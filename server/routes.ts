@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertJobSchema, insertLeadSchema, insertInvoiceSchema } from "@shared/schema";
 import { z } from "zod";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+import { parseTextToPlan, suggestScheduleSlots, generateFollowUp } from "./ai/aiService";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -293,6 +294,58 @@ export async function registerRoutes(
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete invoice" });
+    }
+  });
+
+  // AI Endpoints
+
+  app.post("/api/ai/text-to-plan", async (req, res) => {
+    try {
+      const { message } = req.body;
+      if (!message || typeof message !== "string") {
+        return res.status(400).json({ error: "Message is required" });
+      }
+      const jobDraft = await parseTextToPlan(message);
+      res.json(jobDraft);
+    } catch (error) {
+      console.error("Text-to-plan error:", error);
+      res.status(500).json({ error: "Failed to parse message" });
+    }
+  });
+
+  app.post("/api/ai/schedule-suggestions", async (req, res) => {
+    try {
+      const { duration, preferredDate } = req.body;
+      const jobs = await storage.getJobs(defaultUserId);
+      const suggestions = await suggestScheduleSlots(
+        jobs,
+        duration || 60,
+        preferredDate
+      );
+      res.json({ suggestions });
+    } catch (error) {
+      console.error("Schedule suggestions error:", error);
+      res.status(500).json({ error: "Failed to generate suggestions" });
+    }
+  });
+
+  app.post("/api/ai/follow-up", async (req, res) => {
+    try {
+      const { clientName, context, lastService, daysSinceInteraction, tone } = req.body;
+      if (!clientName || !context) {
+        return res.status(400).json({ error: "clientName and context are required" });
+      }
+      const followUp = await generateFollowUp({
+        clientName,
+        context,
+        lastService,
+        daysSinceInteraction,
+        tone,
+      });
+      res.json(followUp);
+    } catch (error) {
+      console.error("Follow-up generation error:", error);
+      res.status(500).json({ error: "Failed to generate follow-up" });
     }
   });
 

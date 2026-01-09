@@ -1,15 +1,15 @@
-import { useState } from "react";
-import { useLocation, useParams } from "wouter";
+import { useState, useEffect } from "react";
+import { useLocation, useParams, useSearch } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -27,8 +27,14 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Sparkles, Calendar, Clock } from "lucide-react";
 import type { Job, InsertJob } from "@shared/schema";
+
+interface ScheduleSuggestion {
+  date: string;
+  time: string;
+  reason: string;
+}
 
 const jobFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -68,8 +74,22 @@ export default function JobForm() {
   const { id } = useParams<{ id: string }>();
   const isEditing = id && id !== "new";
   const [, navigate] = useLocation();
+  const searchString = useSearch();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const urlParams = new URLSearchParams(searchString);
+  const prefillData = {
+    serviceType: urlParams.get("serviceType") || "",
+    date: urlParams.get("date") || "",
+    time: urlParams.get("time") || "",
+    clientName: urlParams.get("clientName") || "",
+    clientPhone: urlParams.get("clientPhone") || "",
+    description: urlParams.get("description") || "",
+    duration: urlParams.get("duration") ? parseInt(urlParams.get("duration")!) : undefined,
+    price: urlParams.get("price") ? parseInt(urlParams.get("price")!) / 100 : undefined,
+  };
 
   const { data: existingJob, isLoading: isLoadingJob } = useQuery<Job>({
     queryKey: ["/api/jobs", id],
@@ -79,16 +99,16 @@ export default function JobForm() {
   const form = useForm<JobFormData>({
     resolver: zodResolver(jobFormSchema),
     defaultValues: {
-      title: "",
-      serviceType: "",
-      description: "",
+      title: prefillData.description || "",
+      serviceType: prefillData.serviceType || "",
+      description: prefillData.description || "",
       location: "",
-      scheduledDate: new Date().toISOString().split('T')[0],
-      scheduledTime: "09:00",
-      duration: 60,
-      price: undefined,
-      clientName: "",
-      clientPhone: "",
+      scheduledDate: prefillData.date || new Date().toISOString().split('T')[0],
+      scheduledTime: prefillData.time || "09:00",
+      duration: prefillData.duration || 60,
+      price: prefillData.price,
+      clientName: prefillData.clientName || "",
+      clientPhone: prefillData.clientPhone || "",
       status: "scheduled",
     },
     values: existingJob ? {
@@ -105,6 +125,31 @@ export default function JobForm() {
       status: existingJob.status,
     } : undefined,
   });
+
+  const duration = form.watch("duration");
+  const scheduledDate = form.watch("scheduledDate");
+
+  const suggestionsMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/ai/schedule-suggestions", {
+        duration: duration || 60,
+        preferredDate: scheduledDate,
+      });
+      return response.json() as Promise<{ suggestions: ScheduleSuggestion[] }>;
+    },
+  });
+
+  const handleGetSuggestions = () => {
+    setShowSuggestions(true);
+    suggestionsMutation.mutate();
+  };
+
+  const handleSelectSuggestion = (suggestion: ScheduleSuggestion) => {
+    form.setValue("scheduledDate", suggestion.date);
+    form.setValue("scheduledTime", suggestion.time);
+    setShowSuggestions(false);
+    toast({ title: "Time slot selected" });
+  };
 
   const createMutation = useMutation({
     mutationFn: async (data: JobFormData) => {
@@ -157,6 +202,30 @@ export default function JobForm() {
   };
 
   const isPending = createMutation.isPending || updateMutation.isPending;
+
+  const formatDate = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric"
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatTime = (timeStr: string) => {
+    try {
+      const [hours, minutes] = timeStr.split(":");
+      const hour = parseInt(hours);
+      const ampm = hour >= 12 ? "PM" : "AM";
+      const hour12 = hour % 12 || 12;
+      return `${hour12}:${minutes} ${ampm}`;
+    } catch {
+      return timeStr;
+    }
+  };
 
   if (isEditing && isLoadingJob) {
     return (
@@ -282,7 +351,72 @@ export default function JobForm() {
 
             <Card>
               <CardContent className="pt-6 space-y-4">
-                <h3 className="font-medium text-foreground">Schedule</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium text-foreground">Schedule</h3>
+                  {!isEditing && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGetSuggestions}
+                      disabled={suggestionsMutation.isPending}
+                      data-testid="button-get-suggestions"
+                    >
+                      {suggestionsMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-4 w-4 mr-1" />
+                      )}
+                      Suggest Times
+                    </Button>
+                  )}
+                </div>
+
+                {showSuggestions && suggestionsMutation.data?.suggestions && (
+                  <Card className="bg-muted/50" data-testid="card-suggestions">
+                    <CardHeader className="py-3 px-4">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        AI-Suggested Time Slots
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4 space-y-2">
+                      {suggestionsMutation.data.suggestions.map((suggestion, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-3 bg-background rounded-md border hover-elevate cursor-pointer"
+                          onClick={() => handleSelectSuggestion(suggestion)}
+                          data-testid={`suggestion-slot-${index}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-sm font-medium">{formatDate(suggestion.date)}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-sm">{formatTime(suggestion.time)}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <Badge variant="secondary" className="text-xs">
+                            Select
+                          </Badge>
+                        </div>
+                      ))}
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Tap a slot to use it
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {suggestionsMutation.isError && (
+                  <p className="text-sm text-destructive">
+                    Failed to get suggestions. Please try again.
+                  </p>
+                )}
                 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
