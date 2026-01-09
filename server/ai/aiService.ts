@@ -1,4 +1,4 @@
-import { openai } from "./openaiClient";
+import { getOpenAI } from "./openaiClient";
 import type { Job } from "@shared/schema";
 
 export interface JobDraft {
@@ -26,7 +26,7 @@ export interface FollowUpMessage {
 export async function parseTextToPlan(userMessage: string): Promise<JobDraft> {
   const today = new Date().toISOString().split("T")[0];
   
-  const response = await openai.chat.completions.create({
+  const response = await getOpenAI().chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       {
@@ -78,7 +78,7 @@ export async function suggestScheduleSlots(
       title: job.title
     }));
 
-  const response = await openai.chat.completions.create({
+  const response = await getOpenAI().chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       {
@@ -137,7 +137,7 @@ export async function generateFollowUp(params: {
     no_response: `The client hasn't responded in ${daysSinceInteraction} days after initial contact.`
   };
 
-  const response = await openai.chat.completions.create({
+  const response = await getOpenAI().chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       {

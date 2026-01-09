@@ -166,10 +166,14 @@ export default function Leads() {
   const handleGenerateFollowUp = (lead: Lead) => {
     setSelectedLead(lead);
     setFollowUpMessage("");
-    const daysSince = getDaysSince(lead.lastContactedAt || lead.createdAt);
-    const context = lead.status === "new" ? "new_lead" : "no_response";
+  };
+
+  const handleGenerateMessage = () => {
+    if (!selectedLead) return;
+    const daysSince = getDaysSince(selectedLead.lastContactedAt || selectedLead.createdAt);
+    const context = selectedLead.status === "new" ? "new_lead" : "no_response";
     followUpMutation.mutate({
-      clientName: lead.clientName,
+      clientName: selectedLead.clientName,
       context,
       daysSinceInteraction: daysSince,
       tone,
@@ -181,20 +185,7 @@ export default function Leads() {
     toast({ title: "Message copied to clipboard" });
   };
 
-  const handleRegenerateWithTone = (newTone: "friendly" | "professional" | "casual") => {
-    setTone(newTone);
-    if (selectedLead) {
-      const daysSince = getDaysSince(selectedLead.lastContactedAt || selectedLead.createdAt);
-      const context = selectedLead.status === "new" ? "new_lead" : "no_response";
-      followUpMutation.mutate({
-        clientName: selectedLead.clientName,
-        context,
-        daysSinceInteraction: daysSince,
-        tone: newTone,
-      });
-    }
-  };
-
+  
   const filteredLeads = filter === "all" 
     ? leads 
     : leads.filter(lead => lead.status === filter);
@@ -275,7 +266,7 @@ export default function Leads() {
             </div>
 
             <div className="flex gap-2">
-              <Select value={tone} onValueChange={(v) => handleRegenerateWithTone(v as any)}>
+              <Select value={tone} onValueChange={(v) => setTone(v as any)}>
                 <SelectTrigger className="w-[140px]" data-testid="select-tone">
                   <SelectValue />
                 </SelectTrigger>
@@ -287,16 +278,16 @@ export default function Leads() {
               </Select>
               <Button
                 variant="outline"
-                size="sm"
-                onClick={() => selectedLead && handleGenerateFollowUp(selectedLead)}
+                onClick={handleGenerateMessage}
                 disabled={followUpMutation.isPending}
-                data-testid="button-regenerate"
+                data-testid="button-generate"
               >
                 {followUpMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                 ) : (
-                  <Sparkles className="h-4 w-4" />
+                  <Sparkles className="h-4 w-4 mr-1" />
                 )}
+                Generate
               </Button>
             </div>
 

@@ -299,53 +299,73 @@ export async function registerRoutes(
 
   // AI Endpoints
 
+  const textToPlanSchema = z.object({
+    message: z.string().min(1, "Message is required").max(1000),
+  });
+
+  const scheduleSuggestionsSchema = z.object({
+    duration: z.number().min(15).max(480).optional().default(60),
+    preferredDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  });
+
+  const followUpSchema = z.object({
+    clientName: z.string().min(1).max(100),
+    context: z.enum(["job_completed", "quote_sent", "new_lead", "no_response"]),
+    lastService: z.string().max(200).optional(),
+    daysSinceInteraction: z.number().min(0).max(365).optional(),
+    tone: z.enum(["friendly", "professional", "casual"]).optional(),
+  });
+
   app.post("/api/ai/text-to-plan", async (req, res) => {
     try {
-      const { message } = req.body;
-      if (!message || typeof message !== "string") {
-        return res.status(400).json({ error: "Message is required" });
-      }
-      const jobDraft = await parseTextToPlan(message);
+      const validated = textToPlanSchema.parse(req.body);
+      const jobDraft = await parseTextToPlan(validated.message);
       res.json(jobDraft);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid request" });
+      }
       console.error("Text-to-plan error:", error);
-      res.status(500).json({ error: "Failed to parse message" });
+      res.status(500).json({ error: "AI service temporarily unavailable" });
     }
   });
 
   app.post("/api/ai/schedule-suggestions", async (req, res) => {
     try {
-      const { duration, preferredDate } = req.body;
+      const validated = scheduleSuggestionsSchema.parse(req.body);
       const jobs = await storage.getJobs(defaultUserId);
       const suggestions = await suggestScheduleSlots(
         jobs,
-        duration || 60,
-        preferredDate
+        validated.duration,
+        validated.preferredDate
       );
       res.json({ suggestions });
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid request" });
+      }
       console.error("Schedule suggestions error:", error);
-      res.status(500).json({ error: "Failed to generate suggestions" });
+      res.status(500).json({ error: "AI service temporarily unavailable" });
     }
   });
 
   app.post("/api/ai/follow-up", async (req, res) => {
     try {
-      const { clientName, context, lastService, daysSinceInteraction, tone } = req.body;
-      if (!clientName || !context) {
-        return res.status(400).json({ error: "clientName and context are required" });
-      }
+      const validated = followUpSchema.parse(req.body);
       const followUp = await generateFollowUp({
-        clientName,
-        context,
-        lastService,
-        daysSinceInteraction,
-        tone,
+        clientName: validated.clientName,
+        context: validated.context,
+        lastService: validated.lastService,
+        daysSinceInteraction: validated.daysSinceInteraction,
+        tone: validated.tone,
       });
       res.json(followUp);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid request" });
+      }
       console.error("Follow-up generation error:", error);
-      res.status(500).json({ error: "Failed to generate follow-up" });
+      res.status(500).json({ error: "AI service temporarily unavailable" });
     }
   });
 

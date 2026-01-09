@@ -63,7 +63,10 @@ export function VoiceFAB() {
       if (jobDraft.clientPhone) params.set("clientPhone", jobDraft.clientPhone);
       if (jobDraft.description) params.set("description", jobDraft.description);
       if (jobDraft.duration) params.set("duration", String(jobDraft.duration));
-      if (jobDraft.price) params.set("price", String(jobDraft.price));
+      if (jobDraft.price) {
+        const priceInCents = jobDraft.price < 1000 ? jobDraft.price * 100 : jobDraft.price;
+        params.set("price", String(priceInCents));
+      }
       
       navigate(`/jobs/new?${params.toString()}`);
       handleClose();
