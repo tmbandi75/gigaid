@@ -1,0 +1,80 @@
+# 🎯 Project: Gig Aid – AI Feature Implementation (MVP Tier 1)
+Build 3 core AI features for the Gig Aid app. Use Supabase as the backend and implement everything in modular Vite/React + TypeScript components.
+
+---
+
+## 🔧 Tech Stack
+- Frontend: Vite + React + TypeScript
+- Backend: Supabase (Postgres + RLS)
+- AI: OpenAI (GPT-4 Turbo for text, Whisper for voice) or Anthropic Claude
+- APIs: Optional – Twilio for SMS, Google Maps API for travel time
+
+---
+
+## 🧠 Feature 1: Text-to-Plan AI
+**Goal:** Convert freeform text or voice note into a structured job (service, date, time, client)
+
+### Frontend:
+- Component: `<TextToPlanInput />`
+- Modes: Text or Voice (toggle)
+- On submit: Call `/api/ai/parseJob`
+
+### Backend Endpoint: `/api/ai/parseJob`
+- Input: `{ message: string }`
+- Use OpenAI or Claude to extract:
+  - service
+  - date (natural language → ISO)
+  - time
+  - client name (if included)
+- Return: `JobDraft` object `{ service, date, time, clientName }`
+
+### Bonus:
+- Use Whisper to transcribe voice → text before calling GPT
+- Use `react-speech-recognition` for voice UI
+
+---
+
+## 📅 Feature 2: Smart Scheduling Assistant
+**Goal:** Suggest 3 optimal time slots based on:
+- User availability (from Supabase table `availability`)
+- Existing jobs (table `jobs`)
+- (Optional) Travel time between jobs (via Google Maps API)
+
+### Frontend:
+- Component: `<SuggestedSlots jobDuration={minutes} location={latlng} />`
+- On job creation, show suggested slots with "Accept" or "Pick manually"
+
+### Backend:
+- Endpoint: `/api/schedule/suggestSlots`
+- Input: `{ userId, jobDuration, jobLocation }`
+- Logic:
+  1. Fetch availability blocks
+  2. Fetch existing jobs
+  3. Exclude overlaps
+  4. (Optional) Add travel time buffers
+  5. Return next 3 available time blocks
+
+---
+
+## ✍️ Feature 3: Auto Follow-Up Generator
+**Goal:** Automatically generate follow-up messages based on context
+
+### Trigger Conditions:
+- Job marked complete
+- No response after 48h on sent quote
+- New lead not followed up in 3 days
+
+### Frontend:
+- Component: `<FollowUpMessage client={Client} job={Job} />`
+- Pre-filled message with “Edit” and “Send via SMS” buttons
+
+### Backend:
+- Endpoint: `/api/ai/generateFollowUp`
+- Input:
+```ts
+{
+  clientName: string,
+  lastService: string,
+  timeSinceLastInteraction: string,
+  tone: 'friendly' | 'professional' | 'casual'
+}
