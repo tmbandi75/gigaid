@@ -3,12 +3,71 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertJobSchema, insertLeadSchema, insertInvoiceSchema } from "@shared/schema";
 import { z } from "zod";
+import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
   const defaultUserId = "demo-user";
+
+  registerObjectStorageRoutes(app);
+
+  app.get("/api/profile", async (req, res) => {
+    try {
+      const user = await storage.getUser(defaultUserId);
+      if (!user) {
+        return res.json({
+          id: defaultUserId,
+          name: "Gig Worker",
+          email: "gig@example.com",
+          phone: null,
+          photo: null,
+        });
+      }
+      res.json({
+        id: user.id,
+        name: user.name || "Gig Worker",
+        email: user.email || "gig@example.com",
+        phone: user.phone,
+        photo: user.photo,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch profile" });
+    }
+  });
+
+  app.patch("/api/profile", async (req, res) => {
+    try {
+      const { name, email, phone, photo } = req.body;
+      let user = await storage.getUser(defaultUserId);
+      
+      if (!user) {
+        user = await storage.createUser({
+          username: "demo",
+          password: "demo123",
+        });
+      }
+      
+      const updatedUser = await storage.updateUser(defaultUserId, {
+        name,
+        email,
+        phone,
+        photo,
+      });
+      
+      res.json({
+        id: updatedUser?.id || defaultUserId,
+        name: updatedUser?.name || name,
+        email: updatedUser?.email || email,
+        phone: updatedUser?.phone || phone,
+        photo: updatedUser?.photo || photo,
+      });
+    } catch (error) {
+      console.error("Profile update error:", error);
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
 
   app.get("/api/dashboard/summary", async (req, res) => {
     try {

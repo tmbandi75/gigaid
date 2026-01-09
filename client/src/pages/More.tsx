@@ -1,6 +1,8 @@
+import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { TopBar } from "@/components/layout/TopBar";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { 
   User, 
@@ -18,6 +20,14 @@ import {
 import { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
 
+interface UserProfile {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  photo: string | null;
+}
+
 const menuItems = [
   { icon: User, label: "Profile", description: "Manage your account", href: "#" },
   { icon: Bell, label: "Notifications", description: "SMS & email preferences", href: "#" },
@@ -28,12 +38,26 @@ const menuItems = [
 ];
 
 export default function More() {
+  const [, navigate] = useLocation();
   const [darkMode, setDarkMode] = useState(false);
+
+  const { data: profile } = useQuery<UserProfile>({
+    queryKey: ["/api/profile"],
+  });
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains('dark');
     setDarkMode(isDark);
   }, []);
+
+  const displayName = profile?.name || "Gig Worker";
+  const displayEmail = profile?.email || "gig@example.com";
+  const initials = displayName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   const toggleDarkMode = (enabled: boolean) => {
     setDarkMode(enabled);
@@ -51,17 +75,24 @@ export default function More() {
       <TopBar title="More" showActions={false} />
       
       <div className="px-4 py-6 space-y-6">
-        <Card data-testid="card-profile">
+        <Card 
+          data-testid="card-profile"
+          className="hover-elevate active-elevate-2 cursor-pointer"
+          onClick={() => navigate("/profile")}
+        >
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16">
+                {profile?.photo ? (
+                  <AvatarImage src={profile.photo} alt="Profile" />
+                ) : null}
                 <AvatarFallback className="bg-primary text-primary-foreground text-xl">
-                  GA
+                  {initials}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <h2 className="font-medium text-lg text-foreground">Gig Worker</h2>
-                <p className="text-sm text-muted-foreground">gig@example.com</p>
+                <h2 className="font-medium text-lg text-foreground">{displayName}</h2>
+                <p className="text-sm text-muted-foreground">{displayEmail}</p>
                 <Badge variant="outline" className="mt-1 text-xs">
                   Free Plan
                 </Badge>

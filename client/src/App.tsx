@@ -15,6 +15,7 @@ import LeadForm from "@/pages/LeadForm";
 import Invoices from "@/pages/Invoices";
 import InvoiceForm from "@/pages/InvoiceForm";
 import More from "@/pages/More";
+import Profile from "@/pages/Profile";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -31,6 +32,7 @@ function Router() {
       <Route path="/invoices/new" component={InvoiceForm} />
       <Route path="/invoices/:id" component={InvoiceForm} />
       <Route path="/more" component={More} />
+      <Route path="/profile" component={Profile} />
       <Route component={NotFound} />
     </Switch>
   );
