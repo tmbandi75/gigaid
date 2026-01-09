@@ -10,6 +10,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Form,
   FormControl,
   FormField,
@@ -30,13 +37,47 @@ interface UserProfile {
   photo: string | null;
 }
 
+const countryCodes = [
+  { value: "+1", label: "+1 (US/CA)" },
+  { value: "+44", label: "+44 (UK)" },
+  { value: "+61", label: "+61 (AU)" },
+  { value: "+49", label: "+49 (DE)" },
+  { value: "+33", label: "+33 (FR)" },
+  { value: "+34", label: "+34 (ES)" },
+  { value: "+39", label: "+39 (IT)" },
+  { value: "+81", label: "+81 (JP)" },
+  { value: "+86", label: "+86 (CN)" },
+  { value: "+91", label: "+91 (IN)" },
+  { value: "+52", label: "+52 (MX)" },
+  { value: "+55", label: "+55 (BR)" },
+];
+
 const profileFormSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  phone: z.string().optional(),
+  countryCode: z.string().optional(),
+  phoneNumber: z.string().optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileFormSchema>;
+
+function parseStoredName(name: string | null): { firstName: string; lastName: string } {
+  if (!name) return { firstName: "", lastName: "" };
+  const parts = name.trim().split(" ");
+  if (parts.length === 1) return { firstName: parts[0], lastName: "" };
+  return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
+}
+
+function parseStoredPhone(phone: string | null): { countryCode: string; phoneNumber: string } {
+  if (!phone) return { countryCode: "+1", phoneNumber: "" };
+  for (const code of countryCodes) {
+    if (phone.startsWith(code.value)) {
+      return { countryCode: code.value, phoneNumber: phone.slice(code.value.length).trim() };
+    }
+  }
+  return { countryCode: "+1", phoneNumber: phone };
+}
 
 export default function Profile() {
   const [, navigate] = useLocation();
@@ -59,22 +100,29 @@ export default function Profile() {
     },
   });
 
+  const parsedName = parseStoredName(profile?.name || null);
+  const parsedPhone = parseStoredPhone(profile?.phone || null);
+
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      name: "",
+      firstName: "",
+      lastName: "",
       email: "",
-      phone: "",
+      countryCode: "+1",
+      phoneNumber: "",
     },
     values: profile ? {
-      name: profile.name || "",
+      firstName: parsedName.firstName,
+      lastName: parsedName.lastName,
       email: profile.email || "",
-      phone: profile.phone || "",
+      countryCode: parsedPhone.countryCode,
+      phoneNumber: parsedPhone.phoneNumber,
     } : undefined,
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (data: Partial<ProfileFormData & { photo?: string }>) => {
+    mutationFn: async (data: Partial<{ name: string; email: string; phone: string; photo: string }>) => {
       return apiRequest("PATCH", "/api/profile", data);
     },
     onSuccess: () => {
@@ -87,7 +135,13 @@ export default function Profile() {
   });
 
   const onSubmit = (data: ProfileFormData) => {
-    updateMutation.mutate(data);
+    const fullName = `${data.firstName} ${data.lastName}`.trim();
+    const fullPhone = data.phoneNumber ? `${data.countryCode} ${data.phoneNumber}`.trim() : "";
+    updateMutation.mutate({
+      name: fullName,
+      email: data.email || "",
+      phone: fullPhone,
+    });
   };
 
   const handlePhotoClick = () => {
@@ -110,7 +164,8 @@ export default function Profile() {
   };
 
   const currentPhoto = photoUrl || profile?.photo;
-  const initials = (profile?.name || "Gig Worker")
+  const displayName = profile?.name || "Gig Worker";
+  const initials = displayName
     .split(" ")
     .map((n) => n[0])
     .join("")
@@ -188,23 +243,43 @@ export default function Profile() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <Card>
               <CardContent className="pt-6 space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Full Name</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Your name"
-                          {...field}
-                          data-testid="input-name"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="firstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>First Name</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="First"
+                            {...field}
+                            data-testid="input-first-name"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="lastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Last Name</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Last"
+                            {...field}
+                            data-testid="input-last-name"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <FormField
                   control={form.control}
@@ -225,24 +300,52 @@ export default function Profile() {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone Number</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="tel"
-                          placeholder="(555) 123-4567"
-                          {...field}
-                          data-testid="input-phone"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div>
+                  <FormLabel className="mb-2 block">Phone Number</FormLabel>
+                  <div className="grid grid-cols-[100px_1fr] gap-2">
+                    <FormField
+                      control={form.control}
+                      name="countryCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-country-code">
+                                <SelectValue placeholder="+1" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {countryCodes.map((code) => (
+                                <SelectItem key={code.value} value={code.value}>
+                                  {code.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="phoneNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input
+                              type="tel"
+                              placeholder="555-123-4567"
+                              {...field}
+                              data-testid="input-phone-number"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
