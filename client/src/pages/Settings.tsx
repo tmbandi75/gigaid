@@ -18,7 +18,9 @@ import {
   Copy, 
   Check,
   Loader2,
+  Building2,
 } from "lucide-react";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { AvailabilityEditor, DEFAULT_AVAILABILITY } from "@/components/settings/AvailabilityEditor";
 import { BioEditor } from "@/components/settings/BioEditor";
 import type { Referral, WeeklyAvailability } from "@shared/schema";
@@ -48,7 +50,8 @@ export default function Settings() {
     publicProfileSlug: "",
     notifyBySms: true,
     notifyByEmail: true,
-    businessName: "",
+    companyName: "",
+    phone: "",
     bio: "",
     services: [] as string[],
     availability: null as WeeklyAvailability | null,
@@ -72,7 +75,8 @@ export default function Settings() {
         publicProfileSlug: profile.publicProfileSlug || "",
         notifyBySms: profile.notifyBySms !== false,
         notifyByEmail: profile.notifyByEmail !== false,
-        businessName: profile.businessName || "",
+        companyName: profile.businessName || "",
+        phone: profile.phone || "",
         bio: profile.bio || "",
         services: profile.services || [],
         availability: parsedAvailability,
@@ -94,8 +98,16 @@ export default function Settings() {
 
   const handleSave = () => {
     const dataToSave = {
-      ...settings,
+      publicProfileEnabled: settings.publicProfileEnabled,
+      publicProfileSlug: settings.publicProfileSlug,
+      notifyBySms: settings.notifyBySms,
+      notifyByEmail: settings.notifyByEmail,
+      businessName: settings.companyName,
+      phone: settings.phone,
+      bio: settings.bio,
+      services: settings.services,
       availability: settings.availability ? JSON.stringify(settings.availability) : null,
+      slotDuration: settings.slotDuration,
     };
     updateMutation.mutate(dataToSave);
   };
@@ -133,6 +145,45 @@ export default function Settings() {
   return (
     <div className="p-4 pb-24 space-y-6">
       <h1 className="text-2xl font-bold">Settings</h1>
+
+      <Card data-testid="card-business-profile">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5" />
+            Business Profile
+          </CardTitle>
+          <CardDescription>Your business information shown to clients</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="companyName">Company Name</Label>
+            <Input
+              id="companyName"
+              value={settings.companyName}
+              onChange={(e) => setSettings({ ...settings, companyName: e.target.value })}
+              placeholder="Your Company Name"
+              data-testid="input-company-name"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone Number</Label>
+            <PhoneInput
+              id="phone"
+              value={settings.phone}
+              onChange={(phone) => setSettings({ ...settings, phone })}
+              data-testid="input-phone"
+            />
+          </div>
+
+          <BioEditor
+            value={settings.bio}
+            onChange={(bio) => setSettings({ ...settings, bio })}
+            businessName={settings.companyName}
+            services={settings.services}
+          />
+        </CardContent>
+      </Card>
 
       <Card data-testid="card-notifications">
         <CardHeader>
@@ -211,24 +262,6 @@ export default function Settings() {
                   {window.location.origin}/book/{settings.publicProfileSlug || "your-name"}
                 </p>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="businessName">Business Name</Label>
-                <Input
-                  id="businessName"
-                  value={settings.businessName}
-                  onChange={(e) => setSettings({ ...settings, businessName: e.target.value })}
-                  placeholder="Your Business Name"
-                  data-testid="input-business-name"
-                />
-              </div>
-
-              <BioEditor
-                value={settings.bio}
-                onChange={(bio) => setSettings({ ...settings, bio })}
-                businessName={settings.businessName}
-                services={settings.services}
-              />
 
               <div className="space-y-2">
                 <Label>Services</Label>

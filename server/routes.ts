@@ -41,6 +41,15 @@ export async function registerRoutes(
         email: user.email || "gig@example.com",
         phone: user.phone,
         photo: user.photo,
+        businessName: user.businessName,
+        bio: user.bio,
+        services: user.services,
+        availability: user.availability,
+        slotDuration: user.slotDuration,
+        publicProfileEnabled: user.publicProfileEnabled,
+        publicProfileSlug: user.publicProfileSlug,
+        notifyBySms: user.notifyBySms,
+        notifyByEmail: user.notifyByEmail,
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch profile" });
@@ -674,6 +683,7 @@ export async function registerRoutes(
         notifyBySms,
         notifyByEmail,
         businessName,
+        phone,
         bio,
         services,
         availability,
@@ -686,6 +696,7 @@ export async function registerRoutes(
         notifyBySms,
         notifyByEmail,
         businessName,
+        phone,
         bio,
         services,
         availability,
