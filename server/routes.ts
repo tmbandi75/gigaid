@@ -626,7 +626,7 @@ export async function registerRoutes(
 
       // Send SMS confirmation
       if (request.clientPhone) {
-        const smsMessage = `Hi ${request.clientName.split(" ")[0]}! Your ${serviceName} booking request ${preferredDateTime} has been received. ${providerFirstName} will get back to you shortly to confirm. - Powered by GigAid`;
+        const smsMessage = `Hi ${request.clientName.split(" ")[0]}! Your ${serviceName} booking request ${preferredDateTime} has been received. ${providerFirstName} will get back to you shortly to confirm. - Powered by GigAid™`;
         sendSMS(request.clientPhone, smsMessage).catch(err => {
           console.error("Failed to send booking confirmation SMS:", err);
         });
