@@ -884,6 +884,147 @@ export async function registerRoutes(
     }
   });
 
+  // Smart Slot Ranking by ZIP Proximity
+  app.post("/api/public/smart-slots/:slug/:date", async (req, res) => {
+    try {
+      const { getDistanceBetweenZips, estimateTravelTime, extractZipFromLocation } = await import("./zipDistance");
+      
+      const user = await storage.getUserByPublicSlug(req.params.slug);
+      if (!user || !user.publicProfileEnabled) {
+        return res.status(404).json({ error: "Profile not found" });
+      }
+
+      const { clientZipCode } = req.body;
+      if (!clientZipCode) {
+        return res.status(400).json({ error: "Client ZIP code is required" });
+      }
+
+      const dateStr = req.params.date;
+      const date = new Date(dateStr);
+      const dayOfWeek = date.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
+
+      let availability: any = null;
+      try {
+        availability = user.availability ? JSON.parse(user.availability) : null;
+      } catch (e) {
+        availability = null;
+      }
+
+      if (!availability || !availability[dayOfWeek] || !availability[dayOfWeek].enabled) {
+        return res.json({ available: false, slots: [], optimizedSlots: [] });
+      }
+
+      const dayConfig = availability[dayOfWeek];
+      const slotDuration = user.slotDuration || 60;
+
+      const jobs = await storage.getJobs(user.id);
+      const scheduledJobs = jobs.filter((j) => j.scheduledDate === dateStr && j.scheduledTime);
+
+      const bookedTimes = scheduledJobs.map((j) => j.scheduledTime);
+
+      const slots: string[] = [];
+      const ranges = dayConfig.ranges || [{ start: dayConfig.start, end: dayConfig.end }];
+
+      for (const range of ranges) {
+        const [startH, startM] = range.start.split(":").map(Number);
+        const [endH, endM] = range.end.split(":").map(Number);
+        const startMinutes = startH * 60 + startM;
+        const endMinutes = endH * 60 + endM;
+
+        for (let m = startMinutes; m + slotDuration <= endMinutes; m += slotDuration) {
+          const h = Math.floor(m / 60);
+          const min = m % 60;
+          const timeStr = `${h.toString().padStart(2, "0")}:${min.toString().padStart(2, "0")}`;
+          
+          if (!bookedTimes.includes(timeStr) && !slots.includes(timeStr)) {
+            slots.push(timeStr);
+          }
+        }
+      }
+
+      const optimizedSlots = slots.map((slot) => {
+        const [slotH, slotM] = slot.split(":").map(Number);
+        const slotMinutes = slotH * 60 + slotM;
+
+        let nearestJob: { time: string; location: string; distance: number } | null = null;
+        let minDistance = Infinity;
+
+        for (const job of scheduledJobs) {
+          if (!job.scheduledTime || !job.location) continue;
+          
+          const jobZip = extractZipFromLocation(job.location);
+          if (!jobZip) continue;
+
+          const [jobH, jobM] = job.scheduledTime.split(":").map(Number);
+          const jobMinutes = jobH * 60 + jobM;
+          const jobEndMinutes = jobMinutes + (job.duration || 60);
+
+          const timeDiffBefore = slotMinutes - jobEndMinutes;
+          const timeDiffAfter = jobMinutes - (slotMinutes + slotDuration);
+
+          const isAdjacent = timeDiffBefore >= 0 && timeDiffBefore <= 120 ||
+                            timeDiffAfter >= 0 && timeDiffAfter <= 120;
+
+          if (isAdjacent) {
+            const distance = getDistanceBetweenZips(clientZipCode, jobZip);
+            if (distance < minDistance) {
+              minDistance = distance;
+              nearestJob = {
+                time: job.scheduledTime,
+                location: job.location,
+                distance,
+              };
+            }
+          }
+        }
+
+        let proximityScore = 50;
+        let travelTime = 0;
+        let recommendation: "best" | "good" | "available" = "available";
+
+        if (nearestJob) {
+          travelTime = estimateTravelTime(nearestJob.distance);
+          proximityScore = Math.max(0, 100 - nearestJob.distance * 5);
+          
+          if (nearestJob.distance <= 5) {
+            recommendation = "best";
+          } else if (nearestJob.distance <= 15) {
+            recommendation = "good";
+          }
+        }
+
+        return {
+          time: slot,
+          proximityScore: Math.round(proximityScore),
+          travelTime,
+          recommendation,
+          nearbyJob: nearestJob ? {
+            distance: Math.round(nearestJob.distance * 10) / 10,
+          } : null,
+        };
+      });
+
+      optimizedSlots.sort((a, b) => {
+        const recOrder = { best: 0, good: 1, available: 2 };
+        if (recOrder[a.recommendation] !== recOrder[b.recommendation]) {
+          return recOrder[a.recommendation] - recOrder[b.recommendation];
+        }
+        return a.time.localeCompare(b.time);
+      });
+
+      res.json({
+        available: true,
+        slots,
+        optimizedSlots,
+        slotDuration,
+        clientZipCode,
+      });
+    } catch (error) {
+      console.error("Error generating smart slots:", error);
+      res.status(500).json({ error: "Failed to generate smart slots" });
+    }
+  });
+
   // Booking Page AI Features
   app.post("/api/public/ai/recommend-service", async (req, res) => {
     try {

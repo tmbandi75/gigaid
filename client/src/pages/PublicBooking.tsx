@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Star, Calendar, CheckCircle, Loader2, ChevronLeft, ChevronRight, Clock, History, RotateCcw } from "lucide-react";
+import { Star, Calendar, CheckCircle, Loader2, ChevronLeft, ChevronRight, Clock, History, RotateCcw, MapPin, Zap, Navigation } from "lucide-react";
 import { SmartServiceRecommender } from "@/components/booking/SmartServiceRecommender";
 import { JobNotesAutocomplete } from "@/components/booking/JobNotesAutocomplete";
 import { FAQAssistant } from "@/components/booking/FAQAssistant";
@@ -51,6 +51,22 @@ interface AvailableSlots {
   slotDuration: number;
 }
 
+interface OptimizedSlot {
+  time: string;
+  proximityScore: number;
+  travelTime: number;
+  recommendation: "best" | "good" | "available";
+  nearbyJob: { distance: number } | null;
+}
+
+interface SmartSlotsResponse {
+  available: boolean;
+  slots: string[];
+  optimizedSlots: OptimizedSlot[];
+  slotDuration: number;
+  clientZipCode: string;
+}
+
 export default function PublicBooking() {
   const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
@@ -68,6 +84,8 @@ export default function PublicBooking() {
     location: "",
     description: "",
   });
+  const [clientZipCode, setClientZipCode] = useState("");
+  const [zipConfirmed, setZipConfirmed] = useState(false);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const [bookingHistory, setBookingHistory] = useState<BookingHistoryItem[]>([]);
 
@@ -128,7 +146,21 @@ export default function PublicBooking() {
       if (!res.ok) throw new Error("Failed to fetch slots");
       return res.json();
     },
-    enabled: !!slug && !!selectedDateStr,
+    enabled: !!slug && !!selectedDateStr && !zipConfirmed,
+  });
+
+  const { data: smartSlotsData, isLoading: smartSlotsLoading } = useQuery<SmartSlotsResponse>({
+    queryKey: ["/api/public/smart-slots", slug, selectedDateStr, clientZipCode],
+    queryFn: async () => {
+      const res = await fetch(`/api/public/smart-slots/${slug}/${selectedDateStr}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientZipCode }),
+      });
+      if (!res.ok) throw new Error("Failed to fetch smart slots");
+      return res.json();
+    },
+    enabled: !!slug && !!selectedDateStr && zipConfirmed && clientZipCode.length === 5,
   });
 
   const submitMutation = useMutation({
@@ -383,40 +415,158 @@ export default function PublicBooking() {
                 ))}
               </div>
 
-              {selectedDate && (
+              {selectedDate && !zipConfirmed && (
+                <div className="mt-6 space-y-4">
+                  <div className="p-4 rounded-lg bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20">
+                    <div className="flex items-center gap-2 mb-3">
+                      <MapPin className="h-5 w-5 text-blue-500" />
+                      <span className="font-medium">Where is the job located?</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Enter your ZIP code so we can suggest the best times based on nearby appointments.
+                    </p>
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={5}
+                        placeholder="Enter ZIP code"
+                        value={clientZipCode}
+                        onChange={(e) => setClientZipCode(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                        className="flex-1"
+                        data-testid="input-client-zip"
+                      />
+                      <Button
+                        type="button"
+                        disabled={clientZipCode.length !== 5}
+                        onClick={() => setZipConfirmed(true)}
+                        data-testid="button-confirm-zip"
+                      >
+                        <Zap className="h-4 w-4 mr-1" />
+                        Find Best Times
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {selectedDate && zipConfirmed && (
                 <div className="mt-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Clock className="h-4 w-4" />
-                    <span className="font-medium">
-                      Available times for {selectedDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
-                    </span>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      <span className="font-medium">
+                        Available times for {selectedDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
+                      </span>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      <MapPin className="h-3 w-3 mr-1" />
+                      {clientZipCode}
+                      <button
+                        type="button"
+                        className="ml-1 hover:text-primary"
+                        onClick={() => { setZipConfirmed(false); setSelectedTime(null); }}
+                        data-testid="button-change-zip"
+                      >
+                        (change)
+                      </button>
+                    </Badge>
                   </div>
                   
-                  {slotsLoading ? (
+                  {smartSlotsLoading || slotsLoading ? (
                     <div className="flex justify-center py-4">
                       <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                     </div>
-                  ) : !slotsData?.available ? (
+                  ) : !(smartSlotsData?.available || slotsData?.available) ? (
                     <p className="text-sm text-muted-foreground text-center py-4">
                       Not available on this day
                     </p>
-                  ) : slotsData.slots.length === 0 ? (
+                  ) : (smartSlotsData?.optimizedSlots?.length || 0) === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-4">
                       No available slots on this day
                     </p>
                   ) : (
-                    <div className="grid grid-cols-3 gap-2">
-                      {slotsData.slots.map((slot) => (
-                        <Button
-                          key={slot}
-                          variant={selectedTime === slot ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setSelectedTime(slot)}
-                          data-testid={`slot-${slot}`}
-                        >
-                          {formatTime(slot)}
-                        </Button>
-                      ))}
+                    <div className="space-y-3">
+                      {smartSlotsData.optimizedSlots.filter(s => s.recommendation === "best").length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Zap className="h-4 w-4 text-green-500" />
+                            <span className="text-sm font-medium text-green-600 dark:text-green-400">Best Times - Minimized Travel</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            {smartSlotsData.optimizedSlots.filter(s => s.recommendation === "best").map((slot) => (
+                              <Button
+                                key={slot.time}
+                                variant={selectedTime === slot.time ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setSelectedTime(slot.time)}
+                                className="flex-col h-auto py-2 relative"
+                                data-testid={`slot-${slot.time}`}
+                              >
+                                <span>{formatTime(slot.time)}</span>
+                                {slot.nearbyJob && (
+                                  <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                    <Navigation className="h-3 w-3" />
+                                    {slot.nearbyJob.distance} mi away
+                                  </span>
+                                )}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {smartSlotsData.optimizedSlots.filter(s => s.recommendation === "good").length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Clock className="h-4 w-4 text-yellow-500" />
+                            <span className="text-sm font-medium text-yellow-600 dark:text-yellow-400">Good Times - Nearby Jobs</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            {smartSlotsData.optimizedSlots.filter(s => s.recommendation === "good").map((slot) => (
+                              <Button
+                                key={slot.time}
+                                variant={selectedTime === slot.time ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setSelectedTime(slot.time)}
+                                className="flex-col h-auto py-2"
+                                data-testid={`slot-${slot.time}`}
+                              >
+                                <span>{formatTime(slot.time)}</span>
+                                {slot.nearbyJob && (
+                                  <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                    <Navigation className="h-3 w-3" />
+                                    {slot.nearbyJob.distance} mi away
+                                  </span>
+                                )}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {smartSlotsData.optimizedSlots.filter(s => s.recommendation === "available").length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-medium text-muted-foreground">Other Available Times</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            {smartSlotsData.optimizedSlots.filter(s => s.recommendation === "available").map((slot) => (
+                              <Button
+                                key={slot.time}
+                                variant={selectedTime === slot.time ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setSelectedTime(slot.time)}
+                                data-testid={`slot-${slot.time}`}
+                              >
+                                {formatTime(slot.time)}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
