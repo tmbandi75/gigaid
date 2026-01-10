@@ -34,6 +34,12 @@ interface OnboardingStatus {
   step: number;
 }
 
+interface UserProfile {
+  id: string;
+  name: string;
+  publicProfileSlug?: string;
+}
+
 function formatTime(time: string): string {
   const [hours, minutes] = time.split(":");
   const h = parseInt(hours);
@@ -84,6 +90,10 @@ export default function Dashboard() {
 
   const { data: onboarding } = useQuery<OnboardingStatus>({
     queryKey: ["/api/onboarding"],
+  });
+
+  const { data: profile } = useQuery<UserProfile>({
+    queryKey: ["/api/profile"],
   });
 
   useEffect(() => {
@@ -222,11 +232,12 @@ export default function Dashboard() {
       </div>
 
       <div className="flex-1 px-4 py-6 space-y-6 -mt-4">
-        {!onboarding?.completed && onboarding?.step !== undefined && onboarding.step < 4 && (
+        {!onboarding?.completed && onboarding?.step !== undefined && (
           <OnboardingChecklist
             currentStep={onboarding.step}
             onStepClick={handleOnboardingStepClick}
             onComplete={handleOnboardingComplete}
+            bookingSlug={profile?.publicProfileSlug}
           />
         )}
 

@@ -71,23 +71,19 @@ export function WelcomeModal({ open, onClose, onStart }: WelcomeModalProps) {
               >
                 Welcome to GigAid</motion.h1>
 
-              <motion.p
+              <motion.div
                 initial={{ y: 10, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.3, delay: 0.3 }}
-                className="text-lg font-semibold text-primary mt-2"
+                className="mt-3"
               >
-                Book jobs. Get paid. Done.
-              </motion.p>
-
-              <motion.p
-                initial={{ y: 10, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.3, delay: 0.4 }}
-                className="text-sm text-muted-foreground mt-3 leading-relaxed"
-              >
-                <span className="font-semibold text-foreground">GigAid<sup className="text-xs">™</sup></span> turns texts and calls into booked jobs with automatic reminders and payments — so you can focus on the work, not the admin.
-              </motion.p>
+                <p className="text-base text-muted-foreground leading-relaxed">
+                  From "Can you come tomorrow?"
+                </p>
+                <p className="text-base text-muted-foreground leading-relaxed">
+                  to booked and paid — <span className="font-semibold text-primary">in minutes.</span>
+                </p>
+              </motion.div>
             </div>
 
             <div className="space-y-3">

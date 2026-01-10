@@ -1,0 +1,94 @@
+You are working in the GigAid codebase. Implement improvements to the onboarding checklist UX + copy, re-order the steps for faster time-to-value, and add a celebratory confetti animation when onboarding is completed.
+
+GOALS (must all be met)
+1) Re-order checklist steps to emphasize immediate value:
+   - Step 1: Share Booking Link
+   - Step 2: Add a Service
+   - Step 3: Set Your Hours (Availability)
+   - Step 4: Turn on Reminders
+2) Rename the checklist header from “Getting Started” to: “Get Your First Job Booked”
+3) Improve microcopy to be outcome-focused and plainspoken for non-technical gig workers (see COPY section below).
+4) Completion experience:
+   - When all 4 steps are complete, show a “You’re ready to book jobs 🎉” success state
+   - Provide a primary CTA button: “Copy Booking Link”
+   - Trigger a short confetti celebration (1–2 seconds) ONCE when the user completes onboarding (not every time they open the dashboard).
+   - Persist a flag so confetti doesn’t replay after completion unless onboarding is reset.
+5) Keep the existing structure and routes where possible. DO NOT refactor unrelated code. Make the smallest safe changes.
+6) Add basic analytics events (if analytics already exists) for:
+   - onboarding_checklist_viewed
+   - onboarding_step_clicked (step_key)
+   - onboarding_step_completed (step_key)
+   - onboarding_completed
+   - onboarding_copy_booking_link_clicked
+
+COPY (use exactly or very close)
+- Checklist title: “Get Your First Job Booked”
+- Step 1 title: “Share Your Booking Link”
+  Step 1 subtitle: “Send this to clients to book and pay you”
+  CTA: “Get Link”
+- Step 2 title: “Add a Service”
+  Step 2 subtitle: “What do you usually get hired to do?”
+  CTA: “Add Service”
+- Step 3 title: “Set Your Hours”
+  Step 3 subtitle: “When can clients book you?”
+  CTA: “Set Hours”
+- Step 4 title: “Turn on Reminders”
+  Step 4 subtitle: “Reduce no-shows automatically”
+  CTA: “Enable”
+- Completion title: “You’re ready to book jobs 🎉”
+  Completion subtitle: “Send your booking link to your next customer and get paid faster.”
+  Primary CTA: “Copy Booking Link”
+  Secondary: “Dismiss”
+
+IMPLEMENTATION DETAILS
+A) Identify existing onboarding checklist component(s)
+   - Search for “Getting Started”, “checklist”, “setup”, “progress”, or the current step definitions.
+   - Locate where step completion is calculated (e.g., based on existence of service, availability, booking link config, reminder).
+B) Rebuild step definitions as a typed array:
+   - key: 'share_booking_link' | 'add_service' | 'set_availability' | 'enable_reminders'
+   - title, subtitle, ctaLabel
+   - actionRoute (existing route)
+   - isComplete() selector based on existing state/data
+C) Re-order by array order (Step 1 should always be booking link).
+D) Dashboard UI:
+   - Use existing progress bar, checkmarks, and action buttons.
+   - Ensure each step has a single CTA button that navigates to existing Settings/Reminders screens.
+   - When returning, the step should auto-check if requirements are met.
+E) Confetti:
+   - Add a lightweight confetti library such as `canvas-confetti` (preferred) or `react-confetti`.
+   - Trigger confetti ONLY at the moment onboarding becomes complete (transition from incomplete -> complete).
+   - Duration ~1200–1800ms.
+   - Don’t block the UI; run asynchronously.
+   - Add persistence:
+     - store `onboarding_completed_at` and `onboarding_confetti_shown=true` in localStorage (or existing user profile preferences table if available).
+     - If you already have a user settings/preferences table, prefer storing server-side; otherwise use localStorage.
+   - Add a “Reset onboarding” dev-only toggle if one already exists; otherwise do not add.
+F) “Copy Booking Link” CTA:
+   - Use the existing booking link value (public booking URL).
+   - Copy to clipboard and show a toast “Link copied”.
+   - If booking link isn’t available, fallback to navigating the user to the Booking Link screen.
+G) Tests/QA (light):
+   - Verify checklist appears for new users.
+   - Verify step order is correct.
+   - Verify completion state appears after all 4 are complete.
+   - Verify confetti triggers once, not repeatedly on refresh.
+   - Verify events fire (only if analytics exists; otherwise add TODO stubs, do not add a full analytics framework).
+
+CONSTRAINTS
+- No breaking changes.
+- No broad refactors.
+- Preserve existing routes and data model.
+- If you must add a dependency, update package.json and lockfile accordingly.
+
+DELIVERABLES
+1) Updated checklist UI with new title, step order, and copy.
+2) Completion state with “Copy Booking Link”.
+3) Confetti celebration on first completion with persistence guard.
+4) Minimal code diff and brief notes in comments where you made changes.
+
+Proceed by:
+1) Locating the checklist code and current step logic
+2) Implementing the new step array + copy
+3) Adding completion detection + confetti
+4) Adding the copy-link CTA
+5) Verifying no repeated confetti and no regressions
