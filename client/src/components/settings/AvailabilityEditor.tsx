@@ -2,8 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Clock } from "lucide-react";
-import type { WeeklyAvailability, DayAvailability } from "@shared/schema";
+import { Button } from "@/components/ui/button";
+import { Clock, Plus, Trash2 } from "lucide-react";
+import type { WeeklyAvailability, DayAvailability, TimeRange } from "@shared/schema";
 
 const DAYS = [
   { key: "monday", label: "Monday" },
@@ -23,13 +24,13 @@ const TIME_OPTIONS = [
 ];
 
 const DEFAULT_AVAILABILITY: WeeklyAvailability = {
-  monday: { enabled: true, start: "09:00", end: "17:00" },
-  tuesday: { enabled: true, start: "09:00", end: "17:00" },
-  wednesday: { enabled: true, start: "09:00", end: "17:00" },
-  thursday: { enabled: true, start: "09:00", end: "17:00" },
-  friday: { enabled: true, start: "09:00", end: "17:00" },
-  saturday: { enabled: false, start: "09:00", end: "17:00" },
-  sunday: { enabled: false, start: "09:00", end: "17:00" },
+  monday: { enabled: true, ranges: [{ start: "09:00", end: "17:00" }] },
+  tuesday: { enabled: true, ranges: [{ start: "09:00", end: "17:00" }] },
+  wednesday: { enabled: true, ranges: [{ start: "09:00", end: "17:00" }] },
+  thursday: { enabled: true, ranges: [{ start: "09:00", end: "17:00" }] },
+  friday: { enabled: true, ranges: [{ start: "09:00", end: "17:00" }] },
+  saturday: { enabled: false, ranges: [{ start: "09:00", end: "17:00" }] },
+  sunday: { enabled: false, ranges: [{ start: "09:00", end: "17:00" }] },
 };
 
 interface AvailabilityEditorProps {
@@ -49,6 +50,28 @@ export function AvailabilityEditor({ availability, slotDuration, onChange }: Ava
     onChange(newAvailability, slotDuration);
   };
 
+  const updateRange = (day: keyof WeeklyAvailability, rangeIndex: number, updates: Partial<TimeRange>) => {
+    const dayData = currentAvailability[day];
+    const newRanges = [...dayData.ranges];
+    newRanges[rangeIndex] = { ...newRanges[rangeIndex], ...updates };
+    updateDay(day, { ranges: newRanges });
+  };
+
+  const addRange = (day: keyof WeeklyAvailability) => {
+    const dayData = currentAvailability[day];
+    const lastRange = dayData.ranges[dayData.ranges.length - 1];
+    const newStart = lastRange ? lastRange.end : "09:00";
+    const startIndex = TIME_OPTIONS.indexOf(newStart);
+    const newEnd = TIME_OPTIONS[Math.min(startIndex + 2, TIME_OPTIONS.length - 1)] || "17:00";
+    updateDay(day, { ranges: [...dayData.ranges, { start: newStart, end: newEnd }] });
+  };
+
+  const removeRange = (day: keyof WeeklyAvailability, rangeIndex: number) => {
+    const dayData = currentAvailability[day];
+    const newRanges = dayData.ranges.filter((_, i) => i !== rangeIndex);
+    updateDay(day, { ranges: newRanges.length > 0 ? newRanges : [{ start: "09:00", end: "17:00" }] });
+  };
+
   const formatTime = (time: string) => {
     const [hours, minutes] = time.split(":");
     const h = parseInt(hours);
@@ -64,7 +87,7 @@ export function AvailabilityEditor({ availability, slotDuration, onChange }: Ava
           <Clock className="h-5 w-5" />
           Availability
         </CardTitle>
-        <CardDescription>Set your working hours for each day</CardDescription>
+        <CardDescription>Set your working hours for each day. Add multiple time slots per day.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
@@ -85,59 +108,88 @@ export function AvailabilityEditor({ availability, slotDuration, onChange }: Ava
           </Select>
         </div>
 
-        <div className="space-y-3 pt-2">
+        <div className="space-y-4 pt-2">
           {DAYS.map(({ key, label }) => {
             const day = currentAvailability[key];
             return (
               <div 
                 key={key} 
-                className={`flex items-center gap-3 p-3 rounded-lg border ${day.enabled ? "bg-background" : "bg-muted/50"}`}
+                className={`p-4 rounded-lg border ${day.enabled ? "bg-background" : "bg-muted/50"}`}
                 data-testid={`availability-${key}`}
               >
-                <Switch
-                  checked={day.enabled}
-                  onCheckedChange={(enabled) => updateDay(key, { enabled })}
-                  data-testid={`switch-${key}`}
-                />
-                <span className={`w-24 font-medium ${!day.enabled ? "text-muted-foreground" : ""}`}>
-                  {label}
-                </span>
-                {day.enabled ? (
-                  <div className="flex items-center gap-2 flex-1">
-                    <Select
-                      value={day.start}
-                      onValueChange={(start) => updateDay(key, { start })}
+                <div className="flex items-center gap-3 mb-3">
+                  <Switch
+                    checked={day.enabled}
+                    onCheckedChange={(enabled) => updateDay(key, { enabled })}
+                    data-testid={`switch-${key}`}
+                  />
+                  <span className={`font-medium ${!day.enabled ? "text-muted-foreground" : ""}`}>
+                    {label}
+                  </span>
+                </div>
+
+                {day.enabled && (
+                  <div className="space-y-2 pl-10">
+                    {day.ranges.map((range, rangeIndex) => (
+                      <div key={rangeIndex} className="flex items-center gap-2 flex-wrap">
+                        <Select
+                          value={range.start}
+                          onValueChange={(start) => updateRange(key, rangeIndex, { start })}
+                        >
+                          <SelectTrigger className="w-28" data-testid={`select-${key}-${rangeIndex}-start`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TIME_OPTIONS.map((time) => (
+                              <SelectItem key={time} value={time}>
+                                {formatTime(time)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <span className="text-muted-foreground">to</span>
+                        <Select
+                          value={range.end}
+                          onValueChange={(end) => updateRange(key, rangeIndex, { end })}
+                        >
+                          <SelectTrigger className="w-28" data-testid={`select-${key}-${rangeIndex}-end`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TIME_OPTIONS.filter((t) => t > range.start).map((time) => (
+                              <SelectItem key={time} value={time}>
+                                {formatTime(time)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {day.ranges.length > 1 && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeRange(key, rangeIndex)}
+                            data-testid={`button-remove-range-${key}-${rangeIndex}`}
+                          >
+                            <Trash2 className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => addRange(key)}
+                      className="mt-1"
+                      data-testid={`button-add-range-${key}`}
                     >
-                      <SelectTrigger className="w-28" data-testid={`select-${key}-start`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {TIME_OPTIONS.map((time) => (
-                          <SelectItem key={time} value={time}>
-                            {formatTime(time)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <span className="text-muted-foreground">to</span>
-                    <Select
-                      value={day.end}
-                      onValueChange={(end) => updateDay(key, { end })}
-                    >
-                      <SelectTrigger className="w-28" data-testid={`select-${key}-end`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {TIME_OPTIONS.filter((t) => t > day.start).map((time) => (
-                          <SelectItem key={time} value={time}>
-                            {formatTime(time)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add time slot
+                    </Button>
                   </div>
-                ) : (
-                  <span className="text-sm text-muted-foreground">Unavailable</span>
+                )}
+
+                {!day.enabled && (
+                  <p className="text-sm text-muted-foreground pl-10">Unavailable</p>
                 )}
               </div>
             );

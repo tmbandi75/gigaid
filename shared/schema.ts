@@ -35,10 +35,14 @@ export const users = pgTable("users", {
 });
 
 // Availability type for frontend use
-export interface DayAvailability {
-  enabled: boolean;
+export interface TimeRange {
   start: string; // "09:00"
   end: string; // "17:00"
+}
+
+export interface DayAvailability {
+  enabled: boolean;
+  ranges: TimeRange[]; // Multiple time ranges per day
 }
 
 export interface WeeklyAvailability {

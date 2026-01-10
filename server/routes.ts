@@ -731,22 +731,29 @@ export async function registerRoutes(
         .filter((j) => j.scheduledDate === dateStr)
         .map((j) => j.scheduledTime);
 
-      // Generate available slots
+      // Generate available slots from all time ranges
       const slots: string[] = [];
-      const [startH, startM] = dayConfig.start.split(":").map(Number);
-      const [endH, endM] = dayConfig.end.split(":").map(Number);
-      const startMinutes = startH * 60 + startM;
-      const endMinutes = endH * 60 + endM;
+      const ranges = dayConfig.ranges || [{ start: dayConfig.start, end: dayConfig.end }];
 
-      for (let m = startMinutes; m + slotDuration <= endMinutes; m += slotDuration) {
-        const h = Math.floor(m / 60);
-        const min = m % 60;
-        const timeStr = `${h.toString().padStart(2, "0")}:${min.toString().padStart(2, "0")}`;
-        
-        if (!bookedTimes.includes(timeStr)) {
-          slots.push(timeStr);
+      for (const range of ranges) {
+        const [startH, startM] = range.start.split(":").map(Number);
+        const [endH, endM] = range.end.split(":").map(Number);
+        const startMinutes = startH * 60 + startM;
+        const endMinutes = endH * 60 + endM;
+
+        for (let m = startMinutes; m + slotDuration <= endMinutes; m += slotDuration) {
+          const h = Math.floor(m / 60);
+          const min = m % 60;
+          const timeStr = `${h.toString().padStart(2, "0")}:${min.toString().padStart(2, "0")}`;
+          
+          if (!bookedTimes.includes(timeStr) && !slots.includes(timeStr)) {
+            slots.push(timeStr);
+          }
         }
       }
+
+      // Sort slots chronologically
+      slots.sort();
 
       res.json({ 
         available: true, 
