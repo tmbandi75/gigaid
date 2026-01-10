@@ -111,11 +111,8 @@ export function PaymentConfirmation({
 
   const confirmMutation = useMutation({
     mutationFn: async ({ paymentId, notes }: { paymentId: string; notes?: string }) => {
-      return apiRequest(`/api/payments/${paymentId}/confirm`, {
-        method: "POST",
-        body: JSON.stringify({ notes }),
-        headers: { "Content-Type": "application/json" },
-      });
+      const response = await apiRequest("POST", `/api/payments/${paymentId}/confirm`, { notes });
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
@@ -141,11 +138,8 @@ export function PaymentConfirmation({
 
   const markPaidMutation = useMutation({
     mutationFn: async ({ paymentId, notes }: { paymentId: string; notes?: string }) => {
-      return apiRequest(`/api/payments/${paymentId}/mark-paid`, {
-        method: "POST",
-        body: JSON.stringify({ notes }),
-        headers: { "Content-Type": "application/json" },
-      });
+      const response = await apiRequest("POST", `/api/payments/${paymentId}/mark-paid`, { notes });
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });

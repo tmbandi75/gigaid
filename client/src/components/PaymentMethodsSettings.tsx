@@ -138,12 +138,8 @@ export function PaymentMethodsSettings() {
 
   const bulkUpdateMutation = useMutation({
     mutationFn: async (methods: { type: PaymentMethodType; label: string | null; instructions: string | null; isEnabled: boolean }[]) => {
-      const response = await apiRequest("/api/payment-methods/bulk-update", {
-        method: "POST",
-        body: JSON.stringify({ methods }),
-        headers: { "Content-Type": "application/json" },
-      });
-      return response;
+      const response = await apiRequest("POST", "/api/payment-methods/bulk-update", { methods });
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/payment-methods"] });

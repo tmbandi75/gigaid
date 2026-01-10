@@ -23,6 +23,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import { AvailabilityEditor, DEFAULT_AVAILABILITY } from "@/components/settings/AvailabilityEditor";
+import { PaymentMethodsSettings } from "@/components/PaymentMethodsSettings";
 import type { Referral, WeeklyAvailability } from "@shared/schema";
 
 interface ReferralData {
@@ -299,6 +300,8 @@ export default function Settings() {
           onChange={handleAvailabilityChange}
         />
       )}
+
+      <PaymentMethodsSettings />
 
       <Card data-testid="card-referrals">
         <CardHeader>
