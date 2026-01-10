@@ -14,6 +14,8 @@ import {
   type DashboardSummary,
   type WeeklyStats,
   type MonthlyStats,
+  type UserPaymentMethod, type InsertUserPaymentMethod,
+  type JobPayment, type InsertJobPayment,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -102,6 +104,20 @@ export interface IStorage {
 
   // Dashboard
   getDashboardSummary(userId: string): Promise<DashboardSummary>;
+
+  // Payment Methods
+  getUserPaymentMethods(userId: string): Promise<UserPaymentMethod[]>;
+  getUserPaymentMethod(id: string): Promise<UserPaymentMethod | undefined>;
+  createUserPaymentMethod(method: InsertUserPaymentMethod): Promise<UserPaymentMethod>;
+  updateUserPaymentMethod(id: string, updates: Partial<UserPaymentMethod>): Promise<UserPaymentMethod | undefined>;
+  deleteUserPaymentMethod(id: string): Promise<boolean>;
+
+  // Job Payments
+  getJobPayments(userId: string): Promise<JobPayment[]>;
+  getJobPayment(id: string): Promise<JobPayment | undefined>;
+  getJobPaymentsByInvoice(invoiceId: string): Promise<JobPayment[]>;
+  createJobPayment(payment: InsertJobPayment): Promise<JobPayment>;
+  updateJobPayment(id: string, updates: Partial<JobPayment>): Promise<JobPayment | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -117,6 +133,8 @@ export class MemStorage implements IStorage {
   private bookingRequests: Map<string, BookingRequest>;
   private voiceNotes: Map<string, VoiceNote>;
   private reviews: Map<string, Review>;
+  private userPaymentMethods: Map<string, UserPaymentMethod>;
+  private jobPayments: Map<string, JobPayment>;
 
   constructor() {
     this.users = new Map();
@@ -131,6 +149,8 @@ export class MemStorage implements IStorage {
     this.bookingRequests = new Map();
     this.voiceNotes = new Map();
     this.reviews = new Map();
+    this.userPaymentMethods = new Map();
+    this.jobPayments = new Map();
     
     this.seedDemoData();
   }
@@ -1054,6 +1074,94 @@ export class MemStorage implements IStorage {
       weeklyStats,
       monthlyStats,
     };
+  }
+
+  // User Payment Methods
+  async getUserPaymentMethods(userId: string): Promise<UserPaymentMethod[]> {
+    return Array.from(this.userPaymentMethods.values())
+      .filter(m => m.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getUserPaymentMethod(id: string): Promise<UserPaymentMethod | undefined> {
+    return this.userPaymentMethods.get(id);
+  }
+
+  async createUserPaymentMethod(method: InsertUserPaymentMethod): Promise<UserPaymentMethod> {
+    const id = randomUUID();
+    const newMethod: UserPaymentMethod = {
+      ...method,
+      id,
+      label: method.label || null,
+      instructions: method.instructions || null,
+      isEnabled: method.isEnabled ?? true,
+      createdAt: new Date().toISOString(),
+      updatedAt: null,
+    };
+    this.userPaymentMethods.set(id, newMethod);
+    return newMethod;
+  }
+
+  async updateUserPaymentMethod(id: string, updates: Partial<UserPaymentMethod>): Promise<UserPaymentMethod | undefined> {
+    const method = this.userPaymentMethods.get(id);
+    if (!method) return undefined;
+    const updated: UserPaymentMethod = { 
+      ...method, 
+      ...updates, 
+      updatedAt: new Date().toISOString() 
+    };
+    this.userPaymentMethods.set(id, updated);
+    return updated;
+  }
+
+  async deleteUserPaymentMethod(id: string): Promise<boolean> {
+    return this.userPaymentMethods.delete(id);
+  }
+
+  // Job Payments
+  async getJobPayments(userId: string): Promise<JobPayment[]> {
+    return Array.from(this.jobPayments.values())
+      .filter(p => p.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getJobPayment(id: string): Promise<JobPayment | undefined> {
+    return this.jobPayments.get(id);
+  }
+
+  async getJobPaymentsByInvoice(invoiceId: string): Promise<JobPayment[]> {
+    return Array.from(this.jobPayments.values())
+      .filter(p => p.invoiceId === invoiceId);
+  }
+
+  async createJobPayment(payment: InsertJobPayment): Promise<JobPayment> {
+    const id = randomUUID();
+    const newPayment: JobPayment = {
+      ...payment,
+      id,
+      invoiceId: payment.invoiceId || null,
+      jobId: payment.jobId || null,
+      clientName: payment.clientName || null,
+      clientEmail: payment.clientEmail || null,
+      status: payment.status || "pending",
+      stripePaymentIntentId: payment.stripePaymentIntentId || null,
+      stripeCheckoutSessionId: payment.stripeCheckoutSessionId || null,
+      proofUrl: payment.proofUrl || null,
+      notes: payment.notes || null,
+      paidAt: payment.paidAt || null,
+      confirmedAt: payment.confirmedAt || null,
+      createdAt: new Date().toISOString(),
+    };
+    this.jobPayments.set(id, newPayment);
+    return newPayment;
+  }
+
+  async updateJobPayment(id: string, updates: Partial<JobPayment>): Promise<JobPayment | undefined> {
+    const payment = this.jobPayments.get(id);
+    if (!payment) return undefined;
+    const updated: JobPayment = { ...payment, ...updates };
+    this.jobPayments.set(id, updated);
+    return updated;
   }
 }
 

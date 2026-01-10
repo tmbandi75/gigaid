@@ -168,9 +168,62 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
 export type InsertLead = z.infer<typeof insertLeadSchema>;
 export type Lead = typeof leads.$inferSelect;
 
-// Payment Methods
-export const paymentMethods = ["cash", "zelle", "venmo", "other"] as const;
+// Payment Methods (expanded for hybrid system)
+export const paymentMethods = ["stripe", "zelle", "venmo", "cashapp", "cash", "check", "other"] as const;
 export type PaymentMethod = (typeof paymentMethods)[number];
+
+// Payment Status
+export const paymentStatuses = ["pending", "processing", "paid", "confirmed", "failed", "refunded"] as const;
+export type PaymentStatus = (typeof paymentStatuses)[number];
+
+// User Payment Methods - what payment methods a gig worker accepts
+export const userPaymentMethods = pgTable("user_payment_methods", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  type: text("type").notNull(), // 'stripe', 'zelle', 'venmo', 'cashapp', 'cash', 'check'
+  label: text("label"), // e.g., "@janedoe" for Venmo
+  instructions: text("instructions"), // e.g., "Send to janedoe@gmail.com"
+  isEnabled: boolean("is_enabled").default(true),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at"),
+});
+
+export const insertUserPaymentMethodSchema = createInsertSchema(userPaymentMethods).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertUserPaymentMethod = z.infer<typeof insertUserPaymentMethodSchema>;
+export type UserPaymentMethod = typeof userPaymentMethods.$inferSelect;
+
+// Job/Invoice Payments - track payments for jobs/invoices
+export const jobPayments = pgTable("job_payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invoiceId: varchar("invoice_id"),
+  jobId: varchar("job_id"),
+  userId: varchar("user_id").notNull(), // the gig worker
+  clientName: text("client_name"),
+  clientEmail: text("client_email"),
+  amount: integer("amount").notNull(), // in cents
+  method: text("method").notNull(), // 'stripe', 'zelle', 'venmo', etc.
+  status: text("status").notNull().default("pending"), // pending, processing, paid, confirmed, failed
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  stripeCheckoutSessionId: text("stripe_checkout_session_id"),
+  proofUrl: text("proof_url"), // for manual payments, screenshot/receipt
+  notes: text("notes"),
+  paidAt: text("paid_at"),
+  confirmedAt: text("confirmed_at"),
+  createdAt: text("created_at").notNull(),
+});
+
+export const insertJobPaymentSchema = createInsertSchema(jobPayments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertJobPayment = z.infer<typeof insertJobPaymentSchema>;
+export type JobPayment = typeof jobPayments.$inferSelect;
 
 // Invoice Status
 export const invoiceStatuses = ["draft", "sent", "paid"] as const;
