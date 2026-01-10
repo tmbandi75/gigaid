@@ -631,8 +631,18 @@ export async function registerRoutes(
         });
       }
       
+      // Format time with AM/PM (e.g., "10:00 AM")
+      let formattedTime = "";
+      if (request.preferredTime) {
+        const [hours, minutes] = request.preferredTime.split(":");
+        const hour = parseInt(hours, 10);
+        const ampm = hour >= 12 ? "PM" : "AM";
+        const hour12 = hour % 12 || 12;
+        formattedTime = `${hour12}:${minutes} ${ampm}`;
+      }
+      
       const preferredDateTime = request.preferredDate && request.preferredTime
-        ? `on ${formattedDate} at ${request.preferredTime}`
+        ? `on ${formattedDate} at ${formattedTime}`
         : request.preferredDate
         ? `on ${formattedDate}`
         : "at your requested time";
