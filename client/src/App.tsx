@@ -14,6 +14,9 @@ import Leads from "@/pages/Leads";
 import LeadForm from "@/pages/LeadForm";
 import Invoices from "@/pages/Invoices";
 import InvoiceForm from "@/pages/InvoiceForm";
+import Reminders from "@/pages/Reminders";
+import Crew from "@/pages/Crew";
+import Settings from "@/pages/Settings";
 import More from "@/pages/More";
 import Profile from "@/pages/Profile";
 import NotFound from "@/pages/not-found";
@@ -31,6 +34,9 @@ function Router() {
       <Route path="/invoices" component={Invoices} />
       <Route path="/invoices/new" component={InvoiceForm} />
       <Route path="/invoices/:id" component={InvoiceForm} />
+      <Route path="/reminders" component={Reminders} />
+      <Route path="/crew" component={Crew} />
+      <Route path="/settings" component={Settings} />
       <Route path="/more" component={More} />
       <Route path="/profile" component={Profile} />
       <Route component={NotFound} />

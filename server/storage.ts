@@ -3,48 +3,132 @@ import {
   type Job, type InsertJob,
   type Lead, type InsertLead,
   type Invoice, type InsertInvoice,
-  type DashboardSummary
+  type Reminder, type InsertReminder,
+  type CrewMember, type InsertCrewMember,
+  type Referral, type InsertReferral,
+  type BookingRequest, type InsertBookingRequest,
+  type VoiceNote, type InsertVoiceNote,
+  type Review, type InsertReview,
+  type OtpCode, type InsertOtp,
+  type Session,
+  type DashboardSummary,
+  type WeeklyStats,
+  type MonthlyStats,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
+  // Users
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByPhone(phone: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByPublicSlug(slug: string): Promise<User | undefined>;
+  getUserByReferralCode(code: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
 
+  // OTP
+  createOtp(otp: InsertOtp): Promise<OtpCode>;
+  getOtp(identifier: string, code: string): Promise<OtpCode | undefined>;
+  verifyOtp(id: string): Promise<boolean>;
+
+  // Sessions
+  createSession(userId: string, token: string, expiresAt: string): Promise<Session>;
+  getSessionByToken(token: string): Promise<Session | undefined>;
+  deleteSession(token: string): Promise<boolean>;
+
+  // Jobs
   getJobs(userId: string): Promise<Job[]>;
   getJob(id: string): Promise<Job | undefined>;
   createJob(job: InsertJob): Promise<Job>;
   updateJob(id: string, updates: Partial<InsertJob>): Promise<Job | undefined>;
   deleteJob(id: string): Promise<boolean>;
 
+  // Leads
   getLeads(userId: string): Promise<Lead[]>;
   getLead(id: string): Promise<Lead | undefined>;
   createLead(lead: InsertLead): Promise<Lead>;
   updateLead(id: string, updates: Partial<InsertLead>): Promise<Lead | undefined>;
   deleteLead(id: string): Promise<boolean>;
 
+  // Invoices
   getInvoices(userId: string): Promise<Invoice[]>;
   getInvoice(id: string): Promise<Invoice | undefined>;
+  getInvoiceByShareLink(shareLink: string): Promise<Invoice | undefined>;
   createInvoice(invoice: InsertInvoice): Promise<Invoice>;
   updateInvoice(id: string, updates: Partial<InsertInvoice>): Promise<Invoice | undefined>;
   deleteInvoice(id: string): Promise<boolean>;
 
+  // Reminders
+  getReminders(userId: string): Promise<Reminder[]>;
+  getReminder(id: string): Promise<Reminder | undefined>;
+  getPendingReminders(): Promise<Reminder[]>;
+  createReminder(reminder: InsertReminder): Promise<Reminder>;
+  updateReminder(id: string, updates: Partial<Reminder>): Promise<Reminder | undefined>;
+  deleteReminder(id: string): Promise<boolean>;
+
+  // Crew
+  getCrewMembers(userId: string): Promise<CrewMember[]>;
+  getCrewMember(id: string): Promise<CrewMember | undefined>;
+  createCrewMember(member: InsertCrewMember): Promise<CrewMember>;
+  updateCrewMember(id: string, updates: Partial<CrewMember>): Promise<CrewMember | undefined>;
+  deleteCrewMember(id: string): Promise<boolean>;
+
+  // Referrals
+  getReferrals(userId: string): Promise<Referral[]>;
+  createReferral(referral: InsertReferral): Promise<Referral>;
+  updateReferral(id: string, updates: Partial<Referral>): Promise<Referral | undefined>;
+
+  // Booking Requests
+  getBookingRequests(userId: string): Promise<BookingRequest[]>;
+  getBookingRequest(id: string): Promise<BookingRequest | undefined>;
+  createBookingRequest(request: InsertBookingRequest): Promise<BookingRequest>;
+  updateBookingRequest(id: string, updates: Partial<BookingRequest>): Promise<BookingRequest | undefined>;
+
+  // Voice Notes
+  getVoiceNotes(userId: string): Promise<VoiceNote[]>;
+  getVoiceNote(id: string): Promise<VoiceNote | undefined>;
+  createVoiceNote(note: InsertVoiceNote): Promise<VoiceNote>;
+  updateVoiceNote(id: string, updates: Partial<VoiceNote>): Promise<VoiceNote | undefined>;
+  deleteVoiceNote(id: string): Promise<boolean>;
+
+  // Reviews
+  getReviews(userId: string): Promise<Review[]>;
+  getPublicReviews(userId: string): Promise<Review[]>;
+  createReview(review: InsertReview): Promise<Review>;
+
+  // Dashboard
   getDashboardSummary(userId: string): Promise<DashboardSummary>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
+  private otpCodes: Map<string, OtpCode>;
+  private sessions: Map<string, Session>;
   private jobs: Map<string, Job>;
   private leads: Map<string, Lead>;
   private invoices: Map<string, Invoice>;
+  private reminders: Map<string, Reminder>;
+  private crewMembers: Map<string, CrewMember>;
+  private referrals: Map<string, Referral>;
+  private bookingRequests: Map<string, BookingRequest>;
+  private voiceNotes: Map<string, VoiceNote>;
+  private reviews: Map<string, Review>;
 
   constructor() {
     this.users = new Map();
+    this.otpCodes = new Map();
+    this.sessions = new Map();
     this.jobs = new Map();
     this.leads = new Map();
     this.invoices = new Map();
+    this.reminders = new Map();
+    this.crewMembers = new Map();
+    this.referrals = new Map();
+    this.bookingRequests = new Map();
+    this.voiceNotes = new Map();
+    this.reviews = new Map();
     
     this.seedDemoData();
   }
@@ -59,6 +143,36 @@ export class MemStorage implements IStorage {
     dayAfter.setDate(dayAfter.getDate() + 2);
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
+
+    // Seed demo user
+    const demoUser: User = {
+      id: userId,
+      username: "demo",
+      password: "demo123",
+      firstName: "Gig",
+      lastName: "Worker",
+      name: "Gig Worker",
+      phone: "(555) 000-0000",
+      countryCode: "+1",
+      email: "gig@example.com",
+      photo: null,
+      businessName: "Pro Gig Services",
+      services: ["plumbing", "electrical", "cleaning"],
+      bio: "Professional gig worker serving the Springfield area.",
+      onboardingCompleted: false,
+      onboardingStep: 0,
+      isPro: false,
+      proExpiresAt: null,
+      notifyBySms: true,
+      notifyByEmail: true,
+      lastActiveAt: today.toISOString(),
+      publicProfileEnabled: true,
+      publicProfileSlug: "gig-worker",
+      referralCode: "GIGPRO2024",
+      referredBy: null,
+      createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+    };
+    this.users.set(userId, demoUser);
     
     const jobs: Job[] = [
       {
@@ -75,8 +189,13 @@ export class MemStorage implements IStorage {
         price: 15000,
         photos: null,
         voiceNote: null,
+        voiceNoteTranscript: null,
+        voiceNoteSummary: null,
         clientName: "Sarah Johnson",
         clientPhone: "(555) 123-4567",
+        assignedCrewId: null,
+        materials: null,
+        notes: null,
         createdAt: yesterday.toISOString(),
       },
       {
@@ -93,8 +212,13 @@ export class MemStorage implements IStorage {
         price: 25000,
         photos: null,
         voiceNote: null,
+        voiceNoteTranscript: null,
+        voiceNoteSummary: null,
         clientName: "Mike Chen",
         clientPhone: "(555) 234-5678",
+        assignedCrewId: null,
+        materials: null,
+        notes: null,
         createdAt: yesterday.toISOString(),
       },
       {
@@ -111,8 +235,13 @@ export class MemStorage implements IStorage {
         price: 35000,
         photos: null,
         voiceNote: null,
+        voiceNoteTranscript: null,
+        voiceNoteSummary: null,
         clientName: "Emily Davis",
         clientPhone: "(555) 345-6789",
+        assignedCrewId: null,
+        materials: null,
+        notes: null,
         createdAt: today.toISOString(),
       },
       {
@@ -129,8 +258,13 @@ export class MemStorage implements IStorage {
         price: 12500,
         photos: null,
         voiceNote: null,
+        voiceNoteTranscript: null,
+        voiceNoteSummary: null,
         clientName: "James Wilson",
         clientPhone: "(555) 456-7890",
+        assignedCrewId: null,
+        materials: null,
+        notes: null,
         createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
       },
     ];
@@ -148,8 +282,12 @@ export class MemStorage implements IStorage {
         description: "Needs water heater replacement, asked for quote",
         status: "new",
         source: "booking_form",
+        score: 75,
+        notes: null,
         createdAt: today.toISOString(),
         lastContactedAt: null,
+        convertedAt: null,
+        convertedJobId: null,
       },
       {
         id: "lead-2",
@@ -161,8 +299,12 @@ export class MemStorage implements IStorage {
         description: "Interested in whole-house rewiring estimate",
         status: "contacted",
         source: "referral",
+        score: 60,
+        notes: null,
         createdAt: yesterday.toISOString(),
         lastContactedAt: today.toISOString(),
+        convertedAt: null,
+        convertedJobId: null,
       },
       {
         id: "lead-3",
@@ -174,8 +316,12 @@ export class MemStorage implements IStorage {
         description: "Office cleaning, 3x per week contract",
         status: "new",
         source: "manual",
+        score: 90,
+        notes: null,
         createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
         lastContactedAt: null,
+        convertedAt: null,
+        convertedJobId: null,
       },
     ];
 
@@ -192,8 +338,12 @@ export class MemStorage implements IStorage {
         clientPhone: "(555) 456-7890",
         serviceDescription: "Unclogged bathroom drain - removed hair and soap buildup, tested flow",
         amount: 12500,
+        tax: 0,
+        discount: 0,
         status: "paid",
         paymentMethod: "zelle",
+        shareLink: null,
+        offlineDraft: false,
         createdAt: yesterday.toISOString(),
         sentAt: yesterday.toISOString(),
         paidAt: today.toISOString(),
@@ -208,8 +358,12 @@ export class MemStorage implements IStorage {
         clientPhone: "(555) 890-1234",
         serviceDescription: "Emergency pipe repair - replaced burst pipe section under kitchen sink",
         amount: 28000,
+        tax: 0,
+        discount: 0,
         status: "sent",
         paymentMethod: null,
+        shareLink: "inv-002-share",
+        offlineDraft: false,
         createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
         sentAt: yesterday.toISOString(),
         paidAt: null,
@@ -224,8 +378,12 @@ export class MemStorage implements IStorage {
         clientPhone: "(555) 901-2345",
         serviceDescription: "Installed 3 new outlets in garage workshop",
         amount: 32000,
+        tax: 0,
+        discount: 0,
         status: "paid",
         paymentMethod: "cash",
+        shareLink: null,
+        offlineDraft: false,
         createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
         sentAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
         paidAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
@@ -233,16 +391,82 @@ export class MemStorage implements IStorage {
     ];
 
     invoices.forEach(inv => this.invoices.set(inv.id, inv));
+
+    // Seed demo reminders
+    const reminders: Reminder[] = [
+      {
+        id: "rem-1",
+        userId,
+        jobId: "job-1",
+        clientName: "Sarah Johnson",
+        clientPhone: "(555) 123-4567",
+        clientEmail: null,
+        message: "Reminder: Your plumbing appointment is tomorrow at 2:00 PM",
+        channel: "sms",
+        scheduledAt: today.toISOString(),
+        status: "pending",
+        acknowledgedAt: null,
+        createdAt: yesterday.toISOString(),
+      },
+    ];
+    reminders.forEach(r => this.reminders.set(r.id, r));
+
+    // Seed demo crew member
+    const crewMembers: CrewMember[] = [
+      {
+        id: "crew-1",
+        userId,
+        memberUserId: null,
+        name: "John Helper",
+        phone: "(555) 111-2222",
+        email: "john.helper@email.com",
+        role: "helper",
+        status: "joined",
+        invitedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        joinedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+    ];
+    crewMembers.forEach(c => this.crewMembers.set(c.id, c));
+
+    // Seed demo reviews
+    const reviews: Review[] = [
+      {
+        id: "review-1",
+        userId,
+        jobId: "job-4",
+        clientName: "James Wilson",
+        rating: 5,
+        comment: "Excellent work! Fixed the drain quickly and professionally.",
+        isPublic: true,
+        createdAt: today.toISOString(),
+      },
+    ];
+    reviews.forEach(r => this.reviews.set(r.id, r));
   }
 
+  // User methods
   async getUser(id: string): Promise<User | undefined> {
     return this.users.get(id);
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    return Array.from(this.users.values()).find(u => u.username === username);
+  }
+
+  async getUserByPhone(phone: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(u => u.phone === phone);
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(u => u.email === email);
+  }
+
+  async getUserByPublicSlug(slug: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(u => u.publicProfileSlug === slug);
+  }
+
+  async getUserByReferralCode(code: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(u => u.referralCode === code);
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -250,37 +474,113 @@ export class MemStorage implements IStorage {
     const user: User = { 
       ...insertUser, 
       id,
+      firstName: null,
+      lastName: null,
       name: null,
       phone: null,
+      countryCode: null,
       email: null,
       photo: null,
+      businessName: null,
+      services: null,
+      bio: null,
       onboardingCompleted: false,
+      onboardingStep: 0,
+      isPro: false,
+      proExpiresAt: null,
+      notifyBySms: true,
+      notifyByEmail: true,
+      lastActiveAt: new Date().toISOString(),
+      publicProfileEnabled: false,
+      publicProfileSlug: null,
+      referralCode: `REF${id.slice(0, 8).toUpperCase()}`,
+      referredBy: null,
+      createdAt: new Date().toISOString(),
     };
     this.users.set(id, user);
     return user;
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
-    const user = this.users.get(id);
+    let user = this.users.get(id);
     if (!user) {
-      const newUser: User = {
+      user = {
         id,
         username: "demo",
         password: "demo123",
-        name: updates.name || null,
-        phone: updates.phone || null,
-        email: updates.email || null,
-        photo: updates.photo || null,
+        firstName: null,
+        lastName: null,
+        name: null,
+        phone: null,
+        countryCode: null,
+        email: null,
+        photo: null,
+        businessName: null,
+        services: null,
+        bio: null,
         onboardingCompleted: false,
+        onboardingStep: 0,
+        isPro: false,
+        proExpiresAt: null,
+        notifyBySms: true,
+        notifyByEmail: true,
+        lastActiveAt: new Date().toISOString(),
+        publicProfileEnabled: false,
+        publicProfileSlug: null,
+        referralCode: null,
+        referredBy: null,
+        createdAt: new Date().toISOString(),
       };
-      this.users.set(id, newUser);
-      return newUser;
     }
     const updatedUser: User = { ...user, ...updates };
     this.users.set(id, updatedUser);
     return updatedUser;
   }
 
+  // OTP methods
+  async createOtp(otp: InsertOtp): Promise<OtpCode> {
+    const id = randomUUID();
+    const otpCode: OtpCode = {
+      ...otp,
+      id,
+      verified: false,
+      createdAt: new Date().toISOString(),
+    };
+    this.otpCodes.set(id, otpCode);
+    return otpCode;
+  }
+
+  async getOtp(identifier: string, code: string): Promise<OtpCode | undefined> {
+    return Array.from(this.otpCodes.values()).find(
+      o => o.identifier === identifier && o.code === code && !o.verified
+    );
+  }
+
+  async verifyOtp(id: string): Promise<boolean> {
+    const otp = this.otpCodes.get(id);
+    if (!otp) return false;
+    otp.verified = true;
+    this.otpCodes.set(id, otp);
+    return true;
+  }
+
+  // Session methods
+  async createSession(userId: string, token: string, expiresAt: string): Promise<Session> {
+    const id = randomUUID();
+    const session: Session = { id, userId, token, expiresAt, createdAt: new Date().toISOString() };
+    this.sessions.set(token, session);
+    return session;
+  }
+
+  async getSessionByToken(token: string): Promise<Session | undefined> {
+    return this.sessions.get(token);
+  }
+
+  async deleteSession(token: string): Promise<boolean> {
+    return this.sessions.delete(token);
+  }
+
+  // Job methods
   async getJobs(userId: string): Promise<Job[]> {
     return Array.from(this.jobs.values())
       .filter(job => job.userId === userId)
@@ -303,8 +603,13 @@ export class MemStorage implements IStorage {
       price: insertJob.price || null,
       photos: insertJob.photos || null,
       voiceNote: insertJob.voiceNote || null,
+      voiceNoteTranscript: insertJob.voiceNoteTranscript || null,
+      voiceNoteSummary: insertJob.voiceNoteSummary || null,
       clientName: insertJob.clientName || null,
       clientPhone: insertJob.clientPhone || null,
+      assignedCrewId: insertJob.assignedCrewId || null,
+      materials: insertJob.materials || null,
+      notes: insertJob.notes || null,
       createdAt: new Date().toISOString(),
     };
     this.jobs.set(id, job);
@@ -314,7 +619,6 @@ export class MemStorage implements IStorage {
   async updateJob(id: string, updates: Partial<InsertJob>): Promise<Job | undefined> {
     const job = this.jobs.get(id);
     if (!job) return undefined;
-    
     const updated: Job = { ...job, ...updates };
     this.jobs.set(id, updated);
     return updated;
@@ -324,6 +628,7 @@ export class MemStorage implements IStorage {
     return this.jobs.delete(id);
   }
 
+  // Lead methods
   async getLeads(userId: string): Promise<Lead[]> {
     return Array.from(this.leads.values())
       .filter(lead => lead.userId === userId)
@@ -344,8 +649,12 @@ export class MemStorage implements IStorage {
       description: insertLead.description || null,
       status: insertLead.status || "new",
       source: insertLead.source || "manual",
+      score: insertLead.score || 50,
+      notes: insertLead.notes || null,
       createdAt: new Date().toISOString(),
       lastContactedAt: insertLead.lastContactedAt || null,
+      convertedAt: null,
+      convertedJobId: null,
     };
     this.leads.set(id, lead);
     return lead;
@@ -354,10 +663,12 @@ export class MemStorage implements IStorage {
   async updateLead(id: string, updates: Partial<InsertLead>): Promise<Lead | undefined> {
     const lead = this.leads.get(id);
     if (!lead) return undefined;
-    
     const updated: Lead = { ...lead, ...updates };
     if (updates.status === "contacted" && !lead.lastContactedAt) {
       updated.lastContactedAt = new Date().toISOString();
+    }
+    if (updates.status === "converted" && !lead.convertedAt) {
+      updated.convertedAt = new Date().toISOString();
     }
     this.leads.set(id, updated);
     return updated;
@@ -367,6 +678,7 @@ export class MemStorage implements IStorage {
     return this.leads.delete(id);
   }
 
+  // Invoice methods
   async getInvoices(userId: string): Promise<Invoice[]> {
     return Array.from(this.invoices.values())
       .filter(inv => inv.userId === userId)
@@ -377,16 +689,25 @@ export class MemStorage implements IStorage {
     return this.invoices.get(id);
   }
 
+  async getInvoiceByShareLink(shareLink: string): Promise<Invoice | undefined> {
+    return Array.from(this.invoices.values()).find(inv => inv.shareLink === shareLink);
+  }
+
   async createInvoice(insertInvoice: InsertInvoice): Promise<Invoice> {
     const id = randomUUID();
+    const shareLink = `inv-${id.slice(0, 8)}`;
     const invoice: Invoice = {
       ...insertInvoice,
       id,
       jobId: insertInvoice.jobId || null,
       clientEmail: insertInvoice.clientEmail || null,
       clientPhone: insertInvoice.clientPhone || null,
+      tax: insertInvoice.tax || 0,
+      discount: insertInvoice.discount || 0,
       status: insertInvoice.status || "draft",
       paymentMethod: insertInvoice.paymentMethod || null,
+      shareLink,
+      offlineDraft: insertInvoice.offlineDraft || false,
       createdAt: new Date().toISOString(),
       sentAt: insertInvoice.sentAt || null,
       paidAt: insertInvoice.paidAt || null,
@@ -398,7 +719,6 @@ export class MemStorage implements IStorage {
   async updateInvoice(id: string, updates: Partial<InsertInvoice>): Promise<Invoice | undefined> {
     const invoice = this.invoices.get(id);
     if (!invoice) return undefined;
-    
     const updated: Invoice = { ...invoice, ...updates };
     this.invoices.set(id, updated);
     return updated;
@@ -408,12 +728,236 @@ export class MemStorage implements IStorage {
     return this.invoices.delete(id);
   }
 
+  // Reminder methods
+  async getReminders(userId: string): Promise<Reminder[]> {
+    return Array.from(this.reminders.values())
+      .filter(r => r.userId === userId)
+      .sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime());
+  }
+
+  async getReminder(id: string): Promise<Reminder | undefined> {
+    return this.reminders.get(id);
+  }
+
+  async getPendingReminders(): Promise<Reminder[]> {
+    const now = new Date().toISOString();
+    return Array.from(this.reminders.values())
+      .filter(r => r.status === "pending" && r.scheduledAt <= now);
+  }
+
+  async createReminder(insertReminder: InsertReminder): Promise<Reminder> {
+    const id = randomUUID();
+    const reminder: Reminder = {
+      ...insertReminder,
+      id,
+      jobId: insertReminder.jobId || null,
+      clientPhone: insertReminder.clientPhone || null,
+      clientEmail: insertReminder.clientEmail || null,
+      channel: insertReminder.channel || "sms",
+      status: "pending",
+      acknowledgedAt: null,
+      createdAt: new Date().toISOString(),
+    };
+    this.reminders.set(id, reminder);
+    return reminder;
+  }
+
+  async updateReminder(id: string, updates: Partial<Reminder>): Promise<Reminder | undefined> {
+    const reminder = this.reminders.get(id);
+    if (!reminder) return undefined;
+    const updated: Reminder = { ...reminder, ...updates };
+    this.reminders.set(id, updated);
+    return updated;
+  }
+
+  async deleteReminder(id: string): Promise<boolean> {
+    return this.reminders.delete(id);
+  }
+
+  // Crew methods
+  async getCrewMembers(userId: string): Promise<CrewMember[]> {
+    return Array.from(this.crewMembers.values()).filter(c => c.userId === userId);
+  }
+
+  async getCrewMember(id: string): Promise<CrewMember | undefined> {
+    return this.crewMembers.get(id);
+  }
+
+  async createCrewMember(insertMember: InsertCrewMember): Promise<CrewMember> {
+    const id = randomUUID();
+    const member: CrewMember = {
+      ...insertMember,
+      id,
+      memberUserId: insertMember.memberUserId || null,
+      phone: insertMember.phone || null,
+      email: insertMember.email || null,
+      role: insertMember.role || "helper",
+      status: "invited",
+      invitedAt: new Date().toISOString(),
+      joinedAt: null,
+    };
+    this.crewMembers.set(id, member);
+    return member;
+  }
+
+  async updateCrewMember(id: string, updates: Partial<CrewMember>): Promise<CrewMember | undefined> {
+    const member = this.crewMembers.get(id);
+    if (!member) return undefined;
+    const updated: CrewMember = { ...member, ...updates };
+    if (updates.status === "joined" && !member.joinedAt) {
+      updated.joinedAt = new Date().toISOString();
+    }
+    this.crewMembers.set(id, updated);
+    return updated;
+  }
+
+  async deleteCrewMember(id: string): Promise<boolean> {
+    return this.crewMembers.delete(id);
+  }
+
+  // Referral methods
+  async getReferrals(userId: string): Promise<Referral[]> {
+    return Array.from(this.referrals.values()).filter(r => r.referrerId === userId);
+  }
+
+  async createReferral(insertReferral: InsertReferral): Promise<Referral> {
+    const id = randomUUID();
+    const referral: Referral = {
+      ...insertReferral,
+      id,
+      referredEmail: insertReferral.referredEmail || null,
+      referredPhone: insertReferral.referredPhone || null,
+      referredUserId: insertReferral.referredUserId || null,
+      status: "pending",
+      rewardAmount: 0,
+      createdAt: new Date().toISOString(),
+      convertedAt: null,
+    };
+    this.referrals.set(id, referral);
+    return referral;
+  }
+
+  async updateReferral(id: string, updates: Partial<Referral>): Promise<Referral | undefined> {
+    const referral = this.referrals.get(id);
+    if (!referral) return undefined;
+    const updated: Referral = { ...referral, ...updates };
+    this.referrals.set(id, updated);
+    return updated;
+  }
+
+  // Booking Request methods
+  async getBookingRequests(userId: string): Promise<BookingRequest[]> {
+    return Array.from(this.bookingRequests.values())
+      .filter(b => b.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getBookingRequest(id: string): Promise<BookingRequest | undefined> {
+    return this.bookingRequests.get(id);
+  }
+
+  async createBookingRequest(insertRequest: InsertBookingRequest): Promise<BookingRequest> {
+    const id = randomUUID();
+    const request: BookingRequest = {
+      ...insertRequest,
+      id,
+      clientPhone: insertRequest.clientPhone || null,
+      clientEmail: insertRequest.clientEmail || null,
+      preferredDate: insertRequest.preferredDate || null,
+      preferredTime: insertRequest.preferredTime || null,
+      description: insertRequest.description || null,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    };
+    this.bookingRequests.set(id, request);
+    return request;
+  }
+
+  async updateBookingRequest(id: string, updates: Partial<BookingRequest>): Promise<BookingRequest | undefined> {
+    const request = this.bookingRequests.get(id);
+    if (!request) return undefined;
+    const updated: BookingRequest = { ...request, ...updates };
+    this.bookingRequests.set(id, updated);
+    return updated;
+  }
+
+  // Voice Note methods
+  async getVoiceNotes(userId: string): Promise<VoiceNote[]> {
+    return Array.from(this.voiceNotes.values())
+      .filter(v => v.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getVoiceNote(id: string): Promise<VoiceNote | undefined> {
+    return this.voiceNotes.get(id);
+  }
+
+  async createVoiceNote(insertNote: InsertVoiceNote): Promise<VoiceNote> {
+    const id = randomUUID();
+    const note: VoiceNote = {
+      ...insertNote,
+      id,
+      jobId: insertNote.jobId || null,
+      transcript: insertNote.transcript || null,
+      summary: insertNote.summary || null,
+      duration: insertNote.duration || null,
+      createdAt: new Date().toISOString(),
+    };
+    this.voiceNotes.set(id, note);
+    return note;
+  }
+
+  async updateVoiceNote(id: string, updates: Partial<VoiceNote>): Promise<VoiceNote | undefined> {
+    const note = this.voiceNotes.get(id);
+    if (!note) return undefined;
+    const updated: VoiceNote = { ...note, ...updates };
+    this.voiceNotes.set(id, updated);
+    return updated;
+  }
+
+  async deleteVoiceNote(id: string): Promise<boolean> {
+    return this.voiceNotes.delete(id);
+  }
+
+  // Review methods
+  async getReviews(userId: string): Promise<Review[]> {
+    return Array.from(this.reviews.values())
+      .filter(r => r.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getPublicReviews(userId: string): Promise<Review[]> {
+    return Array.from(this.reviews.values())
+      .filter(r => r.userId === userId && r.isPublic)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async createReview(insertReview: InsertReview): Promise<Review> {
+    const id = randomUUID();
+    const review: Review = {
+      ...insertReview,
+      id,
+      jobId: insertReview.jobId || null,
+      comment: insertReview.comment || null,
+      isPublic: insertReview.isPublic !== false,
+      createdAt: new Date().toISOString(),
+    };
+    this.reviews.set(id, review);
+    return review;
+  }
+
+  // Dashboard methods
   async getDashboardSummary(userId: string): Promise<DashboardSummary> {
     const jobs = await this.getJobs(userId);
     const leads = await this.getLeads(userId);
     const invoices = await this.getInvoices(userId);
+    const reminders = await this.getReminders(userId);
 
     const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay());
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
     const upcomingJobs = jobs.filter(job => {
       const jobDate = new Date(job.scheduledDate);
       return jobDate >= today && (job.status === "scheduled" || job.status === "in_progress");
@@ -425,6 +969,38 @@ export class MemStorage implements IStorage {
       .filter(inv => inv.status === "paid")
       .reduce((sum, inv) => sum + inv.amount, 0);
 
+    const pendingReminders = reminders.filter(r => r.status === "pending").length;
+
+    // Weekly stats
+    const weekJobs = jobs.filter(j => new Date(j.createdAt) >= startOfWeek);
+    const weekLeads = leads.filter(l => new Date(l.createdAt) >= startOfWeek);
+    const weekEarnings = invoices
+      .filter(inv => inv.status === "paid" && inv.paidAt && new Date(inv.paidAt) >= startOfWeek)
+      .reduce((sum, inv) => sum + inv.amount, 0);
+    const weekCompletedJobs = weekJobs.filter(j => j.status === "completed").length;
+
+    const weeklyStats: WeeklyStats = {
+      jobsThisWeek: weekJobs.length,
+      leadsThisWeek: weekLeads.length,
+      earningsThisWeek: weekEarnings,
+      completionRate: weekJobs.length > 0 ? Math.round((weekCompletedJobs / weekJobs.length) * 100) : 0,
+    };
+
+    // Monthly stats
+    const monthJobs = jobs.filter(j => new Date(j.createdAt) >= startOfMonth);
+    const monthLeads = leads.filter(l => new Date(l.createdAt) >= startOfMonth);
+    const monthEarnings = invoices
+      .filter(inv => inv.status === "paid" && inv.paidAt && new Date(inv.paidAt) >= startOfMonth)
+      .reduce((sum, inv) => sum + inv.amount, 0);
+    const monthCompletedJobs = monthJobs.filter(j => j.status === "completed").length;
+
+    const monthlyStats: MonthlyStats = {
+      jobsThisMonth: monthJobs.length,
+      leadsThisMonth: monthLeads.length,
+      earningsThisMonth: monthEarnings,
+      completionRate: monthJobs.length > 0 ? Math.round((monthCompletedJobs / monthJobs.length) * 100) : 0,
+    };
+
     return {
       totalJobs: jobs.length,
       completedJobs: jobs.filter(j => j.status === "completed").length,
@@ -433,6 +1009,9 @@ export class MemStorage implements IStorage {
       totalEarnings,
       upcomingJobs,
       recentLeads,
+      pendingReminders,
+      weeklyStats,
+      monthlyStats,
     };
   }
 }

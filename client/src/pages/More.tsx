@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { 
   User, 
   Bell, 
-  Palette, 
   HelpCircle, 
   LogOut, 
   ChevronRight,
@@ -15,7 +14,9 @@ import {
   Star,
   Shield,
   Moon,
-  Sun
+  Sun,
+  Users,
+  Settings,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
@@ -29,11 +30,12 @@ interface UserProfile {
 }
 
 const menuItems = [
-  { icon: User, label: "Profile", description: "Manage your account", href: "#" },
-  { icon: Bell, label: "Notifications", description: "SMS & email preferences", href: "#" },
-  { icon: Share2, label: "Booking Link", description: "Share your booking page", href: "#", badge: "New" },
-  { icon: Star, label: "Reviews", description: "View client feedback", href: "#" },
-  { icon: Shield, label: "Privacy", description: "Data & security settings", href: "#" },
+  { icon: User, label: "Profile", description: "Manage your account", href: "/profile" },
+  { icon: Bell, label: "Reminders", description: "SMS & voice reminders", href: "/reminders", badge: "New" },
+  { icon: Users, label: "Crew", description: "Manage team members", href: "/crew" },
+  { icon: Share2, label: "Booking Link", description: "Share your booking page", href: "/settings", badge: "New" },
+  { icon: Star, label: "Reviews", description: "View client feedback", href: "/settings" },
+  { icon: Settings, label: "Settings", description: "All app settings", href: "/settings" },
   { icon: HelpCircle, label: "Help & Support", description: "FAQs and contact", href: "#" },
 ];
 
@@ -141,6 +143,7 @@ export default function More() {
                   <div 
                     className="flex items-center justify-between p-3 rounded-lg hover-elevate active-elevate-2 cursor-pointer"
                     data-testid={`menu-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+                    onClick={() => item.href !== "#" && navigate(item.href)}
                   >
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-full bg-muted/50 flex items-center justify-center">

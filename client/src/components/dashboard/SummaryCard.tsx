@@ -1,7 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Briefcase, Users, Clock } from "lucide-react";
-import { useState } from "react";
 
 interface SummaryCardProps {
   totalJobs: number;
@@ -9,6 +7,7 @@ interface SummaryCardProps {
   totalLeads: number;
   newLeads: number;
   isLoading?: boolean;
+  periodLabel?: string;
 }
 
 export function SummaryCard({ 
@@ -16,9 +15,9 @@ export function SummaryCard({
   completedJobs, 
   totalLeads, 
   newLeads,
-  isLoading 
+  isLoading,
+  periodLabel = "This Week",
 }: SummaryCardProps) {
-  const [period, setPeriod] = useState<"week" | "month">("week");
   const pendingJobs = totalJobs - completedJobs;
 
   if (isLoading) {
@@ -44,17 +43,7 @@ export function SummaryCard({
   return (
     <Card data-testid="card-summary">
       <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-        <CardTitle className="text-lg font-medium">Summary</CardTitle>
-        <Tabs value={period} onValueChange={(v) => setPeriod(v as "week" | "month")}>
-          <TabsList className="h-8">
-            <TabsTrigger value="week" className="text-xs px-3" data-testid="tab-week">
-              Week
-            </TabsTrigger>
-            <TabsTrigger value="month" className="text-xs px-3" data-testid="tab-month">
-              Month
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <CardTitle className="text-lg font-medium">{periodLabel}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-3 gap-4">

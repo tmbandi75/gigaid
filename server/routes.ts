@@ -1,7 +1,16 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertJobSchema, insertLeadSchema, insertInvoiceSchema } from "@shared/schema";
+import { 
+  insertJobSchema, 
+  insertLeadSchema, 
+  insertInvoiceSchema,
+  insertReminderSchema,
+  insertCrewMemberSchema,
+  insertBookingRequestSchema,
+  insertVoiceNoteSchema,
+  insertReviewSchema,
+} from "@shared/schema";
 import { z } from "zod";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { parseTextToPlan, suggestScheduleSlots, generateFollowUp } from "./ai/aiService";
@@ -366,6 +375,405 @@ export async function registerRoutes(
       }
       console.error("Follow-up generation error:", error);
       res.status(500).json({ error: "AI service temporarily unavailable" });
+    }
+  });
+
+  // Reminders Endpoints
+  app.get("/api/reminders", async (req, res) => {
+    try {
+      const reminders = await storage.getReminders(defaultUserId);
+      res.json(reminders);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch reminders" });
+    }
+  });
+
+  app.get("/api/reminders/:id", async (req, res) => {
+    try {
+      const reminder = await storage.getReminder(req.params.id);
+      if (!reminder) {
+        return res.status(404).json({ error: "Reminder not found" });
+      }
+      res.json(reminder);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch reminder" });
+    }
+  });
+
+  app.post("/api/reminders", async (req, res) => {
+    try {
+      const validated = insertReminderSchema.parse({
+        ...req.body,
+        userId: defaultUserId,
+      });
+      const reminder = await storage.createReminder(validated);
+      res.status(201).json(reminder);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create reminder" });
+    }
+  });
+
+  app.patch("/api/reminders/:id", async (req, res) => {
+    try {
+      const reminder = await storage.updateReminder(req.params.id, req.body);
+      if (!reminder) {
+        return res.status(404).json({ error: "Reminder not found" });
+      }
+      res.json(reminder);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update reminder" });
+    }
+  });
+
+  app.delete("/api/reminders/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteReminder(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Reminder not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete reminder" });
+    }
+  });
+
+  // Crew Members Endpoints
+  app.get("/api/crew", async (req, res) => {
+    try {
+      const crew = await storage.getCrewMembers(defaultUserId);
+      res.json(crew);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch crew members" });
+    }
+  });
+
+  app.post("/api/crew", async (req, res) => {
+    try {
+      const validated = insertCrewMemberSchema.parse({
+        ...req.body,
+        userId: defaultUserId,
+      });
+      const member = await storage.createCrewMember(validated);
+      res.status(201).json(member);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to add crew member" });
+    }
+  });
+
+  app.patch("/api/crew/:id", async (req, res) => {
+    try {
+      const member = await storage.updateCrewMember(req.params.id, req.body);
+      if (!member) {
+        return res.status(404).json({ error: "Crew member not found" });
+      }
+      res.json(member);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update crew member" });
+    }
+  });
+
+  app.delete("/api/crew/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteCrewMember(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Crew member not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to remove crew member" });
+    }
+  });
+
+  // Referrals Endpoints
+  app.get("/api/referrals", async (req, res) => {
+    try {
+      const referrals = await storage.getReferrals(defaultUserId);
+      const user = await storage.getUser(defaultUserId);
+      res.json({
+        referralCode: user?.referralCode || "",
+        referrals,
+        totalRewards: referrals.reduce((sum, r) => sum + (r.rewardAmount || 0), 0),
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch referrals" });
+    }
+  });
+
+  app.post("/api/referrals", async (req, res) => {
+    try {
+      const { email, phone } = req.body;
+      const referral = await storage.createReferral({
+        referrerId: defaultUserId,
+        referredEmail: email || null,
+        referredPhone: phone || null,
+        referredUserId: null,
+      });
+      res.status(201).json(referral);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create referral" });
+    }
+  });
+
+  // Booking Requests (Public)
+  app.get("/api/booking-requests", async (req, res) => {
+    try {
+      const requests = await storage.getBookingRequests(defaultUserId);
+      res.json(requests);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch booking requests" });
+    }
+  });
+
+  app.post("/api/public/book/:slug", async (req, res) => {
+    try {
+      const user = await storage.getUserByPublicSlug(req.params.slug);
+      if (!user || !user.publicProfileEnabled) {
+        return res.status(404).json({ error: "Profile not found" });
+      }
+      const validated = insertBookingRequestSchema.parse({
+        ...req.body,
+        userId: user.id,
+      });
+      const request = await storage.createBookingRequest(validated);
+      res.status(201).json(request);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to submit booking request" });
+    }
+  });
+
+  app.patch("/api/booking-requests/:id", async (req, res) => {
+    try {
+      const request = await storage.updateBookingRequest(req.params.id, req.body);
+      if (!request) {
+        return res.status(404).json({ error: "Booking request not found" });
+      }
+      res.json(request);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update booking request" });
+    }
+  });
+
+  // Voice Notes Endpoints
+  app.get("/api/voice-notes", async (req, res) => {
+    try {
+      const notes = await storage.getVoiceNotes(defaultUserId);
+      res.json(notes);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch voice notes" });
+    }
+  });
+
+  app.post("/api/voice-notes", async (req, res) => {
+    try {
+      const validated = insertVoiceNoteSchema.parse({
+        ...req.body,
+        userId: defaultUserId,
+      });
+      const note = await storage.createVoiceNote(validated);
+      res.status(201).json(note);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create voice note" });
+    }
+  });
+
+  app.patch("/api/voice-notes/:id", async (req, res) => {
+    try {
+      const note = await storage.updateVoiceNote(req.params.id, req.body);
+      if (!note) {
+        return res.status(404).json({ error: "Voice note not found" });
+      }
+      res.json(note);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update voice note" });
+    }
+  });
+
+  app.delete("/api/voice-notes/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteVoiceNote(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Voice note not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete voice note" });
+    }
+  });
+
+  // Reviews Endpoints
+  app.get("/api/reviews", async (req, res) => {
+    try {
+      const reviews = await storage.getReviews(defaultUserId);
+      res.json(reviews);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch reviews" });
+    }
+  });
+
+  app.post("/api/reviews", async (req, res) => {
+    try {
+      const validated = insertReviewSchema.parse({
+        ...req.body,
+        userId: defaultUserId,
+      });
+      const review = await storage.createReview(validated);
+      res.status(201).json(review);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create review" });
+    }
+  });
+
+  // Public Profile Endpoints
+  app.get("/api/public/profile/:slug", async (req, res) => {
+    try {
+      const user = await storage.getUserByPublicSlug(req.params.slug);
+      if (!user || !user.publicProfileEnabled) {
+        return res.status(404).json({ error: "Profile not found" });
+      }
+      const reviews = await storage.getPublicReviews(user.id);
+      const avgRating = reviews.length > 0 
+        ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length 
+        : 0;
+      
+      res.json({
+        name: user.name || `${user.firstName || ""} ${user.lastName || ""}`.trim(),
+        photo: user.photo,
+        businessName: user.businessName,
+        services: user.services || [],
+        bio: user.bio,
+        rating: Math.round(avgRating * 10) / 10,
+        reviewCount: reviews.length,
+        reviews: reviews.slice(0, 5),
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch profile" });
+    }
+  });
+
+  // User settings for public profile and notifications
+  app.patch("/api/settings", async (req, res) => {
+    try {
+      const { 
+        publicProfileEnabled, 
+        publicProfileSlug,
+        notifyBySms,
+        notifyByEmail,
+        businessName,
+        bio,
+        services,
+      } = req.body;
+      
+      const user = await storage.updateUser(defaultUserId, {
+        publicProfileEnabled,
+        publicProfileSlug,
+        notifyBySms,
+        notifyByEmail,
+        businessName,
+        bio,
+        services,
+      });
+      
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update settings" });
+    }
+  });
+
+  // Onboarding endpoints
+  app.get("/api/onboarding", async (req, res) => {
+    try {
+      const user = await storage.getUser(defaultUserId);
+      res.json({
+        completed: user?.onboardingCompleted || false,
+        step: user?.onboardingStep || 0,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch onboarding status" });
+    }
+  });
+
+  app.patch("/api/onboarding", async (req, res) => {
+    try {
+      const { step, completed } = req.body;
+      const user = await storage.updateUser(defaultUserId, {
+        onboardingStep: step,
+        onboardingCompleted: completed,
+      });
+      res.json({
+        completed: user?.onboardingCompleted || false,
+        step: user?.onboardingStep || 0,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update onboarding" });
+    }
+  });
+
+  // Invoice sharing
+  app.get("/api/public/invoice/:shareLink", async (req, res) => {
+    try {
+      const invoice = await storage.getInvoiceByShareLink(req.params.shareLink);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+      res.json({
+        invoiceNumber: invoice.invoiceNumber,
+        clientName: invoice.clientName,
+        serviceDescription: invoice.serviceDescription,
+        amount: invoice.amount,
+        tax: invoice.tax,
+        discount: invoice.discount,
+        status: invoice.status,
+        createdAt: invoice.createdAt,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch invoice" });
+    }
+  });
+
+  // Smart Replies for Leads
+  app.get("/api/leads/:id/smart-replies", async (req, res) => {
+    try {
+      const lead = await storage.getLead(req.params.id);
+      if (!lead) {
+        return res.status(404).json({ error: "Lead not found" });
+      }
+      
+      const replies = [
+        {
+          id: "1",
+          text: `Hi ${lead.clientName.split(" ")[0]}! Thanks for reaching out about ${lead.serviceType}. I'd love to help. When works best for a quick call?`,
+          context: "initial_response",
+        },
+        {
+          id: "2",
+          text: `Hello ${lead.clientName.split(" ")[0]}, I received your inquiry. I have availability this week. Would you like me to stop by for a free estimate?`,
+          context: "schedule",
+        },
+        {
+          id: "3",
+          text: `Thanks for your interest! Based on your description, I can provide a quote. Can you share a photo of the area?`,
+          context: "quote",
+        },
+      ];
+      
+      res.json(replies);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to generate smart replies" });
     }
   });
 

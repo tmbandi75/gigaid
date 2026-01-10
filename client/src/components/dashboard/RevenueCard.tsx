@@ -4,9 +4,10 @@ import { TrendingUp, DollarSign } from "lucide-react";
 interface RevenueCardProps {
   totalEarnings: number;
   isLoading?: boolean;
+  periodLabel?: string;
 }
 
-export function RevenueCard({ totalEarnings, isLoading }: RevenueCardProps) {
+export function RevenueCard({ totalEarnings, isLoading, periodLabel = "This Period" }: RevenueCardProps) {
   const formattedEarnings = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -44,7 +45,7 @@ export function RevenueCard({ totalEarnings, isLoading }: RevenueCardProps) {
           </span>
           <div className="flex items-center text-sm text-primary-foreground/80 mb-1">
             <TrendingUp className="h-4 w-4 mr-1" />
-            <span>This period</span>
+            <span>{periodLabel}</span>
           </div>
         </div>
       </CardContent>
