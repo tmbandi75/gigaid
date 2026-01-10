@@ -618,10 +618,23 @@ export async function registerRoutes(
       // Send confirmation notifications to the client
       const providerFirstName = user.name?.split(" ")[0] || "Your service provider";
       const serviceName = request.serviceType || "service";
+      
+      // Format date nicely (e.g., "Wednesday, January 15, 2026")
+      let formattedDate = "";
+      if (request.preferredDate) {
+        const dateObj = new Date(request.preferredDate + "T12:00:00");
+        formattedDate = dateObj.toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long", 
+          day: "numeric",
+          year: "numeric"
+        });
+      }
+      
       const preferredDateTime = request.preferredDate && request.preferredTime
-        ? `on ${request.preferredDate} at ${request.preferredTime}`
+        ? `on ${formattedDate} at ${request.preferredTime}`
         : request.preferredDate
-        ? `on ${request.preferredDate}`
+        ? `on ${formattedDate}`
         : "at your requested time";
 
       // Send SMS confirmation
