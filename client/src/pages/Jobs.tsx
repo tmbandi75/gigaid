@@ -13,7 +13,9 @@ import {
   CheckCircle2,
   AlertCircle,
   TrendingUp,
-  Filter
+  Filter,
+  CircleDollarSign,
+  XCircle
 } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
@@ -96,7 +98,10 @@ function JobCard({ job }: { job: Job }) {
                       {statusLabels[job.status]}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-2 capitalize">{job.serviceType}</p>
+                  {job.clientName && (
+                    <p className="text-sm text-muted-foreground mb-1">{job.clientName}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground/70 mb-2 capitalize">{job.serviceType}</p>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
@@ -107,6 +112,29 @@ function JobCard({ job }: { job: Job }) {
                         <DollarSign className="h-3 w-3" />
                         {(job.price / 100).toFixed(0)}
                       </span>
+                    )}
+                    {job.status === "completed" && (
+                      <Badge 
+                        variant="secondary" 
+                        className={`text-[10px] px-2 py-0.5 border-0 ${
+                          job.paymentStatus === "paid" 
+                            ? "bg-emerald-500/10 text-emerald-600" 
+                            : "bg-amber-500/10 text-amber-600"
+                        }`}
+                        data-testid={`badge-payment-${job.id}`}
+                      >
+                        {job.paymentStatus === "paid" ? (
+                          <>
+                            <CircleDollarSign className="h-3 w-3 mr-1" />
+                            Paid
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Unpaid
+                          </>
+                        )}
+                      </Badge>
                     )}
                   </div>
                   {job.location && (
