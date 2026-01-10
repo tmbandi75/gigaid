@@ -19,6 +19,7 @@ import Crew from "@/pages/Crew";
 import Settings from "@/pages/Settings";
 import More from "@/pages/More";
 import Profile from "@/pages/Profile";
+import PublicBooking from "@/pages/PublicBooking";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -62,10 +63,15 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <ThemeInitializer />
-        <MobileLayout>
-          <Router />
-        </MobileLayout>
-        <VoiceFAB />
+        <Switch>
+          <Route path="/book/:slug" component={PublicBooking} />
+          <Route>
+            <MobileLayout>
+              <Router />
+            </MobileLayout>
+            <VoiceFAB />
+          </Route>
+        </Switch>
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
