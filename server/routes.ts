@@ -1149,5 +1149,312 @@ export async function registerRoutes(
     }
   });
 
+  // ============ PAYMENT METHODS API ============
+
+  // Get user's configured payment methods
+  app.get("/api/payment-methods", async (req, res) => {
+    try {
+      const methods = await storage.getUserPaymentMethods(defaultUserId);
+      res.json(methods);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch payment methods" });
+    }
+  });
+
+  // Create/add a new payment method
+  app.post("/api/payment-methods", async (req, res) => {
+    try {
+      const { type, label, instructions, isEnabled } = req.body;
+      if (!type) {
+        return res.status(400).json({ error: "Payment type is required" });
+      }
+      const method = await storage.createUserPaymentMethod({
+        userId: defaultUserId,
+        type,
+        label: label || null,
+        instructions: instructions || null,
+        isEnabled: isEnabled !== false,
+      });
+      res.status(201).json(method);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create payment method" });
+    }
+  });
+
+  // Update a payment method
+  app.patch("/api/payment-methods/:id", async (req, res) => {
+    try {
+      const { type, label, instructions, isEnabled } = req.body;
+      const method = await storage.updateUserPaymentMethod(req.params.id, {
+        type,
+        label,
+        instructions,
+        isEnabled,
+      });
+      if (!method) {
+        return res.status(404).json({ error: "Payment method not found" });
+      }
+      res.json(method);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update payment method" });
+    }
+  });
+
+  // Delete a payment method
+  app.delete("/api/payment-methods/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteUserPaymentMethod(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Payment method not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete payment method" });
+    }
+  });
+
+  // Bulk update payment methods (for settings page)
+  app.post("/api/payment-methods/bulk-update", async (req, res) => {
+    try {
+      const { methods } = req.body;
+      if (!Array.isArray(methods)) {
+        return res.status(400).json({ error: "Methods array is required" });
+      }
+
+      const existingMethods = await storage.getUserPaymentMethods(defaultUserId);
+      const results = [];
+
+      for (const methodData of methods) {
+        const existing = existingMethods.find(m => m.type === methodData.type);
+        
+        if (existing) {
+          const updated = await storage.updateUserPaymentMethod(existing.id, {
+            label: methodData.label,
+            instructions: methodData.instructions,
+            isEnabled: methodData.isEnabled,
+          });
+          if (updated) results.push(updated);
+        } else if (methodData.isEnabled) {
+          const created = await storage.createUserPaymentMethod({
+            userId: defaultUserId,
+            type: methodData.type,
+            label: methodData.label || null,
+            instructions: methodData.instructions || null,
+            isEnabled: true,
+          });
+          results.push(created);
+        }
+      }
+
+      res.json(results);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update payment methods" });
+    }
+  });
+
+  // ============ JOB PAYMENTS API ============
+
+  // Get all payments for user
+  app.get("/api/payments", async (req, res) => {
+    try {
+      const payments = await storage.getJobPayments(defaultUserId);
+      res.json(payments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch payments" });
+    }
+  });
+
+  // Get payments for a specific invoice
+  app.get("/api/invoices/:id/payments", async (req, res) => {
+    try {
+      const payments = await storage.getJobPaymentsByInvoice(req.params.id);
+      res.json(payments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch invoice payments" });
+    }
+  });
+
+  // Create a payment record (for manual payments)
+  app.post("/api/payments", async (req, res) => {
+    try {
+      const { invoiceId, jobId, clientName, clientEmail, amount, method, notes, proofUrl } = req.body;
+      if (!amount || !method) {
+        return res.status(400).json({ error: "Amount and method are required" });
+      }
+      const payment = await storage.createJobPayment({
+        userId: defaultUserId,
+        invoiceId: invoiceId || null,
+        jobId: jobId || null,
+        clientName: clientName || null,
+        clientEmail: clientEmail || null,
+        amount,
+        method,
+        status: "pending",
+        notes: notes || null,
+        proofUrl: proofUrl || null,
+      });
+      res.status(201).json(payment);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create payment" });
+    }
+  });
+
+  // Confirm a manual payment
+  app.post("/api/payments/:id/confirm", async (req, res) => {
+    try {
+      const { proofUrl, notes } = req.body;
+      const payment = await storage.getJobPayment(req.params.id);
+      if (!payment) {
+        return res.status(404).json({ error: "Payment not found" });
+      }
+
+      const updated = await storage.updateJobPayment(req.params.id, {
+        status: "confirmed",
+        proofUrl: proofUrl || payment.proofUrl,
+        notes: notes || payment.notes,
+        confirmedAt: new Date().toISOString(),
+        paidAt: payment.paidAt || new Date().toISOString(),
+      });
+
+      if (payment.invoiceId) {
+        await storage.updateInvoice(payment.invoiceId, {
+          status: "paid",
+          paymentMethod: payment.method,
+          paidAt: new Date().toISOString(),
+        });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to confirm payment" });
+    }
+  });
+
+  // Mark payment as paid (gig worker marks client has paid)
+  app.post("/api/payments/:id/mark-paid", async (req, res) => {
+    try {
+      const { proofUrl, notes } = req.body;
+      const payment = await storage.getJobPayment(req.params.id);
+      if (!payment) {
+        return res.status(404).json({ error: "Payment not found" });
+      }
+
+      const updated = await storage.updateJobPayment(req.params.id, {
+        status: "paid",
+        proofUrl: proofUrl || payment.proofUrl,
+        notes: notes || payment.notes,
+        paidAt: new Date().toISOString(),
+      });
+
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to mark payment as paid" });
+    }
+  });
+
+  // ============ STRIPE INTEGRATION ============
+
+  // Get Stripe publishable key
+  app.get("/api/stripe/publishable-key", async (req, res) => {
+    try {
+      const { getStripePublishableKey } = await import("./stripeClient");
+      const publishableKey = await getStripePublishableKey();
+      res.json({ publishableKey });
+    } catch (error) {
+      console.error("Error getting Stripe key:", error);
+      res.status(500).json({ error: "Stripe not configured" });
+    }
+  });
+
+  // Create Stripe checkout session for an invoice
+  app.post("/api/invoices/:id/stripe-checkout", async (req, res) => {
+    try {
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price_data: {
+              currency: "usd",
+              product_data: {
+                name: invoice.serviceDescription || "Service",
+                description: `Invoice #${invoice.invoiceNumber}`,
+              },
+              unit_amount: invoice.amount + (invoice.tax || 0) - (invoice.discount || 0),
+            },
+            quantity: 1,
+          },
+        ],
+        mode: "payment",
+        success_url: `${req.protocol}://${req.get("host")}/invoice/${invoice.id}/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${req.protocol}://${req.get("host")}/invoice/${invoice.id}`,
+        metadata: {
+          invoiceId: invoice.id,
+          userId: invoice.userId,
+        },
+      });
+
+      const payment = await storage.createJobPayment({
+        userId: invoice.userId,
+        invoiceId: invoice.id,
+        clientName: invoice.clientName,
+        clientEmail: invoice.clientEmail,
+        amount: invoice.amount + (invoice.tax || 0) - (invoice.discount || 0),
+        method: "stripe",
+        status: "processing",
+        stripeCheckoutSessionId: session.id,
+      });
+
+      res.json({ url: session.url, paymentId: payment.id });
+    } catch (error) {
+      console.error("Stripe checkout error:", error);
+      res.status(500).json({ error: "Failed to create checkout session" });
+    }
+  });
+
+  // Handle successful Stripe payment
+  app.get("/api/stripe/success", async (req, res) => {
+    try {
+      const { session_id, invoice_id } = req.query;
+      if (!session_id || !invoice_id) {
+        return res.status(400).json({ error: "Missing session or invoice ID" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+      const session = await stripe.checkout.sessions.retrieve(session_id as string);
+
+      if (session.payment_status === "paid") {
+        await storage.updateInvoice(invoice_id as string, {
+          status: "paid",
+          paymentMethod: "stripe",
+          paidAt: new Date().toISOString(),
+        });
+
+        const payments = await storage.getJobPaymentsByInvoice(invoice_id as string);
+        const stripePayment = payments.find(p => p.stripeCheckoutSessionId === session_id);
+        if (stripePayment) {
+          await storage.updateJobPayment(stripePayment.id, {
+            status: "paid",
+            stripePaymentIntentId: session.payment_intent as string,
+            paidAt: new Date().toISOString(),
+          });
+        }
+      }
+
+      res.json({ success: true, status: session.payment_status });
+    } catch (error) {
+      console.error("Stripe success handler error:", error);
+      res.status(500).json({ error: "Failed to process payment confirmation" });
+    }
+  });
+
   return httpServer;
 }
