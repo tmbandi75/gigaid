@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { TopBar } from "@/components/layout/TopBar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TextToPlanInput } from "@/components/ai/TextToPlanInput";
 import { SmartScheduling } from "@/components/ai/SmartScheduling";
@@ -12,119 +14,322 @@ import { UnlockNudge } from "@/components/ai/UnlockNudge";
 import { NewServiceAIInput } from "@/components/ai/NewServiceAIInput";
 import { ReviewDraftGenerator } from "@/components/ai/ReviewDraftGenerator";
 import { ClientTags } from "@/components/ai/ClientTags";
-import { Sparkles, Calendar, MessageSquare, Mic, Share2, TrendingUp, Lightbulb, Plus, Star, Tags } from "lucide-react";
+import { 
+  Sparkles, 
+  Calendar, 
+  Mic, 
+  Share2, 
+  TrendingUp, 
+  Lightbulb, 
+  Plus, 
+  Star, 
+  Tags,
+  Wand2,
+  Send,
+  Zap,
+  ChevronRight,
+  X,
+} from "lucide-react";
 
-const tabs = [
-  { id: "jobs", label: "Jobs", icon: Sparkles },
-  { id: "schedule", label: "Schedule", icon: Calendar },
-  { id: "messages", label: "Messages", icon: MessageSquare },
-  { id: "voice", label: "Voice", icon: Mic },
-  { id: "growth", label: "Growth", icon: TrendingUp },
-  { id: "crm", label: "CRM", icon: Tags },
-];
+interface AIFeature {
+  id: string;
+  title: string;
+  description: string;
+  icon: typeof Sparkles;
+  category: "create" | "automate" | "grow";
+  gradient: string;
+  component: React.ReactNode;
+}
 
 export default function AITools() {
-  const [activeTab, setActiveTab] = useState("jobs");
+  const [activeFeature, setActiveFeature] = useState<string | null>(null);
+
+  const features: AIFeature[] = [
+    {
+      id: "text-to-plan",
+      title: "Text to Job",
+      description: "Type or speak a job description and let AI create it for you",
+      icon: Wand2,
+      category: "create",
+      gradient: "from-violet-500 to-purple-600",
+      component: (
+        <TextToPlanInput
+          onJobCreated={(job) => {
+            console.log("Job created:", job);
+            setActiveFeature(null);
+          }}
+        />
+      ),
+    },
+    {
+      id: "smart-schedule",
+      title: "Smart Scheduling",
+      description: "AI finds the best time slots based on your calendar",
+      icon: Calendar,
+      category: "automate",
+      gradient: "from-blue-500 to-cyan-500",
+      component: (
+        <SmartScheduling
+          jobDuration={60}
+          onSelectSlot={(date, time) => {
+            console.log("Slot selected:", date, time);
+          }}
+        />
+      ),
+    },
+    {
+      id: "follow-up",
+      title: "Follow-Up Messages",
+      description: "Generate personalized follow-up messages for clients",
+      icon: Send,
+      category: "automate",
+      gradient: "from-emerald-500 to-teal-500",
+      component: (
+        <FollowUpComposer
+          clientName="Demo Client"
+          context="job_completed"
+          lastService="Plumbing Repair"
+        />
+      ),
+    },
+    {
+      id: "voice-notes",
+      title: "Voice Notes",
+      description: "Record voice memos and get AI-powered summaries",
+      icon: Mic,
+      category: "create",
+      gradient: "from-rose-500 to-pink-500",
+      component: (
+        <VoiceNoteSummarizer
+          onSummaryComplete={(summary) => {
+            console.log("Summary:", summary);
+          }}
+        />
+      ),
+    },
+    {
+      id: "referral-message",
+      title: "Referral Generator",
+      description: "Create shareable referral messages to grow your business",
+      icon: Share2,
+      category: "grow",
+      gradient: "from-amber-500 to-orange-500",
+      component: (
+        <ReferralMessageAI
+          link="https://gigaid.app/book/demo"
+          providerName="Demo Provider"
+          serviceCategory="plumbing"
+        />
+      ),
+    },
+    {
+      id: "booking-insights",
+      title: "Booking Insights",
+      description: "AI analytics on your bookings and revenue trends",
+      icon: TrendingUp,
+      category: "grow",
+      gradient: "from-indigo-500 to-blue-600",
+      component: <BookingInsightsDashboard />,
+    },
+    {
+      id: "new-service",
+      title: "Service Builder",
+      description: "Instantly create new service offerings with AI",
+      icon: Plus,
+      category: "create",
+      gradient: "from-fuchsia-500 to-purple-500",
+      component: (
+        <NewServiceAIInput
+          onServicesCreated={(services) => {
+            console.log("Services created:", services);
+          }}
+        />
+      ),
+    },
+    {
+      id: "review-draft",
+      title: "Review Responses",
+      description: "Draft professional responses to client reviews",
+      icon: Star,
+      category: "automate",
+      gradient: "from-yellow-500 to-amber-500",
+      component: (
+        <ReviewDraftGenerator
+          clientName="Demo Client"
+          jobName="Kitchen Sink Repair"
+        />
+      ),
+    },
+    {
+      id: "client-tags",
+      title: "Smart Tags",
+      description: "Auto-tag clients based on their behavior patterns",
+      icon: Tags,
+      category: "grow",
+      gradient: "from-cyan-500 to-blue-500",
+      component: (
+        <ClientTags
+          clientHistory={{
+            name: "Demo Client",
+            totalJobs: 5,
+            totalSpent: 75000,
+            lastJobDate: new Date().toISOString(),
+            cancellations: 0,
+            noShows: 0,
+            averageRating: 4.8,
+            paymentHistory: "prompt",
+            referrals: 2,
+          }}
+        />
+      ),
+    },
+    {
+      id: "unlock-nudge",
+      title: "Growth Tips",
+      description: "Personalized suggestions to unlock more features",
+      icon: Lightbulb,
+      category: "grow",
+      gradient: "from-green-500 to-emerald-500",
+      component: (
+        <UnlockNudge
+          completedFeatures={["profile"]}
+          incompleteFeatures={["services", "availability", "public_profile"]}
+        />
+      ),
+    },
+  ];
+
+  const categories = [
+    { id: "create", label: "Create", icon: Wand2, color: "text-violet-500" },
+    { id: "automate", label: "Automate", icon: Zap, color: "text-emerald-500" },
+    { id: "grow", label: "Grow", icon: TrendingUp, color: "text-amber-500" },
+  ];
+
+  const activeFeatureData = features.find((f) => f.id === activeFeature);
 
   return (
-    <div className="flex flex-col min-h-full" data-testid="page-ai-tools">
-      <TopBar title="AI Tools" showActions={false} />
-
-      <div className="px-4 py-4 flex-1">
-        <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-semibold">AI-Powered Features</h2>
+    <div className="flex flex-col min-h-full bg-background" data-testid="page-ai-tools">
+      <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-background px-4 pt-6 pb-8">
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-4 -right-4 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 -left-8 w-24 h-24 bg-violet-500/10 rounded-full blur-2xl" />
         </div>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full flex overflow-x-auto" data-testid="tabs-list-ai-tools">
-            {tabs.map((tab) => (
-              <TabsTrigger
-                key={tab.id}
-                value={tab.id}
-                className="flex-1 min-w-[80px]"
-                data-testid={`tab-${tab.id}`}
-              >
-                <tab.icon className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">{tab.label}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          <ScrollArea className="mt-4">
-            <TabsContent value="jobs" className="space-y-4 mt-0">
-              <TextToPlanInput
-                onJobCreated={(job) => {
-                  console.log("Job created:", job);
-                }}
-              />
-              <NewServiceAIInput
-                onServicesCreated={(services) => {
-                  console.log("Services created:", services);
-                }}
-              />
-            </TabsContent>
-
-            <TabsContent value="schedule" className="space-y-4 mt-0">
-              <SmartScheduling
-                jobDuration={60}
-                onSelectSlot={(date, time) => {
-                  console.log("Slot selected:", date, time);
-                }}
-              />
-            </TabsContent>
-
-            <TabsContent value="messages" className="space-y-4 mt-0">
-              <FollowUpComposer
-                clientName="Demo Client"
-                context="job_completed"
-                lastService="Plumbing Repair"
-              />
-              <ReviewDraftGenerator
-                clientName="Demo Client"
-                jobName="Kitchen Sink Repair"
-              />
-            </TabsContent>
-
-            <TabsContent value="voice" className="space-y-4 mt-0">
-              <VoiceNoteSummarizer
-                onSummaryComplete={(summary) => {
-                  console.log("Summary:", summary);
-                }}
-              />
-            </TabsContent>
-
-            <TabsContent value="growth" className="space-y-4 mt-0">
-              <ReferralMessageAI
-                link="https://gigaid.app/book/demo"
-                providerName="Demo Provider"
-                serviceCategory="plumbing"
-              />
-              <BookingInsightsDashboard />
-              <UnlockNudge
-                completedFeatures={["profile"]}
-                incompleteFeatures={["services", "availability", "public_profile"]}
-              />
-            </TabsContent>
-
-            <TabsContent value="crm" className="space-y-4 mt-0">
-              <ClientTags
-                clientHistory={{
-                  name: "Demo Client",
-                  totalJobs: 5,
-                  totalSpent: 75000,
-                  lastJobDate: new Date().toISOString(),
-                  cancellations: 0,
-                  noShows: 0,
-                  averageRating: 4.8,
-                  paymentHistory: "prompt",
-                  referrals: 2,
-                }}
-              />
-            </TabsContent>
-          </ScrollArea>
-        </Tabs>
+        
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center shadow-lg">
+              <Sparkles className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">AI Assistant</h1>
+              <p className="text-sm text-muted-foreground">Your smart business companion</p>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <ScrollArea className="flex-1 px-4 pb-24">
+        <div className="py-4 space-y-6">
+          {categories.map((category) => {
+            const categoryFeatures = features.filter((f) => f.category === category.id);
+            return (
+              <div key={category.id} className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <category.icon className={`h-4 w-4 ${category.color}`} />
+                  <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
+                    {category.label}
+                  </h2>
+                  <Badge variant="secondary" className="text-xs">
+                    {categoryFeatures.length}
+                  </Badge>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-3">
+                  {categoryFeatures.map((feature) => (
+                    <Card
+                      key={feature.id}
+                      className="group cursor-pointer hover-elevate overflow-visible border-0 shadow-sm"
+                      onClick={() => setActiveFeature(feature.id)}
+                      data-testid={`card-feature-${feature.id}`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-4">
+                          <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center shadow-md flex-shrink-0`}>
+                            <feature.icon className="h-6 w-6 text-white" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-base mb-0.5">{feature.title}</h3>
+                            <p className="text-sm text-muted-foreground line-clamp-1">
+                              {feature.description}
+                            </p>
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-muted-foreground/50 flex-shrink-0 group-hover:text-primary transition-colors" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          <Card className="bg-gradient-to-br from-primary/5 to-violet-500/5 border-primary/20">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Zap className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-1">Pro Tip</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Use the voice button at the bottom of any screen to quickly create jobs, leads, or invoices hands-free.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </ScrollArea>
+
+      {activeFeature && activeFeatureData && (
+        <Dialog open={!!activeFeature} onOpenChange={() => setActiveFeature(null)}>
+          <DialogContent 
+            className="max-w-lg max-h-[85vh] overflow-hidden p-0"
+            data-testid={`dialog-feature-${activeFeature}`}
+          >
+            <div className={`relative bg-gradient-to-br ${activeFeatureData.gradient} p-6 pb-8`}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-2 right-2 text-white/80 hover:text-white hover:bg-white/20"
+                onClick={() => setActiveFeature(null)}
+                data-testid="button-close-feature"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+                  <activeFeatureData.icon className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <DialogTitle className="text-xl font-bold text-white">
+                    {activeFeatureData.title}
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-white/80 mt-0.5">
+                    {activeFeatureData.description}
+                  </DialogDescription>
+                </div>
+              </div>
+            </div>
+            
+            <ScrollArea className="max-h-[60vh]">
+              <div className="p-4">
+                {activeFeatureData.component}
+              </div>
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
