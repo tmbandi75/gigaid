@@ -304,14 +304,30 @@ export async function registerRoutes(
   app.post("/api/invoices/:id/mark-paid", async (req, res) => {
     try {
       const { paymentMethod } = req.body;
+      const existingInvoice = await storage.getInvoice(req.params.id);
+      if (!existingInvoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      const paidAt = new Date().toISOString();
       const invoice = await storage.updateInvoice(req.params.id, {
         status: "paid",
         paymentMethod: paymentMethod || "other",
-        paidAt: new Date().toISOString(),
+        paidAt,
       });
-      if (!invoice) {
-        return res.status(404).json({ error: "Invoice not found" });
-      }
+
+      await storage.createJobPayment({
+        userId: existingInvoice.userId,
+        invoiceId: existingInvoice.id,
+        clientName: existingInvoice.clientName,
+        clientEmail: existingInvoice.clientEmail,
+        amount: existingInvoice.amount + (existingInvoice.tax || 0) - (existingInvoice.discount || 0),
+        method: paymentMethod || "other",
+        status: "confirmed",
+        paidAt,
+        confirmedAt: paidAt,
+      });
+
       res.json(invoice);
     } catch (error) {
       res.status(500).json({ error: "Failed to mark invoice as paid" });

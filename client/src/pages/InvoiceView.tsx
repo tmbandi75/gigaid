@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { PaymentConfirmation } from "@/components/PaymentConfirmation";
 import { 
   ArrowLeft, 
   Send, 
@@ -40,6 +41,25 @@ import {
   Trash2,
 } from "lucide-react";
 import type { Invoice } from "@shared/schema";
+
+interface JobPayment {
+  id: string;
+  userId: string;
+  invoiceId: string | null;
+  jobId: string | null;
+  clientName: string | null;
+  clientEmail: string | null;
+  amount: number;
+  method: string;
+  status: string;
+  stripePaymentIntentId: string | null;
+  stripeCheckoutSessionId: string | null;
+  proofUrl: string | null;
+  notes: string | null;
+  paidAt: string | null;
+  confirmedAt: string | null;
+  createdAt: string;
+}
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted/50 text-muted-foreground border-muted",
@@ -86,6 +106,11 @@ export default function InvoiceView() {
 
   const { data: invoice, isLoading } = useQuery<Invoice>({
     queryKey: ["/api/invoices", id],
+    enabled: !!id,
+  });
+
+  const { data: payments = [] } = useQuery<JobPayment[]>({
+    queryKey: [`/api/invoices/${id}/payments`],
     enabled: !!id,
   });
 
@@ -288,6 +313,15 @@ export default function InvoiceView() {
             </CardContent>
           </Card>
         )}
+
+        <PaymentConfirmation 
+          invoice={invoice} 
+          payments={payments}
+          onPaymentConfirmed={() => {
+            queryClient.invalidateQueries({ queryKey: ["/api/invoices", id] });
+            queryClient.invalidateQueries({ queryKey: [`/api/invoices/${id}/payments`] });
+          }}
+        />
 
         <div className="grid grid-cols-2 gap-3">
           {invoice.status === "draft" && (
