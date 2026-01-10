@@ -303,7 +303,7 @@ export default function PublicBooking() {
             </div>
             <h2 className="text-xl font-semibold mb-2">Request Submitted!</h2>
             <p className="text-muted-foreground mb-4">
-              {profile.name} will get back to you shortly to confirm your booking.
+              {profile.name.split(" ")[0]} will get back to you shortly to confirm your booking.
             </p>
             <Button variant="outline" onClick={() => { setSubmitted(false); setShowConfetti(false); setSelectedDate(null); setSelectedTime(null); }}>
               Submit Another Request
@@ -792,7 +792,16 @@ export default function PublicBooking() {
         )}
 
         <p className="text-center text-xs text-muted-foreground">
-          Powered by Gig Aid
+          Powered by{" "}
+          <a 
+            href="http://www.gigaid.com" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="hover:underline"
+            data-testid="link-gigaid"
+          >
+            GigAid<sup className="text-[8px]">TM</sup>
+          </a>
         </p>
       </div>
 
