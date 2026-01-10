@@ -10,13 +10,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Form,
   FormControl,
   FormField,
@@ -28,6 +21,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useUpload } from "@/hooks/use-upload";
 import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, Camera, Loader2 } from "lucide-react";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { BioEditor } from "@/components/settings/BioEditor";
 
 interface UserProfile {
   id: string;
@@ -35,29 +30,18 @@ interface UserProfile {
   email: string | null;
   phone: string | null;
   photo: string | null;
+  businessName: string | null;
+  bio: string | null;
+  services: string[] | null;
 }
-
-const countryCodes = [
-  { value: "+1", label: "+1 (US/CA)" },
-  { value: "+44", label: "+44 (UK)" },
-  { value: "+61", label: "+61 (AU)" },
-  { value: "+49", label: "+49 (DE)" },
-  { value: "+33", label: "+33 (FR)" },
-  { value: "+34", label: "+34 (ES)" },
-  { value: "+39", label: "+39 (IT)" },
-  { value: "+81", label: "+81 (JP)" },
-  { value: "+86", label: "+86 (CN)" },
-  { value: "+91", label: "+91 (IN)" },
-  { value: "+52", label: "+52 (MX)" },
-  { value: "+55", label: "+55 (BR)" },
-];
 
 const profileFormSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  countryCode: z.string().optional(),
-  phoneNumber: z.string().optional(),
+  companyName: z.string().optional(),
+  phone: z.string().optional(),
+  bio: z.string().optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileFormSchema>;
@@ -67,16 +51,6 @@ function parseStoredName(name: string | null): { firstName: string; lastName: st
   const parts = name.trim().split(" ");
   if (parts.length === 1) return { firstName: parts[0], lastName: "" };
   return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
-}
-
-function parseStoredPhone(phone: string | null): { countryCode: string; phoneNumber: string } {
-  if (!phone) return { countryCode: "+1", phoneNumber: "" };
-  for (const code of countryCodes) {
-    if (phone.startsWith(code.value)) {
-      return { countryCode: code.value, phoneNumber: phone.slice(code.value.length).trim() };
-    }
-  }
-  return { countryCode: "+1", phoneNumber: phone };
 }
 
 export default function Profile() {
@@ -101,7 +75,6 @@ export default function Profile() {
   });
 
   const parsedName = parseStoredName(profile?.name || null);
-  const parsedPhone = parseStoredPhone(profile?.phone || null);
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileFormSchema),
@@ -109,20 +82,22 @@ export default function Profile() {
       firstName: "",
       lastName: "",
       email: "",
-      countryCode: "+1",
-      phoneNumber: "",
+      companyName: "",
+      phone: "",
+      bio: "",
     },
     values: profile ? {
       firstName: parsedName.firstName,
       lastName: parsedName.lastName,
       email: profile.email || "",
-      countryCode: parsedPhone.countryCode,
-      phoneNumber: parsedPhone.phoneNumber,
+      companyName: profile.businessName || "",
+      phone: profile.phone || "",
+      bio: profile.bio || "",
     } : undefined,
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (data: Partial<{ name: string; email: string; phone: string; photo: string }>) => {
+    mutationFn: async (data: Partial<{ name: string; email: string; phone: string; photo: string; businessName: string; bio: string }>) => {
       return apiRequest("PATCH", "/api/profile", data);
     },
     onSuccess: () => {
@@ -136,11 +111,12 @@ export default function Profile() {
 
   const onSubmit = (data: ProfileFormData) => {
     const fullName = `${data.firstName} ${data.lastName}`.trim();
-    const fullPhone = data.phoneNumber ? `${data.countryCode} ${data.phoneNumber}`.trim() : "";
     updateMutation.mutate({
       name: fullName,
       email: data.email || "",
-      phone: fullPhone,
+      phone: data.phone || "",
+      businessName: data.companyName || "",
+      bio: data.bio || "",
     });
   };
 
@@ -300,52 +276,53 @@ export default function Profile() {
                   )}
                 />
 
-                <div>
-                  <FormLabel className="mb-2 block">Phone Number</FormLabel>
-                  <div className="grid grid-cols-[100px_1fr] gap-2">
-                    <FormField
-                      control={form.control}
-                      name="countryCode"
-                      render={({ field }) => (
-                        <FormItem>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-country-code">
-                                <SelectValue placeholder="+1" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {countryCodes.map((code) => (
-                                <SelectItem key={code.value} value={code.value}>
-                                  {code.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                <FormField
+                  control={form.control}
+                  name="companyName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Your Company Name"
+                          {...field}
+                          data-testid="input-company-name"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                    <FormField
-                      control={form.control}
-                      name="phoneNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Input
-                              type="tel"
-                              placeholder="555-123-4567"
-                              {...field}
-                              data-testid="input-phone-number"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number</FormLabel>
+                      <FormControl>
+                        <PhoneInput
+                          id="phone"
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          data-testid="input-phone"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <BioEditor
+                  value={form.watch("bio") || ""}
+                  onChange={(bio) => form.setValue("bio", bio)}
+                  businessName={form.watch("companyName") || ""}
+                  services={profile?.services || []}
+                />
               </CardContent>
             </Card>
 

@@ -58,7 +58,7 @@ export async function registerRoutes(
 
   app.patch("/api/profile", async (req, res) => {
     try {
-      const { name, email, phone, photo } = req.body;
+      const { name, email, phone, photo, businessName, bio } = req.body;
       let user = await storage.getUser(defaultUserId);
       
       if (!user) {
@@ -68,12 +68,16 @@ export async function registerRoutes(
         });
       }
       
-      const updatedUser = await storage.updateUser(defaultUserId, {
-        name,
-        email,
-        phone,
-        photo,
-      });
+      // Only update fields that are explicitly provided (not undefined)
+      const updates: Record<string, any> = {};
+      if (name !== undefined) updates.name = name;
+      if (email !== undefined) updates.email = email;
+      if (phone !== undefined) updates.phone = phone;
+      if (photo !== undefined) updates.photo = photo;
+      if (businessName !== undefined) updates.businessName = businessName;
+      if (bio !== undefined) updates.bio = bio;
+      
+      const updatedUser = await storage.updateUser(defaultUserId, updates);
       
       res.json({
         id: updatedUser?.id || defaultUserId,
@@ -81,6 +85,15 @@ export async function registerRoutes(
         email: updatedUser?.email || email,
         phone: updatedUser?.phone || phone,
         photo: updatedUser?.photo || photo,
+        businessName: updatedUser?.businessName || businessName,
+        bio: updatedUser?.bio || bio,
+        services: updatedUser?.services,
+        availability: updatedUser?.availability,
+        slotDuration: updatedUser?.slotDuration,
+        publicProfileEnabled: updatedUser?.publicProfileEnabled,
+        publicProfileSlug: updatedUser?.publicProfileSlug,
+        notifyBySms: updatedUser?.notifyBySms,
+        notifyByEmail: updatedUser?.notifyByEmail,
       });
     } catch (error) {
       console.error("Profile update error:", error);
