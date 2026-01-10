@@ -16,6 +16,9 @@ import {
   type MonthlyStats,
   type UserPaymentMethod, type InsertUserPaymentMethod,
   type JobPayment, type InsertJobPayment,
+  type CrewInvite, type InsertCrewInvite,
+  type CrewJobPhoto, type InsertCrewJobPhoto,
+  type CrewMessage, type InsertCrewMessage,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -118,6 +121,27 @@ export interface IStorage {
   getJobPaymentsByInvoice(invoiceId: string): Promise<JobPayment[]>;
   createJobPayment(payment: InsertJobPayment): Promise<JobPayment>;
   updateJobPayment(id: string, updates: Partial<JobPayment>): Promise<JobPayment | undefined>;
+
+  // Crew Invites
+  getCrewInvites(userId: string): Promise<CrewInvite[]>;
+  getCrewInvite(id: string): Promise<CrewInvite | undefined>;
+  getCrewInviteByToken(token: string): Promise<CrewInvite | undefined>;
+  getCrewInvitesByJob(jobId: string): Promise<CrewInvite[]>;
+  createCrewInvite(invite: InsertCrewInvite): Promise<CrewInvite>;
+  updateCrewInvite(id: string, updates: Partial<CrewInvite>): Promise<CrewInvite | undefined>;
+  deleteCrewInvite(id: string): Promise<boolean>;
+
+  // Crew Job Photos
+  getCrewJobPhotos(jobId: string): Promise<CrewJobPhoto[]>;
+  getCrewJobPhoto(id: string): Promise<CrewJobPhoto | undefined>;
+  createCrewJobPhoto(photo: InsertCrewJobPhoto): Promise<CrewJobPhoto>;
+  deleteCrewJobPhoto(id: string): Promise<boolean>;
+
+  // Crew Messages
+  getCrewMessages(jobId: string): Promise<CrewMessage[]>;
+  getCrewMessagesByUser(userId: string): Promise<CrewMessage[]>;
+  createCrewMessage(message: InsertCrewMessage): Promise<CrewMessage>;
+  updateCrewMessage(id: string, updates: Partial<CrewMessage>): Promise<CrewMessage | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -135,6 +159,9 @@ export class MemStorage implements IStorage {
   private reviews: Map<string, Review>;
   private userPaymentMethods: Map<string, UserPaymentMethod>;
   private jobPayments: Map<string, JobPayment>;
+  private crewInvites: Map<string, CrewInvite>;
+  private crewJobPhotos: Map<string, CrewJobPhoto>;
+  private crewMessages: Map<string, CrewMessage>;
 
   constructor() {
     this.users = new Map();
@@ -151,6 +178,9 @@ export class MemStorage implements IStorage {
     this.reviews = new Map();
     this.userPaymentMethods = new Map();
     this.jobPayments = new Map();
+    this.crewInvites = new Map();
+    this.crewJobPhotos = new Map();
+    this.crewMessages = new Map();
     
     this.seedDemoData();
   }
@@ -1161,6 +1191,121 @@ export class MemStorage implements IStorage {
     if (!payment) return undefined;
     const updated: JobPayment = { ...payment, ...updates };
     this.jobPayments.set(id, updated);
+    return updated;
+  }
+
+  // Crew Invites
+  async getCrewInvites(userId: string): Promise<CrewInvite[]> {
+    return Array.from(this.crewInvites.values())
+      .filter(i => i.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getCrewInvite(id: string): Promise<CrewInvite | undefined> {
+    return this.crewInvites.get(id);
+  }
+
+  async getCrewInviteByToken(token: string): Promise<CrewInvite | undefined> {
+    return Array.from(this.crewInvites.values()).find(i => i.token === token);
+  }
+
+  async getCrewInvitesByJob(jobId: string): Promise<CrewInvite[]> {
+    return Array.from(this.crewInvites.values())
+      .filter(i => i.jobId === jobId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async createCrewInvite(invite: InsertCrewInvite): Promise<CrewInvite> {
+    const id = randomUUID();
+    const newInvite: CrewInvite = {
+      ...invite,
+      id,
+      status: "pending",
+      tokenHash: invite.tokenHash || null,
+      deliveredVia: invite.deliveredVia || null,
+      deliveredAt: null,
+      viewedAt: null,
+      confirmedAt: null,
+      declinedAt: null,
+      revokedAt: null,
+      createdAt: new Date().toISOString(),
+    };
+    this.crewInvites.set(id, newInvite);
+    return newInvite;
+  }
+
+  async updateCrewInvite(id: string, updates: Partial<CrewInvite>): Promise<CrewInvite | undefined> {
+    const invite = this.crewInvites.get(id);
+    if (!invite) return undefined;
+    const updated: CrewInvite = { ...invite, ...updates };
+    this.crewInvites.set(id, updated);
+    return updated;
+  }
+
+  async deleteCrewInvite(id: string): Promise<boolean> {
+    return this.crewInvites.delete(id);
+  }
+
+  // Crew Job Photos
+  async getCrewJobPhotos(jobId: string): Promise<CrewJobPhoto[]> {
+    return Array.from(this.crewJobPhotos.values())
+      .filter(p => p.jobId === jobId)
+      .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
+  }
+
+  async getCrewJobPhoto(id: string): Promise<CrewJobPhoto | undefined> {
+    return this.crewJobPhotos.get(id);
+  }
+
+  async createCrewJobPhoto(photo: InsertCrewJobPhoto): Promise<CrewJobPhoto> {
+    const id = randomUUID();
+    const newPhoto: CrewJobPhoto = {
+      ...photo,
+      id,
+      crewInviteId: photo.crewInviteId || null,
+      caption: photo.caption || null,
+      uploadedAt: new Date().toISOString(),
+    };
+    this.crewJobPhotos.set(id, newPhoto);
+    return newPhoto;
+  }
+
+  async deleteCrewJobPhoto(id: string): Promise<boolean> {
+    return this.crewJobPhotos.delete(id);
+  }
+
+  // Crew Messages
+  async getCrewMessages(jobId: string): Promise<CrewMessage[]> {
+    return Array.from(this.crewMessages.values())
+      .filter(m => m.jobId === jobId)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }
+
+  async getCrewMessagesByUser(userId: string): Promise<CrewMessage[]> {
+    return Array.from(this.crewMessages.values())
+      .filter(m => m.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async createCrewMessage(message: InsertCrewMessage): Promise<CrewMessage> {
+    const id = randomUUID();
+    const newMessage: CrewMessage = {
+      ...message,
+      id,
+      crewInviteId: message.crewInviteId || null,
+      isFromCrew: message.isFromCrew ?? true,
+      readAt: null,
+      createdAt: new Date().toISOString(),
+    };
+    this.crewMessages.set(id, newMessage);
+    return newMessage;
+  }
+
+  async updateCrewMessage(id: string, updates: Partial<CrewMessage>): Promise<CrewMessage | undefined> {
+    const msg = this.crewMessages.get(id);
+    if (!msg) return undefined;
+    const updated: CrewMessage = { ...msg, ...updates };
+    this.crewMessages.set(id, updated);
     return updated;
   }
 }
