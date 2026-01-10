@@ -172,3 +172,207 @@ Return ONLY valid JSON.`
 
   return JSON.parse(content) as FollowUpMessage;
 }
+
+// Booking Page AI Features
+
+export interface ServiceRecommendation {
+  serviceId: string;
+  serviceName: string;
+  confidence: number;
+  reason: string;
+}
+
+export async function recommendService(params: {
+  userInput: string;
+  services: Array<{ id: string; name: string; description?: string }>;
+}): Promise<ServiceRecommendation[]> {
+  const { userInput, services } = params;
+
+  if (!services.length) {
+    return [];
+  }
+
+  const response = await getOpenAI().chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `You are a helpful assistant that matches customer needs to available services.
+
+Available services:
+${services.map((s, i) => `${i + 1}. ${s.name}${s.description ? ` - ${s.description}` : ""} (ID: ${s.id})`).join("\n")}
+
+Given the customer's description of their issue, recommend the 1-2 best matching services.
+
+Return a JSON object with an array called "recommendations" containing objects with:
+- serviceId: The ID of the recommended service
+- serviceName: The name of the service
+- confidence: A number 0-100 indicating match confidence
+- reason: A brief explanation of why this service matches
+
+Return ONLY valid JSON.`
+      },
+      {
+        role: "user",
+        content: userInput
+      }
+    ],
+    response_format: { type: "json_object" },
+    max_completion_tokens: 300,
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    return [];
+  }
+
+  const parsed = JSON.parse(content);
+  return (parsed.recommendations || []) as ServiceRecommendation[];
+}
+
+export interface NotesSuggestion {
+  suggestion: string;
+}
+
+export async function autocompleteNotes(params: {
+  partialText: string;
+  serviceName?: string;
+}): Promise<NotesSuggestion> {
+  const { partialText, serviceName } = params;
+
+  const response = await getOpenAI().chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `You are a helpful assistant that completes job notes for service bookings.
+${serviceName ? `The service being booked is: ${serviceName}` : ""}
+
+Given the partial text the customer started typing, suggest a complete, helpful note.
+Make it specific and actionable for the service provider.
+Keep it concise (1-2 sentences max).
+
+Return a JSON object with:
+- suggestion: The completed note text
+
+Return ONLY valid JSON.`
+      },
+      {
+        role: "user",
+        content: `Complete this note: "${partialText}"`
+      }
+    ],
+    response_format: { type: "json_object" },
+    max_completion_tokens: 150,
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    return { suggestion: partialText };
+  }
+
+  return JSON.parse(content) as NotesSuggestion;
+}
+
+export interface FAQAnswer {
+  answer: string;
+  confidence: number;
+}
+
+export async function answerFAQ(params: {
+  question: string;
+  providerName?: string;
+  services?: string[];
+}): Promise<FAQAnswer> {
+  const { question, providerName, services } = params;
+
+  const response = await getOpenAI().chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `You are a helpful FAQ assistant for a gig worker's booking page.
+${providerName ? `Provider name: ${providerName}` : ""}
+${services?.length ? `Services offered: ${services.join(", ")}` : ""}
+
+Answer common questions about booking, services, and policies.
+Be helpful, concise, and professional.
+If you don't know the specific answer, provide a general helpful response and suggest contacting the provider directly.
+
+Common topics you can help with:
+- Booking process
+- Cancellation/rescheduling (standard 24-hour notice policy)
+- Payment methods (typically cash, card, or digital payment)
+- What to expect during service
+- Preparation tips for the service
+
+Return a JSON object with:
+- answer: Your helpful response (2-3 sentences max)
+- confidence: A number 0-100 indicating how confident you are in the answer
+
+Return ONLY valid JSON.`
+      },
+      {
+        role: "user",
+        content: question
+      }
+    ],
+    response_format: { type: "json_object" },
+    max_completion_tokens: 200,
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    return { answer: "Please contact the service provider directly for more information.", confidence: 0 };
+  }
+
+  return JSON.parse(content) as FAQAnswer;
+}
+
+export interface PriceEstimate {
+  estimateRange: string;
+  breakdown?: string;
+}
+
+export async function estimatePrice(params: {
+  description: string;
+  services: Array<{ name: string; price?: number }>;
+}): Promise<PriceEstimate> {
+  const { description, services } = params;
+
+  const response = await getOpenAI().chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `You are a price estimation assistant for gig services.
+
+Available services and their base prices:
+${services.map(s => `- ${s.name}: ${s.price ? `$${(s.price / 100).toFixed(0)}` : "Price varies"}`).join("\n")}
+
+Given the job description, provide a reasonable price estimate range.
+Consider job complexity, time needed, and standard rates.
+If unsure, give a wider range.
+
+Return a JSON object with:
+- estimateRange: A price range string like "$75 - $150"
+- breakdown: Brief explanation of what factors affect the price
+
+Return ONLY valid JSON.`
+      },
+      {
+        role: "user",
+        content: description
+      }
+    ],
+    response_format: { type: "json_object" },
+    max_completion_tokens: 200,
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    return { estimateRange: "Contact for quote" };
+  }
+
+  return JSON.parse(content) as PriceEstimate;
+}

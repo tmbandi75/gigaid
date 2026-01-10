@@ -1,17 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Star, Calendar, CheckCircle, Loader2, ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { SmartServiceRecommender } from "@/components/booking/SmartServiceRecommender";
+import { JobNotesAutocomplete } from "@/components/booking/JobNotesAutocomplete";
+import { FAQAssistant } from "@/components/booking/FAQAssistant";
 
 interface PublicProfile {
   name: string;
@@ -388,6 +390,11 @@ export default function PublicBooking() {
                   />
                 </div>
 
+                <SmartServiceRecommender
+                  slug={slug || ""}
+                  onSelectService={(serviceId) => setFormData({ ...formData, serviceType: serviceId })}
+                />
+
                 <div className="space-y-2">
                   <Label htmlFor="serviceType">Service Needed *</Label>
                   <Select
@@ -430,13 +437,11 @@ export default function PublicBooking() {
 
                 <div className="space-y-2">
                   <Label htmlFor="description">Describe the Job</Label>
-                  <Textarea
-                    id="description"
+                  <JobNotesAutocomplete
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(v) => setFormData({ ...formData, description: v })}
+                    serviceName={formData.serviceType}
                     placeholder="Please describe what you need help with..."
-                    rows={3}
-                    data-testid="input-description"
                   />
                 </div>
 
@@ -490,6 +495,8 @@ export default function PublicBooking() {
           Powered by Gig Aid
         </p>
       </div>
+
+      <FAQAssistant slug={slug || ""} providerName={profile?.name} />
     </div>
   );
 }

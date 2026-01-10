@@ -766,6 +766,101 @@ export async function registerRoutes(
     }
   });
 
+  // Booking Page AI Features
+  app.post("/api/public/ai/recommend-service", async (req, res) => {
+    try {
+      const { userInput, slug } = req.body;
+      if (!userInput || !slug) {
+        return res.status(400).json({ error: "Missing userInput or slug" });
+      }
+
+      const user = await storage.getUserByPublicSlug(slug);
+      if (!user || !user.publicProfileEnabled) {
+        return res.status(404).json({ error: "Profile not found" });
+      }
+
+      const services = (user.services || []).map((s, i) => ({
+        id: s,
+        name: s.charAt(0).toUpperCase() + s.slice(1),
+      }));
+
+      const { recommendService } = await import("./ai/aiService");
+      const recommendations = await recommendService({ userInput, services });
+      res.json({ recommendations });
+    } catch (error) {
+      console.error("Error recommending service:", error);
+      res.json({ recommendations: [] });
+    }
+  });
+
+  app.post("/api/public/ai/autocomplete-notes", async (req, res) => {
+    try {
+      const { partialText, serviceName } = req.body;
+      if (!partialText || partialText.split(" ").length < 3) {
+        return res.json({ suggestion: null });
+      }
+
+      const { autocompleteNotes } = await import("./ai/aiService");
+      const result = await autocompleteNotes({ partialText, serviceName });
+      res.json(result);
+    } catch (error) {
+      console.error("Error autocompleting notes:", error);
+      res.json({ suggestion: null });
+    }
+  });
+
+  app.post("/api/public/ai/faq", async (req, res) => {
+    try {
+      const { question, slug } = req.body;
+      if (!question) {
+        return res.status(400).json({ error: "Missing question" });
+      }
+
+      let providerName = "the service provider";
+      let services: string[] = [];
+
+      if (slug) {
+        const user = await storage.getUserByPublicSlug(slug);
+        if (user) {
+          providerName = user.name || user.businessName || "the service provider";
+          services = user.services || [];
+        }
+      }
+
+      const { answerFAQ } = await import("./ai/aiService");
+      const result = await answerFAQ({ question, providerName, services });
+      res.json(result);
+    } catch (error) {
+      console.error("Error answering FAQ:", error);
+      res.json({ answer: "Please contact the provider directly for assistance.", confidence: 0 });
+    }
+  });
+
+  app.post("/api/public/ai/estimate-price", async (req, res) => {
+    try {
+      const { description, slug } = req.body;
+      if (!description) {
+        return res.status(400).json({ error: "Missing description" });
+      }
+
+      let services: Array<{ name: string; price?: number }> = [];
+
+      if (slug) {
+        const user = await storage.getUserByPublicSlug(slug);
+        if (user && user.services) {
+          services = user.services.map(s => ({ name: s }));
+        }
+      }
+
+      const { estimatePrice } = await import("./ai/aiService");
+      const result = await estimatePrice({ description, services });
+      res.json(result);
+    } catch (error) {
+      console.error("Error estimating price:", error);
+      res.json({ estimateRange: "Contact for quote" });
+    }
+  });
+
   // Onboarding endpoints
   app.get("/api/onboarding", async (req, res) => {
     try {

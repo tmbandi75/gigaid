@@ -1,0 +1,114 @@
+# 🚀 Project: Gig Aid – AI-Enhanced Client Booking Page
+Implement AI features on the public booking page to reduce friction and increase conversion for gig clients.
+
+---
+
+## 🛠 Tech Stack
+- Frontend: React (Vite + Tailwind)
+- Backend: Supabase (Postgres for jobs, services, clients)
+- AI: OpenAI GPT-4 or Claude Sonnet for text generation
+- Optional: Stripe (for price estimator logic)
+
+---
+
+## 📄 Booking Page Components (Existing)
+This is a **public booking link** used by clients to:
+- View gig worker profile and services
+- Select service
+- Pick date/time
+- Add job notes
+- Confirm booking
+
+---
+
+## ✨ AI Feature 1: Smart Service Recommender
+### Goal:
+Suggest the best-matching service when a client types a need (e.g., “I need help with my leaking sink”)
+
+### UI:
+- Input field: “Not sure what to book? Describe your issue.”
+- Below it: AI-generated suggestions with CTA: “Book this”
+
+### API Endpoint: `/api/ai/recommendService`
+- Input: `{ userInput: string, providerId: string }`
+- Output: `{ suggestedServiceId, label, description, duration, price }`
+
+Use GPT to:
+- Match input to provider’s existing services (from Supabase)
+- Return top 1–2 matches
+
+---
+
+## ✨ AI Feature 2: Job Notes Auto-Complete
+### Goal:
+Help clients describe the job by autocompleting special instructions or common job notes
+
+### UI:
+- Field: “Special Notes”
+- As user types, show ghost text or dropdown suggestion
+- Example: User types “leaking…” → AI suggests full sentence
+
+### API Endpoint: `/api/ai/notesAutocomplete`
+- Input: `{ partialText: string, serviceName?: string }`
+- Output: `{ suggestion: string }`
+
+Trigger suggestion on 3+ words typed
+
+---
+
+## ✨ AI Feature 3: FAQ Assistant (Context-Aware)
+### Goal:
+Answer common client questions directly on the page without support requests
+
+### UI:
+- Small button: “❓ Questions?”
+- Opens popup with:
+  - Input field: “Ask a question…”
+  - Suggested FAQs (e.g., "What’s your cancellation policy?")
+
+### API Endpoint: `/api/ai/faqAssistant`
+- Input: `{ question: string, serviceId?: string, providerName?: string }`
+- Output: `{ answer: string }`
+
+Use GPT with prompt tuned to FAQs, include fallback answers if unknown
+
+---
+
+## ✨ (Optional) AI Feature 4: Dynamic Price Estimator
+### Goal:
+Estimate price based on job description if no fixed-price service applies
+
+### UI:
+- Input field: “What do you need help with?”
+- Output: “Estimated cost: $125 – based on local rates and job size”
+
+### API Endpoint: `/api/ai/priceEstimator`
+- Input: `{ description: string, zipCode?: string, baseRates: Service[] }`
+- Output: `{ estimateRange: string }`
+
+---
+
+## 📦 Supabase Tables (simplified)
+- `services`: id, providerId, name, description, price, duration
+- `clients`: id, name, phone, email
+- `jobs`: id, serviceId, clientId, notes, date, time, createdAt
+
+---
+
+## ✅ Requirements
+- All AI-generated suggestions must be editable
+- Must fallback to manual entry if API fails
+- Mobile-first responsive design
+- Use loading states + error handling
+- AI APIs must respond < 2s or fallback
+- DO NOT block booking flow with AI delays
+
+---
+
+## 🔚 Deliverables
+- `<SmartServiceRecommender />` component with API integration
+- `<JobNotesAutocomplete />` input enhancer
+- `<FAQAssistant />` mini popup widget
+- (Optional) `<PriceEstimator />` panel
+
+Start with Smart Service Recommender and Autocomplete first — those drive most value in MVP.
