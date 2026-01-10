@@ -189,7 +189,7 @@ export default function Invoices() {
 
   return (
     <div className="flex flex-col min-h-full bg-background" data-testid="page-invoices">
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-600 text-white px-4 pt-6 pb-10">
+      <div className="relative overflow-hidden bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-600 text-white px-4 pt-6 pb-6">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-20 -right-20 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
           <div className="absolute top-10 -left-20 w-40 h-40 bg-cyan-400/20 rounded-full blur-2xl" />
@@ -235,7 +235,7 @@ export default function Invoices() {
         </div>
       </div>
       
-      <div className="flex-1 px-4 -mt-5">
+      <div className="flex-1 px-4 pt-4">
         <Card className="border-0 shadow-lg mb-4 overflow-hidden bg-card">
           <CardContent className="p-1.5">
             <div className="flex gap-1">

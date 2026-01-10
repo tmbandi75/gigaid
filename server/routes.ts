@@ -334,6 +334,37 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/invoices/:id/revert-paid", async (req, res) => {
+    try {
+      const existingInvoice = await storage.getInvoice(req.params.id);
+      if (!existingInvoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      if (existingInvoice.status !== "paid") {
+        return res.status(400).json({ error: "Invoice is not marked as paid" });
+      }
+
+      const invoice = await storage.updateInvoice(req.params.id, {
+        status: existingInvoice.sentAt ? "sent" : "draft",
+        paymentMethod: null,
+        paidAt: null,
+      });
+
+      const payments = await storage.getJobPaymentsByInvoice(req.params.id);
+      for (const payment of payments) {
+        const paymentData = await storage.getJobPayment(payment.id);
+        if (paymentData) {
+          await storage.updateJobPayment(payment.id, { status: "voided" });
+        }
+      }
+
+      res.json(invoice);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to revert invoice payment" });
+    }
+  });
+
   app.delete("/api/invoices/:id", async (req, res) => {
     try {
       const deleted = await storage.deleteInvoice(req.params.id);

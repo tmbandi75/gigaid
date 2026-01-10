@@ -43,6 +43,7 @@ import {
   Sparkles,
   ChevronRight,
   ExternalLink,
+  Undo2,
 } from "lucide-react";
 import type { Invoice } from "@shared/schema";
 
@@ -137,6 +138,7 @@ export default function InvoiceView() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("cash");
   const [copied, setCopied] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showRevertDialog, setShowRevertDialog] = useState(false);
 
   const { data: invoice, isLoading } = useQuery<Invoice>({
     queryKey: ["/api/invoices", id],
@@ -193,6 +195,23 @@ export default function InvoiceView() {
     },
   });
 
+  const revertMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", `/api/invoices/${id}/revert-paid`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices", id] });
+      queryClient.invalidateQueries({ queryKey: [`/api/invoices/${id}/payments`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
+      toast({ title: "Payment reverted - invoice is now pending" });
+      setShowRevertDialog(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to revert payment", variant: "destructive" });
+    },
+  });
+
   const copyShareLink = () => {
     if (invoice?.shareLink) {
       const link = `${window.location.origin}/invoice/${invoice.shareLink}`;
@@ -242,7 +261,7 @@ export default function InvoiceView() {
 
   return (
     <div className="flex flex-col min-h-full bg-background" data-testid="page-invoice-view">
-      <div className={`relative overflow-hidden bg-gradient-to-br ${config.gradient} text-white px-4 pt-4 pb-20`}>
+      <div className={`relative overflow-hidden bg-gradient-to-br ${config.gradient} text-white px-4 pt-4 pb-6`}>
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-20 -right-20 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
           <div className="absolute bottom-0 -left-20 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
@@ -300,7 +319,7 @@ export default function InvoiceView() {
         </div>
       </div>
       
-      <div className="flex-1 px-4 -mt-14 pb-6 space-y-4">
+      <div className="flex-1 px-4 pt-4 pb-6 space-y-4">
         <Card className="border-0 shadow-xl overflow-hidden">
           <CardContent className="p-0">
             <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6 text-center border-b">
@@ -391,7 +410,16 @@ export default function InvoiceView() {
                     {invoice.paymentMethod && ` via ${invoice.paymentMethod.charAt(0).toUpperCase() + invoice.paymentMethod.slice(1)}`}
                   </p>
                 </div>
-                <Sparkles className="h-6 w-6 text-white/50" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowRevertDialog(true)}
+                  className="text-white/80 hover:text-white hover:bg-white/20"
+                  data-testid="button-revert-paid"
+                >
+                  <Undo2 className="h-4 w-4 mr-1" />
+                  Undo
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -560,6 +588,40 @@ export default function InvoiceView() {
                 <Trash2 className="h-4 w-4 mr-2" />
               )}
               Delete Invoice
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showRevertDialog} onOpenChange={setShowRevertDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                <Undo2 className="h-5 w-5 text-amber-600" />
+              </div>
+              Revert Payment
+            </DialogTitle>
+            <DialogDescription>
+              This will mark invoice #{invoice.invoiceNumber} as unpaid and remove the payment record. Use this if you made a mistake.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowRevertDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => revertMutation.mutate()}
+              disabled={revertMutation.isPending}
+              className="bg-gradient-to-r from-amber-500 to-orange-500"
+              data-testid="button-confirm-revert"
+            >
+              {revertMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Undo2 className="h-4 w-4 mr-2" />
+              )}
+              Revert to Unpaid
             </Button>
           </DialogFooter>
         </DialogContent>
