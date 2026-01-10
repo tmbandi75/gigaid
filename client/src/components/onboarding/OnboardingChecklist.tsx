@@ -5,8 +5,9 @@ import { Check, Link2, Briefcase, Clock, Bell, ChevronRight, Copy, PartyPopper }
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import confetti from "canvas-confetti";
+import { SendBookingLinkDialog } from "./SendBookingLinkDialog";
 
 interface OnboardingStep {
   id: string;
@@ -72,6 +73,7 @@ export function OnboardingChecklist({ currentStep, onStepClick, onComplete, book
   const isComplete = currentStep >= steps.length;
   const confettiShownRef = useRef(false);
   const prevStepRef = useRef(currentStep);
+  const [showSendLinkDialog, setShowSendLinkDialog] = useState(false);
 
   useEffect(() => {
     trackEvent("onboarding_checklist_viewed");
@@ -130,6 +132,12 @@ export function OnboardingChecklist({ currentStep, onStepClick, onComplete, book
 
   const handleStepClick = (index: number, route: string) => {
     trackEvent("onboarding_step_clicked", { step_key: steps[index].id });
+    
+    if (steps[index].id === "share_booking") {
+      setShowSendLinkDialog(true);
+      return;
+    }
+    
     onStepClick(index, route);
   };
 
@@ -214,6 +222,14 @@ export function OnboardingChecklist({ currentStep, onStepClick, onComplete, book
           );
         })}
       </CardContent>
+
+      <SendBookingLinkDialog
+        open={showSendLinkDialog}
+        onClose={() => setShowSendLinkDialog(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/onboarding"] });
+        }}
+      />
     </Card>
   );
 }

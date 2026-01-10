@@ -49,6 +49,7 @@ import {
 } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import type { Job } from "@shared/schema";
+import { GetPaidDialog } from "@/components/job/GetPaidDialog";
 
 interface ScheduleSuggestion {
   date: string;
@@ -129,6 +130,8 @@ export default function JobForm() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showGetPaidDialog, setShowGetPaidDialog] = useState(false);
+  const [completedJobData, setCompletedJobData] = useState<{ title: string; price?: number; clientName?: string } | null>(null);
 
   const urlParams = new URLSearchParams(searchString);
   const prefillClientName = urlParams.get("clientName") || "";
@@ -265,7 +268,7 @@ export default function JobForm() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (data: JobFormData) => {
+    mutationFn: async (data: JobFormData & { _showGetPaid?: boolean }) => {
       const clientName = [data.clientFirstName, data.clientLastName]
         .filter(Boolean)
         .join(" ")
@@ -284,14 +287,27 @@ export default function JobForm() {
         clientPhone: data.clientPhone,
         status: data.status,
       };
-      return apiRequest("PATCH", `/api/jobs/${id}`, payload);
+      
+      const response = await apiRequest("PATCH", `/api/jobs/${id}`, payload);
+      return { data, clientName, response };
     },
-    onSuccess: () => {
+    onSuccess: ({ data, clientName }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
-      toast({ title: "Job updated successfully" });
-      navigate("/jobs");
+      
+      if (data.status === "completed" && existingJob?.status !== "completed") {
+        setCompletedJobData({
+          title: data.title,
+          price: data.price ? data.price * 100 : undefined,
+          clientName: clientName || undefined,
+        });
+        setShowGetPaidDialog(true);
+        toast({ title: "Job marked as complete!" });
+      } else {
+        toast({ title: "Job updated successfully" });
+        navigate("/jobs");
+      }
     },
     onError: () => {
       toast({ title: "Failed to update job", variant: "destructive" });
@@ -880,6 +896,20 @@ export default function JobForm() {
           </form>
         </Form>
       </div>
+
+      {id && completedJobData && (
+        <GetPaidDialog
+          open={showGetPaidDialog}
+          onClose={() => {
+            setShowGetPaidDialog(false);
+            navigate("/jobs");
+          }}
+          jobId={id}
+          jobTitle={completedJobData.title}
+          amount={completedJobData.price}
+          clientName={completedJobData.clientName}
+        />
+      )}
     </div>
   );
 }

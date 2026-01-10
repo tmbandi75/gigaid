@@ -167,6 +167,93 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/jobs/:id/payment", async (req, res) => {
+    try {
+      const paymentUpdateSchema = z.object({
+        paymentStatus: z.enum(["unpaid", "paid", "partial"]).optional(),
+        paymentMethod: z.enum(["cash", "zelle", "venmo", "cashapp", "check", "card", "other"]).optional(),
+        paidAt: z.string().optional(),
+      });
+      
+      const validatedData = paymentUpdateSchema.parse(req.body);
+      const job = await storage.updateJob(req.params.id, validatedData);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      res.json(job);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update payment status" });
+    }
+  });
+
+  app.post("/api/jobs/:id/send-confirmation", async (req, res) => {
+    try {
+      const job = await storage.getJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      if (!job.clientPhone) {
+        return res.status(400).json({ error: "Client phone number not available" });
+      }
+
+      const crypto = await import("crypto");
+      const confirmToken = crypto.randomBytes(16).toString("base64url");
+      
+      const formatTime = (time: string) => {
+        const [hours, minutes] = time.split(":");
+        const h = parseInt(hours);
+        const ampm = h >= 12 ? "PM" : "AM";
+        const hour12 = h % 12 || 12;
+        return `${hour12}:${minutes} ${ampm}`;
+      };
+
+      const formatDate = (dateStr: string) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+      };
+
+      const confirmUrl = `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : "https://gigaid.com"}/confirm/${confirmToken}`;
+      
+      const smsMessage = `You're booked for ${formatDate(job.scheduledDate)} at ${formatTime(job.scheduledTime)}. Reply YES to confirm. Or click: ${confirmUrl}`;
+
+      await sendSMS(job.clientPhone, smsMessage);
+
+      await storage.updateJob(req.params.id, {
+        clientConfirmToken: confirmToken,
+        confirmationSentAt: new Date().toISOString(),
+      });
+
+      res.json({ success: true, message: "Confirmation sent" });
+    } catch (error) {
+      console.error("Failed to send confirmation:", error);
+      res.status(500).json({ error: "Failed to send confirmation" });
+    }
+  });
+
+  app.get("/api/public/confirm/:token", async (req, res) => {
+    try {
+      const jobs = await storage.getJobs(defaultUserId);
+      const job = jobs.find(j => j.clientConfirmToken === req.params.token);
+      
+      if (!job) {
+        return res.status(404).json({ error: "Confirmation not found or expired" });
+      }
+
+      await storage.updateJob(job.id, {
+        clientConfirmStatus: "confirmed",
+        clientConfirmedAt: new Date().toISOString(),
+      });
+
+      res.json({ success: true, message: "Booking confirmed!", job: { title: job.title, scheduledDate: job.scheduledDate, scheduledTime: job.scheduledTime } });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to confirm booking" });
+    }
+  });
+
   app.delete("/api/jobs/:id", async (req, res) => {
     try {
       const deleted = await storage.deleteJob(req.params.id);
@@ -1801,6 +1888,31 @@ export async function registerRoutes(
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to update onboarding" });
+    }
+  });
+
+  app.post("/api/onboarding/send-booking-link", async (req, res) => {
+    try {
+      const { phoneNumber } = req.body;
+      if (!phoneNumber) {
+        return res.status(400).json({ error: "Phone number is required" });
+      }
+
+      const user = await storage.getUser(defaultUserId);
+      if (!user?.publicProfileSlug) {
+        return res.status(400).json({ error: "Booking link not set up yet" });
+      }
+
+      const bookingUrl = `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : "https://gigaid.com"}/book/${user.publicProfileSlug}`;
+      
+      const message = `Here's your GigAid booking link! Share it with your next customer: ${bookingUrl}`;
+
+      await sendSMS(phoneNumber, message);
+
+      res.json({ success: true, message: "Booking link sent to your phone!" });
+    } catch (error) {
+      console.error("Failed to send booking link:", error);
+      res.status(500).json({ error: "Failed to send booking link" });
     }
   });
 

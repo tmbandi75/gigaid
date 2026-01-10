@@ -100,6 +100,18 @@ export type Session = typeof sessions.$inferSelect;
 export const jobStatuses = ["scheduled", "in_progress", "completed", "cancelled"] as const;
 export type JobStatus = (typeof jobStatuses)[number];
 
+// Client confirmation status
+export const clientConfirmStatuses = ["pending", "confirmed", "declined"] as const;
+export type ClientConfirmStatus = (typeof clientConfirmStatuses)[number];
+
+// Job payment status
+export const jobPaymentStatuses = ["unpaid", "paid"] as const;
+export type JobPaymentStatus = (typeof jobPaymentStatuses)[number];
+
+// Job payment methods
+export const jobPaymentMethods = ["cash", "zelle", "venmo", "cashapp", "check", "card", "other"] as const;
+export type JobPaymentMethod = (typeof jobPaymentMethods)[number];
+
 // Jobs table with enhanced fields
 export const jobs = pgTable("jobs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -119,9 +131,19 @@ export const jobs = pgTable("jobs", {
   voiceNoteSummary: text("voice_note_summary"),
   clientName: text("client_name"),
   clientPhone: text("client_phone"),
+  clientEmail: text("client_email"),
   assignedCrewId: text("assigned_crew_id"),
   materials: text("materials"),
   notes: text("notes"),
+  clientConfirmStatus: text("client_confirm_status").default("pending"),
+  clientConfirmToken: text("client_confirm_token"),
+  clientConfirmedAt: text("client_confirmed_at"),
+  confirmationSentAt: text("confirmation_sent_at"),
+  paymentStatus: text("payment_status").default("unpaid"),
+  paymentMethod: text("payment_method"),
+  paidAt: text("paid_at"),
+  reminder24hSent: boolean("reminder_24h_sent").default(false),
+  reminder2hSent: boolean("reminder_2h_sent").default(false),
   createdAt: text("created_at").notNull(),
 });
 
