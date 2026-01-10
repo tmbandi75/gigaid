@@ -1,12 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation, useParams, useSearch } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -27,9 +26,24 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Loader2, Sparkles, Calendar, Clock } from "lucide-react";
+import { 
+  ArrowLeft, 
+  Loader2, 
+  Sparkles, 
+  Calendar, 
+  Clock, 
+  Briefcase,
+  User,
+  MapPin,
+  DollarSign,
+  FileText,
+  Phone,
+  Timer,
+  CheckCircle2,
+  Wrench
+} from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
-import type { Job, InsertJob } from "@shared/schema";
+import type { Job } from "@shared/schema";
 
 interface ScheduleSuggestion {
   date: string;
@@ -46,7 +60,8 @@ const jobFormSchema = z.object({
   scheduledTime: z.string().min(1, "Time is required"),
   duration: z.coerce.number().min(15, "Duration must be at least 15 minutes").optional(),
   price: z.coerce.number().optional(),
-  clientName: z.string().optional(),
+  clientFirstName: z.string().optional(),
+  clientLastName: z.string().optional(),
   clientPhone: z.string().optional(),
   status: z.string().optional(),
 });
@@ -54,22 +69,33 @@ const jobFormSchema = z.object({
 type JobFormData = z.infer<typeof jobFormSchema>;
 
 const serviceTypes = [
-  { value: "plumbing", label: "Plumbing" },
-  { value: "electrical", label: "Electrical" },
-  { value: "cleaning", label: "Cleaning" },
-  { value: "hvac", label: "HVAC" },
-  { value: "painting", label: "Painting" },
-  { value: "carpentry", label: "Carpentry" },
-  { value: "landscaping", label: "Landscaping" },
-  { value: "general", label: "General Maintenance" },
+  { value: "plumbing", label: "Plumbing", icon: "🔧" },
+  { value: "electrical", label: "Electrical", icon: "⚡" },
+  { value: "cleaning", label: "Cleaning", icon: "✨" },
+  { value: "hvac", label: "HVAC", icon: "❄️" },
+  { value: "painting", label: "Painting", icon: "🎨" },
+  { value: "carpentry", label: "Carpentry", icon: "🪚" },
+  { value: "landscaping", label: "Landscaping", icon: "🌳" },
+  { value: "general", label: "General Maintenance", icon: "🔨" },
 ];
 
 const jobStatuses = [
-  { value: "scheduled", label: "Scheduled" },
-  { value: "in_progress", label: "In Progress" },
-  { value: "completed", label: "Completed" },
-  { value: "cancelled", label: "Cancelled" },
+  { value: "scheduled", label: "Scheduled", color: "bg-blue-500" },
+  { value: "in_progress", label: "In Progress", color: "bg-amber-500" },
+  { value: "completed", label: "Completed", color: "bg-emerald-500" },
+  { value: "cancelled", label: "Cancelled", color: "bg-gray-500" },
 ];
+
+function parseClientName(fullName: string): { firstName: string; lastName: string } {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) {
+    return { firstName: parts[0], lastName: "" };
+  }
+  return {
+    firstName: parts[0],
+    lastName: parts.slice(1).join(" "),
+  };
+}
 
 export default function JobForm() {
   const { id } = useParams<{ id: string }>();
@@ -81,11 +107,15 @@ export default function JobForm() {
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   const urlParams = new URLSearchParams(searchString);
+  const prefillClientName = urlParams.get("clientName") || "";
+  const parsedPrefill = parseClientName(prefillClientName);
+  
   const prefillData = {
     serviceType: urlParams.get("serviceType") || "",
     date: urlParams.get("date") || "",
     time: urlParams.get("time") || "",
-    clientName: urlParams.get("clientName") || "",
+    clientFirstName: parsedPrefill.firstName,
+    clientLastName: parsedPrefill.lastName,
     clientPhone: urlParams.get("clientPhone") || "",
     description: urlParams.get("description") || "",
     duration: urlParams.get("duration") ? parseInt(urlParams.get("duration")!) : undefined,
@@ -96,6 +126,8 @@ export default function JobForm() {
     queryKey: ["/api/jobs", id],
     enabled: !!isEditing,
   });
+
+  const parsedExisting = existingJob ? parseClientName(existingJob.clientName || "") : { firstName: "", lastName: "" };
 
   const form = useForm<JobFormData>({
     resolver: zodResolver(jobFormSchema),
@@ -108,7 +140,8 @@ export default function JobForm() {
       scheduledTime: prefillData.time || "09:00",
       duration: prefillData.duration || 60,
       price: prefillData.price,
-      clientName: prefillData.clientName || "",
+      clientFirstName: prefillData.clientFirstName || "",
+      clientLastName: prefillData.clientLastName || "",
       clientPhone: prefillData.clientPhone || "",
       status: "scheduled",
     },
@@ -121,7 +154,8 @@ export default function JobForm() {
       scheduledTime: existingJob.scheduledTime,
       duration: existingJob.duration || 60,
       price: existingJob.price ? existingJob.price / 100 : undefined,
-      clientName: existingJob.clientName || "",
+      clientFirstName: parsedExisting.firstName,
+      clientLastName: parsedExisting.lastName,
       clientPhone: existingJob.clientPhone || "",
       status: existingJob.status,
     } : undefined,
@@ -154,10 +188,23 @@ export default function JobForm() {
 
   const createMutation = useMutation({
     mutationFn: async (data: JobFormData) => {
+      const clientName = [data.clientFirstName, data.clientLastName]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+      
       const payload = {
-        ...data,
-        userId: "demo-user",
+        title: data.title,
+        serviceType: data.serviceType,
+        description: data.description,
+        location: data.location,
+        scheduledDate: data.scheduledDate,
+        scheduledTime: data.scheduledTime,
+        duration: data.duration,
         price: data.price ? data.price * 100 : undefined,
+        clientName: clientName || undefined,
+        clientPhone: data.clientPhone,
+        userId: "demo-user",
         status: "scheduled",
       };
       return apiRequest("POST", "/api/jobs", payload);
@@ -175,9 +222,22 @@ export default function JobForm() {
 
   const updateMutation = useMutation({
     mutationFn: async (data: JobFormData) => {
+      const clientName = [data.clientFirstName, data.clientLastName]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+      
       const payload = {
-        ...data,
+        title: data.title,
+        serviceType: data.serviceType,
+        description: data.description,
+        location: data.location,
+        scheduledDate: data.scheduledDate,
+        scheduledTime: data.scheduledTime,
+        duration: data.duration,
         price: data.price ? data.price * 100 : undefined,
+        clientName: clientName || undefined,
+        clientPhone: data.clientPhone,
         status: data.status,
       };
       return apiRequest("PATCH", `/api/jobs/${id}`, payload);
@@ -230,44 +290,80 @@ export default function JobForm() {
 
   if (isEditing && isLoadingJob) {
     return (
-      <div className="flex flex-col min-h-full">
-        <TopBar title="Loading..." showActions={false} />
+      <div className="flex flex-col min-h-full bg-background">
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="text-center space-y-3">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+            <p className="text-sm text-muted-foreground">Loading job details...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-full" data-testid="page-job-form">
-      <TopBar title={isEditing ? "Edit Job" : "New Job"} showActions={false} />
+    <div className="flex flex-col min-h-full bg-background" data-testid="page-job-form">
+      <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-violet-600 text-primary-foreground px-4 pt-4 pb-6">
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 -left-10 w-32 h-32 bg-violet-400/20 rounded-full blur-2xl" />
+        </div>
+        
+        <div className="relative">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/jobs")}
+            className="text-primary-foreground hover:bg-white/20 -ml-2 mb-3"
+            data-testid="button-back"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+          
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+              {isEditing ? (
+                <Wrench className="h-6 w-6" />
+              ) : (
+                <Briefcase className="h-6 w-6" />
+              )}
+            </div>
+            <div>
+              <h1 className="text-xl font-bold">
+                {isEditing ? "Edit Job" : "New Job"}
+              </h1>
+              <p className="text-sm text-primary-foreground/80">
+                {isEditing ? "Update job details" : "Create a new job entry"}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
       
-      <div className="px-4 py-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate("/jobs")}
-          className="mb-4 -ml-2"
-          data-testid="button-back"
-        >
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Back
-        </Button>
-
+      <div className="flex-1 px-4 py-6 -mt-2">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <Card>
-              <CardContent className="pt-6 space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            <Card className="border-0 shadow-md overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-primary to-violet-500" />
+              <CardContent className="pt-5 space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText className="h-4 w-4 text-primary" />
+                  <h3 className="font-semibold text-sm">Job Details</h3>
+                </div>
+                
                 <FormField
                   control={form.control}
                   name="title"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Job Title</FormLabel>
+                      <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Job Title
+                      </FormLabel>
                       <FormControl>
                         <Input 
                           placeholder="e.g., Fix bathroom sink" 
+                          className="h-12 text-base"
                           {...field} 
                           data-testid="input-title"
                         />
@@ -282,17 +378,22 @@ export default function JobForm() {
                   name="serviceType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Service Type</FormLabel>
+                      <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Service Type
+                      </FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger data-testid="select-service-type">
+                          <SelectTrigger className="h-12" data-testid="select-service-type">
                             <SelectValue placeholder="Select service type" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {serviceTypes.map((type) => (
                             <SelectItem key={type.value} value={type.value}>
-                              {type.label}
+                              <span className="flex items-center gap-2">
+                                <span>{type.icon}</span>
+                                <span>{type.label}</span>
+                              </span>
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -307,11 +408,13 @@ export default function JobForm() {
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description (optional)</FormLabel>
+                      <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Description (optional)
+                      </FormLabel>
                       <FormControl>
                         <Textarea 
-                          placeholder="Job details..."
-                          className="resize-none"
+                          placeholder="Add any details about the job..."
+                          className="resize-none min-h-[80px]"
                           {...field}
                           data-testid="input-description"
                         />
@@ -327,17 +430,22 @@ export default function JobForm() {
                     name="status"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Job Status</FormLabel>
+                        <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Status
+                        </FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <SelectTrigger data-testid="select-status">
+                            <SelectTrigger className="h-12" data-testid="select-status">
                               <SelectValue placeholder="Select status" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             {jobStatuses.map((status) => (
                               <SelectItem key={status.value} value={status.value}>
-                                {status.label}
+                                <span className="flex items-center gap-2">
+                                  <span className={`h-2 w-2 rounded-full ${status.color}`} />
+                                  <span>{status.label}</span>
+                                </span>
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -350,10 +458,14 @@ export default function JobForm() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="pt-6 space-y-4">
+            <Card className="border-0 shadow-md overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-blue-500 to-cyan-500" />
+              <CardContent className="pt-5 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-medium text-foreground">Schedule</h3>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-blue-500" />
+                    <h3 className="font-semibold text-sm">Schedule</h3>
+                  </div>
                   {!isEditing && (
                     <Button
                       type="button"
@@ -361,56 +473,47 @@ export default function JobForm() {
                       size="sm"
                       onClick={handleGetSuggestions}
                       disabled={suggestionsMutation.isPending}
+                      className="h-8"
                       data-testid="button-get-suggestions"
                     >
                       {suggestionsMutation.isPending ? (
-                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                       ) : (
-                        <Sparkles className="h-4 w-4 mr-1" />
+                        <Sparkles className="h-3 w-3 mr-1" />
                       )}
-                      Suggest Times
+                      AI Suggest
                     </Button>
                   )}
                 </div>
 
                 {showSuggestions && suggestionsMutation.data?.suggestions && (
-                  <Card className="bg-muted/50" data-testid="card-suggestions">
-                    <CardHeader className="py-3 px-4">
-                      <CardTitle className="text-sm flex items-center gap-2">
-                        <Sparkles className="h-4 w-4 text-primary" />
-                        AI-Suggested Time Slots
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="px-4 pb-4 space-y-2">
-                      {suggestionsMutation.data.suggestions.map((suggestion, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between p-3 bg-background rounded-md border hover-elevate cursor-pointer"
-                          onClick={() => handleSelectSuggestion(suggestion)}
-                          data-testid={`suggestion-slot-${index}`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2">
-                                <Calendar className="h-3 w-3 text-muted-foreground" />
-                                <span className="text-sm font-medium">{formatDate(suggestion.date)}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Clock className="h-3 w-3 text-muted-foreground" />
-                                <span className="text-sm">{formatTime(suggestion.time)}</span>
-                              </div>
-                            </div>
+                  <div className="rounded-xl bg-gradient-to-br from-primary/5 to-violet-500/5 border border-primary/20 p-4 space-y-2" data-testid="card-suggestions">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">AI-Suggested Slots</span>
+                    </div>
+                    {suggestionsMutation.data.suggestions.map((suggestion, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 bg-background rounded-lg border hover-elevate cursor-pointer"
+                        onClick={() => handleSelectSuggestion(suggestion)}
+                        data-testid={`suggestion-slot-${index}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Calendar className="h-4 w-4 text-primary" />
                           </div>
-                          <Badge variant="secondary" className="text-xs">
-                            Select
-                          </Badge>
+                          <div>
+                            <p className="text-sm font-medium">{formatDate(suggestion.date)}</p>
+                            <p className="text-xs text-muted-foreground">{formatTime(suggestion.time)}</p>
+                          </div>
                         </div>
-                      ))}
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Tap a slot to use it
-                      </p>
-                    </CardContent>
-                  </Card>
+                        <Badge variant="secondary" className="text-xs">
+                          Select
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
                 )}
 
                 {suggestionsMutation.isError && (
@@ -419,16 +522,19 @@ export default function JobForm() {
                   </p>
                 )}
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <FormField
                     control={form.control}
                     name="scheduledDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Date</FormLabel>
+                        <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Date
+                        </FormLabel>
                         <FormControl>
                           <Input 
                             type="date" 
+                            className="h-12"
                             {...field} 
                             data-testid="input-date"
                           />
@@ -443,10 +549,13 @@ export default function JobForm() {
                     name="scheduledTime"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Time</FormLabel>
+                        <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Time
+                        </FormLabel>
                         <FormControl>
                           <Input 
                             type="time" 
+                            className="h-12"
                             {...field} 
                             data-testid="input-time"
                           />
@@ -457,36 +566,122 @@ export default function JobForm() {
                   />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="duration"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Duration (minutes)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="60"
-                          {...field}
-                          data-testid="input-duration"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="duration"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                          <Timer className="h-3 w-3" />
+                          Duration (min)
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="60"
+                            className="h-12"
+                            {...field}
+                            data-testid="input-duration"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          Location
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Address"
+                            className="h-12"
+                            {...field}
+                            data-testid="input-location"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-md overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
+              <CardContent className="pt-5 space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <User className="h-4 w-4 text-emerald-500" />
+                  <h3 className="font-semibold text-sm">Client Information</h3>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="clientFirstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          First Name
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="John"
+                            className="h-12"
+                            {...field}
+                            data-testid="input-client-first-name"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="clientLastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Last Name
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Doe"
+                            className="h-12"
+                            {...field}
+                            data-testid="input-client-last-name"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <FormField
                   control={form.control}
-                  name="location"
+                  name="clientPhone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Location (optional)</FormLabel>
+                      <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                        <Phone className="h-3 w-3" />
+                        Phone Number
+                      </FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="123 Main St, City"
-                          {...field}
-                          data-testid="input-location"
+                        <PhoneInput
+                          value={field.value || ""}
+                          onChange={field.onChange}
+                          className="h-12"
+                          data-testid="input-client-phone"
                         />
                       </FormControl>
                       <FormMessage />
@@ -496,59 +691,33 @@ export default function JobForm() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="pt-6 space-y-4">
-                <h3 className="font-medium text-foreground">Client & Payment</h3>
+            <Card className="border-0 shadow-md overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-amber-500 to-orange-500" />
+              <CardContent className="pt-5 space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <DollarSign className="h-4 w-4 text-amber-500" />
+                  <h3 className="font-semibold text-sm">Pricing</h3>
+                </div>
                 
-                <FormField
-                  control={form.control}
-                  name="clientName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Client Name (optional)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="John Doe"
-                          {...field}
-                          data-testid="input-client-name"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="clientPhone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Client Phone (optional)</FormLabel>
-                      <FormControl>
-                        <PhoneInput
-                          value={field.value || ""}
-                          onChange={field.onChange}
-                          data-testid="input-client-phone"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 <FormField
                   control={form.control}
                   name="price"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Price ($) (optional)</FormLabel>
+                      <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Job Price ($)
+                      </FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number"
-                          placeholder="150"
-                          {...field}
-                          data-testid="input-price"
-                        />
+                        <div className="relative">
+                          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input 
+                            type="number"
+                            placeholder="0.00"
+                            className="h-12 pl-9 text-lg font-semibold"
+                            {...field}
+                            data-testid="input-price"
+                          />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -559,19 +728,24 @@ export default function JobForm() {
 
             <Button 
               type="submit" 
-              className="w-full h-12" 
+              className="w-full h-14 text-base font-semibold bg-gradient-to-r from-primary to-violet-600 hover:from-primary/90 hover:to-violet-600/90 shadow-lg" 
               disabled={isPending}
               data-testid="button-submit"
             >
               {isPending ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                   {isEditing ? "Updating..." : "Creating..."}
                 </>
               ) : (
-                isEditing ? "Update Job" : "Create Job"
+                <>
+                  <CheckCircle2 className="h-5 w-5 mr-2" />
+                  {isEditing ? "Update Job" : "Create Job"}
+                </>
               )}
             </Button>
+            
+            <div className="h-6" />
           </form>
         </Form>
       </div>

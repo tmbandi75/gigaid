@@ -51,7 +51,7 @@ export function NewServiceAIInput({ onServicesCreated }: NewServiceAIInputProps)
   };
 
   const handleSaveAll = () => {
-    if (suggestions.length > 0) {
+    if (suggestions && suggestions.length > 0) {
       onServicesCreated?.(suggestions);
       toast({ title: `${suggestions.length} service(s) added!` });
       setSuggestions([]);
@@ -60,10 +60,13 @@ export function NewServiceAIInput({ onServicesCreated }: NewServiceAIInputProps)
   };
 
   const handleRemove = (index: number) => {
-    setSuggestions(suggestions.filter((_, i) => i !== index));
+    if (suggestions) {
+      setSuggestions(suggestions.filter((_, i) => i !== index));
+    }
   };
 
   const handleUpdate = (index: number, field: keyof ServiceSuggestion, value: string | number) => {
+    if (!suggestions) return;
     const updated = [...suggestions];
     updated[index] = { ...updated[index], [field]: value };
     setSuggestions(updated);
