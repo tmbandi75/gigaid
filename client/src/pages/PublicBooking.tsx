@@ -15,6 +15,7 @@ import { SmartServiceRecommender } from "@/components/booking/SmartServiceRecomm
 import { JobNotesAutocomplete } from "@/components/booking/JobNotesAutocomplete";
 import { FAQAssistant } from "@/components/booking/FAQAssistant";
 import { PriceEstimator } from "@/components/booking/PriceEstimator";
+import { Confetti } from "@/components/booking/Confetti";
 
 interface PublicProfile {
   name: string;
@@ -43,6 +44,7 @@ export default function PublicBooking() {
   const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
   const [submitted, setSubmitted] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -83,6 +85,7 @@ export default function PublicBooking() {
     mutationFn: (data: typeof formData & { preferredDate: string; preferredTime: string }) =>
       apiRequest("POST", `/api/public/book/${slug}`, data),
     onSuccess: () => {
+      setShowConfetti(true);
       setSubmitted(true);
       toast({ title: "Booking request sent!" });
     },
@@ -188,16 +191,17 @@ export default function PublicBooking() {
   if (submitted) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Confetti active={showConfetti} duration={5000} />
         <Card className="max-w-md w-full">
           <CardContent className="py-12 text-center">
-            <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mx-auto mb-4 animate-bounce">
               <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
             <h2 className="text-xl font-semibold mb-2">Request Submitted!</h2>
             <p className="text-muted-foreground mb-4">
               {profile.name} will get back to you shortly to confirm your booking.
             </p>
-            <Button variant="outline" onClick={() => { setSubmitted(false); setSelectedDate(null); setSelectedTime(null); }}>
+            <Button variant="outline" onClick={() => { setSubmitted(false); setShowConfetti(false); setSelectedDate(null); setSelectedTime(null); }}>
               Submit Another Request
             </Button>
           </CardContent>
