@@ -649,7 +649,7 @@ export default function CrewPortal() {
         </Card>
 
         <div className="text-center text-xs text-muted-foreground pt-4">
-          <p className="flex items-center justify-center gap-1">Powered by <img src="/gigaid-logo.png" alt="GigAid" className="h-4 inline-block" /></p>
+          <p>Powered by GigAid</p>
           <p className="mt-1">
             Link expires:{" "}
             {new Date(invite.expiresAt).toLocaleDateString("en-US", {

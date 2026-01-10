@@ -222,10 +222,9 @@ export default function More() {
           </CardContent>
         </Card>
 
-        <div className="text-center py-4">
-          <img src="/gigaid-logo.png" alt="GigAid" className="h-6 mx-auto mb-1" />
-          <p className="text-xs text-muted-foreground">v1.0.0</p>
-        </div>
+        <p className="text-center text-xs text-muted-foreground py-4">
+          GigAid v1.0.0
+        </p>
         
         <div className="h-4" />
       </div>

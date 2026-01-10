@@ -805,7 +805,7 @@ export default function PublicBooking() {
           </Card>
         )}
 
-        <div className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1">
+        <p className="text-center text-xs text-muted-foreground">
           Powered by{" "}
           <a 
             href="http://www.gigaid.com" 
@@ -814,9 +814,9 @@ export default function PublicBooking() {
             className="hover:underline"
             data-testid="link-gigaid"
           >
-            <img src="/gigaid-logo.png" alt="GigAid" className="h-4 inline-block" />
+            GigAid<sup className="text-[8px]">TM</sup>
           </a>
-        </div>
+        </p>
       </div>
 
       <FAQAssistant slug={slug || ""} providerName={profile?.name} />
