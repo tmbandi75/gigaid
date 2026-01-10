@@ -14,6 +14,8 @@ import {
 import { z } from "zod";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { parseTextToPlan, suggestScheduleSlots, generateFollowUp } from "./ai/aiService";
+import { sendSMS } from "./twilio";
+import { sendEmail } from "./sendgrid";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -612,6 +614,53 @@ export async function registerRoutes(
         userId: user.id,
       });
       const request = await storage.createBookingRequest(validated);
+
+      // Send confirmation notifications to the client
+      const providerFirstName = user.name?.split(" ")[0] || "Your service provider";
+      const serviceName = request.serviceType || "service";
+      const preferredDateTime = request.preferredDate && request.preferredTime
+        ? `on ${request.preferredDate} at ${request.preferredTime}`
+        : request.preferredDate
+        ? `on ${request.preferredDate}`
+        : "at your requested time";
+
+      // Send SMS confirmation
+      if (request.clientPhone) {
+        const smsMessage = `Hi ${request.clientName.split(" ")[0]}! Your ${serviceName} booking request ${preferredDateTime} has been received. ${providerFirstName} will get back to you shortly to confirm. - Powered by GigAid`;
+        sendSMS(request.clientPhone, smsMessage).catch(err => {
+          console.error("Failed to send booking confirmation SMS:", err);
+        });
+      }
+
+      // Send email confirmation
+      if (request.clientEmail) {
+        const emailSubject = `Booking Request Received - ${serviceName}`;
+        const emailText = `Hi ${request.clientName.split(" ")[0]},\n\nThank you for your booking request!\n\nService: ${serviceName}\nRequested Time: ${preferredDateTime}\n\n${providerFirstName} has received your request and will get back to you shortly to confirm.\n\nBest regards,\n${user.name || "Your Service Provider"}\n\n---\nPowered by GigAid`;
+        const emailHtml = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #333;">Booking Request Received!</h2>
+            <p>Hi ${request.clientName.split(" ")[0]},</p>
+            <p>Thank you for your booking request!</p>
+            <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
+              <p style="margin: 0;"><strong>Service:</strong> ${serviceName}</p>
+              <p style="margin: 8px 0 0;"><strong>Requested Time:</strong> ${preferredDateTime}</p>
+            </div>
+            <p>${providerFirstName} has received your request and will get back to you shortly to confirm.</p>
+            <p>Best regards,<br/>${user.name || "Your Service Provider"}</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;"/>
+            <p style="font-size: 12px; color: #888;">Powered by <a href="http://www.gigaid.com" style="color: #888;">GigAid</a></p>
+          </div>
+        `;
+        sendEmail({
+          to: request.clientEmail,
+          subject: emailSubject,
+          text: emailText,
+          html: emailHtml,
+        }).catch(err => {
+          console.error("Failed to send booking confirmation email:", err);
+        });
+      }
+
       res.status(201).json(request);
     } catch (error) {
       if (error instanceof z.ZodError) {

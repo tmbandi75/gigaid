@@ -488,14 +488,14 @@ export default function PublicBooking() {
                     </p>
                   ) : (
                     <div className="space-y-3">
-                      {smartSlotsData.optimizedSlots.filter(s => s.recommendation === "best").length > 0 && (
+                      {(smartSlotsData?.optimizedSlots?.filter(s => s.recommendation === "best")?.length || 0) > 0 && (
                         <div>
                           <div className="flex items-center gap-2 mb-2">
                             <Zap className="h-4 w-4 text-green-500" />
                             <span className="text-sm font-medium text-green-600 dark:text-green-400">Best Times - Minimized Travel</span>
                           </div>
                           <div className="grid grid-cols-2 gap-2">
-                            {smartSlotsData.optimizedSlots.filter(s => s.recommendation === "best").map((slot) => (
+                            {smartSlotsData?.optimizedSlots?.filter(s => s.recommendation === "best").map((slot) => (
                               <Button
                                 key={slot.time}
                                 variant={selectedTime === slot.time ? "default" : "outline"}
@@ -517,14 +517,14 @@ export default function PublicBooking() {
                         </div>
                       )}
                       
-                      {smartSlotsData.optimizedSlots.filter(s => s.recommendation === "good").length > 0 && (
+                      {(smartSlotsData?.optimizedSlots?.filter(s => s.recommendation === "good")?.length || 0) > 0 && (
                         <div>
                           <div className="flex items-center gap-2 mb-2">
                             <Clock className="h-4 w-4 text-yellow-500" />
                             <span className="text-sm font-medium text-yellow-600 dark:text-yellow-400">Good Times - Nearby Jobs</span>
                           </div>
                           <div className="grid grid-cols-2 gap-2">
-                            {smartSlotsData.optimizedSlots.filter(s => s.recommendation === "good").map((slot) => (
+                            {smartSlotsData?.optimizedSlots?.filter(s => s.recommendation === "good").map((slot) => (
                               <Button
                                 key={slot.time}
                                 variant={selectedTime === slot.time ? "default" : "outline"}
@@ -546,14 +546,14 @@ export default function PublicBooking() {
                         </div>
                       )}
                       
-                      {smartSlotsData.optimizedSlots.filter(s => s.recommendation === "available").length > 0 && (
+                      {(smartSlotsData?.optimizedSlots?.filter(s => s.recommendation === "available")?.length || 0) > 0 && (
                         <div>
                           <div className="flex items-center gap-2 mb-2">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm font-medium text-muted-foreground">Other Available Times</span>
                           </div>
                           <div className="grid grid-cols-3 gap-2">
-                            {smartSlotsData.optimizedSlots.filter(s => s.recommendation === "available").map((slot) => (
+                            {smartSlotsData?.optimizedSlots?.filter(s => s.recommendation === "available").map((slot) => (
                               <Button
                                 key={slot.time}
                                 variant={selectedTime === slot.time ? "default" : "outline"}
