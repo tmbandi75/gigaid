@@ -174,7 +174,7 @@ export function VoiceNoteSummarizer({ onSummaryComplete }: VoiceNoteSummarizerPr
             </div>
             <p className="text-sm">{summary.summary}</p>
             
-            {summary.keyPoints.length > 0 && (
+            {summary.keyPoints && summary.keyPoints.length > 0 && (
               <div className="space-y-1">
                 <p className="text-xs font-medium text-muted-foreground">Key Points</p>
                 <ul className="text-sm space-y-1">
