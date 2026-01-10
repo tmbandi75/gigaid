@@ -18,6 +18,8 @@ export const users = pgTable("users", {
   businessName: text("business_name"),
   services: text("services").array(),
   bio: text("bio"),
+  availability: text("availability"), // JSON string: { "monday": { enabled: true, start: "09:00", end: "17:00" }, ... }
+  slotDuration: integer("slot_duration").default(60), // in minutes
   onboardingCompleted: boolean("onboarding_completed").default(false),
   onboardingStep: integer("onboarding_step").default(0),
   isPro: boolean("is_pro").default(false),
@@ -31,6 +33,23 @@ export const users = pgTable("users", {
   referredBy: text("referred_by"),
   createdAt: text("created_at"),
 });
+
+// Availability type for frontend use
+export interface DayAvailability {
+  enabled: boolean;
+  start: string; // "09:00"
+  end: string; // "17:00"
+}
+
+export interface WeeklyAvailability {
+  monday: DayAvailability;
+  tuesday: DayAvailability;
+  wednesday: DayAvailability;
+  thursday: DayAvailability;
+  friday: DayAvailability;
+  saturday: DayAvailability;
+  sunday: DayAvailability;
+}
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,

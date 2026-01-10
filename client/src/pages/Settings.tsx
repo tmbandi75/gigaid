@@ -11,7 +11,6 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { 
-  Settings as SettingsIcon, 
   Bell, 
   Link2, 
   Share2, 
@@ -19,9 +18,9 @@ import {
   Copy, 
   Check,
   Loader2,
-  ExternalLink,
 } from "lucide-react";
-import type { User, Referral } from "@shared/schema";
+import { AvailabilityEditor, DEFAULT_AVAILABILITY } from "@/components/settings/AvailabilityEditor";
+import type { Referral, WeeklyAvailability } from "@shared/schema";
 
 interface ReferralData {
   referralCode: string;
@@ -51,10 +50,22 @@ export default function Settings() {
     businessName: "",
     bio: "",
     services: [] as string[],
+    availability: null as WeeklyAvailability | null,
+    slotDuration: 60,
   });
 
   useEffect(() => {
     if (profile) {
+      let parsedAvailability = null;
+      try {
+        if (profile.availability) {
+          parsedAvailability = typeof profile.availability === 'string' 
+            ? JSON.parse(profile.availability) 
+            : profile.availability;
+        }
+      } catch (e) {
+        parsedAvailability = null;
+      }
       setSettings({
         publicProfileEnabled: profile.publicProfileEnabled || false,
         publicProfileSlug: profile.publicProfileSlug || "",
@@ -63,12 +74,14 @@ export default function Settings() {
         businessName: profile.businessName || "",
         bio: profile.bio || "",
         services: profile.services || [],
+        availability: parsedAvailability,
+        slotDuration: profile.slotDuration || 60,
       });
     }
   }, [profile]);
 
   const updateMutation = useMutation({
-    mutationFn: (data: Partial<typeof settings>) => apiRequest("PATCH", "/api/settings", data),
+    mutationFn: (data: any) => apiRequest("PATCH", "/api/settings", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
       toast({ title: "Settings saved" });
@@ -79,7 +92,15 @@ export default function Settings() {
   });
 
   const handleSave = () => {
-    updateMutation.mutate(settings);
+    const dataToSave = {
+      ...settings,
+      availability: settings.availability ? JSON.stringify(settings.availability) : null,
+    };
+    updateMutation.mutate(dataToSave);
+  };
+
+  const handleAvailabilityChange = (availability: WeeklyAvailability, slotDuration: number) => {
+    setSettings({ ...settings, availability, slotDuration });
   };
 
   const copyReferralLink = () => {
@@ -242,6 +263,14 @@ export default function Settings() {
           )}
         </CardContent>
       </Card>
+
+      {settings.publicProfileEnabled && (
+        <AvailabilityEditor
+          availability={settings.availability}
+          slotDuration={settings.slotDuration}
+          onChange={handleAvailabilityChange}
+        />
+      )}
 
       <Card data-testid="card-referrals">
         <CardHeader>

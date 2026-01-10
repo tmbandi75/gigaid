@@ -170,6 +170,16 @@ export class MemStorage implements IStorage {
       publicProfileSlug: "gig-worker",
       referralCode: "GIGPRO2024",
       referredBy: null,
+      availability: JSON.stringify({
+        monday: { enabled: true, start: "09:00", end: "17:00" },
+        tuesday: { enabled: true, start: "09:00", end: "17:00" },
+        wednesday: { enabled: true, start: "09:00", end: "17:00" },
+        thursday: { enabled: true, start: "09:00", end: "17:00" },
+        friday: { enabled: true, start: "09:00", end: "17:00" },
+        saturday: { enabled: false, start: "09:00", end: "17:00" },
+        sunday: { enabled: false, start: "09:00", end: "17:00" },
+      }),
+      slotDuration: 60,
       createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
     };
     this.users.set(userId, demoUser);
@@ -495,6 +505,8 @@ export class MemStorage implements IStorage {
       publicProfileSlug: null,
       referralCode: `REF${id.slice(0, 8).toUpperCase()}`,
       referredBy: null,
+      availability: null,
+      slotDuration: 60,
       createdAt: new Date().toISOString(),
     };
     this.users.set(id, user);
@@ -529,6 +541,8 @@ export class MemStorage implements IStorage {
         publicProfileSlug: null,
         referralCode: null,
         referredBy: null,
+        availability: null,
+        slotDuration: 60,
         createdAt: new Date().toISOString(),
       };
     }

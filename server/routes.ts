@@ -676,6 +676,8 @@ export async function registerRoutes(
         businessName,
         bio,
         services,
+        availability,
+        slotDuration,
       } = req.body;
       
       const user = await storage.updateUser(defaultUserId, {
@@ -686,11 +688,74 @@ export async function registerRoutes(
         businessName,
         bio,
         services,
+        availability,
+        slotDuration,
       });
       
       res.json(user);
     } catch (error) {
       res.status(500).json({ error: "Failed to update settings" });
+    }
+  });
+
+  // Get available time slots for a date (public)
+  app.get("/api/public/available-slots/:slug/:date", async (req, res) => {
+    try {
+      const user = await storage.getUserByPublicSlug(req.params.slug);
+      if (!user || !user.publicProfileEnabled) {
+        return res.status(404).json({ error: "Profile not found" });
+      }
+
+      const dateStr = req.params.date; // format: YYYY-MM-DD
+      const date = new Date(dateStr);
+      const dayOfWeek = date.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
+
+      // Parse availability
+      let availability: any = null;
+      try {
+        availability = user.availability ? JSON.parse(user.availability) : null;
+      } catch (e) {
+        availability = null;
+      }
+
+      if (!availability || !availability[dayOfWeek] || !availability[dayOfWeek].enabled) {
+        return res.json({ available: false, slots: [] });
+      }
+
+      const dayConfig = availability[dayOfWeek];
+      const slotDuration = user.slotDuration || 60;
+
+      // Get existing bookings for this date
+      const jobs = await storage.getJobs(user.id);
+      const bookedTimes = jobs
+        .filter((j) => j.scheduledDate === dateStr)
+        .map((j) => j.scheduledTime);
+
+      // Generate available slots
+      const slots: string[] = [];
+      const [startH, startM] = dayConfig.start.split(":").map(Number);
+      const [endH, endM] = dayConfig.end.split(":").map(Number);
+      const startMinutes = startH * 60 + startM;
+      const endMinutes = endH * 60 + endM;
+
+      for (let m = startMinutes; m + slotDuration <= endMinutes; m += slotDuration) {
+        const h = Math.floor(m / 60);
+        const min = m % 60;
+        const timeStr = `${h.toString().padStart(2, "0")}:${min.toString().padStart(2, "0")}`;
+        
+        if (!bookedTimes.includes(timeStr)) {
+          slots.push(timeStr);
+        }
+      }
+
+      res.json({ 
+        available: true, 
+        slots,
+        slotDuration,
+      });
+    } catch (error) {
+      console.error("Error fetching available slots:", error);
+      res.status(500).json({ error: "Failed to fetch available slots" });
     }
   });
 
