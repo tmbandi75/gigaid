@@ -1716,5 +1716,187 @@ export async function registerRoutes(
     }
   });
 
+  // Export all data as JSON
+  app.get("/api/export/json", async (req, res) => {
+    try {
+      const jobs = await storage.getJobs(defaultUserId);
+      const leads = await storage.getLeads(defaultUserId);
+      const invoices = await storage.getInvoices(defaultUserId);
+      const reminders = await storage.getReminders(defaultUserId);
+      const crewMembers = await storage.getCrewMembers(defaultUserId);
+      const reviews = await storage.getReviews(defaultUserId);
+      const user = await storage.getUser(defaultUserId);
+
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        appName: "GigAid",
+        version: "1.0.0",
+        profile: user ? {
+          name: user.name,
+          businessName: user.businessName,
+          email: user.email,
+          phone: user.phone,
+          services: user.services,
+          serviceArea: user.serviceArea,
+        } : null,
+        data: {
+          jobs,
+          leads,
+          invoices,
+          reminders,
+          crewMembers,
+          reviews,
+        },
+        summary: {
+          totalJobs: jobs.length,
+          totalLeads: leads.length,
+          totalInvoices: invoices.length,
+          totalReminders: reminders.length,
+          totalCrewMembers: crewMembers.length,
+          totalReviews: reviews.length,
+        }
+      };
+
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("Content-Disposition", `attachment; filename="gigaid-export-${new Date().toISOString().split('T')[0]}.json"`);
+      res.json(exportData);
+    } catch (error) {
+      console.error("Export JSON error:", error);
+      res.status(500).json({ error: "Failed to export data" });
+    }
+  });
+
+  // Export data relationships as DOT (GraphViz) file
+  app.get("/api/export/dot", async (req, res) => {
+    try {
+      const jobs = await storage.getJobs(defaultUserId);
+      const leads = await storage.getLeads(defaultUserId);
+      const invoices = await storage.getInvoices(defaultUserId);
+      const crewMembers = await storage.getCrewMembers(defaultUserId);
+      const user = await storage.getUser(defaultUserId);
+
+      let dot = `digraph GigAid {
+  rankdir=LR;
+  node [shape=box, style="rounded,filled", fontname="Arial"];
+  edge [fontname="Arial", fontsize=10];
+  
+  // User/Business node
+  user [label="${user?.businessName || user?.name || 'GigAid User'}", fillcolor="#8B5CF6", fontcolor="white"];
+  
+  // Subgraphs for organization
+  subgraph cluster_jobs {
+    label="Jobs";
+    style=filled;
+    fillcolor="#EFF6FF";
+    node [fillcolor="#3B82F6", fontcolor="white"];
+`;
+
+      // Add job nodes
+      jobs.forEach((job, i) => {
+        const label = `${job.title}\\n${job.status}`;
+        dot += `    job_${i} [label="${label.replace(/"/g, '\\"')}"];\n`;
+      });
+
+      dot += `  }
+  
+  subgraph cluster_leads {
+    label="Leads";
+    style=filled;
+    fillcolor="#F0FDF4";
+    node [fillcolor="#22C55E", fontcolor="white"];
+`;
+
+      // Add lead nodes
+      leads.forEach((lead, i) => {
+        const label = `${lead.clientName}\\n${lead.status}`;
+        dot += `    lead_${i} [label="${label.replace(/"/g, '\\"')}"];\n`;
+      });
+
+      dot += `  }
+  
+  subgraph cluster_invoices {
+    label="Invoices";
+    style=filled;
+    fillcolor="#FEF3C7";
+    node [fillcolor="#F59E0B", fontcolor="white"];
+`;
+
+      // Add invoice nodes
+      invoices.forEach((inv, i) => {
+        const label = `#${inv.invoiceNumber}\\n$${(inv.amount / 100).toFixed(2)}`;
+        dot += `    invoice_${i} [label="${label.replace(/"/g, '\\"')}"];\n`;
+      });
+
+      dot += `  }
+  
+  subgraph cluster_crew {
+    label="Crew";
+    style=filled;
+    fillcolor="#FDF2F8";
+    node [fillcolor="#EC4899", fontcolor="white"];
+`;
+
+      // Add crew nodes
+      crewMembers.forEach((crew, i) => {
+        const label = `${crew.name}\\n${crew.role}`;
+        dot += `    crew_${i} [label="${label.replace(/"/g, '\\"')}"];\n`;
+      });
+
+      dot += `  }
+  
+  // Relationships
+`;
+
+      // User to jobs
+      jobs.forEach((_, i) => {
+        dot += `  user -> job_${i};\n`;
+      });
+
+      // User to leads
+      leads.forEach((_, i) => {
+        dot += `  user -> lead_${i};\n`;
+      });
+
+      // Jobs to invoices (if linked)
+      invoices.forEach((inv, i) => {
+        if (inv.jobId) {
+          const jobIdx = jobs.findIndex(j => j.id === inv.jobId);
+          if (jobIdx >= 0) {
+            dot += `  job_${jobIdx} -> invoice_${i} [label="invoiced"];\n`;
+          }
+        }
+      });
+
+      // Leads to jobs (if converted)
+      leads.forEach((lead, i) => {
+        if (lead.convertedJobId) {
+          const jobIdx = jobs.findIndex(j => j.id === lead.convertedJobId);
+          if (jobIdx >= 0) {
+            dot += `  lead_${i} -> job_${jobIdx} [label="converted", style="dashed"];\n`;
+          }
+        }
+      });
+
+      // Crew to jobs
+      jobs.forEach((job, i) => {
+        if (job.assignedCrewId) {
+          const crewIdx = crewMembers.findIndex(c => c.id === job.assignedCrewId);
+          if (crewIdx >= 0) {
+            dot += `  crew_${crewIdx} -> job_${i} [label="assigned"];\n`;
+          }
+        }
+      });
+
+      dot += `}\n`;
+
+      res.setHeader("Content-Type", "text/vnd.graphviz");
+      res.setHeader("Content-Disposition", `attachment; filename="gigaid-graph-${new Date().toISOString().split('T')[0]}.dot"`);
+      res.send(dot);
+    } catch (error) {
+      console.error("Export DOT error:", error);
+      res.status(500).json({ error: "Failed to export graph" });
+    }
+  });
+
   return httpServer;
 }

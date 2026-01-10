@@ -21,6 +21,9 @@ import {
   Plus,
   Eye,
   EyeOff,
+  Download,
+  FileJson,
+  Share,
 } from "lucide-react";
 import { AvailabilityEditor, DEFAULT_AVAILABILITY } from "@/components/settings/AvailabilityEditor";
 import { PaymentMethodsSettings } from "@/components/PaymentMethodsSettings";
@@ -334,6 +337,49 @@ export default function Settings() {
               <p className="text-sm text-muted-foreground">Total rewards</p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card data-testid="card-export">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Download className="h-5 w-5" />
+            Export Data
+          </CardTitle>
+          <CardDescription>Download your data in different formats</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3">
+            <a 
+              href="/api/export/json" 
+              download
+              className="w-full"
+            >
+              <Button variant="outline" className="w-full justify-start" data-testid="button-export-json">
+                <FileJson className="h-4 w-4 mr-2 text-blue-500" />
+                <div className="text-left">
+                  <p className="font-medium">Download JSON</p>
+                  <p className="text-xs text-muted-foreground">Complete data export</p>
+                </div>
+              </Button>
+            </a>
+            <a 
+              href="/api/export/dot" 
+              download
+              className="w-full"
+            >
+              <Button variant="outline" className="w-full justify-start" data-testid="button-export-dot">
+                <Share className="h-4 w-4 mr-2 text-purple-500" />
+                <div className="text-left">
+                  <p className="font-medium">Download DOT Graph</p>
+                  <p className="text-xs text-muted-foreground">Data relationships (GraphViz format)</p>
+                </div>
+              </Button>
+            </a>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            JSON includes all your jobs, leads, invoices, and more. DOT file can be visualized at graphviz.org
+          </p>
         </CardContent>
       </Card>
 
