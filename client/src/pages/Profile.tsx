@@ -33,6 +33,7 @@ interface UserProfile {
   businessName: string | null;
   bio: string | null;
   services: string[] | null;
+  serviceArea: string | null;
 }
 
 const profileFormSchema = z.object({
@@ -42,6 +43,7 @@ const profileFormSchema = z.object({
   companyName: z.string().optional(),
   phone: z.string().optional(),
   bio: z.string().optional(),
+  serviceArea: z.string().optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileFormSchema>;
@@ -85,6 +87,7 @@ export default function Profile() {
       companyName: "",
       phone: "",
       bio: "",
+      serviceArea: "",
     },
     values: profile ? {
       firstName: parsedName.firstName,
@@ -93,11 +96,12 @@ export default function Profile() {
       companyName: profile.businessName || "",
       phone: profile.phone || "",
       bio: profile.bio || "",
+      serviceArea: profile.serviceArea || "",
     } : undefined,
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (data: Partial<{ name: string; email: string; phone: string; photo: string; businessName: string; bio: string }>) => {
+    mutationFn: async (data: Partial<{ name: string; email: string; phone: string; photo: string; businessName: string; bio: string; serviceArea: string }>) => {
       return apiRequest("PATCH", "/api/profile", data);
     },
     onSuccess: () => {
@@ -117,6 +121,7 @@ export default function Profile() {
       phone: data.phone || "",
       businessName: data.companyName || "",
       bio: data.bio || "",
+      serviceArea: data.serviceArea || "",
     });
   };
 
@@ -308,6 +313,27 @@ export default function Profile() {
                           data-testid="input-phone"
                         />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="serviceArea"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Service Area</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g., Los Angeles, Orange County, San Diego"
+                          {...field}
+                          data-testid="input-service-area"
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Cities, neighborhoods, or regions you serve
+                      </p>
                       <FormMessage />
                     </FormItem>
                   )}

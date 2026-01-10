@@ -44,6 +44,7 @@ export async function registerRoutes(
         businessName: user.businessName,
         bio: user.bio,
         services: user.services,
+        serviceArea: user.serviceArea,
         availability: user.availability,
         slotDuration: user.slotDuration,
         publicProfileEnabled: user.publicProfileEnabled,
@@ -58,7 +59,7 @@ export async function registerRoutes(
 
   app.patch("/api/profile", async (req, res) => {
     try {
-      const { name, email, phone, photo, businessName, bio } = req.body;
+      const { name, email, phone, photo, businessName, bio, serviceArea } = req.body;
       let user = await storage.getUser(defaultUserId);
       
       if (!user) {
@@ -76,6 +77,7 @@ export async function registerRoutes(
       if (photo !== undefined) updates.photo = photo;
       if (businessName !== undefined) updates.businessName = businessName;
       if (bio !== undefined) updates.bio = bio;
+      if (serviceArea !== undefined) updates.serviceArea = serviceArea;
       
       const updatedUser = await storage.updateUser(defaultUserId, updates);
       

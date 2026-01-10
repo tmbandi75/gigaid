@@ -18,6 +18,7 @@ export const users = pgTable("users", {
   businessName: text("business_name"),
   services: text("services").array(),
   bio: text("bio"),
+  serviceArea: text("service_area"),
   availability: text("availability"), // JSON string: { "monday": { enabled: true, start: "09:00", end: "17:00" }, ... }
   slotDuration: integer("slot_duration").default(60), // in minutes
   onboardingCompleted: boolean("onboarding_completed").default(false),
