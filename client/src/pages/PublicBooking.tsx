@@ -14,6 +14,7 @@ import { Star, Calendar, CheckCircle, Loader2, ChevronLeft, ChevronRight, Clock 
 import { SmartServiceRecommender } from "@/components/booking/SmartServiceRecommender";
 import { JobNotesAutocomplete } from "@/components/booking/JobNotesAutocomplete";
 import { FAQAssistant } from "@/components/booking/FAQAssistant";
+import { PriceEstimator } from "@/components/booking/PriceEstimator";
 
 interface PublicProfile {
   name: string;
@@ -471,6 +472,8 @@ export default function PublicBooking() {
             </CardContent>
           </Card>
         </div>
+
+        <PriceEstimator slug={slug || ""} />
 
         {profile.reviews.length > 0 && (
           <Card data-testid="card-reviews">
