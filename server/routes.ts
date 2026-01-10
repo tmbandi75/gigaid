@@ -1000,6 +1000,123 @@ export async function registerRoutes(
     }
   });
 
+  // AI Voice Note Summarizer
+  app.post("/api/ai/summarize-voice-note", async (req, res) => {
+    try {
+      const { transcript } = req.body;
+      if (!transcript) {
+        return res.status(400).json({ error: "Transcript is required" });
+      }
+      const { summarizeVoiceNote } = await import("./ai/aiService");
+      const result = await summarizeVoiceNote(transcript);
+      res.json(result);
+    } catch (error) {
+      console.error("Error summarizing voice note:", error);
+      res.status(500).json({ error: "Failed to summarize voice note" });
+    }
+  });
+
+  // AI Referral Message Generator
+  app.post("/api/ai/referral-message", async (req, res) => {
+    try {
+      const { tone, link, serviceCategory, providerName } = req.body;
+      if (!link) {
+        return res.status(400).json({ error: "Link is required" });
+      }
+      const { generateReferralMessage } = await import("./ai/aiService");
+      const result = await generateReferralMessage({ tone: tone || "friendly", link, serviceCategory, providerName });
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating referral message:", error);
+      res.status(500).json({ error: "Failed to generate referral message" });
+    }
+  });
+
+  // AI Booking Insights
+  app.get("/api/ai/booking-insights", async (req, res) => {
+    try {
+      const jobs = await storage.getJobs(defaultUserId);
+      const jobData = jobs.map(j => ({
+        service: j.title,
+        date: j.scheduledDate,
+        time: j.scheduledTime,
+        price: j.price || 0,
+        clientName: j.clientName || "Unknown"
+      }));
+      const { analyzeBookingPatterns } = await import("./ai/aiService");
+      const result = await analyzeBookingPatterns({ jobs: jobData });
+      res.json(result);
+    } catch (error) {
+      console.error("Error analyzing booking patterns:", error);
+      res.status(500).json({ error: "Failed to analyze booking patterns" });
+    }
+  });
+
+  // AI Feature Unlock Nudge
+  app.post("/api/ai/feature-nudge", async (req, res) => {
+    try {
+      const { completedFeatures, incompleteFeatures, userType } = req.body;
+      const { generateFeatureNudge } = await import("./ai/aiService");
+      const result = await generateFeatureNudge({
+        completedFeatures: completedFeatures || [],
+        incompleteFeatures: incompleteFeatures || ["profile", "services", "availability"],
+        userType
+      });
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating nudge:", error);
+      res.status(500).json({ error: "Failed to generate nudge" });
+    }
+  });
+
+  // AI Service Builder
+  app.post("/api/ai/build-services", async (req, res) => {
+    try {
+      const { description } = req.body;
+      if (!description) {
+        return res.status(400).json({ error: "Description is required" });
+      }
+      const { buildServicesFromDescription } = await import("./ai/aiService");
+      const result = await buildServicesFromDescription(description);
+      res.json({ services: result });
+    } catch (error) {
+      console.error("Error building services:", error);
+      res.status(500).json({ error: "Failed to build services" });
+    }
+  });
+
+  // AI Review Draft Generator
+  app.post("/api/ai/review-draft", async (req, res) => {
+    try {
+      const { clientName, jobName, tone, highlights } = req.body;
+      if (!clientName || !jobName) {
+        return res.status(400).json({ error: "Client name and job name are required" });
+      }
+      const { generateReviewDraft } = await import("./ai/aiService");
+      const result = await generateReviewDraft({ clientName, jobName, tone, highlights });
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating review draft:", error);
+      res.status(500).json({ error: "Failed to generate review draft" });
+    }
+  });
+
+  // AI Client Tagging
+  app.post("/api/ai/tag-client", async (req, res) => {
+    try {
+      const { clientHistory } = req.body;
+      if (!clientHistory) {
+        return res.status(400).json({ error: "Client history is required" });
+      }
+      const { tagClient } = await import("./ai/aiService");
+      const result = await tagClient({ clientHistory });
+      res.json(result);
+    } catch (error) {
+      console.error("Error tagging client:", error);
+      res.status(500).json({ error: "Failed to tag client" });
+    }
+  });
+
   // Smart Replies for Leads
   app.get("/api/leads/:id/smart-replies", async (req, res) => {
     try {

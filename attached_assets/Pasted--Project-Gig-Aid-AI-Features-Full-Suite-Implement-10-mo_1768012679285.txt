@@ -1,0 +1,186 @@
+# 🚀 Project: Gig Aid – AI Features (Full Suite)
+Implement 10 modular AI features to enhance productivity, automation, retention, and growth for gig workers.
+
+Use Supabase for data, React/TypeScript for UI, and OpenAI/Claude APIs for inference.
+
+---
+
+## 🛠️ Tech Stack
+- Frontend: React (Vite + TailwindCSS)
+- Backend: Supabase (Postgres + RLS)
+- AI: OpenAI GPT-4 / Whisper / Claude / Embeddings
+- Extras: Stripe, Google Maps API, SMS API (Twilio or Brevo)
+
+---
+
+## 1️⃣ Text-to-Plan AI
+### Goal: Convert freeform text or voice messages into structured job entries.
+
+### UI Component:
+`<TextToPlanInput />`  
+- Accepts text or voice input  
+- Displays editable job suggestion
+
+### API: `/api/ai/parseJobPlan`
+- Input: `{ message: string | audioBlob, userId: string }`
+- Output: `{ service, date, time, clientName }`
+
+### Flow:
+1. If audio: transcribe with Whisper
+2. Parse transcription with GPT/Claude
+3. Display editable job preview
+4. Save to `jobs` table
+
+---
+
+## 2️⃣ Smart Scheduling Assistant
+### Goal: Suggest optimal slots based on availability, job length, and travel time
+
+### UI Component:
+`<SuggestedTimeSlots jobDuration={60} />`
+
+### API: `/api/schedule/suggestSlots`
+- Input: `{ userId, jobDuration, location }`
+- Output: `[{ startTime, endTime }]`
+
+### Logic:
+1. Query user’s `availability` + `jobs`
+2. Check travel time buffers (optional via Google Maps API)
+3. Return 3 best slots
+
+---
+
+## 3️⃣ Auto Follow-Up Copy Generator
+### Goal: Generate follow-up messages after job or lead inactivity
+
+### UI Component:
+`<FollowUpComposer clientId={id} jobId={id} />`
+
+### API: `/api/ai/generateFollowUp`
+- Input: `{ clientName, lastService, daysSince, tone }`
+- Output: `{ message: string }`
+
+### Use:
+- Trigger 48h after quote or job
+- Let user edit before sending (SMS/WhatsApp/email)
+
+---
+
+## 4️⃣ Voice Note Summarizer
+### Goal: Summarize voice notes from workers or clients
+
+### UI Component:
+`<VoiceNoteUploader />`
+
+### API: `/api/ai/summarizeVoiceNote`
+- Input: `{ audioBlob }`
+- Output: `{ transcript, summary, type: 'job' | 'update' | 'shareable' }`
+
+### Use:
+- Output editable summaries for job cards, marketing, or project updates
+
+---
+
+## 5️⃣ Referral Message Optimizer
+### Goal: Generate referral messages with dynamic tone
+
+### UI Component:
+`<ReferralMessageAI tone="friendly" link="https://gigaid.app/yourname" />`
+
+### API: `/api/ai/referralMessage`
+- Input: `{ tone: string, link: string, serviceCategory?: string }`
+- Output: `{ message: string }`
+
+---
+
+## 6️⃣ Booking Insights & Job Forecast
+### Goal: Analyze user booking history and forecast patterns
+
+### UI Component:
+`<BookingInsightsDashboard />`
+
+### API: `/api/ai/forecastBookings`
+- Input: `{ userId }`
+- Output: `{ topDays, popularServices, topClients }`
+
+### Requires:
+- Analyze data from `jobs`, `clients`, `services` tables
+
+---
+
+## 7️⃣ AI-Powered Feature Unlock Nudges
+### Goal: Detect what’s nearly complete and nudge users to finish onboarding or unlock features
+
+### Component:
+`<UnlockNudge type="analytics" />`
+
+### API: `/api/ai/nudgeFeatureUnlock`
+- Input: `{ userProgress: object }`
+- Output: `{ message: string, callToAction: string }`
+
+---
+
+## 8️⃣ Instant Service Builder
+### Goal: Turn natural description into new services
+
+### Component:
+`<NewServiceAIInput />`
+
+### API: `/api/ai/buildService`
+- Input: `{ description: string }`
+- Output: `{ services: [{ name, category, duration, price }] }`
+
+---
+
+## 9️⃣ Client Review Draft Generator
+### Goal: Draft client reviews post-job for easier submission
+
+### Component:
+`<ReviewDraftGenerator clientName="Anna" jobName="Sink Repair" />`
+
+### API: `/api/ai/reviewDraft`
+- Input: `{ clientName, jobName, tone }`
+- Output: `{ review: string }`
+
+---
+
+## 🔟 AI-Powered Client Tagging & CRM
+### Goal: Auto-tag clients based on behavior (e.g., high tipper, repeat, ghost)
+
+### Component:
+`<ClientTags />`
+
+### API: `/api/ai/tagClient`
+- Input: `{ clientHistory: object }`
+- Output: `{ tags: [“Repeat”, “No-Show”, “High Value”] }`
+
+---
+
+## 📦 Supabase Tables
+- `jobs`: id, clientId, service, date, time, notes
+- `clients`: id, name, tags[], phone, email
+- `services`: id, name, category, duration, price
+- `voice_notes`: id, file_url, userId, created_at
+- `analytics`: userId, feature, progress_percent
+
+---
+
+## ✅ Requirements
+- All AI suggestions must be user-editable
+- AI APIs must return in <3 seconds or fail gracefully
+- Use loading and fallback states
+- Prioritize mobile-first UX
+- Modular code with one feature per file/component
+- Rate limit AI endpoints
+
+---
+
+## 🔚 Deliverables
+- 10 AI endpoints under `/api/ai/`
+- 10 React components (with props + loading/error states)
+- Supabase schema migrations (optional: use embedded `sql/` folder)
+- Audio upload, Whisper pipeline, and basic logs for analytics
+
+---
+
+Begin with Text-to-Plan AI and Smart Scheduling. Test inference and save-to-job pipeline before expanding to the rest.

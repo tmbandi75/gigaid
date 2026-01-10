@@ -17,6 +17,7 @@ import {
   Sun,
   Users,
   Settings,
+  Sparkles,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
@@ -31,9 +32,10 @@ interface UserProfile {
 
 const menuItems = [
   { icon: User, label: "Profile", description: "Manage your account", href: "/profile" },
-  { icon: Bell, label: "Reminders", description: "SMS & voice reminders", href: "/reminders", badge: "New" },
+  { icon: Sparkles, label: "AI Tools", description: "Smart AI features", href: "/ai-tools", badge: "New" },
+  { icon: Bell, label: "Reminders", description: "SMS & voice reminders", href: "/reminders" },
   { icon: Users, label: "Crew", description: "Manage team members", href: "/crew" },
-  { icon: Share2, label: "Booking Link", description: "Share your booking page", href: "/settings", badge: "New" },
+  { icon: Share2, label: "Booking Link", description: "Share your booking page", href: "/settings" },
   { icon: Star, label: "Reviews", description: "View client feedback", href: "/reviews" },
   { icon: Settings, label: "Settings", description: "All app settings", href: "/settings" },
   { icon: HelpCircle, label: "Help & Support", description: "FAQs and contact", href: "/help" },

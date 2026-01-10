@@ -22,6 +22,7 @@ import More from "@/pages/More";
 import Profile from "@/pages/Profile";
 import Reviews from "@/pages/Reviews";
 import HelpSupport from "@/pages/HelpSupport";
+import AITools from "@/pages/AITools";
 import PublicBooking from "@/pages/PublicBooking";
 import InvoiceRating from "@/pages/InvoiceRating";
 import NotFound from "@/pages/not-found";
@@ -47,6 +48,7 @@ function Router() {
       <Route path="/profile" component={Profile} />
       <Route path="/reviews" component={Reviews} />
       <Route path="/help" component={HelpSupport} />
+      <Route path="/ai-tools" component={AITools} />
       <Route component={NotFound} />
     </Switch>
   );
