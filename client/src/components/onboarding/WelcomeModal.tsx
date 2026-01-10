@@ -1,7 +1,8 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { MessageSquareText, CreditCard, BellRing, Sparkles } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { MessageSquareText, CreditCard, BellRing } from "lucide-react";
+import { motion } from "framer-motion";
+import gigaidLogo from "@assets/image_1768065147961.png";
 
 interface WelcomeModalProps {
   open: boolean;
@@ -53,19 +54,22 @@ export function WelcomeModal({ open, onClose, onStart }: WelcomeModalProps) {
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.3, delay: 0.1 }}
-                className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-violet-600 shadow-lg shadow-primary/25 mb-4"
+                className="mb-4"
               >
-                <Sparkles className="w-8 h-8 text-white" />
+                <img 
+                  src={gigaidLogo} 
+                  alt="GigAid" 
+                  className="h-12 mx-auto"
+                />
               </motion.div>
 
               <motion.h1
                 initial={{ y: 10, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.3, delay: 0.2 }}
-                className="text-2xl font-bold bg-gradient-to-r from-foreground via-foreground to-muted-foreground bg-clip-text"
+                className="text-xl font-bold text-foreground"
               >
-                Welcome to GigAid
-              </motion.h1>
+                Welcome to GigAid</motion.h1>
 
               <motion.p
                 initial={{ y: 10, opacity: 0 }}

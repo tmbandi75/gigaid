@@ -145,7 +145,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <p className="text-primary-foreground/80 text-sm">{getGreeting()}</p>
-              <h1 className="text-2xl font-bold">Gig Aid</h1>
+              <img src="/gigaid-logo.png" alt="GigAid" className="h-8" />
             </div>
             <Link href="/reminders">
               <Button

@@ -311,7 +311,7 @@ export default function PublicBooking() {
               </Button>
             </CardContent>
           </Card>
-          <p className="text-center text-xs text-muted-foreground">
+          <div className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1">
             Powered by{" "}
             <a 
               href="http://www.gigaid.com" 
@@ -320,9 +320,9 @@ export default function PublicBooking() {
               className="hover:underline"
               data-testid="link-gigaid-confirmation"
             >
-              GigAid<sup className="text-[8px]">TM</sup>
+              <img src="/gigaid-logo.png" alt="GigAid" className="h-4 inline-block" />
             </a>
-          </p>
+          </div>
         </div>
       </div>
     );
@@ -805,7 +805,7 @@ export default function PublicBooking() {
           </Card>
         )}
 
-        <p className="text-center text-xs text-muted-foreground">
+        <div className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1">
           Powered by{" "}
           <a 
             href="http://www.gigaid.com" 
@@ -814,9 +814,9 @@ export default function PublicBooking() {
             className="hover:underline"
             data-testid="link-gigaid"
           >
-            GigAid<sup className="text-[8px]">TM</sup>
+            <img src="/gigaid-logo.png" alt="GigAid" className="h-4 inline-block" />
           </a>
-        </p>
+        </div>
       </div>
 
       <FAQAssistant slug={slug || ""} providerName={profile?.name} />
