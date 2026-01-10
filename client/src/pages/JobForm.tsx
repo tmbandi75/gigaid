@@ -40,7 +40,12 @@ import {
   Phone,
   Timer,
   CheckCircle2,
-  Wrench
+  Wrench,
+  Users,
+  Camera,
+  XCircle,
+  HelpCircle,
+  ExternalLink
 } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import type { Job } from "@shared/schema";
@@ -49,6 +54,25 @@ interface ScheduleSuggestion {
   date: string;
   time: string;
   reason: string;
+}
+
+interface CrewInvite {
+  id: string;
+  crewMemberId: number;
+  crewFirstName?: string;
+  crewEmail?: string;
+  crewPhone?: string;
+  status: string;
+  confirmedAt?: string;
+  declinedAt?: string;
+  declineReason?: string;
+}
+
+interface CrewPhoto {
+  id: string;
+  photoUrl: string;
+  caption?: string;
+  createdAt: string;
 }
 
 const jobFormSchema = z.object({
@@ -124,6 +148,26 @@ export default function JobForm() {
 
   const { data: existingJob, isLoading: isLoadingJob } = useQuery<Job>({
     queryKey: ["/api/jobs", id],
+    enabled: !!isEditing,
+  });
+
+  const { data: crewInvites = [] } = useQuery<CrewInvite[]>({
+    queryKey: ["/api/jobs", id, "crew-invites"],
+    queryFn: async () => {
+      const res = await fetch(`/api/jobs/${id}/crew-invites`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!isEditing,
+  });
+
+  const { data: crewPhotos = [] } = useQuery<CrewPhoto[]>({
+    queryKey: ["/api/jobs", id, "crew-photos"],
+    queryFn: async () => {
+      const res = await fetch(`/api/jobs/${id}/crew-photos`);
+      if (!res.ok) return [];
+      return res.json();
+    },
     enabled: !!isEditing,
   });
 
@@ -725,6 +769,93 @@ export default function JobForm() {
                 />
               </CardContent>
             </Card>
+
+            {isEditing && (crewInvites.length > 0 || crewPhotos.length > 0) && (
+              <Card className="border-0 shadow-md overflow-hidden">
+                <div className="h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
+                <CardContent className="pt-5 space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Users className="h-4 w-4 text-indigo-500" />
+                    <h3 className="font-semibold text-sm">Crew Status</h3>
+                  </div>
+                  
+                  {crewInvites.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Assigned Crew
+                      </p>
+                      {crewInvites.map((invite) => (
+                        <div 
+                          key={invite.id} 
+                          className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                          data-testid={`crew-invite-${invite.id}`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                              <User className="w-4 h-4 text-primary" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">
+                                {invite.crewFirstName || "Crew Member"}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {invite.crewPhone || invite.crewEmail || "No contact"}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge 
+                            variant="secondary"
+                            className={`text-xs ${
+                              invite.status === "confirmed" 
+                                ? "bg-emerald-500/10 text-emerald-600" 
+                                : invite.status === "declined" 
+                                  ? "bg-red-500/10 text-red-600"
+                                  : "bg-amber-500/10 text-amber-600"
+                            }`}
+                          >
+                            {invite.status === "confirmed" && <CheckCircle2 className="w-3 h-3 mr-1" />}
+                            {invite.status === "declined" && <XCircle className="w-3 h-3 mr-1" />}
+                            {invite.status === "pending" && <HelpCircle className="w-3 h-3 mr-1" />}
+                            {invite.status === "viewed" && <HelpCircle className="w-3 h-3 mr-1" />}
+                            {invite.status.charAt(0).toUpperCase() + invite.status.slice(1)}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {crewPhotos.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                        <Camera className="h-3 w-3" />
+                        Photos from Crew ({crewPhotos.length})
+                      </p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {crewPhotos.map((photo) => (
+                          <a 
+                            key={photo.id}
+                            href={photo.photoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="aspect-square rounded-lg overflow-hidden bg-muted relative group"
+                            data-testid={`crew-photo-${photo.id}`}
+                          >
+                            <img 
+                              src={photo.photoUrl} 
+                              alt={photo.caption || "Job photo"} 
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <ExternalLink className="w-5 h-5 text-white" />
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             <Button 
               type="submit" 
