@@ -669,7 +669,7 @@ export async function registerRoutes(
           await sendEmail({
             to: crewMember.email,
             subject: `Job Assignment: ${job.title} on ${formattedDate}`,
-            text: `Hi ${crewMember.name.split(" ")[0]},\n\nYou've been assigned to a job.\n\nJob: ${job.title}\nDate: ${formattedDate}\nLocation: ${job.address || "TBD"}\n\nView details, confirm attendance, and get directions:\n${magicLink}\n\nThis link expires in ${expiryHours} hours.\n\nFrom: ${ownerName}`,
+            text: `Hi ${crewMember.name.split(" ")[0]},\n\nYou've been assigned to a job.\n\nJob: ${job.title}\nDate: ${formattedDate}\nLocation: ${job.location || "TBD"}\n\nView details, confirm attendance, and get directions:\n${magicLink}\n\nThis link expires in ${expiryHours} hours.\n\nFrom: ${ownerName}`,
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2 style="color: #2563eb;">Job Assignment</h2>
@@ -678,7 +678,7 @@ export async function registerRoutes(
                 <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
                   <p style="margin: 4px 0;"><strong>Job:</strong> ${job.title}</p>
                   <p style="margin: 4px 0;"><strong>Date:</strong> ${formattedDate}</p>
-                  <p style="margin: 4px 0;"><strong>Location:</strong> ${job.address || "TBD"}</p>
+                  <p style="margin: 4px 0;"><strong>Location:</strong> ${job.location || "TBD"}</p>
                 </div>
                 <p>
                   <a href="${magicLink}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none;">
@@ -763,7 +763,7 @@ export async function registerRoutes(
           description: job.description,
           scheduledDate: job.scheduledDate,
           scheduledTime: job.scheduledTime,
-          address: job.address,
+          address: job.location,
           status: job.status,
           clientName: job.clientName,
           clientPhone: job.clientPhone,

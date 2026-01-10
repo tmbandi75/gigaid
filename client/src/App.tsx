@@ -25,6 +25,7 @@ import HelpSupport from "@/pages/HelpSupport";
 import AITools from "@/pages/AITools";
 import PublicBooking from "@/pages/PublicBooking";
 import InvoiceRating from "@/pages/InvoiceRating";
+import CrewPortal from "@/pages/CrewPortal";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -75,6 +76,7 @@ function App() {
         <Switch>
           <Route path="/book/:slug" component={PublicBooking} />
           <Route path="/invoice/:id/rate" component={InvoiceRating} />
+          <Route path="/crew-portal/:token" component={CrewPortal} />
           <Route>
             <MobileLayout>
               <Router />
