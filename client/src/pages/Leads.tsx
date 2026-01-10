@@ -30,11 +30,13 @@ import {
   Users,
   TrendingUp,
   Star,
-  Mail
+  Mail,
+  Send
 } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useSendText } from "@/hooks/use-send-text";
 import { apiRequest } from "@/lib/queryClient";
 import type { Lead } from "@shared/schema";
 
@@ -82,7 +84,7 @@ const filters = [
   { value: "converted", label: "Won" },
 ];
 
-function LeadCard({ lead, onGenerateFollowUp }: { lead: Lead; onGenerateFollowUp: (lead: Lead) => void }) {
+function LeadCard({ lead, onGenerateFollowUp, onSendText }: { lead: Lead; onGenerateFollowUp: (lead: Lead) => void; onSendText: (phone: string) => void }) {
   const config = statusConfig[lead.status] || statusConfig.new;
   const initials = lead.clientName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   
@@ -135,6 +137,21 @@ function LeadCard({ lead, onGenerateFollowUp }: { lead: Lead; onGenerateFollowUp
                       Call
                     </Button>
                   </a>
+                )}
+                {lead.clientPhone && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 px-2" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSendText(lead.clientPhone!);
+                    }}
+                    data-testid={`button-text-${lead.id}`}
+                  >
+                    <MessageSquare className="h-3 w-3 mr-1" />
+                    Text
+                  </Button>
                 )}
                 {lead.clientEmail && (
                   <a href={`mailto:${lead.clientEmail}`} onClick={(e) => e.stopPropagation()}>
@@ -193,6 +210,7 @@ export default function Leads() {
   const [followUpMessage, setFollowUpMessage] = useState<string>("");
   const [tone, setTone] = useState<"friendly" | "professional" | "casual">("friendly");
   const { toast } = useToast();
+  const { sendText } = useSendText();
   
   const { data: leads = [], isLoading } = useQuery<Lead[]>({
     queryKey: ["/api/leads"],
@@ -336,7 +354,12 @@ export default function Leads() {
         ) : (
           <div className="space-y-3">
             {filteredLeads.map((lead) => (
-              <LeadCard key={lead.id} lead={lead} onGenerateFollowUp={handleGenerateFollowUp} />
+              <LeadCard 
+                key={lead.id} 
+                lead={lead} 
+                onGenerateFollowUp={handleGenerateFollowUp}
+                onSendText={(phone) => sendText({ phoneNumber: phone, message: "" })}
+              />
             ))}
           </div>
         )}
@@ -399,24 +422,41 @@ export default function Leads() {
             )}
           </div>
 
-          <DialogFooter className="flex-row gap-2">
+          <DialogFooter className="flex-col gap-2">
             <Button
-              variant="outline"
-              onClick={() => setSelectedLead(null)}
-              className="flex-1"
-              data-testid="button-cancel"
+              onClick={() => {
+                if (selectedLead?.clientPhone && followUpMessage) {
+                  sendText({ phoneNumber: selectedLead.clientPhone, message: followUpMessage });
+                  setSelectedLead(null);
+                }
+              }}
+              disabled={!followUpMessage || !selectedLead?.clientPhone || followUpMutation.isPending}
+              className="w-full h-12 bg-gradient-to-r from-emerald-500 to-teal-500"
+              data-testid="button-send-text"
             >
-              Cancel
+              <Send className="h-4 w-4 mr-2" />
+              Send Text Message
             </Button>
-            <Button
-              onClick={handleCopyMessage}
-              disabled={!followUpMessage || followUpMutation.isPending}
-              className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500"
-              data-testid="button-copy"
-            >
-              <Copy className="h-4 w-4 mr-2" />
-              Copy
-            </Button>
+            <div className="flex gap-2 w-full">
+              <Button
+                variant="outline"
+                onClick={() => setSelectedLead(null)}
+                className="flex-1"
+                data-testid="button-cancel"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleCopyMessage}
+                disabled={!followUpMessage || followUpMutation.isPending}
+                className="flex-1"
+                data-testid="button-copy"
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                Copy Only
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

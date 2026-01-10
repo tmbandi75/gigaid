@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useSendText } from "@/hooks/use-send-text";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { PaymentConfirmation } from "@/components/PaymentConfirmation";
 import { 
@@ -44,6 +45,7 @@ import {
   ChevronRight,
   ExternalLink,
   Undo2,
+  MessageSquare,
 } from "lucide-react";
 import type { Invoice } from "@shared/schema";
 
@@ -139,6 +141,7 @@ export default function InvoiceView() {
   const [copied, setCopied] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showRevertDialog, setShowRevertDialog] = useState(false);
+  const { sendText } = useSendText();
 
   const { data: invoice, isLoading } = useQuery<Invoice>({
     queryKey: ["/api/invoices", id],
@@ -364,6 +367,19 @@ export default function InvoiceView() {
                         <Phone className="h-3.5 w-3.5" />
                         {invoice.clientPhone}
                       </a>
+                    )}
+                    {invoice.clientPhone && (
+                      <button 
+                        onClick={() => sendText({ 
+                          phoneNumber: invoice.clientPhone!, 
+                          message: `Hi ${invoice.clientName}, this is a reminder about invoice #${invoice.invoiceNumber} for ${formatCurrency(total)}. Please let me know if you have any questions!`
+                        })}
+                        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-emerald-600 transition-colors"
+                        data-testid="button-text-client"
+                      >
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        Send Text
+                      </button>
                     )}
                   </div>
                 </div>
