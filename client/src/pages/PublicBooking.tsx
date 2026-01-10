@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Star, Calendar, CheckCircle, Loader2, ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { Star, Calendar, CheckCircle, Loader2, ChevronLeft, ChevronRight, Clock, History, RotateCcw } from "lucide-react";
 import { SmartServiceRecommender } from "@/components/booking/SmartServiceRecommender";
 import { JobNotesAutocomplete } from "@/components/booking/JobNotesAutocomplete";
 import { FAQAssistant } from "@/components/booking/FAQAssistant";
@@ -26,13 +26,23 @@ interface PublicProfile {
   bio: string | null;
   rating: number;
   reviewCount: number;
+  showReviews?: boolean;
   reviews: Array<{
     id: string;
     clientName: string;
     rating: number;
     comment: string;
     createdAt: string;
+    providerResponse?: string | null;
   }>;
+}
+
+interface BookingHistoryItem {
+  serviceType: string;
+  description: string;
+  date: string;
+  time: string;
+  bookedAt: string;
 }
 
 interface AvailableSlots {
@@ -58,6 +68,44 @@ export default function PublicBooking() {
     location: "",
     description: "",
   });
+  const [showHistoryPanel, setShowHistoryPanel] = useState(false);
+  const [bookingHistory, setBookingHistory] = useState<BookingHistoryItem[]>([]);
+
+  const getBookingHistoryKey = () => {
+    const phone = formData.clientPhone.replace(/\D/g, "");
+    return phone.length >= 10 ? `booking_history_${slug}_${phone}` : null;
+  };
+
+  const loadBookingHistory = () => {
+    const key = getBookingHistoryKey();
+    if (!key) return [];
+    try {
+      const stored = localStorage.getItem(key);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const saveToBookingHistory = (booking: BookingHistoryItem) => {
+    const key = getBookingHistoryKey();
+    if (!key) return;
+    const history = loadBookingHistory();
+    const updated = [booking, ...history.filter((h: BookingHistoryItem) => 
+      !(h.serviceType === booking.serviceType && h.date === booking.date)
+    )].slice(0, 10);
+    localStorage.setItem(key, JSON.stringify(updated));
+  };
+
+  const applyHistoryBooking = (item: BookingHistoryItem) => {
+    setFormData(prev => ({
+      ...prev,
+      serviceType: item.serviceType,
+      description: item.description,
+    }));
+    setShowHistoryPanel(false);
+    toast({ title: "Applied from history" });
+  };
 
   const { data: profile, isLoading, error } = useQuery<PublicProfile>({
     queryKey: ["/api/public/profile", slug],
@@ -87,6 +135,13 @@ export default function PublicBooking() {
     mutationFn: (data: { clientName: string; clientPhone: string; clientEmail: string; serviceType: string; location: string; description: string; preferredDate: string; preferredTime: string }) =>
       apiRequest("POST", `/api/public/book/${slug}`, data),
     onSuccess: () => {
+      saveToBookingHistory({
+        serviceType: formData.serviceType,
+        description: formData.description,
+        date: selectedDateStr || "",
+        time: selectedTime || "",
+        bookedAt: new Date().toISOString(),
+      });
       setShowConfetti(true);
       setSubmitted(true);
       toast({ title: "Booking request sent!" });
@@ -95,6 +150,16 @@ export default function PublicBooking() {
       toast({ title: "Failed to submit booking", variant: "destructive" });
     },
   });
+
+  const handleCheckHistory = () => {
+    const history = loadBookingHistory();
+    setBookingHistory(history);
+    if (history.length > 0) {
+      setShowHistoryPanel(true);
+    } else {
+      toast({ title: "No previous bookings found for this phone number" });
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -393,13 +458,73 @@ export default function PublicBooking() {
 
                 <div className="space-y-2">
                   <Label htmlFor="clientPhone">Phone *</Label>
-                  <PhoneInput
-                    id="clientPhone"
-                    value={formData.clientPhone}
-                    onChange={(value) => setFormData({ ...formData, clientPhone: value })}
-                    data-testid="input-client-phone"
-                  />
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <PhoneInput
+                        id="clientPhone"
+                        value={formData.clientPhone}
+                        onChange={(value) => setFormData({ ...formData, clientPhone: value })}
+                        data-testid="input-client-phone"
+                      />
+                    </div>
+                    {formData.clientPhone.replace(/\D/g, "").length >= 10 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={handleCheckHistory}
+                        data-testid="button-check-history"
+                        title="Check booking history"
+                      >
+                        <History className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
+
+                {showHistoryPanel && bookingHistory.length > 0 && (
+                  <Card className="border-primary/20">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <History className="h-4 w-4" />
+                          Your Previous Bookings
+                        </CardTitle>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowHistoryPanel(false)}
+                        >
+                          Close
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {bookingHistory.map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between p-2 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
+                          onClick={() => applyHistoryBooking(item)}
+                          data-testid={`history-item-${idx}`}
+                        >
+                          <div>
+                            <p className="text-sm font-medium">
+                              {item.serviceType.charAt(0).toUpperCase() + item.serviceType.slice(1)}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate max-w-[180px]">
+                              {item.description || "No description"}
+                            </p>
+                          </div>
+                          <Button type="button" variant="ghost" size="sm">
+                            <RotateCcw className="h-4 w-4 mr-1" />
+                            Rebook
+                          </Button>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="clientEmail">Email</Label>

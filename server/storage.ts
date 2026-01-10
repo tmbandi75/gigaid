@@ -95,8 +95,10 @@ export interface IStorage {
 
   // Reviews
   getReviews(userId: string): Promise<Review[]>;
+  getReview(id: string): Promise<Review | undefined>;
   getPublicReviews(userId: string): Promise<Review[]>;
   createReview(review: InsertReview): Promise<Review>;
+  updateReview(id: string, updates: Partial<Review>): Promise<Review | undefined>;
 
   // Dashboard
   getDashboardSummary(userId: string): Promise<DashboardSummary>;
@@ -168,6 +170,7 @@ export class MemStorage implements IStorage {
       lastActiveAt: today.toISOString(),
       publicProfileEnabled: true,
       publicProfileSlug: "gig-worker",
+      showReviewsOnBooking: true,
       referralCode: "GIGPRO2024",
       referredBy: null,
       availability: JSON.stringify({
@@ -444,9 +447,14 @@ export class MemStorage implements IStorage {
         id: "review-1",
         userId,
         jobId: "job-4",
+        invoiceId: null,
         clientName: "James Wilson",
+        clientEmail: null,
+        clientPhone: "(555) 987-6543",
         rating: 5,
         comment: "Excellent work! Fixed the drain quickly and professionally.",
+        providerResponse: null,
+        respondedAt: null,
         isPublic: true,
         createdAt: today.toISOString(),
       },
@@ -503,6 +511,7 @@ export class MemStorage implements IStorage {
       lastActiveAt: new Date().toISOString(),
       publicProfileEnabled: false,
       publicProfileSlug: null,
+      showReviewsOnBooking: true,
       referralCode: `REF${id.slice(0, 8).toUpperCase()}`,
       referredBy: null,
       availability: null,
@@ -539,6 +548,7 @@ export class MemStorage implements IStorage {
         lastActiveAt: new Date().toISOString(),
         publicProfileEnabled: false,
         publicProfileSlug: null,
+        showReviewsOnBooking: true,
         referralCode: null,
         referredBy: null,
         availability: null,
@@ -546,7 +556,7 @@ export class MemStorage implements IStorage {
         createdAt: new Date().toISOString(),
       };
     }
-    const updatedUser: User = { ...user, ...updates };
+    const updatedUser = { ...user, ...updates } as User;
     this.users.set(id, updatedUser);
     return updatedUser;
   }
@@ -952,12 +962,29 @@ export class MemStorage implements IStorage {
       ...insertReview,
       id,
       jobId: insertReview.jobId || null,
+      invoiceId: insertReview.invoiceId || null,
+      clientEmail: insertReview.clientEmail || null,
+      clientPhone: insertReview.clientPhone || null,
       comment: insertReview.comment || null,
+      providerResponse: null,
+      respondedAt: null,
       isPublic: insertReview.isPublic !== false,
       createdAt: new Date().toISOString(),
     };
     this.reviews.set(id, review);
     return review;
+  }
+
+  async updateReview(id: string, updates: Partial<Review>): Promise<Review | undefined> {
+    const review = this.reviews.get(id);
+    if (!review) return undefined;
+    const updated = { ...review, ...updates } as Review;
+    this.reviews.set(id, updated);
+    return updated;
+  }
+
+  async getReview(id: string): Promise<Review | undefined> {
+    return this.reviews.get(id);
   }
 
   // Dashboard methods

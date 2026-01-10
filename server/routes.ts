@@ -660,6 +660,46 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/reviews/:id/respond", async (req, res) => {
+    try {
+      const { response } = req.body;
+      const review = await storage.getReview(req.params.id);
+      if (!review || review.userId !== defaultUserId) {
+        return res.status(404).json({ error: "Review not found" });
+      }
+      const updated = await storage.updateReview(req.params.id, {
+        providerResponse: response,
+        respondedAt: new Date().toISOString(),
+      });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to respond to review" });
+    }
+  });
+
+  app.post("/api/invoices/:id/review", async (req, res) => {
+    try {
+      const { rating, comment } = req.body;
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+      const review = await storage.createReview({
+        userId: invoice.userId,
+        invoiceId: invoice.id,
+        clientName: invoice.clientName,
+        clientEmail: invoice.clientEmail,
+        clientPhone: invoice.clientPhone,
+        rating: parseInt(rating, 10),
+        comment: comment || null,
+        isPublic: true,
+      });
+      res.status(201).json(review);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to submit review" });
+    }
+  });
+
   // Public Profile Endpoints
   app.get("/api/public/profile/:slug", async (req, res) => {
     try {
@@ -680,7 +720,10 @@ export async function registerRoutes(
         bio: user.bio,
         rating: Math.round(avgRating * 10) / 10,
         reviewCount: reviews.length,
-        reviews: reviews.slice(0, 5),
+        reviews: user.showReviewsOnBooking !== false ? reviews.slice(0, 5) : [],
+        showReviews: user.showReviewsOnBooking !== false,
+        availability: user.availability,
+        slotDuration: user.slotDuration,
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch profile" });
@@ -701,6 +744,7 @@ export async function registerRoutes(
         services,
         availability,
         slotDuration,
+        showReviewsOnBooking,
       } = req.body;
       
       const user = await storage.updateUser(defaultUserId, {
@@ -714,6 +758,7 @@ export async function registerRoutes(
         services,
         availability,
         slotDuration,
+        showReviewsOnBooking,
       });
       
       res.json(user);

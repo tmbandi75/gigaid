@@ -18,10 +18,12 @@ export default function Crew() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     phone: "",
     email: "",
     role: "helper" as string,
+    customRole: "",
   });
 
   const { data: crew = [], isLoading } = useQuery<CrewMember[]>({
@@ -29,7 +31,7 @@ export default function Crew() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: typeof formData) => apiRequest("POST", "/api/crew", data),
+    mutationFn: (data: { name: string; phone: string; email: string; role: string }) => apiRequest("POST", "/api/crew", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crew"] });
       setIsDialogOpen(false);
@@ -59,16 +61,30 @@ export default function Crew() {
   });
 
   const resetForm = () => {
-    setFormData({ name: "", phone: "", email: "", role: "helper" });
+    setFormData({ firstName: "", lastName: "", phone: "", email: "", role: "helper", customRole: "" });
+  };
+
+  const formatPhoneNumber = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 10);
+    if (digits.length === 0) return "";
+    if (digits.length <= 3) return `(${digits}`;
+    if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  };
+
+  const handlePhoneChange = (value: string) => {
+    setFormData({ ...formData, phone: formatPhoneNumber(value) });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name) {
-      toast({ title: "Please enter a name", variant: "destructive" });
+    if (!formData.firstName) {
+      toast({ title: "Please enter a first name", variant: "destructive" });
       return;
     }
-    createMutation.mutate(formData);
+    const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+    const effectiveRole = formData.role === "other" && formData.customRole ? formData.customRole.toLowerCase() : formData.role;
+    createMutation.mutate({ name: fullName, phone: formData.phone, email: formData.email, role: effectiveRole });
   };
 
   const getStatusBadge = (status: string) => {
@@ -199,15 +215,27 @@ export default function Crew() {
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Enter name"
-                data-testid="input-crew-name"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name *</Label>
+                <Input
+                  id="firstName"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  placeholder="First name"
+                  data-testid="input-crew-first-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  placeholder="Last name"
+                  data-testid="input-crew-last-name"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -216,7 +244,7 @@ export default function Crew() {
                 <Input
                   id="phone"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) => handlePhoneChange(e.target.value)}
                   placeholder="(555) 000-0000"
                   data-testid="input-crew-phone"
                 />
@@ -225,7 +253,7 @@ export default function Crew() {
                 <Label htmlFor="role">Role</Label>
                 <Select
                   value={formData.role}
-                  onValueChange={(v) => setFormData({ ...formData, role: v })}
+                  onValueChange={(v) => setFormData({ ...formData, role: v, customRole: "" })}
                 >
                   <SelectTrigger data-testid="select-crew-role">
                     <SelectValue />
@@ -240,6 +268,19 @@ export default function Crew() {
                 </Select>
               </div>
             </div>
+
+            {formData.role === "other" && (
+              <div className="space-y-2">
+                <Label htmlFor="customRole">Custom Role</Label>
+                <Input
+                  id="customRole"
+                  value={formData.customRole}
+                  onChange={(e) => setFormData({ ...formData, customRole: e.target.value })}
+                  placeholder="Enter role (e.g., Carpenter, HVAC)"
+                  data-testid="input-crew-custom-role"
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

@@ -18,6 +18,9 @@ import {
   Copy, 
   Check,
   Loader2,
+  Plus,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { AvailabilityEditor, DEFAULT_AVAILABILITY } from "@/components/settings/AvailabilityEditor";
 import type { Referral, WeeklyAvailability } from "@shared/schema";
@@ -50,7 +53,9 @@ export default function Settings() {
     services: [] as string[],
     availability: null as WeeklyAvailability | null,
     slotDuration: 60,
+    showReviewsOnBooking: true,
   });
+  const [customServiceInput, setCustomServiceInput] = useState("");
 
   useEffect(() => {
     if (profile) {
@@ -72,6 +77,7 @@ export default function Settings() {
         services: profile.services || [],
         availability: parsedAvailability,
         slotDuration: profile.slotDuration || 60,
+        showReviewsOnBooking: profile.showReviewsOnBooking !== false,
       });
     }
   }, [profile]);
@@ -96,8 +102,17 @@ export default function Settings() {
       services: settings.services,
       availability: settings.availability ? JSON.stringify(settings.availability) : null,
       slotDuration: settings.slotDuration,
+      showReviewsOnBooking: settings.showReviewsOnBooking,
     };
     updateMutation.mutate(dataToSave);
+  };
+  
+  const handleAddCustomService = () => {
+    const trimmed = customServiceInput.trim().toLowerCase();
+    if (trimmed && !settings.services.includes(trimmed)) {
+      setSettings({ ...settings, services: [...settings.services, trimmed] });
+      setCustomServiceInput("");
+    }
   };
 
   const handleAvailabilityChange = (availability: WeeklyAvailability, slotDuration: number) => {
@@ -221,7 +236,7 @@ export default function Settings() {
                     </Badge>
                   ))}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {["plumbing", "electrical", "cleaning", "handyman", "landscaping"].map((s) => (
                     !settings.services.includes(s) && (
                       <Badge
@@ -236,6 +251,41 @@ export default function Settings() {
                     )
                   ))}
                 </div>
+                <div className="flex gap-2 mt-2">
+                  <Input
+                    value={customServiceInput}
+                    onChange={(e) => setCustomServiceInput(e.target.value)}
+                    placeholder="Add custom service..."
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCustomService())}
+                    data-testid="input-custom-service"
+                  />
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="icon"
+                    onClick={handleAddCustomService}
+                    data-testid="button-add-custom-service"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <Separator />
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium flex items-center gap-2">
+                    {settings.showReviewsOnBooking ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                    Show Reviews on Booking Page
+                  </p>
+                  <p className="text-sm text-muted-foreground">Let potential clients see your ratings</p>
+                </div>
+                <Switch
+                  checked={settings.showReviewsOnBooking}
+                  onCheckedChange={(checked) => setSettings({ ...settings, showReviewsOnBooking: checked })}
+                  data-testid="switch-show-reviews"
+                />
               </div>
             </>
           )}

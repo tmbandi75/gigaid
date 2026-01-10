@@ -20,7 +20,10 @@ import Crew from "@/pages/Crew";
 import Settings from "@/pages/Settings";
 import More from "@/pages/More";
 import Profile from "@/pages/Profile";
+import Reviews from "@/pages/Reviews";
+import HelpSupport from "@/pages/HelpSupport";
 import PublicBooking from "@/pages/PublicBooking";
+import InvoiceRating from "@/pages/InvoiceRating";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -42,6 +45,8 @@ function Router() {
       <Route path="/settings" component={Settings} />
       <Route path="/more" component={More} />
       <Route path="/profile" component={Profile} />
+      <Route path="/reviews" component={Reviews} />
+      <Route path="/help" component={HelpSupport} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -67,6 +72,7 @@ function App() {
         <ThemeInitializer />
         <Switch>
           <Route path="/book/:slug" component={PublicBooking} />
+          <Route path="/invoice/:id/rate" component={InvoiceRating} />
           <Route>
             <MobileLayout>
               <Router />

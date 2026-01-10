@@ -34,9 +34,9 @@ const menuItems = [
   { icon: Bell, label: "Reminders", description: "SMS & voice reminders", href: "/reminders", badge: "New" },
   { icon: Users, label: "Crew", description: "Manage team members", href: "/crew" },
   { icon: Share2, label: "Booking Link", description: "Share your booking page", href: "/settings", badge: "New" },
-  { icon: Star, label: "Reviews", description: "View client feedback", href: "/settings" },
+  { icon: Star, label: "Reviews", description: "View client feedback", href: "/reviews" },
   { icon: Settings, label: "Settings", description: "All app settings", href: "/settings" },
-  { icon: HelpCircle, label: "Help & Support", description: "FAQs and contact", href: "#" },
+  { icon: HelpCircle, label: "Help & Support", description: "FAQs and contact", href: "/help" },
 ];
 
 export default function More() {

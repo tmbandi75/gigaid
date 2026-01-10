@@ -29,6 +29,7 @@ export const users = pgTable("users", {
   lastActiveAt: text("last_active_at"),
   publicProfileEnabled: boolean("public_profile_enabled").default(false),
   publicProfileSlug: text("public_profile_slug"),
+  showReviewsOnBooking: boolean("show_reviews_on_booking").default(true),
   referralCode: text("referral_code"),
   referredBy: text("referred_by"),
   createdAt: text("created_at"),
@@ -340,9 +341,14 @@ export const reviews = pgTable("reviews", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(), // service provider
   jobId: varchar("job_id"),
+  invoiceId: varchar("invoice_id"),
   clientName: text("client_name").notNull(),
+  clientEmail: text("client_email"),
+  clientPhone: text("client_phone"),
   rating: integer("rating").notNull(),
   comment: text("comment"),
+  providerResponse: text("provider_response"),
+  respondedAt: text("responded_at"),
   isPublic: boolean("is_public").default(true),
   createdAt: text("created_at").notNull(),
 });
