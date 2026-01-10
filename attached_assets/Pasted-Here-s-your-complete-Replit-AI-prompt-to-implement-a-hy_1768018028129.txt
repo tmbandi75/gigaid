@@ -1,0 +1,177 @@
+Here's your complete **Replit AI prompt** to implement a **hybrid payment flow** in **Gig Aid**, supporting:
+
+* ✅ Stripe Connect (automated)
+* ✅ Zelle, Venmo, Cash App, Cash, and Check (manual)
+* ✅ Client-selected payment method at booking
+* ✅ Proof-of-payment uploads
+* ✅ Unified backend tracking via Supabase
+
+---
+
+## 🧠 Replit Prompt — Hybrid Payment Flow for Gig Aid
+
+````markdown
+# 💵 Project: Gig Aid – Hybrid Payment System (Stripe + Manual Methods)
+
+Implement a hybrid payment system where gig workers can accept **Stripe**, **Zelle**, **Venmo**, **Cash App**, **Cash**, and **Check**. 
+
+Allow clients to select their preferred method during booking. Track all payments through Supabase, even if not processed by Stripe.
+
+---
+
+## ⚙️ Tech Stack
+- Frontend: React (Vite + TailwindCSS)
+- Backend: Supabase (Postgres, RLS)
+- Payment Processor: Stripe Connect
+- Optional: Supabase Storage for proof uploads
+
+---
+
+## 🛠️ Payment Setup by Gig Worker
+
+### Component: `<PaymentMethodsSettings />`
+
+- Display checkboxes for accepted methods:
+  - [x] Stripe
+  - [x] Zelle
+  - [x] Venmo
+  - [x] Cash App
+  - [x] Cash
+  - [x] Check
+
+- For manual methods, show input fields:
+  - Handle/username/email for Zelle, Venmo, etc.
+  - Instructions for Check or Cash
+
+### API: `/api/payments/update-methods`
+- Store into `user_payment_methods` table
+
+---
+
+## 📄 Booking Flow (Client Side)
+
+### Component: `<ClientBookingPage />`
+
+1. Show provider’s accepted payment methods.
+2. Let client select:
+```ts
+<select name="payment_method">
+  <option value="stripe">Credit/Debit (Online)</option>
+  <option value="venmo">Venmo</option>
+  <option value="zelle">Zelle</option>
+  <option value="cashapp">Cash App</option>
+  <option value="cash">Cash</option>
+  <option value="check">Check</option>
+</select>
+````
+
+3. If Stripe selected:
+
+   * Create a Checkout Session using `/api/payments/stripe-checkout`
+   * Redirect to Stripe
+
+4. For manual methods:
+
+   * Show provider's handle/email + instructions
+   * Save choice in Supabase on booking
+
+---
+
+## 🧾 After Job Completion (Proof or Confirmation)
+
+### Component: `<PaymentConfirmation />`
+
+For manual payments:
+
+* Show dropdown:
+
+  * ✅ "I paid via Zelle" (client side)
+  * 📎 "Upload receipt or screenshot" (worker or client)
+* Uploads go to Supabase Storage: `proofs/`
+
+### API: `/api/payments/confirm`
+
+```ts
+POST {
+  jobId: string,
+  method: "venmo" | "zelle" | "cashapp" | "cash" | "check",
+  status: "paid" | "unpaid" | "confirmed",
+  proofUrl?: string
+}
+```
+
+---
+
+## 🧱 Supabase Schema
+
+### `user_payment_methods`
+
+```sql
+CREATE TABLE user_payment_methods (
+  id uuid PRIMARY KEY,
+  user_id uuid REFERENCES users(id),
+  type text, -- e.g. 'venmo', 'cash'
+  label text, -- e.g. @JaneDoe
+  instructions text,
+  is_enabled boolean
+);
+```
+
+### `job_payments`
+
+```sql
+CREATE TABLE job_payments (
+  id uuid PRIMARY KEY,
+  job_id uuid REFERENCES jobs(id),
+  method text, -- 'stripe', 'venmo', etc.
+  status text, -- 'pending', 'paid', 'confirmed'
+  proof_url text,
+  created_at timestamp DEFAULT now()
+);
+```
+
+---
+
+## ✅ Stripe Integration (Optional)
+
+* Use Stripe Connect to onboard gig workers (standard or express)
+* Store `stripe_account_id` in `users` table
+* For Stripe bookings:
+
+  * Create a Checkout Session with destination account
+  * Optionally set `application_fee_amount`
+
+---
+
+## 🔒 Security & Validations
+
+* Prevent fake proof uploads with file type check
+* Rate-limit payment confirmations
+* Use Supabase RLS to restrict data by user role (worker/client)
+
+---
+
+## 🔚 Deliverables
+
+* `PaymentMethodsSettings.tsx`: Worker selects methods
+* `ClientBookingPage.tsx`: Client selects payment method
+* `PaymentConfirmation.tsx`: Client/worker confirms manual payment
+* `api/payments/`: 3 endpoints (update-methods, stripe-checkout, confirm)
+* Supabase tables: `user_payment_methods`, `job_payments`
+* Optional: Supabase Storage setup for proof uploads
+
+---
+
+Start with manual method support, then integrate Stripe Connect for automated flow.
+
+```
+
+---
+
+Would you like:
+- Starter React component files?
+- Stripe onboarding flow (OAuth + dashboard)?
+- QR code generator for Venmo/Cash App?
+
+Just say the word.
+```

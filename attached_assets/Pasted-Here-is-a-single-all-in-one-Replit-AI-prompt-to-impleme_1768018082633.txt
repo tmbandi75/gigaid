@@ -1,0 +1,184 @@
+Here is a **single, all-in-one Replit AI prompt** to implement **hybrid payment support in Gig Aid**, including:
+
+* ✅ Manual payment methods (Zelle, Venmo, Cash App, Cash, Check)
+* ✅ Stripe Connect for automated card payments
+* ✅ Client-side selection at booking
+* ✅ Backend tracking via Supabase
+* ✅ Optional upload of proof (receipt/screenshot)
+
+---
+
+## 🧠 Replit AI Prompt — Implement Full Hybrid Payment System in Gig Aid
+
+````markdown
+# 💵 Project: Gig Aid – Hybrid Payment Integration (Manual + Stripe)
+
+Implement a hybrid payment system that allows Gig Aid users (gig workers) to accept both **automated** and **manual** payments from their clients. The app should support:
+
+✅ Zelle  
+✅ Venmo  
+✅ Cash App  
+✅ Cash  
+✅ Check  
+✅ Stripe Connect (credit/debit cards)
+
+---
+
+## ⚙️ Tech Stack
+- Frontend: React (Vite + TailwindCSS)
+- Backend: Supabase (Postgres + RLS, Supabase Storage)
+- Payment Processor: Stripe Connect (Standard or Express)
+- Uploads: Supabase Storage (for screenshots, receipts)
+
+---
+
+## 📌 Core Requirements
+
+### 1. Gig Workers Choose Accepted Payment Methods
+
+#### Component: `PaymentMethodsSettings.tsx`
+- Show a list of toggle switches:
+  - Accept Stripe
+  - Accept Zelle
+  - Accept Venmo
+  - Accept Cash App
+  - Accept Cash
+  - Accept Check
+- For manual methods, include:
+  - `Handle` or `Instructions` input (e.g., `@JaneDoe` or `janedoe@gmail.com`)
+
+#### API Endpoint: `POST /api/payments/update-methods`
+- Save selected methods to `user_payment_methods` table in Supabase
+
+---
+
+### 2. Clients Select Payment Method When Booking
+
+#### Component: `ClientBookingPage.tsx`
+- Display provider’s accepted payment methods
+- Let client select their preferred method:
+```ts
+<select name="payment_method">
+  <option value="stripe">Credit/Debit (Online)</option>
+  <option value="venmo">Venmo</option>
+  <option value="zelle">Zelle</option>
+  <option value="cashapp">Cash App</option>
+  <option value="cash">Cash</option>
+  <option value="check">Check</option>
+</select>
+````
+
+* If Stripe is selected:
+
+  * Create a Stripe Checkout Session with `/api/payments/stripe-checkout`
+  * Redirect to Stripe
+* If manual method is selected:
+
+  * Show gig worker's handle/instructions
+  * Store selection with job record in Supabase
+
+---
+
+### 3. Track and Confirm Payment
+
+#### Component: `PaymentConfirmation.tsx`
+
+* Allow client or gig worker to confirm payment was made
+* Optional upload of screenshot or proof of payment
+
+#### API: `POST /api/payments/confirm`
+
+```ts
+{
+  jobId: string,
+  method: "venmo" | "zelle" | "cashapp" | "cash" | "check",
+  status: "paid" | "confirmed",
+  proofUrl?: string
+}
+```
+
+* Save to `job_payments` table
+* Upload file to Supabase Storage → `proofs/` bucket
+
+---
+
+### 4. Stripe Integration (Optional / Bonus)
+
+* Onboard gig workers using Stripe Connect OAuth
+* Store `stripe_account_id` in `users` table
+* For Stripe bookings:
+
+  * Use `stripe.checkout.sessions.create` with `payment_intent_data.transfer_data.destination = worker_stripe_account_id`
+  * Optional: add `application_fee_amount` to earn platform commission
+
+---
+
+## 🧱 Supabase Tables
+
+### `user_payment_methods`
+
+```sql
+CREATE TABLE user_payment_methods (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id uuid REFERENCES users(id),
+  type text, -- 'venmo', 'zelle', 'cash', etc.
+  label text, -- e.g. @janedoe
+  instructions text,
+  is_enabled boolean
+);
+```
+
+### `job_payments`
+
+```sql
+CREATE TABLE job_payments (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  job_id uuid REFERENCES jobs(id),
+  method text, -- 'stripe', 'venmo', etc.
+  status text, -- 'pending', 'paid', 'confirmed'
+  proof_url text,
+  created_at timestamp DEFAULT now()
+);
+```
+
+---
+
+## 🛡 Security and Validation
+
+* Sanitize input for all manual payment fields
+* Restrict proof uploads to image/PDF files under 5MB
+* Apply RLS policies: only job owner or worker can confirm payments
+* Rate-limit confirmation endpoint to prevent abuse
+
+---
+
+## 🧪 Deliverables
+
+* `PaymentMethodsSettings.tsx` (worker-facing)
+* `ClientBookingPage.tsx` (client-facing)
+* `PaymentConfirmation.tsx` (post-job follow-up)
+* 3 API endpoints:
+
+  * `/api/payments/update-methods`
+  * `/api/payments/stripe-checkout`
+  * `/api/payments/confirm`
+* Supabase schema: `user_payment_methods`, `job_payments`
+* Supabase Storage setup: `proofs/`
+
+---
+
+Start by enabling manual methods first. Once working, layer in Stripe Connect support and webhooks for real-time updates.
+
+```
+
+---
+
+Let me know if you want:
+
+- **Starter code for any component**
+- **Stripe Connect OAuth redirect flow**
+- **Webhook handler for Stripe events**
+- **Smart routing logic for mobile-optimized payments**
+
+Happy to deliver that next.
+```
