@@ -10,13 +10,26 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Users, Plus, Trash2, Mail, Phone, UserCheck, UserX, Clock, Loader2 } from "lucide-react";
+import { Users, Plus, Trash2, Mail, Phone, UserCheck, UserX, Clock, Loader2, ChevronDown, ChevronUp, Briefcase, CheckCircle2, XCircle, Link2Off, ExternalLink } from "lucide-react";
 import type { CrewMember } from "@shared/schema";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+
+interface CrewInvite {
+  id: string;
+  jobId: number;
+  jobTitle?: string;
+  jobDate?: string;
+  status: string;
+  createdAt: string;
+  expiresAt: string;
+  token: string;
+}
 
 export default function Crew() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [expandedMember, setExpandedMember] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -57,6 +70,28 @@ export default function Crew() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crew"] });
       toast({ title: "Crew member removed" });
+    },
+  });
+
+  const { data: crewInvites = [] } = useQuery<CrewInvite[]>({
+    queryKey: ["/api/crew", expandedMember, "invites"],
+    queryFn: async () => {
+      if (!expandedMember) return [];
+      const res = await fetch(`/api/crew/${expandedMember}/invites`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!expandedMember,
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: (inviteId: string) => apiRequest("POST", `/api/crew-invites/${inviteId}/revoke`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/crew", expandedMember, "invites"] });
+      toast({ title: "Invite revoked successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to revoke invite", variant: "destructive" });
     },
   });
 
@@ -119,6 +154,27 @@ export default function Crew() {
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
+  const getInviteStatusBadge = (status: string) => {
+    switch (status) {
+      case "confirmed":
+        return <Badge className="bg-emerald-500/10 text-emerald-600 text-xs"><CheckCircle2 className="h-3 w-3 mr-1" />Confirmed</Badge>;
+      case "declined":
+        return <Badge className="bg-red-500/10 text-red-600 text-xs"><XCircle className="h-3 w-3 mr-1" />Declined</Badge>;
+      case "revoked":
+        return <Badge className="bg-gray-500/10 text-gray-600 text-xs"><Link2Off className="h-3 w-3 mr-1" />Revoked</Badge>;
+      case "expired":
+        return <Badge className="bg-gray-500/10 text-gray-600 text-xs"><Clock className="h-3 w-3 mr-1" />Expired</Badge>;
+      case "viewed":
+        return <Badge className="bg-blue-500/10 text-blue-600 text-xs"><ExternalLink className="h-3 w-3 mr-1" />Viewed</Badge>;
+      default:
+        return <Badge className="bg-amber-500/10 text-amber-600 text-xs"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+    }
+  };
+
+  const toggleExpand = (memberId: string) => {
+    setExpandedMember(expandedMember === memberId ? null : memberId);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -154,55 +210,122 @@ export default function Crew() {
         <div className="space-y-3">
           {crew.map((member) => (
             <Card key={member.id} data-testid={`card-crew-${member.id}`}>
-              <CardContent className="py-4">
-                <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium">{member.name}</span>
-                      {getRoleBadge(member.role)}
-                      {getStatusBadge(member.status)}
+              <Collapsible open={expandedMember === member.id} onOpenChange={() => toggleExpand(member.id)}>
+                <CardContent className="py-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar>
+                      <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium">{member.name}</span>
+                        {getRoleBadge(member.role)}
+                        {getStatusBadge(member.status)}
+                      </div>
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                        {member.phone && (
+                          <span className="flex items-center gap-1">
+                            <Phone className="h-3 w-3" />
+                            {member.phone}
+                          </span>
+                        )}
+                        {member.email && (
+                          <span className="flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {member.email}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                      {member.phone && (
-                        <span className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
-                          {member.phone}
-                        </span>
+                    <div className="flex gap-1">
+                      {member.status === "invited" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateMutation.mutate({ id: member.id, status: "joined" });
+                          }}
+                          data-testid={`button-mark-joined-${member.id}`}
+                        >
+                          Mark Joined
+                        </Button>
                       )}
-                      {member.email && (
-                        <span className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {member.email}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-1">
-                    {member.status === "invited" && (
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          data-testid={`button-expand-${member.id}`}
+                        >
+                          {expandedMember === member.id ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </CollapsibleTrigger>
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => updateMutation.mutate({ id: member.id, status: "joined" })}
-                        data-testid={`button-mark-joined-${member.id}`}
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteMutation.mutate(member.id);
+                        }}
+                        disabled={deleteMutation.isPending}
+                        data-testid={`button-remove-${member.id}`}
                       >
-                        Mark Joined
+                        <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => deleteMutation.mutate(member.id)}
-                      disabled={deleteMutation.isPending}
-                      data-testid={`button-remove-${member.id}`}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
+                  
+                  <CollapsibleContent className="mt-4 pt-4 border-t">
+                    <div className="space-y-3">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                        <Briefcase className="h-3 w-3" />
+                        Job Assignments
+                      </p>
+                      {crewInvites.length === 0 ? (
+                        <p className="text-sm text-muted-foreground py-2">No job assignments yet</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {crewInvites.map((invite) => (
+                            <div 
+                              key={invite.id}
+                              className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                              data-testid={`invite-${invite.id}`}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">
+                                  {invite.jobTitle || `Job #${invite.jobId}`}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {invite.jobDate ? new Date(invite.jobDate).toLocaleDateString() : "Date TBD"}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {getInviteStatusBadge(invite.status)}
+                                {(invite.status === "pending" || invite.status === "viewed") && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => revokeMutation.mutate(invite.id)}
+                                    disabled={revokeMutation.isPending}
+                                    className="text-destructive hover:text-destructive"
+                                    data-testid={`button-revoke-${invite.id}`}
+                                  >
+                                    <Link2Off className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </CardContent>
+              </Collapsible>
             </Card>
           ))}
         </div>

@@ -566,14 +566,37 @@ export async function registerRoutes(
     }
   });
 
+  // Get all invites for a specific crew member
+  app.get("/api/crew/:crewMemberId/invites", async (req, res) => {
+    try {
+      const allInvites = await storage.getCrewInvites(defaultUserId);
+      const memberInvites = allInvites.filter(
+        (inv: any) => String(inv.crewMemberId) === req.params.crewMemberId
+      );
+      
+      // Enhance with job details
+      const enhancedInvites = await Promise.all(
+        memberInvites.map(async (invite: any) => {
+          const job = await storage.getJob(invite.jobId);
+          return {
+            ...invite,
+            jobTitle: job?.title,
+            jobDate: job?.scheduledDate,
+          };
+        })
+      );
+      
+      res.json(enhancedInvites);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch crew member invites" });
+    }
+  });
+
   // Crew Invite Endpoints - Magic Link System
   const generateSecureToken = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let token = '';
-    for (let i = 0; i < 32; i++) {
-      token += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return token;
+    // Use cryptographically secure random bytes
+    const crypto = require('crypto');
+    return crypto.randomBytes(24).toString('base64url');
   };
 
   // Get all crew invites for a user
