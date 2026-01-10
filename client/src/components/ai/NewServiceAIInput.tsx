@@ -33,8 +33,9 @@ export function NewServiceAIInput({ onServicesCreated }: NewServiceAIInputProps)
       return response as unknown as { services: ServiceSuggestion[] };
     },
     onSuccess: (data) => {
-      setSuggestions(data.services);
-      toast({ title: `${data.services.length} service(s) suggested!` });
+      const services = data.services || [];
+      setSuggestions(services);
+      toast({ title: `${services.length} service(s) suggested!` });
     },
     onError: () => {
       toast({ title: "Failed to build services", variant: "destructive" });
@@ -106,7 +107,7 @@ export function NewServiceAIInput({ onServicesCreated }: NewServiceAIInputProps)
           Generate Services
         </Button>
 
-        {suggestions.length > 0 && (
+        {suggestions && suggestions.length > 0 && (
           <div className="space-y-3">
             <p className="text-sm font-medium">Suggested Services</p>
             {suggestions.map((service, idx) => (
