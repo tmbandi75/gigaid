@@ -324,6 +324,84 @@ export const insertCrewMemberSchema = createInsertSchema(crewMembers).omit({
 export type InsertCrewMember = z.infer<typeof insertCrewMemberSchema>;
 export type CrewMember = typeof crewMembers.$inferSelect;
 
+// Crew job invites - magic link system
+export const crewInviteStatuses = ["pending", "viewed", "confirmed", "declined", "expired", "revoked"] as const;
+export type CrewInviteStatus = (typeof crewInviteStatuses)[number];
+
+export const crewInvites = pgTable("crew_invites", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(), // owner
+  crewMemberId: varchar("crew_member_id").notNull(),
+  jobId: varchar("job_id").notNull(),
+  token: text("token").notNull().unique(), // secure magic link token
+  tokenHash: text("token_hash"), // hashed version for security
+  status: text("status").notNull().default("pending"),
+  deliveredVia: text("delivered_via"), // "sms", "email", "both"
+  deliveredAt: text("delivered_at"),
+  viewedAt: text("viewed_at"),
+  confirmedAt: text("confirmed_at"),
+  declinedAt: text("declined_at"),
+  revokedAt: text("revoked_at"),
+  expiresAt: text("expires_at").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+export const insertCrewInviteSchema = createInsertSchema(crewInvites).omit({
+  id: true,
+  createdAt: true,
+  status: true,
+  deliveredAt: true,
+  viewedAt: true,
+  confirmedAt: true,
+  declinedAt: true,
+  revokedAt: true,
+});
+
+export type InsertCrewInvite = z.infer<typeof insertCrewInviteSchema>;
+export type CrewInvite = typeof crewInvites.$inferSelect;
+
+// Crew job photos - photos uploaded by crew members
+export const crewJobPhotos = pgTable("crew_job_photos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(), // owner
+  jobId: varchar("job_id").notNull(),
+  crewMemberId: varchar("crew_member_id").notNull(),
+  crewInviteId: varchar("crew_invite_id"),
+  photoUrl: text("photo_url").notNull(),
+  caption: text("caption"),
+  uploadedAt: text("uploaded_at").notNull(),
+});
+
+export const insertCrewJobPhotoSchema = createInsertSchema(crewJobPhotos).omit({
+  id: true,
+  uploadedAt: true,
+});
+
+export type InsertCrewJobPhoto = z.infer<typeof insertCrewJobPhotoSchema>;
+export type CrewJobPhoto = typeof crewJobPhotos.$inferSelect;
+
+// Crew messages - messages from crew to owner
+export const crewMessages = pgTable("crew_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(), // owner
+  jobId: varchar("job_id").notNull(),
+  crewMemberId: varchar("crew_member_id").notNull(),
+  crewInviteId: varchar("crew_invite_id"),
+  message: text("message").notNull(),
+  isFromCrew: boolean("is_from_crew").default(true),
+  readAt: text("read_at"),
+  createdAt: text("created_at").notNull(),
+});
+
+export const insertCrewMessageSchema = createInsertSchema(crewMessages).omit({
+  id: true,
+  createdAt: true,
+  readAt: true,
+});
+
+export type InsertCrewMessage = z.infer<typeof insertCrewMessageSchema>;
+export type CrewMessage = typeof crewMessages.$inferSelect;
+
 // Referrals table
 export const referrals = pgTable("referrals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
