@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -109,6 +109,8 @@ export function PaymentMethodsSettings() {
     refetchOnMount: true,
   });
 
+  const hasSynced = useRef(false);
+
   const updateMethodState = (type: PaymentMethodType, updates: Partial<MethodState>) => {
     setMethodStates((prev) => ({
       ...prev,
@@ -116,9 +118,13 @@ export function PaymentMethodsSettings() {
     }));
   };
 
-  const syncWithSavedMethods = () => {
-    if (savedMethods) {
-      const newStates = { ...methodStates };
+  useEffect(() => {
+    if (savedMethods && !hasSynced.current) {
+      hasSynced.current = true;
+      const newStates: Record<string, MethodState> = {};
+      PAYMENT_METHODS.forEach((m) => {
+        newStates[m.type] = { isEnabled: false, instructions: "", customLabel: "" };
+      });
       savedMethods.forEach((method) => {
         if (newStates[method.type]) {
           newStates[method.type] = {
@@ -128,13 +134,9 @@ export function PaymentMethodsSettings() {
           };
         }
       });
-      setMethodStates(newStates);
+      setMethodStates(newStates as Record<PaymentMethodType, MethodState>);
     }
-  };
-
-  if (savedMethods && !Object.values(methodStates).some((s) => s.isEnabled)) {
-    syncWithSavedMethods();
-  }
+  }, [savedMethods]);
 
   const bulkUpdateMutation = useMutation({
     mutationFn: async (methods: { type: PaymentMethodType; label: string | null; instructions: string | null; isEnabled: boolean }[]) => {
