@@ -256,6 +256,7 @@ export default function Crew() {
               onClick={() => setIsDialogOpen(true)} 
               size="icon"
               className="bg-white/20 hover:bg-white/30 text-white"
+              aria-label="Add crew member"
               data-testid="button-add-crew-header"
             >
               <Plus className="h-5 w-5" />
@@ -369,13 +370,23 @@ export default function Crew() {
                               {/* Contact Info */}
                               <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                                 {member.phone && (
-                                  <a href={`tel:${member.phone}`} className="flex items-center gap-1 hover:text-primary">
+                                  <a 
+                                    href={`tel:${member.phone}`} 
+                                    className="flex items-center gap-1 hover:text-primary"
+                                    aria-label={`Call ${member.name}`}
+                                    data-testid={`link-phone-${member.id}`}
+                                  >
                                     <Phone className="h-3 w-3" />
                                     {member.phone}
                                   </a>
                                 )}
                                 {member.email && (
-                                  <a href={`mailto:${member.email}`} className="flex items-center gap-1 hover:text-primary truncate">
+                                  <a 
+                                    href={`mailto:${member.email}`} 
+                                    className="flex items-center gap-1 hover:text-primary truncate"
+                                    aria-label={`Email ${member.name}`}
+                                    data-testid={`link-email-${member.id}`}
+                                  >
                                     <Mail className="h-3 w-3" />
                                     <span className="truncate max-w-[120px]">{member.email}</span>
                                   </a>
@@ -390,6 +401,7 @@ export default function Crew() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-9 w-9"
+                                  aria-label={isExpanded ? "Collapse job assignments" : "Expand job assignments"}
                                   data-testid={`button-expand-${member.id}`}
                                 >
                                   {isExpanded ? (
@@ -402,25 +414,40 @@ export default function Crew() {
                               
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-9 w-9" data-testid={`button-menu-${member.id}`}>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-9 w-9" 
+                                    aria-label={`Actions for ${member.name}`}
+                                    data-testid={`button-menu-${member.id}`}
+                                  >
                                     <MoreVertical className="h-5 w-5 text-muted-foreground" />
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   {member.status === "invited" && (
-                                    <DropdownMenuItem onClick={() => updateMutation.mutate({ id: member.id, status: "joined" })}>
+                                    <DropdownMenuItem 
+                                      onClick={() => updateMutation.mutate({ id: member.id, status: "joined" })}
+                                      data-testid={`menu-join-${member.id}`}
+                                    >
                                       <UserCheck className="h-4 w-4 mr-2" />
                                       Mark as Joined
                                     </DropdownMenuItem>
                                   )}
                                   {member.status === "joined" && (
-                                    <DropdownMenuItem onClick={() => updateMutation.mutate({ id: member.id, status: "inactive" })}>
+                                    <DropdownMenuItem 
+                                      onClick={() => updateMutation.mutate({ id: member.id, status: "inactive" })}
+                                      data-testid={`menu-inactive-${member.id}`}
+                                    >
                                       <UserX className="h-4 w-4 mr-2" />
                                       Mark as Inactive
                                     </DropdownMenuItem>
                                   )}
                                   {member.status === "inactive" && (
-                                    <DropdownMenuItem onClick={() => updateMutation.mutate({ id: member.id, status: "joined" })}>
+                                    <DropdownMenuItem 
+                                      onClick={() => updateMutation.mutate({ id: member.id, status: "joined" })}
+                                      data-testid={`menu-reactivate-${member.id}`}
+                                    >
                                       <UserCheck className="h-4 w-4 mr-2" />
                                       Reactivate
                                     </DropdownMenuItem>
@@ -428,6 +455,7 @@ export default function Crew() {
                                   <DropdownMenuItem 
                                     onClick={() => deleteMutation.mutate(member.id)}
                                     className="text-destructive focus:text-destructive"
+                                    data-testid={`menu-remove-${member.id}`}
                                   >
                                     <Trash2 className="h-4 w-4 mr-2" />
                                     Remove
@@ -485,6 +513,7 @@ export default function Crew() {
                                           size="icon"
                                           className="h-8 w-8"
                                           onClick={() => copyInviteLink(invite.token)}
+                                          aria-label="Copy invite link"
                                           data-testid={`button-copy-${invite.id}`}
                                         >
                                           <Copy className="h-4 w-4" />
@@ -495,6 +524,7 @@ export default function Crew() {
                                           className="h-8 w-8 text-destructive hover:text-destructive"
                                           onClick={() => revokeMutation.mutate(invite.id)}
                                           disabled={revokeMutation.isPending}
+                                          aria-label="Revoke invite"
                                           data-testid={`button-revoke-${invite.id}`}
                                         >
                                           <Link2Off className="h-4 w-4" />
@@ -626,7 +656,12 @@ export default function Crew() {
             )}
 
             <DialogFooter className="gap-2 sm:gap-0">
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsDialogOpen(false)}
+                data-testid="button-cancel-crew"
+              >
                 Cancel
               </Button>
               <Button 
