@@ -296,20 +296,34 @@ export default function PublicBooking() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Confetti active={showConfetti} duration={5000} />
-        <Card className="max-w-md w-full">
-          <CardContent className="py-12 text-center">
-            <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mx-auto mb-4 animate-bounce">
-              <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
-            </div>
-            <h2 className="text-xl font-semibold mb-2">Request Submitted!</h2>
-            <p className="text-muted-foreground mb-4">
-              {profile.name.split(" ")[0]} will get back to you shortly to confirm your booking.
-            </p>
-            <Button variant="outline" onClick={() => { setSubmitted(false); setShowConfetti(false); setSelectedDate(null); setSelectedTime(null); }}>
-              Submit Another Request
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="max-w-md w-full space-y-4">
+          <Card>
+            <CardContent className="py-12 text-center">
+              <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mx-auto mb-4 animate-bounce">
+                <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+              </div>
+              <h2 className="text-xl font-semibold mb-2">Request Submitted!</h2>
+              <p className="text-muted-foreground mb-4">
+                {profile.name.split(" ")[0]} will get back to you shortly to confirm your booking.
+              </p>
+              <Button variant="outline" onClick={() => { setSubmitted(false); setShowConfetti(false); setSelectedDate(null); setSelectedTime(null); }}>
+                Submit Another Request
+              </Button>
+            </CardContent>
+          </Card>
+          <p className="text-center text-xs text-muted-foreground">
+            Powered by{" "}
+            <a 
+              href="http://www.gigaid.com" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:underline"
+              data-testid="link-gigaid-confirmation"
+            >
+              GigAid<sup className="text-[8px]">TM</sup>
+            </a>
+          </p>
+        </div>
       </div>
     );
   }
