@@ -39,7 +39,7 @@ function InvoiceCard({ invoice }: { invoice: Invoice }) {
   const StatusIcon = statusIcons[invoice.status] || Clock;
   
   return (
-    <Link href={`/invoices/${invoice.id}`}>
+    <Link href={`/invoices/${invoice.id}/view`}>
       <Card className="hover-elevate active-elevate-2 cursor-pointer" data-testid={`invoice-card-${invoice.id}`}>
         <CardContent className="p-4">
           <div className="flex items-start gap-3">

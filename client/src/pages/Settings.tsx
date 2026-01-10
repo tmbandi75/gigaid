@@ -20,6 +20,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { AvailabilityEditor, DEFAULT_AVAILABILITY } from "@/components/settings/AvailabilityEditor";
+import { BioEditor } from "@/components/settings/BioEditor";
 import type { Referral, WeeklyAvailability } from "@shared/schema";
 
 interface ReferralData {
@@ -222,17 +223,12 @@ export default function Settings() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea
-                  id="bio"
-                  value={settings.bio}
-                  onChange={(e) => setSettings({ ...settings, bio: e.target.value })}
-                  placeholder="Tell clients about yourself..."
-                  rows={3}
-                  data-testid="input-bio"
-                />
-              </div>
+              <BioEditor
+                value={settings.bio}
+                onChange={(bio) => setSettings({ ...settings, bio })}
+                businessName={settings.businessName}
+                services={settings.services}
+              />
 
               <div className="space-y-2">
                 <Label>Services</Label>

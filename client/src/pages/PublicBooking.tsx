@@ -16,6 +16,7 @@ import { JobNotesAutocomplete } from "@/components/booking/JobNotesAutocomplete"
 import { FAQAssistant } from "@/components/booking/FAQAssistant";
 import { PriceEstimator } from "@/components/booking/PriceEstimator";
 import { Confetti } from "@/components/booking/Confetti";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 interface PublicProfile {
   name: string;
@@ -49,7 +50,8 @@ export default function PublicBooking() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [formData, setFormData] = useState({
-    clientName: "",
+    clientFirstName: "",
+    clientLastName: "",
     clientPhone: "",
     clientEmail: "",
     serviceType: "",
@@ -82,7 +84,7 @@ export default function PublicBooking() {
   });
 
   const submitMutation = useMutation({
-    mutationFn: (data: typeof formData & { preferredDate: string; preferredTime: string }) =>
+    mutationFn: (data: { clientName: string; clientPhone: string; clientEmail: string; serviceType: string; location: string; description: string; preferredDate: string; preferredTime: string }) =>
       apiRequest("POST", `/api/public/book/${slug}`, data),
     onSuccess: () => {
       setShowConfetti(true);
@@ -96,12 +98,17 @@ export default function PublicBooking() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.clientName || !formData.clientPhone || !formData.serviceType || !selectedDate || !selectedTime) {
+    if (!formData.clientFirstName || !formData.clientLastName || !formData.clientPhone || !formData.serviceType || !selectedDate || !selectedTime) {
       toast({ title: "Please fill in all required fields and select a time", variant: "destructive" });
       return;
     }
     submitMutation.mutate({
-      ...formData,
+      clientName: `${formData.clientFirstName} ${formData.clientLastName}`.trim(),
+      clientPhone: formData.clientPhone,
+      clientEmail: formData.clientEmail,
+      serviceType: formData.serviceType,
+      location: formData.location,
+      description: formData.description,
       preferredDate: selectedDateStr!,
       preferredTime: selectedTime,
     });
@@ -361,24 +368,35 @@ export default function PublicBooking() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="clientName">Your Name *</Label>
-                  <Input
-                    id="clientName"
-                    value={formData.clientName}
-                    onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-                    placeholder="John Smith"
-                    data-testid="input-client-name"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="clientFirstName">First Name *</Label>
+                    <Input
+                      id="clientFirstName"
+                      value={formData.clientFirstName}
+                      onChange={(e) => setFormData({ ...formData, clientFirstName: e.target.value })}
+                      placeholder="John"
+                      data-testid="input-first-name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="clientLastName">Last Name *</Label>
+                    <Input
+                      id="clientLastName"
+                      value={formData.clientLastName}
+                      onChange={(e) => setFormData({ ...formData, clientLastName: e.target.value })}
+                      placeholder="Smith"
+                      data-testid="input-last-name"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="clientPhone">Phone *</Label>
-                  <Input
+                  <PhoneInput
                     id="clientPhone"
                     value={formData.clientPhone}
-                    onChange={(e) => setFormData({ ...formData, clientPhone: e.target.value })}
-                    placeholder="(555) 000-0000"
+                    onChange={(value) => setFormData({ ...formData, clientPhone: value })}
                     data-testid="input-client-phone"
                   />
                 </div>

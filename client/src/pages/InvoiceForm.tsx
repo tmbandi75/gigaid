@@ -26,10 +26,12 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, Loader2, Send, CheckCircle } from "lucide-react";
+import { PhoneInput } from "@/components/ui/phone-input";
 import type { Invoice } from "@shared/schema";
 
 const invoiceFormSchema = z.object({
-  clientName: z.string().min(1, "Client name is required"),
+  clientFirstName: z.string().min(1, "First name is required"),
+  clientLastName: z.string().min(1, "Last name is required"),
   clientEmail: z.string().email().optional().or(z.literal("")),
   clientPhone: z.string().optional(),
   serviceDescription: z.string().min(1, "Service description is required"),
@@ -60,14 +62,16 @@ export default function InvoiceForm() {
   const form = useForm<InvoiceFormData>({
     resolver: zodResolver(invoiceFormSchema),
     defaultValues: {
-      clientName: "",
+      clientFirstName: "",
+      clientLastName: "",
       clientEmail: "",
       clientPhone: "",
       serviceDescription: "",
       amount: undefined,
     },
     values: existingInvoice ? {
-      clientName: existingInvoice.clientName,
+      clientFirstName: existingInvoice.clientName.split(" ")[0] || "",
+      clientLastName: existingInvoice.clientName.split(" ").slice(1).join(" ") || "",
       clientEmail: existingInvoice.clientEmail || "",
       clientPhone: existingInvoice.clientPhone || "",
       serviceDescription: existingInvoice.serviceDescription,
@@ -79,11 +83,13 @@ export default function InvoiceForm() {
     mutationFn: async (data: InvoiceFormData) => {
       const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`;
       const payload = {
-        ...data,
+        clientName: `${data.clientFirstName} ${data.clientLastName}`.trim(),
+        clientPhone: data.clientPhone,
+        clientEmail: data.clientEmail || undefined,
+        serviceDescription: data.serviceDescription,
         invoiceNumber,
         userId: "demo-user",
         amount: data.amount * 100,
-        clientEmail: data.clientEmail || undefined,
         status: "draft",
       };
       return apiRequest("POST", "/api/invoices", payload);
@@ -102,9 +108,11 @@ export default function InvoiceForm() {
   const updateMutation = useMutation({
     mutationFn: async (data: InvoiceFormData) => {
       const payload = {
-        ...data,
-        amount: data.amount * 100,
+        clientName: `${data.clientFirstName} ${data.clientLastName}`.trim(),
+        clientPhone: data.clientPhone,
         clientEmail: data.clientEmail || undefined,
+        serviceDescription: data.serviceDescription,
+        amount: data.amount * 100,
       };
       return apiRequest("PATCH", `/api/invoices/${id}`, payload);
     },
@@ -112,7 +120,7 @@ export default function InvoiceForm() {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
       queryClient.invalidateQueries({ queryKey: ["/api/invoices", id] });
       toast({ title: "Invoice updated successfully" });
-      navigate("/invoices");
+      navigate(`/invoices/${id}/view`);
     },
     onError: () => {
       toast({ title: "Failed to update invoice", variant: "destructive" });
@@ -192,23 +200,42 @@ export default function InvoiceForm() {
               <CardContent className="pt-6 space-y-4">
                 <h3 className="font-medium text-foreground">Client Details</h3>
                 
-                <FormField
-                  control={form.control}
-                  name="clientName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Client Name</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="John Doe" 
-                          {...field} 
-                          data-testid="input-client-name"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="clientFirstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>First Name</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="John" 
+                            {...field} 
+                            data-testid="input-first-name"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="clientLastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Last Name</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Doe" 
+                            {...field} 
+                            data-testid="input-last-name"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <FormField
                   control={form.control}
@@ -236,10 +263,9 @@ export default function InvoiceForm() {
                     <FormItem>
                       <FormLabel>Phone (optional)</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="tel"
-                          placeholder="(555) 123-4567"
-                          {...field}
+                        <PhoneInput
+                          value={field.value || ""}
+                          onChange={field.onChange}
                           data-testid="input-phone"
                         />
                       </FormControl>

@@ -912,6 +912,23 @@ export async function registerRoutes(
     }
   });
 
+  // AI Bio Rewrite
+  app.post("/api/ai/rewrite-bio", async (req, res) => {
+    try {
+      const { bio, businessName, services } = req.body;
+      if (!bio || bio.length < 10) {
+        return res.status(400).json({ error: "Bio must be at least 10 characters" });
+      }
+
+      const { rewriteBio } = await import("./ai/aiService");
+      const result = await rewriteBio({ bio, businessName, services });
+      res.json(result);
+    } catch (error) {
+      console.error("Error rewriting bio:", error);
+      res.json({ rewrittenBio: req.body.bio });
+    }
+  });
+
   // Smart Replies for Leads
   app.get("/api/leads/:id/smart-replies", async (req, res) => {
     try {

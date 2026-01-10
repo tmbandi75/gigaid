@@ -3,17 +3,18 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Clock, Plus, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Clock, Plus, Trash2, Calendar } from "lucide-react";
 import type { WeeklyAvailability, DayAvailability, TimeRange } from "@shared/schema";
 
 const DAYS = [
-  { key: "monday", label: "Monday" },
-  { key: "tuesday", label: "Tuesday" },
-  { key: "wednesday", label: "Wednesday" },
-  { key: "thursday", label: "Thursday" },
-  { key: "friday", label: "Friday" },
-  { key: "saturday", label: "Saturday" },
-  { key: "sunday", label: "Sunday" },
+  { key: "monday", label: "Mon", fullLabel: "Monday" },
+  { key: "tuesday", label: "Tue", fullLabel: "Tuesday" },
+  { key: "wednesday", label: "Wed", fullLabel: "Wednesday" },
+  { key: "thursday", label: "Thu", fullLabel: "Thursday" },
+  { key: "friday", label: "Fri", fullLabel: "Friday" },
+  { key: "saturday", label: "Sat", fullLabel: "Saturday" },
+  { key: "sunday", label: "Sun", fullLabel: "Sunday" },
 ] as const;
 
 const TIME_OPTIONS = [
@@ -32,6 +33,13 @@ const DEFAULT_AVAILABILITY: WeeklyAvailability = {
   saturday: { enabled: false, ranges: [{ start: "09:00", end: "17:00" }] },
   sunday: { enabled: false, ranges: [{ start: "09:00", end: "17:00" }] },
 };
+
+const SLOT_DURATIONS = [
+  { value: "30", label: "30 min" },
+  { value: "60", label: "1 hour" },
+  { value: "90", label: "1.5 hours" },
+  { value: "120", label: "2 hours" },
+];
 
 interface AvailabilityEditorProps {
   availability: WeeklyAvailability | null;
@@ -80,117 +88,151 @@ export function AvailabilityEditor({ availability, slotDuration, onChange }: Ava
     return `${displayHour}:${minutes} ${ampm}`;
   };
 
+  const getTotalHours = () => {
+    let total = 0;
+    DAYS.forEach(({ key }) => {
+      const day = currentAvailability[key];
+      if (day.enabled) {
+        day.ranges.forEach((range) => {
+          const [startH, startM] = range.start.split(":").map(Number);
+          const [endH, endM] = range.end.split(":").map(Number);
+          total += (endH * 60 + endM - startH * 60 - startM) / 60;
+        });
+      }
+    });
+    return total;
+  };
+
+  const enabledDays = DAYS.filter(({ key }) => currentAvailability[key].enabled).length;
+
   return (
     <Card data-testid="card-availability">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5" />
-          Availability
-        </CardTitle>
-        <CardDescription>Set your working hours for each day. Add multiple time slots per day.</CardDescription>
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Availability
+            </CardTitle>
+            <CardDescription>Set when clients can book you</CardDescription>
+          </div>
+          <div className="text-right">
+            <div className="text-2xl font-bold">{getTotalHours().toFixed(0)}h</div>
+            <p className="text-xs text-muted-foreground">{enabledDays} days/week</p>
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label>Appointment Duration</Label>
-          <Select
-            value={slotDuration.toString()}
-            onValueChange={(v) => onChange(currentAvailability, parseInt(v))}
-          >
-            <SelectTrigger data-testid="select-slot-duration">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="30">30 minutes</SelectItem>
-              <SelectItem value="60">1 hour</SelectItem>
-              <SelectItem value="90">1.5 hours</SelectItem>
-              <SelectItem value="120">2 hours</SelectItem>
-            </SelectContent>
-          </Select>
+      <CardContent className="space-y-6">
+        <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
+          <Clock className="h-5 w-5 text-muted-foreground" />
+          <div className="flex-1">
+            <Label className="text-sm">Appointment Duration</Label>
+          </div>
+          <div className="flex gap-1">
+            {SLOT_DURATIONS.map((opt) => (
+              <Badge
+                key={opt.value}
+                variant={slotDuration.toString() === opt.value ? "default" : "outline"}
+                className="cursor-pointer"
+                onClick={() => onChange(currentAvailability, parseInt(opt.value))}
+                data-testid={`badge-duration-${opt.value}`}
+              >
+                {opt.label}
+              </Badge>
+            ))}
+          </div>
         </div>
 
-        <div className="space-y-4 pt-2">
-          {DAYS.map(({ key, label }) => {
+        <div className="grid gap-3">
+          {DAYS.map(({ key, label, fullLabel }) => {
             const day = currentAvailability[key];
             return (
               <div 
                 key={key} 
-                className={`p-4 rounded-lg border ${day.enabled ? "bg-background" : "bg-muted/50"}`}
+                className={`rounded-lg border transition-all ${
+                  day.enabled 
+                    ? "bg-background border-border" 
+                    : "bg-muted/30 border-transparent"
+                }`}
                 data-testid={`availability-${key}`}
               >
-                <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center gap-3 p-3">
                   <Switch
                     checked={day.enabled}
                     onCheckedChange={(enabled) => updateDay(key, { enabled })}
                     data-testid={`switch-${key}`}
                   />
-                  <span className={`font-medium ${!day.enabled ? "text-muted-foreground" : ""}`}>
-                    {label}
-                  </span>
-                </div>
-
-                {day.enabled && (
-                  <div className="space-y-2 pl-10">
-                    {day.ranges.map((range, rangeIndex) => (
-                      <div key={rangeIndex} className="flex items-center gap-2 flex-wrap">
-                        <Select
-                          value={range.start}
-                          onValueChange={(start) => updateRange(key, rangeIndex, { start })}
-                        >
-                          <SelectTrigger className="w-28" data-testid={`select-${key}-${rangeIndex}-start`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TIME_OPTIONS.map((time) => (
-                              <SelectItem key={time} value={time}>
-                                {formatTime(time)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <span className="text-muted-foreground">to</span>
-                        <Select
-                          value={range.end}
-                          onValueChange={(end) => updateRange(key, rangeIndex, { end })}
-                        >
-                          <SelectTrigger className="w-28" data-testid={`select-${key}-${rangeIndex}-end`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TIME_OPTIONS.filter((t) => t > range.start).map((time) => (
-                              <SelectItem key={time} value={time}>
-                                {formatTime(time)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {day.ranges.length > 1 && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeRange(key, rangeIndex)}
-                            data-testid={`button-remove-range-${key}-${rangeIndex}`}
-                          >
-                            <Trash2 className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => addRange(key)}
-                      className="mt-1"
-                      data-testid={`button-add-range-${key}`}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add time slot
-                    </Button>
+                  <div className="w-20">
+                    <span className="font-medium hidden sm:inline">{fullLabel}</span>
+                    <span className="font-medium sm:hidden">{label}</span>
                   </div>
-                )}
-
-                {!day.enabled && (
-                  <p className="text-sm text-muted-foreground pl-10">Unavailable</p>
-                )}
+                  
+                  {day.enabled ? (
+                    <div className="flex-1 flex flex-wrap items-center gap-2">
+                      {day.ranges.map((range, rangeIndex) => (
+                        <div 
+                          key={rangeIndex} 
+                          className="flex items-center gap-1 px-2 py-1 rounded-md bg-primary/5 border border-primary/10"
+                        >
+                          <Select
+                            value={range.start}
+                            onValueChange={(start) => updateRange(key, rangeIndex, { start })}
+                          >
+                            <SelectTrigger className="h-7 w-20 text-xs border-0 bg-transparent p-1">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {TIME_OPTIONS.map((time) => (
+                                <SelectItem key={time} value={time} className="text-xs">
+                                  {formatTime(time)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <span className="text-xs text-muted-foreground">-</span>
+                          <Select
+                            value={range.end}
+                            onValueChange={(end) => updateRange(key, rangeIndex, { end })}
+                          >
+                            <SelectTrigger className="h-7 w-20 text-xs border-0 bg-transparent p-1">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {TIME_OPTIONS.filter((t) => t > range.start).map((time) => (
+                                <SelectItem key={time} value={time} className="text-xs">
+                                  {formatTime(time)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {day.ranges.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeRange(key, rangeIndex)}
+                              className="p-1 hover:bg-destructive/10 rounded"
+                              data-testid={`button-remove-range-${key}-${rangeIndex}`}
+                            >
+                              <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => addRange(key)}
+                        className="h-7 px-2 text-xs"
+                        data-testid={`button-add-range-${key}`}
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add
+                      </Button>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Unavailable</span>
+                  )}
+                </div>
               </div>
             );
           })}

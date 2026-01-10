@@ -334,6 +334,55 @@ export interface PriceEstimate {
   breakdown?: string;
 }
 
+export interface BioRewrite {
+  rewrittenBio: string;
+}
+
+export async function rewriteBio(params: {
+  bio: string;
+  businessName?: string;
+  services?: string[];
+}): Promise<BioRewrite> {
+  const { bio, businessName, services } = params;
+
+  const response = await getOpenAI().chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `You are a professional copywriter helping gig workers improve their bio for their public profile.
+${businessName ? `Business name: ${businessName}` : ""}
+${services?.length ? `Services offered: ${services.join(", ")}` : ""}
+
+Rewrite the bio to be:
+- Professional but friendly and approachable
+- Highlight experience and reliability
+- Include a call to action
+- Keep it concise (2-3 sentences max)
+- Maintain the original meaning and key details
+
+Return a JSON object with:
+- rewrittenBio: The improved bio text
+
+Return ONLY valid JSON.`
+      },
+      {
+        role: "user",
+        content: bio
+      }
+    ],
+    response_format: { type: "json_object" },
+    max_completion_tokens: 200,
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    return { rewrittenBio: bio };
+  }
+
+  return JSON.parse(content) as BioRewrite;
+}
+
 export async function estimatePrice(params: {
   description: string;
   services: Array<{ name: string; price?: number }>;

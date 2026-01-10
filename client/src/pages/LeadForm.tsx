@@ -26,10 +26,12 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { PhoneInput } from "@/components/ui/phone-input";
 import type { Lead } from "@shared/schema";
 
 const leadFormSchema = z.object({
-  clientName: z.string().min(1, "Client name is required"),
+  clientFirstName: z.string().min(1, "First name is required"),
+  clientLastName: z.string().min(1, "Last name is required"),
   clientPhone: z.string().optional(),
   clientEmail: z.string().email().optional().or(z.literal("")),
   serviceType: z.string().min(1, "Service type is required"),
@@ -71,7 +73,8 @@ export default function LeadForm() {
   const form = useForm<LeadFormData>({
     resolver: zodResolver(leadFormSchema),
     defaultValues: {
-      clientName: "",
+      clientFirstName: "",
+      clientLastName: "",
       clientPhone: "",
       clientEmail: "",
       serviceType: "",
@@ -79,7 +82,8 @@ export default function LeadForm() {
       status: "new",
     },
     values: existingLead ? {
-      clientName: existingLead.clientName,
+      clientFirstName: existingLead.clientName.split(" ")[0] || "",
+      clientLastName: existingLead.clientName.split(" ").slice(1).join(" ") || "",
       clientPhone: existingLead.clientPhone || "",
       clientEmail: existingLead.clientEmail || "",
       serviceType: existingLead.serviceType,
@@ -91,9 +95,13 @@ export default function LeadForm() {
   const createMutation = useMutation({
     mutationFn: async (data: LeadFormData) => {
       const payload = {
-        ...data,
-        userId: "demo-user",
+        clientName: `${data.clientFirstName} ${data.clientLastName}`.trim(),
+        clientPhone: data.clientPhone,
         clientEmail: data.clientEmail || undefined,
+        serviceType: data.serviceType,
+        description: data.description,
+        status: data.status,
+        userId: "demo-user",
         source: "manual",
       };
       return apiRequest("POST", "/api/leads", payload);
@@ -112,8 +120,12 @@ export default function LeadForm() {
   const updateMutation = useMutation({
     mutationFn: async (data: LeadFormData) => {
       const payload = {
-        ...data,
+        clientName: `${data.clientFirstName} ${data.clientLastName}`.trim(),
+        clientPhone: data.clientPhone,
         clientEmail: data.clientEmail || undefined,
+        serviceType: data.serviceType,
+        description: data.description,
+        status: data.status,
       };
       return apiRequest("PATCH", `/api/leads/${id}`, payload);
     },
@@ -170,23 +182,42 @@ export default function LeadForm() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <Card>
               <CardContent className="pt-6 space-y-4">
-                <FormField
-                  control={form.control}
-                  name="clientName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Client Name</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="John Doe" 
-                          {...field} 
-                          data-testid="input-client-name"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="clientFirstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>First Name</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="John" 
+                            {...field} 
+                            data-testid="input-first-name"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="clientLastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Last Name</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Doe" 
+                            {...field} 
+                            data-testid="input-last-name"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <FormField
                   control={form.control}
@@ -195,10 +226,9 @@ export default function LeadForm() {
                     <FormItem>
                       <FormLabel>Phone (optional)</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="tel"
-                          placeholder="(555) 123-4567"
-                          {...field}
+                        <PhoneInput
+                          value={field.value || ""}
+                          onChange={field.onChange}
                           data-testid="input-phone"
                         />
                       </FormControl>

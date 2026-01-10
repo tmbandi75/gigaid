@@ -28,6 +28,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, Loader2, Sparkles, Calendar, Clock } from "lucide-react";
+import { PhoneInput } from "@/components/ui/phone-input";
 import type { Job, InsertJob } from "@shared/schema";
 
 interface ScheduleSuggestion {
@@ -524,10 +525,9 @@ export default function JobForm() {
                     <FormItem>
                       <FormLabel>Client Phone (optional)</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="tel"
-                          placeholder="(555) 123-4567"
-                          {...field}
+                        <PhoneInput
+                          value={field.value || ""}
+                          onChange={field.onChange}
                           data-testid="input-client-phone"
                         />
                       </FormControl>
