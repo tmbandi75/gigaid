@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "wouter";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +24,8 @@ import {
   AlertTriangle,
   Loader2,
   ExternalLink,
+  Upload,
+  Plus,
 } from "lucide-react";
 
 interface CrewPortalData {
@@ -75,6 +78,9 @@ export default function CrewPortal() {
   const [messageText, setMessageText] = useState("");
   const [declineReason, setDeclineReason] = useState("");
   const [showDeclineForm, setShowDeclineForm] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [photoCaption, setPhotoCaption] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const portalQueryKey = ["/api/public/crew-portal", token];
   
@@ -149,6 +155,63 @@ export default function CrewPortal() {
       });
     },
   });
+
+  const handlePhotoUpload = async (file: File) => {
+    if (!file) return;
+    
+    setIsUploading(true);
+    try {
+      const uploadRes = await fetch("/api/uploads/request-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: file.name,
+          size: file.size,
+          contentType: file.type,
+        }),
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error("Failed to get upload URL");
+      }
+
+      const { uploadURL, objectPath } = await uploadRes.json();
+
+      const uploadToStorage = await fetch(uploadURL, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!uploadToStorage.ok) {
+        throw new Error("Failed to upload file");
+      }
+
+      await apiRequest("POST", `/api/public/crew-portal/${token}/photo`, {
+        photoUrl: objectPath,
+        caption: photoCaption || null,
+      });
+
+      queryClient.invalidateQueries({ queryKey: portalQueryKey });
+      setPhotoCaption("");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      toast({
+        title: "Photo Uploaded",
+        description: "Your photo has been uploaded successfully.",
+      });
+    } catch (err) {
+      console.error("Photo upload error:", err);
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload photo. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -537,8 +600,8 @@ export default function CrewPortal() {
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            {photos.length > 0 ? (
+          <CardContent className="space-y-4">
+            {photos.length > 0 && (
               <div className="grid grid-cols-3 gap-2">
                 {photos.map((photo) => (
                   <div
@@ -554,11 +617,34 @@ export default function CrewPortal() {
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No photos uploaded yet. Photo upload coming soon!
-              </p>
             )}
+            
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Upload photos from the job site
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handlePhotoUpload(file);
+                  }}
+                  disabled={isUploading}
+                  className="flex-1"
+                  data-testid="input-photo-upload"
+                />
+              </div>
+              {isUploading && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Uploading photo...
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
