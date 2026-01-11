@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, doublePrecision } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -158,6 +158,11 @@ export const jobs = pgTable("jobs", {
   paidAt: text("paid_at"),
   reminder24hSent: boolean("reminder_24h_sent").default(false),
   reminder2hSent: boolean("reminder_2h_sent").default(false),
+  customerLat: doublePrecision("customer_lat"),
+  customerLng: doublePrecision("customer_lng"),
+  providerLat: doublePrecision("provider_lat"),
+  providerLng: doublePrecision("provider_lng"),
+  providerLocationUpdatedAt: text("provider_location_updated_at"),
   createdAt: text("created_at").notNull(),
 });
 
