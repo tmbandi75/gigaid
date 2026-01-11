@@ -176,3 +176,58 @@ Enable the following APIs in the Google Cloud Console:
 - `server/geocode.ts` - Geocoding utility using Google Maps API
 - `client/src/components/JobLocationMap.tsx` - Map display with dual pins and distance
 - `client/src/pages/JobForm.tsx` - Job detail page with location tracking integration
+
+## iOS App Build (Capacitor)
+
+GigAid uses Capacitor to package the web app as a native iOS application.
+
+### Prerequisites
+
+- **macOS** with Xcode 14+ installed
+- **Apple Developer Account** ($99/year) for App Store submission
+- **CocoaPods** installed (`sudo gem install cocoapods`)
+
+### Building for iOS
+
+1. **Build the web app**:
+   ```bash
+   npm run build
+   ```
+
+2. **Sync with Capacitor**:
+   ```bash
+   npx cap sync ios
+   ```
+
+3. **Open in Xcode**:
+   ```bash
+   npx cap open ios
+   ```
+
+4. **In Xcode**:
+   - Select your team under Signing & Capabilities
+   - Set the Bundle Identifier to match your Apple Developer account
+   - Choose a target device or "Any iOS Device"
+   - Product → Archive for App Store submission
+
+### App Configuration
+
+The Capacitor config is in `capacitor.config.ts`:
+- **Bundle ID**: `com.gigaid.app` (change to match your Apple Developer account)
+- **App Name**: Gig Aid
+- **Web Directory**: `dist/public`
+
+### Key Files
+
+- `capacitor.config.ts` - Capacitor configuration
+- `ios/` - Native iOS Xcode project
+- `client/src/index.css` - iOS safe area insets for notch handling
+
+### Updating the App
+
+After making changes to the web app:
+```bash
+npm run build && npx cap sync ios
+```
+
+Then rebuild in Xcode.
