@@ -77,6 +77,17 @@ interface CrewPhoto {
   createdAt: string;
 }
 
+interface CrewMember {
+  id: number;
+  userId: string;
+  firstName: string;
+  lastName: string | null;
+  email: string | null;
+  phone: string | null;
+  role: string | null;
+  status: string;
+}
+
 const jobFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   serviceType: z.string().min(1, "Service type is required"),
@@ -173,6 +184,37 @@ export default function JobForm() {
       return res.json();
     },
     enabled: !!isEditing,
+  });
+
+  const { data: crewMembers = [] } = useQuery<CrewMember[]>({
+    queryKey: ["/api/crew"],
+    enabled: !!isEditing,
+  });
+
+  const [selectedCrewId, setSelectedCrewId] = useState<string>("");
+
+  const assignCrewMutation = useMutation({
+    mutationFn: async (crewMemberId: number) => {
+      const member = crewMembers.find(m => m.id === crewMemberId);
+      return apiRequest("POST", "/api/crew-invites", {
+        jobId: id,
+        crewMemberId,
+        crewFirstName: member?.firstName || "",
+        crewEmail: member?.email || null,
+        crewPhone: member?.phone || null,
+        message: `You've been assigned to a job`,
+        sendSms: !!member?.phone,
+        sendEmail: !!member?.email,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs", id, "crew-invites"] });
+      setSelectedCrewId("");
+      toast({ title: "Crew member assigned successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to assign crew member", variant: "destructive" });
+    },
   });
 
   const updateLocationMutation = useMutation({
@@ -834,14 +876,59 @@ export default function JobForm() {
               </CardContent>
             </Card>
 
-            {isEditing && (crewInvites.length > 0 || crewPhotos.length > 0) && (
+            {isEditing && (
               <Card className="border-0 shadow-md overflow-hidden">
                 <div className="h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
                 <CardContent className="pt-5 space-y-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Users className="h-4 w-4 text-indigo-500" />
-                    <h3 className="font-semibold text-sm">Crew Status</h3>
+                    <h3 className="font-semibold text-sm">Crew Assignment</h3>
                   </div>
+
+                  {crewMembers.length > 0 ? (
+                    <div className="space-y-3">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Assign a Crew Member
+                      </p>
+                      <div className="flex gap-2">
+                        <Select value={selectedCrewId} onValueChange={setSelectedCrewId}>
+                          <SelectTrigger className="h-12 flex-1" data-testid="select-crew-member">
+                            <SelectValue placeholder="Select crew member..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {crewMembers
+                              .filter(m => m.status === "joined" && !crewInvites.some(inv => inv.crewMemberId === m.id))
+                              .map((member) => (
+                                <SelectItem key={member.id} value={member.id.toString()}>
+                                  {member.firstName} {member.lastName || ""} {member.role ? `(${member.role})` : ""}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            if (selectedCrewId) {
+                              assignCrewMutation.mutate(parseInt(selectedCrewId));
+                            }
+                          }}
+                          disabled={!selectedCrewId || assignCrewMutation.isPending}
+                          className="h-12 px-6"
+                          data-testid="button-assign-crew"
+                        >
+                          {assignCrewMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            "Assign"
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No crew members yet. Add crew members in <span className="text-primary cursor-pointer" onClick={() => navigate("/crew")}>More → Crew</span>.
+                    </p>
+                  )}
                   
                   {crewInvites.length > 0 && (
                     <div className="space-y-3">

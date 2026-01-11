@@ -19,6 +19,7 @@ import {
   Gift,
   Shield,
   Palette,
+  Calendar,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
@@ -39,6 +40,7 @@ const menuSections = [
       { icon: Sparkles, label: "AI Tools", description: "Smart AI features", href: "/ai-tools", badge: "New", gradient: "from-violet-500 to-purple-500" },
       { icon: Users, label: "Crew", description: "Manage team members", href: "/crew", gradient: "from-blue-500 to-cyan-500" },
       { icon: Bell, label: "Reminders", description: "SMS & voice alerts", href: "/reminders", gradient: "from-amber-500 to-orange-500" },
+      { icon: Calendar, label: "Booking Requests", description: "Customer bookings", href: "/booking-requests", gradient: "from-green-500 to-emerald-500" },
     ]
   },
   {
