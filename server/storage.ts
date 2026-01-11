@@ -236,7 +236,7 @@ export class MemStorage implements IStorage {
       serviceArea: null,
       onboardingCompleted: false,
       onboardingStep: 0,
-      isPro: false,
+      isPro: true,
       proExpiresAt: null,
       notifyBySms: true,
       notifyByEmail: true,
