@@ -60,7 +60,7 @@ interface ScheduleSuggestion {
 
 interface CrewInvite {
   id: string;
-  crewMemberId: number;
+  crewMemberId: string;
   crewFirstName?: string;
   crewEmail?: string;
   crewPhone?: string;
@@ -78,10 +78,9 @@ interface CrewPhoto {
 }
 
 interface CrewMember {
-  id: number;
+  id: string;
   userId: string;
-  firstName: string;
-  lastName: string | null;
+  name: string;
   email: string | null;
   phone: string | null;
   role: string | null;
@@ -194,12 +193,12 @@ export default function JobForm() {
   const [selectedCrewId, setSelectedCrewId] = useState<string>("");
 
   const assignCrewMutation = useMutation({
-    mutationFn: async (crewMemberId: number) => {
+    mutationFn: async (crewMemberId: string) => {
       const member = crewMembers.find(m => m.id === crewMemberId);
       return apiRequest("POST", "/api/crew-invites", {
         jobId: id,
         crewMemberId,
-        crewFirstName: member?.firstName || "",
+        crewFirstName: member?.name || "",
         crewEmail: member?.email || null,
         crewPhone: member?.phone || null,
         message: `You've been assigned to a job`,
@@ -897,10 +896,10 @@ export default function JobForm() {
                           </SelectTrigger>
                           <SelectContent>
                             {crewMembers
-                              .filter(m => m.status === "joined" && !crewInvites.some(inv => inv.crewMemberId === m.id))
+                              .filter(m => m.status === "joined" && !crewInvites.some(inv => inv.crewMemberId?.toString() === m.id))
                               .map((member) => (
-                                <SelectItem key={member.id} value={member.id.toString()}>
-                                  {member.firstName} {member.lastName || ""} {member.role ? `(${member.role})` : ""}
+                                <SelectItem key={member.id} value={member.id}>
+                                  {member.name} {member.role ? `(${member.role})` : ""}
                                 </SelectItem>
                               ))}
                           </SelectContent>
@@ -909,7 +908,7 @@ export default function JobForm() {
                           type="button"
                           onClick={() => {
                             if (selectedCrewId) {
-                              assignCrewMutation.mutate(parseInt(selectedCrewId));
+                              assignCrewMutation.mutate(selectedCrewId);
                             }
                           }}
                           disabled={!selectedCrewId || assignCrewMutation.isPending}
