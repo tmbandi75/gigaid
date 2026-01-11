@@ -109,16 +109,22 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
   const initAutocomplete = useCallback(async () => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     
+    console.log("[AddressAutocomplete] API Key present:", !!apiKey, apiKey ? `(${apiKey.substring(0, 8)}...)` : "(none)");
+    
     if (!apiKey) {
+      console.log("[AddressAutocomplete] No API key found, switching to manual mode");
       setManualMode(true);
       setIsLoading(false);
       return;
     }
 
     try {
+      console.log("[AddressAutocomplete] Loading Google Maps script...");
       await loadGoogleMapsScript(apiKey);
+      console.log("[AddressAutocomplete] Google Maps script loaded successfully");
       
       if (inputRef.current && window.google?.maps?.places) {
+        console.log("[AddressAutocomplete] Initializing autocomplete on input");
         autocompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, {
           types: ["address"],
           componentRestrictions: { country: "us" },
@@ -127,16 +133,18 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
 
         autocompleteRef.current.addListener("place_changed", () => {
           const place = autocompleteRef.current?.getPlace();
+          console.log("[AddressAutocomplete] Place selected:", place?.formatted_address);
           if (place && place.address_components) {
             const components = parseAddressComponents(place);
             setInputValue(components.fullAddress);
             onChange(components.fullAddress, components);
           }
         });
+        console.log("[AddressAutocomplete] Autocomplete ready!");
       }
       setIsLoading(false);
     } catch (err) {
-      console.error("Google Maps failed to load:", err);
+      console.error("[AddressAutocomplete] Google Maps failed to load:", err);
       setError("Address suggestions unavailable");
       setManualMode(true);
       setIsLoading(false);
