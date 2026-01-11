@@ -213,6 +213,29 @@ export async function registerRoutes(
           priceCents: job.price || 0,
         }));
 
+      // Deposit metrics: jobs with deposit requests this week
+      const jobsWithDepositThisWeek = jobs.filter(job => {
+        const scheduledDate = job.scheduledDate ? new Date(job.scheduledDate) : null;
+        if (!scheduledDate || scheduledDate < oneWeekAgo) return false;
+        const depositMeta = extractDepositMetadata(job.notes);
+        return depositMeta && depositMeta.depositRequestedCents > 0;
+      }).length;
+
+      // Calculate total deposits collected this week from job payments
+      const jobPayments = await storage.getJobPayments(defaultUserId);
+      const depositPaymentsThisWeek = jobPayments.filter(payment => {
+        if (!payment.notes) return false;
+        try {
+          const notes = JSON.parse(payment.notes);
+          if (!notes.isDeposit) return false;
+        } catch {
+          return false;
+        }
+        const paidAt = payment.paidAt ? new Date(payment.paidAt) : null;
+        return paidAt && paidAt >= oneWeekAgo && payment.amount > 0;
+      });
+      const depositsCollectedThisWeek = depositPaymentsThisWeek.reduce((sum, p) => sum + p.amount, 0);
+
       res.json({
         isPro: true,
         weeklyRevenue,
@@ -225,6 +248,8 @@ export async function registerRoutes(
         outstandingInvoices,
         upcomingJobs,
         recentCompletedJobs,
+        jobsWithDepositThisWeek,
+        depositsCollectedThisWeek,
       });
     } catch (error) {
       console.error("Owner metrics error:", error);

@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   Clock,
   Loader2,
+  Shield,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 
@@ -49,6 +50,8 @@ interface OwnerMetrics {
     completedAt: string;
     priceCents: number;
   }>;
+  jobsWithDepositThisWeek?: number;
+  depositsCollectedThisWeek?: number;
 }
 
 function UpgradeGate() {
@@ -249,6 +252,32 @@ export default function OwnerView() {
             color="amber"
           />
         </div>
+
+        {(metrics.jobsWithDepositThisWeek || 0) > 0 || (metrics.depositsCollectedThisWeek || 0) > 0 ? (
+          <Card className="border-0 shadow-md mb-8 border-l-4 border-l-teal-500" data-testid="card-deposit-metrics">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-full bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center">
+                    <Shield className="h-6 w-6 text-teal-600 dark:text-teal-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Deposit-Secured Jobs</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {metrics.jobsWithDepositThisWeek || 0} job{(metrics.jobsWithDepositThisWeek || 0) !== 1 ? "s" : ""} secured with deposits this week
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-teal-600 dark:text-teal-400" data-testid="text-deposits-collected">
+                    {formatCurrency(metrics.depositsCollectedThisWeek || 0)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">collected this week</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
 
         {metrics.outstandingInvoices.count > 0 && (
           <Card className="border-0 shadow-md mb-8 border-l-4 border-l-amber-500">

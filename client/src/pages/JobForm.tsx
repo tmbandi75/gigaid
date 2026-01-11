@@ -45,7 +45,9 @@ import {
   Camera,
   XCircle,
   HelpCircle,
-  ExternalLink
+  ExternalLink,
+  Shield,
+  Percent
 } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import type { Job } from "@shared/schema";
@@ -85,6 +87,210 @@ interface CrewMember {
   phone: string | null;
   role: string | null;
   status: string;
+}
+
+interface DepositState {
+  hasDeposit: boolean;
+  depositRequestedCents: number;
+  depositPaidCents: number;
+  depositOutstandingCents: number;
+  isDepositFullyPaid: boolean;
+}
+
+function DepositSection({ job }: { job: Job }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [depositType, setDepositType] = useState<"flat" | "percent">("percent");
+  const [depositAmount, setDepositAmount] = useState<number>(20);
+  const [showSetDeposit, setShowSetDeposit] = useState(false);
+
+  const { data: depositStatus } = useQuery<DepositState>({
+    queryKey: ["/api/jobs", job.id, "deposit-status"],
+  });
+
+  const setDepositMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", `/api/jobs/${job.id}/deposit`, {
+        depositType,
+        depositAmount,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs", job.id, "deposit-status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs", job.id] });
+      setShowSetDeposit(false);
+      toast({ title: "Deposit requirement set" });
+    },
+    onError: () => {
+      toast({ title: "Failed to set deposit", variant: "destructive" });
+    },
+  });
+
+  const priceInDollars = (job.price || 0) / 100;
+  const maxDepositPercent = 30;
+  const depositPreview = depositType === "percent" 
+    ? Math.min(Math.round(priceInDollars * (depositAmount / 100)), Math.round(priceInDollars * (maxDepositPercent / 100)))
+    : Math.min(depositAmount, Math.round(priceInDollars * (maxDepositPercent / 100)));
+
+  return (
+    <Card className="border-0 shadow-md overflow-hidden">
+      <div className="h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
+      <CardContent className="pt-5 space-y-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Shield className="h-4 w-4 text-emerald-500" />
+            <h3 className="font-semibold text-sm">Secure Your Appointment</h3>
+          </div>
+          {depositStatus?.hasDeposit && (
+            <Badge 
+              variant="secondary" 
+              className={depositStatus.isDepositFullyPaid 
+                ? "bg-emerald-500/10 text-emerald-600" 
+                : "bg-amber-500/10 text-amber-600"
+              }
+              data-testid="badge-deposit-status"
+            >
+              {depositStatus.isDepositFullyPaid ? (
+                <>
+                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                  Deposit Received
+                </>
+              ) : (
+                `$${(depositStatus.depositOutstandingCents / 100).toFixed(2)} pending`
+              )}
+            </Badge>
+          )}
+        </div>
+
+        {depositStatus?.hasDeposit ? (
+          <div className="space-y-2 p-3 rounded-lg bg-muted/50">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Deposit requested:</span>
+              <span className="font-medium">${(depositStatus.depositRequestedCents / 100).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Deposit paid:</span>
+              <span className="font-medium text-emerald-600">${(depositStatus.depositPaidCents / 100).toFixed(2)}</span>
+            </div>
+            {depositStatus.depositOutstandingCents > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Outstanding:</span>
+                <span className="font-medium text-amber-600">${(depositStatus.depositOutstandingCents / 100).toFixed(2)}</span>
+              </div>
+            )}
+          </div>
+        ) : showSetDeposit ? (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Asking for a small deposit helps ensure clients show up for appointments. 
+              Deposits are capped at 30% to build trust.
+            </p>
+            
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={depositType === "percent" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setDepositType("percent")}
+                className="flex-1"
+                data-testid="button-deposit-percent"
+              >
+                <Percent className="w-4 h-4 mr-1" />
+                Percentage
+              </Button>
+              <Button
+                type="button"
+                variant={depositType === "flat" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setDepositType("flat")}
+                className="flex-1"
+                data-testid="button-deposit-flat"
+              >
+                <DollarSign className="w-4 h-4 mr-1" />
+                Flat Amount
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                {depositType === "percent" ? "Deposit Percentage" : "Deposit Amount"}
+              </label>
+              <div className="relative">
+                {depositType === "flat" && (
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                )}
+                <Input
+                  type="number"
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(parseFloat(e.target.value) || 0)}
+                  className={`h-12 ${depositType === "flat" ? "pl-9" : ""}`}
+                  placeholder={depositType === "percent" ? "20" : "50"}
+                  data-testid="input-deposit-amount"
+                />
+                {depositType === "percent" && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">%</span>
+                )}
+              </div>
+            </div>
+
+            <div className="p-3 rounded-lg bg-emerald-500/10 text-sm">
+              <div className="flex justify-between">
+                <span className="text-emerald-700 dark:text-emerald-400">Deposit preview:</span>
+                <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                  ${depositPreview.toFixed(2)}
+                </span>
+              </div>
+              <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-1">
+                of ${priceInDollars.toFixed(2)} job total (max 30%)
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowSetDeposit(false)}
+                className="flex-1"
+                data-testid="button-cancel-deposit"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={() => setDepositMutation.mutate()}
+                disabled={setDepositMutation.isPending || depositAmount <= 0}
+                className="flex-1"
+                data-testid="button-set-deposit"
+              >
+                {setDepositMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Set Deposit"
+                )}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Protect your time by requesting a small deposit upfront. 
+              Customers appreciate the professional approach.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowSetDeposit(true)}
+              className="w-full"
+              data-testid="button-request-deposit"
+            >
+              <Shield className="w-4 h-4 mr-2" />
+              Request a Deposit
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 const jobFormSchema = z.object({
@@ -874,6 +1080,10 @@ export default function JobForm() {
                 />
               </CardContent>
             </Card>
+
+            {isEditing && existingJob?.price && existingJob.price > 0 && (
+              <DepositSection job={existingJob} />
+            )}
 
             {isEditing && (crewMembers.length > 0 || crewInvites.length > 0 || crewPhotos.length > 0) && (
               <Card className="border-0 shadow-md overflow-hidden">

@@ -15,7 +15,8 @@ import {
   TrendingUp,
   Filter,
   CircleDollarSign,
-  XCircle
+  XCircle,
+  Shield
 } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
@@ -49,6 +50,18 @@ function formatCurrency(cents: number): string {
     currency: 'USD',
     minimumFractionDigits: 0,
   }).format(cents / 100);
+}
+
+function hasDepositRequest(job: Job): boolean {
+  if (!job.notes) return false;
+  try {
+    const match = job.notes.match(/\[DEPOSIT_META:([^\]]+)\]/);
+    if (match) {
+      const meta = JSON.parse(match[1]);
+      return meta.depositRequestedCents > 0;
+    }
+  } catch {}
+  return false;
 }
 
 const statusConfig: Record<string, { color: string; bg: string; icon: typeof CheckCircle2 }> = {
@@ -112,6 +125,16 @@ function JobCard({ job }: { job: Job }) {
                         <DollarSign className="h-3 w-3" />
                         {(job.price / 100).toFixed(0)}
                       </span>
+                    )}
+                    {hasDepositRequest(job) && job.status !== "completed" && job.status !== "cancelled" && (
+                      <Badge 
+                        variant="secondary" 
+                        className="text-[10px] px-2 py-0.5 border-0 bg-teal-500/10 text-teal-600"
+                        data-testid={`badge-deposit-${job.id}`}
+                      >
+                        <Shield className="h-3 w-3 mr-1" />
+                        Deposit
+                      </Badge>
                     )}
                     {job.status === "completed" && (
                       <Badge 
