@@ -175,7 +175,7 @@ export type InsertJob = z.infer<typeof insertJobSchema>;
 export type Job = typeof jobs.$inferSelect;
 
 // Lead Status
-export const leadStatuses = ["new", "contacted", "converted", "cold"] as const;
+export const leadStatuses = ["new", "contacted", "engaged", "converted", "cold"] as const;
 export type LeadStatus = (typeof leadStatuses)[number];
 
 // Lead follow-up status for response tracking

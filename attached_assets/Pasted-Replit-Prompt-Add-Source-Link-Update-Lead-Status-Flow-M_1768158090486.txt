@@ -1,0 +1,180 @@
+Replit Prompt: Add Source Link + Update Lead Status Flow (MVP-Safe)
+
+Context
+
+GigAid manages leads from external marketplaces (Craigslist, Facebook, etc.)
+The actual conversations happen outside the app.
+
+We must:
+
+Track lead progress honestly
+
+Give users a fast way to return to the original conversation
+
+Avoid scraping, syncing, or pretending we control external platforms
+
+🎯 Goals
+
+Add a Source Link to Leads
+
+Make Source Link a first-class action in the Lead UI
+
+Integrate Source Link into the Lead status flow
+
+Keep all behavior manual, honest, and MVP-safe
+
+1️⃣ Schema Update (Additive Only)
+
+Extend the existing leads table with:
+
+source_type (string, optional)
+
+Examples: craigslist, facebook, thumbtack, instagram
+
+source_url (text, optional)
+
+Full URL to original post or conversation thread
+
+response_sent_at (timestamp, nullable)
+
+Set when user copies/sends a reply externally
+
+Do not remove or rename any existing fields.
+
+2️⃣ Lead Status Enum (No New States)
+
+Use the existing Lead statuses:
+
+new
+
+response_sent
+
+engaged
+
+price_confirmed
+
+cold
+
+lost
+
+Do NOT add delivery/read states.
+
+3️⃣ Source Link Behavior Rules
+Visibility
+
+If source_url exists:
+
+Show a primary button: “Open original post”
+
+Button must:
+
+Open link in a new tab/window
+
+Be visible in all non-terminal states (lost optional but allowed)
+
+Labeling
+
+Use human language only:
+
+“Open original post”
+
+“Return to conversation”
+
+Do NOT label it:
+
+“External URL”
+
+“Source field”
+
+“Marketplace link”
+
+4️⃣ Status Transitions (Updated Logic)
+NEW → RESPONSE SENT
+
+When user copies a response:
+
+Set status to response_sent
+
+Set response_sent_at = now()
+
+Do NOT assume delivery or reply
+
+RESPONSE SENT → 24-Hour Check-In
+
+After 24 hours from response_sent_at, show a passive prompt:
+
+Prompt text
+
+“Did they reply?”
+
+Actions
+
+“Yes, they replied” → status = engaged
+
+“Not yet” → keep status, offer Source Link button
+
+“No response” → status = cold
+
+Never auto-send messages.
+
+COLD State Behavior
+
+In cold state:
+
+Hide lead from default active list
+
+Keep it accessible via filters
+
+Always allow:
+
+Open original post
+
+Manual re-engagement
+
+Do NOT block further actions.
+
+ENGAGED → PRICE CONFIRMED
+
+Unchanged from current logic.
+
+Source Link remains visible.
+
+5️⃣ UI / UX Constraints (Critical)
+
+Source Link must be one tap away
+
+No scraping
+
+No inbox mirroring
+
+No login requests for external platforms
+
+No automated follow-ups
+
+GigAid is a sidecar, not a bridge.
+
+6️⃣ Explicit Non-Goals (Do NOT Implement)
+
+❌ Detect replies automatically
+
+❌ Scrape Craigslist or Facebook
+
+❌ Sync messages
+
+❌ Guess engagement status
+
+❌ Hide Source Link when lead is cold
+
+7️⃣ Success Criteria
+
+User always knows where the lead came from
+
+User can always return to the original conversation
+
+Lead status flow remains honest and simple
+
+No false assumptions about external platforms
+
+MVP remains stable and compliant
+
+Proceed with this implementation exactly as described.

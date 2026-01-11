@@ -9,6 +9,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
+import FollowUpCheckIn from "@/components/FollowUpCheckIn";
 import {
   Briefcase,
   Users,
@@ -258,6 +259,9 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
+
+        {/* Follow-up check-ins for leads */}
+        <FollowUpCheckIn />
 
         {periodJobs > 0 && (
           <Card className="overflow-hidden border-0 shadow-sm" data-testid="card-progress">

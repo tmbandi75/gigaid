@@ -119,6 +119,7 @@ export default function ShareCapture() {
   const [step, setStep] = useState<"input" | "review" | "reply">("input");
   const [showServicePicker, setShowServicePicker] = useState(false);
   const [showSourcePicker, setShowSourcePicker] = useState(false);
+  const [createdLeadId, setCreatedLeadId] = useState<string | null>(null);
 
   const [editedLead, setEditedLead] = useState({
     clientName: "",
@@ -202,6 +203,7 @@ export default function ShareCapture() {
       return res.json();
     },
     onSuccess: (lead) => {
+      setCreatedLeadId(lead.id);
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       toast({
         title: "Lead saved!",
@@ -222,6 +224,16 @@ export default function ShareCapture() {
     },
   });
 
+  const markResponseCopiedMutation = useMutation({
+    mutationFn: async (leadId: string) => {
+      const res = await apiRequest("POST", `/api/leads/${leadId}/response-copied`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+    },
+  });
+
   const handleParse = () => {
     if (!sharedText.trim()) {
       toast({
@@ -238,9 +250,15 @@ export default function ShareCapture() {
     await navigator.clipboard.writeText(selectedReply);
     setCopiedReply(true);
     setTimeout(() => setCopiedReply(false), 2000);
+    
+    // Mark response as copied - starts 24h follow-up timer
+    if (createdLeadId) {
+      markResponseCopiedMutation.mutate(createdLeadId);
+    }
+    
     toast({
       title: "Copied!",
-      description: "Now paste it in your chat",
+      description: "We'll remind you to check if they replied in 24h",
     });
   };
 

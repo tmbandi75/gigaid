@@ -39,6 +39,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSendText } from "@/hooks/use-send-text";
 import { apiRequest } from "@/lib/queryClient";
 import type { Lead } from "@shared/schema";
+import FollowUpCheckIn from "@/components/FollowUpCheckIn";
 
 interface FollowUpMessage {
   message: string;
@@ -48,7 +49,9 @@ interface FollowUpMessage {
 const statusConfig: Record<string, { color: string; bg: string; label: string }> = {
   new: { color: "text-emerald-600", bg: "bg-emerald-500/10", label: "New" },
   contacted: { color: "text-blue-600", bg: "bg-blue-500/10", label: "Contacted" },
+  engaged: { color: "text-cyan-600", bg: "bg-cyan-500/10", label: "Engaged" },
   converted: { color: "text-violet-600", bg: "bg-violet-500/10", label: "Won" },
+  cold: { color: "text-gray-600", bg: "bg-gray-500/10", label: "Cold" },
 };
 
 function formatDate(dateStr: string): string {
@@ -78,9 +81,10 @@ function getScoreColor(score: number | null): string {
 }
 
 const filters = [
-  { value: "all", label: "All" },
+  { value: "all", label: "Active" },
   { value: "new", label: "New" },
-  { value: "contacted", label: "Contacted" },
+  { value: "engaged", label: "Engaged" },
+  { value: "cold", label: "Cold" },
   { value: "converted", label: "Won" },
 ];
 
@@ -257,7 +261,7 @@ export default function Leads() {
   };
 
   const filteredLeads = filter === "all" 
-    ? leads 
+    ? leads.filter(lead => lead.status !== "cold")
     : leads.filter(lead => lead.status === filter);
 
   const newCount = leads.filter(l => l.status === "new").length;
@@ -326,11 +330,14 @@ export default function Leads() {
         </Card>
 
         <Link href="/leads/new">
-          <Button className="w-full mb-6 h-12 bg-gradient-to-r from-emerald-500 to-teal-500 shadow-lg" data-testid="button-add-lead">
+          <Button className="w-full mb-4 h-12 bg-gradient-to-r from-emerald-500 to-teal-500 shadow-lg" data-testid="button-add-lead">
             <Plus className="h-5 w-5 mr-2" />
             Add New Lead
           </Button>
         </Link>
+
+        {/* Follow-up check-ins */}
+        <FollowUpCheckIn />
 
         {isLoading ? (
           <div className="space-y-3">

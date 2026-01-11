@@ -14,6 +14,7 @@ import {
   insertCrewJobPhotoSchema,
   insertCrewMessageSchema,
   insertPriceConfirmationSchema,
+  type Lead,
 } from "@shared/schema";
 import { z } from "zod";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
@@ -666,6 +667,89 @@ export async function registerRoutes(
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete lead" });
+    }
+  });
+
+  // Response Tracking - mark response as copied and start follow-up timer
+  app.post("/api/leads/:id/response-copied", async (req, res) => {
+    try {
+      const lead = await storage.getLead(req.params.id);
+      if (!lead) {
+        return res.status(404).json({ error: "Lead not found" });
+      }
+      
+      const now = new Date().toISOString();
+      const updated = await storage.updateLead(req.params.id, {
+        responseCopiedAt: now,
+        followUpStatus: "pending_check",
+        status: lead.status === "new" ? "contacted" : lead.status,
+        lastContactedAt: now,
+      });
+      
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to mark response copied" });
+    }
+  });
+
+  // Get leads needing follow-up check (24h since response copied)
+  app.get("/api/leads/follow-up-needed", async (req, res) => {
+    try {
+      const leads = await storage.getLeads(defaultUserId);
+      const now = new Date().getTime();
+      const twentyFourHours = 24 * 60 * 60 * 1000;
+      
+      const needsFollowUp = leads.filter((lead: Lead) => {
+        if (lead.followUpStatus !== "pending_check") return false;
+        if (!lead.responseCopiedAt) return false;
+        
+        // Check if snoozed
+        if (lead.followUpSnoozedUntil) {
+          const snoozeEnd = new Date(lead.followUpSnoozedUntil).getTime();
+          if (now < snoozeEnd) return false;
+        }
+        
+        const copiedAt = new Date(lead.responseCopiedAt).getTime();
+        return now - copiedAt >= twentyFourHours;
+      });
+      
+      res.json(needsFollowUp);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch leads needing follow-up" });
+    }
+  });
+
+  // Update follow-up status (user answers "Did they reply?")
+  app.post("/api/leads/:id/follow-up-response", async (req, res) => {
+    try {
+      const { response } = req.body; // "replied", "waiting", "no_response"
+      const lead = await storage.getLead(req.params.id);
+      if (!lead) {
+        return res.status(404).json({ error: "Lead not found" });
+      }
+      
+      let updates: Partial<typeof lead> = {
+        followUpStatus: response,
+      };
+      
+      if (response === "replied") {
+        // Lead is engaged - they responded back
+        updates.status = "engaged";
+      } else if (response === "waiting") {
+        // Snooze for another 24 hours
+        const snoozeUntil = new Date();
+        snoozeUntil.setHours(snoozeUntil.getHours() + 24);
+        updates.followUpSnoozedUntil = snoozeUntil.toISOString();
+        updates.followUpStatus = "pending_check"; // Keep checking
+      } else if (response === "no_response") {
+        // Mark as cold
+        updates.status = "cold";
+      }
+      
+      const updated = await storage.updateLead(req.params.id, updates);
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update follow-up status" });
     }
   });
 
