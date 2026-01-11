@@ -586,6 +586,11 @@ export class MemStorage implements IStorage {
         customerLat: 37.7749,
         customerLng: -122.4194,
         createdAt: today.toISOString(),
+        totalAmountCents: 15000, // Total job price: $150
+        remainderPaymentStatus: "pending",
+        remainderPaymentMethod: null,
+        remainderPaidAt: null,
+        remainderNotes: null,
       },
     ];
     seedBookingRequests.forEach(b => this.bookingRequests.set(b.id, b));
