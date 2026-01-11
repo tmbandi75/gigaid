@@ -25,8 +25,10 @@ export interface QuickReply {
 
 const SOURCE_PATTERNS: Record<string, RegExp[]> = {
   facebook: [/facebook\.com/i, /fb\.com/i, /messenger/i],
+  craigslist: [/craigslist/i, /cl\.com/i],
   thumbtack: [/thumbtack/i],
   taskrabbit: [/taskrabbit/i],
+  nextdoor: [/nextdoor/i],
   angi: [/angi/i, /angieslist/i, /angie's list/i],
   homeadvisor: [/homeadvisor/i],
   yelp: [/yelp/i],
