@@ -7,6 +7,7 @@ import {
   type CrewMember, type InsertCrewMember,
   type Referral, type InsertReferral,
   type BookingRequest, type InsertBookingRequest,
+  type BookingEvent, type InsertBookingEvent,
   type VoiceNote, type InsertVoiceNote,
   type Review, type InsertReview,
   type OtpCode, type InsertOtp,
@@ -88,8 +89,14 @@ export interface IStorage {
   // Booking Requests
   getBookingRequests(userId: string): Promise<BookingRequest[]>;
   getBookingRequest(id: string): Promise<BookingRequest | undefined>;
+  getBookingRequestByToken(token: string): Promise<BookingRequest | undefined>;
+  getBookingRequestsAwaitingRelease(): Promise<BookingRequest[]>;
   createBookingRequest(request: InsertBookingRequest): Promise<BookingRequest>;
   updateBookingRequest(id: string, updates: Partial<BookingRequest>): Promise<BookingRequest | undefined>;
+  
+  // Booking Events (audit trail)
+  getBookingEvents(bookingId: string): Promise<BookingEvent[]>;
+  createBookingEvent(event: InsertBookingEvent): Promise<BookingEvent>;
 
   // Voice Notes
   getVoiceNotes(userId: string): Promise<VoiceNote[]>;
@@ -162,6 +169,7 @@ export class MemStorage implements IStorage {
   private crewInvites: Map<string, CrewInvite>;
   private crewJobPhotos: Map<string, CrewJobPhoto>;
   private crewMessages: Map<string, CrewMessage>;
+  private bookingEvents: Map<string, BookingEvent>;
 
   constructor() {
     this.users = new Map();
@@ -174,6 +182,7 @@ export class MemStorage implements IStorage {
     this.crewMembers = new Map();
     this.referrals = new Map();
     this.bookingRequests = new Map();
+    this.bookingEvents = new Map();
     this.voiceNotes = new Map();
     this.reviews = new Map();
     this.userPaymentMethods = new Map();
@@ -211,6 +220,7 @@ export class MemStorage implements IStorage {
       businessName: "Pro Gig Services",
       services: ["plumbing", "electrical", "cleaning"],
       bio: "Professional gig worker serving the Springfield area.",
+      serviceArea: null,
       onboardingCompleted: false,
       onboardingStep: 0,
       isPro: false,
@@ -234,9 +244,34 @@ export class MemStorage implements IStorage {
       }),
       slotDuration: 60,
       createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      // Stripe Connect fields
+      stripeConnectAccountId: null,
+      stripeConnectStatus: "not_connected",
+      stripeConnectOnboardedAt: null,
+      // Deposit settings
+      depositEnabled: false,
+      depositType: "percent",
+      depositValue: 50,
+      lateRescheduleWindowHours: 24,
+      lateRescheduleRetainPctFirst: 40,
+      lateRescheduleRetainPctSecond: 60,
+      lateRescheduleRetainPctCap: 75,
     };
     this.users.set(userId, demoUser);
     
+    const baseJobFields = {
+      clientEmail: null,
+      clientConfirmStatus: "pending",
+      clientConfirmToken: null,
+      clientConfirmedAt: null,
+      confirmationSentAt: null,
+      paymentStatus: "unpaid",
+      paymentMethod: null,
+      paidAt: null,
+      reminder24hSent: false,
+      reminder2hSent: false,
+    };
+
     const jobs: Job[] = [
       {
         id: "job-1",
@@ -260,6 +295,7 @@ export class MemStorage implements IStorage {
         materials: null,
         notes: null,
         createdAt: yesterday.toISOString(),
+        ...baseJobFields,
       },
       {
         id: "job-2",
@@ -283,6 +319,7 @@ export class MemStorage implements IStorage {
         materials: null,
         notes: null,
         createdAt: yesterday.toISOString(),
+        ...baseJobFields,
       },
       {
         id: "job-3",
@@ -306,6 +343,7 @@ export class MemStorage implements IStorage {
         materials: null,
         notes: null,
         createdAt: today.toISOString(),
+        ...baseJobFields,
       },
       {
         id: "job-4",
@@ -324,11 +362,15 @@ export class MemStorage implements IStorage {
         voiceNoteTranscript: null,
         voiceNoteSummary: null,
         clientName: "James Wilson",
-        clientPhone: "(555) 456-7890",
+        clientPhone: "(555) 987-6543",
         assignedCrewId: null,
         materials: null,
         notes: null,
         createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        ...baseJobFields,
+        paymentStatus: "paid",
+        paymentMethod: "card",
+        paidAt: yesterday.toISOString(),
       },
     ];
 
@@ -552,6 +594,7 @@ export class MemStorage implements IStorage {
       businessName: null,
       services: null,
       bio: null,
+      serviceArea: null,
       onboardingCompleted: false,
       onboardingStep: 0,
       isPro: false,
@@ -567,6 +610,18 @@ export class MemStorage implements IStorage {
       availability: null,
       slotDuration: 60,
       createdAt: new Date().toISOString(),
+      // Stripe Connect fields
+      stripeConnectAccountId: null,
+      stripeConnectStatus: "not_connected",
+      stripeConnectOnboardedAt: null,
+      // Deposit settings
+      depositEnabled: false,
+      depositType: "percent",
+      depositValue: 50,
+      lateRescheduleWindowHours: 24,
+      lateRescheduleRetainPctFirst: 40,
+      lateRescheduleRetainPctSecond: 60,
+      lateRescheduleRetainPctCap: 75,
     };
     this.users.set(id, user);
     return user;
@@ -589,6 +644,7 @@ export class MemStorage implements IStorage {
         businessName: null,
         services: null,
         bio: null,
+        serviceArea: null,
         onboardingCompleted: false,
         onboardingStep: 0,
         isPro: false,
@@ -604,6 +660,16 @@ export class MemStorage implements IStorage {
         availability: null,
         slotDuration: 60,
         createdAt: new Date().toISOString(),
+        stripeConnectAccountId: null,
+        stripeConnectStatus: "not_connected",
+        stripeConnectOnboardedAt: null,
+        depositEnabled: false,
+        depositType: "percent",
+        depositValue: 50,
+        lateRescheduleWindowHours: 24,
+        lateRescheduleRetainPctFirst: 40,
+        lateRescheduleRetainPctSecond: 60,
+        lateRescheduleRetainPctCap: 75,
       };
     }
     const updatedUser = { ...user, ...updates } as User;
@@ -681,9 +747,19 @@ export class MemStorage implements IStorage {
       voiceNoteSummary: insertJob.voiceNoteSummary || null,
       clientName: insertJob.clientName || null,
       clientPhone: insertJob.clientPhone || null,
+      clientEmail: insertJob.clientEmail || null,
       assignedCrewId: insertJob.assignedCrewId || null,
       materials: insertJob.materials || null,
       notes: insertJob.notes || null,
+      clientConfirmStatus: insertJob.clientConfirmStatus || "pending",
+      clientConfirmToken: insertJob.clientConfirmToken || null,
+      clientConfirmedAt: insertJob.clientConfirmedAt || null,
+      confirmationSentAt: insertJob.confirmationSentAt || null,
+      paymentStatus: insertJob.paymentStatus || "unpaid",
+      paymentMethod: insertJob.paymentMethod || null,
+      paidAt: insertJob.paidAt || null,
+      reminder24hSent: insertJob.reminder24hSent || false,
+      reminder2hSent: insertJob.reminder2hSent || false,
       createdAt: new Date().toISOString(),
     };
     this.jobs.set(id, job);
@@ -940,8 +1016,30 @@ export class MemStorage implements IStorage {
       preferredDate: insertRequest.preferredDate || null,
       preferredTime: insertRequest.preferredTime || null,
       description: insertRequest.description || null,
+      location: insertRequest.location || null,
       status: "pending",
       createdAt: new Date().toISOString(),
+      // Deposit fields
+      depositAmountCents: insertRequest.depositAmountCents || null,
+      depositCurrency: insertRequest.depositCurrency || "usd",
+      depositStatus: "none",
+      completionStatus: "scheduled",
+      // Scheduling timestamps
+      jobStartAt: insertRequest.jobStartAt || null,
+      jobEndAt: insertRequest.jobEndAt || null,
+      autoReleaseAt: null,
+      // Reschedule tracking
+      lastRescheduleAt: null,
+      lateRescheduleCount: 0,
+      waiveRescheduleFee: false,
+      retainedAmountCents: 0,
+      rolledAmountCents: 0,
+      // Stripe integration
+      stripePaymentIntentId: null,
+      stripeChargeId: null,
+      stripeTransferId: null,
+      // Customer confirmation token
+      confirmationToken: randomUUID(),
     };
     this.bookingRequests.set(id, request);
     return request;
@@ -953,6 +1051,40 @@ export class MemStorage implements IStorage {
     const updated: BookingRequest = { ...request, ...updates };
     this.bookingRequests.set(id, updated);
     return updated;
+  }
+
+  async getBookingRequestByToken(token: string): Promise<BookingRequest | undefined> {
+    return Array.from(this.bookingRequests.values()).find(b => b.confirmationToken === token);
+  }
+
+  async getBookingRequestsAwaitingRelease(): Promise<BookingRequest[]> {
+    const now = new Date();
+    return Array.from(this.bookingRequests.values()).filter(b => {
+      if (b.completionStatus !== "awaiting_confirmation") return false;
+      if (b.depositStatus === "on_hold_dispute") return false;
+      if (!b.autoReleaseAt) return false;
+      return new Date(b.autoReleaseAt) <= now;
+    });
+  }
+
+  // Booking Events (audit trail)
+  async getBookingEvents(bookingId: string): Promise<BookingEvent[]> {
+    return Array.from(this.bookingEvents.values())
+      .filter(e => e.bookingId === bookingId)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }
+
+  async createBookingEvent(insertEvent: InsertBookingEvent): Promise<BookingEvent> {
+    const id = randomUUID();
+    const event: BookingEvent = {
+      ...insertEvent,
+      id,
+      actorId: insertEvent.actorId || null,
+      metadata: insertEvent.metadata || null,
+      createdAt: new Date().toISOString(),
+    };
+    this.bookingEvents.set(id, event);
+    return event;
   }
 
   // Voice Note methods

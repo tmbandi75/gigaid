@@ -34,6 +34,20 @@ export const users = pgTable("users", {
   referralCode: text("referral_code"),
   referredBy: text("referred_by"),
   createdAt: text("created_at"),
+  
+  // Stripe Connect fields
+  stripeConnectAccountId: text("stripe_connect_account_id"),
+  stripeConnectStatus: text("stripe_connect_status").default("not_connected"), // not_connected, pending, active, restricted
+  stripeConnectOnboardedAt: text("stripe_connect_onboarded_at"),
+  
+  // Deposit settings for providers
+  depositEnabled: boolean("deposit_enabled").default(false),
+  depositType: text("deposit_type").default("percent"), // percent, fixed
+  depositValue: integer("deposit_value").default(50), // percent 0-100 or cents if fixed
+  lateRescheduleWindowHours: integer("late_reschedule_window_hours").default(24),
+  lateRescheduleRetainPctFirst: integer("late_reschedule_retain_pct_first").default(40),
+  lateRescheduleRetainPctSecond: integer("late_reschedule_retain_pct_second").default(60),
+  lateRescheduleRetainPctCap: integer("late_reschedule_retain_pct_cap").default(75),
 });
 
 // Availability type for frontend use
@@ -446,7 +460,15 @@ export const insertReferralSchema = createInsertSchema(referrals).omit({
 export type InsertReferral = z.infer<typeof insertReferralSchema>;
 export type Referral = typeof referrals.$inferSelect;
 
-// Public booking requests
+// Deposit status enum
+export const depositStatuses = ["none", "pending", "held", "released", "refunded", "partial_refunded", "on_hold_dispute"] as const;
+export type DepositStatus = (typeof depositStatuses)[number];
+
+// Completion status enum
+export const completionStatuses = ["scheduled", "awaiting_confirmation", "completed", "dispute"] as const;
+export type CompletionStatus = (typeof completionStatuses)[number];
+
+// Public booking requests with deposit support
 export const bookingRequests = pgTable("booking_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(), // service provider
@@ -457,18 +479,76 @@ export const bookingRequests = pgTable("booking_requests", {
   preferredDate: text("preferred_date"),
   preferredTime: text("preferred_time"),
   description: text("description"),
-  status: text("status").notNull().default("pending"), // pending, accepted, declined
+  location: text("location"),
+  status: text("status").notNull().default("pending"), // pending, accepted, declined, cancelled
   createdAt: text("created_at").notNull(),
+  
+  // Deposit fields
+  depositAmountCents: integer("deposit_amount_cents"),
+  depositCurrency: text("deposit_currency").default("usd"),
+  depositStatus: text("deposit_status").default("none"), // none, pending, held, released, refunded, partial_refunded, on_hold_dispute
+  completionStatus: text("completion_status").default("scheduled"), // scheduled, awaiting_confirmation, completed, dispute
+  
+  // Scheduling timestamps
+  jobStartAt: text("job_start_at"),
+  jobEndAt: text("job_end_at"),
+  autoReleaseAt: text("auto_release_at"),
+  
+  // Reschedule tracking
+  lastRescheduleAt: text("last_reschedule_at"),
+  lateRescheduleCount: integer("late_reschedule_count").default(0),
+  waiveRescheduleFee: boolean("waive_reschedule_fee").default(false),
+  retainedAmountCents: integer("retained_amount_cents").default(0),
+  rolledAmountCents: integer("rolled_amount_cents").default(0),
+  
+  // Stripe integration
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  stripeChargeId: text("stripe_charge_id"),
+  stripeTransferId: text("stripe_transfer_id"),
+  
+  // Customer confirmation token
+  confirmationToken: text("confirmation_token"),
 });
 
 export const insertBookingRequestSchema = createInsertSchema(bookingRequests).omit({
   id: true,
   createdAt: true,
   status: true,
+  depositStatus: true,
+  completionStatus: true,
+  lateRescheduleCount: true,
+  waiveRescheduleFee: true,
+  retainedAmountCents: true,
+  rolledAmountCents: true,
+  stripePaymentIntentId: true,
+  stripeChargeId: true,
+  stripeTransferId: true,
+  confirmationToken: true,
+  autoReleaseAt: true,
+  lastRescheduleAt: true,
 });
 
 export type InsertBookingRequest = z.infer<typeof insertBookingRequestSchema>;
 export type BookingRequest = typeof bookingRequests.$inferSelect;
+
+// Booking events table for audit trail
+export const bookingEvents = pgTable("booking_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bookingId: varchar("booking_id").notNull(),
+  eventType: text("event_type").notNull(), // created, payment_received, rescheduled, completed, disputed, refunded, transferred
+  actorType: text("actor_type").notNull(), // customer, provider, admin, system
+  actorId: text("actor_id"),
+  metadata: text("metadata"), // JSON string with event details
+  createdAt: text("created_at").notNull(),
+});
+
+export const insertBookingEventSchema = createInsertSchema(bookingEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertBookingEvent = z.infer<typeof insertBookingEventSchema>;
+export type BookingEvent = typeof bookingEvents.$inferSelect;
 
 // Voice notes table
 export const voiceNotes = pgTable("voice_notes", {
