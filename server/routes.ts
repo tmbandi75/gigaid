@@ -625,7 +625,12 @@ export async function registerRoutes(
 
   app.post("/api/leads", async (req, res) => {
     try {
-      const validated = insertLeadSchema.parse(req.body);
+      // Auto-add userId if not provided
+      const dataWithUser = {
+        ...req.body,
+        userId: req.body.userId || defaultUserId,
+      };
+      const validated = insertLeadSchema.parse(dataWithUser);
       const lead = await storage.createLead(validated);
       res.status(201).json(lead);
     } catch (error) {
