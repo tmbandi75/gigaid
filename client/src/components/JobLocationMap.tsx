@@ -203,10 +203,17 @@ export function JobLocationMap({
     initMap();
 
     return () => {
-      markersRef.current.forEach((marker) => {
-        if (marker.setMap) marker.setMap(null);
-      });
-      markersRef.current = [];
+      try {
+        markersRef.current.forEach((marker) => {
+          if (marker.setMap) marker.setMap(null);
+        });
+        markersRef.current = [];
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current = null;
+        }
+      } catch (e) {
+        // Ignore cleanup errors from Google Maps DOM manipulation
+      }
     };
   }, [apiKey, initMap]);
 
@@ -265,13 +272,14 @@ export function JobLocationMap({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div
-          ref={mapRef}
-          className="w-full h-48 sm:h-64 rounded-lg bg-muted overflow-hidden relative"
-          data-testid="map-container"
-        >
+        <div className="relative w-full h-48 sm:h-64 rounded-lg bg-muted overflow-hidden">
+          <div
+            ref={mapRef}
+            className="w-full h-full"
+            data-testid="map-container"
+          />
           {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-muted">
+            <div className="absolute inset-0 flex items-center justify-center bg-muted pointer-events-none">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           )}
