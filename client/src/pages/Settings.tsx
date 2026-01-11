@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { AvailabilityEditor, DEFAULT_AVAILABILITY } from "@/components/settings/AvailabilityEditor";
 import { PaymentMethodsSettings } from "@/components/PaymentMethodsSettings";
+import { StripeConnectSettings } from "@/components/settings/StripeConnectSettings";
 import type { Referral, WeeklyAvailability } from "@shared/schema";
 
 interface ReferralData {
@@ -305,6 +306,8 @@ export default function Settings() {
       )}
 
       <PaymentMethodsSettings />
+
+      <StripeConnectSettings />
 
       <Card data-testid="card-referrals">
         <CardHeader>

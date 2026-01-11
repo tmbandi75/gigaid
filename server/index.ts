@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { startReminderScheduler } from "./reminderScheduler";
+import { startAutoReleaseScheduler } from "./depositAutoRelease";
 
 const app = express();
 const httpServer = createServer(app);
@@ -95,6 +96,7 @@ app.use((req, res, next) => {
     () => {
       log(`serving on port ${port}`);
       startReminderScheduler();
+      startAutoReleaseScheduler();
     },
   );
 })();

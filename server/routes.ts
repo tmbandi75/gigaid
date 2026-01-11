@@ -2411,6 +2411,1236 @@ export async function registerRoutes(
     }
   });
 
+  // ============ STRIPE CONNECT (PROVIDER ONBOARDING) ============
+
+  // Get provider's Stripe Connect status
+  app.get("/api/stripe/connect/status", async (req, res) => {
+    try {
+      const user = await storage.getUser(defaultUserId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (!user.stripeConnectAccountId) {
+        return res.json({
+          connected: false,
+          onboardingComplete: false,
+          chargesEnabled: false,
+          payoutsEnabled: false,
+        });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+      const account = await stripe.accounts.retrieve(user.stripeConnectAccountId);
+
+      res.json({
+        connected: true,
+        onboardingComplete: account.details_submitted,
+        chargesEnabled: account.charges_enabled,
+        payoutsEnabled: account.payouts_enabled,
+        accountId: user.stripeConnectAccountId,
+      });
+    } catch (error) {
+      console.error("Stripe Connect status error:", error);
+      res.status(500).json({ error: "Failed to get Connect status" });
+    }
+  });
+
+  // Create Stripe Connect onboarding link for provider
+  app.post("/api/stripe/connect/onboard", async (req, res) => {
+    try {
+      const user = await storage.getUser(defaultUserId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      let accountId = user.stripeConnectAccountId;
+
+      if (!accountId) {
+        const account = await stripe.accounts.create({
+          type: "express",
+          country: "US",
+          email: user.email || undefined,
+          business_type: "individual",
+          metadata: {
+            gigaid_user_id: user.id,
+          },
+          capabilities: {
+            card_payments: { requested: true },
+            transfers: { requested: true },
+          },
+        });
+        accountId = account.id;
+
+        await storage.updateUser(user.id, {
+          stripeConnectAccountId: accountId,
+          stripeConnectStatus: "pending",
+        });
+      }
+
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+      const accountLink = await stripe.accountLinks.create({
+        account: accountId,
+        refresh_url: `${baseUrl}/settings?stripe_refresh=true`,
+        return_url: `${baseUrl}/settings?stripe_connected=true`,
+        type: "account_onboarding",
+      });
+
+      res.json({ url: accountLink.url });
+    } catch (error) {
+      console.error("Stripe Connect onboarding error:", error);
+      res.status(500).json({ error: "Failed to create onboarding link" });
+    }
+  });
+
+  // Create Stripe Connect dashboard login link for provider
+  app.post("/api/stripe/connect/dashboard", async (req, res) => {
+    try {
+      const user = await storage.getUser(defaultUserId);
+      if (!user?.stripeConnectAccountId) {
+        return res.status(400).json({ error: "No Stripe Connect account" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      const loginLink = await stripe.accounts.createLoginLink(user.stripeConnectAccountId);
+      res.json({ url: loginLink.url });
+    } catch (error) {
+      console.error("Stripe Connect dashboard error:", error);
+      res.status(500).json({ error: "Failed to create dashboard link" });
+    }
+  });
+
+  // Update provider's deposit settings
+  app.patch("/api/stripe/connect/deposit-settings", async (req, res) => {
+    try {
+      const { 
+        depositEnabled, 
+        depositType, 
+        depositValue,
+        lateRescheduleWindowHours,
+        lateRescheduleRetainPctFirst,
+        lateRescheduleRetainPctSecond,
+        lateRescheduleRetainPctCap,
+      } = req.body;
+
+      const updated = await storage.updateUser(defaultUserId, {
+        depositEnabled: depositEnabled ?? undefined,
+        depositType: depositType ?? undefined,
+        depositValue: depositValue ?? undefined,
+        lateRescheduleWindowHours: lateRescheduleWindowHours ?? undefined,
+        lateRescheduleRetainPctFirst: lateRescheduleRetainPctFirst ?? undefined,
+        lateRescheduleRetainPctSecond: lateRescheduleRetainPctSecond ?? undefined,
+        lateRescheduleRetainPctCap: lateRescheduleRetainPctCap ?? undefined,
+      });
+
+      if (!updated) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json({
+        depositEnabled: updated.depositEnabled,
+        depositType: updated.depositType,
+        depositValue: updated.depositValue,
+        lateRescheduleWindowHours: updated.lateRescheduleWindowHours,
+        lateRescheduleRetainPctFirst: updated.lateRescheduleRetainPctFirst,
+        lateRescheduleRetainPctSecond: updated.lateRescheduleRetainPctSecond,
+        lateRescheduleRetainPctCap: updated.lateRescheduleRetainPctCap,
+      });
+    } catch (error) {
+      console.error("Deposit settings update error:", error);
+      res.status(500).json({ error: "Failed to update deposit settings" });
+    }
+  });
+
+  // ============ DEPOSIT PAYMENT FLOW ============
+
+  // Create PaymentIntent for booking deposit
+  app.post("/api/bookings/:id/create-deposit-intent", async (req, res) => {
+    try {
+      const booking = await storage.getBookingRequest(req.params.id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      if (booking.depositStatus !== "none" && booking.depositStatus !== "pending") {
+        return res.status(400).json({ error: "Deposit already processed" });
+      }
+
+      if (!booking.depositAmountCents || booking.depositAmountCents <= 0) {
+        return res.status(400).json({ error: "No deposit amount configured" });
+      }
+
+      const provider = await storage.getUser(booking.userId);
+      if (!provider?.stripeConnectAccountId) {
+        return res.status(400).json({ error: "Provider has not set up payment account" });
+      }
+
+      if (provider.stripeConnectStatus !== "active") {
+        return res.status(400).json({ error: "Provider payment account is not active" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: booking.depositAmountCents,
+        currency: booking.depositCurrency || "usd",
+        capture_method: "automatic",
+        transfer_group: `booking_${booking.id}`,
+        metadata: {
+          booking_id: booking.id,
+          provider_id: booking.userId,
+          provider_connect_id: provider.stripeConnectAccountId,
+          client_name: booking.clientName,
+        },
+        description: `Deposit for service booking - ${booking.clientName}`,
+      });
+
+      await storage.updateBookingRequest(booking.id, {
+        depositStatus: "pending",
+        stripePaymentIntentId: paymentIntent.id,
+      });
+
+      await storage.createBookingEvent({
+        bookingId: booking.id,
+        eventType: "deposit_intent_created",
+        actorType: "customer",
+        actorId: null,
+        metadata: JSON.stringify({
+          amount: paymentIntent.amount,
+          paymentIntentId: paymentIntent.id,
+        }),
+      });
+
+      res.json({
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+      });
+    } catch (error) {
+      console.error("Create deposit intent error:", error);
+      res.status(500).json({ error: "Failed to create payment intent" });
+    }
+  });
+
+  // Get booking deposit status (public endpoint for customers)
+  app.get("/api/bookings/by-token/:token/deposit", async (req, res) => {
+    try {
+      const booking = await storage.getBookingRequestByToken(req.params.token);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      const provider = await storage.getUser(booking.userId);
+
+      res.json({
+        bookingId: booking.id,
+        clientName: booking.clientName,
+        depositAmountCents: booking.depositAmountCents,
+        depositCurrency: booking.depositCurrency,
+        depositStatus: booking.depositStatus,
+        completionStatus: booking.completionStatus,
+        jobStartAt: booking.jobStartAt,
+        providerName: provider?.name || provider?.businessName || "Provider",
+        providerHasPayments: provider?.stripeConnectStatus === "active",
+      });
+    } catch (error) {
+      console.error("Get deposit status error:", error);
+      res.status(500).json({ error: "Failed to get deposit status" });
+    }
+  });
+
+  // Create PaymentIntent for booking deposit (by token - public)
+  app.post("/api/bookings/by-token/:token/create-deposit-intent", async (req, res) => {
+    try {
+      const booking = await storage.getBookingRequestByToken(req.params.token);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      if (booking.depositStatus !== "none" && booking.depositStatus !== "pending") {
+        return res.status(400).json({ error: "Deposit already processed" });
+      }
+
+      if (!booking.depositAmountCents || booking.depositAmountCents <= 0) {
+        return res.status(400).json({ error: "No deposit amount configured" });
+      }
+
+      const provider = await storage.getUser(booking.userId);
+      if (!provider?.stripeConnectAccountId) {
+        return res.status(400).json({ error: "Provider has not set up payment account" });
+      }
+
+      if (provider.stripeConnectStatus !== "active") {
+        return res.status(400).json({ error: "Provider payment account is not active" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      let paymentIntent;
+      if (booking.stripePaymentIntentId) {
+        paymentIntent = await stripe.paymentIntents.retrieve(booking.stripePaymentIntentId);
+        if (paymentIntent.status === "succeeded") {
+          return res.status(400).json({ error: "Deposit already paid" });
+        }
+      } else {
+        paymentIntent = await stripe.paymentIntents.create({
+          amount: booking.depositAmountCents,
+          currency: booking.depositCurrency || "usd",
+          capture_method: "automatic",
+          transfer_group: `booking_${booking.id}`,
+          metadata: {
+            booking_id: booking.id,
+            provider_id: booking.userId,
+            provider_connect_id: provider.stripeConnectAccountId,
+            client_name: booking.clientName,
+          },
+          description: `Deposit for service booking - ${booking.clientName}`,
+        });
+
+        await storage.updateBookingRequest(booking.id, {
+          depositStatus: "pending",
+          stripePaymentIntentId: paymentIntent.id,
+        });
+
+        await storage.createBookingEvent({
+          bookingId: booking.id,
+          eventType: "deposit_intent_created",
+          actorType: "customer",
+          actorId: null,
+          metadata: JSON.stringify({
+            amount: paymentIntent.amount,
+            paymentIntentId: paymentIntent.id,
+          }),
+        });
+      }
+
+      res.json({
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+      });
+    } catch (error) {
+      console.error("Create deposit intent error:", error);
+      res.status(500).json({ error: "Failed to create payment intent" });
+    }
+  });
+
+  // Confirm deposit payment received (called after successful payment)
+  app.post("/api/bookings/:id/confirm-deposit", async (req, res) => {
+    try {
+      const booking = await storage.getBookingRequest(req.params.id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      if (!booking.stripePaymentIntentId) {
+        return res.status(400).json({ error: "No payment intent for this booking" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+      const paymentIntent = await stripe.paymentIntents.retrieve(booking.stripePaymentIntentId);
+
+      if (paymentIntent.status !== "succeeded") {
+        return res.status(400).json({ 
+          error: "Payment not completed", 
+          status: paymentIntent.status 
+        });
+      }
+
+      if (booking.depositStatus !== "captured") {
+        await storage.updateBookingRequest(booking.id, {
+          depositStatus: "captured",
+          stripeChargeId: paymentIntent.latest_charge as string,
+        });
+
+        await storage.createBookingEvent({
+          bookingId: booking.id,
+          eventType: "deposit_captured",
+          actorType: "system",
+          actorId: null,
+          metadata: JSON.stringify({
+            amount: paymentIntent.amount,
+            paymentIntentId: paymentIntent.id,
+            chargeId: paymentIntent.latest_charge,
+          }),
+        });
+      }
+
+      res.json({
+        success: true,
+        depositStatus: "captured",
+        amount: paymentIntent.amount,
+      });
+    } catch (error) {
+      console.error("Confirm deposit error:", error);
+      res.status(500).json({ error: "Failed to confirm deposit" });
+    }
+  });
+
+  // ============ RESCHEDULE WITH LATE FEE RETENTION ============
+
+  // Reschedule a booking (provider-initiated)
+  app.post("/api/bookings/:id/reschedule", async (req, res) => {
+    try {
+      const { newJobStartAt, newJobEndAt, waiveFee } = req.body;
+      const booking = await storage.getBookingRequest(req.params.id);
+      
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      if (booking.depositStatus !== "captured") {
+        await storage.updateBookingRequest(booking.id, {
+          jobStartAt: newJobStartAt,
+          jobEndAt: newJobEndAt || null,
+          lastRescheduleAt: new Date().toISOString(),
+        });
+
+        await storage.createBookingEvent({
+          bookingId: booking.id,
+          eventType: "rescheduled",
+          actorType: "provider",
+          actorId: booking.userId,
+          metadata: JSON.stringify({
+            oldJobStartAt: booking.jobStartAt,
+            newJobStartAt,
+            reason: "No deposit - free reschedule",
+          }),
+        });
+
+        return res.json({
+          success: true,
+          retainedAmountCents: 0,
+          rolledAmountCents: 0,
+          isLateReschedule: false,
+        });
+      }
+
+      const provider = await storage.getUser(booking.userId);
+      if (!provider) {
+        return res.status(404).json({ error: "Provider not found" });
+      }
+
+      const windowHours = provider.lateRescheduleWindowHours || 24;
+      const jobStartTime = booking.jobStartAt ? new Date(booking.jobStartAt).getTime() : 0;
+      const now = Date.now();
+      const hoursUntilJob = (jobStartTime - now) / (1000 * 60 * 60);
+      const isLateReschedule = hoursUntilJob < windowHours;
+
+      let retainedAmountCents = 0;
+      let rolledAmountCents = booking.depositAmountCents || 0;
+
+      if (isLateReschedule && !waiveFee && !booking.waiveRescheduleFee) {
+        const lateCount = (booking.lateRescheduleCount || 0) + 1;
+        let retainPercent: number;
+
+        if (lateCount === 1) {
+          retainPercent = provider.lateRescheduleRetainPctFirst || 40;
+        } else if (lateCount === 2) {
+          retainPercent = provider.lateRescheduleRetainPctSecond || 60;
+        } else {
+          retainPercent = provider.lateRescheduleRetainPctCap || 75;
+        }
+
+        const depositAmount = booking.depositAmountCents || 0;
+        retainedAmountCents = Math.floor(depositAmount * retainPercent / 100);
+        rolledAmountCents = depositAmount - retainedAmountCents - (booking.retainedAmountCents || 0);
+        if (rolledAmountCents < 0) rolledAmountCents = 0;
+
+        const { getUncachableStripeClient } = await import("./stripeClient");
+        const stripe = await getUncachableStripeClient();
+
+        if (retainedAmountCents > 0 && provider.stripeConnectAccountId) {
+          try {
+            await stripe.transfers.create({
+              amount: retainedAmountCents,
+              currency: booking.depositCurrency || "usd",
+              destination: provider.stripeConnectAccountId,
+              transfer_group: `booking_${booking.id}`,
+              metadata: {
+                booking_id: booking.id,
+                type: "late_reschedule_fee",
+                reschedule_count: String(lateCount),
+              },
+            });
+
+            await storage.createBookingEvent({
+              bookingId: booking.id,
+              eventType: "late_fee_transferred",
+              actorType: "system",
+              actorId: null,
+              metadata: JSON.stringify({
+                amount: retainedAmountCents,
+                rescheduleCount: lateCount,
+                retainPercent,
+              }),
+            });
+          } catch (transferError) {
+            console.error("Failed to transfer late fee:", transferError);
+          }
+        }
+
+        await storage.updateBookingRequest(booking.id, {
+          jobStartAt: newJobStartAt,
+          jobEndAt: newJobEndAt || null,
+          lastRescheduleAt: new Date().toISOString(),
+          lateRescheduleCount: lateCount,
+          retainedAmountCents: (booking.retainedAmountCents || 0) + retainedAmountCents,
+          rolledAmountCents,
+        });
+
+        await storage.createBookingEvent({
+          bookingId: booking.id,
+          eventType: "late_rescheduled",
+          actorType: "provider",
+          actorId: booking.userId,
+          metadata: JSON.stringify({
+            oldJobStartAt: booking.jobStartAt,
+            newJobStartAt,
+            retainedAmountCents,
+            retainPercent,
+            lateCount,
+          }),
+        });
+      } else {
+        await storage.updateBookingRequest(booking.id, {
+          jobStartAt: newJobStartAt,
+          jobEndAt: newJobEndAt || null,
+          lastRescheduleAt: new Date().toISOString(),
+        });
+
+        await storage.createBookingEvent({
+          bookingId: booking.id,
+          eventType: "rescheduled",
+          actorType: "provider",
+          actorId: booking.userId,
+          metadata: JSON.stringify({
+            oldJobStartAt: booking.jobStartAt,
+            newJobStartAt,
+            reason: isLateReschedule ? "Fee waived" : "Not late reschedule",
+          }),
+        });
+      }
+
+      res.json({
+        success: true,
+        retainedAmountCents,
+        rolledAmountCents,
+        isLateReschedule,
+        lateRescheduleCount: booking.lateRescheduleCount,
+      });
+    } catch (error) {
+      console.error("Reschedule booking error:", error);
+      res.status(500).json({ error: "Failed to reschedule booking" });
+    }
+  });
+
+  // Waive reschedule fee for a booking
+  app.post("/api/bookings/:id/waive-reschedule-fee", async (req, res) => {
+    try {
+      const booking = await storage.getBookingRequest(req.params.id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      await storage.updateBookingRequest(booking.id, {
+        waiveRescheduleFee: true,
+      });
+
+      await storage.createBookingEvent({
+        bookingId: booking.id,
+        eventType: "reschedule_fee_waived",
+        actorType: "provider",
+        actorId: booking.userId,
+        metadata: null,
+      });
+
+      res.json({ success: true, waiveRescheduleFee: true });
+    } catch (error) {
+      console.error("Waive reschedule fee error:", error);
+      res.status(500).json({ error: "Failed to waive reschedule fee" });
+    }
+  });
+
+  // ============ COMPLETION CONFIRMATION ============
+
+  // Provider marks job as completed (starts 36h customer confirmation window)
+  app.post("/api/bookings/:id/mark-completed", async (req, res) => {
+    try {
+      const booking = await storage.getBookingRequest(req.params.id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      if (booking.completionStatus !== "scheduled" && booking.completionStatus !== "in_progress") {
+        return res.status(400).json({ error: "Booking is not in a completable state" });
+      }
+
+      const autoReleaseAt = new Date(Date.now() + 36 * 60 * 60 * 1000).toISOString();
+
+      await storage.updateBookingRequest(booking.id, {
+        completionStatus: "awaiting_confirmation",
+        autoReleaseAt,
+      });
+
+      await storage.createBookingEvent({
+        bookingId: booking.id,
+        eventType: "marked_completed",
+        actorType: "provider",
+        actorId: booking.userId,
+        metadata: JSON.stringify({
+          autoReleaseAt,
+        }),
+      });
+
+      res.json({
+        success: true,
+        completionStatus: "awaiting_confirmation",
+        autoReleaseAt,
+      });
+    } catch (error) {
+      console.error("Mark completed error:", error);
+      res.status(500).json({ error: "Failed to mark job as completed" });
+    }
+  });
+
+  // Customer confirms job completion (by token - public endpoint)
+  app.post("/api/bookings/by-token/:token/confirm-completion", async (req, res) => {
+    try {
+      const booking = await storage.getBookingRequestByToken(req.params.token);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      if (booking.completionStatus !== "awaiting_confirmation") {
+        return res.status(400).json({ error: "Booking is not awaiting confirmation" });
+      }
+
+      await storage.updateBookingRequest(booking.id, {
+        completionStatus: "completed",
+      });
+
+      await storage.createBookingEvent({
+        bookingId: booking.id,
+        eventType: "customer_confirmed",
+        actorType: "customer",
+        actorId: null,
+        metadata: null,
+      });
+
+      if (booking.depositStatus === "captured") {
+        const provider = await storage.getUser(booking.userId);
+        if (provider?.stripeConnectAccountId) {
+          const { getUncachableStripeClient } = await import("./stripeClient");
+          const stripe = await getUncachableStripeClient();
+
+          const releaseAmount = booking.rolledAmountCents || booking.depositAmountCents || 0;
+          if (releaseAmount > 0) {
+            try {
+              const transfer = await stripe.transfers.create({
+                amount: releaseAmount,
+                currency: booking.depositCurrency || "usd",
+                destination: provider.stripeConnectAccountId,
+                transfer_group: `booking_${booking.id}`,
+                metadata: {
+                  booking_id: booking.id,
+                  type: "job_completion",
+                },
+              });
+
+              await storage.updateBookingRequest(booking.id, {
+                depositStatus: "released",
+                stripeTransferId: transfer.id,
+              });
+
+              await storage.createBookingEvent({
+                bookingId: booking.id,
+                eventType: "deposit_released",
+                actorType: "system",
+                actorId: null,
+                metadata: JSON.stringify({
+                  amount: releaseAmount,
+                  transferId: transfer.id,
+                  trigger: "customer_confirmation",
+                }),
+              });
+            } catch (transferError) {
+              console.error("Failed to transfer deposit:", transferError);
+            }
+          }
+        }
+      }
+
+      res.json({
+        success: true,
+        completionStatus: "completed",
+        depositStatus: booking.depositStatus,
+      });
+    } catch (error) {
+      console.error("Confirm completion error:", error);
+      res.status(500).json({ error: "Failed to confirm completion" });
+    }
+  });
+
+  // Customer flags an issue with the job (by token - public endpoint)
+  app.post("/api/bookings/by-token/:token/flag-issue", async (req, res) => {
+    try {
+      const { issueDescription } = req.body;
+      const booking = await storage.getBookingRequestByToken(req.params.token);
+      
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      if (booking.completionStatus !== "awaiting_confirmation") {
+        return res.status(400).json({ error: "Booking is not awaiting confirmation" });
+      }
+
+      await storage.updateBookingRequest(booking.id, {
+        completionStatus: "disputed",
+        depositStatus: "on_hold_dispute",
+        autoReleaseAt: null,
+      });
+
+      await storage.createBookingEvent({
+        bookingId: booking.id,
+        eventType: "issue_flagged",
+        actorType: "customer",
+        actorId: null,
+        metadata: JSON.stringify({
+          issueDescription: issueDescription || "Customer flagged an issue",
+        }),
+      });
+
+      res.json({
+        success: true,
+        completionStatus: "disputed",
+        depositStatus: "on_hold_dispute",
+        message: "Issue flagged. The deposit is now on hold pending resolution.",
+      });
+    } catch (error) {
+      console.error("Flag issue error:", error);
+      res.status(500).json({ error: "Failed to flag issue" });
+    }
+  });
+
+  // Get booking status by token (public endpoint for customer)
+  app.get("/api/bookings/by-token/:token/status", async (req, res) => {
+    try {
+      const booking = await storage.getBookingRequestByToken(req.params.token);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      const provider = await storage.getUser(booking.userId);
+      const events = await storage.getBookingEvents(booking.id);
+
+      res.json({
+        bookingId: booking.id,
+        clientName: booking.clientName,
+        status: booking.status,
+        completionStatus: booking.completionStatus,
+        depositStatus: booking.depositStatus,
+        depositAmountCents: booking.depositAmountCents,
+        depositCurrency: booking.depositCurrency,
+        jobStartAt: booking.jobStartAt,
+        jobEndAt: booking.jobEndAt,
+        autoReleaseAt: booking.autoReleaseAt,
+        providerName: provider?.name || provider?.businessName || "Provider",
+        events: events.map(e => ({
+          eventType: e.eventType,
+          createdAt: e.createdAt,
+        })),
+      });
+    } catch (error) {
+      console.error("Get booking status error:", error);
+      res.status(500).json({ error: "Failed to get booking status" });
+    }
+  });
+
+  // ============ ADMIN DEPOSIT MANAGEMENT ============
+
+  // Force release deposit to provider (admin/provider action)
+  app.post("/api/bookings/:id/admin/force-release", async (req, res) => {
+    try {
+      const booking = await storage.getBookingRequest(req.params.id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      if (booking.depositStatus !== "captured" && booking.depositStatus !== "on_hold_dispute") {
+        return res.status(400).json({ error: "No held deposit to release" });
+      }
+
+      if (!booking.stripeChargeId) {
+        return res.status(400).json({ error: "No charge ID for this booking" });
+      }
+
+      const provider = await storage.getUser(booking.userId);
+      if (!provider?.stripeConnectAccountId) {
+        return res.status(400).json({ error: "Provider has no Connect account" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      const releaseAmount = booking.rolledAmountCents || booking.depositAmountCents || 0;
+      if (releaseAmount <= 0) {
+        await storage.updateBookingRequest(booking.id, {
+          completionStatus: "completed",
+          depositStatus: "released",
+        });
+        return res.json({ success: true, amount: 0 });
+      }
+
+      const transfer = await stripe.transfers.create({
+        amount: releaseAmount,
+        currency: booking.depositCurrency || "usd",
+        destination: provider.stripeConnectAccountId,
+        transfer_group: `booking_${booking.id}`,
+        metadata: {
+          booking_id: booking.id,
+          type: "admin_force_release",
+        },
+      });
+
+      await storage.updateBookingRequest(booking.id, {
+        completionStatus: "completed",
+        depositStatus: "released",
+        stripeTransferId: transfer.id,
+        autoReleaseAt: null,
+      });
+
+      await storage.createBookingEvent({
+        bookingId: booking.id,
+        eventType: "admin_force_released",
+        actorType: "admin",
+        actorId: defaultUserId,
+        metadata: JSON.stringify({
+          amount: releaseAmount,
+          transferId: transfer.id,
+        }),
+      });
+
+      res.json({
+        success: true,
+        amount: releaseAmount,
+        transferId: transfer.id,
+      });
+    } catch (error) {
+      console.error("Force release error:", error);
+      res.status(500).json({ error: "Failed to force release deposit" });
+    }
+  });
+
+  // Full refund to customer (admin action)
+  app.post("/api/bookings/:id/admin/refund-full", async (req, res) => {
+    try {
+      const { reason } = req.body;
+      const booking = await storage.getBookingRequest(req.params.id);
+      
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      if (booking.depositStatus !== "captured" && booking.depositStatus !== "on_hold_dispute") {
+        return res.status(400).json({ error: "No deposit to refund" });
+      }
+
+      if (!booking.stripePaymentIntentId) {
+        return res.status(400).json({ error: "No payment intent for this booking" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      const refund = await stripe.refunds.create({
+        payment_intent: booking.stripePaymentIntentId,
+        reason: "requested_by_customer",
+        metadata: {
+          booking_id: booking.id,
+          admin_reason: reason || "Admin initiated full refund",
+        },
+      });
+
+      await storage.updateBookingRequest(booking.id, {
+        depositStatus: "refunded",
+        completionStatus: "cancelled",
+        autoReleaseAt: null,
+      });
+
+      await storage.createBookingEvent({
+        bookingId: booking.id,
+        eventType: "admin_refunded_full",
+        actorType: "admin",
+        actorId: defaultUserId,
+        metadata: JSON.stringify({
+          amount: refund.amount,
+          refundId: refund.id,
+          reason: reason || "Admin initiated",
+        }),
+      });
+
+      res.json({
+        success: true,
+        amount: refund.amount,
+        refundId: refund.id,
+      });
+    } catch (error) {
+      console.error("Full refund error:", error);
+      res.status(500).json({ error: "Failed to process full refund" });
+    }
+  });
+
+  // Partial refund to customer (admin action for disputes)
+  app.post("/api/bookings/:id/admin/refund-partial", async (req, res) => {
+    try {
+      const { amountCents, reason } = req.body;
+      const booking = await storage.getBookingRequest(req.params.id);
+      
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      if (!amountCents || amountCents <= 0) {
+        return res.status(400).json({ error: "Invalid refund amount" });
+      }
+
+      if (booking.depositStatus !== "captured" && booking.depositStatus !== "on_hold_dispute") {
+        return res.status(400).json({ error: "No deposit to refund" });
+      }
+
+      if (!booking.stripePaymentIntentId) {
+        return res.status(400).json({ error: "No payment intent for this booking" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      const refund = await stripe.refunds.create({
+        payment_intent: booking.stripePaymentIntentId,
+        amount: amountCents,
+        reason: "requested_by_customer",
+        metadata: {
+          booking_id: booking.id,
+          admin_reason: reason || "Admin initiated partial refund",
+        },
+      });
+
+      const remainingAmount = (booking.depositAmountCents || 0) - amountCents;
+
+      await storage.updateBookingRequest(booking.id, {
+        depositStatus: remainingAmount > 0 ? "partial_refund" : "refunded",
+        rolledAmountCents: remainingAmount > 0 ? remainingAmount : 0,
+      });
+
+      await storage.createBookingEvent({
+        bookingId: booking.id,
+        eventType: "admin_refunded_partial",
+        actorType: "admin",
+        actorId: defaultUserId,
+        metadata: JSON.stringify({
+          refundedAmount: amountCents,
+          remainingAmount,
+          refundId: refund.id,
+          reason: reason || "Admin initiated",
+        }),
+      });
+
+      res.json({
+        success: true,
+        refundedAmount: amountCents,
+        remainingAmount,
+        refundId: refund.id,
+      });
+    } catch (error) {
+      console.error("Partial refund error:", error);
+      res.status(500).json({ error: "Failed to process partial refund" });
+    }
+  });
+
+  // Resolve dispute (admin action)
+  app.post("/api/bookings/:id/admin/resolve-dispute", async (req, res) => {
+    try {
+      const { resolution, refundAmountCents } = req.body;
+      const booking = await storage.getBookingRequest(req.params.id);
+      
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      if (booking.completionStatus !== "disputed") {
+        return res.status(400).json({ error: "Booking is not in disputed state" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      if (resolution === "refund_customer" && booking.stripePaymentIntentId) {
+        await stripe.refunds.create({
+          payment_intent: booking.stripePaymentIntentId,
+          amount: refundAmountCents || booking.depositAmountCents || 0,
+        });
+
+        await storage.updateBookingRequest(booking.id, {
+          completionStatus: "cancelled",
+          depositStatus: "refunded",
+          autoReleaseAt: null,
+        });
+
+        await storage.createBookingEvent({
+          bookingId: booking.id,
+          eventType: "dispute_resolved_refund",
+          actorType: "admin",
+          actorId: defaultUserId,
+          metadata: JSON.stringify({
+            resolution: "refund_customer",
+            amount: refundAmountCents || booking.depositAmountCents,
+          }),
+        });
+      } else if (resolution === "release_to_provider" && booking.stripeChargeId) {
+        const provider = await storage.getUser(booking.userId);
+        if (provider?.stripeConnectAccountId) {
+          const releaseAmount = booking.rolledAmountCents || booking.depositAmountCents || 0;
+          
+          await stripe.transfers.create({
+            amount: releaseAmount,
+            currency: booking.depositCurrency || "usd",
+            destination: provider.stripeConnectAccountId,
+            transfer_group: `booking_${booking.id}`,
+            metadata: {
+              booking_id: booking.id,
+              type: "dispute_resolution",
+            },
+          });
+
+          await storage.updateBookingRequest(booking.id, {
+            completionStatus: "completed",
+            depositStatus: "released",
+            autoReleaseAt: null,
+          });
+
+          await storage.createBookingEvent({
+            bookingId: booking.id,
+            eventType: "dispute_resolved_released",
+            actorType: "admin",
+            actorId: defaultUserId,
+            metadata: JSON.stringify({
+              resolution: "release_to_provider",
+              amount: releaseAmount,
+            }),
+          });
+        }
+      } else if (resolution === "split") {
+        const refundAmount = refundAmountCents || Math.floor((booking.depositAmountCents || 0) / 2);
+        const releaseAmount = (booking.depositAmountCents || 0) - refundAmount;
+
+        if (booking.stripePaymentIntentId && refundAmount > 0) {
+          await stripe.refunds.create({
+            payment_intent: booking.stripePaymentIntentId,
+            amount: refundAmount,
+          });
+        }
+
+        if (booking.stripeChargeId && releaseAmount > 0) {
+          const provider = await storage.getUser(booking.userId);
+          if (provider?.stripeConnectAccountId) {
+            await stripe.transfers.create({
+              amount: releaseAmount,
+              currency: booking.depositCurrency || "usd",
+              destination: provider.stripeConnectAccountId,
+              transfer_group: `booking_${booking.id}`,
+              metadata: {
+                booking_id: booking.id,
+                type: "dispute_split",
+              },
+            });
+          }
+        }
+
+        await storage.updateBookingRequest(booking.id, {
+          completionStatus: "completed",
+          depositStatus: "released",
+          autoReleaseAt: null,
+        });
+
+        await storage.createBookingEvent({
+          bookingId: booking.id,
+          eventType: "dispute_resolved_split",
+          actorType: "admin",
+          actorId: defaultUserId,
+          metadata: JSON.stringify({
+            resolution: "split",
+            refundedAmount: refundAmount,
+            releasedAmount: releaseAmount,
+          }),
+        });
+      }
+
+      res.json({
+        success: true,
+        resolution,
+        completionStatus: booking.completionStatus,
+      });
+    } catch (error) {
+      console.error("Resolve dispute error:", error);
+      res.status(500).json({ error: "Failed to resolve dispute" });
+    }
+  });
+
+  // Get booking events (audit trail)
+  app.get("/api/bookings/:id/events", async (req, res) => {
+    try {
+      const booking = await storage.getBookingRequest(req.params.id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      const events = await storage.getBookingEvents(booking.id);
+      res.json(events);
+    } catch (error) {
+      console.error("Get booking events error:", error);
+      res.status(500).json({ error: "Failed to get booking events" });
+    }
+  });
+
+  // Stripe Connect webhook handler
+  app.post("/api/stripe/connect/webhook", async (req, res) => {
+    try {
+      const { getUncachableStripeClient, getStripeSecretKey } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      const sig = req.headers["stripe-signature"] as string;
+      const webhookSecret = process.env.STRIPE_CONNECT_WEBHOOK_SECRET;
+
+      let event;
+      if (webhookSecret && sig) {
+        try {
+          event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+        } catch (err: any) {
+          console.error("Webhook signature verification failed:", err.message);
+          return res.status(400).send(`Webhook Error: ${err.message}`);
+        }
+      } else {
+        event = req.body;
+      }
+
+      switch (event.type) {
+        case "account.updated": {
+          const account = event.data.object as any;
+          const gigaidUserId = account.metadata?.gigaid_user_id;
+          if (gigaidUserId) {
+            let status: "pending" | "active" | "restricted" | "disabled" = "pending";
+            if (account.charges_enabled && account.payouts_enabled) {
+              status = "active";
+            } else if (account.details_submitted) {
+              status = "restricted";
+            }
+
+            await storage.updateUser(gigaidUserId, {
+              stripeConnectStatus: status,
+            });
+            console.log(`Updated Connect status for user ${gigaidUserId}: ${status}`);
+          }
+          break;
+        }
+
+        case "payment_intent.succeeded": {
+          const paymentIntent = event.data.object as any;
+          const bookingId = paymentIntent.metadata?.booking_id;
+          if (bookingId) {
+            const booking = await storage.getBookingRequest(bookingId);
+            if (booking) {
+              await storage.updateBookingRequest(bookingId, {
+                depositStatus: "captured",
+                stripePaymentIntentId: paymentIntent.id,
+                stripeChargeId: paymentIntent.latest_charge,
+              });
+
+              await storage.createBookingEvent({
+                bookingId,
+                eventType: "deposit_captured",
+                actorType: "system",
+                actorId: null,
+                metadata: JSON.stringify({
+                  amount: paymentIntent.amount,
+                  paymentIntentId: paymentIntent.id,
+                }),
+              });
+              console.log(`Deposit captured for booking ${bookingId}`);
+            }
+          }
+          break;
+        }
+
+        case "charge.refunded": {
+          const charge = event.data.object as any;
+          const paymentIntentId = charge.payment_intent;
+          const allBookings = await storage.getBookingRequests(defaultUserId);
+          const booking = allBookings.find(b => b.stripePaymentIntentId === paymentIntentId);
+          if (booking) {
+            const isFullRefund = charge.amount_refunded === charge.amount;
+            await storage.updateBookingRequest(booking.id, {
+              depositStatus: isFullRefund ? "refunded" : "partial_refund",
+            });
+
+            await storage.createBookingEvent({
+              bookingId: booking.id,
+              eventType: isFullRefund ? "deposit_refunded" : "deposit_partial_refund",
+              actorType: "system",
+              actorId: null,
+              metadata: JSON.stringify({
+                refundedAmount: charge.amount_refunded,
+                chargeId: charge.id,
+              }),
+            });
+          }
+          break;
+        }
+
+        case "transfer.created": {
+          const transfer = event.data.object as any;
+          const bookingId = transfer.metadata?.booking_id;
+          if (bookingId) {
+            await storage.updateBookingRequest(bookingId, {
+              depositStatus: "released",
+              stripeTransferId: transfer.id,
+            });
+
+            await storage.createBookingEvent({
+              bookingId,
+              eventType: "deposit_released",
+              actorType: "system",
+              actorId: null,
+              metadata: JSON.stringify({
+                amount: transfer.amount,
+                transferId: transfer.id,
+              }),
+            });
+            console.log(`Deposit released for booking ${bookingId}`);
+          }
+          break;
+        }
+      }
+
+      res.json({ received: true });
+    } catch (error) {
+      console.error("Stripe webhook error:", error);
+      res.status(500).json({ error: "Webhook handler failed" });
+    }
+  });
+
   // Export all data as JSON
   app.get("/api/export/json", async (req, res) => {
     try {
