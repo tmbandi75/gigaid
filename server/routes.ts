@@ -3688,6 +3688,34 @@ export async function registerRoutes(
           }
           break;
         }
+
+        case "charge.dispute.created": {
+          const dispute = event.data.object as any;
+          const chargeId = dispute.charge;
+          const allBookings = await storage.getBookingRequests(defaultUserId);
+          const booking = allBookings.find(b => b.stripeChargeId === chargeId);
+          if (booking) {
+            await storage.updateBookingRequest(booking.id, {
+              depositStatus: "on_hold_dispute",
+              completionStatus: "disputed",
+            });
+
+            await storage.createBookingEvent({
+              bookingId: booking.id,
+              eventType: "stripe_dispute_created",
+              actorType: "system",
+              actorId: null,
+              metadata: JSON.stringify({
+                disputeId: dispute.id,
+                reason: dispute.reason,
+                amount: dispute.amount,
+                chargeId,
+              }),
+            });
+            console.log(`Stripe dispute created for booking ${booking.id}`);
+          }
+          break;
+        }
       }
 
       res.json({ received: true });

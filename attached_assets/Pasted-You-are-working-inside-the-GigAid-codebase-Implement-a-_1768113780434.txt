@@ -1,0 +1,122 @@
+You are working inside the GigAid codebase. Implement a deposit-safe payment + reschedule policy for the public Booking + Payment flow using Stripe Connect (Express). DO NOT refactor unrelated code. Make changes minimally, behind feature flags if needed, and ensure existing booking creation continues to work.
+
+GOALS
+1) Deposit payments:
+- Allow providers (gig workers) to require a deposit (percentage or fixed amount) for bookings.
+- Customer pays only the deposit at booking time.
+- Deposit is HELD by GigAid and is NOT transferred to the provider immediately.
+- Deposit is transferred to the provider only after the job is marked completed (customer confirms OR auto-release after time window).
+- Customer can still pay remaining balance off-platform or later (do not implement remaining balance collection unless it already exists).
+
+2) Late reschedule policy (within 24 hours of scheduled start):
+- Customers can reschedule instead of canceling.
+- If reschedule occurs within <24 hours before scheduled start:
+  - retain a configurable portion of the deposit as a reschedule fee (default 40% of deposit retained),
+  - roll the remaining portion forward to the new appointment.
+- First late reschedule uses default retention; second late reschedule within the same booking uses higher retention (default 60% retained), with a cap of 75%.
+- Provider can optionally “waive reschedule fee” (manual toggle on the booking) which sets retention to 0% for that reschedule.
+
+3) Completion confirmation & payout timing:
+- At job end time, booking enters AWAITING_CONFIRMATION.
+- Provide customer a “Job completed” and “There’s an issue” action.
+- If customer confirms completion -> transfer deposit to provider immediately.
+- If customer does nothing -> auto-release transfer 36 hours after job end time.
+- If customer flags an issue before auto-release -> hold funds and set booking state ON_HOLD_DISPUTE (no transfer).
+- Admin override endpoints: force_release_deposit, refund_deposit_full, refund_deposit_partial.
+- Ensure all transitions are logged with timestamps and actor (customer/provider/admin/system).
+
+TECHNICAL REQUIREMENTS
+A) Stripe / Payments
+- Use Stripe Connect (Express). Assume platform Stripe keys exist.
+- Use PaymentIntents to collect the deposit.
+- Store stripe_payment_intent_id and stripe_charge_id (if available).
+- DO NOT transfer funds at booking creation.
+- Implement transfer at completion via Stripe Transfers OR destination charge pattern depending on current integration; choose the safest approach based on existing code.
+- Support refunds (full/partial) from the platform for the deposit while still held.
+- Use environment variables:
+  - STRIPE_SECRET_KEY
+  - STRIPE_WEBHOOK_SECRET
+  - (if needed) STRIPE_CONNECT_PLATFORM_ACCOUNT_ID
+- Add webhook handlers for: payment_intent.succeeded, charge.refunded, dispute.created (if already supported, extend safely).
+
+B) Data model changes (add migrations)
+Add/extend tables/fields (adapt to existing schema naming):
+- bookings table:
+  - deposit_amount_cents (int)
+  - deposit_currency (text default 'usd')
+  - deposit_status (enum: HELD, RELEASED, REFUNDED, PARTIAL_REFUNDED, ON_HOLD_DISPUTE)
+  - completion_status (enum: SCHEDULED, AWAITING_CONFIRMATION, COMPLETED, DISPUTE)
+  - job_start_at, job_end_at (timestamps)
+  - auto_release_at (timestamp)
+  - last_reschedule_at (timestamp)
+  - late_reschedule_count (int default 0)
+  - waive_reschedule_fee (boolean default false)
+  - stripe_payment_intent_id (text)
+  - stripe_transfer_id (text nullable)
+- booking_events table:
+  - id, booking_id, event_type, actor_type, actor_id, metadata_json, created_at
+
+- provider_settings table:
+  - deposit_enabled (bool)
+  - deposit_type (enum: PERCENT, FIXED)
+  - deposit_value (int) (percent 0-100 or cents)
+  - late_reschedule_window_hours (int default 24)
+  - late_reschedule_retain_pct_first (int default 40)
+  - late_reschedule_retain_pct_second (int default 60)
+  - late_reschedule_retain_pct_cap (int default 75)
+
+C) Server logic
+- When booking is created:
+  - compute deposit_amount based on provider settings
+  - create PaymentIntent for deposit
+  - set booking.deposit_status = HELD after PI succeeds
+  - set completion_status = SCHEDULED
+- Reschedule endpoint:
+  - if within late_reschedule_window_hours AND waive_reschedule_fee=false:
+    - increment late_reschedule_count
+    - compute retain_pct based on count (first/second/cap)
+    - retained_amount = deposit_amount * retain_pct
+    - rolled_amount = deposit_amount - retained_amount
+    - store retained_amount_cents and rolled_amount_cents in booking metadata (or fields)
+    - NOTE: do not pay retained amount yet; it becomes earned only when job completes (reduce disputes).
+  - update booking start/end times
+  - recompute auto_release_at = new job_end_at + 36 hours
+  - log booking_events
+- Completion confirmation:
+  - customer_confirm_complete endpoint sets completion_status=COMPLETED
+  - triggers deposit release transfer if deposit_status=HELD and not ON_HOLD_DISPUTE
+- Auto-release job:
+  - implement a scheduled job / background task OR server cron pattern used in this codebase
+  - finds bookings where completion_status=AWAITING_CONFIRMATION and now >= auto_release_at and no dispute
+  - releases deposit and marks completion_status=COMPLETED, deposit_status=RELEASED
+- Issue flow:
+  - customer_flag_issue endpoint sets deposit_status=ON_HOLD_DISPUTE, completion_status=DISPUTE and logs it.
+- Refund endpoints:
+  - admin can refund full/partial deposit while HELD (preferred).
+  - if already RELEASED, handle refund logic as supported (clawback/future payout offset) but do not implement complex clawbacks unless code already has it.
+
+D) UI changes (Booking/Payment/Confirmation)
+- Payment page:
+  - show deposit amount and a short “deposit safety” message (copy provided below).
+  - show provider cancellation/reschedule policy summary with the 24h late reschedule rule.
+- Booking detail page (customer):
+  - post-job prompt: “Was the job completed?” with Yes / There’s an issue.
+- Provider view:
+  - show deposit status + estimated release time
+  - toggle “Waive reschedule fee” for a specific booking
+- Ensure mobile-friendly UI and no breaking changes.
+
+E) Testing
+- Add minimal unit/integration tests (or test script) covering:
+  1) deposit PaymentIntent creation
+  2) reschedule within 24h increments count and computes retention
+  3) completion confirmation triggers transfer
+  4) auto-release triggers after 36h
+  5) issue flag prevents transfer
+
+DELIVERABLES
+- Migrations
+- Updated server endpoints + webhook handlers
+- Updated UI components
+- Any necessary configuration docs (README snippet) describing required Stripe settings and env vars
+- Keep code clean, typed, and consistent with existing patterns.

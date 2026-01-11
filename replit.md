@@ -103,12 +103,13 @@ GigAid uses Stripe Connect (Express) for deposit-safe payments. This system allo
 2. **Configure Express Accounts**: Enable Express account onboarding
 3. **Set Platform Settings**: Configure your platform's branding and policies
 4. **Create Webhook Endpoint**: 
-   - Endpoint URL: `https://your-domain.com/api/stripe/webhooks`
+   - Endpoint URL: `https://your-domain.com/api/stripe/connect/webhook`
    - Events to listen for:
      - `account.updated` - Provider account status changes
      - `payment_intent.succeeded` - Deposit payments completed
      - `charge.refunded` - Refunds processed
      - `transfer.created` - Funds transferred to providers
+     - `charge.dispute.created` - Customer disputes (auto-holds funds)
 
 ### Deposit Flow
 
