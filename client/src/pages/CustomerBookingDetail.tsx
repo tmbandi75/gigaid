@@ -75,12 +75,13 @@ interface DepositIntentResponse {
 
 interface PaymentFormProps {
   token: string;
+  bookingId: number;
   depositAmountCents: number;
   depositCurrency: string;
   onSuccess: () => void;
 }
 
-function PaymentForm({ token, depositAmountCents, depositCurrency, onSuccess }: PaymentFormProps) {
+function PaymentForm({ token, bookingId, depositAmountCents, depositCurrency, onSuccess }: PaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const { toast } = useToast();
@@ -104,7 +105,7 @@ function PaymentForm({ token, depositAmountCents, depositCurrency, onSuccess }: 
     setIsProcessing(true);
     setPaymentError(null);
 
-    const { error } = await stripe.confirmPayment({
+    const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
         return_url: window.location.href,
@@ -114,6 +115,31 @@ function PaymentForm({ token, depositAmountCents, depositCurrency, onSuccess }: 
 
     if (error) {
       setPaymentError(error.message || "Payment failed. Please try again.");
+      setIsProcessing(false);
+      return;
+    }
+
+    if (paymentIntent && paymentIntent.status === "succeeded") {
+      try {
+        const confirmRes = await fetch(`/api/bookings/${bookingId}/confirm-deposit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (!confirmRes.ok) {
+          console.error("Failed to confirm deposit on backend");
+        }
+      } catch (err) {
+        console.error("Error confirming deposit:", err);
+      }
+
+      toast({ 
+        title: "Payment successful!", 
+        description: "Your deposit has been received." 
+      });
+      onSuccess();
+    } else if (paymentIntent && paymentIntent.status === "requires_action") {
+      setPaymentError("Additional authentication required. Please follow the prompts.");
       setIsProcessing(false);
     } else {
       toast({ 
@@ -177,8 +203,11 @@ function DepositPaymentSection({ token, booking, onPaymentSuccess }: DepositPaym
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
+    if (initialized) return;
+    
     async function initializePayment() {
       try {
         setIsLoading(true);
@@ -201,6 +230,7 @@ function DepositPaymentSection({ token, booking, onPaymentSuccess }: DepositPaym
         
         const intentData: DepositIntentResponse = await intentRes.json();
         setClientSecret(intentData.clientSecret);
+        setInitialized(true);
       } catch (err: any) {
         setError(err.message || "Failed to load payment form");
       } finally {
@@ -209,7 +239,7 @@ function DepositPaymentSection({ token, booking, onPaymentSuccess }: DepositPaym
     }
 
     initializePayment();
-  }, [token]);
+  }, [token, initialized]);
 
   if (isLoading) {
     return (
@@ -248,6 +278,7 @@ function DepositPaymentSection({ token, booking, onPaymentSuccess }: DepositPaym
     >
       <PaymentForm
         token={token}
+        bookingId={booking.id}
         depositAmountCents={booking.depositAmountCents || 0}
         depositCurrency={booking.depositCurrency || "usd"}
         onSuccess={onPaymentSuccess}
