@@ -1,8 +1,7 @@
-import { useRef, useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MapPin, AlertCircle } from "lucide-react";
-import { APILoader, PlacePicker } from "@googlemaps/extended-component-library/react";
+import { MapPin, AlertCircle, Loader2 } from "lucide-react";
 
 interface AddressComponents {
   streetAddress: string;
@@ -19,7 +18,46 @@ interface AddressAutocompleteProps {
   className?: string;
 }
 
+const GOOGLE_MAPS_SCRIPT_ID = "google-maps-script";
+
+function loadGoogleMapsScript(apiKey: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if ((window as any).google?.maps) {
+      resolve();
+      return;
+    }
+
+    const existingScript = document.getElementById(GOOGLE_MAPS_SCRIPT_ID);
+    if (existingScript) {
+      const checkLoaded = setInterval(() => {
+        if ((window as any).google?.maps) {
+          clearInterval(checkLoaded);
+          resolve();
+        }
+      }, 100);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = GOOGLE_MAPS_SCRIPT_ID;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      const checkLoaded = setInterval(() => {
+        if ((window as any).google?.maps) {
+          clearInterval(checkLoaded);
+          resolve();
+        }
+      }, 100);
+    };
+    script.onerror = () => reject(new Error("Failed to load Google Maps"));
+    document.head.appendChild(script);
+  });
+}
+
 export function AddressAutocomplete({ value, onChange, placeholder = "Start typing an address...", className }: AddressAutocompleteProps) {
+  const [isLoading, setIsLoading] = useState(true);
   const [manualMode, setManualMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [manualFields, setManualFields] = useState({
@@ -29,57 +67,110 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
     zipCode: "",
   });
   
-  const pickerRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const autocompleteElementRef = useRef<any>(null);
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
   useEffect(() => {
     if (!apiKey) {
       setManualMode(true);
       setError("Google Maps API key not configured");
+      setIsLoading(false);
+      return;
     }
-  }, [apiKey]);
 
-  const handlePlaceChange = () => {
-    const picker = pickerRef.current;
-    if (!picker?.value) return;
-    
-    const place = picker.value;
-    const components = place.addressComponents || [];
-    
-    let streetNumber = "";
-    let route = "";
-    let city = "";
-    let state = "";
-    let zipCode = "";
+    let mounted = true;
 
-    for (const comp of components) {
-      const types = comp.types || [];
-      if (types.includes("street_number")) {
-        streetNumber = comp.longText || comp.long_name || "";
-      } else if (types.includes("route")) {
-        route = comp.longText || comp.long_name || "";
-      } else if (types.includes("locality")) {
-        city = comp.longText || comp.long_name || "";
-      } else if (types.includes("sublocality_level_1") && !city) {
-        city = comp.longText || comp.long_name || "";
-      } else if (types.includes("administrative_area_level_1")) {
-        state = comp.shortText || comp.short_name || "";
-      } else if (types.includes("postal_code")) {
-        zipCode = comp.longText || comp.long_name || "";
+    const init = async () => {
+      try {
+        await loadGoogleMapsScript(apiKey);
+        
+        if (!mounted) return;
+
+        const google = (window as any).google;
+        const { PlaceAutocompleteElement } = await google.maps.importLibrary("places");
+        
+        if (!mounted || !containerRef.current) return;
+
+        // Create the new PlaceAutocompleteElement
+        const autocomplete = new PlaceAutocompleteElement({
+          componentRestrictions: { country: ["us"] },
+        });
+        
+        // Style the element
+        autocomplete.style.width = "100%";
+        autocomplete.style.height = "40px";
+        
+        // Listen for place selection
+        autocomplete.addEventListener("gmp-placeselect", async (event: any) => {
+          const place = event.place;
+          
+          // Fetch address components
+          await place.fetchFields({
+            fields: ["addressComponents", "formattedAddress", "displayName"],
+          });
+
+          const components = place.addressComponents || [];
+          let streetNumber = "";
+          let route = "";
+          let city = "";
+          let state = "";
+          let zipCode = "";
+
+          for (const comp of components) {
+            const types = comp.types || [];
+            if (types.includes("street_number")) {
+              streetNumber = comp.longText || "";
+            } else if (types.includes("route")) {
+              route = comp.longText || "";
+            } else if (types.includes("locality")) {
+              city = comp.longText || "";
+            } else if (types.includes("sublocality_level_1") && !city) {
+              city = comp.longText || "";
+            } else if (types.includes("administrative_area_level_1")) {
+              state = comp.shortText || "";
+            } else if (types.includes("postal_code")) {
+              zipCode = comp.longText || "";
+            }
+          }
+
+          const streetAddress = [streetNumber, route].filter(Boolean).join(" ");
+          const fullAddress = place.formattedAddress || place.displayName || "";
+
+          onChange(fullAddress, {
+            streetAddress,
+            city,
+            state,
+            zipCode,
+            fullAddress,
+          });
+        });
+
+        // Clear any existing content and append
+        containerRef.current.innerHTML = "";
+        containerRef.current.appendChild(autocomplete);
+        autocompleteElementRef.current = autocomplete;
+        
+        setIsLoading(false);
+      } catch (err: any) {
+        console.error("[AddressAutocomplete] Failed to load:", err?.message || err);
+        if (mounted) {
+          setError("Address suggestions unavailable");
+          setManualMode(true);
+          setIsLoading(false);
+        }
       }
-    }
+    };
 
-    const streetAddress = [streetNumber, route].filter(Boolean).join(" ");
-    const fullAddress = place.formattedAddress || place.displayName || "";
+    init();
 
-    onChange(fullAddress, {
-      streetAddress,
-      city,
-      state,
-      zipCode,
-      fullAddress,
-    });
-  };
+    return () => {
+      mounted = false;
+      if (autocompleteElementRef.current) {
+        autocompleteElementRef.current.remove();
+      }
+    };
+  }, [apiKey, onChange]);
 
   const handleManualChange = (field: keyof typeof manualFields, val: string) => {
     const updated = { ...manualFields, [field]: val };
@@ -157,22 +248,23 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
 
   return (
     <div className={className}>
-      <APILoader apiKey={apiKey} solutionChannel="GMP_GE_mapsandplacesautocomplete_v2" />
-      <PlacePicker
-        ref={pickerRef}
-        placeholder={placeholder}
-        country={["us"]}
-        onPlaceChange={handlePlaceChange}
-        style={{
-          width: "100%",
-          height: "40px",
-        }}
+      {isLoading && (
+        <div className="flex items-center gap-2 h-10 px-3 border rounded-md bg-muted/50">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Loading address search...</span>
+        </div>
+      )}
+      <div 
+        ref={containerRef} 
+        className={isLoading ? "hidden" : ""}
         data-testid="input-address-autocomplete"
       />
-      <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
-        <MapPin className="h-2.5 w-2.5" />
-        Powered by Google
-      </p>
+      {!isLoading && (
+        <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
+          <MapPin className="h-2.5 w-2.5" />
+          Powered by Google
+        </p>
+      )}
     </div>
   );
 }
