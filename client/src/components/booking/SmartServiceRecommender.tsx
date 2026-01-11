@@ -61,6 +61,7 @@ export function SmartServiceRecommender({ slug, onSelectService }: SmartServiceR
           data-testid="input-service-query"
         />
         <Button
+          type="button"
           onClick={handleSearch}
           disabled={query.trim().length < 5 || recommendMutation.isPending}
           data-testid="button-find-service"
@@ -88,6 +89,7 @@ export function SmartServiceRecommender({ slug, onSelectService }: SmartServiceR
                   <p className="text-sm text-muted-foreground mt-1">{rec.reason}</p>
                 </div>
                 <Button
+                  type="button"
                   size="sm"
                   onClick={() => onSelectService(rec.serviceId)}
                   data-testid={`button-book-${rec.serviceId}`}
