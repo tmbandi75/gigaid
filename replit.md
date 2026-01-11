@@ -199,14 +199,20 @@ GigAid uses Capacitor to package the web app as a native iOS application.
    npx cap sync ios
    ```
 
-3. **Open in Xcode**:
+3. **Install CocoaPods dependencies** (first time only):
+   ```bash
+   cd ios/App && pod install && cd ../..
+   ```
+
+4. **Open in Xcode**:
    ```bash
    npx cap open ios
    ```
 
-4. **In Xcode**:
+5. **In Xcode**:
    - Select your team under Signing & Capabilities
-   - Set the Bundle Identifier to match your Apple Developer account
+   - Set the Bundle Identifier to match your Apple Developer account (change `com.gigaid.app` to your own)
+   - Add your app icon in Assets.xcassets
    - Choose a target device or "Any iOS Device"
    - Product → Archive for App Store submission
 
