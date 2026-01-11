@@ -122,8 +122,10 @@ export default function BookingRequests() {
   });
 
   const recordRemainderPaymentMutation = useMutation({
-    mutationFn: ({ bookingId, paymentMethod, notes }: { bookingId: number; paymentMethod: string; notes: string }) =>
-      apiRequest("POST", `/api/bookings/${bookingId}/record-remainder-payment`, { paymentMethod, notes }),
+    mutationFn: async ({ bookingId, paymentMethod, notes }: { bookingId: number; paymentMethod: string; notes: string }) => {
+      const response = await apiRequest("POST", `/api/bookings/${bookingId}/record-remainder-payment`, { paymentMethod, notes });
+      return response.json();
+    },
     onSuccess: () => {
       toast({ title: "Payment recorded", description: "The remainder payment has been marked as paid." });
       queryClient.invalidateQueries({ queryKey: ["/api/booking-requests"] });
@@ -139,8 +141,12 @@ export default function BookingRequests() {
       setSelectedPaymentMethod("");
       setRemainderNotes("");
     },
-    onError: () => {
-      toast({ title: "Failed to record payment", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ 
+        title: "Failed to record payment", 
+        description: error.message || "Please try again.",
+        variant: "destructive" 
+      });
     },
   });
 

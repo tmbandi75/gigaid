@@ -3622,6 +3622,20 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Booking not found" });
       }
 
+      // Check if already paid
+      if (booking.remainderPaymentStatus === "paid") {
+        return res.status(400).json({ error: "Remainder payment has already been recorded" });
+      }
+
+      // Check if there's actually a remainder to pay
+      const totalAmount = booking.totalAmountCents || 0;
+      const depositAmount = booking.depositAmountCents || 0;
+      const remainderAmount = totalAmount - depositAmount;
+      
+      if (remainderAmount <= 0) {
+        return res.status(400).json({ error: "No remainder payment due for this booking" });
+      }
+
       const { paymentMethod, notes } = req.body;
 
       if (!paymentMethod) {
@@ -3631,6 +3645,11 @@ export async function registerRoutes(
       const validMethods = ["zelle", "venmo", "cashapp", "cash", "check", "stripe", "other"];
       if (!validMethods.includes(paymentMethod)) {
         return res.status(400).json({ error: "Invalid payment method" });
+      }
+
+      // Validate notes length
+      if (notes && notes.length > 500) {
+        return res.status(400).json({ error: "Notes must be 500 characters or less" });
       }
 
       const updated = await storage.updateBookingRequest(booking.id, {
