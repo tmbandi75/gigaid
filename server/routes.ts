@@ -407,8 +407,14 @@ export async function registerRoutes(
     try {
       const { leadId, serviceType, agreedPrice, notes } = req.body;
       
-      if (!leadId || !agreedPrice) {
-        return res.status(400).json({ error: "leadId and agreedPrice are required" });
+      if (!leadId) {
+        return res.status(400).json({ error: "leadId is required" });
+      }
+      
+      // Validate price - must be a positive number
+      const priceValue = parseInt(agreedPrice);
+      if (isNaN(priceValue) || priceValue <= 0) {
+        return res.status(400).json({ error: "agreedPrice must be a positive number" });
       }
       
       // Verify lead exists
@@ -423,7 +429,7 @@ export async function registerRoutes(
         leadId,
         userId: defaultUserId,
         serviceType: serviceType || lead.serviceType,
-        agreedPrice: parseInt(agreedPrice),
+        agreedPrice: priceValue,
         notes: notes || null,
         status: "draft",
         confirmationToken: token,
@@ -544,7 +550,7 @@ export async function registerRoutes(
   // Public endpoint: View price confirmation (for clients)
   app.get("/api/public/price-confirmation/:token", async (req, res) => {
     try {
-      const confirmation = await storage.getPriceConfirmationByToken(req.params.token);
+      let confirmation = await storage.getPriceConfirmationByToken(req.params.token);
       if (!confirmation) {
         return res.status(404).json({ error: "Price confirmation not found" });
       }
@@ -553,12 +559,13 @@ export async function registerRoutes(
       const lead = await storage.getLead(confirmation.leadId);
       const provider = await storage.getUser(confirmation.userId);
       
-      // Mark as viewed if not already
+      // Mark as viewed if not already confirmed or expired
       if (confirmation.status === "sent") {
-        await storage.updatePriceConfirmation(confirmation.id, {
+        const updated = await storage.updatePriceConfirmation(confirmation.id, {
           status: "viewed",
           viewedAt: new Date().toISOString(),
         });
+        if (updated) confirmation = updated;
       }
       
       res.json({

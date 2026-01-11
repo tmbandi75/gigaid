@@ -86,6 +86,15 @@ export default function LeadForm() {
   // Query for existing price confirmation
   const { data: activePriceConfirmation, isLoading: isLoadingPC } = useQuery<PriceConfirmation | null>({
     queryKey: ["/api/leads", id, "active-price-confirmation"],
+    queryFn: async () => {
+      const res = await fetch(`/api/leads/${id}/active-price-confirmation`);
+      if (!res.ok) {
+        if (res.status === 404) return null;
+        throw new Error("Failed to fetch");
+      }
+      const data = await res.json();
+      return data || null;
+    },
     enabled: !!isEditing,
   });
 
@@ -163,8 +172,12 @@ export default function LeadForm() {
   // Create and send price confirmation
   const sendPriceConfirmationMutation = useMutation({
     mutationFn: async () => {
-      // Convert dollars to cents
-      const priceInCents = Math.round(parseFloat(priceAmount) * 100);
+      // Validate and convert dollars to cents
+      const parsedAmount = parseFloat(priceAmount);
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        throw new Error("Please enter a valid price greater than $0");
+      }
+      const priceInCents = Math.round(parsedAmount * 100);
       
       // Create the price confirmation
       const createResponse = await apiRequest("POST", "/api/price-confirmations", {
