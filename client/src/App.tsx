@@ -23,6 +23,7 @@ import Profile from "@/pages/Profile";
 import Reviews from "@/pages/Reviews";
 import Referrals from "@/pages/Referrals";
 import HelpSupport from "@/pages/HelpSupport";
+import UserGuides from "@/pages/UserGuides";
 import AITools from "@/pages/AITools";
 import PublicBooking from "@/pages/PublicBooking";
 import InvoiceRating from "@/pages/InvoiceRating";
@@ -59,6 +60,7 @@ function Router() {
       <Route path="/reviews" component={Reviews} />
       <Route path="/referrals" component={Referrals} />
       <Route path="/help" component={HelpSupport} />
+      <Route path="/guides" component={UserGuides} />
       <Route path="/ai-tools" component={AITools} />
       <Route path="/booking-requests" component={BookingRequests} />
       <Route path="/share" component={ShareCapture} />

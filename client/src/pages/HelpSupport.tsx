@@ -47,6 +47,156 @@ const faqs = [
         q: "How do I add my services?",
         a: "In Settings, scroll to Services. You can click preset services like plumbing or electrical, or type in your own custom service and press the + button to add it.",
       },
+      {
+        q: "What's the typical workflow for a new gig?",
+        a: "The typical flow is: Quick Capture (grab the lead) → Reply Composer (negotiate) → Price Confirmation (lock the deal) → Deposit (secure it) → Job (do the work) → Get Paid → Review Request. GigAid guides you through each step!",
+      },
+    ],
+  },
+  {
+    category: "Quick Capture & Leads",
+    icon: Zap,
+    color: "from-pink-500 to-rose-500",
+    questions: [
+      {
+        q: "What is Quick Capture?",
+        a: "Quick Capture lets you instantly create leads from anywhere - Facebook Marketplace, Craigslist, texts, or any message. Just copy the text and paste it into GigAid, or use Share → GigAid on your phone.",
+      },
+      {
+        q: "How does AI parsing work in Quick Capture?",
+        a: "When you paste or share content, our AI automatically extracts the client's name, phone number, service needed, and source (like Facebook or Craigslist). You can review and adjust before saving.",
+      },
+      {
+        q: "What is Source Tracking?",
+        a: "GigAid tracks where each lead came from (Facebook, Nextdoor, referral, etc.). This helps you see which platforms bring the most business so you can focus your marketing.",
+      },
+      {
+        q: "How do I use Quick Capture from Facebook?",
+        a: "When you see a job post on Facebook, tap Share → GigAid (or copy the post text). GigAid will extract all the details and create a lead automatically. No typing required!",
+      },
+    ],
+  },
+  {
+    category: "Reply Composer & Negotiations",
+    icon: MessageCircle,
+    color: "from-indigo-500 to-blue-500",
+    questions: [
+      {
+        q: "What is the Reply Composer?",
+        a: "Reply Composer uses AI to help you write professional responses to clients. It suggests replies for common situations like giving quotes, discussing availability, or following up.",
+      },
+      {
+        q: "What scenarios does Reply Composer support?",
+        a: "Reply Composer handles four key scenarios: Giving a Quote (with pricing), Sharing Availability (your schedule), Following Up (checking in), and Providing Details (answering questions about your services).",
+      },
+      {
+        q: "How do I use Reply Composer?",
+        a: "Open any lead and scroll to the Reply Composer section. Select your scenario (quote, availability, etc.), optionally add notes, and tap Generate. Copy the suggested reply and paste it into your messaging app.",
+      },
+      {
+        q: "Can I customize the AI-generated replies?",
+        a: "Yes! The AI uses your profile information (name, services, bio) to personalize replies. You can also add notes before generating, and edit the reply before copying it.",
+      },
+    ],
+  },
+  {
+    category: "Price Confirmation",
+    icon: FileText,
+    color: "from-teal-500 to-cyan-500",
+    questions: [
+      {
+        q: "What is Price Confirmation?",
+        a: "Price Confirmation lets you lock in a price with your client before starting work. You send a link, they tap 'Looks Good', and the price is timestamped - no disputes later!",
+      },
+      {
+        q: "How do I send a Price Confirmation?",
+        a: "Open a lead and tap 'Send Price Confirmation'. Enter the agreed price and any notes, then send. The client receives a link via SMS or email to confirm.",
+      },
+      {
+        q: "What happens when the client confirms?",
+        a: "When the client confirms the price, GigAid automatically converts the lead to a job, sets the price, and marks everything as confirmed. You're ready to schedule!",
+      },
+      {
+        q: "Can I see if the client viewed the confirmation?",
+        a: "Yes! Price confirmations have status tracking: Draft, Sent, Viewed (they opened it), Confirmed (they approved), or Expired. You can see exactly where things stand.",
+      },
+    ],
+  },
+  {
+    category: "Deposits & Payments",
+    icon: CreditCard,
+    color: "from-green-500 to-emerald-500",
+    questions: [
+      {
+        q: "How do deposits work?",
+        a: "Deposits let you collect a payment upfront to secure an appointment. The deposit is held safely and applied to the final bill. This protects you from no-shows!",
+      },
+      {
+        q: "How do I request a deposit?",
+        a: "After price confirmation, you can enable deposits in your booking settings. Clients pay via Apple Pay, Google Pay, or card. The deposit is held until job completion.",
+      },
+      {
+        q: "What happens to the deposit after the job?",
+        a: "When you mark a job complete and record payment, the deposit is shown as 'applied' to the total. The client only pays the remaining balance (Total - Deposit = Balance Due).",
+      },
+      {
+        q: "What if the client cancels?",
+        a: "Your cancellation policy determines what happens. Late cancellations may forfeit part or all of the deposit. You can also choose to refund deposits for good customers.",
+      },
+      {
+        q: "How do I create an invoice?",
+        a: "Go to Invoices and tap 'New Invoice'. Fill in the client details, service description, and amount. You can send it via email or share a link.",
+      },
+      {
+        q: "How do I mark a job as paid?",
+        a: "Open the job and tap 'Get Paid'. Select how the client paid (Cash, Zelle, Venmo, Card, etc.). If there was a deposit, it shows the breakdown automatically.",
+      },
+    ],
+  },
+  {
+    category: "On The Way & Notifications",
+    icon: Send,
+    color: "from-orange-500 to-amber-500",
+    questions: [
+      {
+        q: "What is 'On The Way'?",
+        a: "'On The Way' sends an automatic text to your client letting them know you're headed to the job. It reduces anxiety, prevents no-shows, and makes you look professional.",
+      },
+      {
+        q: "How do I send an 'On The Way' notification?",
+        a: "Open the job you're heading to and tap the 'On The Way' button. GigAid sends an SMS to the client immediately. Simple and fast!",
+      },
+      {
+        q: "What does the notification say?",
+        a: "The message includes your name and says you're on your way. For example: 'Mike from Pro Gig Services is on the way to your appointment.'",
+      },
+      {
+        q: "Can I customize the On The Way message?",
+        a: "The message uses your profile name and business name automatically. The format is designed to be brief and professional.",
+      },
+    ],
+  },
+  {
+    category: "Reviews & Reputation",
+    icon: Users,
+    color: "from-yellow-500 to-orange-500",
+    questions: [
+      {
+        q: "How do I request a review?",
+        a: "When you mark a job as paid in the Get Paid dialog, you'll see an option to 'Request a Review'. Tap it and GigAid sends a review link to your client automatically.",
+      },
+      {
+        q: "How does the review process work?",
+        a: "The client receives a link, taps it, sees the job details, gives a star rating (1-5), and optionally adds a comment. The review appears in your Reviews section.",
+      },
+      {
+        q: "Can clients only leave one review per job?",
+        a: "Yes, each review link works once. After submitting, the link shows a thank-you message if they try to use it again.",
+      },
+      {
+        q: "Where can I see my reviews?",
+        a: "Go to More > Reviews to see all your reviews, your average rating, and feedback from clients. Great reviews help you get more business!",
+      },
     ],
   },
   {
@@ -66,39 +216,32 @@ const faqs = [
         q: "How do reminders work?",
         a: "Set up reminders in the Reminders page. You can send SMS or voice reminders to clients before appointments. Reminders help reduce no-shows!",
       },
-    ],
-  },
-  {
-    category: "Invoicing & Payments",
-    icon: CreditCard,
-    color: "from-green-500 to-emerald-500",
-    questions: [
       {
-        q: "How do I create an invoice?",
-        a: "Go to Invoices and tap 'New Invoice'. Fill in the client details, service description, and amount. You can send it via email or share a link.",
-      },
-      {
-        q: "How do I mark an invoice as paid?",
-        a: "Open the invoice and tap 'Mark as Paid'. You can also select the payment method (cash, Zelle, Venmo, etc.) for your records.",
-      },
-      {
-        q: "Can clients leave reviews after paying?",
-        a: "Yes! When you mark an invoice as paid and send it, clients will see a 'Thank you' message with an option to rate your service.",
+        q: "What job statuses are available?",
+        a: "Jobs can be: Scheduled (upcoming), In Progress (you're working on it), Completed (finished), or Cancelled. Update the status as you work.",
       },
     ],
   },
   {
-    category: "Managing Leads",
-    icon: Users,
-    color: "from-amber-500 to-orange-500",
+    category: "Owner View & Analytics",
+    icon: FileText,
+    color: "from-purple-500 to-violet-500",
     questions: [
       {
-        q: "What's the difference between a lead and a job?",
-        a: "A lead is a potential client who's interested in your services. Once they book, you can convert them to a job. Leads help you track your sales pipeline.",
+        q: "What is Owner View?",
+        a: "Owner View is your business dashboard. It shows earnings, completed jobs, pending payments, and upcoming work. It's designed for end-of-day or weekly review.",
       },
       {
-        q: "How do I convert a lead to a job?",
-        a: "Open the lead and tap 'Convert to Job'. This will create a new job with the lead's information pre-filled.",
+        q: "How do I access Owner View?",
+        a: "Go to More > Owner View. You can also access it from the desktop/web version for a larger screen experience.",
+      },
+      {
+        q: "What metrics can I see in Owner View?",
+        a: "Owner View shows: Total earnings, jobs completed, average job value, unpaid invoices, upcoming jobs, and performance trends over time.",
+      },
+      {
+        q: "Can I get weekly summaries?",
+        a: "Yes! GigAid can send you weekly email summaries every Monday with your earnings, completed jobs, and upcoming schedule. Enable this in Settings.",
       },
     ],
   },
@@ -116,8 +259,12 @@ const faqs = [
         a: "Go to More and toggle the Dark Mode switch. Your preference is saved automatically.",
       },
       {
+        q: "How do I connect Stripe for payments?",
+        a: "Go to Settings > Stripe Connect and tap 'Connect with Stripe'. Follow the setup wizard to enable deposit collection and card payments.",
+      },
+      {
         q: "What's included in the Pro plan?",
-        a: "Pro includes web dashboard access, Google Calendar sync, advanced analytics, priority support, and more. Upgrade in Settings!",
+        a: "Pro includes Owner View dashboard access, weekly email summaries, advanced analytics, priority support, and more. Upgrade in Settings!",
       },
     ],
   },
@@ -330,19 +477,21 @@ export default function HelpSupport() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md hover-elevate cursor-pointer">
+        <Card 
+          className="border-0 shadow-md hover-elevate cursor-pointer"
+          onClick={() => navigate("/guides")}
+          data-testid="card-user-guides"
+        >
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
                 <Book className="h-5 w-5 text-white" />
               </div>
               <div className="flex-1">
-                <p className="font-medium text-sm">Documentation</p>
-                <p className="text-xs text-muted-foreground">Full user guide & tutorials</p>
+                <p className="font-medium text-sm">User Guides & Tutorials</p>
+                <p className="text-xs text-muted-foreground">Step-by-step walkthroughs</p>
               </div>
-              <Button variant="ghost" size="icon" data-testid="button-docs">
-                <ExternalLink className="h-4 w-4" />
-              </Button>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </div>
           </CardContent>
         </Card>
