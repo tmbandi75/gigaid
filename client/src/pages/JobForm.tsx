@@ -350,7 +350,13 @@ export default function JobForm() {
   const queryClient = useQueryClient();
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showGetPaidDialog, setShowGetPaidDialog] = useState(false);
-  const [completedJobData, setCompletedJobData] = useState<{ title: string; price?: number; clientName?: string } | null>(null);
+  const [completedJobData, setCompletedJobData] = useState<{ 
+    title: string; 
+    price?: number; 
+    clientName?: string;
+    depositPaidCents?: number;
+    totalAmountCents?: number;
+  } | null>(null);
 
   const urlParams = new URLSearchParams(searchString);
   const prefillClientName = urlParams.get("clientName") || "";
@@ -579,10 +585,13 @@ export default function JobForm() {
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
       
       if (data.status === "completed" && existingJob?.status !== "completed") {
+        const totalCents = data.price ? data.price * 100 : (existingJob?.price || 0);
         setCompletedJobData({
           title: data.title,
-          price: data.price ? data.price * 100 : undefined,
+          price: totalCents || undefined,
           clientName: clientName || undefined,
+          depositPaidCents: (existingJob as any)?.depositPaidCents || undefined,
+          totalAmountCents: totalCents || undefined,
         });
         setShowGetPaidDialog(true);
         toast({ title: "Job marked as complete!" });
@@ -1283,6 +1292,8 @@ export default function JobForm() {
           jobTitle={completedJobData.title}
           amount={completedJobData.price}
           clientName={completedJobData.clientName}
+          depositPaidCents={completedJobData.depositPaidCents}
+          totalAmountCents={completedJobData.totalAmountCents}
         />
       )}
     </div>

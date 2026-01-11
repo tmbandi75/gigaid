@@ -49,6 +49,7 @@ export interface IStorage {
   // Jobs
   getJobs(userId: string): Promise<Job[]>;
   getJob(id: string): Promise<Job | undefined>;
+  getJobByReviewToken(token: string): Promise<Job | undefined>;
   createJob(job: InsertJob): Promise<Job>;
   updateJob(id: string, updates: Partial<InsertJob>): Promise<Job | undefined>;
   deleteJob(id: string): Promise<boolean>;
@@ -289,6 +290,8 @@ export class MemStorage implements IStorage {
       providerLat: null,
       providerLng: null,
       providerLocationUpdatedAt: null,
+      reviewToken: null,
+      reviewRequestedAt: null,
     };
 
     const jobs: Job[] = [
@@ -820,6 +823,11 @@ export class MemStorage implements IStorage {
     return this.jobs.get(id);
   }
 
+  async getJobByReviewToken(token: string): Promise<Job | undefined> {
+    const jobs = Array.from(this.jobs.values());
+    return jobs.find(job => job.reviewToken === token);
+  }
+
   async createJob(insertJob: InsertJob): Promise<Job> {
     const id = randomUUID();
     const job: Job = {
@@ -854,6 +862,8 @@ export class MemStorage implements IStorage {
       providerLat: insertJob.providerLat || null,
       providerLng: insertJob.providerLng || null,
       providerLocationUpdatedAt: insertJob.providerLocationUpdatedAt || null,
+      reviewToken: insertJob.reviewToken || null,
+      reviewRequestedAt: insertJob.reviewRequestedAt || null,
       createdAt: new Date().toISOString(),
     };
     this.jobs.set(id, job);

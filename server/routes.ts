@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import crypto from "crypto";
 import { storage } from "./storage";
 import { 
   insertJobSchema, 
@@ -20,6 +21,7 @@ import { z } from "zod";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { parseTextToPlan, suggestScheduleSlots, generateFollowUp } from "./ai/aiService";
 import { parseSharedContent, generateQuickReplies } from "./ai/shareParser";
+import { getOpenAI } from "./ai/openaiClient";
 import { sendSMS } from "./twilio";
 import { sendEmail } from "./sendgrid";
 import { geocodeAddress } from "./geocode";
@@ -3027,6 +3029,55 @@ export async function registerRoutes(
   });
 
   // AI Review Draft Generator
+  app.post("/api/ai/generate-negotiation-reply", async (req, res) => {
+    try {
+      const { scenario, clientName, serviceType, description } = req.body;
+      
+      const scenarioPrompts: Record<string, string> = {
+        quote: `Provide a pricing quote for the ${serviceType || "service"} job. Mention you can discuss the price and ask for confirmation.`,
+        availability: `Share your availability for the ${serviceType || "service"} job. Offer a couple of time options.`,
+        followup: `Follow up on the ${serviceType || "service"} inquiry. Check if they're still interested and ready to move forward.`,
+        details: `Ask clarifying questions about the ${serviceType || "service"} job to better understand scope and requirements.`,
+      };
+      
+      const prompt = scenarioPrompts[scenario] || scenarioPrompts.followup;
+      
+      const response = await getOpenAI().chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are helping a gig worker reply to a potential client named ${clientName || "Customer"}.
+
+Job context: ${description || `${serviceType || "general"} service inquiry`}
+
+Goal: ${prompt}
+
+Write a single concise reply (2-3 sentences max) that:
+- Is friendly and professional
+- Moves the conversation forward
+- Is ready to copy/paste into a messaging app
+
+Return ONLY the message text, no JSON or formatting.`
+          },
+          {
+            role: "user",
+            content: `Generate a ${scenario} reply for this lead.`
+          }
+        ],
+        temperature: 0.7,
+      });
+      
+      const reply = response.choices[0]?.message?.content?.trim() || 
+        `Hi ${clientName || "there"}! Just following up on your ${serviceType || "service"} request. Let me know if you're still interested!`;
+      
+      res.json({ reply });
+    } catch (error) {
+      console.error("Negotiation reply error:", error);
+      res.status(500).json({ error: "Failed to generate reply" });
+    }
+  });
+
   app.post("/api/ai/review-draft", async (req, res) => {
     try {
       const { clientName, jobName, tone, highlights } = req.body;
@@ -5103,6 +5154,155 @@ export async function registerRoutes(
     } catch (error) {
       console.error("On the way error:", error);
       res.status(500).json({ error: "Failed to send notification" });
+    }
+  });
+
+  // Review Request System
+  app.post("/api/jobs/:id/request-review", async (req, res) => {
+    try {
+      const job = await storage.getJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      // Generate a review token
+      const reviewToken = crypto.randomBytes(16).toString("hex");
+      
+      // Store the token on the job (add reviewToken field)
+      await storage.updateJob(req.params.id, {
+        reviewToken,
+        reviewRequestedAt: new Date().toISOString(),
+      });
+
+      const user = await storage.getUser(job.userId);
+      const providerName = user?.businessName || "Your service provider";
+      
+      // Build the review URL
+      const baseUrl = process.env.FRONTEND_URL || `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+      const reviewUrl = `${baseUrl}/review/${reviewToken}`;
+      
+      const message = `Hi ${job.clientName || "there"}! Thank you for using ${providerName}. We'd love your feedback! Please leave a quick review: ${reviewUrl}`;
+
+      let smsSent = false;
+      let emailSent = false;
+
+      // Send SMS if phone available
+      if (job.clientPhone) {
+        try {
+          const sent = await sendSMS(job.clientPhone, message);
+          smsSent = sent;
+        } catch (e) {
+          console.error("Review request SMS error:", e);
+        }
+      }
+
+      // Send email if available
+      if (job.clientEmail) {
+        try {
+          await sendEmail({
+            to: job.clientEmail,
+            subject: `How was your experience with ${providerName}?`,
+            text: message,
+            html: `
+              <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+                <h2>How did we do?</h2>
+                <p>Hi ${job.clientName || "there"}!</p>
+                <p>Thank you for choosing ${providerName}. We'd love to hear about your experience.</p>
+                <p style="text-align: center; margin: 24px 0;">
+                  <a href="${reviewUrl}" style="background: linear-gradient(to right, #6366f1, #8b5cf6); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
+                    Leave a Review
+                  </a>
+                </p>
+                <p style="color: #666; font-size: 14px;">It only takes 30 seconds!</p>
+              </div>
+            `,
+          });
+          emailSent = true;
+        } catch (e) {
+          console.error("Review request email error:", e);
+        }
+      }
+
+      res.json({
+        success: true,
+        smsSent,
+        emailSent,
+        reviewUrl,
+        message: smsSent || emailSent 
+          ? "Review request sent!" 
+          : "No contact info available",
+      });
+    } catch (error) {
+      console.error("Review request error:", error);
+      res.status(500).json({ error: "Failed to send review request" });
+    }
+  });
+
+  // Public review page - get job info
+  app.get("/api/public/review/:token", async (req, res) => {
+    try {
+      const job = await storage.getJobByReviewToken(req.params.token);
+      if (!job) {
+        return res.status(404).json({ error: "Invalid review link" });
+      }
+
+      const user = await storage.getUser(job.userId);
+      const providerName = user?.businessName || user?.name || "Your service provider";
+
+      // Check if already reviewed
+      const reviews = await storage.getReviews(job.userId);
+      const alreadyReviewed = reviews.some(r => r.jobId === job.id);
+
+      res.json({
+        jobId: job.id,
+        providerName,
+        jobTitle: job.title,
+        completedAt: job.scheduledDate,
+        alreadyReviewed,
+      });
+    } catch (error) {
+      console.error("Get review page error:", error);
+      res.status(500).json({ error: "Failed to load review page" });
+    }
+  });
+
+  // Public review submission
+  app.post("/api/public/review/:token", async (req, res) => {
+    try {
+      const { rating, comment } = req.body;
+      
+      if (!rating || rating < 1 || rating > 5) {
+        return res.status(400).json({ error: "Rating must be between 1 and 5" });
+      }
+
+      const job = await storage.getJobByReviewToken(req.params.token);
+      if (!job) {
+        return res.status(404).json({ error: "Invalid review link" });
+      }
+
+      // Check if already reviewed
+      const reviews = await storage.getReviews(job.userId);
+      const alreadyReviewed = reviews.some(r => r.jobId === job.id);
+      if (alreadyReviewed) {
+        return res.status(400).json({ error: "Already reviewed" });
+      }
+
+      // Create the review
+      const review = await storage.createReview({
+        userId: job.userId,
+        jobId: job.id,
+        clientName: job.clientName || "Customer",
+        clientEmail: job.clientEmail || undefined,
+        clientPhone: job.clientPhone || undefined,
+        rating,
+        comment: comment || undefined,
+        isPublic: true,
+      });
+
+      res.json({ success: true, review });
+    } catch (error) {
+      console.error("Submit review error:", error);
+      res.status(500).json({ error: "Failed to submit review" });
     }
   });
 

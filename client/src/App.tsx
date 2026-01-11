@@ -34,6 +34,7 @@ import ConfirmPrice from "@/pages/ConfirmPrice";
 import PayDeposit from "@/pages/PayDeposit";
 import OwnerView from "@/pages/OwnerView";
 import ShareCapture from "@/pages/ShareCapture";
+import PublicReview from "@/pages/PublicReview";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -92,6 +93,7 @@ function App() {
           <Route path="/confirm-price/:token" component={ConfirmPrice} />
           <Route path="/pay-deposit/:token" component={PayDeposit} />
           <Route path="/crew-portal/:token" component={CrewPortal} />
+          <Route path="/review/:token" component={PublicReview} />
           <Route path="/owner" component={OwnerView} />
           <Route>
             <MobileLayout>

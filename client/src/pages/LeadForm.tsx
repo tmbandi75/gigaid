@@ -38,6 +38,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, Loader2, DollarSign, Send, Check, Clock, Eye, ExternalLink } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import type { Lead, PriceConfirmation } from "@shared/schema";
+import { ReplyComposer } from "@/components/lead/ReplyComposer";
 
 const leadFormSchema = z.object({
   clientFirstName: z.string().min(1, "First name is required"),
@@ -462,6 +463,13 @@ export default function LeadForm() {
             </Button>
           </form>
         </Form>
+
+        {/* Reply Composer - only show when editing */}
+        {isEditing && existingLead && (
+          <div className="mt-6">
+            <ReplyComposer lead={existingLead} />
+          </div>
+        )}
 
         {/* Price Confirmation Section - only show when editing */}
         {isEditing && existingLead && existingLead.status !== "converted" && (

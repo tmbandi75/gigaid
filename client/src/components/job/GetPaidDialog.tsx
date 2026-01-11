@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +12,9 @@ import {
   Check,
   ExternalLink,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  Star,
+  X
 } from "lucide-react";
 import { SiVenmo, SiCashapp } from "react-icons/si";
 
@@ -24,6 +25,8 @@ interface GetPaidDialogProps {
   jobTitle: string;
   amount?: number;
   clientName?: string;
+  depositPaidCents?: number;
+  totalAmountCents?: number;
 }
 
 const paymentMethods = [
@@ -35,9 +38,9 @@ const paymentMethods = [
   { id: "card", label: "Card", icon: CreditCard, color: "text-slate-600", bg: "bg-slate-500/10" },
 ];
 
-export function GetPaidDialog({ open, onClose, jobId, jobTitle, amount, clientName }: GetPaidDialogProps) {
+export function GetPaidDialog({ open, onClose, jobId, jobTitle, amount, clientName, depositPaidCents, totalAmountCents }: GetPaidDialogProps) {
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
-  const [step, setStep] = useState<"ask" | "method" | "success">("ask");
+  const [step, setStep] = useState<"ask" | "method" | "success" | "review_sent">("ask");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -64,6 +67,31 @@ export function GetPaidDialog({ open, onClose, jobId, jobTitle, amount, clientNa
     },
   });
 
+  const requestReviewMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", `/api/jobs/${jobId}/request-review`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.smsSent || data.emailSent) {
+        setStep("review_sent");
+      } else {
+        toast({
+          title: "No contact info",
+          description: "Customer has no phone or email on file for review request.",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to send review request. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleYesPaid = () => {
     setStep("method");
   };
@@ -79,6 +107,10 @@ export function GetPaidDialog({ open, onClose, jobId, jobTitle, amount, clientNa
       description: "Payment link sending coming soon!",
     });
     onClose();
+  };
+
+  const handleRequestReview = () => {
+    requestReviewMutation.mutate();
   };
 
   const handleClose = () => {
@@ -110,11 +142,26 @@ export function GetPaidDialog({ open, onClose, jobId, jobTitle, amount, clientNa
                 {clientName && (
                   <span className="block text-sm mt-1">for {clientName}</span>
                 )}
-                {amount && amount > 0 && (
+                {totalAmountCents && totalAmountCents > 0 && depositPaidCents && depositPaidCents > 0 ? (
+                  <div className="mt-3 space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Total</span>
+                      <span>{formatAmount(totalAmountCents)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-emerald-600">
+                      <span>Deposit paid</span>
+                      <span>-{formatAmount(depositPaidCents)}</span>
+                    </div>
+                    <div className="border-t pt-1 flex justify-between font-bold text-lg">
+                      <span>Balance due</span>
+                      <span className="text-emerald-600">{formatAmount(totalAmountCents - depositPaidCents)}</span>
+                    </div>
+                  </div>
+                ) : amount && amount > 0 ? (
                   <span className="block text-2xl font-bold text-emerald-600 mt-2">
                     {formatAmount(amount)}
                   </span>
-                )}
+                ) : null}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-3 mt-4">
@@ -190,7 +237,22 @@ export function GetPaidDialog({ open, onClose, jobId, jobTitle, amount, clientNa
               </div>
               <DialogTitle className="text-center text-xl">Payment Recorded!</DialogTitle>
               <DialogDescription className="text-center">
-                {amount && amount > 0 ? (
+                {totalAmountCents && totalAmountCents > 0 && depositPaidCents && depositPaidCents > 0 ? (
+                  <div className="mt-2 space-y-1 text-left">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Balance collected</span>
+                      <span className="font-medium">{formatAmount(totalAmountCents - depositPaidCents)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>Deposit (already paid)</span>
+                      <span>{formatAmount(depositPaidCents)}</span>
+                    </div>
+                    <div className="border-t pt-1 flex justify-between font-bold text-emerald-600">
+                      <span>Total earned</span>
+                      <span>{formatAmount(totalAmountCents)}</span>
+                    </div>
+                  </div>
+                ) : amount && amount > 0 ? (
                   <>
                     <span className="text-2xl font-bold text-emerald-600 block mt-2">
                       {formatAmount(amount)}
@@ -200,6 +262,54 @@ export function GetPaidDialog({ open, onClose, jobId, jobTitle, amount, clientNa
                 ) : (
                   "This job has been marked as paid"
                 )}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 mt-4">
+              <p className="text-center text-sm text-muted-foreground">
+                Would you like to request a review from {clientName || "the customer"}?
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  className="flex-1 h-12 text-base bg-amber-500 hover:bg-amber-600"
+                  onClick={handleRequestReview}
+                  disabled={requestReviewMutation.isPending}
+                  data-testid="button-request-review"
+                >
+                  {requestReviewMutation.isPending ? (
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  ) : (
+                    <Star className="h-5 w-5 mr-2" />
+                  )}
+                  Request Review
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1 h-12 text-base"
+                  onClick={handleClose}
+                  data-testid="button-skip-review"
+                >
+                  <X className="h-5 w-5 mr-2" />
+                  Skip
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {step === "review_sent" && (
+          <>
+            <DialogHeader>
+              <div className="mx-auto p-4 rounded-full bg-amber-500/10 mb-2">
+                <Star className="h-10 w-10 text-amber-500 fill-amber-500" />
+              </div>
+              <DialogTitle className="text-center text-xl">Review Request Sent!</DialogTitle>
+              <DialogDescription className="text-center">
+                <span className="block mt-2">
+                  {clientName || "The customer"} will receive a link to leave a review.
+                </span>
+                <span className="block text-sm mt-2 text-muted-foreground">
+                  Reviews help grow your business!
+                </span>
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="mt-4">

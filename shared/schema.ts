@@ -163,6 +163,8 @@ export const jobs = pgTable("jobs", {
   providerLat: doublePrecision("provider_lat"),
   providerLng: doublePrecision("provider_lng"),
   providerLocationUpdatedAt: text("provider_location_updated_at"),
+  reviewToken: text("review_token"),
+  reviewRequestedAt: text("review_requested_at"),
   createdAt: text("created_at").notNull(),
 });
 

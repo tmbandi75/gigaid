@@ -236,6 +236,11 @@ export class DatabaseStorage implements IStorage {
     return job || undefined;
   }
 
+  async getJobByReviewToken(token: string): Promise<Job | undefined> {
+    const [job] = await db.select().from(jobs).where(eq(jobs.reviewToken, token));
+    return job || undefined;
+  }
+
   async createJob(insertJob: InsertJob): Promise<Job> {
     const id = randomUUID();
     const [job] = await db.insert(jobs).values({
