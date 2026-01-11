@@ -20,7 +20,9 @@ import {
   RefreshCw,
   Info,
   MapPin,
-  Lock
+  Lock,
+  DollarSign,
+  Wallet
 } from "lucide-react";
 import {
   Dialog,
@@ -71,6 +73,22 @@ interface DepositIntentResponse {
   paymentIntentId: string;
   amount: number;
   currency: string;
+}
+
+interface PaymentMethodInfo {
+  label: string | null;
+  instructions: string | null;
+}
+
+interface PaymentMethodsResponse {
+  paymentMethods: Record<string, PaymentMethodInfo>;
+  providerName: string;
+  totalAmountCents: number | null;
+  depositAmountCents: number | null;
+  remainderAmountCents: number;
+  remainderPaymentStatus: string | null;
+  remainderPaymentMethod: string | null;
+  remainderPaidAt: string | null;
 }
 
 interface PaymentFormProps {
@@ -299,6 +317,16 @@ export default function CustomerBookingDetail() {
     queryFn: async () => {
       const res = await fetch(`/api/bookings/by-token/${token}/detail`);
       if (!res.ok) throw new Error("Booking not found");
+      return res.json();
+    },
+    enabled: !!token,
+  });
+
+  const { data: paymentMethods } = useQuery<PaymentMethodsResponse>({
+    queryKey: ["/api/bookings/by-token", token, "payment-methods"],
+    queryFn: async () => {
+      const res = await fetch(`/api/bookings/by-token/${token}/payment-methods`);
+      if (!res.ok) throw new Error("Failed to load payment methods");
       return res.json();
     },
     enabled: !!token,
@@ -556,6 +584,94 @@ export default function CustomerBookingDetail() {
                   <span data-testid="text-reschedule-count">
                     This booking has been rescheduled {booking.lateRescheduleCount} time(s) within the late window.
                   </span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Remainder Payment Card - show when there's a remaining balance */}
+        {paymentMethods && paymentMethods.remainderAmountCents > 0 && (
+          <Card data-testid="card-remainder-payment">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Wallet className="h-5 w-5" />
+                  Remaining Balance
+                </CardTitle>
+                {paymentMethods.remainderPaymentStatus === "paid" ? (
+                  <Badge variant="default" className="bg-green-600" data-testid="badge-remainder-paid">Paid</Badge>
+                ) : (
+                  <Badge variant="outline" data-testid="badge-remainder-pending">Due at Service</Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Total Service Cost</span>
+                <span className="font-medium" data-testid="text-total-amount">
+                  {formatCurrency(paymentMethods.totalAmountCents)}
+                </span>
+              </div>
+              
+              {paymentMethods.depositAmountCents && paymentMethods.depositAmountCents > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Deposit Paid</span>
+                  <span className="text-green-600" data-testid="text-deposit-paid">
+                    -{formatCurrency(paymentMethods.depositAmountCents)}
+                  </span>
+                </div>
+              )}
+              
+              <Separator />
+              
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Amount Due</span>
+                <span className="text-xl font-semibold" data-testid="text-remainder-amount">
+                  {formatCurrency(paymentMethods.remainderAmountCents)}
+                </span>
+              </div>
+
+              {paymentMethods.remainderPaymentStatus === "paid" ? (
+                <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-4">
+                  <div className="flex items-center gap-2 text-green-600">
+                    <CheckCircle className="h-5 w-5" />
+                    <span className="font-medium">Payment received</span>
+                  </div>
+                  {paymentMethods.remainderPaymentMethod && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Paid via {paymentMethods.remainderPaymentMethod.charAt(0).toUpperCase() + paymentMethods.remainderPaymentMethod.slice(1)}
+                      {paymentMethods.remainderPaidAt && ` on ${new Date(paymentMethods.remainderPaidAt).toLocaleDateString()}`}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <DollarSign className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm">Payment Options</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Pay the remaining balance at the time of service using any of these accepted methods:
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    {Object.entries(paymentMethods.paymentMethods).map(([type, info]) => (
+                      <div key={type} className="bg-muted/50 rounded-lg p-3">
+                        <div className="font-medium text-sm capitalize">
+                          {type === "cashapp" ? "Cash App" : type === "stripe" ? "Card (Stripe)" : type}
+                        </div>
+                        {info.label && (
+                          <div className="text-sm text-muted-foreground">{info.label}</div>
+                        )}
+                        {info.instructions && (
+                          <div className="text-sm text-muted-foreground">{info.instructions}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </CardContent>

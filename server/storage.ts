@@ -270,6 +270,11 @@ export class MemStorage implements IStorage {
       paidAt: null,
       reminder24hSent: false,
       reminder2hSent: false,
+      customerLat: null,
+      customerLng: null,
+      providerLat: null,
+      providerLng: null,
+      providerLocationUpdatedAt: null,
     };
 
     const jobs: Job[] = [
@@ -802,6 +807,11 @@ export class MemStorage implements IStorage {
       paidAt: insertJob.paidAt || null,
       reminder24hSent: insertJob.reminder24hSent || false,
       reminder2hSent: insertJob.reminder2hSent || false,
+      customerLat: insertJob.customerLat || null,
+      customerLng: insertJob.customerLng || null,
+      providerLat: insertJob.providerLat || null,
+      providerLng: insertJob.providerLng || null,
+      providerLocationUpdatedAt: insertJob.providerLocationUpdatedAt || null,
       createdAt: new Date().toISOString(),
     };
     this.jobs.set(id, job);
@@ -1082,6 +1092,15 @@ export class MemStorage implements IStorage {
       stripeTransferId: null,
       // Customer confirmation token
       confirmationToken: randomUUID(),
+      // Location coordinates
+      customerLat: insertRequest.customerLat || null,
+      customerLng: insertRequest.customerLng || null,
+      // Remainder payment fields
+      totalAmountCents: insertRequest.totalAmountCents || null,
+      remainderPaymentStatus: "pending",
+      remainderPaymentMethod: null,
+      remainderPaidAt: null,
+      remainderNotes: null,
     };
     this.bookingRequests.set(id, request);
     return request;

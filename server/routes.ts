@@ -3670,23 +3670,28 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Booking not found" });
       }
 
-      // Get the provider's payment methods
+      // Get the provider's info
       const provider = await storage.getUser(booking.userId);
       if (!provider) {
         return res.status(404).json({ error: "Provider not found" });
       }
 
+      // Get the provider's payment methods from the userPaymentMethods table
+      const providerPaymentMethods = await storage.getUserPaymentMethods(booking.userId);
+      const enabledMethods = providerPaymentMethods.filter(m => m.isEnabled);
+
+      // Build payment methods object
+      const paymentMethodsMap: Record<string, { label: string | null; instructions: string | null }> = {};
+      for (const method of enabledMethods) {
+        paymentMethodsMap[method.type] = {
+          label: method.label,
+          instructions: method.instructions,
+        };
+      }
+
       res.json({
-        paymentMethods: {
-          zelle: provider.paymentMethodZelle || false,
-          venmo: provider.paymentMethodVenmo || false,
-          cashapp: provider.paymentMethodCashapp || false,
-          cash: provider.paymentMethodCash || false,
-          check: provider.paymentMethodCheck || false,
-          stripe: provider.paymentMethodStripe || false,
-        },
-        paymentInstructions: provider.paymentInstructions || null,
-        providerName: provider.fullName || provider.businessName || provider.username,
+        paymentMethods: paymentMethodsMap,
+        providerName: provider.businessName || provider.name || provider.username,
         totalAmountCents: booking.totalAmountCents,
         depositAmountCents: booking.depositAmountCents,
         remainderAmountCents: (booking.totalAmountCents || 0) - (booking.depositAmountCents || 0),
