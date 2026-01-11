@@ -44,3 +44,4 @@ integrations = ["javascript_object_storage:2.0.0", "stripe:2.0.0", "twilio:1.0.0
 [userenv]
 
 [userenv.shared]
+VITE_GOOGLE_MAPS_API_KEY = "AIzaSyAHlKXFXhNBL1i3eQl-QGkTGuXFCoIK-wM"
