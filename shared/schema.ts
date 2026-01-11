@@ -175,14 +175,22 @@ export type InsertJob = z.infer<typeof insertJobSchema>;
 export type Job = typeof jobs.$inferSelect;
 
 // Lead Status
-export const leadStatuses = ["new", "contacted", "engaged", "converted", "cold"] as const;
+export const leadStatuses = ["new", "response_sent", "engaged", "price_confirmed", "cold", "lost"] as const;
 export type LeadStatus = (typeof leadStatuses)[number];
 
 // Lead follow-up status for response tracking
 export const leadFollowUpStatuses = ["none", "pending_check", "replied", "waiting", "no_response"] as const;
 export type LeadFollowUpStatus = (typeof leadFollowUpStatuses)[number];
 
-// Lead sources
+// Lead sources (platform types)
+export const leadSourceTypes = [
+  "craigslist", "facebook", "thumbtack", "instagram", "nextdoor", 
+  "yelp", "angi", "homeadvisor", "taskrabbit", "google", 
+  "whatsapp", "messenger", "imessage", "sms", "email", "manual", "other"
+] as const;
+export type LeadSourceType = (typeof leadSourceTypes)[number];
+
+// Lead sources (legacy - keeping for compatibility)
 export const leadSources = ["manual", "booking_form", "referral", "social"] as const;
 export type LeadSource = (typeof leadSources)[number];
 
@@ -208,6 +216,10 @@ export const leads = pgTable("leads", {
   responseCopiedAt: text("response_copied_at"),
   followUpStatus: text("follow_up_status").default("none"), // none, pending_check, replied, waiting, no_response
   followUpSnoozedUntil: text("follow_up_snoozed_until"),
+  
+  // Source link fields - URL to original post/conversation
+  sourceType: text("source_type"), // craigslist, facebook, thumbtack, etc.
+  sourceUrl: text("source_url"), // Full URL to original post
 });
 
 export const insertLeadSchema = createInsertSchema(leads).omit({
