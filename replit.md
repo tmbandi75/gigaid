@@ -146,6 +146,43 @@ npx tsx server/tests/deposit.test.ts
 - `client/src/pages/CustomerBookingDetail.tsx` - Customer deposit/confirmation UI
 - `client/src/pages/BookingRequests.tsx` - Provider booking management with deposit info
 
+## Price Confirmation Feature
+
+GigAid includes a lightweight price confirmation workflow that sits between Leads and Jobs. This allows service providers to get client approval on pricing before creating a scheduled job.
+
+### How It Works
+
+1. **Create Confirmation**: From a Lead's detail page, tap "Send Price Confirmation"
+2. **Enter Price**: Provider enters the agreed price and optional notes
+3. **Client Receives Link**: SMS and/or email sent with a confirmation link
+4. **Client Confirms**: One-tap confirmation on a mobile-friendly public page
+5. **Auto Job Creation**: System automatically creates a Job and marks Lead as converted
+
+### API Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/price-confirmations` | List all price confirmations for user |
+| `POST /api/price-confirmations` | Create a new price confirmation |
+| `POST /api/price-confirmations/:id/send` | Send confirmation to client (SMS/email) |
+| `GET /api/public/price-confirmation/:token` | Public view for client (marks as "viewed") |
+| `POST /api/public/price-confirmation/:token/confirm` | Client confirms, creates Job |
+
+### Statuses
+
+- **draft**: Created but not yet sent
+- **sent**: Sent to client, awaiting response
+- **viewed**: Client has opened the link
+- **confirmed**: Client approved, Job created
+- **expired**: No longer valid
+
+### Key Files
+
+- `shared/schema.ts` - `priceConfirmations` table definition
+- `server/routes.ts` - API endpoints (around lines 362-650)
+- `client/src/pages/LeadForm.tsx` - Price confirmation section on Lead detail
+- `client/src/pages/ConfirmPrice.tsx` - Public confirmation page for clients
+
 ## Google Maps Configuration
 
 GigAid uses Google Maps for job location tracking and geocoding.
