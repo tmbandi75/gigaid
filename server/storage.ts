@@ -249,7 +249,7 @@ export class MemStorage implements IStorage {
       stripeConnectStatus: "not_connected",
       stripeConnectOnboardedAt: null,
       // Deposit settings
-      depositEnabled: false,
+      depositEnabled: true,
       depositType: "percent",
       depositValue: 50,
       lateRescheduleWindowHours: 24,
@@ -552,6 +552,43 @@ export class MemStorage implements IStorage {
       },
     ];
     reviews.forEach(r => this.reviews.set(r.id, r));
+
+    // Seed demo booking requests with confirmation tokens for testing
+    const seedBookingRequests: BookingRequest[] = [
+      {
+        id: "booking-1",
+        userId,
+        clientName: "Test Customer",
+        clientPhone: "(555) 999-8888",
+        clientEmail: "test.customer@email.com",
+        serviceType: "plumbing",
+        preferredDate: tomorrow.toISOString().split('T')[0],
+        preferredTime: "10:00",
+        description: "Fix leaky faucet in kitchen",
+        location: "123 Test Street, San Francisco, CA 94102",
+        status: "approved",
+        confirmationToken: "test-booking-token",
+        jobStartAt: tomorrow.toISOString(),
+        jobEndAt: new Date(tomorrow.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+        depositAmountCents: 5000,
+        depositCurrency: "usd",
+        depositStatus: "none",
+        completionStatus: "pending",
+        stripePaymentIntentId: null,
+        stripeChargeId: null,
+        stripeTransferId: null,
+        autoReleaseAt: null,
+        lateRescheduleCount: 0,
+        lastRescheduleAt: null,
+        retainedAmountCents: 0,
+        rolledAmountCents: 0,
+        waiveRescheduleFee: false,
+        customerLat: 37.7749,
+        customerLng: -122.4194,
+        createdAt: today.toISOString(),
+      },
+    ];
+    seedBookingRequests.forEach(b => this.bookingRequests.set(b.id, b));
   }
 
   // User methods
