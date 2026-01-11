@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -5,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -23,11 +24,20 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, DollarSign, Send, Check, Clock, Eye } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
-import type { Lead } from "@shared/schema";
+import type { Lead, PriceConfirmation } from "@shared/schema";
 
 const leadFormSchema = z.object({
   clientFirstName: z.string().min(1, "First name is required"),
@@ -64,9 +74,18 @@ export default function LeadForm() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [priceDialogOpen, setPriceDialogOpen] = useState(false);
+  const [priceAmount, setPriceAmount] = useState("");
+  const [priceNotes, setPriceNotes] = useState("");
 
   const { data: existingLead, isLoading: isLoadingLead } = useQuery<Lead>({
     queryKey: ["/api/leads", id],
+    enabled: !!isEditing,
+  });
+
+  // Query for existing price confirmation
+  const { data: activePriceConfirmation, isLoading: isLoadingPC } = useQuery<PriceConfirmation | null>({
+    queryKey: ["/api/leads", id, "active-price-confirmation"],
     enabled: !!isEditing,
   });
 
@@ -138,6 +157,72 @@ export default function LeadForm() {
     },
     onError: () => {
       toast({ title: "Failed to update lead", variant: "destructive" });
+    },
+  });
+
+  // Create and send price confirmation
+  const sendPriceConfirmationMutation = useMutation({
+    mutationFn: async () => {
+      // Convert dollars to cents
+      const priceInCents = Math.round(parseFloat(priceAmount) * 100);
+      
+      // Create the price confirmation
+      const createResponse = await apiRequest("POST", "/api/price-confirmations", {
+        leadId: id,
+        serviceType: existingLead?.serviceType,
+        agreedPrice: priceInCents,
+        notes: priceNotes || null,
+      });
+      
+      const confirmation = await createResponse.json();
+      
+      // Send it immediately
+      const sendResponse = await apiRequest("POST", `/api/price-confirmations/${confirmation.id}/send`);
+      return sendResponse.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads", id, "active-price-confirmation"] });
+      setPriceDialogOpen(false);
+      setPriceAmount("");
+      setPriceNotes("");
+      
+      const sentVia = [];
+      if (data.smsSent) sentVia.push("SMS");
+      if (data.emailSent) sentVia.push("Email");
+      
+      toast({ 
+        title: "Price Confirmation Sent",
+        description: sentVia.length > 0 
+          ? `Sent via ${sentVia.join(" and ")}`
+          : "Link created - share it with your client",
+      });
+    },
+    onError: () => {
+      toast({ title: "Failed to send price confirmation", variant: "destructive" });
+    },
+  });
+
+  // Resend existing confirmation
+  const resendConfirmationMutation = useMutation({
+    mutationFn: async () => {
+      if (!activePriceConfirmation) throw new Error("No confirmation to resend");
+      const response = await apiRequest("POST", `/api/price-confirmations/${activePriceConfirmation.id}/send`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads", id, "active-price-confirmation"] });
+      const sentVia = [];
+      if (data.smsSent) sentVia.push("SMS");
+      if (data.emailSent) sentVia.push("Email");
+      toast({ 
+        title: "Price Confirmation Resent",
+        description: sentVia.length > 0 
+          ? `Sent via ${sentVia.join(" and ")}`
+          : "Link refreshed",
+      });
+    },
+    onError: () => {
+      toast({ title: "Failed to resend confirmation", variant: "destructive" });
     },
   });
 
@@ -350,6 +435,160 @@ export default function LeadForm() {
             </Button>
           </form>
         </Form>
+
+        {/* Price Confirmation Section - only show when editing */}
+        {isEditing && existingLead && existingLead.status !== "converted" && (
+          <Card className="mt-6">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <DollarSign className="h-5 w-5" />
+                Price Confirmation
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {isLoadingPC ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : activePriceConfirmation ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Status</span>
+                    <Badge 
+                      variant={
+                        activePriceConfirmation.status === "confirmed" ? "default" :
+                        activePriceConfirmation.status === "viewed" ? "secondary" :
+                        activePriceConfirmation.status === "sent" ? "outline" :
+                        "outline"
+                      }
+                      data-testid="badge-pc-status"
+                    >
+                      {activePriceConfirmation.status === "confirmed" && <Check className="h-3 w-3 mr-1" />}
+                      {activePriceConfirmation.status === "viewed" && <Eye className="h-3 w-3 mr-1" />}
+                      {activePriceConfirmation.status === "sent" && <Clock className="h-3 w-3 mr-1" />}
+                      {activePriceConfirmation.status.charAt(0).toUpperCase() + activePriceConfirmation.status.slice(1)}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Price</span>
+                    <span className="font-medium" data-testid="text-pc-price">
+                      ${(activePriceConfirmation.agreedPrice / 100).toFixed(2)}
+                    </span>
+                  </div>
+                  {activePriceConfirmation.status !== "confirmed" && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => resendConfirmationMutation.mutate()}
+                      disabled={resendConfirmationMutation.isPending}
+                      data-testid="button-resend-pc"
+                    >
+                      {resendConfirmationMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4 mr-2" />
+                      )}
+                      Resend to Client
+                    </Button>
+                  )}
+                  {activePriceConfirmation.status === "confirmed" && activePriceConfirmation.convertedJobId && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => navigate(`/jobs/${activePriceConfirmation.convertedJobId}`)}
+                      data-testid="button-view-job"
+                    >
+                      View Created Job
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Send a price quote to {existingLead.clientName} for quick approval
+                  </p>
+                  <Button
+                    type="button"
+                    variant="default"
+                    className="w-full"
+                    onClick={() => setPriceDialogOpen(true)}
+                    data-testid="button-send-price"
+                  >
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Send Price Confirmation
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Price Confirmation Dialog */}
+        <Dialog open={priceDialogOpen} onOpenChange={setPriceDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Send Price Confirmation</DialogTitle>
+              <DialogDescription>
+                Enter the agreed price for {existingLead?.clientName}. They'll receive a link to confirm.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="price-input">Price</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input
+                    id="price-input"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    className="pl-7"
+                    value={priceAmount}
+                    onChange={(e) => setPriceAmount(e.target.value)}
+                    data-testid="input-price-amount"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="price-notes">Notes (optional)</label>
+                <Textarea
+                  id="price-notes"
+                  placeholder="Any details about the service..."
+                  className="resize-none"
+                  value={priceNotes}
+                  onChange={(e) => setPriceNotes(e.target.value)}
+                  data-testid="input-price-notes"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setPriceDialogOpen(false)}
+                data-testid="button-cancel-price"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={() => sendPriceConfirmationMutation.mutate()}
+                disabled={!priceAmount || parseFloat(priceAmount) <= 0 || sendPriceConfirmationMutation.isPending}
+                data-testid="button-confirm-send-price"
+              >
+                {sendPriceConfirmationMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
+                Send to Client
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
