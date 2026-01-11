@@ -461,7 +461,10 @@ export async function registerRoutes(
 
   app.post("/api/invoices/:id/send", async (req, res) => {
     try {
-      const { sendEmail: shouldSendEmail = true, sendSms: shouldSendSms = true } = req.body;
+      // Safely parse request body with defaults
+      const body = req.body || {};
+      const shouldSendEmail = body.sendEmail !== false;
+      const shouldSendSms = body.sendSms !== false;
       
       const existingInvoice = await storage.getInvoice(req.params.id);
       if (!existingInvoice) {
@@ -493,6 +496,8 @@ export async function registerRoutes(
 
       let emailSentAt = existingInvoice.emailSentAt;
       let smsSentAt = existingInvoice.smsSentAt;
+      let emailSentNow = false;
+      let smsSentNow = false;
 
       // Send email if client has email and email sending is requested
       if (shouldSendEmail && existingInvoice.clientEmail) {
@@ -514,6 +519,7 @@ export async function registerRoutes(
             `,
           });
           emailSentAt = new Date().toISOString();
+          emailSentNow = true;
         } catch (emailError) {
           console.error("Failed to send invoice email:", emailError);
         }
@@ -527,6 +533,7 @@ export async function registerRoutes(
             `Invoice ${existingInvoice.invoiceNumber} for ${formattedAmount} from ${businessName}. View & pay: ${invoiceUrl}`
           );
           smsSentAt = new Date().toISOString();
+          smsSentNow = true;
         } catch (smsError) {
           console.error("Failed to send invoice SMS:", smsError);
         }
@@ -544,8 +551,8 @@ export async function registerRoutes(
       res.json({
         ...invoice,
         invoiceUrl,
-        emailSent: !!emailSentAt,
-        smsSent: !!smsSentAt,
+        emailSent: emailSentNow,
+        smsSent: smsSentNow,
       });
     } catch (error) {
       console.error("Invoice send error:", error);

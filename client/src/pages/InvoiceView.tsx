@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -46,6 +48,7 @@ import {
   ExternalLink,
   Undo2,
   MessageSquare,
+  Link,
 } from "lucide-react";
 import type { Invoice } from "@shared/schema";
 
@@ -141,6 +144,11 @@ export default function InvoiceView() {
   const [copied, setCopied] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showRevertDialog, setShowRevertDialog] = useState(false);
+  const [showSendDialog, setShowSendDialog] = useState(false);
+  const [sendViaEmail, setSendViaEmail] = useState(true);
+  const [sendViaSms, setSendViaSms] = useState(true);
+  const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   const { sendText } = useSendText();
 
   const { data: invoice, isLoading } = useQuery<Invoice>({
@@ -154,13 +162,28 @@ export default function InvoiceView() {
   });
 
   const sendMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", `/api/invoices/${id}/send`, {});
+    mutationFn: async ({ sendEmail, sendSms }: { sendEmail: boolean; sendSms: boolean }) => {
+      const response = await apiRequest("POST", `/api/invoices/${id}/send`, { sendEmail, sendSms });
+      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
       queryClient.invalidateQueries({ queryKey: ["/api/invoices", id] });
-      toast({ title: "Invoice sent successfully!" });
+      setShowSendDialog(false);
+      
+      const sentMethods: string[] = [];
+      if (data.emailSent) sentMethods.push("email");
+      if (data.smsSent) sentMethods.push("SMS");
+      
+      if (sentMethods.length > 0) {
+        toast({ title: `Invoice sent via ${sentMethods.join(" and ")}!` });
+      } else {
+        toast({ title: "Invoice status updated!" });
+      }
+      
+      if (data.invoiceUrl) {
+        setInvoiceUrl(data.invoiceUrl);
+      }
     },
     onError: () => {
       toast({ title: "Failed to send invoice", variant: "destructive" });
@@ -479,18 +502,13 @@ export default function InvoiceView() {
         <div className="space-y-3 pt-2">
           {invoice.status === "draft" && (
             <Button
-              onClick={() => sendMutation.mutate()}
-              disabled={sendMutation.isPending}
+              onClick={() => setShowSendDialog(true)}
               className="w-full h-14 text-base font-semibold bg-gradient-to-r from-blue-500 to-cyan-500 shadow-lg shadow-blue-500/20 rounded-xl"
               data-testid="button-send-invoice"
             >
-              {sendMutation.isPending ? (
-                <Loader2 className="h-5 w-5 animate-spin mr-2" />
-              ) : (
-                <div className="h-8 w-8 rounded-lg bg-white/20 flex items-center justify-center mr-3">
-                  <Send className="h-4 w-4" />
-                </div>
-              )}
+              <div className="h-8 w-8 rounded-lg bg-white/20 flex items-center justify-center mr-3">
+                <Send className="h-4 w-4" />
+              </div>
               Send Invoice to Client
             </Button>
           )}
@@ -509,16 +527,11 @@ export default function InvoiceView() {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => sendMutation.mutate()}
-                disabled={sendMutation.isPending}
+                onClick={() => setShowSendDialog(true)}
                 className="w-full h-12 rounded-xl"
                 data-testid="button-resend"
               >
-                {sendMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <Send className="h-4 w-4 mr-2" />
-                )}
+                <Send className="h-4 w-4 mr-2" />
                 Resend Invoice
               </Button>
             </>
@@ -638,6 +651,100 @@ export default function InvoiceView() {
                 <Undo2 className="h-4 w-4 mr-2" />
               )}
               Revert to Unpaid
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showSendDialog} onOpenChange={setShowSendDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                <Send className="h-5 w-5 text-blue-600" />
+              </div>
+              Send Invoice
+            </DialogTitle>
+            <DialogDescription>
+              Choose how to send invoice #{invoice.invoiceNumber} to {invoice.clientName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="flex items-center space-x-3">
+              <Checkbox 
+                id="sendEmail" 
+                checked={sendViaEmail} 
+                onCheckedChange={(checked) => setSendViaEmail(checked === true)}
+                disabled={!invoice.clientEmail}
+                data-testid="checkbox-send-email"
+              />
+              <Label 
+                htmlFor="sendEmail" 
+                className={`flex items-center gap-2 ${!invoice.clientEmail ? 'text-muted-foreground' : ''}`}
+              >
+                <Mail className="h-4 w-4" />
+                Email {invoice.clientEmail ? `(${invoice.clientEmail})` : '(No email on file)'}
+              </Label>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Checkbox 
+                id="sendSms" 
+                checked={sendViaSms} 
+                onCheckedChange={(checked) => setSendViaSms(checked === true)}
+                disabled={!invoice.clientPhone}
+                data-testid="checkbox-send-sms"
+              />
+              <Label 
+                htmlFor="sendSms" 
+                className={`flex items-center gap-2 ${!invoice.clientPhone ? 'text-muted-foreground' : ''}`}
+              >
+                <Phone className="h-4 w-4" />
+                SMS {invoice.clientPhone ? `(${invoice.clientPhone})` : '(No phone on file)'}
+              </Label>
+            </div>
+
+            {invoiceUrl && (
+              <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+                <p className="text-sm font-medium flex items-center gap-2 mb-2">
+                  <Link className="h-4 w-4" />
+                  Invoice Link
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-xs bg-background px-2 py-1 rounded border truncate">
+                    {invoiceUrl}
+                  </code>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText(invoiceUrl);
+                      setLinkCopied(true);
+                      setTimeout(() => setLinkCopied(false), 2000);
+                    }}
+                    data-testid="button-copy-link"
+                  >
+                    {linkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowSendDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => sendMutation.mutate({ sendEmail: sendViaEmail, sendSms: sendViaSms })}
+              disabled={sendMutation.isPending || (!sendViaEmail && !sendViaSms)}
+              className="bg-gradient-to-r from-blue-500 to-cyan-500"
+              data-testid="button-confirm-send"
+            >
+              {sendMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              Send Invoice
             </Button>
           </DialogFooter>
         </DialogContent>
