@@ -4,11 +4,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   Form,
   FormControl,
@@ -20,7 +20,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useUpload } from "@/hooks/use-upload";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Camera, Loader2 } from "lucide-react";
+import { ArrowLeft, Camera, Loader2, User, Mail, Phone, Building2, MapPin, FileText, Sparkles } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { BioEditor } from "@/components/settings/BioEditor";
 
@@ -155,9 +155,25 @@ export default function Profile() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col min-h-full">
-        <TopBar title="Profile" showActions={false} />
-        <div className="flex-1 flex items-center justify-center">
+      <div className="min-h-screen bg-background">
+        <div className="relative overflow-hidden bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 text-white px-4 pt-6 pb-20">
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
+          </div>
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/more")}
+              className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back
+            </Button>
+            <h1 className="text-2xl font-bold">Profile</h1>
+          </div>
+        </div>
+        <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       </div>
@@ -165,44 +181,51 @@ export default function Profile() {
   }
 
   return (
-    <div className="flex flex-col min-h-full" data-testid="page-profile">
-      <TopBar title="Profile" showActions={false} />
+    <div className="min-h-screen bg-background pb-24" data-testid="page-profile">
+      <div className="relative overflow-hidden bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 text-white px-4 pt-6 pb-24">
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 -left-10 w-32 h-32 bg-slate-400/10 rounded-full blur-2xl" />
+        </div>
+        <div className="relative">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/more")}
+            className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
+            data-testid="button-back"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+          <h1 className="text-2xl font-bold">Profile</h1>
+          <p className="text-slate-300/80 mt-1">Manage your personal information</p>
+        </div>
+      </div>
 
-      <div className="px-4 py-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate("/more")}
-          className="mb-4 -ml-2"
-          data-testid="button-back"
-        >
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Back
-        </Button>
-
-        <Card className="mb-6">
+      <div className="px-4 -mt-16 relative z-10">
+        <Card className="border-0 shadow-lg mb-6">
           <CardContent className="pt-6 flex flex-col items-center">
             <div className="relative mb-4">
-              <Avatar className="h-24 w-24">
+              <Avatar className="h-28 w-28 ring-4 ring-background shadow-lg">
                 {currentPhoto ? (
                   <AvatarImage src={currentPhoto} alt="Profile" />
                 ) : null}
-                <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
+                <AvatarFallback className="bg-gradient-to-br from-primary to-violet-600 text-white text-3xl font-semibold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
               <Button
                 size="icon"
-                variant="secondary"
-                className="absolute bottom-0 right-0 h-8 w-8 rounded-full"
+                className="absolute bottom-0 right-0 h-10 w-10 rounded-full shadow-md bg-primary"
                 onClick={handlePhotoClick}
                 disabled={isUploading}
                 data-testid="button-change-photo"
               >
                 {isUploading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
-                  <Camera className="h-4 w-4" />
+                  <Camera className="h-5 w-5" />
                 )}
               </Button>
               <input
@@ -214,28 +237,76 @@ export default function Profile() {
                 data-testid="input-photo"
               />
             </div>
-            <p className="text-sm text-muted-foreground">
-              Tap the camera icon to change your photo
-            </p>
+            <h2 className="font-semibold text-lg">{displayName}</h2>
+            {profile?.businessName && (
+              <p className="text-sm text-muted-foreground">{profile.businessName}</p>
+            )}
+            <Badge variant="secondary" className="mt-2">Free Plan</Badge>
           </CardContent>
         </Card>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <Card>
-              <CardContent className="pt-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <Card className="border-0 shadow-md">
+              <CardContent className="pt-6">
+                <h3 className="font-medium mb-4 flex items-center gap-2 text-sm text-muted-foreground uppercase tracking-wide">
+                  <User className="h-4 w-4" />
+                  Personal Info
+                </h3>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="firstName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>First Name</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="First"
+                              {...field}
+                              data-testid="input-first-name"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="lastName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Last Name</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Last"
+                              {...field}
+                              data-testid="input-last-name"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
                   <FormField
                     control={form.control}
-                    name="firstName"
+                    name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>First Name</FormLabel>
+                        <FormLabel className="flex items-center gap-2">
+                          <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                          Email
+                        </FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="First"
+                            type="email"
+                            placeholder="your@email.com"
                             {...field}
-                            data-testid="input-first-name"
+                            data-testid="input-email"
                           />
                         </FormControl>
                         <FormMessage />
@@ -245,15 +316,19 @@ export default function Profile() {
 
                   <FormField
                     control={form.control}
-                    name="lastName"
+                    name="phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Last Name</FormLabel>
+                        <FormLabel className="flex items-center gap-2">
+                          <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                          Phone Number
+                        </FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="Last"
-                            {...field}
-                            data-testid="input-last-name"
+                          <PhoneInput
+                            id="phone"
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            data-testid="input-phone"
                           />
                         </FormControl>
                         <FormMessage />
@@ -261,88 +336,67 @@ export default function Profile() {
                     )}
                   />
                 </div>
-
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="email"
-                          placeholder="your@email.com"
-                          {...field}
-                          data-testid="input-email"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="companyName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Company Name</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Your Company Name"
-                          {...field}
-                          data-testid="input-company-name"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone Number</FormLabel>
-                      <FormControl>
-                        <PhoneInput
-                          id="phone"
-                          value={field.value || ""}
-                          onChange={field.onChange}
-                          data-testid="input-phone"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="serviceArea"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Service Area</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="e.g., Los Angeles, Orange County, San Diego"
-                          {...field}
-                          data-testid="input-service-area"
-                        />
-                      </FormControl>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Cities, neighborhoods, or regions you serve
-                      </p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-0 shadow-md">
               <CardContent className="pt-6">
+                <h3 className="font-medium mb-4 flex items-center gap-2 text-sm text-muted-foreground uppercase tracking-wide">
+                  <Building2 className="h-4 w-4" />
+                  Business Info
+                </h3>
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="companyName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company Name</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Your Company Name"
+                            {...field}
+                            data-testid="input-company-name"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="serviceArea"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                          Service Area
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g., Los Angeles, Orange County"
+                            {...field}
+                            data-testid="input-service-area"
+                          />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Cities, neighborhoods, or regions you serve
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-md">
+              <CardContent className="pt-6">
+                <h3 className="font-medium mb-4 flex items-center gap-2 text-sm text-muted-foreground uppercase tracking-wide">
+                  <FileText className="h-4 w-4" />
+                  About You
+                </h3>
                 <BioEditor
                   value={form.watch("bio") || ""}
                   onChange={(bio) => form.setValue("bio", bio)}
@@ -354,13 +408,13 @@ export default function Profile() {
 
             <Button
               type="submit"
-              className="w-full"
+              className="w-full h-12 text-base"
               disabled={updateMutation.isPending}
               data-testid="button-save"
             >
               {updateMutation.isPending ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                   Saving...
                 </>
               ) : (

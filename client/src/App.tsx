@@ -21,6 +21,7 @@ import Settings from "@/pages/Settings";
 import More from "@/pages/More";
 import Profile from "@/pages/Profile";
 import Reviews from "@/pages/Reviews";
+import Referrals from "@/pages/Referrals";
 import HelpSupport from "@/pages/HelpSupport";
 import AITools from "@/pages/AITools";
 import PublicBooking from "@/pages/PublicBooking";
@@ -52,6 +53,7 @@ function Router() {
       <Route path="/more" component={More} />
       <Route path="/profile" component={Profile} />
       <Route path="/reviews" component={Reviews} />
+      <Route path="/referrals" component={Referrals} />
       <Route path="/help" component={HelpSupport} />
       <Route path="/ai-tools" component={AITools} />
       <Route path="/booking-requests" component={BookingRequests} />

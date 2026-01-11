@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLocation } from "wouter";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -22,8 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { TopBar } from "@/components/layout/TopBar";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Calendar,
   Clock,
@@ -31,17 +31,18 @@ import {
   Phone,
   Mail,
   CreditCard,
-  Shield,
-  RefreshCw,
   Loader2,
   ChevronRight,
   User,
   CheckCircle,
   AlertCircle,
-  XCircle,
   Copy,
   Wallet,
-  DollarSign,
+  ArrowLeft,
+  CalendarCheck,
+  CalendarClock,
+  XCircle,
+  Inbox,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -75,11 +76,11 @@ interface BookingRequest {
 }
 
 const statusFilters = [
-  { value: "all", label: "All" },
-  { value: "pending", label: "Pending" },
-  { value: "accepted", label: "Accepted" },
-  { value: "completed", label: "Completed" },
-  { value: "cancelled", label: "Cancelled" },
+  { value: "all", label: "All", icon: Inbox },
+  { value: "pending", label: "Pending", icon: CalendarClock },
+  { value: "accepted", label: "Accepted", icon: CalendarCheck },
+  { value: "completed", label: "Completed", icon: CheckCircle },
+  { value: "cancelled", label: "Cancelled", icon: XCircle },
 ];
 
 const depositStatusConfig: Record<string, { color: string; label: string }> = {
@@ -92,8 +93,8 @@ const depositStatusConfig: Record<string, { color: string; label: string }> = {
 };
 
 const completionStatusConfig: Record<string, { color: string; label: string; icon: typeof CheckCircle }> = {
-  scheduled: { color: "bg-muted text-muted-foreground", label: "Scheduled", icon: Calendar },
-  awaiting_confirmation: { color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400", label: "Awaiting Confirmation", icon: Clock },
+  scheduled: { color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400", label: "Scheduled", icon: Calendar },
+  awaiting_confirmation: { color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400", label: "Awaiting", icon: Clock },
   completed: { color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400", label: "Completed", icon: CheckCircle },
   dispute: { color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400", label: "Dispute", icon: AlertCircle },
 };
@@ -109,6 +110,7 @@ const paymentMethodOptions = [
 ];
 
 export default function BookingRequests() {
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState("all");
@@ -198,10 +200,32 @@ export default function BookingRequests() {
     return b.status === statusFilter;
   }) || [];
 
+  const pendingCount = bookings?.filter(b => b.status === "pending").length || 0;
+  const acceptedCount = bookings?.filter(b => b.status === "accepted").length || 0;
+
   if (isLoading) {
     return (
-      <div className="min-h-screen">
-        <TopBar title="Booking Requests" />
+      <div className="min-h-screen bg-background">
+        <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 text-white px-4 pt-6 pb-8">
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 -left-10 w-32 h-32 bg-emerald-400/10 rounded-full blur-2xl" />
+          </div>
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/more")}
+              className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
+              data-testid="button-back"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back
+            </Button>
+            <h1 className="text-2xl font-bold">Booking Requests</h1>
+            <p className="text-emerald-100/80 mt-1">Manage customer bookings</p>
+          </div>
+        </div>
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -210,31 +234,82 @@ export default function BookingRequests() {
   }
 
   return (
-    <div className="min-h-screen pb-20">
-      <TopBar title="Booking Requests" />
-      
-      <div className="p-4 space-y-4">
-        {/* Filter */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2">
-          {statusFilters.map((filter) => (
-            <Button
-              key={filter.value}
-              variant={statusFilter === filter.value ? "default" : "outline"}
-              size="sm"
-              onClick={() => setStatusFilter(filter.value)}
-              data-testid={`filter-${filter.value}`}
-            >
-              {filter.label}
-            </Button>
-          ))}
+    <div className="min-h-screen bg-background pb-20" data-testid="page-booking-requests">
+      <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 text-white px-4 pt-6 pb-8">
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 -left-10 w-32 h-32 bg-emerald-400/10 rounded-full blur-2xl" />
         </div>
+        <div className="relative">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/more")}
+            className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
+            data-testid="button-back"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+          <h1 className="text-2xl font-bold">Booking Requests</h1>
+          <p className="text-emerald-100/80 mt-1">Manage customer bookings</p>
+          
+          <div className="flex gap-6 mt-6">
+            <div className="text-center">
+              <p className="text-3xl font-bold">{pendingCount}</p>
+              <p className="text-xs text-emerald-100/70 uppercase tracking-wide">Pending</p>
+            </div>
+            <div className="w-px bg-white/20" />
+            <div className="text-center">
+              <p className="text-3xl font-bold">{acceptedCount}</p>
+              <p className="text-xs text-emerald-100/70 uppercase tracking-wide">Accepted</p>
+            </div>
+            <div className="w-px bg-white/20" />
+            <div className="text-center">
+              <p className="text-3xl font-bold">{bookings?.length || 0}</p>
+              <p className="text-xs text-emerald-100/70 uppercase tracking-wide">Total</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="px-4 -mt-4 relative z-10">
+        <Card className="border-0 shadow-lg mb-4">
+          <CardContent className="p-2">
+            <div className="flex gap-1 overflow-x-auto">
+              {statusFilters.map((filter) => {
+                const Icon = filter.icon;
+                const isActive = statusFilter === filter.value;
+                return (
+                  <Button
+                    key={filter.value}
+                    variant={isActive ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setStatusFilter(filter.value)}
+                    className={`flex-shrink-0 gap-1.5 ${isActive ? "" : "text-muted-foreground"}`}
+                    data-testid={`filter-${filter.value}`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {filter.label}
+                  </Button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Booking List */}
         {filteredBookings.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No booking requests found</p>
+          <Card className="border-0 shadow-md">
+            <CardContent className="py-16 text-center">
+              <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+                <Calendar className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <h3 className="font-semibold text-lg mb-2">No bookings found</h3>
+              <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+                {statusFilter === "all" 
+                  ? "When customers book your services, they'll appear here"
+                  : `No ${statusFilter} bookings at the moment`}
+              </p>
             </CardContent>
           </Card>
         ) : (
@@ -247,46 +322,51 @@ export default function BookingRequests() {
               return (
                 <Card
                   key={booking.id}
-                  className="cursor-pointer hover-elevate"
+                  className="border-0 shadow-md cursor-pointer hover-elevate overflow-hidden"
                   onClick={() => setSelectedBooking(booking)}
                   data-testid={`booking-card-${booking.id}`}
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold truncate">{booking.clientName}</h3>
-                          <Badge variant="secondary" className={completionConfig.color}>
-                            <CompletionIcon className="h-3 w-3 mr-1" />
-                            {completionConfig.label}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground capitalize mb-2">
-                          {booking.serviceType}
-                        </p>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {formatDate(booking.preferredDate)}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {formatTime(booking.preferredTime)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        {booking.depositAmountCents && booking.depositAmountCents > 0 && (
-                          <div className="mb-2">
-                            <p className="text-sm font-medium" data-testid={`deposit-amount-${booking.id}`}>
-                              {formatCurrency(booking.depositAmountCents, booking.depositCurrency || "usd")}
+                  <CardContent className="p-0">
+                    <div className="flex">
+                      <div className={`w-1 ${booking.status === "pending" ? "bg-amber-500" : booking.status === "accepted" ? "bg-emerald-500" : booking.status === "completed" ? "bg-blue-500" : "bg-gray-300"}`} />
+                      <div className="flex-1 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <h3 className="font-semibold truncate">{booking.clientName}</h3>
+                              <Badge variant="secondary" className={`text-xs ${completionConfig.color}`}>
+                                <CompletionIcon className="h-3 w-3 mr-1" />
+                                {completionConfig.label}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground capitalize mb-3">
+                              {booking.serviceType}
                             </p>
-                            <Badge variant="secondary" className={`text-xs ${depositConfig.color}`}>
-                              {depositConfig.label}
-                            </Badge>
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md">
+                                <Calendar className="h-3.5 w-3.5" />
+                                {formatDate(booking.preferredDate)}
+                              </span>
+                              <span className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md">
+                                <Clock className="h-3.5 w-3.5" />
+                                {formatTime(booking.preferredTime)}
+                              </span>
+                            </div>
                           </div>
-                        )}
-                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                          <div className="text-right shrink-0 flex flex-col items-end gap-2">
+                            {booking.depositAmountCents && booking.depositAmountCents > 0 && (
+                              <div>
+                                <p className="text-sm font-semibold" data-testid={`deposit-amount-${booking.id}`}>
+                                  {formatCurrency(booking.depositAmountCents, booking.depositCurrency || "usd")}
+                                </p>
+                                <Badge variant="secondary" className={`text-xs ${depositConfig.color}`}>
+                                  {depositConfig.label}
+                                </Badge>
+                              </div>
+                            )}
+                            <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -297,50 +377,47 @@ export default function BookingRequests() {
         )}
       </div>
 
-      {/* Booking Detail Dialog */}
       <Dialog open={!!selectedBooking} onOpenChange={() => setSelectedBooking(null)}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           {selectedBooking && (
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  {selectedBooking.clientName}
+                  <div className="h-10 w-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                    <User className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <span className="block">{selectedBooking.clientName}</span>
+                    <span className="text-sm font-normal text-muted-foreground capitalize">{selectedBooking.serviceType}</span>
+                  </div>
                 </DialogTitle>
-                <DialogDescription className="capitalize">
-                  {selectedBooking.serviceType}
-                </DialogDescription>
               </DialogHeader>
 
               <div className="space-y-4">
-                {/* Schedule */}
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-2 flex-1">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    {formatDate(selectedBooking.preferredDate)}
+                    <span className="text-sm">{formatDate(selectedBooking.preferredDate)}</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-1">
                     <Clock className="h-4 w-4 text-muted-foreground" />
-                    {formatTime(selectedBooking.preferredTime)}
+                    <span className="text-sm">{formatTime(selectedBooking.preferredTime)}</span>
                   </div>
                 </div>
 
-                {/* Location */}
                 {selectedBooking.location && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    {selectedBooking.location}
+                  <div className="flex items-start gap-2 text-sm">
+                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <span>{selectedBooking.location}</span>
                   </div>
                 )}
 
-                {/* Description */}
                 {selectedBooking.description && (
-                  <div className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
+                  <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
                     {selectedBooking.description}
                   </div>
                 )}
 
-                {/* Contact */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm">
                     <Phone className="h-4 w-4 text-muted-foreground" />
@@ -360,7 +437,6 @@ export default function BookingRequests() {
 
                 <Separator />
 
-                {/* Deposit Information */}
                 {selectedBooking.depositAmountCents && selectedBooking.depositAmountCents > 0 && (
                   <div className="space-y-3">
                     <h4 className="font-medium flex items-center gap-2">
@@ -420,7 +496,6 @@ export default function BookingRequests() {
                       )}
                     </div>
 
-                    {/* Waive Reschedule Fee Toggle */}
                     {selectedBooking.depositStatus === "captured" && (
                       <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
                         <div className="space-y-0.5">
@@ -447,7 +522,6 @@ export default function BookingRequests() {
                   </div>
                 )}
 
-                {/* Remainder Payment Section */}
                 {selectedBooking.totalAmountCents && 
                  selectedBooking.totalAmountCents > (selectedBooking.depositAmountCents || 0) && (
                   <div className="space-y-3">
@@ -516,47 +590,30 @@ export default function BookingRequests() {
                         onClick={() => setShowRemainderPaymentDialog(true)}
                         data-testid="button-record-remainder"
                       >
-                        <DollarSign className="h-4 w-4 mr-2" />
+                        <Wallet className="h-4 w-4 mr-2" />
                         Record Remainder Payment
                       </Button>
                     )}
                   </div>
                 )}
 
-                <Separator />
-
-                {/* Customer Booking Link */}
                 {selectedBooking.confirmationToken && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm">Customer Booking Link</h4>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 text-xs bg-muted p-2 rounded truncate">
-                        {window.location.origin}/booking/{selectedBooking.confirmationToken}
-                      </code>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        onClick={() => copyBookingLink(selectedBooking.confirmationToken!)}
-                        data-testid="button-copy-link"
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => copyBookingLink(selectedBooking.confirmationToken!)}
+                    data-testid="button-copy-booking-link"
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy Booking Link
+                  </Button>
                 )}
               </div>
-
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setSelectedBooking(null)}>
-                  Close
-                </Button>
-              </DialogFooter>
             </>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Record Remainder Payment Dialog */}
       <Dialog open={showRemainderPaymentDialog} onOpenChange={setShowRemainderPaymentDialog}>
         <DialogContent>
           <DialogHeader>
@@ -566,54 +623,41 @@ export default function BookingRequests() {
                 <>
                   Record the payment of{" "}
                   {formatCurrency(
-                    selectedBooking.totalAmountCents - (selectedBooking.depositAmountCents || 0),
+                    selectedBooking.totalAmountCents - (selectedBooking.depositAmountCents || 0), 
                     selectedBooking.depositCurrency || "usd"
-                  )}{" "}
-                  from {selectedBooking.clientName}.
+                  )}
                 </>
               )}
             </DialogDescription>
           </DialogHeader>
-
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="payment-method">Payment Method</Label>
+              <Label>Payment Method</Label>
               <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
-                <SelectTrigger id="payment-method" data-testid="select-payment-method">
+                <SelectTrigger data-testid="select-payment-method">
                   <SelectValue placeholder="Select payment method" />
                 </SelectTrigger>
                 <SelectContent>
-                  {paymentMethodOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
+                  {paymentMethodOptions.map((method) => (
+                    <SelectItem key={method.value} value={method.value}>
+                      {method.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="payment-notes">Notes (optional)</Label>
+              <Label>Notes (optional)</Label>
               <Textarea
-                id="payment-notes"
-                placeholder="Any additional notes about this payment..."
                 value={remainderNotes}
                 onChange={(e) => setRemainderNotes(e.target.value)}
-                rows={3}
-                data-testid="input-payment-notes"
+                placeholder="Any notes about this payment..."
+                data-testid="textarea-remainder-notes"
               />
             </div>
           </div>
-
           <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setShowRemainderPaymentDialog(false);
-                setSelectedPaymentMethod("");
-                setRemainderNotes("");
-              }}
-            >
+            <Button variant="outline" onClick={() => setShowRemainderPaymentDialog(false)}>
               Cancel
             </Button>
             <Button
@@ -629,9 +673,9 @@ export default function BookingRequests() {
               disabled={!selectedPaymentMethod || recordRemainderPaymentMutation.isPending}
               data-testid="button-confirm-remainder"
             >
-              {recordRemainderPaymentMutation.isPending && (
+              {recordRemainderPaymentMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              )}
+              ) : null}
               Record Payment
             </Button>
           </DialogFooter>

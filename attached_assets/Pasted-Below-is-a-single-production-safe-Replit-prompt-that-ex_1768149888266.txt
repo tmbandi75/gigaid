@@ -1,0 +1,228 @@
+Below is a **single, production-safe Replit prompt** that **extends your existing Owner View** with:
+
+1. **Paid-plan gating**
+2. **Weekly email summaries**
+
+This is written to be **additive only**, aligned with your GigAid model, and safe for an early-stage product (no refactors, no breaking flows).
+
+---
+
+## ✅ Replit Prompt: Paid Owner View + Weekly Summary Emails
+
+**Context**
+
+GigAid is a mobile-first app for gig workers.
+The **Owner View** is a desktop-first, read-only business snapshot.
+
+We now want to:
+
+* Make Owner View a **paid-plan feature**
+* Add **weekly email summaries** that reinforce value and retention
+
+This must be:
+
+* Lightweight
+* Non-invasive
+* Backward-compatible
+* Easy to disable/extend later
+
+---
+
+## 🎯 Goals
+
+1. Restrict `/owner` access to paid users only
+2. Show a friendly upgrade screen for free users
+3. Send a **weekly business summary email** to paid users
+4. Reuse existing data (jobs, invoices, leads)
+5. Avoid complex billing logic or heavy analytics
+
+---
+
+## 1️⃣ Paid Plan Lock (Owner View)
+
+### Assumptions
+
+* There is an existing `users` or `accounts` table with:
+
+  * `plan` or `subscription_tier`
+  * OR a boolean like `is_paid`
+* If none exists, add a **single field**:
+
+  * `plan: 'free' | 'pro' | 'business'`
+
+Do NOT integrate billing logic here — only read plan status.
+
+---
+
+### Access Rules for `/owner`
+
+* If user is:
+
+  * `plan = free` → deny access
+  * `plan != free` → allow access
+
+---
+
+### Free User Experience (important)
+
+If a free user visits `/owner`:
+
+Show an **Upgrade Gate Screen**, not an error.
+
+**Content**
+
+* Title: “Owner View is a Pro Feature”
+* Bullet points:
+
+  * See weekly & monthly revenue
+  * Track unpaid invoices
+  * Know what jobs are coming up
+* CTA:
+
+  * “Upgrade to Pro”
+* Secondary CTA:
+
+  * “Back to Jobs”
+
+No dark patterns. No hard lockout.
+
+---
+
+### Paid User Experience
+
+* Direct access to Owner View
+* No upsell banners
+* No friction
+
+---
+
+## 2️⃣ Weekly Email Summary (Paid Users Only)
+
+### Purpose
+
+Reinforce:
+
+> “GigAid helps me make and track money.”
+
+This is **retention**, not marketing.
+
+---
+
+### Schedule
+
+* Send **once per week**
+* Default: **Monday at 8am local time**
+* Can be implemented via:
+
+  * background job
+  * cron
+  * scheduled function (depending on stack)
+
+---
+
+### Recipients
+
+* Only users with:
+
+  * `plan != free`
+  * valid email
+  * email notifications enabled (default = on)
+
+---
+
+### Data Used (reuse Owner View logic)
+
+Compute weekly metrics:
+
+* Revenue last week
+* Jobs completed last week
+* New leads last week
+* Outstanding invoices (count + total)
+* Upcoming jobs (next 7 days)
+
+No new tables required.
+
+---
+
+### Email Content (plain, clear, mobile-friendly)
+
+**Subject**
+
+> “Your GigAid weekly summary”
+
+**Body**
+
+* Header: “Here’s how your business did last week”
+* Sections:
+
+  * 💰 Revenue
+  * 🛠 Jobs completed
+  * 📥 New leads
+  * ⚠️ Unpaid invoices
+  * 📅 Jobs coming up
+
+**CTA**
+
+* “View full Owner Summary”
+* Link to `/owner`
+
+No images required. Simple HTML or text is fine.
+
+---
+
+## 3️⃣ Technical Constraints (important)
+
+* Do NOT block existing email flows
+* Do NOT introduce real-time analytics
+* Do NOT send emails to free users
+* Fail silently if data is missing (no crashes)
+* Log sends for debugging
+
+---
+
+## 4️⃣ Explicit Non-Goals (do NOT implement)
+
+* ❌ Daily emails
+* ❌ Custom schedules
+* ❌ Per-metric configuration
+* ❌ Billing management
+* ❌ Email marketing templates
+
+---
+
+## 5️⃣ Success Criteria
+
+* Free users see Owner View → understand value → upgrade
+* Paid users:
+
+  * Access Owner View freely
+  * Receive weekly summaries
+  * Click through at least occasionally
+* No impact to:
+
+  * mobile job flows
+  * lead capture
+  * scheduling
+  * invoicing
+
+---
+
+**Proceed with implementation exactly within this scope.**
+
+---
+
+## Strategic note (for you, not the code)
+
+This does two critical things:
+
+* **Justifies paid plans** without feature bloat
+* **Builds habit** via weekly “money check-ins”
+
+If you want next, I can:
+
+* Design the **exact upgrade copy**
+* Recommend **pricing tiers tied to this**
+* Add a **monthly summary for higher plans**
+* Or wire this into **SendGrid with sample code**
+
+Just tell me the next move.

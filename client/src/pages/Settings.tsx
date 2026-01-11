@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useLocation } from "wouter";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +13,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { 
   Bell, 
   Link2, 
-  Share2, 
   Crown, 
   Copy, 
   Check,
@@ -24,6 +23,11 @@ import {
   Download,
   FileJson,
   Share,
+  ArrowLeft,
+  Settings as SettingsIcon,
+  Globe,
+  Sparkles,
+  ChevronRight,
 } from "lucide-react";
 import { AvailabilityEditor, DEFAULT_AVAILABILITY } from "@/components/settings/AvailabilityEditor";
 import { PaymentMethodsSettings } from "@/components/PaymentMethodsSettings";
@@ -43,32 +47,25 @@ interface PaymentMethod {
 }
 
 export default function Settings() {
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [copied, setCopied] = useState(false);
   const [bookingLinkCopied, setBookingLinkCopied] = useState(false);
 
   const { data: profile } = useQuery<any>({
     queryKey: ["/api/profile"],
   });
 
-  const { data: referralData } = useQuery<ReferralData>({
-    queryKey: ["/api/referrals"],
-  });
-
   const { data: paymentMethods } = useQuery<PaymentMethod[]>({
     queryKey: ["/api/payment-methods"],
   });
 
-  // Check if Card (Stripe) payment method is enabled - from saved data
   const savedStripeEnabled = paymentMethods?.some(
     (method) => method.type === "stripe" && method.isEnabled
   ) ?? false;
   
-  // Local state for immediate toggle feedback
   const [stripeEnabled, setStripeEnabled] = useState(false);
   
-  // Sync local state with saved data
   useEffect(() => {
     setStripeEnabled(savedStripeEnabled);
   }, [savedStripeEnabled]);
@@ -147,14 +144,6 @@ export default function Settings() {
     setSettings({ ...settings, availability, slotDuration });
   };
 
-  const copyReferralLink = () => {
-    const link = `${window.location.origin}/join?ref=${referralData?.referralCode || ""}`;
-    navigator.clipboard.writeText(link);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast({ title: "Referral link copied!" });
-  };
-
   const copyBookingLink = () => {
     const link = `${window.location.origin}/book/${settings.publicProfileSlug}`;
     navigator.clipboard.writeText(link);
@@ -174,285 +163,279 @@ export default function Settings() {
   };
 
   return (
-    <div className="p-4 pb-24 space-y-6">
-      <h1 className="text-2xl font-bold">Settings</h1>
-
-      <Card data-testid="card-notifications">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Notifications
-          </CardTitle>
-          <CardDescription>Configure how you receive notifications</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">SMS Notifications</p>
-              <p className="text-sm text-muted-foreground">Receive updates via text message</p>
+    <div className="min-h-screen bg-background pb-24" data-testid="page-settings">
+      <div className="relative overflow-hidden bg-gradient-to-br from-slate-600 via-slate-700 to-slate-800 text-white px-4 pt-6 pb-8">
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 -left-10 w-32 h-32 bg-slate-400/10 rounded-full blur-2xl" />
+        </div>
+        <div className="relative">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/more")}
+            className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
+            data-testid="button-back"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center">
+              <SettingsIcon className="h-6 w-6" />
             </div>
-            <Switch
-              checked={settings.notifyBySms}
-              onCheckedChange={(checked) => setSettings({ ...settings, notifyBySms: checked })}
-              data-testid="switch-notify-sms"
-            />
-          </div>
-          <Separator />
-          <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">Email Notifications</p>
-              <p className="text-sm text-muted-foreground">Receive updates via email</p>
+              <h1 className="text-2xl font-bold">Settings</h1>
+              <p className="text-slate-300/80">Configure your app preferences</p>
             </div>
-            <Switch
-              checked={settings.notifyByEmail}
-              onCheckedChange={(checked) => setSettings({ ...settings, notifyByEmail: checked })}
-              data-testid="switch-notify-email"
-            />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card data-testid="card-public-profile">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Link2 className="h-5 w-5" />
-            Public Profile & Booking
-          </CardTitle>
-          <CardDescription>Let clients find and book you directly</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Enable Public Profile</p>
-              <p className="text-sm text-muted-foreground">Make your profile visible to clients</p>
-            </div>
-            <Switch
-              checked={settings.publicProfileEnabled}
-              onCheckedChange={(checked) => setSettings({ ...settings, publicProfileEnabled: checked })}
-              data-testid="switch-public-profile"
-            />
-          </div>
-
-          {settings.publicProfileEnabled && (
-            <>
-              <Separator />
-              <div className="space-y-2">
-                <Label htmlFor="slug">Profile URL</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="slug"
-                    value={settings.publicProfileSlug}
-                    onChange={(e) => setSettings({ ...settings, publicProfileSlug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })}
-                    placeholder="your-name"
-                    data-testid="input-profile-slug"
-                  />
-                  <Button variant="outline" onClick={copyBookingLink} data-testid="button-copy-booking">
-                    {bookingLinkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {window.location.origin}/book/{settings.publicProfileSlug || "your-name"}
-                </p>
+      <div className="px-4 py-4 space-y-4">
+        <Card className="border-0 shadow-md" data-testid="card-notifications">
+          <CardContent className="p-4">
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                <Bell className="h-4 w-4 text-white" />
               </div>
-
-              <div className="space-y-2">
-                <Label>Services</Label>
-                <div className="flex flex-wrap gap-2">
-                  {settings.services.map((service) => (
-                    <Badge key={service} variant="secondary" className="cursor-pointer" onClick={() => removeService(service)}>
-                      {service} &times;
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {["plumbing", "electrical", "cleaning", "handyman", "landscaping"].map((s) => (
-                    !settings.services.includes(s) && (
-                      <Badge
-                        key={s}
-                        variant="outline"
-                        className="cursor-pointer"
-                        onClick={() => addService(s)}
-                        data-testid={`badge-add-${s}`}
-                      >
-                        + {s}
-                      </Badge>
-                    )
-                  ))}
-                </div>
-                <div className="flex gap-2 mt-2">
-                  <Input
-                    value={customServiceInput}
-                    onChange={(e) => setCustomServiceInput(e.target.value)}
-                    placeholder="Add custom service..."
-                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCustomService())}
-                    data-testid="input-custom-service"
-                  />
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="icon"
-                    onClick={handleAddCustomService}
-                    data-testid="button-add-custom-service"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <Separator />
-              
+              Notifications
+            </h3>
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium flex items-center gap-2">
-                    {settings.showReviewsOnBooking ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                    Show Reviews on Booking Page
-                  </p>
-                  <p className="text-sm text-muted-foreground">Let potential clients see your ratings</p>
+                  <p className="font-medium text-sm">SMS Notifications</p>
+                  <p className="text-xs text-muted-foreground">Receive updates via text message</p>
                 </div>
                 <Switch
-                  checked={settings.showReviewsOnBooking}
-                  onCheckedChange={(checked) => setSettings({ ...settings, showReviewsOnBooking: checked })}
-                  data-testid="switch-show-reviews"
+                  checked={settings.notifyBySms}
+                  onCheckedChange={(checked) => setSettings({ ...settings, notifyBySms: checked })}
+                  data-testid="switch-notify-sms"
                 />
               </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {settings.publicProfileEnabled && (
-        <AvailabilityEditor
-          availability={settings.availability}
-          slotDuration={settings.slotDuration}
-          onChange={handleAvailabilityChange}
-        />
-      )}
-
-      <PaymentMethodsSettings onStripeToggle={setStripeEnabled} />
-
-      {stripeEnabled && <StripeConnectSettings />}
-
-      <Card data-testid="card-referrals">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Share2 className="h-5 w-5" />
-            Referrals
-          </CardTitle>
-          <CardDescription>Invite others and earn rewards</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="p-4 rounded-lg bg-muted">
-            <p className="text-sm text-muted-foreground mb-2">Your referral code</p>
-            <div className="flex items-center gap-2">
-              <code className="text-lg font-mono font-bold">{referralData?.referralCode || "Loading..."}</code>
-              <Button variant="ghost" size="icon" onClick={copyReferralLink} data-testid="button-copy-referral">
-                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-2xl font-bold">{referralData?.referrals?.length || 0}</p>
-              <p className="text-sm text-muted-foreground">People referred</p>
-            </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-green-600">
-                ${((referralData?.totalRewards || 0) / 100).toFixed(2)}
-              </p>
-              <p className="text-sm text-muted-foreground">Total rewards</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card data-testid="card-export">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Download className="h-5 w-5" />
-            Export Data
-          </CardTitle>
-          <CardDescription>Download your data in different formats</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3">
-            <a 
-              href="/api/export/json" 
-              download
-              className="w-full"
-            >
-              <Button variant="outline" className="w-full justify-start" data-testid="button-export-json">
-                <FileJson className="h-4 w-4 mr-2 text-blue-500" />
-                <div className="text-left">
-                  <p className="font-medium">Download JSON</p>
-                  <p className="text-xs text-muted-foreground">Complete data export</p>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm">Email Notifications</p>
+                  <p className="text-xs text-muted-foreground">Receive updates via email</p>
                 </div>
-              </Button>
-            </a>
-            <a 
-              href="/api/export/dot" 
-              download
-              className="w-full"
-            >
-              <Button variant="outline" className="w-full justify-start" data-testid="button-export-dot">
-                <Share className="h-4 w-4 mr-2 text-purple-500" />
-                <div className="text-left">
-                  <p className="font-medium">Download DOT Graph</p>
-                  <p className="text-xs text-muted-foreground">Data relationships (GraphViz format)</p>
+                <Switch
+                  checked={settings.notifyByEmail}
+                  onCheckedChange={(checked) => setSettings({ ...settings, notifyByEmail: checked })}
+                  data-testid="switch-notify-email"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-md" data-testid="card-public-profile">
+          <CardContent className="p-4">
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+                <Globe className="h-4 w-4 text-white" />
+              </div>
+              Public Profile & Booking
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm">Enable Public Profile</p>
+                  <p className="text-xs text-muted-foreground">Let clients find and book you</p>
                 </div>
-              </Button>
-            </a>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            JSON includes all your jobs, leads, invoices, and more. DOT file can be visualized at graphviz.org
-          </p>
-        </CardContent>
-      </Card>
+                <Switch
+                  checked={settings.publicProfileEnabled}
+                  onCheckedChange={(checked) => setSettings({ ...settings, publicProfileEnabled: checked })}
+                  data-testid="switch-public-profile"
+                />
+              </div>
 
-      <Card data-testid="card-premium">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Crown className="h-5 w-5 text-yellow-500" />
-            Pro Plan
-          </CardTitle>
-          <CardDescription>Unlock advanced features</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-green-500" />
-              <span className="text-sm">Web dashboard access</span>
+              {settings.publicProfileEnabled && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <Label className="text-sm">Your Booking URL</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={settings.publicProfileSlug}
+                        onChange={(e) => setSettings({ ...settings, publicProfileSlug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })}
+                        placeholder="your-name"
+                        className="h-10"
+                        data-testid="input-profile-slug"
+                      />
+                      <Button variant="outline" size="icon" onClick={copyBookingLink} data-testid="button-copy-booking">
+                        {bookingLinkCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {window.location.origin}/book/{settings.publicProfileSlug || "your-name"}
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-sm">Your Services</Label>
+                    {settings.services.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {settings.services.map((service) => (
+                          <Badge 
+                            key={service} 
+                            variant="secondary" 
+                            className="cursor-pointer hover:bg-destructive/10 hover:text-destructive" 
+                            onClick={() => removeService(service)}
+                          >
+                            {service} &times;
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      {["plumbing", "electrical", "cleaning", "handyman", "landscaping"].map((s) => (
+                        !settings.services.includes(s) && (
+                          <Badge
+                            key={s}
+                            variant="outline"
+                            className="cursor-pointer"
+                            onClick={() => addService(s)}
+                            data-testid={`badge-add-${s}`}
+                          >
+                            + {s}
+                          </Badge>
+                        )
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={customServiceInput}
+                        onChange={(e) => setCustomServiceInput(e.target.value)}
+                        placeholder="Add custom service..."
+                        className="h-10"
+                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCustomService())}
+                        data-testid="input-custom-service"
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="icon"
+                        onClick={handleAddCustomService}
+                        data-testid="button-add-custom-service"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <Separator />
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {settings.showReviewsOnBooking ? <Eye className="h-4 w-4 text-muted-foreground" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
+                      <div>
+                        <p className="font-medium text-sm">Show Reviews</p>
+                        <p className="text-xs text-muted-foreground">Display ratings on booking page</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={settings.showReviewsOnBooking}
+                      onCheckedChange={(checked) => setSettings({ ...settings, showReviewsOnBooking: checked })}
+                      data-testid="switch-show-reviews"
+                    />
+                  </div>
+                </>
+              )}
             </div>
-            <div className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-green-500" />
-              <span className="text-sm">Google Calendar sync</span>
+          </CardContent>
+        </Card>
+
+        {settings.publicProfileEnabled && (
+          <AvailabilityEditor
+            availability={settings.availability}
+            slotDuration={settings.slotDuration}
+            onChange={handleAvailabilityChange}
+          />
+        )}
+
+        <PaymentMethodsSettings onStripeToggle={setStripeEnabled} />
+
+        {stripeEnabled && <StripeConnectSettings />}
+
+        <Card className="border-0 shadow-md" data-testid="card-export">
+          <CardContent className="p-4">
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                <Download className="h-4 w-4 text-white" />
+              </div>
+              Export Data
+            </h3>
+            <div className="space-y-3">
+              <a href="/api/export/json" download className="block">
+                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover-elevate cursor-pointer">
+                  <FileJson className="h-5 w-5 text-blue-500" />
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">Download JSON</p>
+                    <p className="text-xs text-muted-foreground">Complete data export</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </a>
+              <a href="/api/export/dot" download className="block">
+                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover-elevate cursor-pointer">
+                  <Share className="h-5 w-5 text-purple-500" />
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">Download DOT Graph</p>
+                    <p className="text-xs text-muted-foreground">Data relationships (GraphViz)</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </a>
             </div>
-            <div className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-green-500" />
-              <span className="text-sm">Advanced analytics</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-green-500" />
-              <span className="text-sm">Priority support</span>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-md overflow-hidden" data-testid="card-premium">
+          <div className="bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-400 p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-2xl bg-white/20 flex items-center justify-center">
+                <Crown className="h-6 w-6 text-white" />
+              </div>
+              <div className="text-white">
+                <h3 className="font-bold">Upgrade to Pro</h3>
+                <p className="text-sm text-white/80">Unlock all premium features</p>
+              </div>
             </div>
           </div>
-          <Button className="w-full mt-4" data-testid="button-upgrade-pro">
-            Upgrade to Pro - $9.99/month
-          </Button>
-        </CardContent>
-      </Card>
+          <CardContent className="p-4">
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {[
+                { icon: Sparkles, label: "Web Dashboard" },
+                { icon: Sparkles, label: "Calendar Sync" },
+                { icon: Sparkles, label: "Analytics" },
+                { icon: Sparkles, label: "Priority Support" },
+              ].map((feature, index) => (
+                <div key={index} className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span>{feature.label}</span>
+                </div>
+              ))}
+            </div>
+            <Button className="w-full bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600" data-testid="button-upgrade-pro">
+              <Crown className="h-4 w-4 mr-2" />
+              Upgrade - $9.99/month
+            </Button>
+          </CardContent>
+        </Card>
 
-      <Button 
-        onClick={handleSave} 
-        className="w-full" 
-        disabled={updateMutation.isPending}
-        data-testid="button-save-settings"
-      >
-        {updateMutation.isPending ? (
-          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-        ) : null}
-        Save Settings
-      </Button>
+        <Button 
+          onClick={handleSave} 
+          className="w-full h-12 text-base" 
+          disabled={updateMutation.isPending}
+          data-testid="button-save-settings"
+        >
+          {updateMutation.isPending ? (
+            <Loader2 className="h-5 w-5 animate-spin mr-2" />
+          ) : null}
+          Save Settings
+        </Button>
+      </div>
     </div>
   );
 }

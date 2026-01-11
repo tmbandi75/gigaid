@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLocation } from "wouter";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -21,12 +23,17 @@ import {
   Loader2,
   ExternalLink,
   Search,
+  ArrowLeft,
+  Book,
+  Headphones,
+  ChevronRight,
 } from "lucide-react";
 
 const faqs = [
   {
     category: "Getting Started",
     icon: Zap,
+    color: "from-violet-500 to-purple-500",
     questions: [
       {
         q: "How do I create my first job?",
@@ -45,6 +52,7 @@ const faqs = [
   {
     category: "Scheduling & Jobs",
     icon: Calendar,
+    color: "from-blue-500 to-cyan-500",
     questions: [
       {
         q: "How do I reschedule a job?",
@@ -63,6 +71,7 @@ const faqs = [
   {
     category: "Invoicing & Payments",
     icon: CreditCard,
+    color: "from-green-500 to-emerald-500",
     questions: [
       {
         q: "How do I create an invoice?",
@@ -81,6 +90,7 @@ const faqs = [
   {
     category: "Managing Leads",
     icon: Users,
+    color: "from-amber-500 to-orange-500",
     questions: [
       {
         q: "What's the difference between a lead and a job?",
@@ -95,6 +105,7 @@ const faqs = [
   {
     category: "Account & Settings",
     icon: Settings,
+    color: "from-slate-500 to-gray-600",
     questions: [
       {
         q: "How do I update my profile?",
@@ -113,6 +124,7 @@ const faqs = [
 ];
 
 export default function HelpSupport() {
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [contactForm, setContactForm] = useState({
@@ -120,6 +132,7 @@ export default function HelpSupport() {
     message: "",
   });
   const [isSending, setIsSending] = useState(false);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   const filteredFaqs = faqs.map(category => ({
     ...category,
@@ -145,140 +158,195 @@ export default function HelpSupport() {
   };
 
   return (
-    <div className="p-4 pb-24 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Help & Support</h1>
-      </div>
-
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search help articles..."
-          className="pl-10"
-          data-testid="input-search-help"
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <Card className="hover-elevate cursor-pointer" data-testid="card-email-support">
-          <CardContent className="py-4 text-center">
-            <Mail className="h-8 w-8 mx-auto mb-2 text-primary" />
-            <p className="font-medium text-sm">Email Support</p>
-            <p className="text-xs text-muted-foreground">support@gigaid.app</p>
-          </CardContent>
-        </Card>
-        <Card className="hover-elevate cursor-pointer" data-testid="card-phone-support">
-          <CardContent className="py-4 text-center">
-            <Phone className="h-8 w-8 mx-auto mb-2 text-primary" />
-            <p className="font-medium text-sm">Phone Support</p>
-            <p className="text-xs text-muted-foreground">1-800-GIG-AID</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card data-testid="card-faqs">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <HelpCircle className="h-5 w-5" />
-            Frequently Asked Questions
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {searchQuery && filteredFaqs.length === 0 ? (
-            <div className="py-8 text-center">
-              <HelpCircle className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-              <p className="text-muted-foreground">No results found for "{searchQuery}"</p>
+    <div className="min-h-screen bg-background pb-24" data-testid="page-help-support">
+      <div className="relative overflow-hidden bg-gradient-to-br from-slate-600 via-slate-700 to-slate-800 text-white px-4 pt-6 pb-12">
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 -left-10 w-32 h-32 bg-slate-400/10 rounded-full blur-2xl" />
+        </div>
+        <div className="relative">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/more")}
+            className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
+            data-testid="button-back"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center">
+              <Headphones className="h-6 w-6" />
             </div>
-          ) : (
-            <Accordion type="multiple" className="w-full">
-              {(searchQuery ? filteredFaqs : faqs).map((category, catIndex) => (
-                <div key={category.category} className={catIndex > 0 ? "mt-4" : ""}>
-                  <div className="flex items-center gap-2 mb-2 text-sm font-medium text-muted-foreground">
-                    <category.icon className="h-4 w-4" />
-                    {category.category}
-                  </div>
-                  {category.questions.map((faq, index) => (
-                    <AccordionItem key={index} value={`${catIndex}-${index}`}>
-                      <AccordionTrigger className="text-left text-sm hover:no-underline">
-                        {faq.q}
-                      </AccordionTrigger>
-                      <AccordionContent className="text-sm text-muted-foreground">
-                        {faq.a}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </div>
-              ))}
-            </Accordion>
-          )}
-        </CardContent>
-      </Card>
+            <div>
+              <h1 className="text-2xl font-bold">Help & Support</h1>
+              <p className="text-slate-300/80">We're here to help you</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      <Card data-testid="card-contact">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <MessageCircle className="h-5 w-5" />
-            Contact Us
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="subject">Subject</Label>
+      <div className="px-4 -mt-6 relative z-10 space-y-4">
+        <Card className="border-0 shadow-lg">
+          <CardContent className="p-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                id="subject"
-                value={contactForm.subject}
-                onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
-                placeholder="What do you need help with?"
-                data-testid="input-subject"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search for help..."
+                className="pl-10 h-12 bg-muted/50 border-0"
+                data-testid="input-search-help"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="message">Message</Label>
-              <Textarea
-                id="message"
-                value={contactForm.message}
-                onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
-                placeholder="Describe your issue or question..."
-                className="min-h-[100px]"
-                data-testid="textarea-message"
-              />
-            </div>
-            <Button 
-              type="submit" 
-              className="w-full"
-              disabled={isSending}
-              data-testid="button-send-message"
-            >
-              {isSending ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Send className="h-4 w-4 mr-2" />
-              )}
-              Send Message
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardContent className="py-4">
-          <div className="flex items-center justify-between">
+        <div className="grid grid-cols-2 gap-3">
+          <Card className="border-0 shadow-md hover-elevate cursor-pointer" data-testid="card-email-support">
+            <CardContent className="p-4">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mb-3">
+                <Mail className="h-5 w-5 text-white" />
+              </div>
+              <p className="font-medium text-sm">Email Us</p>
+              <p className="text-xs text-muted-foreground mt-0.5">support@gigaid.app</p>
+            </CardContent>
+          </Card>
+          <Card className="border-0 shadow-md hover-elevate cursor-pointer" data-testid="card-phone-support">
+            <CardContent className="p-4">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center mb-3">
+                <Phone className="h-5 w-5 text-white" />
+              </div>
+              <p className="font-medium text-sm">Call Us</p>
+              <p className="text-xs text-muted-foreground mt-0.5">1-800-GIG-AID</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="border-0 shadow-md" data-testid="card-faqs">
+          <CardContent className="p-4">
+            <h2 className="font-semibold mb-4 flex items-center gap-2">
+              <HelpCircle className="h-5 w-5 text-primary" />
+              Frequently Asked Questions
+            </h2>
+
+            {searchQuery && filteredFaqs.length === 0 ? (
+              <div className="py-12 text-center">
+                <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+                  <Search className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground">No results found for "{searchQuery}"</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {(searchQuery ? filteredFaqs : faqs).map((category) => {
+                  const Icon = category.icon;
+                  const isExpanded = expandedCategory === category.category;
+                  
+                  return (
+                    <div key={category.category} className="border rounded-lg overflow-hidden">
+                      <button
+                        className="w-full flex items-center gap-3 p-3 text-left hover-elevate"
+                        onClick={() => setExpandedCategory(isExpanded ? null : category.category)}
+                      >
+                        <div className={`h-9 w-9 rounded-lg bg-gradient-to-br ${category.color} flex items-center justify-center shrink-0`}>
+                          <Icon className="h-4 w-4 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{category.category}</p>
+                          <p className="text-xs text-muted-foreground">{category.questions.length} questions</p>
+                        </div>
+                        <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+                      </button>
+                      
+                      {isExpanded && (
+                        <div className="border-t bg-muted/30">
+                          <Accordion type="single" collapsible className="w-full">
+                            {category.questions.map((faq, index) => (
+                              <AccordionItem key={index} value={`${index}`} className="border-0">
+                                <AccordionTrigger className="text-left text-sm px-4 py-3 hover:no-underline hover:bg-muted/50">
+                                  {faq.q}
+                                </AccordionTrigger>
+                                <AccordionContent className="text-sm text-muted-foreground px-4 pb-4">
+                                  {faq.a}
+                                </AccordionContent>
+                              </AccordionItem>
+                            ))}
+                          </Accordion>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-md" data-testid="card-contact">
+          <CardContent className="p-4">
+            <h2 className="font-semibold mb-4 flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-primary" />
+              Send Us a Message
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="subject">Subject</Label>
+                <Input
+                  id="subject"
+                  value={contactForm.subject}
+                  onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
+                  placeholder="What do you need help with?"
+                  className="h-12"
+                  data-testid="input-subject"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="message">Message</Label>
+                <Textarea
+                  id="message"
+                  value={contactForm.message}
+                  onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                  placeholder="Describe your issue or question..."
+                  className="min-h-[120px] resize-none"
+                  data-testid="textarea-message"
+                />
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full h-12"
+                disabled={isSending}
+                data-testid="button-send-message"
+              >
+                {isSending ? (
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                ) : (
+                  <Send className="h-5 w-5 mr-2" />
+                )}
+                Send Message
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-md hover-elevate cursor-pointer">
+          <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <FileText className="h-5 w-5 text-muted-foreground" />
-              <div>
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
+                <Book className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1">
                 <p className="font-medium text-sm">Documentation</p>
                 <p className="text-xs text-muted-foreground">Full user guide & tutorials</p>
               </div>
+              <Button variant="ghost" size="icon" data-testid="button-docs">
+                <ExternalLink className="h-4 w-4" />
+              </Button>
             </div>
-            <Button variant="ghost" size="icon" data-testid="button-docs">
-              <ExternalLink className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

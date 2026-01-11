@@ -48,7 +48,7 @@ const menuSections = [
     items: [
       { icon: Share2, label: "Booking Link", description: "Share your page", href: "/settings", gradient: "from-emerald-500 to-teal-500" },
       { icon: Star, label: "Reviews", description: "Client feedback", href: "/reviews", gradient: "from-yellow-500 to-amber-500" },
-      { icon: Gift, label: "Referrals", description: "Earn rewards", href: "/settings", gradient: "from-pink-500 to-rose-500" },
+      { icon: Gift, label: "Referrals", description: "Earn rewards", href: "/referrals", gradient: "from-pink-500 to-rose-500" },
     ]
   },
   {
