@@ -36,6 +36,12 @@ interface ReferralData {
   totalRewards: number;
 }
 
+interface PaymentMethod {
+  id: string;
+  type: string;
+  isEnabled: boolean;
+}
+
 export default function Settings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -49,6 +55,23 @@ export default function Settings() {
   const { data: referralData } = useQuery<ReferralData>({
     queryKey: ["/api/referrals"],
   });
+
+  const { data: paymentMethods } = useQuery<PaymentMethod[]>({
+    queryKey: ["/api/payment-methods"],
+  });
+
+  // Check if Card (Stripe) payment method is enabled - from saved data
+  const savedStripeEnabled = paymentMethods?.some(
+    (method) => method.type === "stripe" && method.isEnabled
+  ) ?? false;
+  
+  // Local state for immediate toggle feedback
+  const [stripeEnabled, setStripeEnabled] = useState(false);
+  
+  // Sync local state with saved data
+  useEffect(() => {
+    setStripeEnabled(savedStripeEnabled);
+  }, [savedStripeEnabled]);
 
   const [settings, setSettings] = useState({
     publicProfileEnabled: false,
@@ -305,9 +328,9 @@ export default function Settings() {
         />
       )}
 
-      <PaymentMethodsSettings />
+      <PaymentMethodsSettings onStripeToggle={setStripeEnabled} />
 
-      <StripeConnectSettings />
+      {stripeEnabled && <StripeConnectSettings />}
 
       <Card data-testid="card-referrals">
         <CardHeader>

@@ -93,7 +93,11 @@ interface MethodState {
   customLabel: string;
 }
 
-export function PaymentMethodsSettings() {
+interface PaymentMethodsSettingsProps {
+  onStripeToggle?: (enabled: boolean) => void;
+}
+
+export function PaymentMethodsSettings({ onStripeToggle }: PaymentMethodsSettingsProps = {}) {
   const { toast } = useToast();
   const [expandedMethod, setExpandedMethod] = useState<PaymentMethodType | null>(null);
   const [methodStates, setMethodStates] = useState<Record<PaymentMethodType, MethodState>>(() => {
@@ -171,7 +175,13 @@ export function PaymentMethodsSettings() {
 
   const toggleMethod = (type: PaymentMethodType) => {
     const current = methodStates[type].isEnabled;
-    updateMethodState(type, { isEnabled: !current });
+    const newEnabled = !current;
+    updateMethodState(type, { isEnabled: newEnabled });
+    
+    // Notify parent when Stripe toggle changes
+    if (type === "stripe" && onStripeToggle) {
+      onStripeToggle(newEnabled);
+    }
   };
 
   const toggleExpand = (type: PaymentMethodType) => {
