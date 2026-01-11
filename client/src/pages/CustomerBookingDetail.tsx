@@ -447,8 +447,8 @@ export default function CustomerBookingDetail() {
           </CardContent>
         </Card>
 
-        {/* Deposit Information Card */}
-        {booking.depositAmountCents && booking.depositAmountCents > 0 && (
+        {/* Deposit Information Card - only show if provider requires deposits */}
+        {booking.depositAmountCents && booking.depositAmountCents > 0 && booking.provider?.depositEnabled && (
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">

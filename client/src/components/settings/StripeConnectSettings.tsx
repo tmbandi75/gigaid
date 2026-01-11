@@ -78,10 +78,18 @@ export function StripeConnectSettings() {
     mutationFn: () => apiRequest("POST", "/api/stripe/connect/onboard"),
     onSuccess: (data: any) => {
       if (data.url) {
-        window.location.href = data.url;
+        // Open Stripe onboarding in new tab to avoid navigation issues
+        window.open(data.url, "_blank");
+        toast({ 
+          title: "Stripe Setup", 
+          description: "Complete your Stripe setup in the new tab. Return here when finished." 
+        });
+      } else {
+        toast({ title: "Failed to get onboarding URL", variant: "destructive" });
       }
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Onboarding error:", error);
       toast({ title: "Failed to start onboarding", variant: "destructive" });
     },
   });
@@ -91,10 +99,17 @@ export function StripeConnectSettings() {
     onSuccess: (data: any) => {
       if (data.url) {
         window.open(data.url, "_blank");
+      } else {
+        toast({ title: "Failed to get dashboard URL", variant: "destructive" });
       }
     },
-    onError: () => {
-      toast({ title: "Failed to open dashboard", variant: "destructive" });
+    onError: (error: any) => {
+      console.error("Dashboard error:", error);
+      toast({ 
+        title: "Cannot open dashboard", 
+        description: "Please complete your Stripe setup first.",
+        variant: "destructive" 
+      });
     },
   });
 
@@ -208,12 +223,12 @@ export function StripeConnectSettings() {
                   {onboardMutation.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   ) : null}
-                  Update Account
+                  {connectStatus?.onboardingComplete ? "Update Account" : "Complete Setup"}
                 </Button>
                 <Button 
                   variant="outline"
                   onClick={() => dashboardMutation.mutate()} 
-                  disabled={dashboardMutation.isPending}
+                  disabled={dashboardMutation.isPending || !connectStatus?.onboardingComplete}
                   className="flex-1"
                   data-testid="button-stripe-dashboard"
                 >
@@ -225,6 +240,12 @@ export function StripeConnectSettings() {
                   Stripe Dashboard
                 </Button>
               </div>
+              
+              {!connectStatus?.onboardingComplete && (
+                <p className="text-xs text-muted-foreground">
+                  Complete your Stripe setup to access the dashboard and start accepting payments.
+                </p>
+              )}
 
               {connectStatus.chargesEnabled && (
                 <div className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
