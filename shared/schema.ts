@@ -726,8 +726,11 @@ export interface DerivedDepositState {
   hasDeposit: boolean;
   depositRequestedCents: number;
   depositPaidCents: number;
+  depositPendingCents?: number;
+  depositOutstandingCents?: number;
   depositBalanceCents: number;
   isLocked: boolean; // true if deposit paid
+  isDepositFullyPaid?: boolean;
   refundedAt?: string;
 }
 
@@ -744,8 +747,39 @@ export function parseDepositMetadata(notes: string | null): DepositMetadata | nu
     if (parsed.depositType) return parsed as DepositMetadata;
     return null;
   } catch {
+    // Try to find embedded [DEPOSIT_META:...] format
+    const match = notes.match(/\[DEPOSIT_META:([^\]]+)\]/);
+    if (match) {
+      try {
+        return JSON.parse(match[1]) as DepositMetadata;
+      } catch {
+        return null;
+      }
+    }
     return null;
   }
+}
+
+// Helper to extract deposit metadata from notes (supports both formats)
+export function extractDepositMetadata(notes: string | null): DepositMetadata | null {
+  if (!notes) return null;
+  // Try embedded format first
+  const match = notes.match(/\[DEPOSIT_META:([^\]]+)\]/);
+  if (match) {
+    try {
+      return JSON.parse(match[1]) as DepositMetadata;
+    } catch {
+      // Fall through to JSON format
+    }
+  }
+  // Try JSON format
+  try {
+    const parsed = JSON.parse(notes);
+    if (parsed.depositType) return parsed as DepositMetadata;
+  } catch {
+    // Not valid JSON
+  }
+  return null;
 }
 
 // Helper to embed deposit metadata in notes field

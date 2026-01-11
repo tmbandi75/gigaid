@@ -19,26 +19,61 @@ export function computeDepositState(
   }
   
   // Calculate deposit payments (any payment marked as deposit in notes)
+  // Check for isDeposit flag in various formats (handles both server-side and customer-submitted)
+  const isDepositPayment = (p: JobPayment): boolean => {
+    if (!p.notes) return false;
+    try {
+      const notesObj = JSON.parse(p.notes);
+      return notesObj.isDeposit === true;
+    } catch {
+      return p.notes.includes('"isDeposit":true') || p.notes.includes('"isDeposit": true');
+    }
+  };
+  
   const depositPayments = payments.filter(p => 
     p.jobId === job.id && 
     (p.status === "paid" || p.status === "confirmed") &&
-    p.notes?.includes('"isDeposit":true')
+    isDepositPayment(p)
+  );
+  
+  // Also count pending payments submitted by customers (awaiting confirmation)
+  const pendingDeposits = payments.filter(p => 
+    p.jobId === job.id && 
+    p.status === "pending" &&
+    isDepositPayment(p)
   );
   
   const depositPaidCents = depositPayments.reduce((sum, p) => sum + p.amount, 0);
+  const depositPendingCents = pendingDeposits.reduce((sum, p) => sum + p.amount, 0);
   
   // Check for refund
+  const isRefundPayment = (p: JobPayment): boolean => {
+    if (!p.notes) return false;
+    try {
+      const notesObj = JSON.parse(p.notes);
+      return notesObj.isDepositRefund === true;
+    } catch {
+      return p.notes.includes('"isDepositRefund":true') || p.notes.includes('"isDepositRefund": true');
+    }
+  };
+  
   const refundPayment = payments.find(p => 
-    p.jobId === job.id && 
-    p.notes?.includes('"isDepositRefund":true')
+    p.jobId === job.id && isRefundPayment(p)
   );
+  
+  // Total effective paid (confirmed + pending from customer)
+  const totalEffectivePaid = depositPaidCents + depositPendingCents;
+  const depositOutstandingCents = Math.max(0, depositRequestedCents - totalEffectivePaid);
   
   return {
     hasDeposit: depositRequestedCents > 0,
     depositRequestedCents,
     depositPaidCents,
-    depositBalanceCents: Math.max(0, depositRequestedCents - depositPaidCents),
+    depositPendingCents,
+    depositOutstandingCents,
+    depositBalanceCents: depositOutstandingCents,
     isLocked: depositPaidCents > 0,
+    isDepositFullyPaid: depositRequestedCents > 0 && depositOutstandingCents === 0,
     refundedAt: refundPayment?.createdAt
   };
 }

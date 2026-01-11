@@ -22,7 +22,7 @@ import { sendSMS } from "./twilio";
 import { sendEmail } from "./sendgrid";
 import { geocodeAddress } from "./geocode";
 import { computeDepositState, calculateDepositAmount, getCancellationOutcome, formatDepositDisplay } from "./depositHelper";
-import { embedDepositMetadata, DepositMetadata, DerivedDepositState } from "@shared/schema";
+import { embedDepositMetadata, extractDepositMetadata, DepositMetadata, DerivedDepositState } from "@shared/schema";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -959,6 +959,107 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Confirm price error:", error);
       res.status(500).json({ error: "Failed to confirm price" });
+    }
+  });
+
+  // Public endpoint: Get deposit info by token (job ID is used as token for simplicity)
+  app.get("/api/public/deposit/:token", async (req, res) => {
+    try {
+      const job = await storage.getJob(req.params.token);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      // Get deposit state
+      const payments = await storage.getJobPaymentsByJob(job.id);
+      const depositState = computeDepositState(job, payments);
+      
+      if (!depositState.hasDeposit) {
+        return res.status(404).json({ error: "No deposit requested for this job" });
+      }
+
+      // Get provider info
+      const provider = await storage.getUser(job.userId);
+
+      res.json({
+        job: {
+          id: job.id,
+          title: job.title,
+          serviceType: job.serviceType,
+          scheduledDate: job.scheduledDate,
+          scheduledTime: job.scheduledTime,
+          location: job.location,
+          price: job.price,
+          clientName: job.clientName,
+        },
+        depositRequestedCents: depositState.depositRequestedCents,
+        depositPaidCents: depositState.depositPaidCents,
+        depositOutstandingCents: depositState.depositOutstandingCents,
+        isDepositFullyPaid: depositState.isDepositFullyPaid,
+        provider: {
+          name: provider?.name,
+          businessName: provider?.businessName,
+          phone: provider?.phone,
+          email: provider?.email,
+        },
+      });
+    } catch (error) {
+      console.error("Public deposit error:", error);
+      res.status(500).json({ error: "Failed to fetch deposit info" });
+    }
+  });
+
+  // Public endpoint: Record deposit payment from customer
+  app.post("/api/public/deposit/:token/record", async (req, res) => {
+    try {
+      const recordSchema = z.object({
+        method: z.enum(["stripe", "zelle", "venmo", "cashapp", "cash", "check", "other"]),
+        proofUrl: z.string().optional(),
+      });
+      
+      const { method, proofUrl } = recordSchema.parse(req.body);
+      const job = await storage.getJob(req.params.token);
+      
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      // Get deposit state
+      const payments = await storage.getJobPaymentsByJob(job.id);
+      const depositState = computeDepositState(job, payments);
+      
+      if (!depositState.hasDeposit) {
+        return res.status(400).json({ error: "No deposit requested for this job" });
+      }
+
+      if (depositState.isDepositFullyPaid) {
+        return res.json({ message: "Deposit already paid", alreadyPaid: true });
+      }
+
+      // Create payment record (pending confirmation from provider)
+      const payment = await storage.createJobPayment({
+        jobId: job.id,
+        userId: job.userId,
+        clientName: job.clientName,
+        clientEmail: job.clientEmail,
+        amount: depositState.depositOutstandingCents,
+        method,
+        status: "pending", // Pending until provider confirms
+        proofUrl: proofUrl || null,
+        notes: JSON.stringify({ isDeposit: true, customerSubmitted: true }),
+        paidAt: new Date().toISOString(),
+      });
+
+      res.json({
+        message: "Payment recorded. Provider will confirm receipt.",
+        payment,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Record deposit error:", error);
+      res.status(500).json({ error: "Failed to record deposit payment" });
     }
   });
 

@@ -31,6 +31,7 @@ import CustomerBookingDetail from "@/pages/CustomerBookingDetail";
 import BookingRequests from "@/pages/BookingRequests";
 import PublicInvoice from "@/pages/PublicInvoice";
 import ConfirmPrice from "@/pages/ConfirmPrice";
+import PayDeposit from "@/pages/PayDeposit";
 import OwnerView from "@/pages/OwnerView";
 import NotFound from "@/pages/not-found";
 
@@ -87,6 +88,7 @@ function App() {
           <Route path="/invoice/:token" component={PublicInvoice} />
           <Route path="/invoice/:id/rate" component={InvoiceRating} />
           <Route path="/confirm-price/:token" component={ConfirmPrice} />
+          <Route path="/pay-deposit/:token" component={PayDeposit} />
           <Route path="/crew-portal/:token" component={CrewPortal} />
           <Route path="/owner" component={OwnerView} />
           <Route>
