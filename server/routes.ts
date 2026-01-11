@@ -13,6 +13,7 @@ import {
   insertCrewInviteSchema,
   insertCrewJobPhotoSchema,
   insertCrewMessageSchema,
+  insertPriceConfirmationSchema,
 } from "@shared/schema";
 import { z } from "zod";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
@@ -352,6 +353,297 @@ export async function registerRoutes(
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete lead" });
+    }
+  });
+
+  // Price Confirmations - lightweight price agreements
+  app.get("/api/price-confirmations", async (req, res) => {
+    try {
+      const confirmations = await storage.getPriceConfirmationsByUser(defaultUserId);
+      res.json(confirmations);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch price confirmations" });
+    }
+  });
+
+  app.get("/api/price-confirmations/:id", async (req, res) => {
+    try {
+      const confirmation = await storage.getPriceConfirmation(req.params.id);
+      if (!confirmation) {
+        return res.status(404).json({ error: "Price confirmation not found" });
+      }
+      res.json(confirmation);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch price confirmation" });
+    }
+  });
+
+  app.get("/api/leads/:leadId/price-confirmations", async (req, res) => {
+    try {
+      const confirmations = await storage.getPriceConfirmationsByLead(req.params.leadId);
+      res.json(confirmations);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch price confirmations" });
+    }
+  });
+
+  app.get("/api/leads/:leadId/active-price-confirmation", async (req, res) => {
+    try {
+      const confirmation = await storage.getActivePriceConfirmationForLead(req.params.leadId);
+      res.json(confirmation || null);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch active price confirmation" });
+    }
+  });
+
+  // Generate a URL-safe token
+  function generateConfirmationToken(): string {
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substring(2, 10);
+    return `pc-${timestamp}-${random}`;
+  }
+
+  app.post("/api/price-confirmations", async (req, res) => {
+    try {
+      const { leadId, serviceType, agreedPrice, notes } = req.body;
+      
+      if (!leadId || !agreedPrice) {
+        return res.status(400).json({ error: "leadId and agreedPrice are required" });
+      }
+      
+      // Verify lead exists
+      const lead = await storage.getLead(leadId);
+      if (!lead) {
+        return res.status(404).json({ error: "Lead not found" });
+      }
+      
+      const token = generateConfirmationToken();
+      
+      const confirmation = await storage.createPriceConfirmation({
+        leadId,
+        userId: defaultUserId,
+        serviceType: serviceType || lead.serviceType,
+        agreedPrice: parseInt(agreedPrice),
+        notes: notes || null,
+        status: "draft",
+        confirmationToken: token,
+      });
+      
+      res.status(201).json(confirmation);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create price confirmation" });
+    }
+  });
+
+  app.patch("/api/price-confirmations/:id", async (req, res) => {
+    try {
+      const { serviceType, agreedPrice, notes } = req.body;
+      const updates: Record<string, any> = {};
+      
+      if (serviceType !== undefined) updates.serviceType = serviceType;
+      if (agreedPrice !== undefined) updates.agreedPrice = parseInt(agreedPrice);
+      if (notes !== undefined) updates.notes = notes;
+      
+      const confirmation = await storage.updatePriceConfirmation(req.params.id, updates);
+      if (!confirmation) {
+        return res.status(404).json({ error: "Price confirmation not found" });
+      }
+      res.json(confirmation);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update price confirmation" });
+    }
+  });
+
+  app.delete("/api/price-confirmations/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deletePriceConfirmation(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Price confirmation not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete price confirmation" });
+    }
+  });
+
+  // Send price confirmation to client
+  app.post("/api/price-confirmations/:id/send", async (req, res) => {
+    try {
+      const confirmation = await storage.getPriceConfirmation(req.params.id);
+      if (!confirmation) {
+        return res.status(404).json({ error: "Price confirmation not found" });
+      }
+      
+      // Get lead for contact info
+      const lead = await storage.getLead(confirmation.leadId);
+      if (!lead) {
+        return res.status(404).json({ error: "Lead not found" });
+      }
+      
+      const provider = await storage.getUser(defaultUserId);
+      const baseUrl = process.env.FRONTEND_URL || `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+      const confirmationUrl = `${baseUrl}/confirm-price/${confirmation.confirmationToken}`;
+      
+      const priceFormatted = `$${(confirmation.agreedPrice / 100).toFixed(2)}`;
+      const message = `Hi ${lead.clientName}, ${provider?.businessName || provider?.name || "Your service provider"} has sent you a price confirmation for ${confirmation.serviceType || "your service"}: ${priceFormatted}. Please confirm: ${confirmationUrl}`;
+      
+      let smsSent = false;
+      let emailSent = false;
+      
+      // Send SMS if phone available
+      if (lead.clientPhone) {
+        try {
+          await sendSMS(lead.clientPhone, message);
+          smsSent = true;
+        } catch (e) {
+          console.error("SMS send failed:", e);
+        }
+      }
+      
+      // Send email if available
+      if (lead.clientEmail) {
+        try {
+          await sendEmail({
+            to: lead.clientEmail,
+            subject: `Price Confirmation from ${provider?.businessName || provider?.name || "Your Service Provider"}`,
+            html: `<p>Hi ${lead.clientName},</p>
+            <p>${provider?.businessName || provider?.name || "Your service provider"} has sent you a price confirmation:</p>
+            <p><strong>Service:</strong> ${confirmation.serviceType || "Service"}</p>
+            <p><strong>Agreed Price:</strong> ${priceFormatted}</p>
+            ${confirmation.notes ? `<p><strong>Notes:</strong> ${confirmation.notes}</p>` : ""}
+            <p><a href="${confirmationUrl}" style="background:#2563eb;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;">Confirm Price</a></p>
+            <p>Or copy this link: ${confirmationUrl}</p>`,
+          });
+          emailSent = true;
+        } catch (e) {
+          console.error("Email send failed:", e);
+        }
+      }
+      
+      // Update status to sent
+      const updated = await storage.updatePriceConfirmation(confirmation.id, {
+        status: "sent",
+        sentAt: new Date().toISOString(),
+      });
+      
+      res.json({
+        ...updated,
+        confirmationUrl,
+        smsSent,
+        emailSent,
+      });
+    } catch (error) {
+      console.error("Send price confirmation error:", error);
+      res.status(500).json({ error: "Failed to send price confirmation" });
+    }
+  });
+
+  // Public endpoint: View price confirmation (for clients)
+  app.get("/api/public/price-confirmation/:token", async (req, res) => {
+    try {
+      const confirmation = await storage.getPriceConfirmationByToken(req.params.token);
+      if (!confirmation) {
+        return res.status(404).json({ error: "Price confirmation not found" });
+      }
+      
+      // Get lead and provider info
+      const lead = await storage.getLead(confirmation.leadId);
+      const provider = await storage.getUser(confirmation.userId);
+      
+      // Mark as viewed if not already
+      if (confirmation.status === "sent") {
+        await storage.updatePriceConfirmation(confirmation.id, {
+          status: "viewed",
+          viewedAt: new Date().toISOString(),
+        });
+      }
+      
+      res.json({
+        id: confirmation.id,
+        serviceType: confirmation.serviceType,
+        agreedPrice: confirmation.agreedPrice,
+        notes: confirmation.notes,
+        status: confirmation.status,
+        clientName: lead?.clientName || "Customer",
+        provider: {
+          name: provider?.name,
+          businessName: provider?.businessName,
+          phone: provider?.phone,
+          email: provider?.email,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch price confirmation" });
+    }
+  });
+
+  // Public endpoint: Confirm price (client one-tap confirmation)
+  app.post("/api/public/price-confirmation/:token/confirm", async (req, res) => {
+    try {
+      const confirmation = await storage.getPriceConfirmationByToken(req.params.token);
+      if (!confirmation) {
+        return res.status(404).json({ error: "Price confirmation not found" });
+      }
+      
+      if (confirmation.status === "confirmed") {
+        return res.json({ message: "Already confirmed", confirmation });
+      }
+      
+      if (confirmation.status === "expired") {
+        return res.status(400).json({ error: "This price confirmation has expired" });
+      }
+      
+      // Get lead for job creation
+      const lead = await storage.getLead(confirmation.leadId);
+      if (!lead) {
+        return res.status(404).json({ error: "Lead not found" });
+      }
+      
+      // Auto-create job from confirmed price
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const job = await storage.createJob({
+        userId: confirmation.userId,
+        title: `${confirmation.serviceType || lead.serviceType || "Service"} for ${lead.clientName}`,
+        description: confirmation.notes || lead.description || null,
+        serviceType: confirmation.serviceType || lead.serviceType,
+        location: null,
+        scheduledDate: tomorrow.toISOString().split("T")[0],
+        scheduledTime: "09:00",
+        duration: 60,
+        status: "scheduled",
+        price: confirmation.agreedPrice,
+        clientName: lead.clientName,
+        clientPhone: lead.clientPhone || null,
+        clientEmail: lead.clientEmail || null,
+      });
+      
+      // Update confirmation status
+      const updated = await storage.updatePriceConfirmation(confirmation.id, {
+        status: "confirmed",
+        confirmedAt: new Date().toISOString(),
+        convertedJobId: job.id,
+      });
+      
+      // Update lead as converted
+      await storage.updateLead(lead.id, {
+        status: "converted",
+        convertedAt: new Date().toISOString(),
+        convertedJobId: job.id,
+      });
+      
+      res.json({
+        message: "Price confirmed! Job created.",
+        confirmation: updated,
+        jobId: job.id,
+      });
+    } catch (error) {
+      console.error("Confirm price error:", error);
+      res.status(500).json({ error: "Failed to confirm price" });
     }
   });
 
