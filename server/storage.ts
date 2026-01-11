@@ -406,12 +406,17 @@ export class MemStorage implements IStorage {
         description: "Needs water heater replacement, asked for quote",
         status: "new",
         source: "booking_form",
+        sourceType: "facebook",
+        sourceUrl: "https://facebook.com/marketplace/item/123456",
         score: 75,
         notes: null,
         createdAt: today.toISOString(),
         lastContactedAt: null,
         convertedAt: null,
         convertedJobId: null,
+        responseCopiedAt: null,
+        followUpStatus: "none",
+        followUpSnoozedUntil: null,
       },
       {
         id: "lead-2",
@@ -421,14 +426,19 @@ export class MemStorage implements IStorage {
         clientEmail: null,
         serviceType: "electrical",
         description: "Interested in whole-house rewiring estimate",
-        status: "contacted",
+        status: "response_sent",
         source: "referral",
+        sourceType: "craigslist",
+        sourceUrl: "https://craigslist.org/services/12345678",
         score: 60,
         notes: null,
         createdAt: yesterday.toISOString(),
         lastContactedAt: today.toISOString(),
         convertedAt: null,
         convertedJobId: null,
+        responseCopiedAt: null,
+        followUpStatus: "none",
+        followUpSnoozedUntil: null,
       },
       {
         id: "lead-3",
@@ -440,12 +450,17 @@ export class MemStorage implements IStorage {
         description: "Office cleaning, 3x per week contract",
         status: "new",
         source: "manual",
+        sourceType: null,
+        sourceUrl: null,
         score: 90,
         notes: null,
         createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
         lastContactedAt: null,
         convertedAt: null,
         convertedJobId: null,
+        responseCopiedAt: null,
+        followUpStatus: "none",
+        followUpSnoozedUntil: null,
       },
     ];
 
@@ -878,12 +893,17 @@ export class MemStorage implements IStorage {
       description: insertLead.description || null,
       status: insertLead.status || "new",
       source: insertLead.source || "manual",
+      sourceType: insertLead.sourceType || null,
+      sourceUrl: insertLead.sourceUrl || null,
       score: insertLead.score || 50,
       notes: insertLead.notes || null,
       createdAt: new Date().toISOString(),
       lastContactedAt: insertLead.lastContactedAt || null,
       convertedAt: null,
       convertedJobId: null,
+      responseCopiedAt: insertLead.responseCopiedAt || null,
+      followUpStatus: insertLead.followUpStatus || "none",
+      followUpSnoozedUntil: insertLead.followUpSnoozedUntil || null,
     };
     this.leads.set(id, lead);
     return lead;
@@ -893,10 +913,10 @@ export class MemStorage implements IStorage {
     const lead = this.leads.get(id);
     if (!lead) return undefined;
     const updated: Lead = { ...lead, ...updates };
-    if (updates.status === "contacted" && !lead.lastContactedAt) {
+    if (updates.status === "response_sent" && !lead.lastContactedAt) {
       updated.lastContactedAt = new Date().toISOString();
     }
-    if (updates.status === "converted" && !lead.convertedAt) {
+    if (updates.status === "price_confirmed" && !lead.convertedAt) {
       updated.convertedAt = new Date().toISOString();
     }
     this.leads.set(id, updated);

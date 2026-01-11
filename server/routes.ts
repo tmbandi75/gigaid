@@ -682,7 +682,7 @@ export async function registerRoutes(
       const updated = await storage.updateLead(req.params.id, {
         responseCopiedAt: now,
         followUpStatus: "pending_check",
-        status: lead.status === "new" ? "contacted" : lead.status,
+        status: lead.status === "new" ? "response_sent" : lead.status,
         lastContactedAt: now,
       });
       
@@ -1034,9 +1034,9 @@ export async function registerRoutes(
         convertedJobId: job.id,
       });
       
-      // Update lead as converted
+      // Update lead as price_confirmed
       await storage.updateLead(lead.id, {
-        status: "converted",
+        status: "price_confirmed",
         convertedAt: new Date().toISOString(),
         convertedJobId: job.id,
       });

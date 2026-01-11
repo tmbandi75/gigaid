@@ -7,6 +7,7 @@ export interface ParsedLead {
   serviceType: string;
   description: string;
   source: string;
+  sourceUrl?: string;
   suggestedReply: string;
   extractedDetails: {
     location?: string;
@@ -130,6 +131,7 @@ Return ONLY valid JSON.`
   return {
     ...parsed,
     source: detectedSource,
+    sourceUrl: url || undefined,
   } as ParsedLead;
 }
 

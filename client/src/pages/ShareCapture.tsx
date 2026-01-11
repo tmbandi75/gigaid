@@ -42,6 +42,7 @@ interface ParsedLead {
   serviceType: string;
   description: string;
   source: string;
+  sourceUrl?: string;
   suggestedReply: string;
   extractedDetails: {
     location?: string;
@@ -128,6 +129,7 @@ export default function ShareCapture() {
     serviceType: "",
     description: "",
     source: "manual",
+    sourceUrl: "",
     location: "",
   });
 
@@ -164,6 +166,7 @@ export default function ShareCapture() {
         serviceType: data.serviceType || "",
         description: data.description || "",
         source: data.source || "manual",
+        sourceUrl: data.sourceUrl || "",
         location: data.extractedDetails?.location || "",
       });
       setSelectedReply(data.suggestedReply || "");
@@ -197,6 +200,8 @@ export default function ShareCapture() {
         serviceType: data.serviceType || "other",
         description: data.description || "",
         source: data.source || "manual",
+        sourceType: data.source || "manual",
+        sourceUrl: data.sourceUrl || null,
         status: "new",
         notes: data.location ? `Location: ${data.location}` : null,
       });

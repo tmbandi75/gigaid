@@ -35,7 +35,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Loader2, DollarSign, Send, Check, Clock, Eye } from "lucide-react";
+import { ArrowLeft, Loader2, DollarSign, Send, Check, Clock, Eye, ExternalLink } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import type { Lead, PriceConfirmation } from "@shared/schema";
 
@@ -64,8 +64,11 @@ const serviceTypes = [
 
 const statusOptions = [
   { value: "new", label: "New" },
-  { value: "contacted", label: "Contacted" },
-  { value: "converted", label: "Converted" },
+  { value: "response_sent", label: "Contacted" },
+  { value: "engaged", label: "Engaged" },
+  { value: "price_confirmed", label: "Price Confirmed" },
+  { value: "cold", label: "Cold" },
+  { value: "lost", label: "Lost" },
 ];
 
 export default function LeadForm() {
@@ -265,16 +268,27 @@ export default function LeadForm() {
       <TopBar title={isEditing ? "Edit Lead" : "New Lead"} showActions={false} />
       
       <div className="px-4 py-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate("/leads")}
-          className="mb-4 -ml-2"
-          data-testid="button-back"
-        >
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Back
-        </Button>
+        <div className="flex items-center justify-between mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/leads")}
+            className="-ml-2"
+            data-testid="button-back"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+          
+          {isEditing && existingLead?.sourceUrl && (
+            <a href={existingLead.sourceUrl} target="_blank" rel="noopener noreferrer">
+              <Button variant="default" size="sm" className="bg-blue-600" data-testid="button-open-source">
+                <ExternalLink className="h-4 w-4 mr-1" />
+                Open original post
+              </Button>
+            </a>
+          )}
+        </div>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

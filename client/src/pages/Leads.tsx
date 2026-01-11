@@ -31,7 +31,8 @@ import {
   TrendingUp,
   Star,
   Mail,
-  Send
+  Send,
+  ExternalLink
 } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
@@ -48,10 +49,11 @@ interface FollowUpMessage {
 
 const statusConfig: Record<string, { color: string; bg: string; label: string }> = {
   new: { color: "text-emerald-600", bg: "bg-emerald-500/10", label: "New" },
-  contacted: { color: "text-blue-600", bg: "bg-blue-500/10", label: "Contacted" },
+  response_sent: { color: "text-blue-600", bg: "bg-blue-500/10", label: "Contacted" },
   engaged: { color: "text-cyan-600", bg: "bg-cyan-500/10", label: "Engaged" },
-  converted: { color: "text-violet-600", bg: "bg-violet-500/10", label: "Won" },
+  price_confirmed: { color: "text-violet-600", bg: "bg-violet-500/10", label: "Price Confirmed" },
   cold: { color: "text-gray-600", bg: "bg-gray-500/10", label: "Cold" },
+  lost: { color: "text-red-600", bg: "bg-red-500/10", label: "Lost" },
 };
 
 function formatDate(dateStr: string): string {
@@ -83,9 +85,11 @@ function getScoreColor(score: number | null): string {
 const filters = [
   { value: "all", label: "Active" },
   { value: "new", label: "New" },
+  { value: "response_sent", label: "Contacted" },
   { value: "engaged", label: "Engaged" },
+  { value: "price_confirmed", label: "Confirmed" },
   { value: "cold", label: "Cold" },
-  { value: "converted", label: "Won" },
+  { value: "lost", label: "Lost" },
 ];
 
 function LeadCard({ lead, onGenerateFollowUp, onSendText }: { lead: Lead; onGenerateFollowUp: (lead: Lead) => void; onSendText: (phone: string) => void }) {
@@ -96,7 +100,7 @@ function LeadCard({ lead, onGenerateFollowUp, onSendText }: { lead: Lead; onGene
     <Card className="border-0 shadow-sm hover-elevate overflow-hidden" data-testid={`lead-card-${lead.id}`}>
       <CardContent className="p-0">
         <div className="flex">
-          <div className={`w-1 ${lead.status === "new" ? "bg-emerald-500" : lead.status === "converted" ? "bg-violet-500" : "bg-blue-500"}`} />
+          <div className={`w-1 ${lead.status === "new" ? "bg-emerald-500" : lead.status === "price_confirmed" ? "bg-violet-500" : "bg-blue-500"}`} />
           <div className="flex-1 p-4">
             <Link href={`/leads/${lead.id}`} data-testid={`link-lead-${lead.id}`}>
               <div className="flex items-start gap-3 cursor-pointer">
@@ -134,6 +138,14 @@ function LeadCard({ lead, onGenerateFollowUp, onSendText }: { lead: Lead; onGene
             </Link>
             <div className="mt-3 pt-3 border-t flex items-center justify-between">
               <div className="flex items-center gap-2">
+                {lead.sourceUrl && (
+                  <a href={lead.sourceUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                    <Button variant="default" size="sm" className="h-8 px-2 bg-blue-600 hover-elevate" data-testid={`button-source-${lead.id}`}>
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      Open post
+                    </Button>
+                  </a>
+                )}
                 {lead.clientPhone && (
                   <a href={`tel:${lead.clientPhone}`} onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="sm" className="h-8 px-2" data-testid={`button-call-${lead.id}`}>
@@ -261,7 +273,7 @@ export default function Leads() {
   };
 
   const filteredLeads = filter === "all" 
-    ? leads.filter(lead => lead.status !== "cold")
+    ? leads.filter(lead => lead.status !== "cold" && lead.status !== "lost")
     : leads.filter(lead => lead.status === filter);
 
   const newCount = leads.filter(l => l.status === "new").length;
