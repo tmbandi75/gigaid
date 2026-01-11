@@ -1,0 +1,183 @@
+🎯 Real scenario: Facebook Marketplace job → Paid Gig (with GigAid)
+The situation
+
+User: Mike
+Trade: Handyman
+Source: Facebook Marketplace
+Job: “Need a TV mounted today — cash or Zelle”
+
+Mike is scrolling Facebook on his phone. He wants the job.
+
+⏱️ T = 0 minutes — The moment GigAid earns its keep
+
+Mike taps the post.
+
+He needs to respond fast — speed matters more than polish.
+
+❌ Without GigAid
+
+Types a rushed message
+
+Forgets to ask key questions
+
+No record if customer ghosts
+
+Pricing disputes later
+
+✅ With GigAid (this is the key)
+
+Mike taps Share → GigAid (or copy/paste).
+
+GigAid pops up a Quick Reply Composer.
+
+✉️ GigAid’s assist (quiet, helpful, not AI-flashy)
+
+GigAid shows Mike a suggested reply, editable in 2 seconds:
+
+“Hi! I can help with that.
+Are you mounting one TV?
+And what size is it?”
+
+Mike hits Send in Facebook Messenger.
+
+GigAid simultaneously:
+
+Creates a Lead
+
+Tags source = Facebook
+
+Service = TV Mounting
+
+Status = New
+
+Mike didn’t “enter data”.
+It just happened.
+
+⏱️ T = +5 minutes — The negotiation (where deals are won)
+
+Customer replies:
+
+“One TV, 65 inch. How much?”
+
+Mike taps Reply with GigAid again.
+
+GigAid suggests:
+
+“For a 65″ TV, I charge $120 and can come today or tomorrow.
+Does that work for you?”
+
+Mike tweaks it to $130 and sends.
+
+⏱️ T = +6 minutes — Price agreement (this is the moment of truth)
+
+Customer replies:
+
+“That works. Today if possible.”
+
+THIS is where GigAid becomes the system of record
+
+Mike taps “Confirm Price” in GigAid.
+
+GigAid generates a Price Confirmation link and auto-sends:
+
+“Perfect. Here’s a quick confirmation so we’re aligned on price and time.”
+
+Customer taps the link and hits:
+✅ “Looks good”
+
+Now:
+
+Price is locked
+
+Timestamped
+
+Zero ambiguity
+
+⏱️ T = +7 minutes — Deposit (optional but powerful)
+
+GigAid prompts Mike:
+
+“Hold this appointment with a deposit?”
+
+Mike selects:
+
+$30 “Hold your spot” deposit
+
+Customer sees:
+
+“This holds your appointment and is applied to the final price.”
+
+Customer pays via Apple Pay.
+
+Now the job is real.
+
+⏱️ T = +8 minutes — Job auto-created
+
+GigAid automatically:
+
+Converts Lead → Job
+
+Sets date/time
+
+Marks deposit received
+
+Enables reminders
+
+Shows balance due: $100
+
+Mike didn’t build anything.
+No admin.
+No forms.
+
+⏱️ T = +2 hours — Reminder saves the day
+
+GigAid sends customer:
+
+“Mike is on the way.”
+
+Customer replies:
+
+“Thanks, see you soon.”
+
+No no-show. No anxiety.
+
+⏱️ T = Job complete — Payment without awkwardness
+
+Mike taps Complete Job.
+
+GigAid sends invoice:
+
+Total: $130
+
+Deposit applied: –$30
+
+Balance due: $100
+
+Customer pays on phone.
+
+⏱️ T = +1 minute — Review loop (future work engine)
+
+GigAid sends:
+
+“How did Mike do?”
+
+5-star review lands.
+
+Mike responds with one tap.
+
+🌙 That evening — Owner View (this is retention)
+
+Mike opens GigAid on desktop.
+
+He sees:
+
+$130 earned today
+
+1 job completed
+
+0 unpaid invoices
+
+Next job tomorrow
+
+GigAid didn’t feel like software.
+It felt like control.
