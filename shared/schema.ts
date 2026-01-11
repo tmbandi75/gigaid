@@ -713,3 +713,43 @@ export interface PublicProfile {
   reviewCount: number;
   reviews: Review[];
 }
+
+// Deposit metadata (stored as JSON in priceConfirmation.notes or job.notes)
+export interface DepositMetadata {
+  depositType: "flat" | "percent" | null; // null = no deposit requested
+  depositAmount: number | null; // cents for flat, 1-100 for percent
+  depositRequestedCents?: number; // computed deposit amount in cents
+}
+
+// Derived deposit state (computed from jobPayments)
+export interface DerivedDepositState {
+  hasDeposit: boolean;
+  depositRequestedCents: number;
+  depositPaidCents: number;
+  depositBalanceCents: number;
+  isLocked: boolean; // true if deposit paid
+  refundedAt?: string;
+}
+
+// Job with derived deposit state (for UI display)
+export interface JobWithDeposit extends Job {
+  deposit?: DerivedDepositState;
+}
+
+// Helper to parse deposit metadata from notes field
+export function parseDepositMetadata(notes: string | null): DepositMetadata | null {
+  if (!notes) return null;
+  try {
+    const parsed = JSON.parse(notes);
+    if (parsed.depositType) return parsed as DepositMetadata;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// Helper to embed deposit metadata in notes field
+export function embedDepositMetadata(existingNotes: string | null, deposit: DepositMetadata): string {
+  const existing = existingNotes ? { originalNotes: existingNotes } : {};
+  return JSON.stringify({ ...existing, ...deposit });
+}

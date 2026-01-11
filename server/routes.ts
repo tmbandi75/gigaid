@@ -21,6 +21,8 @@ import { parseTextToPlan, suggestScheduleSlots, generateFollowUp } from "./ai/ai
 import { sendSMS } from "./twilio";
 import { sendEmail } from "./sendgrid";
 import { geocodeAddress } from "./geocode";
+import { computeDepositState, calculateDepositAmount, getCancellationOutcome, formatDepositDisplay } from "./depositHelper";
+import { embedDepositMetadata, DepositMetadata, DerivedDepositState } from "@shared/schema";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -325,6 +327,175 @@ export async function registerRoutes(
         return res.status(400).json({ error: error.errors });
       }
       res.status(500).json({ error: "Failed to update payment status" });
+    }
+  });
+
+  // Set deposit request on a job
+  app.post("/api/jobs/:id/deposit", async (req, res) => {
+    try {
+      const depositSchema = z.object({
+        depositType: z.enum(["flat", "percent"]),
+        depositAmount: z.number().positive(),
+      });
+      
+      const { depositType, depositAmount } = depositSchema.parse(req.body);
+      const job = await storage.getJob(req.params.id);
+      
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
+      if (!job.price) {
+        return res.status(400).json({ error: "Job must have a price to set deposit" });
+      }
+      
+      // Calculate deposit amount in cents
+      const depositRequestedCents = calculateDepositAmount(job.price, depositType, depositAmount);
+      
+      // Cap at 30% for trust
+      const maxDeposit = Math.round(job.price * 0.30);
+      const finalDepositCents = Math.min(depositRequestedCents, maxDeposit);
+      
+      // Store deposit metadata in notes field
+      const depositMeta: DepositMetadata = {
+        depositType,
+        depositAmount,
+        depositRequestedCents: finalDepositCents,
+      };
+      
+      const updatedNotes = embedDepositMetadata(job.notes, depositMeta);
+      const updatedJob = await storage.updateJob(req.params.id, { notes: updatedNotes });
+      
+      res.json({
+        job: updatedJob,
+        depositRequestedCents: finalDepositCents,
+        depositDisplay: formatDepositDisplay(finalDepositCents),
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to set deposit" });
+    }
+  });
+
+  // Get deposit status for a job
+  app.get("/api/jobs/:id/deposit-status", async (req, res) => {
+    try {
+      const job = await storage.getJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
+      const payments = await storage.getJobPaymentsByJob(req.params.id);
+      const depositState = computeDepositState(job, payments);
+      
+      res.json(depositState);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get deposit status" });
+    }
+  });
+
+  // Record deposit payment
+  app.post("/api/jobs/:id/deposit/record-payment", async (req, res) => {
+    try {
+      const paymentSchema = z.object({
+        amount: z.number().positive(),
+        method: z.enum(["stripe", "zelle", "venmo", "cashapp", "cash", "check", "other"]),
+        proofUrl: z.string().optional(),
+      });
+      
+      const { amount, method, proofUrl } = paymentSchema.parse(req.body);
+      const job = await storage.getJob(req.params.id);
+      
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
+      // Create job payment record for deposit
+      const payment = await storage.createJobPayment({
+        jobId: job.id,
+        userId: job.userId,
+        clientName: job.clientName,
+        clientEmail: job.clientEmail,
+        amount,
+        method,
+        status: "confirmed",
+        proofUrl: proofUrl || null,
+        notes: JSON.stringify({ isDeposit: true }),
+        paidAt: new Date().toISOString(),
+        confirmedAt: new Date().toISOString(),
+      });
+      
+      // Get updated deposit state
+      const payments = await storage.getJobPaymentsByJob(req.params.id);
+      const depositState = computeDepositState(job, payments);
+      
+      res.json({ payment, depositState });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to record deposit payment" });
+    }
+  });
+
+  // Cancel job with deposit handling
+  app.post("/api/jobs/:id/cancel-with-deposit", async (req, res) => {
+    try {
+      const cancelSchema = z.object({
+        cancelledBy: z.enum(["worker", "customer"]),
+        reason: z.string().optional(),
+      });
+      
+      const { cancelledBy, reason } = cancelSchema.parse(req.body);
+      const job = await storage.getJob(req.params.id);
+      
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
+      // Calculate hours until job
+      const jobDateTime = new Date(`${job.scheduledDate}T${job.scheduledTime}`);
+      const now = new Date();
+      const hoursUntilJob = (jobDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+      
+      // Get current deposit state
+      const payments = await storage.getJobPaymentsByJob(req.params.id);
+      const depositState = computeDepositState(job, payments);
+      
+      // Determine cancellation outcome
+      const outcome = getCancellationOutcome(job, cancelledBy, hoursUntilJob, depositState.depositPaidCents);
+      
+      // Update job status to cancelled
+      await storage.updateJob(req.params.id, { status: "cancelled" });
+      
+      // If refund needed, record refund payment
+      if (outcome.refundAmount > 0) {
+        await storage.createJobPayment({
+          jobId: job.id,
+          userId: job.userId,
+          clientName: job.clientName,
+          clientEmail: job.clientEmail,
+          amount: -outcome.refundAmount, // negative for refund
+          method: "other",
+          status: "confirmed",
+          notes: JSON.stringify({ isDepositRefund: true, reason: outcome.reason }),
+          paidAt: new Date().toISOString(),
+          confirmedAt: new Date().toISOString(),
+        });
+      }
+      
+      res.json({
+        cancelled: true,
+        outcome,
+        job: await storage.getJob(req.params.id),
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to cancel job" });
     }
   });
 

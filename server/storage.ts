@@ -129,6 +129,7 @@ export interface IStorage {
   getJobPayments(userId: string): Promise<JobPayment[]>;
   getJobPayment(id: string): Promise<JobPayment | undefined>;
   getJobPaymentsByInvoice(invoiceId: string): Promise<JobPayment[]>;
+  getJobPaymentsByJob(jobId: string): Promise<JobPayment[]>;
   createJobPayment(payment: InsertJobPayment): Promise<JobPayment>;
   updateJobPayment(id: string, updates: Partial<JobPayment>): Promise<JobPayment | undefined>;
 
@@ -1388,6 +1389,12 @@ export class MemStorage implements IStorage {
   async getJobPaymentsByInvoice(invoiceId: string): Promise<JobPayment[]> {
     return Array.from(this.jobPayments.values())
       .filter(p => p.invoiceId === invoiceId);
+  }
+
+  async getJobPaymentsByJob(jobId: string): Promise<JobPayment[]> {
+    return Array.from(this.jobPayments.values())
+      .filter(p => p.jobId === jobId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async createJobPayment(payment: InsertJobPayment): Promise<JobPayment> {

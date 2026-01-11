@@ -656,6 +656,10 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(jobPayments).where(eq(jobPayments.invoiceId, invoiceId));
   }
 
+  async getJobPaymentsByJob(jobId: string): Promise<JobPayment[]> {
+    return await db.select().from(jobPayments).where(eq(jobPayments.jobId, jobId));
+  }
+
   async createJobPayment(insertPayment: InsertJobPayment): Promise<JobPayment> {
     const id = randomUUID();
     const [payment] = await db.insert(jobPayments).values({

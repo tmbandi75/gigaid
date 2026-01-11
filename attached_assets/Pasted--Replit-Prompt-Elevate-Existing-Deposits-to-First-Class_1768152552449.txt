@@ -1,0 +1,160 @@
+## ✅ Replit Prompt: Elevate Existing Deposits to First-Class Feature (Safe Update)
+
+**Context**
+
+GigAid already supports deposits at a data level (partial payments applied to invoices).
+However, deposits are not yet fully expressed as a **clear, intentional workflow** for gig workers or customers.
+
+We want to **surface and formalize deposits** as a trust-building, optional feature **without changing existing payment logic or schemas**.
+
+This update must be:
+
+* additive only
+* backward-compatible
+* UI + behavior focused
+* safe for MVP
+
+---
+
+## 🎯 Goal
+
+Upgrade deposits from “implicit partial payments” to a **clear, intentional job-locking mechanism** tied to Price Confirmation.
+
+---
+
+## 1️⃣ Deposit Intent (No Schema Changes)
+
+Do **NOT** add new tables or fields.
+
+Instead, introduce **derived behavior** using existing fields:
+
+* If a job has:
+
+  * a partial payment
+  * payment < total
+    → treat this as a **deposit**
+
+Add a derived flag in application logic:
+
+```
+job.hasDeposit = true if paid_amount > 0 AND paid_amount < total_amount
+```
+
+---
+
+## 2️⃣ Price Confirmation → Deposit Prompt (Critical UX Upgrade)
+
+After a client **confirms price**:
+
+If no deposit has been collected yet:
+
+* Show gig worker a simple choice:
+
+**“Do you want to hold this appointment with a deposit?”**
+
+Options:
+
+* No deposit
+* Flat amount (default suggestions: $25 / $50)
+* Percentage (default suggestions: 20% / 30%)
+
+Defaults should be conservative (never over 30%).
+
+This choice is **per job**, not global.
+
+---
+
+## 3️⃣ Customer-Facing Deposit Language (Trust-First)
+
+When a deposit is requested, customer sees:
+
+> **“This payment holds your appointment and is applied to the final price.”**
+
+Secondary line (always visible):
+
+> “Fully refundable if I cancel or can’t make it.”
+
+Do NOT use:
+
+* “partial payment”
+* “non-refundable” (unless explicitly configured later)
+* legal or escrow language
+
+---
+
+## 4️⃣ Job State Behavior (No New Statuses)
+
+Do NOT add new job statuses.
+
+Instead, add **visual indicators**:
+
+* “Deposit received” badge
+* “Balance due” amount
+
+Behavioral rules:
+
+* Job is considered **locked** once deposit is paid
+* Auto-enable reminders once deposit is paid
+* Allow rescheduling without losing deposit
+
+---
+
+## 5️⃣ Cancellation / Reschedule Logic (MVP Rules Only)
+
+Use **simple defaults** (no configuration UI yet):
+
+| Scenario              | Outcome                 |
+| --------------------- | ----------------------- |
+| Worker cancels        | Auto-refund deposit     |
+| Customer cancels >24h | Refund deposit          |
+| Customer cancels <24h | Deposit retained        |
+| Customer reschedules  | Deposit carries forward |
+
+Implement logic using existing payment/refund mechanisms.
+
+Fail safely if refund is unavailable.
+
+---
+
+## 6️⃣ Owner View Enhancement (Read-Only)
+
+In Owner View, add:
+
+* “Jobs secured with deposits” (count)
+* “Deposit amount collected this week”
+
+Read-only. No filters. No charts.
+
+This reinforces value without complexity.
+
+---
+
+## 7️⃣ Explicit Non-Goals (Do NOT implement)
+
+* ❌ New deposit schema
+* ❌ Escrow logic
+* ❌ Custom cancellation policies
+* ❌ Legal terms pages
+* ❌ Forced deposits
+* ❌ Global deposit settings
+
+---
+
+## 8️⃣ Success Criteria
+
+* Gig workers clearly understand **when and why** to use deposits
+* Customers understand deposits as **fair and protective**
+* Deposits feel optional, human, and normal
+* No existing payment flows break
+* No migrations required
+
+---
+
+**Proceed with this update exactly as scoped. Do not refactor existing payment or invoice logic.**
+
+---
+
+### Why this prompt matters (for you, not Replit)
+
+This turns deposits from a **hidden capability** into a **perceived differentiator** — without rebuilding anything.
+
