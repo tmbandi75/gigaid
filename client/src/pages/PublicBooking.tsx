@@ -17,6 +17,7 @@ import { FAQAssistant } from "@/components/booking/FAQAssistant";
 import { PriceEstimator } from "@/components/booking/PriceEstimator";
 import { Confetti } from "@/components/booking/Confetti";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { AddressAutocomplete } from "@/components/booking/AddressAutocomplete";
 
 interface PublicProfile {
   name: string;
@@ -737,13 +738,16 @@ export default function PublicBooking() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="location">Location / Address</Label>
-                  <Input
-                    id="location"
+                  <Label>Location / Address</Label>
+                  <AddressAutocomplete
                     value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    placeholder="123 Main St, City"
-                    data-testid="input-location"
+                    onChange={(fullAddress, components) => {
+                      setFormData({ ...formData, location: fullAddress });
+                      if (components.zipCode && components.zipCode.length === 5) {
+                        setClientZipCode(components.zipCode);
+                      }
+                    }}
+                    placeholder="Start typing your address..."
                   />
                 </div>
 

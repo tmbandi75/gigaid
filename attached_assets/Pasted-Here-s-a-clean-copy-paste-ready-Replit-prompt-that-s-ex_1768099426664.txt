@@ -1,0 +1,93 @@
+Here’s a **clean, copy-paste ready Replit prompt** that’s explicit enough to get this implemented correctly **without breaking your existing booking flow**, while still leaving room for Replit to choose sane libraries.
+
+---
+
+### ✅ Replit Prompt: Google Maps Address Autocomplete on Booking Page
+
+> **Goal**
+> Enhance the public Booking Page so that when a user starts typing their local address, Google Maps Places Autocomplete is used to suggest addresses and automatically populate **Street Address, City, State, and Zip Code** fields.
+
+---
+
+### 📌 Functional Requirements
+
+1. **Address Autocomplete Input**
+
+   * Replace the current free-text “Address” input on the Booking Page with a Google Maps Places Autocomplete–enabled input.
+   * As the user types, show a dropdown list of suggested addresses from Google Maps.
+   * Restrict suggestions to **physical addresses only** (no businesses or PO boxes).
+
+2. **Auto-Populate Address Fields**
+
+   * When a user selects an address suggestion, automatically populate:
+
+     * `street_address`
+     * `city`
+     * `state`
+     * `zip_code`
+   * Store these values in the existing booking form state and submission payload.
+
+3. **Manual Fallback**
+
+   * If Google Maps fails to load or autocomplete is unavailable:
+
+     * Allow users to manually enter address, city, state, and zip code.
+     * Do not block booking submission.
+
+4. **Validation**
+
+   * Ensure `zip_code` is valid for the selected country (default to U.S.).
+   * Prevent form submission if required address fields are missing.
+
+---
+
+### 🔐 Technical Constraints & Safety
+
+* Use **Google Maps Places API (Autocomplete)**.
+* Store the API key securely using **Replit Secrets** (`GOOGLE_MAPS_API_KEY`).
+* Lazy-load the Google Maps script only on the Booking Page.
+* Do **not** refactor unrelated booking logic.
+* Do **not** break existing bookings, reminders, or payment flows.
+* Keep the implementation modular and reversible.
+
+---
+
+### 🧩 UI / UX Expectations
+
+* Show a subtle “Powered by Google” label as required by Google Maps TOS.
+* Maintain the current visual design of the Booking Page.
+* Keyboard navigation must work for address suggestions.
+* Mobile-friendly behavior is required.
+
+---
+
+### 🧠 Implementation Guidance (Not Hard Requirements)
+
+* Use Google Places `address_components` to extract:
+
+  * street number + route → street address
+  * locality → city
+  * administrative_area_level_1 → state
+  * postal_code → zip
+* Prefer a lightweight wrapper (e.g., `@react-google-maps/api`) if React is used.
+* Ensure cleanup of event listeners on component unmount.
+
+---
+
+### ✅ Acceptance Criteria
+
+* Typing an address shows Google suggestions.
+* Selecting an address auto-fills street, city, state, and zip.
+* Form submits successfully with populated values.
+* Manual entry works if autocomplete is unavailable.
+* No regression in existing booking functionality.
+
+---
+
+If you want, next I can:
+
+* Add **distance-based slot optimization** using the zip code
+* Restrict bookings by **service area radius**
+* Or chain this into **travel-time-aware scheduling**
+
+Just say which one.
