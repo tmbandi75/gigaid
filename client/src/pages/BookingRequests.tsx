@@ -240,8 +240,8 @@ export default function BookingRequests() {
         ) : (
           <div className="space-y-3">
             {filteredBookings.map((booking) => {
-              const depositConfig = depositStatusConfig[booking.depositStatus || "none"];
-              const completionConfig = completionStatusConfig[booking.completionStatus || "scheduled"];
+              const depositConfig = depositStatusConfig[booking.depositStatus || "none"] || depositStatusConfig.none;
+              const completionConfig = completionStatusConfig[booking.completionStatus || "scheduled"] || completionStatusConfig.scheduled;
               const CompletionIcon = completionConfig.icon;
 
               return (
@@ -377,8 +377,8 @@ export default function BookingRequests() {
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Status</span>
-                        <Badge className={depositStatusConfig[selectedBooking.depositStatus || "none"].color}>
-                          {depositStatusConfig[selectedBooking.depositStatus || "none"].label}
+                        <Badge className={(depositStatusConfig[selectedBooking.depositStatus || "none"] || depositStatusConfig.none).color}>
+                          {(depositStatusConfig[selectedBooking.depositStatus || "none"] || depositStatusConfig.none).label}
                         </Badge>
                       </div>
                       
