@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { loadStripe, Stripe } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { 
   Shield, 
   Clock, 
@@ -17,7 +19,8 @@ import {
   CreditCard,
   RefreshCw,
   Info,
-  MapPin
+  MapPin,
+  Lock
 } from "lucide-react";
 import {
   Dialog,
@@ -65,6 +68,192 @@ interface DepositIntentResponse {
   clientSecret: string;
   depositAmountCents: number;
   depositCurrency: string;
+  paymentIntentId: string;
+  amount: number;
+  currency: string;
+}
+
+interface PaymentFormProps {
+  token: string;
+  depositAmountCents: number;
+  depositCurrency: string;
+  onSuccess: () => void;
+}
+
+function PaymentForm({ token, depositAmountCents, depositCurrency, onSuccess }: PaymentFormProps) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const { toast } = useToast();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  const formatCurrency = (cents: number, currency: string = "usd") => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency.toUpperCase(),
+    }).format(cents / 100);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!stripe || !elements) {
+      return;
+    }
+
+    setIsProcessing(true);
+    setPaymentError(null);
+
+    const { error } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: window.location.href,
+      },
+      redirect: "if_required",
+    });
+
+    if (error) {
+      setPaymentError(error.message || "Payment failed. Please try again.");
+      setIsProcessing(false);
+    } else {
+      toast({ 
+        title: "Payment successful!", 
+        description: "Your deposit has been received." 
+      });
+      onSuccess();
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <PaymentElement 
+        options={{
+          layout: "tabs",
+        }}
+      />
+      
+      {paymentError && (
+        <div className="text-sm text-destructive flex items-center gap-2" data-testid="text-payment-error">
+          <AlertCircle className="h-4 w-4" />
+          {paymentError}
+        </div>
+      )}
+
+      <Button 
+        type="submit" 
+        className="w-full" 
+        disabled={!stripe || isProcessing}
+        data-testid="button-submit-payment"
+      >
+        {isProcessing ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            Processing...
+          </>
+        ) : (
+          <>
+            <Lock className="h-4 w-4 mr-2" />
+            Pay {formatCurrency(depositAmountCents, depositCurrency)} Deposit
+          </>
+        )}
+      </Button>
+
+      <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+        <Shield className="h-3 w-3" />
+        <span>Secured by Stripe</span>
+      </div>
+    </form>
+  );
+}
+
+interface DepositPaymentSectionProps {
+  token: string;
+  booking: BookingDetail;
+  onPaymentSuccess: () => void;
+}
+
+function DepositPaymentSection({ token, booking, onPaymentSuccess }: DepositPaymentSectionProps) {
+  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function initializePayment() {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const keyRes = await fetch("/api/stripe/publishable-key");
+        if (!keyRes.ok) throw new Error("Failed to load payment system");
+        const { publishableKey } = await keyRes.json();
+        setStripePromise(loadStripe(publishableKey));
+
+        const intentRes = await fetch(`/api/bookings/by-token/${token}/create-deposit-intent`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        
+        if (!intentRes.ok) {
+          const data = await intentRes.json();
+          throw new Error(data.error || "Failed to initialize payment");
+        }
+        
+        const intentData: DepositIntentResponse = await intentRes.json();
+        setClientSecret(intentData.clientSecret);
+      } catch (err: any) {
+        setError(err.message || "Failed to load payment form");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    initializePayment();
+  }, [token]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <span className="ml-2 text-muted-foreground">Loading payment form...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-4">
+        <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
+        <p className="text-sm text-destructive">{error}</p>
+      </div>
+    );
+  }
+
+  if (!stripePromise || !clientSecret) {
+    return null;
+  }
+
+  return (
+    <Elements 
+      stripe={stripePromise} 
+      options={{ 
+        clientSecret,
+        appearance: {
+          theme: "stripe",
+          variables: {
+            colorPrimary: "#1565C0",
+          },
+        },
+      }}
+    >
+      <PaymentForm
+        token={token}
+        depositAmountCents={booking.depositAmountCents || 0}
+        depositCurrency={booking.depositCurrency || "usd"}
+        onSuccess={onPaymentSuccess}
+      />
+    </Elements>
+  );
 }
 
 export default function CustomerBookingDetail() {
@@ -269,6 +458,25 @@ export default function CustomerBookingDetail() {
               )}
 
               <Separator />
+
+              {/* Payment Form - show when deposit needs to be paid */}
+              {(booking.depositStatus === "none" || booking.depositStatus === "pending" || !booking.depositStatus) && 
+               booking.provider?.depositEnabled && (
+                <div className="space-y-4" data-testid="section-deposit-payment">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <CreditCard className="h-4 w-4" />
+                    <span>Pay Your Deposit</span>
+                  </div>
+                  <DepositPaymentSection
+                    token={token!}
+                    booking={booking}
+                    onPaymentSuccess={() => {
+                      queryClient.invalidateQueries({ queryKey: ["/api/bookings/by-token", token] });
+                    }}
+                  />
+                  <Separator />
+                </div>
+              )}
 
               {/* Deposit Safety Message */}
               <div className="bg-muted/50 rounded-lg p-4 space-y-3">
