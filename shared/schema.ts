@@ -622,6 +622,41 @@ export const insertReviewSchema = createInsertSchema(reviews).omit({
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type Review = typeof reviews.$inferSelect;
 
+// Price Confirmation Status
+export const priceConfirmationStatuses = ["draft", "sent", "viewed", "confirmed", "expired"] as const;
+export type PriceConfirmationStatus = (typeof priceConfirmationStatuses)[number];
+
+// Price Confirmations table - lightweight price agreement between Lead and Job
+export const priceConfirmations = pgTable("price_confirmations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  leadId: varchar("lead_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  serviceType: text("service_type"),
+  agreedPrice: integer("agreed_price").notNull(), // in cents
+  notes: text("notes"),
+  status: text("status").notNull().default("draft"),
+  confirmationToken: text("confirmation_token").notNull().unique(),
+  sentAt: text("sent_at"),
+  viewedAt: text("viewed_at"),
+  confirmedAt: text("confirmed_at"),
+  convertedJobId: text("converted_job_id"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at"),
+});
+
+export const insertPriceConfirmationSchema = createInsertSchema(priceConfirmations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  sentAt: true,
+  viewedAt: true,
+  confirmedAt: true,
+  convertedJobId: true,
+});
+
+export type InsertPriceConfirmation = z.infer<typeof insertPriceConfirmationSchema>;
+export type PriceConfirmation = typeof priceConfirmations.$inferSelect;
+
 // Onboarding checklist items
 export const onboardingItems = [
   { id: "add_service", title: "Add Service", description: "Add your first service type" },

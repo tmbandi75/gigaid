@@ -1,0 +1,171 @@
+Perfect — below is a **single, copy-paste Replit prompt** that is **fully aligned with your existing GigAid JSON + graph**, avoids refactors, and implements the **lightweight “Price Confirmation” (NOT full estimates)** exactly as we discussed.
+
+This is written the way Replit agents understand best: **clear intent, constraints, schema-first, minimal surface area**.
+
+---
+
+## ✅ Replit Prompt: Implement Lightweight Price Confirmation (GigAid)
+
+**Context**
+
+We are building GigAid for solo and small-crew gig workers who get jobs from Facebook, Craigslist, texts, and DMs.
+
+Pricing is usually discussed informally.
+We do **NOT** want a traditional estimate/proposal system.
+
+We want a **lightweight “Price Confirmation”** step that:
+
+* captures the agreed price
+* requires one-tap client confirmation
+* converts directly into a Job
+* fits the existing Lead → Job → Invoice lifecycle
+* does NOT introduce PDFs, contracts, or multi-line estimates
+
+---
+
+### 🎯 Goal
+
+Add a **Price Confirmation** feature that sits **between Lead and Job**, without breaking existing flows.
+
+---
+
+## 1️⃣ Database / Schema Changes (minimal, additive)
+
+Create a new table:
+
+### `price_confirmations`
+
+Fields:
+
+* `id` (uuid, primary key)
+* `lead_id` (uuid, foreign key → leads.id, required)
+* `service_type` (string, nullable)
+* `agreed_price` (numeric, required)
+* `notes` (text, optional – free-form pricing notes)
+* `status` (enum: `draft`, `sent`, `viewed`, `confirmed`, `expired`)
+* `confirmation_token` (string, unique, required)
+* `sent_at` (timestamp, nullable)
+* `viewed_at` (timestamp, nullable)
+* `confirmed_at` (timestamp, nullable)
+* `created_at`
+* `updated_at`
+
+Constraints:
+
+* One active (non-expired) price confirmation per lead
+* Confirmation token must be unique and URL-safe
+
+Do **not** modify existing tables other than adding this one.
+
+---
+
+## 2️⃣ Business Rules
+
+### Creation
+
+* A price confirmation can only be created from an existing Lead
+* Default status = `draft`
+
+### Sending
+
+* When sent:
+
+  * status → `sent`
+  * `sent_at` populated
+  * generate a **public confirmation link** using `confirmation_token`
+
+### Client View (public, no login)
+
+* Client can:
+
+  * view service + agreed price + notes
+  * tap **“Looks good”**
+* On tap:
+
+  * status → `confirmed`
+  * `confirmed_at` populated
+
+### Conversion (critical)
+
+When status changes to `confirmed`:
+
+* Automatically create a **Job**
+* Populate job fields from:
+
+  * Lead
+  * PriceConfirmation (price, service type, notes)
+* Preserve existing Job lifecycle logic
+* Do NOT require manual job creation
+
+---
+
+## 3️⃣ UI / UX Requirements (keep it simple)
+
+### Internal (gig worker)
+
+* From a Lead:
+
+  * “Confirm Price” button
+* Simple form:
+
+  * Price
+  * Optional notes
+* Status indicator:
+
+  * Draft / Sent / Confirmed
+
+### Client (mobile-first)
+
+* Public page:
+
+  * Service
+  * Price
+  * Notes
+  * Single CTA: **“Looks good”**
+* No login
+* No PDF
+* No signature
+* One-tap confirmation
+
+---
+
+## 4️⃣ Explicit Non-Goals (do NOT implement)
+
+* ❌ No estimate PDFs
+* ❌ No line-item labor/material breakdown
+* ❌ No revisions or approval workflows
+* ❌ No contracts
+* ❌ No payment collection yet (future-ready only)
+
+---
+
+## 5️⃣ Integration Notes
+
+* This feature should **coexist** with the current flow where Leads can still convert directly to Jobs
+* Price Confirmation is optional, not mandatory
+* Do not refactor existing Job, Invoice, Reminder, or Review logic
+* Keep everything backward-compatible
+
+---
+
+## 6️⃣ Success Criteria
+
+* A gig worker can turn a messy DM into:
+  **Lead → Price Confirmation → Confirmed Job**
+* Client confirmation requires **one tap**
+* No additional friction for fast-moving gigs
+* System is ready to layer **deposits/payments later**
+
+---
+
+**Proceed with implementation following these constraints exactly.**
+
+---
+
+If you want next, I can:
+
+* Write the **Supabase SQL migration**
+* Design the **exact mobile copy** for the client page
+* Or extend this prompt to **auto-request deposits after confirmation**
+
+Just tell me which one.

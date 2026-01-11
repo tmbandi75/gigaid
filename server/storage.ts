@@ -20,6 +20,7 @@ import {
   type CrewInvite, type InsertCrewInvite,
   type CrewJobPhoto, type InsertCrewJobPhoto,
   type CrewMessage, type InsertCrewMessage,
+  type PriceConfirmation, type InsertPriceConfirmation,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -150,6 +151,16 @@ export interface IStorage {
   getCrewMessagesByUser(userId: string): Promise<CrewMessage[]>;
   createCrewMessage(message: InsertCrewMessage): Promise<CrewMessage>;
   updateCrewMessage(id: string, updates: Partial<CrewMessage>): Promise<CrewMessage | undefined>;
+
+  // Price Confirmations
+  getPriceConfirmation(id: string): Promise<PriceConfirmation | undefined>;
+  getPriceConfirmationByToken(token: string): Promise<PriceConfirmation | undefined>;
+  getPriceConfirmationsByLead(leadId: string): Promise<PriceConfirmation[]>;
+  getPriceConfirmationsByUser(userId: string): Promise<PriceConfirmation[]>;
+  getActivePriceConfirmationForLead(leadId: string): Promise<PriceConfirmation | undefined>;
+  createPriceConfirmation(confirmation: InsertPriceConfirmation): Promise<PriceConfirmation>;
+  updatePriceConfirmation(id: string, updates: Partial<PriceConfirmation>): Promise<PriceConfirmation | undefined>;
+  deletePriceConfirmation(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -1517,6 +1528,68 @@ export class MemStorage implements IStorage {
     const updated: CrewMessage = { ...msg, ...updates };
     this.crewMessages.set(id, updated);
     return updated;
+  }
+
+  // Price Confirmations - stub implementations (using DatabaseStorage in production)
+  private priceConfirmations: Map<string, PriceConfirmation> = new Map();
+
+  async getPriceConfirmation(id: string): Promise<PriceConfirmation | undefined> {
+    return this.priceConfirmations.get(id);
+  }
+
+  async getPriceConfirmationByToken(token: string): Promise<PriceConfirmation | undefined> {
+    return Array.from(this.priceConfirmations.values()).find(p => p.confirmationToken === token);
+  }
+
+  async getPriceConfirmationsByLead(leadId: string): Promise<PriceConfirmation[]> {
+    return Array.from(this.priceConfirmations.values())
+      .filter(p => p.leadId === leadId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getPriceConfirmationsByUser(userId: string): Promise<PriceConfirmation[]> {
+    return Array.from(this.priceConfirmations.values())
+      .filter(p => p.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getActivePriceConfirmationForLead(leadId: string): Promise<PriceConfirmation | undefined> {
+    const confirmations = Array.from(this.priceConfirmations.values())
+      .filter(p => p.leadId === leadId && (p.status === "draft" || p.status === "sent"))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return confirmations[0];
+  }
+
+  async createPriceConfirmation(confirmation: InsertPriceConfirmation): Promise<PriceConfirmation> {
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    const newConfirmation: PriceConfirmation = {
+      ...confirmation,
+      id,
+      serviceType: confirmation.serviceType || null,
+      notes: confirmation.notes || null,
+      status: confirmation.status || "draft",
+      sentAt: null,
+      viewedAt: null,
+      confirmedAt: null,
+      convertedJobId: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.priceConfirmations.set(id, newConfirmation);
+    return newConfirmation;
+  }
+
+  async updatePriceConfirmation(id: string, updates: Partial<PriceConfirmation>): Promise<PriceConfirmation | undefined> {
+    const confirmation = this.priceConfirmations.get(id);
+    if (!confirmation) return undefined;
+    const updated: PriceConfirmation = { ...confirmation, ...updates, updatedAt: new Date().toISOString() };
+    this.priceConfirmations.set(id, updated);
+    return updated;
+  }
+
+  async deletePriceConfirmation(id: string): Promise<boolean> {
+    return this.priceConfirmations.delete(id);
   }
 }
 

@@ -4,6 +4,7 @@ import {
   users, otpCodes, sessions, jobs, leads, invoices, reminders,
   crewMembers, referrals, bookingRequests, bookingEvents, voiceNotes,
   reviews, userPaymentMethods, jobPayments, crewInvites, crewJobPhotos, crewMessages,
+  priceConfirmations,
   type User, type InsertUser,
   type Job, type InsertJob,
   type Lead, type InsertLead,
@@ -25,6 +26,7 @@ import {
   type CrewInvite, type InsertCrewInvite,
   type CrewJobPhoto, type InsertCrewJobPhoto,
   type CrewMessage, type InsertCrewMessage,
+  type PriceConfirmation, type InsertPriceConfirmation,
 } from "@shared/schema";
 import { IStorage } from "./storage";
 import { randomUUID } from "crypto";
@@ -755,6 +757,70 @@ export class DatabaseStorage implements IStorage {
   async updateCrewMessage(id: string, updates: Partial<CrewMessage>): Promise<CrewMessage | undefined> {
     const [updated] = await db.update(crewMessages).set(updates).where(eq(crewMessages.id, id)).returning();
     return updated || undefined;
+  }
+
+  // Price Confirmation methods
+  async getPriceConfirmation(id: string): Promise<PriceConfirmation | undefined> {
+    const [confirmation] = await db.select().from(priceConfirmations).where(eq(priceConfirmations.id, id));
+    return confirmation || undefined;
+  }
+
+  async getPriceConfirmationByToken(token: string): Promise<PriceConfirmation | undefined> {
+    const [confirmation] = await db.select().from(priceConfirmations).where(eq(priceConfirmations.confirmationToken, token));
+    return confirmation || undefined;
+  }
+
+  async getPriceConfirmationsByLead(leadId: string): Promise<PriceConfirmation[]> {
+    return await db.select().from(priceConfirmations).where(eq(priceConfirmations.leadId, leadId)).orderBy(desc(priceConfirmations.createdAt));
+  }
+
+  async getPriceConfirmationsByUser(userId: string): Promise<PriceConfirmation[]> {
+    return await db.select().from(priceConfirmations).where(eq(priceConfirmations.userId, userId)).orderBy(desc(priceConfirmations.createdAt));
+  }
+
+  async getActivePriceConfirmationForLead(leadId: string): Promise<PriceConfirmation | undefined> {
+    const [confirmation] = await db.select().from(priceConfirmations)
+      .where(and(
+        eq(priceConfirmations.leadId, leadId),
+        eq(priceConfirmations.status, "draft")
+      ))
+      .orderBy(desc(priceConfirmations.createdAt));
+    if (confirmation) return confirmation;
+    
+    // Also check for sent but not expired
+    const [sentConfirmation] = await db.select().from(priceConfirmations)
+      .where(and(
+        eq(priceConfirmations.leadId, leadId),
+        eq(priceConfirmations.status, "sent")
+      ))
+      .orderBy(desc(priceConfirmations.createdAt));
+    return sentConfirmation || undefined;
+  }
+
+  async createPriceConfirmation(insertConfirmation: InsertPriceConfirmation): Promise<PriceConfirmation> {
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    const [confirmation] = await db.insert(priceConfirmations).values({
+      ...insertConfirmation,
+      id,
+      status: insertConfirmation.status || "draft",
+      createdAt: now,
+      updatedAt: now,
+    }).returning();
+    return confirmation;
+  }
+
+  async updatePriceConfirmation(id: string, updates: Partial<PriceConfirmation>): Promise<PriceConfirmation | undefined> {
+    const [updated] = await db.update(priceConfirmations).set({
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    }).where(eq(priceConfirmations.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deletePriceConfirmation(id: string): Promise<boolean> {
+    const result = await db.delete(priceConfirmations).where(eq(priceConfirmations.id, id)).returning();
+    return result.length > 0;
   }
 }
 
