@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Star, Calendar, CheckCircle, Loader2, ChevronLeft, ChevronRight, Clock, History, RotateCcw, MapPin, Zap, Navigation } from "lucide-react";
+import { Star, Calendar, CheckCircle, Loader2, ChevronLeft, ChevronRight, Clock, History, RotateCcw, MapPin, Zap, Navigation, Shield, RefreshCw, CreditCard } from "lucide-react";
 import { SmartServiceRecommender } from "@/components/booking/SmartServiceRecommender";
 import { JobNotesAutocomplete } from "@/components/booking/JobNotesAutocomplete";
 import { FAQAssistant } from "@/components/booking/FAQAssistant";
@@ -36,6 +36,11 @@ interface PublicProfile {
     createdAt: string;
     providerResponse?: string | null;
   }>;
+  depositEnabled?: boolean;
+  depositType?: string;
+  depositValue?: number;
+  lateRescheduleWindowHours?: number;
+  lateRescheduleRetainPctFirst?: number;
 }
 
 interface BookingHistoryItem {
@@ -767,6 +772,52 @@ export default function PublicBooking() {
                     <p className="text-sm text-muted-foreground">
                       {selectedDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })} at {formatTime(selectedTime)}
                     </p>
+                  </div>
+                )}
+
+                {/* Deposit Information */}
+                {profile.depositEnabled && profile.depositValue && profile.depositValue > 0 && (
+                  <div className="space-y-3" data-testid="section-deposit-info">
+                    {/* Deposit Amount */}
+                    <div className="p-4 rounded-lg bg-muted/50 border">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CreditCard className="h-4 w-4 text-primary" />
+                        <span className="font-medium text-sm">Deposit Required</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {profile.depositType === "percent" 
+                          ? `${profile.depositValue}% of the service cost`
+                          : `$${(profile.depositValue / 100).toFixed(2)}`
+                        } will be collected to confirm your booking.
+                      </p>
+                    </div>
+
+                    {/* Deposit Safety */}
+                    <div className="p-4 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                      <div className="flex items-start gap-3">
+                        <Shield className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="font-medium text-sm text-green-700 dark:text-green-400">Your deposit is protected</p>
+                          <p className="text-xs text-green-600/80 dark:text-green-500/80 mt-1">
+                            Deposits are held securely and only released to the provider after job completion.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Reschedule Policy */}
+                    <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-start gap-3">
+                        <RefreshCw className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="font-medium text-sm text-blue-700 dark:text-blue-400">Reschedule Policy</p>
+                          <p className="text-xs text-blue-600/80 dark:text-blue-500/80 mt-1">
+                            Late reschedules (within {profile.lateRescheduleWindowHours || 24}h of appointment) 
+                            may incur a {profile.lateRescheduleRetainPctFirst || 40}% fee. The rest applies to your new booking.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
 

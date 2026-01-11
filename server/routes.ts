@@ -1515,6 +1515,11 @@ export async function registerRoutes(
         showReviews: user.showReviewsOnBooking !== false,
         availability: user.availability,
         slotDuration: user.slotDuration,
+        depositEnabled: user.depositEnabled || false,
+        depositType: user.depositType || "percent",
+        depositValue: user.depositValue || 0,
+        lateRescheduleWindowHours: user.lateRescheduleWindowHours || 24,
+        lateRescheduleRetainPctFirst: user.lateRescheduleRetainPctFirst || 40,
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch profile" });
@@ -2654,6 +2659,57 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Get deposit status error:", error);
       res.status(500).json({ error: "Failed to get deposit status" });
+    }
+  });
+
+  // Get full booking detail for customer view (public endpoint)
+  app.get("/api/bookings/by-token/:token/detail", async (req, res) => {
+    try {
+      const booking = await storage.getBookingRequestByToken(req.params.token);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      // userId is stored as a string in storage - try both string and direct lookup
+      let provider = await storage.getUser(booking.userId);
+      if (!provider && typeof booking.userId === "number") {
+        provider = await storage.getUser(String(booking.userId));
+      }
+
+      res.json({
+        id: booking.id,
+        clientName: booking.clientName,
+        clientPhone: booking.clientPhone,
+        clientEmail: booking.clientEmail,
+        serviceType: booking.serviceType,
+        description: booking.description,
+        location: booking.location,
+        preferredDate: booking.preferredDate,
+        preferredTime: booking.preferredTime,
+        status: booking.status,
+        depositAmountCents: booking.depositAmountCents,
+        depositCurrency: booking.depositCurrency,
+        depositStatus: booking.depositStatus,
+        completionStatus: booking.completionStatus,
+        autoReleaseAt: booking.autoReleaseAt,
+        lateRescheduleCount: booking.lateRescheduleCount,
+        retainedAmountCents: booking.retainedAmountCents,
+        rolledAmountCents: booking.rolledAmountCents,
+        stripePaymentIntentId: booking.stripePaymentIntentId,
+        provider: provider ? {
+          name: provider.name || `${provider.firstName || ""} ${provider.lastName || ""}`.trim() || "Provider",
+          businessName: provider.businessName || null,
+          photo: provider.photo || null,
+          depositEnabled: provider.depositEnabled ?? false,
+          lateRescheduleWindowHours: provider.lateRescheduleWindowHours ?? 24,
+          lateRescheduleRetainPctFirst: provider.lateRescheduleRetainPctFirst ?? 40,
+          lateRescheduleRetainPctSecond: provider.lateRescheduleRetainPctSecond ?? 60,
+          lateRescheduleRetainPctCap: provider.lateRescheduleRetainPctCap ?? 75,
+        } : null,
+      });
+    } catch (error) {
+      console.error("Get booking detail error:", error);
+      res.status(500).json({ error: "Failed to get booking detail" });
     }
   });
 

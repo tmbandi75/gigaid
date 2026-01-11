@@ -26,6 +26,8 @@ import AITools from "@/pages/AITools";
 import PublicBooking from "@/pages/PublicBooking";
 import InvoiceRating from "@/pages/InvoiceRating";
 import CrewPortal from "@/pages/CrewPortal";
+import CustomerBookingDetail from "@/pages/CustomerBookingDetail";
+import BookingRequests from "@/pages/BookingRequests";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -50,6 +52,7 @@ function Router() {
       <Route path="/reviews" component={Reviews} />
       <Route path="/help" component={HelpSupport} />
       <Route path="/ai-tools" component={AITools} />
+      <Route path="/booking-requests" component={BookingRequests} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -75,6 +78,7 @@ function App() {
         <ThemeInitializer />
         <Switch>
           <Route path="/book/:slug" component={PublicBooking} />
+          <Route path="/booking/:token" component={CustomerBookingDetail} />
           <Route path="/invoice/:id/rate" component={InvoiceRating} />
           <Route path="/crew-portal/:token" component={CrewPortal} />
           <Route>
