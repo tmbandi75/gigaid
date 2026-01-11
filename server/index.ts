@@ -4,6 +4,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { startReminderScheduler } from "./reminderScheduler";
 import { startAutoReleaseScheduler } from "./depositAutoRelease";
+import { startWeeklySummaryScheduler } from "./weeklyEmailSummary";
 
 const app = express();
 const httpServer = createServer(app);
@@ -97,6 +98,8 @@ app.use((req, res, next) => {
       log(`serving on port ${port}`);
       startReminderScheduler();
       startAutoReleaseScheduler();
+      const baseUrl = process.env.FRONTEND_URL || `http://localhost:${port}`;
+      startWeeklySummaryScheduler(baseUrl);
     },
   );
 })();

@@ -119,6 +119,117 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/owner/metrics", async (req, res) => {
+    try {
+      const user = await storage.getUser(defaultUserId);
+      const isPro = user?.isPro ?? false;
+
+      if (!isPro) {
+        return res.json({ isPro: false });
+      }
+
+      const now = new Date();
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+      const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+      const jobs = await storage.getJobs(defaultUserId);
+      const leads = await storage.getLeads(defaultUserId);
+      const invoices = await storage.getInvoices(defaultUserId);
+
+      const completedJobsThisWeek = jobs.filter(job => {
+        if (job.status !== "completed") return false;
+        const scheduledDate = job.scheduledDate ? new Date(job.scheduledDate) : null;
+        return scheduledDate && scheduledDate >= oneWeekAgo;
+      });
+
+      const completedJobsLastWeek = jobs.filter(job => {
+        if (job.status !== "completed") return false;
+        const scheduledDate = job.scheduledDate ? new Date(job.scheduledDate) : null;
+        return scheduledDate && scheduledDate >= twoWeeksAgo && scheduledDate < oneWeekAgo;
+      });
+
+      const completedJobsThisMonth = jobs.filter(job => {
+        if (job.status !== "completed") return false;
+        const scheduledDate = job.scheduledDate ? new Date(job.scheduledDate) : null;
+        return scheduledDate && scheduledDate >= oneMonthAgo;
+      });
+
+      const weeklyRevenue = completedJobsThisWeek.reduce((sum, job) => sum + (job.price || 0), 0);
+      const lastWeekRevenue = completedJobsLastWeek.reduce((sum, job) => sum + (job.price || 0), 0);
+      const monthlyRevenue = completedJobsThisMonth.reduce((sum, job) => sum + (job.price || 0), 0);
+
+      const revenueChange = lastWeekRevenue > 0 
+        ? Math.round(((weeklyRevenue - lastWeekRevenue) / lastWeekRevenue) * 100)
+        : weeklyRevenue > 0 ? 100 : 0;
+
+      const newLeadsThisWeek = leads.filter(lead => {
+        const createdAt = lead.createdAt ? new Date(lead.createdAt) : null;
+        return createdAt && createdAt >= oneWeekAgo;
+      }).length;
+
+      const newLeadsLastWeek = leads.filter(lead => {
+        const createdAt = lead.createdAt ? new Date(lead.createdAt) : null;
+        return createdAt && createdAt >= twoWeeksAgo && createdAt < oneWeekAgo;
+      }).length;
+
+      const unpaidInvoices = invoices.filter(inv => inv.status === "pending" || inv.status === "sent");
+      const outstandingInvoices = {
+        count: unpaidInvoices.length,
+        totalCents: unpaidInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0),
+      };
+
+      const upcomingJobs = jobs
+        .filter(job => {
+          if (job.status !== "scheduled") return false;
+          const scheduledDate = job.scheduledDate ? new Date(job.scheduledDate) : null;
+          return scheduledDate && scheduledDate >= now && scheduledDate <= oneWeekFromNow;
+        })
+        .sort((a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime())
+        .map(job => ({
+          id: job.id,
+          clientName: job.clientName || job.title,
+          serviceType: job.serviceType,
+          scheduledDate: job.scheduledDate,
+          scheduledTime: job.scheduledTime,
+          priceCents: job.price || 0,
+        }));
+
+      const recentCompletedJobs = completedJobsThisWeek
+        .sort((a, b) => {
+          const dateA = a.paidAt ? new Date(a.paidAt) : new Date(a.scheduledDate);
+          const dateB = b.paidAt ? new Date(b.paidAt) : new Date(b.scheduledDate);
+          return dateB.getTime() - dateA.getTime();
+        })
+        .slice(0, 10)
+        .map(job => ({
+          id: job.id,
+          clientName: job.clientName || job.title,
+          serviceType: job.serviceType,
+          completedAt: job.paidAt || job.scheduledDate,
+          priceCents: job.price || 0,
+        }));
+
+      res.json({
+        isPro: true,
+        weeklyRevenue,
+        monthlyRevenue,
+        revenueChange,
+        jobsCompletedThisWeek: completedJobsThisWeek.length,
+        jobsCompletedLastWeek: completedJobsLastWeek.length,
+        newLeadsThisWeek,
+        newLeadsLastWeek,
+        outstandingInvoices,
+        upcomingJobs,
+        recentCompletedJobs,
+      });
+    } catch (error) {
+      console.error("Owner metrics error:", error);
+      res.status(500).json({ error: "Failed to fetch owner metrics" });
+    }
+  });
+
   app.get("/api/jobs", async (req, res) => {
     try {
       const jobs = await storage.getJobs(defaultUserId);
@@ -515,6 +626,7 @@ export async function registerRoutes(
           await sendEmail({
             to: lead.clientEmail,
             subject: `Price Confirmation from ${provider?.businessName || provider?.name || "Your Service Provider"}`,
+            text: `Hi ${lead.clientName}, ${provider?.businessName || provider?.name || "Your service provider"} has sent you a price confirmation for ${confirmation.serviceType || "Service"}: ${priceFormatted}. Confirm here: ${confirmationUrl}`,
             html: `<p>Hi ${lead.clientName},</p>
             <p>${provider?.businessName || provider?.name || "Your service provider"} has sent you a price confirmation:</p>
             <p><strong>Service:</strong> ${confirmation.serviceType || "Service"}</p>
