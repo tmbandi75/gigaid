@@ -40,7 +40,10 @@ import {
   AlertCircle,
   XCircle,
   Copy,
+  Wallet,
+  DollarSign,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 interface BookingRequest {
   id: number;
@@ -64,6 +67,11 @@ interface BookingRequest {
   waiveRescheduleFee: boolean | null;
   confirmationToken: string | null;
   createdAt: string;
+  totalAmountCents: number | null;
+  remainderPaymentStatus: string | null;
+  remainderPaymentMethod: string | null;
+  remainderPaidAt: string | null;
+  remainderNotes: string | null;
 }
 
 const statusFilters = [
@@ -90,14 +98,50 @@ const completionStatusConfig: Record<string, { color: string; label: string; ico
   dispute: { color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400", label: "Dispute", icon: AlertCircle },
 };
 
+const paymentMethodOptions = [
+  { value: "zelle", label: "Zelle" },
+  { value: "venmo", label: "Venmo" },
+  { value: "cashapp", label: "Cash App" },
+  { value: "cash", label: "Cash" },
+  { value: "check", label: "Check" },
+  { value: "stripe", label: "Card (Stripe)" },
+  { value: "other", label: "Other" },
+];
+
 export default function BookingRequests() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedBooking, setSelectedBooking] = useState<BookingRequest | null>(null);
+  const [showRemainderPaymentDialog, setShowRemainderPaymentDialog] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
+  const [remainderNotes, setRemainderNotes] = useState("");
 
   const { data: bookings, isLoading } = useQuery<BookingRequest[]>({
     queryKey: ["/api/booking-requests"],
+  });
+
+  const recordRemainderPaymentMutation = useMutation({
+    mutationFn: ({ bookingId, paymentMethod, notes }: { bookingId: number; paymentMethod: string; notes: string }) =>
+      apiRequest("POST", `/api/bookings/${bookingId}/record-remainder-payment`, { paymentMethod, notes }),
+    onSuccess: () => {
+      toast({ title: "Payment recorded", description: "The remainder payment has been marked as paid." });
+      queryClient.invalidateQueries({ queryKey: ["/api/booking-requests"] });
+      if (selectedBooking) {
+        setSelectedBooking({ 
+          ...selectedBooking, 
+          remainderPaymentStatus: "paid",
+          remainderPaymentMethod: selectedPaymentMethod,
+          remainderPaidAt: new Date().toISOString(),
+        });
+      }
+      setShowRemainderPaymentDialog(false);
+      setSelectedPaymentMethod("");
+      setRemainderNotes("");
+    },
+    onError: () => {
+      toast({ title: "Failed to record payment", variant: "destructive" });
+    },
   });
 
   const waiveFeeMutation = useMutation({
@@ -397,6 +441,84 @@ export default function BookingRequests() {
                   </div>
                 )}
 
+                {/* Remainder Payment Section */}
+                {selectedBooking.totalAmountCents && 
+                 selectedBooking.totalAmountCents > (selectedBooking.depositAmountCents || 0) && (
+                  <div className="space-y-3">
+                    <h4 className="font-medium flex items-center gap-2">
+                      <Wallet className="h-4 w-4" />
+                      Remaining Balance
+                    </h4>
+                    
+                    <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Total Service</span>
+                        <span className="font-medium" data-testid="detail-total-amount">
+                          {formatCurrency(selectedBooking.totalAmountCents, selectedBooking.depositCurrency || "usd")}
+                        </span>
+                      </div>
+                      {selectedBooking.depositAmountCents && selectedBooking.depositAmountCents > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Deposit</span>
+                          <span className="text-sm text-green-600" data-testid="detail-deposit-subtracted">
+                            -{formatCurrency(selectedBooking.depositAmountCents, selectedBooking.depositCurrency || "usd")}
+                          </span>
+                        </div>
+                      )}
+                      <Separator />
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Remainder Due</span>
+                        <span className="font-semibold" data-testid="detail-remainder-amount">
+                          {formatCurrency(
+                            selectedBooking.totalAmountCents - (selectedBooking.depositAmountCents || 0), 
+                            selectedBooking.depositCurrency || "usd"
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Status</span>
+                        {selectedBooking.remainderPaymentStatus === "paid" ? (
+                          <Badge variant="default" className="bg-green-600" data-testid="badge-remainder-paid">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Paid
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" data-testid="badge-remainder-pending">
+                            Pending
+                          </Badge>
+                        )}
+                      </div>
+                      {selectedBooking.remainderPaymentStatus === "paid" && selectedBooking.remainderPaymentMethod && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Paid via</span>
+                          <span className="text-sm capitalize">
+                            {selectedBooking.remainderPaymentMethod === "cashapp" ? "Cash App" : selectedBooking.remainderPaymentMethod}
+                            {selectedBooking.remainderPaidAt && ` on ${new Date(selectedBooking.remainderPaidAt).toLocaleDateString()}`}
+                          </span>
+                        </div>
+                      )}
+                      {selectedBooking.remainderNotes && (
+                        <div className="text-xs text-muted-foreground mt-2">
+                          Note: {selectedBooking.remainderNotes}
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedBooking.remainderPaymentStatus !== "paid" && (
+                      <Button
+                        className="w-full"
+                        onClick={() => setShowRemainderPaymentDialog(true)}
+                        data-testid="button-record-remainder"
+                      >
+                        <DollarSign className="h-4 w-4 mr-2" />
+                        Record Remainder Payment
+                      </Button>
+                    )}
+                  </div>
+                )}
+
+                <Separator />
+
                 {/* Customer Booking Link */}
                 {selectedBooking.confirmationToken && (
                   <div className="space-y-2">
@@ -425,6 +547,88 @@ export default function BookingRequests() {
               </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Record Remainder Payment Dialog */}
+      <Dialog open={showRemainderPaymentDialog} onOpenChange={setShowRemainderPaymentDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Record Remainder Payment</DialogTitle>
+            <DialogDescription>
+              {selectedBooking && selectedBooking.totalAmountCents && (
+                <>
+                  Record the payment of{" "}
+                  {formatCurrency(
+                    selectedBooking.totalAmountCents - (selectedBooking.depositAmountCents || 0),
+                    selectedBooking.depositCurrency || "usd"
+                  )}{" "}
+                  from {selectedBooking.clientName}.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="payment-method">Payment Method</Label>
+              <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
+                <SelectTrigger id="payment-method" data-testid="select-payment-method">
+                  <SelectValue placeholder="Select payment method" />
+                </SelectTrigger>
+                <SelectContent>
+                  {paymentMethodOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="payment-notes">Notes (optional)</Label>
+              <Textarea
+                id="payment-notes"
+                placeholder="Any additional notes about this payment..."
+                value={remainderNotes}
+                onChange={(e) => setRemainderNotes(e.target.value)}
+                rows={3}
+                data-testid="input-payment-notes"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowRemainderPaymentDialog(false);
+                setSelectedPaymentMethod("");
+                setRemainderNotes("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (selectedBooking && selectedPaymentMethod) {
+                  recordRemainderPaymentMutation.mutate({
+                    bookingId: selectedBooking.id,
+                    paymentMethod: selectedPaymentMethod,
+                    notes: remainderNotes,
+                  });
+                }
+              }}
+              disabled={!selectedPaymentMethod || recordRemainderPaymentMutation.isPending}
+              data-testid="button-confirm-remainder"
+            >
+              {recordRemainderPaymentMutation.isPending && (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              )}
+              Record Payment
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
