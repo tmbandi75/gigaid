@@ -1,0 +1,110 @@
+You are working inside the GigAid codebase. Implement a map component on the Individual Job page that displays the customer location and the gig worker’s current or last-known location, shows the approximate distance between them, and provides directions. DO NOT refactor unrelated code. Make changes minimally and modularly.
+
+GOALS
+1) Map display on Individual Job page
+- Show an embedded Google Map.
+- Display two pin markers:
+  a) Customer location (service address)
+  b) Gig worker location (current or last-known)
+- Fit map bounds to include both pins.
+- Display approximate distance (miles/km) between worker and customer.
+- Provide “View Directions” actions.
+
+2) Location behavior & privacy
+- Customer location:
+  - Use the booking address (lat/lng from geocoding or stored zip-level fallback).
+- Gig worker location:
+  - Use last known location if available.
+  - If not available, show “Location unavailable” and still render customer pin.
+- Location precision:
+  - Default to rounded coordinates (~100–300m precision) unless worker has explicitly enabled precise tracking.
+- Do NOT continuously track in background unless already implemented.
+
+3) Directions
+- Provide buttons:
+  - “Open in Google Maps”
+  - “Open in Apple Maps” (iOS)
+- Directions should open externally (deep link), not inside the embedded map.
+
+TECHNICAL REQUIREMENTS
+A) Google Maps
+- Use Google Maps JavaScript API.
+- Enable and use:
+  - Maps JavaScript API
+  - Places API (already enabled)
+  - Distance Matrix API (for distance calculation)
+- API key must be loaded from environment variable:
+  GOOGLE_MAPS_API_KEY
+- Lazy-load Maps JS only on the Job page.
+
+B) Data Model
+- Ensure bookings/jobs have:
+  - customer_lat (float)
+  - customer_lng (float)
+  - provider_lat (float, nullable)
+  - provider_lng (float, nullable)
+  - provider_location_updated_at (timestamp)
+- If exact provider location not available:
+  - fallback to zip centroid or last known session location.
+- Do NOT require schema changes unless missing (add migration only if necessary).
+
+C) Server Logic
+- When booking is created:
+  - Geocode customer address → lat/lng (if not already done).
+- When provider opens the app or job page:
+  - Capture provider’s current location via browser/mobile geolocation (with permission).
+  - Update provider_lat/provider_lng + timestamp.
+- Store only the most recent location per job (no historical tracking).
+
+D) Distance Calculation
+- Use Google Distance Matrix API:
+  - origin: provider_lat/lng
+  - destination: customer_lat/lng
+- Display:
+  - distance (e.g., “8.4 miles”)
+  - estimated drive time (optional but recommended)
+- If Distance Matrix fails:
+  - fallback to straight-line (Haversine) distance calculation.
+
+E) UI / UX
+- Job page map section layout:
+  - Title: “Job Location”
+  - Map (responsive, mobile-friendly)
+  - Under map:
+    - “You are approximately X miles from the customer”
+    - Provider location status:
+      - “Location updated 5 minutes ago”
+      - OR “Location unavailable”
+- Marker labels:
+  - Customer: “Customer Location”
+  - Provider: “Your Location”
+- Colors:
+  - Customer pin: blue
+  - Provider pin: green
+- Include “View Directions” buttons:
+  - Google Maps link:
+    https://www.google.com/maps/dir/?api=1&origin=LAT,LNG&destination=LAT,LNG
+  - Apple Maps link:
+    https://maps.apple.com/?saddr=LAT,LNG&daddr=LAT,LNG
+
+F) Safety & Compliance
+- Ask for location permission only when:
+  - Provider opens job page OR taps “Update My Location”
+- Gracefully handle permission denial.
+- Do NOT block job actions if location is unavailable.
+- Clearly label map as “Approximate location”.
+
+G) Testing / Validation
+- Case 1: Both locations available → map shows both pins + distance.
+- Case 2: Provider location missing → map shows customer pin only.
+- Case 3: Location permission denied → no crash, clear messaging.
+- Case 4: Mobile view → map and buttons usable.
+
+DELIVERABLES
+- Map component (isolated, reusable)
+- Server endpoint or hook to update provider location
+- Distance calculation utility
+- Minimal UI additions to Job page
+- README note describing required Google APIs and env vars
+
+Keep the implementation clean, readable, and consistent with existing patterns.
