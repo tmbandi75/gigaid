@@ -19,6 +19,7 @@ import { registerObjectStorageRoutes } from "./replit_integrations/object_storag
 import { parseTextToPlan, suggestScheduleSlots, generateFollowUp } from "./ai/aiService";
 import { sendSMS } from "./twilio";
 import { sendEmail } from "./sendgrid";
+import { geocodeAddress } from "./geocode";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -1309,7 +1310,23 @@ export async function registerRoutes(
         ...req.body,
         userId: user.id,
       });
-      const request = await storage.createBookingRequest(validated);
+      
+      // Geocode the customer's address to get lat/lng
+      let geocodedData: { customerLat?: number; customerLng?: number } = {};
+      if (validated.location) {
+        const coords = await geocodeAddress(validated.location);
+        if (coords) {
+          geocodedData = {
+            customerLat: coords.lat,
+            customerLng: coords.lng,
+          };
+        }
+      }
+      
+      const request = await storage.createBookingRequest({
+        ...validated,
+        ...geocodedData,
+      });
 
       // Send confirmation notifications to the client
       const providerFirstName = user.name?.split(" ")[0] || "Your service provider";

@@ -145,3 +145,34 @@ npx tsx server/tests/deposit.test.ts
 - `client/src/components/settings/StripeConnectSettings.tsx` - Provider onboarding UI
 - `client/src/pages/CustomerBookingDetail.tsx` - Customer deposit/confirmation UI
 - `client/src/pages/BookingRequests.tsx` - Provider booking management with deposit info
+
+## Google Maps Configuration
+
+GigAid uses Google Maps for job location tracking and geocoding.
+
+### Required Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `GOOGLE_MAPS_API_KEY` | Server-side API key for geocoding |
+| `VITE_GOOGLE_MAPS_API_KEY` | Client-side API key for map display |
+
+### Required Google APIs
+
+Enable the following APIs in the Google Cloud Console:
+- **Maps JavaScript API** - For embedded map display
+- **Geocoding API** - For address-to-coordinates conversion
+- **Places API** - For address autocomplete (optional)
+
+### Location Features
+
+- **Customer Location**: Automatically geocoded when booking is created from the address field
+- **Provider Location**: Captured via browser geolocation when provider taps "Update My Location"
+- **Distance Calculation**: Haversine formula for straight-line distance in miles
+- **Directions**: Deep links to Google Maps and Apple Maps for navigation
+
+### Key Files
+
+- `server/geocode.ts` - Geocoding utility using Google Maps API
+- `client/src/components/JobLocationMap.tsx` - Map display with dual pins and distance
+- `client/src/pages/JobForm.tsx` - Job detail page with location tracking integration

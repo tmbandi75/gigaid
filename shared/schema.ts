@@ -513,6 +513,10 @@ export const bookingRequests = pgTable("booking_requests", {
   
   // Customer confirmation token
   confirmationToken: text("confirmation_token"),
+  
+  // Location coordinates (geocoded from location field)
+  customerLat: doublePrecision("customer_lat"),
+  customerLng: doublePrecision("customer_lng"),
 });
 
 export const insertBookingRequestSchema = createInsertSchema(bookingRequests).omit({
