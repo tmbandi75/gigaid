@@ -101,6 +101,16 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
         autocomplete.style.width = "100%";
         autocomplete.style.height = "40px";
         
+        // Listen for errors (e.g., billing not enabled)
+        autocomplete.addEventListener("gmp-requesterror", (event: any) => {
+          console.error("[AddressAutocomplete] API error:", event);
+          if (mounted) {
+            setError("Google Maps billing not enabled");
+            setManualMode(true);
+            setIsLoading(false);
+          }
+        });
+        
         // Listen for place selection
         autocomplete.addEventListener("gmp-placeselect", async (event: any) => {
           const place = event.place;
@@ -194,8 +204,8 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
       <div className={`space-y-3 ${className}`}>
         {error && (
           <div className="flex items-center gap-2 text-xs text-amber-600 mb-2">
-            <AlertCircle className="h-3 w-3" />
-            <span>{error} - Enter address manually</span>
+            <AlertCircle className="h-3 w-3 flex-shrink-0" />
+            <span>Enter address manually</span>
           </div>
         )}
         <div>
