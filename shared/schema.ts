@@ -175,8 +175,12 @@ export type InsertJob = z.infer<typeof insertJobSchema>;
 export type Job = typeof jobs.$inferSelect;
 
 // Lead Status
-export const leadStatuses = ["new", "contacted", "converted"] as const;
+export const leadStatuses = ["new", "contacted", "converted", "cold"] as const;
 export type LeadStatus = (typeof leadStatuses)[number];
+
+// Lead follow-up status for response tracking
+export const leadFollowUpStatuses = ["none", "pending_check", "replied", "waiting", "no_response"] as const;
+export type LeadFollowUpStatus = (typeof leadFollowUpStatuses)[number];
 
 // Lead sources
 export const leadSources = ["manual", "booking_form", "referral", "social"] as const;
@@ -199,6 +203,11 @@ export const leads = pgTable("leads", {
   lastContactedAt: text("last_contacted_at"),
   convertedAt: text("converted_at"),
   convertedJobId: text("converted_job_id"),
+  
+  // Response tracking fields
+  responseCopiedAt: text("response_copied_at"),
+  followUpStatus: text("follow_up_status").default("none"), // none, pending_check, replied, waiting, no_response
+  followUpSnoozedUntil: text("follow_up_snoozed_until"),
 });
 
 export const insertLeadSchema = createInsertSchema(leads).omit({
