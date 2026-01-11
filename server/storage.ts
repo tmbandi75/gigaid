@@ -62,6 +62,7 @@ export interface IStorage {
   getInvoices(userId: string): Promise<Invoice[]>;
   getInvoice(id: string): Promise<Invoice | undefined>;
   getInvoiceByShareLink(shareLink: string): Promise<Invoice | undefined>;
+  getInvoiceByPublicToken(token: string): Promise<Invoice | undefined>;
   createInvoice(invoice: InsertInvoice): Promise<Invoice>;
   updateInvoice(id: string, updates: Partial<InsertInvoice>): Promise<Invoice | undefined>;
   deleteInvoice(id: string): Promise<boolean>;
@@ -457,6 +458,9 @@ export class MemStorage implements IStorage {
         createdAt: yesterday.toISOString(),
         sentAt: yesterday.toISOString(),
         paidAt: today.toISOString(),
+        publicToken: null,
+        emailSentAt: null,
+        smsSentAt: null,
       },
       {
         id: "inv-2",
@@ -477,6 +481,9 @@ export class MemStorage implements IStorage {
         createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
         sentAt: yesterday.toISOString(),
         paidAt: null,
+        publicToken: "test-invoice-token",
+        emailSentAt: yesterday.toISOString(),
+        smsSentAt: null,
       },
       {
         id: "inv-3",
@@ -497,6 +504,9 @@ export class MemStorage implements IStorage {
         createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
         sentAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
         paidAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+        publicToken: null,
+        emailSentAt: null,
+        smsSentAt: null,
       },
     ];
 
@@ -895,6 +905,10 @@ export class MemStorage implements IStorage {
     return Array.from(this.invoices.values()).find(inv => inv.shareLink === shareLink);
   }
 
+  async getInvoiceByPublicToken(token: string): Promise<Invoice | undefined> {
+    return Array.from(this.invoices.values()).find(inv => inv.publicToken === token);
+  }
+
   async createInvoice(insertInvoice: InsertInvoice): Promise<Invoice> {
     const id = randomUUID();
     const shareLink = `inv-${id.slice(0, 8)}`;
@@ -913,6 +927,9 @@ export class MemStorage implements IStorage {
       createdAt: new Date().toISOString(),
       sentAt: insertInvoice.sentAt || null,
       paidAt: insertInvoice.paidAt || null,
+      publicToken: insertInvoice.publicToken || null,
+      emailSentAt: insertInvoice.emailSentAt || null,
+      smsSentAt: insertInvoice.smsSentAt || null,
     };
     this.invoices.set(id, invoice);
     return invoice;

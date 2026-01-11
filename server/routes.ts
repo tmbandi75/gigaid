@@ -376,6 +376,60 @@ export async function registerRoutes(
     }
   });
 
+  // Public invoice view by token (for customers)
+  app.get("/api/public/invoice/:token", async (req, res) => {
+    try {
+      const invoice = await storage.getInvoiceByPublicToken(req.params.token);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      // Get provider info
+      const provider = await storage.getUser(invoice.userId);
+      if (!provider) {
+        return res.status(404).json({ error: "Provider not found" });
+      }
+
+      // Get provider's payment methods
+      const paymentMethods = await storage.getUserPaymentMethods(invoice.userId);
+      const enabledMethods = paymentMethods.filter(m => m.isEnabled);
+
+      const paymentMethodsMap: Record<string, { label: string | null; instructions: string | null }> = {};
+      for (const method of enabledMethods) {
+        paymentMethodsMap[method.type] = {
+          label: method.label,
+          instructions: method.instructions,
+        };
+      }
+
+      res.json({
+        invoice: {
+          id: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          clientName: invoice.clientName,
+          serviceDescription: invoice.serviceDescription,
+          amount: invoice.amount,
+          tax: invoice.tax,
+          discount: invoice.discount,
+          status: invoice.status,
+          createdAt: invoice.createdAt,
+          sentAt: invoice.sentAt,
+          paidAt: invoice.paidAt,
+        },
+        provider: {
+          name: provider.name,
+          businessName: provider.businessName,
+          phone: provider.phone,
+          email: provider.email,
+        },
+        paymentMethods: paymentMethodsMap,
+      });
+    } catch (error) {
+      console.error("Public invoice error:", error);
+      res.status(500).json({ error: "Failed to fetch invoice" });
+    }
+  });
+
   app.post("/api/invoices", async (req, res) => {
     try {
       const validated = insertInvoiceSchema.parse(req.body);
@@ -407,15 +461,94 @@ export async function registerRoutes(
 
   app.post("/api/invoices/:id/send", async (req, res) => {
     try {
+      const { sendEmail: shouldSendEmail = true, sendSms: shouldSendSms = true } = req.body;
+      
+      const existingInvoice = await storage.getInvoice(req.params.id);
+      if (!existingInvoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      // Get provider info
+      const provider = await storage.getUser(existingInvoice.userId);
+      if (!provider) {
+        return res.status(404).json({ error: "Provider not found" });
+      }
+
+      // Generate public token if not already present
+      const publicToken = existingInvoice.publicToken || `inv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const frontendUrl = process.env.FRONTEND_URL || `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER?.toLowerCase()}.repl.co`;
+      const invoiceUrl = `${frontendUrl}/invoice/${publicToken}`;
+
+      // Get provider's payment methods for the email/SMS
+      const paymentMethods = await storage.getUserPaymentMethods(existingInvoice.userId);
+      const enabledMethods = paymentMethods.filter(m => m.isEnabled);
+      const paymentMethodsList = enabledMethods.map(m => {
+        const label = m.type === "cashapp" ? "Cash App" : m.type.charAt(0).toUpperCase() + m.type.slice(1);
+        return m.instructions ? `${label}: ${m.instructions}` : label;
+      }).join("\n");
+
+      const invoiceTotal = (existingInvoice.amount + (existingInvoice.tax || 0) - (existingInvoice.discount || 0)) / 100;
+      const formattedAmount = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(invoiceTotal);
+      const businessName = provider.businessName || provider.name || "Your service provider";
+
+      let emailSentAt = existingInvoice.emailSentAt;
+      let smsSentAt = existingInvoice.smsSentAt;
+
+      // Send email if client has email and email sending is requested
+      if (shouldSendEmail && existingInvoice.clientEmail) {
+        try {
+          await sendEmail({
+            to: existingInvoice.clientEmail,
+            subject: `Invoice ${existingInvoice.invoiceNumber} from ${businessName}`,
+            text: `Hi ${existingInvoice.clientName},\n\nYou have received an invoice for ${formattedAmount} from ${businessName}.\n\nService: ${existingInvoice.serviceDescription}\n\nView and pay your invoice: ${invoiceUrl}\n\nPayment Options:\n${paymentMethodsList || "Contact the provider for payment options."}\n\nThank you for your business!`,
+            html: `
+              <h2>Invoice from ${businessName}</h2>
+              <p>Hi ${existingInvoice.clientName},</p>
+              <p>You have received an invoice for <strong>${formattedAmount}</strong>.</p>
+              <p><strong>Invoice Number:</strong> ${existingInvoice.invoiceNumber}</p>
+              <p><strong>Service:</strong> ${existingInvoice.serviceDescription}</p>
+              <p><a href="${invoiceUrl}" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 6px;">View Invoice & Pay</a></p>
+              <h3>Payment Options:</h3>
+              <pre style="background: #f3f4f6; padding: 12px; border-radius: 6px;">${paymentMethodsList || "Contact the provider for payment options."}</pre>
+              <p>Thank you for your business!</p>
+            `,
+          });
+          emailSentAt = new Date().toISOString();
+        } catch (emailError) {
+          console.error("Failed to send invoice email:", emailError);
+        }
+      }
+
+      // Send SMS if client has phone and SMS sending is requested
+      if (shouldSendSms && existingInvoice.clientPhone) {
+        try {
+          await sendSMS(
+            existingInvoice.clientPhone,
+            `Invoice ${existingInvoice.invoiceNumber} for ${formattedAmount} from ${businessName}. View & pay: ${invoiceUrl}`
+          );
+          smsSentAt = new Date().toISOString();
+        } catch (smsError) {
+          console.error("Failed to send invoice SMS:", smsError);
+        }
+      }
+
+      // Update invoice with sent status and token
       const invoice = await storage.updateInvoice(req.params.id, {
         status: "sent",
         sentAt: new Date().toISOString(),
+        publicToken,
+        emailSentAt,
+        smsSentAt,
       });
-      if (!invoice) {
-        return res.status(404).json({ error: "Invoice not found" });
-      }
-      res.json(invoice);
+
+      res.json({
+        ...invoice,
+        invoiceUrl,
+        emailSent: !!emailSentAt,
+        smsSent: !!smsSentAt,
+      });
     } catch (error) {
+      console.error("Invoice send error:", error);
       res.status(500).json({ error: "Failed to send invoice" });
     }
   });

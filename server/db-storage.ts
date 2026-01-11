@@ -293,6 +293,11 @@ export class DatabaseStorage implements IStorage {
     return invoice || undefined;
   }
 
+  async getInvoiceByPublicToken(token: string): Promise<Invoice | undefined> {
+    const [invoice] = await db.select().from(invoices).where(eq(invoices.publicToken, token));
+    return invoice || undefined;
+  }
+
   async createInvoice(insertInvoice: InsertInvoice): Promise<Invoice> {
     const id = randomUUID();
     const [invoice] = await db.insert(invoices).values({

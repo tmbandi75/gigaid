@@ -290,6 +290,9 @@ export const invoices = pgTable("invoices", {
   createdAt: text("created_at").notNull(),
   sentAt: text("sent_at"),
   paidAt: text("paid_at"),
+  publicToken: text("public_token"),
+  emailSentAt: text("email_sent_at"),
+  smsSentAt: text("sms_sent_at"),
 });
 
 export const insertInvoiceSchema = createInsertSchema(invoices).omit({

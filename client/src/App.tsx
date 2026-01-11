@@ -28,6 +28,7 @@ import InvoiceRating from "@/pages/InvoiceRating";
 import CrewPortal from "@/pages/CrewPortal";
 import CustomerBookingDetail from "@/pages/CustomerBookingDetail";
 import BookingRequests from "@/pages/BookingRequests";
+import PublicInvoice from "@/pages/PublicInvoice";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -79,6 +80,7 @@ function App() {
         <Switch>
           <Route path="/book/:slug" component={PublicBooking} />
           <Route path="/booking/:token" component={CustomerBookingDetail} />
+          <Route path="/invoice/:token" component={PublicInvoice} />
           <Route path="/invoice/:id/rate" component={InvoiceRating} />
           <Route path="/crew-portal/:token" component={CrewPortal} />
           <Route>
