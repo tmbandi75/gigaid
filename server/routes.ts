@@ -3614,6 +3614,92 @@ export async function registerRoutes(
     }
   });
 
+  // Record remainder payment for a booking (provider action)
+  app.post("/api/bookings/:id/record-remainder-payment", async (req, res) => {
+    try {
+      const booking = await storage.getBookingRequest(req.params.id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      const { paymentMethod, notes } = req.body;
+
+      if (!paymentMethod) {
+        return res.status(400).json({ error: "Payment method is required" });
+      }
+
+      const validMethods = ["zelle", "venmo", "cashapp", "cash", "check", "stripe", "other"];
+      if (!validMethods.includes(paymentMethod)) {
+        return res.status(400).json({ error: "Invalid payment method" });
+      }
+
+      const updated = await storage.updateBookingRequest(booking.id, {
+        remainderPaymentStatus: "paid",
+        remainderPaymentMethod: paymentMethod,
+        remainderPaidAt: new Date().toISOString(),
+        remainderNotes: notes || null,
+      });
+
+      await storage.createBookingEvent({
+        bookingId: booking.id,
+        eventType: "remainder_payment_recorded",
+        actorType: "provider",
+        actorId: booking.userId,
+        metadata: JSON.stringify({
+          paymentMethod,
+          notes,
+          remainderAmount: (booking.totalAmountCents || 0) - (booking.depositAmountCents || 0),
+        }),
+      });
+
+      res.json({
+        success: true,
+        booking: updated,
+      });
+    } catch (error) {
+      console.error("Record remainder payment error:", error);
+      res.status(500).json({ error: "Failed to record remainder payment" });
+    }
+  });
+
+  // Get payment methods for a booking by token (for customer view)
+  app.get("/api/bookings/by-token/:token/payment-methods", async (req, res) => {
+    try {
+      const booking = await storage.getBookingRequestByToken(req.params.token);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      // Get the provider's payment methods
+      const provider = await storage.getUser(booking.userId);
+      if (!provider) {
+        return res.status(404).json({ error: "Provider not found" });
+      }
+
+      res.json({
+        paymentMethods: {
+          zelle: provider.paymentMethodZelle || false,
+          venmo: provider.paymentMethodVenmo || false,
+          cashapp: provider.paymentMethodCashapp || false,
+          cash: provider.paymentMethodCash || false,
+          check: provider.paymentMethodCheck || false,
+          stripe: provider.paymentMethodStripe || false,
+        },
+        paymentInstructions: provider.paymentInstructions || null,
+        providerName: provider.fullName || provider.businessName || provider.username,
+        totalAmountCents: booking.totalAmountCents,
+        depositAmountCents: booking.depositAmountCents,
+        remainderAmountCents: (booking.totalAmountCents || 0) - (booking.depositAmountCents || 0),
+        remainderPaymentStatus: booking.remainderPaymentStatus,
+        remainderPaymentMethod: booking.remainderPaymentMethod,
+        remainderPaidAt: booking.remainderPaidAt,
+      });
+    } catch (error) {
+      console.error("Get payment methods error:", error);
+      res.status(500).json({ error: "Failed to get payment methods" });
+    }
+  });
+
   // Stripe Connect webhook handler
   app.post("/api/stripe/connect/webhook", async (req, res) => {
     try {
