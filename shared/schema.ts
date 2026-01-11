@@ -517,7 +517,18 @@ export const bookingRequests = pgTable("booking_requests", {
   // Location coordinates (geocoded from location field)
   customerLat: doublePrecision("customer_lat"),
   customerLng: doublePrecision("customer_lng"),
+  
+  // Remainder payment fields
+  totalAmountCents: integer("total_amount_cents"), // Total job price
+  remainderPaymentStatus: text("remainder_payment_status").default("pending"), // pending, paid
+  remainderPaymentMethod: text("remainder_payment_method"), // zelle, venmo, cashapp, cash, check, stripe
+  remainderPaidAt: text("remainder_paid_at"),
+  remainderNotes: text("remainder_notes"),
 });
+
+// Remainder payment status enum
+export const remainderPaymentStatuses = ["pending", "paid"] as const;
+export type RemainderPaymentStatus = (typeof remainderPaymentStatuses)[number];
 
 export const insertBookingRequestSchema = createInsertSchema(bookingRequests).omit({
   id: true,
@@ -535,6 +546,10 @@ export const insertBookingRequestSchema = createInsertSchema(bookingRequests).om
   confirmationToken: true,
   autoReleaseAt: true,
   lastRescheduleAt: true,
+  remainderPaymentStatus: true,
+  remainderPaymentMethod: true,
+  remainderPaidAt: true,
+  remainderNotes: true,
 });
 
 export type InsertBookingRequest = z.infer<typeof insertBookingRequestSchema>;
