@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useLocation, useParams, useSearch } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -50,6 +50,7 @@ import {
 import { PhoneInput } from "@/components/ui/phone-input";
 import type { Job } from "@shared/schema";
 import { GetPaidDialog } from "@/components/job/GetPaidDialog";
+import { JobLocationMap } from "@/components/JobLocationMap";
 
 interface ScheduleSuggestion {
   date: string;
@@ -173,6 +174,38 @@ export default function JobForm() {
     },
     enabled: !!isEditing,
   });
+
+  const updateLocationMutation = useMutation({
+    mutationFn: async ({ lat, lng }: { lat: number; lng: number }) => {
+      return apiRequest("PATCH", `/api/jobs/${id}/provider-location`, { lat, lng });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] });
+      toast({ title: "Location updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update location", variant: "destructive" });
+    },
+  });
+
+  const handleUpdateMyLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      toast({ title: "Geolocation not supported", variant: "destructive" });
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        updateLocationMutation.mutate({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+      },
+      () => {
+        toast({ title: "Location permission denied", variant: "destructive" });
+      },
+      { enableHighAccuracy: false, maximumAge: 60000, timeout: 10000 }
+    );
+  }, [updateLocationMutation, toast]);
 
   const parsedExisting = existingJob ? parseClientName(existingJob.clientName || "") : { firstName: "", lastName: "" };
 
@@ -674,6 +707,21 @@ export default function JobForm() {
                 </div>
               </CardContent>
             </Card>
+
+            {isEditing && existingJob?.customerLat && existingJob?.customerLng && (
+              <div className="space-y-3">
+                <JobLocationMap
+                  customerLat={existingJob.customerLat}
+                  customerLng={existingJob.customerLng}
+                  providerLat={existingJob.providerLat ?? undefined}
+                  providerLng={existingJob.providerLng ?? undefined}
+                  providerLocationUpdatedAt={existingJob.providerLocationUpdatedAt ?? undefined}
+                  jobLocation={existingJob.location || "Customer location"}
+                  onUpdateLocation={handleUpdateMyLocation}
+                  isUpdatingLocation={updateLocationMutation.isPending}
+                />
+              </div>
+            )}
 
             <Card className="border-0 shadow-md overflow-hidden">
               <div className="h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />

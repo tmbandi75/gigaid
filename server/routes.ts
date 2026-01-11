@@ -167,6 +167,32 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/jobs/:id/provider-location", async (req, res) => {
+    try {
+      const locationSchema = z.object({
+        lat: z.number(),
+        lng: z.number(),
+      });
+      
+      const { lat, lng } = locationSchema.parse(req.body);
+      const job = await storage.updateJob(req.params.id, {
+        providerLat: lat,
+        providerLng: lng,
+        providerLocationUpdatedAt: new Date().toISOString(),
+      });
+      
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      res.json(job);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update provider location" });
+    }
+  });
+
   app.patch("/api/jobs/:id/payment", async (req, res) => {
     try {
       const paymentUpdateSchema = z.object({
