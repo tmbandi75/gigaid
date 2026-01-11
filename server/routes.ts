@@ -18,6 +18,7 @@ import {
 import { z } from "zod";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { parseTextToPlan, suggestScheduleSlots, generateFollowUp } from "./ai/aiService";
+import { parseSharedContent, generateQuickReplies } from "./ai/shareParser";
 import { sendSMS } from "./twilio";
 import { sendEmail } from "./sendgrid";
 import { geocodeAddress } from "./geocode";
@@ -218,7 +219,7 @@ export async function registerRoutes(
         const scheduledDate = job.scheduledDate ? new Date(job.scheduledDate) : null;
         if (!scheduledDate || scheduledDate < oneWeekAgo) return false;
         const depositMeta = extractDepositMetadata(job.notes);
-        return depositMeta && depositMeta.depositRequestedCents > 0;
+        return depositMeta && (depositMeta.depositRequestedCents || 0) > 0;
       }).length;
 
       // Calculate total deposits collected this week from job payments
@@ -1042,7 +1043,7 @@ export async function registerRoutes(
         userId: job.userId,
         clientName: job.clientName,
         clientEmail: job.clientEmail,
-        amount: depositState.depositOutstandingCents,
+        amount: depositState.depositOutstandingCents || depositState.depositRequestedCents,
         method,
         status: "pending", // Pending until provider confirms
         proofUrl: proofUrl || null,
@@ -4905,6 +4906,114 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Export DOT error:", error);
       res.status(500).json({ error: "Failed to export graph" });
+    }
+  });
+
+  // ========================================
+  // Share Extension / Quick Capture Endpoints
+  // ========================================
+
+  // Parse shared content into lead data
+  app.post("/api/share/parse", async (req, res) => {
+    try {
+      const { text, url } = req.body;
+      if (!text) {
+        return res.status(400).json({ error: "No text provided" });
+      }
+
+      const user = await storage.getUser(defaultUserId);
+      const parsed = await parseSharedContent({
+        text,
+        url,
+        providerServices: user?.services || [],
+        providerName: user?.name || undefined,
+      });
+
+      res.json(parsed);
+    } catch (error) {
+      console.error("Parse share error:", error);
+      res.status(500).json({ error: "Failed to parse content" });
+    }
+  });
+
+  // Generate quick reply suggestions
+  app.post("/api/share/replies", async (req, res) => {
+    try {
+      const { text, context } = req.body;
+      if (!text) {
+        return res.status(400).json({ error: "No text provided" });
+      }
+
+      const user = await storage.getUser(defaultUserId);
+      const replies = await generateQuickReplies({
+        originalMessage: text,
+        context: context || "general inquiry",
+        providerName: user?.name || undefined,
+      });
+
+      res.json({ replies });
+    } catch (error) {
+      console.error("Generate replies error:", error);
+      res.status(500).json({ error: "Failed to generate replies" });
+    }
+  });
+
+  // ========================================
+  // On The Way Notification
+  // ========================================
+
+  app.post("/api/jobs/:id/on-the-way", async (req, res) => {
+    try {
+      const job = await storage.getJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      const user = await storage.getUser(defaultUserId);
+      const providerName = user?.name || "Your service provider";
+      const eta = req.body.eta || "soon";
+
+      const message = `Hi ${job.clientName || "there"}! ${providerName} is on the way and will arrive ${eta}. See you shortly!`;
+
+      let smsSent = false;
+      let emailSent = false;
+
+      // Send SMS if phone available
+      if (job.clientPhone) {
+        try {
+          await sendSMS(job.clientPhone, message);
+          smsSent = true;
+        } catch (e) {
+          console.error("On the way SMS error:", e);
+        }
+      }
+
+      // Send email if available
+      if (job.clientEmail) {
+        try {
+          await sendEmail({
+            to: job.clientEmail,
+            subject: `${providerName} is on the way!`,
+            text: message,
+            html: `<p>${message}</p>`,
+          });
+          emailSent = true;
+        } catch (e) {
+          console.error("On the way email error:", e);
+        }
+      }
+
+      res.json({
+        success: true,
+        smsSent,
+        emailSent,
+        message: smsSent || emailSent 
+          ? "On the way notification sent!" 
+          : "No contact info available to send notification",
+      });
+    } catch (error) {
+      console.error("On the way error:", error);
+      res.status(500).json({ error: "Failed to send notification" });
     }
   });
 

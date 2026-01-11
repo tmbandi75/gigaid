@@ -47,7 +47,9 @@ import {
   HelpCircle,
   ExternalLink,
   Shield,
-  Percent
+  Percent,
+  Navigation,
+  Send
 } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import type { Job } from "@shared/schema";
@@ -591,6 +593,21 @@ export default function JobForm() {
     },
     onError: () => {
       toast({ title: "Failed to update job", variant: "destructive" });
+    },
+  });
+
+  const onTheWayMutation = useMutation({
+    mutationFn: async (eta?: string) => {
+      return apiRequest("POST", `/api/jobs/${id}/on-the-way`, { eta });
+    },
+    onSuccess: (response: any) => {
+      toast({ 
+        title: "Notification sent!", 
+        description: "Customer has been notified you're on the way" 
+      });
+    },
+    onError: () => {
+      toast({ title: "Failed to send notification", variant: "destructive" });
     },
   });
 
@@ -1211,6 +1228,24 @@ export default function JobForm() {
                   )}
                 </CardContent>
               </Card>
+            )}
+
+            {isEditing && existingJob && (existingJob.status === "scheduled" || existingJob.status === "in_progress") && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-12 text-base font-medium border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                onClick={() => onTheWayMutation.mutate("soon")}
+                disabled={onTheWayMutation.isPending}
+                data-testid="button-on-the-way"
+              >
+                {onTheWayMutation.isPending ? (
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                ) : (
+                  <Navigation className="h-5 w-5 mr-2" />
+                )}
+                I'm On The Way
+              </Button>
             )}
 
             <Button 

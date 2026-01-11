@@ -38,7 +38,8 @@ const menuSections = [
   {
     title: "Tools",
     items: [
-      { icon: Sparkles, label: "AI Tools", description: "Smart AI features", href: "/ai-tools", badge: "New", gradient: "from-violet-500 to-purple-500" },
+      { icon: Share2, label: "Quick Capture", description: "Save leads from any app", href: "/share", badge: "New", gradient: "from-emerald-500 to-teal-500" },
+      { icon: Sparkles, label: "AI Tools", description: "Smart AI features", href: "/ai-tools", gradient: "from-violet-500 to-purple-500" },
       { icon: Users, label: "Crew", description: "Manage team members", href: "/crew", gradient: "from-blue-500 to-cyan-500" },
       { icon: Bell, label: "Reminders", description: "SMS & voice alerts", href: "/reminders", gradient: "from-amber-500 to-orange-500" },
       { icon: Calendar, label: "Booking Requests", description: "Customer bookings", href: "/booking-requests", gradient: "from-green-500 to-emerald-500" },

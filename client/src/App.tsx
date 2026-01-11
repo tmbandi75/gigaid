@@ -33,6 +33,7 @@ import PublicInvoice from "@/pages/PublicInvoice";
 import ConfirmPrice from "@/pages/ConfirmPrice";
 import PayDeposit from "@/pages/PayDeposit";
 import OwnerView from "@/pages/OwnerView";
+import ShareCapture from "@/pages/ShareCapture";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -59,6 +60,7 @@ function Router() {
       <Route path="/help" component={HelpSupport} />
       <Route path="/ai-tools" component={AITools} />
       <Route path="/booking-requests" component={BookingRequests} />
+      <Route path="/share" component={ShareCapture} />
       <Route component={NotFound} />
     </Switch>
   );
