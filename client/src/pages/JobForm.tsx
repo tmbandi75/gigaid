@@ -875,7 +875,7 @@ export default function JobForm() {
               </CardContent>
             </Card>
 
-            {isEditing && (
+            {isEditing && (crewMembers.length > 0 || crewInvites.length > 0 || crewPhotos.length > 0) && (
               <Card className="border-0 shadow-md overflow-hidden">
                 <div className="h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
                 <CardContent className="pt-5 space-y-4">
@@ -884,7 +884,7 @@ export default function JobForm() {
                     <h3 className="font-semibold text-sm">Crew Assignment</h3>
                   </div>
 
-                  {crewMembers.length > 0 ? (
+                  {crewMembers.length > 0 && (
                     <div className="space-y-3">
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         Assign a Crew Member
@@ -923,10 +923,6 @@ export default function JobForm() {
                         </Button>
                       </div>
                     </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      No crew members yet. Add crew members in <span className="text-primary cursor-pointer" onClick={() => navigate("/crew")}>More → Crew</span>.
-                    </p>
                   )}
                   
                   {crewInvites.length > 0 && (
