@@ -1,0 +1,234 @@
+You are building “AI Micro-Nudges” for GigAid (Leads + Invoices) in a SAFE, non-breaking way.
+
+GOAL
+Add contextual AI nudges (chips/banners) that recommend 1-tap actions on Leads and Invoices, with strict guardrails:
+- Never block core flows
+- Never spam users
+- Always allow dismiss/snooze
+- Always let users edit message before sending
+- Feature-flagged and fully reversible
+- No refactors of existing data models unless absolutely necessary
+
+STACK ASSUMPTIONS
+- React (web or React Native) frontend
+- Supabase backend (Postgres) + RLS
+- Existing entities: leads, jobs, invoices, clients
+- Existing messaging: SMS/email integrations may exist, but do NOT assume; if not present, stub safely
+
+IMPLEMENTATION PLAN (DO THIS EXACTLY)
+
+1) CREATE DB TABLES (minimal, additive)
+Add these tables in Supabase SQL Editor. Do not modify existing tables.
+
+A) ai_nudges (stores generated nudge instances)
+Columns:
+- id uuid primary key default gen_random_uuid()
+- workspace_id uuid not null
+- user_id uuid not null
+- entity_type text not null check (entity_type in ('lead','invoice'))
+- entity_id uuid not null
+- nudge_type text not null
+  check (nudge_type in (
+    'lead_follow_up',
+    'lead_convert_to_job',
+    'lead_silent_rescue',
+    'lead_hot_alert',
+    'invoice_reminder',
+    'invoice_overdue_escalation',
+    'invoice_create_from_job_done',
+    'invoice_weekly_summary'
+  ))
+- priority int not null default 50
+- status text not null default 'active'
+  check (status in ('active','dismissed','snoozed','acted','expired'))
+- created_at timestamptz not null default now()
+- updated_at timestamptz not null default now()
+- last_shown_at timestamptz null
+- snoozed_until timestamptz null
+- action_payload jsonb not null default '{}'::jsonb   -- prefilled message, suggested job fields, etc
+- explain_text text not null default ''               -- 1 sentence: “AI suggests…”
+- dedupe_key text not null                            -- prevents duplicates (workspace+entity+nudge_type+day)
+- confidence numeric null                             -- 0..1 optional
+Indexes:
+- (workspace_id, user_id, status, snoozed_until)
+- (entity_type, entity_id)
+- unique(dedupe_key)
+
+B) ai_nudge_events (audit trail)
+Columns:
+- id uuid primary key default gen_random_uuid()
+- nudge_id uuid references ai_nudges(id) on delete cascade
+- workspace_id uuid not null
+- user_id uuid not null
+- event_type text not null check (event_type in ('created','shown','dismissed','snoozed','acted','expired'))
+- event_at timestamptz not null default now()
+- metadata jsonb not null default '{}'::jsonb
+
+C) feature_flags (if not already)
+Columns:
+- key text primary key
+- enabled boolean not null default false
+Seed:
+- key='ai_micro_nudges', enabled=false
+
+2) ENABLE RLS (SECURITY FIRST)
+For ai_nudges and ai_nudge_events:
+- Enable RLS
+- Policy: user can select/insert/update only where user_id = auth.uid()
+- workspace_id must match user’s active workspace (use your existing workspace membership table; if not available, enforce user_id only for now)
+- Never allow cross-user read
+
+3) SERVER: NUDGE GENERATOR (SAFE + IDPOTENT)
+Create a server function (Edge Function or API route) called:
+POST /api/ai/nudges/generate
+
+It should:
+- Require auth
+- Check feature_flags.ai_micro_nudges == true for this environment (and optionally per-user allowlist)
+- Compute candidate nudges for the current user + workspace
+- Insert only if dedupe_key does not exist (idempotent)
+- Never delete existing nudges
+- Hard caps:
+  - Max 20 new nudges per run
+  - Max 2 active nudges per entity
+- Return {createdCount, activeCount}
+
+NUDGE RULES (DETERMINISTIC FIRST; AI OPTIONAL)
+Do NOT call LLMs initially. Implement deterministic rules using timestamps/status fields.
+Later we can “upgrade” message copy with LLM behind a second feature flag.
+
+Rules:
+
+LEADS
+A) lead_follow_up
+Trigger:
+- lead.status in ('New','Active') AND lead.last_contacted_at is null
+- lead.created_at <= now() - interval '12 hours'
+Payload:
+- suggested_message: short friendly follow-up template
+Explain:
+- “Follow up now — replies drop after 24h.”
+Priority: 90
+Dedupe: workspace:user:lead:lead_follow_up:YYYY-MM-DD
+
+B) lead_silent_rescue
+Trigger:
+- lead.status in ('Contacted','Engaged')
+- lead.last_contacted_at <= now() - interval '48 hours'
+- lead.last_inbound_at is null OR lead.last_inbound_at < lead.last_contacted_at
+Payload:
+- suggested_message: “Just checking in…”
+Explain:
+- “Customers often respond to a quick check-in.”
+Priority: 80
+
+C) lead_convert_to_job
+Trigger:
+- lead.status='Engaged'
+- no job exists linked to lead_id
+- lead.updated_at <= now() - interval '2 hours'
+Payload:
+- job_prefill: {client_id, service, suggested_price(optional), suggested_date(optional)}
+Explain:
+- “Turn this into a job?”
+Priority: 85
+
+D) lead_hot_alert (if you have inbound response timestamps or message parsing)
+Trigger:
+- lead.last_inbound_at >= now() - interval '2 hours'
+- lead.inbound_text contains intent keywords (when, available, price, tomorrow, today)
+Payload:
+- reply_suggestion: concise reply
+Explain:
+- “Likely to book — respond soon.”
+Priority: 95
+
+INVOICES
+E) invoice_reminder
+Trigger:
+- invoice.status in ('Pending','Awaiting Payment','Sent')
+- invoice.sent_at <= now() - interval '24 hours'
+- invoice.paid_at is null
+Payload:
+- reminder_message: polite reminder template with amount + link
+Explain:
+- “You’re owed $X — send a reminder?”
+Priority: 90
+
+F) invoice_overdue_escalation
+Trigger:
+- invoice.sent_at <= now() - interval '7 days'
+- invoice.paid_at is null
+Payload:
+- firmer_message: slightly firmer template
+Explain:
+- “This invoice may need a nudge.”
+Priority: 85
+
+G) invoice_create_from_job_done
+Trigger:
+- job.status='Done'
+- no invoice exists linked to job_id
+- job.updated_at <= now() - interval '1 hour'
+Payload:
+- invoice_prefill: {client_id, line_items, amount}
+Explain:
+- “Invoice now while the job is fresh.”
+Priority: 88
+
+H) invoice_weekly_summary (optional; keep low spam)
+Trigger:
+- Today is Sunday 6pm local (or run on generate with a once-weekly dedupe)
+- total_outstanding > 0
+Payload:
+- summary: {count, total}
+Explain:
+- “Weekly Summary: $X outstanding.”
+Priority: 60
+Dedupe: workspace:user:weekly_summary:YYYY-WW
+
+IMPORTANT: If your schema lacks fields like last_contacted_at, last_inbound_at, sent_at:
+- Do NOT refactor existing tables.
+- Add nullable columns safely OR compute from existing message logs if you have them.
+- If unavailable, skip that rule.
+
+4) SERVER: FETCH ACTIVE NUDGES
+Create:
+GET /api/ai/nudges?entity_type=lead|invoice&entity_id=... (optional filters)
+Returns active nudges where:
+- status='active'
+- (snoozed_until is null OR snoozed_until <= now())
+Sort by priority desc, created_at desc
+Also enforce “display cap”:
+- Return max 2 nudges per entity
+
+5) SERVER: ACTION ENDPOINTS (AUDIT + RATE LIMIT)
+Create:
+POST /api/ai/nudges/:id/dismiss
+POST /api/ai/nudges/:id/snooze {hours: 24|48|72}
+POST /api/ai/nudges/:id/act {action_type: 'send_message'|'create_job'|'create_invoice', payload}
+
+Each must:
+- Verify auth owns the nudge
+- Update ai_nudges.status accordingly
+- Write ai_nudge_events row
+- For act: perform the requested action via existing services, but:
+  - If messaging/invoice/job creation APIs are missing, implement as SAFE NO-OP with a clear response and UI toast:
+    “Action is not configured yet.”
+  - Never crash the app.
+
+6) FRONTEND UI (NON-INTRUSIVE)
+A) Lead Card Nudge Chip
+- If GET nudges returns any, show a small pill:
+  “✨ Follow up” or “🔥 Hot lead”
+- On tap: open BottomSheet
+
+B) Invoice Card Nudge Chip
+- “💰 Send reminder” or “⚠️ Overdue”
+
+C) BottomSheet interaction
+Show:
+- Title: short action label
+- Explain text (1 sentence)
+- Editable message box if sending SMS/email
+- Primary CTA (Send / Create Job / C
