@@ -166,7 +166,7 @@ export default function LeadForm() {
       queryClient.invalidateQueries({ queryKey: ["/api/leads", id] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
       toast({ title: "Lead updated successfully" });
-      navigate("/leads");
+      navigate(`/leads/${id}`);
     },
     onError: () => {
       toast({ title: "Failed to update lead", variant: "destructive" });
@@ -273,7 +273,7 @@ export default function LeadForm() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate("/leads")}
+            onClick={() => navigate(isEditing ? `/leads/${id}` : "/leads")}
             className="-ml-2"
             data-testid="button-back"
           >

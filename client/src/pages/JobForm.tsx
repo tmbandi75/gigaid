@@ -597,7 +597,7 @@ export default function JobForm() {
         toast({ title: "Job marked as complete!" });
       } else {
         toast({ title: "Job updated successfully" });
-        navigate("/jobs");
+        navigate(`/jobs/${id}`);
       }
     },
     onError: () => {
@@ -679,7 +679,7 @@ export default function JobForm() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate("/jobs")}
+            onClick={() => navigate(isEditing ? `/jobs/${id}` : "/jobs")}
             className="text-primary-foreground hover:bg-white/20 -ml-2 mb-3"
             data-testid="button-back"
           >
@@ -1286,7 +1286,7 @@ export default function JobForm() {
           open={showGetPaidDialog}
           onClose={() => {
             setShowGetPaidDialog(false);
-            navigate("/jobs");
+            navigate(`/jobs/${id}`);
           }}
           jobId={id}
           jobTitle={completedJobData.title}

@@ -10,8 +10,10 @@ import { useEffect } from "react";
 import Dashboard from "@/pages/Dashboard";
 import Jobs from "@/pages/Jobs";
 import JobForm from "@/pages/JobForm";
+import JobSummary from "@/pages/JobSummary";
 import Leads from "@/pages/Leads";
 import LeadForm from "@/pages/LeadForm";
+import LeadSummary from "@/pages/LeadSummary";
 import Invoices from "@/pages/Invoices";
 import InvoiceForm from "@/pages/InvoiceForm";
 import InvoiceView from "@/pages/InvoiceView";
@@ -44,10 +46,12 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/jobs" component={Jobs} />
       <Route path="/jobs/new" component={JobForm} />
-      <Route path="/jobs/:id" component={JobForm} />
+      <Route path="/jobs/:id" component={JobSummary} />
+      <Route path="/jobs/:id/edit" component={JobForm} />
       <Route path="/leads" component={Leads} />
       <Route path="/leads/new" component={LeadForm} />
-      <Route path="/leads/:id" component={LeadForm} />
+      <Route path="/leads/:id" component={LeadSummary} />
+      <Route path="/leads/:id/edit" component={LeadForm} />
       <Route path="/invoices" component={Invoices} />
       <Route path="/invoices/new" component={InvoiceForm} />
       <Route path="/invoices/:id/edit" component={InvoiceForm} />
