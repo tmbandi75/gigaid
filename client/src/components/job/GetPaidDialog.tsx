@@ -101,12 +101,35 @@ export function GetPaidDialog({ open, onClose, jobId, jobTitle, amount, clientNa
     markPaidMutation.mutate(method);
   };
 
+  const sendPaymentLinkMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", `/api/jobs/${jobId}/send-payment-link`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      const sentVia = [];
+      if (data.smsSent) sentVia.push("SMS");
+      if (data.emailSent) sentVia.push("Email");
+      
+      toast({
+        title: "Payment link sent!",
+        description: sentVia.length > 0 
+          ? `Sent via ${sentVia.join(" and ")}` 
+          : "Link created - share with your client",
+      });
+      onClose();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send payment link. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleRequestPayment = () => {
-    toast({
-      title: "Payment link feature",
-      description: "Payment link sending coming soon!",
-    });
-    onClose();
+    sendPaymentLinkMutation.mutate();
   };
 
   const handleRequestReview = () => {
@@ -179,10 +202,15 @@ export function GetPaidDialog({ open, onClose, jobId, jobTitle, amount, clientNa
                   variant="outline"
                   className="flex-1 h-12 text-base"
                   onClick={handleRequestPayment}
+                  disabled={sendPaymentLinkMutation.isPending}
                   data-testid="button-request-payment"
                 >
-                  <ExternalLink className="h-5 w-5 mr-2" />
-                  Request Payment
+                  {sendPaymentLinkMutation.isPending ? (
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  ) : (
+                    <ExternalLink className="h-5 w-5 mr-2" />
+                  )}
+                  {sendPaymentLinkMutation.isPending ? "Sending..." : "Request Payment"}
                 </Button>
               </div>
             </div>

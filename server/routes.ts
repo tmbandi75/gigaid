@@ -3411,6 +3411,115 @@ Return ONLY the message text, no JSON or formatting.`
     }
   });
 
+  // Create and send payment link for a job
+  app.post("/api/jobs/:id/send-payment-link", async (req, res) => {
+    try {
+      const job = await storage.getJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      if (!job.price || job.price <= 0) {
+        return res.status(400).json({ error: "Job has no price set. Please set a price first." });
+      }
+
+      if (!job.clientPhone && !job.clientEmail) {
+        return res.status(400).json({ error: "No contact info available. Please add phone or email." });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+      
+      const user = await storage.getUser(job.userId);
+      const providerName = user?.businessName || user?.name || "Service Provider";
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price_data: {
+              currency: "usd",
+              product_data: {
+                name: job.title || "Service",
+                description: `Service from ${providerName}`,
+              },
+              unit_amount: job.price,
+            },
+            quantity: 1,
+          },
+        ],
+        mode: "payment",
+        success_url: `${req.protocol}://${req.get("host")}/payment-success/${job.id}?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${req.protocol}://${req.get("host")}/payment/${job.id}`,
+        metadata: {
+          jobId: job.id,
+          userId: job.userId,
+        },
+      });
+
+      const paymentUrl = session.url;
+      const amountDisplay = new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        minimumFractionDigits: 0,
+      }).format(job.price / 100);
+
+      const message = `Hi ${job.clientName || "there"}! Here's your payment link for ${job.title || "your service"} (${amountDisplay}) from ${providerName}: ${paymentUrl}`;
+
+      let smsSent = false;
+      let emailSent = false;
+
+      if (job.clientPhone) {
+        try {
+          await sendSMS(job.clientPhone, message);
+          smsSent = true;
+        } catch (e) {
+          console.error("Payment link SMS error:", e);
+        }
+      }
+
+      if (job.clientEmail) {
+        try {
+          await sendEmail({
+            to: job.clientEmail,
+            subject: `Payment request from ${providerName} - ${amountDisplay}`,
+            text: message,
+            html: `
+              <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+                <h2>Payment Request</h2>
+                <p>Hi ${job.clientName || "there"}!</p>
+                <p>Please click the button below to pay for your service:</p>
+                <p><strong>${job.title || "Service"}</strong>: ${amountDisplay}</p>
+                <div style="margin: 20px 0;">
+                  <a href="${paymentUrl}" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block;">Pay Now</a>
+                </div>
+                <p style="color: #666; font-size: 14px;">Thank you for your business!</p>
+                <p style="color: #666; font-size: 14px;">${providerName}</p>
+              </div>
+            `,
+          });
+          emailSent = true;
+        } catch (e) {
+          console.error("Payment link email error:", e);
+        }
+      }
+
+      res.json({
+        success: true,
+        smsSent,
+        emailSent,
+        paymentUrl,
+        checkoutSessionId: session.id,
+        message: smsSent || emailSent 
+          ? "Payment link sent!" 
+          : "Payment link created but could not send notification",
+      });
+    } catch (error) {
+      console.error("Send payment link error:", error);
+      res.status(500).json({ error: "Failed to create payment link" });
+    }
+  });
+
   // Handle successful Stripe payment
   app.get("/api/stripe/success", async (req, res) => {
     try {
