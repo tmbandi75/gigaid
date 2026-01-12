@@ -27,6 +27,7 @@ import { sendEmail } from "./sendgrid";
 import { geocodeAddress } from "./geocode";
 import { computeDepositState, calculateDepositAmount, getCancellationOutcome, formatDepositDisplay } from "./depositHelper";
 import { embedDepositMetadata, extractDepositMetadata, DepositMetadata, DerivedDepositState } from "@shared/schema";
+import { generateCelebrationMessage } from "./celebration";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -5621,6 +5622,30 @@ Return ONLY the message text, no JSON or formatting.`
     } catch (error) {
       console.error("Set feature flag error:", error);
       res.status(500).json({ error: "Failed to set feature flag" });
+    }
+  });
+
+  // Celebration message generation endpoint
+  app.post("/api/celebrate", async (req, res) => {
+    try {
+      const { type, jobTitle, clientName, amount, serviceName } = req.body;
+      
+      if (!type || !["job_booked", "payment_received"].includes(type)) {
+        return res.status(400).json({ error: "Invalid celebration type" });
+      }
+
+      const message = await generateCelebrationMessage({
+        type,
+        jobTitle,
+        clientName,
+        amount,
+        serviceName,
+      });
+
+      res.json({ message });
+    } catch (error) {
+      console.error("Celebration message error:", error);
+      res.status(500).json({ error: "Failed to generate celebration message" });
     }
   });
 

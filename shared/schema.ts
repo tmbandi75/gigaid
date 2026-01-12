@@ -888,3 +888,5 @@ export function embedDepositMetadata(existingNotes: string | null, deposit: Depo
   const existing = existingNotes ? { originalNotes: existingNotes } : {};
   return JSON.stringify({ ...existing, ...deposit });
 }
+
+export * from "./models/chat";
