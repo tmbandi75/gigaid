@@ -6,6 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { useCelebration } from "@/hooks/use-celebration";
+import { CelebrationOverlay } from "@/components/CelebrationOverlay";
 import {
   Select,
   SelectContent,
@@ -153,6 +155,7 @@ export default function InvoiceView() {
   const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
   const { sendText } = useSendText();
+  const { celebration, celebrate, dismiss: dismissCelebration } = useCelebration();
 
   const { data: invoice, isLoading } = useQuery<Invoice>({
     queryKey: ["/api/invoices", id],
@@ -207,11 +210,18 @@ export default function InvoiceView() {
     mutationFn: async (paymentMethod: string) => {
       return apiRequest("POST", `/api/invoices/${id}/mark-paid`, { paymentMethod });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
       queryClient.invalidateQueries({ queryKey: ["/api/invoices", id] });
       queryClient.invalidateQueries({ queryKey: [`/api/invoices/${id}/payments`] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
+      
+      await celebrate({
+        type: "payment_received",
+        amount: invoice?.amount,
+        clientName: invoice?.clientName || undefined,
+      });
+      
       toast({ title: "Invoice marked as paid!" });
       setShowPaymentDialog(false);
     },
@@ -782,6 +792,13 @@ export default function InvoiceView() {
           setNudgeSheetOpen(false);
           setSelectedNudge(null);
         }}
+      />
+
+      <CelebrationOverlay
+        isVisible={celebration.isVisible}
+        message={celebration.message}
+        type={celebration.type}
+        onDismiss={dismissCelebration}
       />
     </div>
   );

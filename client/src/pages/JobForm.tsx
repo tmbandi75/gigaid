@@ -9,6 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { useCelebration } from "@/hooks/use-celebration";
+import { CelebrationOverlay } from "@/components/CelebrationOverlay";
 import {
   Select,
   SelectContent,
@@ -357,6 +359,7 @@ export default function JobForm() {
     depositPaidCents?: number;
     totalAmountCents?: number;
   } | null>(null);
+  const { celebration, celebrate, dismiss: dismissCelebration } = useCelebration();
 
   const urlParams = new URLSearchParams(searchString);
   const prefillClientName = urlParams.get("clientName") || "";
@@ -544,11 +547,24 @@ export default function JobForm() {
       };
       return apiRequest("POST", "/api/jobs", payload);
     },
-    onSuccess: () => {
+    onSuccess: async (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
+      
+      const clientName = [variables.clientFirstName, variables.clientLastName]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+      
+      await celebrate({
+        type: "job_booked",
+        jobTitle: variables.title,
+        clientName: clientName || undefined,
+        serviceName: variables.serviceType || undefined,
+      });
+      
       toast({ title: "Job created successfully" });
-      navigate("/jobs");
+      setTimeout(() => navigate("/jobs"), 2000);
     },
     onError: () => {
       toast({ title: "Failed to create job", variant: "destructive" });
@@ -1296,6 +1312,13 @@ export default function JobForm() {
           totalAmountCents={completedJobData.totalAmountCents}
         />
       )}
+
+      <CelebrationOverlay
+        isVisible={celebration.isVisible}
+        message={celebration.message}
+        type={celebration.type}
+        onDismiss={dismissCelebration}
+      />
     </div>
   );
 }
