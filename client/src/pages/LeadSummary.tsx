@@ -24,10 +24,14 @@ import {
   Eye,
   ExternalLink,
   Copy,
+  Sparkles,
 } from "lucide-react";
-import type { Lead, PriceConfirmation } from "@shared/schema";
+import type { Lead, PriceConfirmation, AiNudge } from "@shared/schema";
 import { ReplyComposer } from "@/components/lead/ReplyComposer";
 import { useState } from "react";
+import { useNudges, useGenerateNudges, useFeatureFlag } from "@/hooks/use-nudges";
+import { NudgeChips } from "@/components/nudges/NudgeChip";
+import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
 
 const statusConfig: Record<string, { label: string; color: string; bgColor: string }> = {
   new: { label: "New", color: "text-blue-600", bgColor: "bg-blue-500/10" },
@@ -81,6 +85,20 @@ export default function LeadSummary() {
     },
     enabled: !!id,
   });
+
+  const { data: featureFlag } = useFeatureFlag("ai_micro_nudges");
+  const { data: nudges = [] } = useNudges("lead", id);
+  const [selectedNudge, setSelectedNudge] = useState<AiNudge | null>(null);
+  const [nudgeSheetOpen, setNudgeSheetOpen] = useState(false);
+
+  const handleNudgeClick = (nudge: AiNudge) => {
+    setSelectedNudge(nudge);
+    setNudgeSheetOpen(true);
+  };
+
+  const handleCreateJobFromNudge = (prefill: any) => {
+    navigate(`/jobs/new?leadId=${id}`);
+  };
 
   const convertToJobMutation = useMutation({
     mutationFn: async () => {
@@ -193,6 +211,18 @@ export default function LeadSummary() {
       </div>
 
       <div className="px-4 -mt-8 relative z-10 space-y-4">
+        {featureFlag?.enabled && nudges.length > 0 && (
+          <Card className="border-0 shadow-lg bg-gradient-to-r from-violet-500/10 to-purple-500/10" data-testid="card-nudges">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="h-4 w-4 text-violet-500" />
+                <h3 className="font-semibold text-sm">AI Suggestions</h3>
+              </div>
+              <NudgeChips nudges={nudges} onNudgeClick={handleNudgeClick} />
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="border-0 shadow-lg" data-testid="card-contact">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-3">
@@ -387,6 +417,16 @@ export default function LeadSummary() {
           </Button>
         </div>
       </div>
+
+      <NudgeActionSheet
+        nudge={selectedNudge}
+        open={nudgeSheetOpen}
+        onClose={() => {
+          setNudgeSheetOpen(false);
+          setSelectedNudge(null);
+        }}
+        onCreateJob={handleCreateJobFromNudge}
+      />
     </div>
   );
 }

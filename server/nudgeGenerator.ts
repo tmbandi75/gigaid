@@ -1,0 +1,245 @@
+import { storage } from "./storage";
+import type { Lead, Invoice, Job, AiNudge, InsertAiNudge } from "@shared/schema";
+
+interface NudgeCandidate {
+  entityType: "lead" | "invoice" | "job";
+  entityId: string;
+  nudgeType: string;
+  priority: number;
+  explainText: string;
+  actionPayload: Record<string, any>;
+  confidence?: number;
+}
+
+const MAX_NUDGES_PER_RUN = 20;
+const MAX_ACTIVE_NUDGES_PER_ENTITY = 2;
+
+function getDateString(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
+function hoursAgo(isoString: string | null, hours: number): boolean {
+  if (!isoString) return false;
+  const then = new Date(isoString).getTime();
+  const now = Date.now();
+  return now - then >= hours * 60 * 60 * 1000;
+}
+
+function hoursSince(isoString: string | null): number {
+  if (!isoString) return Infinity;
+  const then = new Date(isoString).getTime();
+  return (Date.now() - then) / (60 * 60 * 1000);
+}
+
+function generateLeadNudges(lead: Lead, userId: string): NudgeCandidate[] {
+  const candidates: NudgeCandidate[] = [];
+  const today = getDateString();
+
+  if (
+    (lead.status === "new" || lead.status === "response_sent") &&
+    !lead.lastContactedAt &&
+    hoursAgo(lead.createdAt, 12)
+  ) {
+    candidates.push({
+      entityType: "lead",
+      entityId: lead.id,
+      nudgeType: "lead_follow_up",
+      priority: 90,
+      explainText: "Follow up now — replies drop after 24h.",
+      actionPayload: {
+        suggestedMessage: `Hi ${lead.clientName || "there"}! Just following up on your inquiry about ${lead.serviceType || "our services"}. When would be a good time to chat?`,
+      },
+    });
+  }
+
+  if (
+    (lead.status === "response_sent" || lead.status === "engaged") &&
+    lead.lastContactedAt &&
+    hoursAgo(lead.lastContactedAt, 48)
+  ) {
+    candidates.push({
+      entityType: "lead",
+      entityId: lead.id,
+      nudgeType: "lead_silent_rescue",
+      priority: 80,
+      explainText: "Customers often respond to a quick check-in.",
+      actionPayload: {
+        suggestedMessage: `Hey ${lead.clientName || "there"}, just checking in to see if you're still interested. Let me know if you have any questions!`,
+      },
+    });
+  }
+
+  if (
+    lead.status === "engaged" &&
+    !lead.convertedJobId &&
+    hoursAgo(lead.createdAt, 2)
+  ) {
+    candidates.push({
+      entityType: "lead",
+      entityId: lead.id,
+      nudgeType: "lead_convert_to_job",
+      priority: 85,
+      explainText: "Turn this into a job?",
+      actionPayload: {
+        jobPrefill: {
+          clientName: lead.clientName,
+          clientPhone: lead.clientPhone,
+          clientEmail: lead.clientEmail,
+          serviceType: lead.serviceType,
+          description: lead.description,
+        },
+      },
+    });
+  }
+
+  return candidates;
+}
+
+function generateInvoiceNudges(invoice: Invoice, userId: string): NudgeCandidate[] {
+  const candidates: NudgeCandidate[] = [];
+
+  if (
+    (invoice.status === "sent" || invoice.status === "draft") &&
+    invoice.sentAt &&
+    hoursAgo(invoice.sentAt, 24) &&
+    !invoice.paidAt
+  ) {
+    const amount = invoice.amount / 100;
+    candidates.push({
+      entityType: "invoice",
+      entityId: invoice.id,
+      nudgeType: "invoice_reminder",
+      priority: 90,
+      explainText: `You're owed $${amount.toFixed(0)} — send a reminder?`,
+      actionPayload: {
+        reminderMessage: `Hi ${invoice.clientName}! Just a friendly reminder about invoice #${invoice.invoiceNumber} for $${amount.toFixed(2)}. Payment link: {link}`,
+      },
+    });
+  }
+
+  if (
+    invoice.sentAt &&
+    hoursAgo(invoice.sentAt, 168) &&
+    !invoice.paidAt
+  ) {
+    const amount = invoice.amount / 100;
+    candidates.push({
+      entityType: "invoice",
+      entityId: invoice.id,
+      nudgeType: "invoice_overdue_escalation",
+      priority: 85,
+      explainText: "This invoice may need a nudge.",
+      actionPayload: {
+        firmerMessage: `Hi ${invoice.clientName}, I noticed invoice #${invoice.invoiceNumber} ($${amount.toFixed(2)}) is still outstanding. Please let me know if there's an issue I can help with.`,
+      },
+    });
+  }
+
+  return candidates;
+}
+
+function generateJobNudges(job: Job, userId: string, invoices: Invoice[]): NudgeCandidate[] {
+  const candidates: NudgeCandidate[] = [];
+
+  if (
+    job.status === "completed" &&
+    !invoices.some(inv => inv.jobId === job.id) &&
+    hoursAgo(job.createdAt, 1)
+  ) {
+    const amount = job.price ? job.price / 100 : 0;
+    candidates.push({
+      entityType: "job",
+      entityId: job.id,
+      nudgeType: "invoice_create_from_job_done",
+      priority: 88,
+      explainText: "Invoice now while the job is fresh.",
+      actionPayload: {
+        invoicePrefill: {
+          clientName: job.clientName,
+          clientEmail: job.clientEmail,
+          clientPhone: job.clientPhone,
+          serviceDescription: job.title,
+          amount: job.price || 0,
+          jobId: job.id,
+        },
+      },
+    });
+  }
+
+  return candidates;
+}
+
+export async function generateNudgesForUser(userId: string): Promise<{ createdCount: number; activeCount: number }> {
+  const featureFlag = await storage.getFeatureFlag("ai_micro_nudges");
+  if (!featureFlag?.enabled) {
+    return { createdCount: 0, activeCount: 0 };
+  }
+
+  const [leads, invoices, jobs] = await Promise.all([
+    storage.getLeads(userId),
+    storage.getInvoices(userId),
+    storage.getJobs(userId),
+  ]);
+
+  const candidates: NudgeCandidate[] = [];
+  const today = getDateString();
+
+  for (const lead of leads) {
+    candidates.push(...generateLeadNudges(lead, userId));
+  }
+
+  for (const invoice of invoices) {
+    candidates.push(...generateInvoiceNudges(invoice, userId));
+  }
+
+  for (const job of jobs) {
+    candidates.push(...generateJobNudges(job, userId, invoices));
+  }
+
+  let createdCount = 0;
+  const entityNudgeCounts = new Map<string, number>();
+
+  for (const candidate of candidates) {
+    if (createdCount >= MAX_NUDGES_PER_RUN) break;
+
+    const entityKey = `${candidate.entityType}:${candidate.entityId}`;
+    const currentCount = entityNudgeCounts.get(entityKey) || 0;
+    if (currentCount >= MAX_ACTIVE_NUDGES_PER_ENTITY) continue;
+
+    const existingNudges = await storage.getAiNudgesByEntity(candidate.entityType, candidate.entityId);
+    const activeNudges = existingNudges.filter(n => n.status === "active");
+    if (activeNudges.length >= MAX_ACTIVE_NUDGES_PER_ENTITY) continue;
+
+    const dedupeKey = `${userId}:${candidate.entityType}:${candidate.entityId}:${candidate.nudgeType}:${today}`;
+    const existing = await storage.getAiNudgeByDedupeKey(dedupeKey);
+    if (existing) continue;
+
+    const nudge: InsertAiNudge = {
+      userId,
+      entityType: candidate.entityType,
+      entityId: candidate.entityId,
+      nudgeType: candidate.nudgeType,
+      priority: candidate.priority,
+      status: "active",
+      createdAt: new Date().toISOString(),
+      explainText: candidate.explainText,
+      actionPayload: JSON.stringify(candidate.actionPayload),
+      dedupeKey,
+      confidence: candidate.confidence,
+    };
+
+    await storage.createAiNudge(nudge);
+    await storage.createAiNudgeEvent({
+      nudgeId: nudge.dedupeKey,
+      userId,
+      eventType: "created",
+      eventAt: new Date().toISOString(),
+    });
+
+    createdCount++;
+    entityNudgeCounts.set(entityKey, currentCount + 1);
+  }
+
+  const activeNudges = await storage.getActiveAiNudgesForUser(userId);
+  return { createdCount, activeCount: activeNudges.length };
+}

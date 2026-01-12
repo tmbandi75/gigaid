@@ -5415,5 +5415,214 @@ Return ONLY the message text, no JSON or formatting.`
     }
   });
 
+  // ==================== AI NUDGES ====================
+  
+  // Generate nudges for the current user
+  app.post("/api/ai/nudges/generate", async (req, res) => {
+    try {
+      const user = await storage.getUser("demo-user");
+      if (!user) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { generateNudgesForUser } = await import("./nudgeGenerator");
+      const result = await generateNudgesForUser(user.id);
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Generate nudges error:", error);
+      res.status(500).json({ error: "Failed to generate nudges" });
+    }
+  });
+
+  // Get active nudges for the current user
+  app.get("/api/ai/nudges", async (req, res) => {
+    try {
+      const user = await storage.getUser("demo-user");
+      if (!user) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { entity_type, entity_id } = req.query;
+      
+      let nudges;
+      if (entity_type && entity_id) {
+        nudges = await storage.getAiNudgesByEntity(
+          entity_type as string, 
+          entity_id as string
+        );
+        nudges = nudges.filter(n => n.status === "active");
+      } else {
+        nudges = await storage.getActiveAiNudgesForUser(user.id);
+      }
+
+      // Limit to 2 nudges per entity
+      const entityNudges = new Map<string, typeof nudges>();
+      for (const nudge of nudges) {
+        const key = `${nudge.entityType}:${nudge.entityId}`;
+        if (!entityNudges.has(key)) {
+          entityNudges.set(key, []);
+        }
+        const existing = entityNudges.get(key)!;
+        if (existing.length < 2) {
+          existing.push(nudge);
+        }
+      }
+
+      const limitedNudges = Array.from(entityNudges.values()).flat();
+      
+      res.json(limitedNudges);
+    } catch (error) {
+      console.error("Get nudges error:", error);
+      res.status(500).json({ error: "Failed to get nudges" });
+    }
+  });
+
+  // Get a single nudge
+  app.get("/api/ai/nudges/:id", async (req, res) => {
+    try {
+      const nudge = await storage.getAiNudge(req.params.id);
+      if (!nudge) {
+        return res.status(404).json({ error: "Nudge not found" });
+      }
+      res.json(nudge);
+    } catch (error) {
+      console.error("Get nudge error:", error);
+      res.status(500).json({ error: "Failed to get nudge" });
+    }
+  });
+
+  // Dismiss a nudge
+  app.post("/api/ai/nudges/:id/dismiss", async (req, res) => {
+    try {
+      const nudge = await storage.getAiNudge(req.params.id);
+      if (!nudge) {
+        return res.status(404).json({ error: "Nudge not found" });
+      }
+
+      await storage.updateAiNudge(req.params.id, { status: "dismissed" });
+      await storage.createAiNudgeEvent({
+        nudgeId: nudge.id,
+        userId: nudge.userId,
+        eventType: "dismissed",
+        eventAt: new Date().toISOString(),
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Dismiss nudge error:", error);
+      res.status(500).json({ error: "Failed to dismiss nudge" });
+    }
+  });
+
+  // Snooze a nudge
+  app.post("/api/ai/nudges/:id/snooze", async (req, res) => {
+    try {
+      const { hours = 24 } = req.body;
+      const nudge = await storage.getAiNudge(req.params.id);
+      if (!nudge) {
+        return res.status(404).json({ error: "Nudge not found" });
+      }
+
+      const snoozedUntil = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+      await storage.updateAiNudge(req.params.id, { 
+        snoozedUntil 
+      });
+      await storage.createAiNudgeEvent({
+        nudgeId: nudge.id,
+        userId: nudge.userId,
+        eventType: "snoozed",
+        eventAt: new Date().toISOString(),
+        metadata: JSON.stringify({ hours, snoozedUntil }),
+      });
+
+      res.json({ success: true, snoozedUntil });
+    } catch (error) {
+      console.error("Snooze nudge error:", error);
+      res.status(500).json({ error: "Failed to snooze nudge" });
+    }
+  });
+
+  // Act on a nudge
+  app.post("/api/ai/nudges/:id/act", async (req, res) => {
+    try {
+      const { action_type, payload } = req.body;
+      const nudge = await storage.getAiNudge(req.params.id);
+      if (!nudge) {
+        return res.status(404).json({ error: "Nudge not found" });
+      }
+
+      let result: any = { success: true };
+
+      switch (action_type) {
+        case "send_message":
+          // For now, mark as acted - actual messaging handled by frontend
+          result.message = "Message action recorded";
+          break;
+        case "create_job":
+          // Return prefilled job data for frontend to use
+          const jobPayload = JSON.parse(nudge.actionPayload || "{}");
+          result.jobPrefill = jobPayload.jobPrefill;
+          break;
+        case "create_invoice":
+          // Return prefilled invoice data for frontend to use
+          const invPayload = JSON.parse(nudge.actionPayload || "{}");
+          result.invoicePrefill = invPayload.invoicePrefill;
+          break;
+        default:
+          result.message = "Action recorded";
+      }
+
+      await storage.updateAiNudge(req.params.id, { status: "acted" });
+      await storage.createAiNudgeEvent({
+        nudgeId: nudge.id,
+        userId: nudge.userId,
+        eventType: "acted",
+        eventAt: new Date().toISOString(),
+        metadata: JSON.stringify({ action_type, payload }),
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error("Act on nudge error:", error);
+      res.status(500).json({ error: "Failed to process action" });
+    }
+  });
+
+  // Feature flags endpoints
+  app.get("/api/feature-flags", async (req, res) => {
+    try {
+      const flags = await storage.getAllFeatureFlags();
+      res.json(flags);
+    } catch (error) {
+      console.error("Get feature flags error:", error);
+      res.status(500).json({ error: "Failed to get feature flags" });
+    }
+  });
+
+  app.get("/api/feature-flags/:key", async (req, res) => {
+    try {
+      const flag = await storage.getFeatureFlag(req.params.key);
+      if (!flag) {
+        return res.json({ key: req.params.key, enabled: false });
+      }
+      res.json(flag);
+    } catch (error) {
+      console.error("Get feature flag error:", error);
+      res.status(500).json({ error: "Failed to get feature flag" });
+    }
+  });
+
+  app.post("/api/feature-flags/:key", async (req, res) => {
+    try {
+      const { enabled, description } = req.body;
+      const flag = await storage.setFeatureFlag(req.params.key, enabled, description);
+      res.json(flag);
+    } catch (error) {
+      console.error("Set feature flag error:", error);
+      res.status(500).json({ error: "Failed to set feature flag" });
+    }
+  });
+
   return httpServer;
 }

@@ -50,7 +50,10 @@ import {
   MessageSquare,
   Link,
 } from "lucide-react";
-import type { Invoice } from "@shared/schema";
+import type { Invoice, AiNudge } from "@shared/schema";
+import { useNudges, useFeatureFlag } from "@/hooks/use-nudges";
+import { NudgeChips } from "@/components/nudges/NudgeChip";
+import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
 
 interface JobPayment {
   id: string;
@@ -160,6 +163,16 @@ export default function InvoiceView() {
     queryKey: [`/api/invoices/${id}/payments`],
     enabled: !!id,
   });
+
+  const { data: featureFlag } = useFeatureFlag("ai_micro_nudges");
+  const { data: nudges = [] } = useNudges("invoice", id);
+  const [selectedNudge, setSelectedNudge] = useState<AiNudge | null>(null);
+  const [nudgeSheetOpen, setNudgeSheetOpen] = useState(false);
+
+  const handleNudgeClick = (nudge: AiNudge) => {
+    setSelectedNudge(nudge);
+    setNudgeSheetOpen(true);
+  };
 
   const sendMutation = useMutation({
     mutationFn: async ({ sendEmail, sendSms }: { sendEmail: boolean; sendSms: boolean }) => {
@@ -346,6 +359,18 @@ export default function InvoiceView() {
       </div>
       
       <div className="flex-1 px-4 pt-4 pb-6 space-y-4">
+        {featureFlag?.enabled && nudges.length > 0 && (
+          <Card className="border-0 shadow-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10" data-testid="card-nudges">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                <h3 className="font-semibold text-sm">AI Suggestions</h3>
+              </div>
+              <NudgeChips nudges={nudges} onNudgeClick={handleNudgeClick} />
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="border-0 shadow-xl overflow-hidden">
           <CardContent className="p-0">
             <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6 text-center border-b">
@@ -749,6 +774,15 @@ export default function InvoiceView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <NudgeActionSheet
+        nudge={selectedNudge}
+        open={nudgeSheetOpen}
+        onClose={() => {
+          setNudgeSheetOpen(false);
+          setSelectedNudge(null);
+        }}
+      />
     </div>
   );
 }

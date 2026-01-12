@@ -21,6 +21,9 @@ import {
   type CrewJobPhoto, type InsertCrewJobPhoto,
   type CrewMessage, type InsertCrewMessage,
   type PriceConfirmation, type InsertPriceConfirmation,
+  type AiNudge, type InsertAiNudge,
+  type AiNudgeEvent, type InsertAiNudgeEvent,
+  type FeatureFlag,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -164,6 +167,25 @@ export interface IStorage {
   createPriceConfirmation(confirmation: InsertPriceConfirmation): Promise<PriceConfirmation>;
   updatePriceConfirmation(id: string, updates: Partial<PriceConfirmation>): Promise<PriceConfirmation | undefined>;
   deletePriceConfirmation(id: string): Promise<boolean>;
+
+  // AI Nudges
+  getAiNudges(userId: string): Promise<AiNudge[]>;
+  getAiNudge(id: string): Promise<AiNudge | undefined>;
+  getAiNudgesByEntity(entityType: string, entityId: string): Promise<AiNudge[]>;
+  getActiveAiNudgesForUser(userId: string): Promise<AiNudge[]>;
+  getAiNudgeByDedupeKey(dedupeKey: string): Promise<AiNudge | undefined>;
+  createAiNudge(nudge: InsertAiNudge): Promise<AiNudge>;
+  updateAiNudge(id: string, updates: Partial<AiNudge>): Promise<AiNudge | undefined>;
+  deleteAiNudge(id: string): Promise<boolean>;
+
+  // AI Nudge Events
+  getAiNudgeEvents(nudgeId: string): Promise<AiNudgeEvent[]>;
+  createAiNudgeEvent(event: InsertAiNudgeEvent): Promise<AiNudgeEvent>;
+
+  // Feature Flags
+  getFeatureFlag(key: string): Promise<FeatureFlag | undefined>;
+  setFeatureFlag(key: string, enabled: boolean, description?: string): Promise<FeatureFlag>;
+  getAllFeatureFlags(): Promise<FeatureFlag[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -185,6 +207,10 @@ export class MemStorage implements IStorage {
   private crewJobPhotos: Map<string, CrewJobPhoto>;
   private crewMessages: Map<string, CrewMessage>;
   private bookingEvents: Map<string, BookingEvent>;
+  private priceConfirmations: Map<string, PriceConfirmation>;
+  private aiNudges: Map<string, AiNudge>;
+  private aiNudgeEvents: Map<string, AiNudgeEvent>;
+  private featureFlags: Map<string, FeatureFlag>;
 
   constructor() {
     this.users = new Map();
@@ -205,6 +231,18 @@ export class MemStorage implements IStorage {
     this.crewInvites = new Map();
     this.crewJobPhotos = new Map();
     this.crewMessages = new Map();
+    this.priceConfirmations = new Map();
+    this.aiNudges = new Map();
+    this.aiNudgeEvents = new Map();
+    this.featureFlags = new Map();
+    
+    // Seed default feature flags
+    this.featureFlags.set("ai_micro_nudges", {
+      key: "ai_micro_nudges",
+      enabled: true, // Enabled by default for demo
+      description: "AI-powered micro-nudges for leads and invoices",
+      updatedAt: new Date().toISOString(),
+    });
     
     this.seedDemoData();
   }
@@ -1572,9 +1610,7 @@ export class MemStorage implements IStorage {
     return updated;
   }
 
-  // Price Confirmations - stub implementations (using DatabaseStorage in production)
-  private priceConfirmations: Map<string, PriceConfirmation> = new Map();
-
+  // Price Confirmations
   async getPriceConfirmation(id: string): Promise<PriceConfirmation | undefined> {
     return this.priceConfirmations.get(id);
   }
@@ -1632,6 +1668,102 @@ export class MemStorage implements IStorage {
 
   async deletePriceConfirmation(id: string): Promise<boolean> {
     return this.priceConfirmations.delete(id);
+  }
+
+  // AI Nudges
+  async getAiNudges(userId: string): Promise<AiNudge[]> {
+    return Array.from(this.aiNudges.values()).filter(n => n.userId === userId);
+  }
+
+  async getAiNudge(id: string): Promise<AiNudge | undefined> {
+    return this.aiNudges.get(id);
+  }
+
+  async getAiNudgesByEntity(entityType: string, entityId: string): Promise<AiNudge[]> {
+    return Array.from(this.aiNudges.values()).filter(
+      n => n.entityType === entityType && n.entityId === entityId
+    );
+  }
+
+  async getActiveAiNudgesForUser(userId: string): Promise<AiNudge[]> {
+    const now = new Date().toISOString();
+    return Array.from(this.aiNudges.values()).filter(n => {
+      if (n.userId !== userId) return false;
+      if (n.status !== "active") return false;
+      if (n.snoozedUntil && n.snoozedUntil > now) return false;
+      return true;
+    }).sort((a, b) => b.priority - a.priority);
+  }
+
+  async getAiNudgeByDedupeKey(dedupeKey: string): Promise<AiNudge | undefined> {
+    return Array.from(this.aiNudges.values()).find(n => n.dedupeKey === dedupeKey);
+  }
+
+  async createAiNudge(nudge: InsertAiNudge): Promise<AiNudge> {
+    const id = randomUUID();
+    const newNudge: AiNudge = {
+      ...nudge,
+      id,
+      priority: nudge.priority ?? 50,
+      status: nudge.status ?? "active",
+      actionPayload: nudge.actionPayload ?? "{}",
+      explainText: nudge.explainText ?? "",
+      confidence: nudge.confidence ?? null,
+      updatedAt: nudge.updatedAt ?? null,
+      lastShownAt: nudge.lastShownAt ?? null,
+      snoozedUntil: nudge.snoozedUntil ?? null,
+    };
+    this.aiNudges.set(id, newNudge);
+    return newNudge;
+  }
+
+  async updateAiNudge(id: string, updates: Partial<AiNudge>): Promise<AiNudge | undefined> {
+    const nudge = this.aiNudges.get(id);
+    if (!nudge) return undefined;
+    const updated = { ...nudge, ...updates, updatedAt: new Date().toISOString() };
+    this.aiNudges.set(id, updated);
+    return updated;
+  }
+
+  async deleteAiNudge(id: string): Promise<boolean> {
+    return this.aiNudges.delete(id);
+  }
+
+  // AI Nudge Events
+  async getAiNudgeEvents(nudgeId: string): Promise<AiNudgeEvent[]> {
+    return Array.from(this.aiNudgeEvents.values()).filter(e => e.nudgeId === nudgeId);
+  }
+
+  async createAiNudgeEvent(event: InsertAiNudgeEvent): Promise<AiNudgeEvent> {
+    const id = randomUUID();
+    const newEvent: AiNudgeEvent = {
+      ...event,
+      id,
+      metadata: event.metadata ?? "{}",
+    };
+    this.aiNudgeEvents.set(id, newEvent);
+    return newEvent;
+  }
+
+  // Feature Flags
+  async getFeatureFlag(key: string): Promise<FeatureFlag | undefined> {
+    return this.featureFlags.get(key);
+  }
+
+  async setFeatureFlag(key: string, enabled: boolean, description?: string): Promise<FeatureFlag> {
+    const existing = this.featureFlags.get(key);
+    const flag: FeatureFlag = {
+      key,
+      enabled,
+      description: description ?? existing?.description ?? null,
+      updatedAt: new Date().toISOString(),
+    };
+    this.featureFlags.set(key, flag);
+    return flag;
+  }
+
+  async getAllFeatureFlags(): Promise<FeatureFlag[]> {
+    return Array.from(this.featureFlags.values());
   }
 }
 

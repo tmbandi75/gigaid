@@ -32,7 +32,8 @@ import {
 import { AvailabilityEditor, DEFAULT_AVAILABILITY } from "@/components/settings/AvailabilityEditor";
 import { PaymentMethodsSettings } from "@/components/PaymentMethodsSettings";
 import { StripeConnectSettings } from "@/components/settings/StripeConnectSettings";
-import type { Referral, WeeklyAvailability } from "@shared/schema";
+import type { Referral, WeeklyAvailability, FeatureFlag } from "@shared/schema";
+import { useFeatureFlag, useUpdateFeatureFlag } from "@/hooks/use-nudges";
 
 interface ReferralData {
   referralCode: string;
@@ -51,6 +52,9 @@ export default function Settings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [bookingLinkCopied, setBookingLinkCopied] = useState(false);
+  
+  const { data: aiNudgesFlag } = useFeatureFlag("ai_micro_nudges");
+  const updateFeatureFlag = useUpdateFeatureFlag();
 
   const { data: profile } = useQuery<any>({
     queryKey: ["/api/profile"],
@@ -223,6 +227,33 @@ export default function Settings() {
                   checked={settings.notifyByEmail}
                   onCheckedChange={(checked) => setSettings({ ...settings, notifyByEmail: checked })}
                   data-testid="switch-notify-email"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-md" data-testid="card-ai-suggestions">
+          <CardContent className="p-4">
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-violet-500 flex items-center justify-center">
+                <Sparkles className="h-4 w-4 text-white" />
+              </div>
+              AI Suggestions
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm">Smart Action Nudges</p>
+                  <p className="text-xs text-muted-foreground">Get AI-powered suggestions for leads and invoices</p>
+                </div>
+                <Switch
+                  checked={aiNudgesFlag?.enabled ?? true}
+                  onCheckedChange={(checked) => {
+                    updateFeatureFlag.mutate({ key: "ai_micro_nudges", enabled: checked });
+                  }}
+                  disabled={updateFeatureFlag.isPending}
+                  data-testid="switch-ai-nudges"
                 />
               </div>
             </div>

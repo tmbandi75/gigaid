@@ -1,10 +1,10 @@
-import { eq, and, desc, asc, lte } from "drizzle-orm";
+import { eq, and, desc, asc, lte, or, ne, isNull } from "drizzle-orm";
 import { db } from "./db";
 import { 
   users, otpCodes, sessions, jobs, leads, invoices, reminders,
   crewMembers, referrals, bookingRequests, bookingEvents, voiceNotes,
   reviews, userPaymentMethods, jobPayments, crewInvites, crewJobPhotos, crewMessages,
-  priceConfirmations,
+  priceConfirmations, aiNudges, aiNudgeEvents, featureFlags,
   type User, type InsertUser,
   type Job, type InsertJob,
   type Lead, type InsertLead,
@@ -27,6 +27,9 @@ import {
   type CrewJobPhoto, type InsertCrewJobPhoto,
   type CrewMessage, type InsertCrewMessage,
   type PriceConfirmation, type InsertPriceConfirmation,
+  type AiNudge, type InsertAiNudge,
+  type AiNudgeEvent, type InsertAiNudgeEvent,
+  type FeatureFlag,
 } from "@shared/schema";
 import { IStorage } from "./storage";
 import { randomUUID } from "crypto";
@@ -834,6 +837,121 @@ export class DatabaseStorage implements IStorage {
   async deletePriceConfirmation(id: string): Promise<boolean> {
     const result = await db.delete(priceConfirmations).where(eq(priceConfirmations.id, id)).returning();
     return result.length > 0;
+  }
+
+  // AI Nudges
+  async getAiNudges(userId: string): Promise<AiNudge[]> {
+    return await db.select().from(aiNudges).where(eq(aiNudges.userId, userId)).orderBy(desc(aiNudges.priority));
+  }
+
+  async getAiNudge(id: string): Promise<AiNudge | undefined> {
+    const [nudge] = await db.select().from(aiNudges).where(eq(aiNudges.id, id));
+    return nudge || undefined;
+  }
+
+  async getAiNudgesByEntity(entityType: string, entityId: string): Promise<AiNudge[]> {
+    const now = new Date().toISOString();
+    return await db.select().from(aiNudges).where(
+      and(
+        eq(aiNudges.entityType, entityType), 
+        eq(aiNudges.entityId, entityId),
+        eq(aiNudges.status, "active"),
+        or(
+          isNull(aiNudges.snoozedUntil),
+          lte(aiNudges.snoozedUntil, now)
+        )
+      )
+    ).orderBy(desc(aiNudges.priority));
+  }
+
+  async getActiveAiNudgesForUser(userId: string): Promise<AiNudge[]> {
+    const now = new Date().toISOString();
+    return await db.select().from(aiNudges).where(
+      and(
+        eq(aiNudges.userId, userId),
+        eq(aiNudges.status, "active"),
+        or(
+          isNull(aiNudges.snoozedUntil),
+          lte(aiNudges.snoozedUntil, now)
+        )
+      )
+    ).orderBy(desc(aiNudges.priority));
+  }
+
+  async getAiNudgeByDedupeKey(dedupeKey: string): Promise<AiNudge | undefined> {
+    const [nudge] = await db.select().from(aiNudges).where(eq(aiNudges.dedupeKey, dedupeKey));
+    return nudge || undefined;
+  }
+
+  async createAiNudge(nudge: InsertAiNudge): Promise<AiNudge> {
+    const id = randomUUID();
+    const [created] = await db.insert(aiNudges).values({
+      ...nudge,
+      id,
+      priority: nudge.priority ?? 50,
+      status: nudge.status ?? "active",
+      actionPayload: nudge.actionPayload ?? "{}",
+      explainText: nudge.explainText ?? "",
+    }).returning();
+    return created;
+  }
+
+  async updateAiNudge(id: string, updates: Partial<AiNudge>): Promise<AiNudge | undefined> {
+    const [updated] = await db.update(aiNudges).set({
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    }).where(eq(aiNudges.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deleteAiNudge(id: string): Promise<boolean> {
+    const result = await db.delete(aiNudges).where(eq(aiNudges.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // AI Nudge Events
+  async getAiNudgeEvents(nudgeId: string): Promise<AiNudgeEvent[]> {
+    return await db.select().from(aiNudgeEvents).where(eq(aiNudgeEvents.nudgeId, nudgeId)).orderBy(desc(aiNudgeEvents.eventAt));
+  }
+
+  async createAiNudgeEvent(event: InsertAiNudgeEvent): Promise<AiNudgeEvent> {
+    const id = randomUUID();
+    const [created] = await db.insert(aiNudgeEvents).values({
+      ...event,
+      id,
+      metadata: event.metadata ?? "{}",
+    }).returning();
+    return created;
+  }
+
+  // Feature Flags
+  async getFeatureFlag(key: string): Promise<FeatureFlag | undefined> {
+    const [flag] = await db.select().from(featureFlags).where(eq(featureFlags.key, key));
+    return flag || undefined;
+  }
+
+  async setFeatureFlag(key: string, enabled: boolean, description?: string): Promise<FeatureFlag> {
+    const existing = await this.getFeatureFlag(key);
+    if (existing) {
+      const [updated] = await db.update(featureFlags).set({
+        enabled,
+        description: description ?? existing.description,
+        updatedAt: new Date().toISOString(),
+      }).where(eq(featureFlags.key, key)).returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(featureFlags).values({
+        key,
+        enabled,
+        description: description ?? null,
+        updatedAt: new Date().toISOString(),
+      }).returning();
+      return created;
+    }
+  }
+
+  async getAllFeatureFlags(): Promise<FeatureFlag[]> {
+    return await db.select().from(featureFlags);
   }
 }
 

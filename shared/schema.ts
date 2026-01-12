@@ -737,6 +737,84 @@ export interface PublicProfile {
   reviews: Review[];
 }
 
+// Feature Flags table for safe rollout of new features
+export const featureFlags = pgTable("feature_flags", {
+  key: text("key").primaryKey(),
+  enabled: boolean("enabled").notNull().default(false),
+  description: text("description"),
+  updatedAt: text("updated_at"),
+});
+
+export type FeatureFlag = typeof featureFlags.$inferSelect;
+
+// AI Nudge types
+export const nudgeTypes = [
+  "lead_follow_up",
+  "lead_convert_to_job",
+  "lead_silent_rescue",
+  "lead_hot_alert",
+  "invoice_reminder",
+  "invoice_overdue_escalation",
+  "invoice_create_from_job_done",
+  "invoice_weekly_summary"
+] as const;
+export type NudgeType = (typeof nudgeTypes)[number];
+
+// AI Nudge statuses
+export const nudgeStatuses = ["active", "dismissed", "snoozed", "acted", "expired"] as const;
+export type NudgeStatus = (typeof nudgeStatuses)[number];
+
+// AI Nudge entity types
+export const nudgeEntityTypes = ["lead", "invoice", "job"] as const;
+export type NudgeEntityType = (typeof nudgeEntityTypes)[number];
+
+// AI Nudges table - stores generated nudge instances
+export const aiNudges = pgTable("ai_nudges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  entityType: text("entity_type").notNull(), // 'lead', 'invoice', 'job'
+  entityId: varchar("entity_id").notNull(),
+  nudgeType: text("nudge_type").notNull(),
+  priority: integer("priority").notNull().default(50),
+  status: text("status").notNull().default("active"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at"),
+  lastShownAt: text("last_shown_at"),
+  snoozedUntil: text("snoozed_until"),
+  actionPayload: text("action_payload").default("{}"), // JSON: prefilled message, suggested job fields, etc
+  explainText: text("explain_text").notNull().default(""), // 1 sentence: "AI suggests…"
+  dedupeKey: text("dedupe_key").notNull().unique(), // prevents duplicates
+  confidence: doublePrecision("confidence"), // 0..1 optional
+});
+
+export const insertAiNudgeSchema = createInsertSchema(aiNudges).omit({
+  id: true,
+});
+
+export type InsertAiNudge = z.infer<typeof insertAiNudgeSchema>;
+export type AiNudge = typeof aiNudges.$inferSelect;
+
+// AI Nudge event types
+export const nudgeEventTypes = ["created", "shown", "dismissed", "snoozed", "acted", "expired"] as const;
+export type NudgeEventType = (typeof nudgeEventTypes)[number];
+
+// AI Nudge Events table - audit trail
+export const aiNudgeEvents = pgTable("ai_nudge_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  nudgeId: varchar("nudge_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  eventType: text("event_type").notNull(),
+  eventAt: text("event_at").notNull(),
+  metadata: text("metadata").default("{}"), // JSON
+});
+
+export const insertAiNudgeEventSchema = createInsertSchema(aiNudgeEvents).omit({
+  id: true,
+});
+
+export type InsertAiNudgeEvent = z.infer<typeof insertAiNudgeEventSchema>;
+export type AiNudgeEvent = typeof aiNudgeEvents.$inferSelect;
+
 // Deposit metadata (stored as JSON in priceConfirmation.notes or job.notes)
 export interface DepositMetadata {
   depositType: "flat" | "percent" | null; // null = no deposit requested
