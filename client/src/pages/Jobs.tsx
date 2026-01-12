@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,11 +16,16 @@ import {
   Filter,
   CircleDollarSign,
   XCircle,
-  Shield
+  Shield,
+  Play,
+  Navigation,
+  Loader2
 } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
 import type { Job } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 function formatTime(time: string): string {
   const [hours, minutes] = time.split(':');
@@ -88,6 +93,55 @@ const filters = [
 function JobCard({ job }: { job: Job }) {
   const config = statusConfig[job.status] || statusConfig.scheduled;
   const StatusIcon = config.icon;
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const startJobMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("PATCH", `/api/jobs/${job.id}`, { status: "in_progress" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({ title: "Job started!", description: "Good luck!" });
+    },
+    onError: () => {
+      toast({ title: "Failed to start job", variant: "destructive" });
+    },
+  });
+
+  const completeJobMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("PATCH", `/api/jobs/${job.id}`, { status: "completed" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({ title: "Job completed!", description: "Don't forget to get paid." });
+    },
+    onError: () => {
+      toast({ title: "Failed to complete job", variant: "destructive" });
+    },
+  });
+
+  const handleNavigate = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (job.location) {
+      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.location)}`;
+      window.open(url, "_blank");
+    }
+  };
+
+  const handleStartJob = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    startJobMutation.mutate();
+  };
+
+  const handleCompleteJob = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    completeJobMutation.mutate();
+  };
   
   return (
     <Link href={`/jobs/${job.id}`} data-testid={`link-job-${job.id}`}>
@@ -164,6 +218,52 @@ function JobCard({ job }: { job: Job }) {
                     <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
                       <MapPin className="h-3 w-3" />
                       <span className="truncate">{job.location}</span>
+                    </div>
+                  )}
+                  
+                  {(job.status === "scheduled" || job.status === "in_progress") && (
+                    <div className="flex items-center gap-2 mt-3 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                      {job.status === "scheduled" && (
+                        <Button
+                          size="sm"
+                          onClick={handleStartJob}
+                          disabled={startJobMutation.isPending}
+                          data-testid={`button-start-job-${job.id}`}
+                        >
+                          {startJobMutation.isPending ? (
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          ) : (
+                            <Play className="h-3 w-3 mr-1" />
+                          )}
+                          Start
+                        </Button>
+                      )}
+                      {job.status === "in_progress" && (
+                        <Button
+                          size="sm"
+                          onClick={handleCompleteJob}
+                          disabled={completeJobMutation.isPending}
+                          data-testid={`button-complete-job-${job.id}`}
+                        >
+                          {completeJobMutation.isPending ? (
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                          )}
+                          Complete
+                        </Button>
+                      )}
+                      {job.location && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleNavigate}
+                          data-testid={`button-navigate-${job.id}`}
+                        >
+                          <Navigation className="h-3 w-3 mr-1" />
+                          Navigate
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>

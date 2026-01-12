@@ -1,0 +1,214 @@
+You are implementing Phase 1 and Phase 2 product upgrades for the GigAid app.
+This must be done SAFELY, incrementally, and WITHOUT refactoring existing core logic.
+
+====================================================
+GOAL (READ CAREFULLY)
+====================================================
+
+Transform GigAid from a passive tracking tool into an assistant that:
+1) Nudges users to take money-making actions
+2) Helps them convert leads faster
+3) Helps them get paid faster
+
+You will implement ONLY Phase 1 and Phase 2.
+Do NOT implement Phase 3 features (Dashboard redesign, feature relocation, copy polish).
+
+====================================================
+NON-NEGOTIABLE CONSTRAINTS
+====================================================
+
+- Additive changes ONLY (no breaking changes)
+- No schema refactors of existing tables
+- Feature-flag everything (must be disable-able instantly)
+- Never block existing user flows
+- Never auto-send messages without user confirmation
+- Always allow dismiss / snooze
+- Deterministic rules first (NO LLM dependency required)
+- If an integration is missing, fail gracefully (no-op + UI notice)
+
+====================================================
+PHASE 1 — MUST SHIP (REVENUE CORE)
+====================================================
+
+--------------------------------
+1️⃣ AI MICRO-NUDGES (LEADS + INVOICES)
+--------------------------------
+
+Create a feature-flagged AI Micro-Nudge system.
+
+DB (Supabase, additive):
+- ai_nudges
+- ai_nudge_events
+- feature_flags (if not already present)
+
+Feature flag:
+- key = 'ai_micro_nudges'
+- default = false
+
+Nudge Types (ONLY these for now):
+
+LEADS
+- lead_follow_up
+  Trigger:
+    - lead.status in ('New','Active')
+    - no outbound message sent
+    - lead.created_at >= 12 hours ago
+
+INVOICES
+- invoice_reminder
+  Trigger:
+    - invoice.status in ('Sent','Pending','Awaiting Payment')
+    - unpaid
+    - sent_at >= 24 hours ago
+
+Rules:
+- Max 2 nudges per entity
+- Max 5 nudges shown per user per day
+- Deduplicate by (workspace + entity + nudge_type + day)
+- Nudges can be dismissed, snoozed, or acted on
+- Snooze options: 24h, 48h
+- All actions logged in ai_nudge_events
+
+API:
+- POST /api/ai/nudges/generate
+- GET  /api/ai/nudges
+- POST /api/ai/nudges/:id/dismiss
+- POST /api/ai/nudges/:id/snooze
+- POST /api/ai/nudges/:id/act
+
+Frontend:
+- Inline nudge chips on Lead and Invoice cards
+  Examples:
+    ✨ Follow up
+    💰 Send reminder
+- Tap opens a Bottom Sheet:
+  - 1-sentence explanation
+  - Editable message (if sending)
+  - Primary CTA
+  - Dismiss + Snooze
+
+DO NOT:
+- Auto-send messages
+- Show modals
+- Interrupt navigation
+
+--------------------------------
+2️⃣ INVOICE CASH-VELOCITY UX
+--------------------------------
+
+Enhance invoice UI (no logic changes):
+
+- Show:
+  “You’re owed $X” for unpaid invoices
+- Inline “Send reminder” CTA
+- Reminder CTA should invoke invoice_reminder nudge action
+- If messaging not configured:
+  - Show toast: “Messaging not configured yet”
+
+--------------------------------
+3️⃣ JOB → INVOICE NUDGE
+--------------------------------
+
+Add a new nudge type:
+- invoice_create_from_job_done
+
+Trigger:
+- job.status = 'Done'
+- no invoice linked
+- job completed ≥ 1 hour ago
+
+UI:
+- Inline chip on job card:
+  🧾 Create invoice
+- Opens invoice creation with prefilled data
+- Requires explicit user confirmation
+
+====================================================
+PHASE 2 — SHOULD SHIP (CONVERSION ENGINE)
+====================================================
+
+--------------------------------
+4️⃣ LEADS → CONVERSION UPGRADES
+--------------------------------
+
+Enhance Leads list UI (NO redesign):
+
+Add metadata display:
+- “Last contacted: X hours ago”
+- “No response yet” (if applicable)
+
+Add contextual actions:
+- Convert to Job (1 tap)
+- Triggered via:
+  - lead_convert_to_job nudge
+
+Nudge trigger:
+- lead.status = 'Engaged'
+- no job created
+- updated ≥ 2 hours ago
+
+Prefill job with:
+- client
+- service
+- suggested price (if exists)
+- next available date (optional)
+
+--------------------------------
+5️⃣ JOB CONTEXTUAL ACTIONS
+--------------------------------
+
+Enhance job cards with contextual CTAs:
+- Start Job
+- Navigate (if address exists)
+- Complete Job
+
+When “Complete Job” is tapped:
+- Mark job as Done
+- Do NOT auto-create invoice
+- Let Phase 1 nudge handle invoice suggestion
+
+====================================================
+GUARDRAILS & UX RULES
+====================================================
+
+- Never show more than 2 nudges on one card
+- Never repeat same nudge same day if dismissed
+- Nudges must feel assistive, not pushy
+- If feature flag is OFF:
+  - No DB writes
+  - No UI changes
+- All new UI must degrade gracefully
+
+====================================================
+DELIVERABLES
+====================================================
+
+Produce:
+1) SQL migration files
+2) API route handlers
+3) Nudge rule engine (deterministic)
+4) React components:
+   - NudgeChip
+   - NudgeSheet
+5) Hooks:
+   - useNudges
+6) Clear comments explaining assumptions
+
+DO NOT IMPLEMENT:
+- Dashboard redesign
+- Moving items out of “More”
+- Progress copy changes
+- LLM-generated copy (future phase)
+
+====================================================
+FINAL CHECK
+====================================================
+
+After implementation:
+- App must behave EXACTLY the same with feature flag OFF
+- No broken flows
+- No auto-messaging
+- No silent failures
+
+Proceed step by step.
+Show your work.

@@ -26,6 +26,7 @@ import {
   Users,
   FileText,
   XCircle,
+  Play,
 } from "lucide-react";
 import type { Job } from "@shared/schema";
 import { JobLocationMap } from "@/components/JobLocationMap";
@@ -99,6 +100,34 @@ export default function JobSummary() {
     },
     onError: () => {
       toast({ title: "Failed to send review request", variant: "destructive" });
+    },
+  });
+
+  const startJobMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("PATCH", `/api/jobs/${id}`, { status: "in_progress" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({ title: "Job started!", description: "Good luck with this one!" });
+    },
+    onError: () => {
+      toast({ title: "Failed to start job", variant: "destructive" });
+    },
+  });
+
+  const completeJobMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("PATCH", `/api/jobs/${id}`, { status: "completed" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({ title: "Job completed!", description: "Great work! Don't forget to get paid." });
+    },
+    onError: () => {
+      toast({ title: "Failed to complete job", variant: "destructive" });
     },
   });
 
@@ -345,6 +374,38 @@ export default function JobSummary() {
         <Separator className="my-2" />
 
         <div className="space-y-3">
+          {job.status === "scheduled" && (
+            <Button
+              className="w-full h-12"
+              onClick={() => startJobMutation.mutate()}
+              disabled={startJobMutation.isPending}
+              data-testid="button-start-job"
+            >
+              {startJobMutation.isPending ? (
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              ) : (
+                <Play className="h-5 w-5 mr-2" />
+              )}
+              Start Job
+            </Button>
+          )}
+
+          {job.status === "in_progress" && (
+            <Button
+              className="w-full h-12"
+              onClick={() => completeJobMutation.mutate()}
+              disabled={completeJobMutation.isPending}
+              data-testid="button-complete-job"
+            >
+              {completeJobMutation.isPending ? (
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-5 w-5 mr-2" />
+              )}
+              Complete Job
+            </Button>
+          )}
+
           {job.status === "scheduled" && job.clientPhone && (
             <Button
               className="w-full h-12"
