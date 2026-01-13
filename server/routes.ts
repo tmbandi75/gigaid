@@ -5437,6 +5437,9 @@ Return ONLY the message text, no JSON or formatting.`
   });
 
   // Get active nudges for the current user
+  // Optional query params:
+  // - entity_type & entity_id: filter by specific entity
+  // - mode=daily: return top 3 nudges for "Today's Game Plan"
   app.get("/api/ai/nudges", async (req, res) => {
     try {
       const user = await storage.getUser("demo-user");
@@ -5444,7 +5447,7 @@ Return ONLY the message text, no JSON or formatting.`
         return res.status(401).json({ error: "Not authenticated" });
       }
 
-      const { entity_type, entity_id } = req.query;
+      const { entity_type, entity_id, mode } = req.query;
       
       let nudges;
       if (entity_type && entity_id) {
@@ -5455,6 +5458,13 @@ Return ONLY the message text, no JSON or formatting.`
         nudges = nudges.filter(n => n.status === "active");
       } else {
         nudges = await storage.getActiveAiNudgesForUser(user.id);
+      }
+
+      // For daily mode (Today's Game Plan), return top 3 by priority
+      if (mode === "daily") {
+        // Already sorted by priority from storage, just take top 3
+        const topNudges = nudges.slice(0, 3);
+        return res.json(topNudges);
       }
 
       // Limit to 2 nudges per entity
