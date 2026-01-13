@@ -14,6 +14,8 @@ import {
   voiceNotes,
   userPaymentMethods,
   jobPayments,
+  aiNudges,
+  featureFlags,
 } from "@shared/schema";
 
 const DEMO_USER_ID = "demo-user";
@@ -801,6 +803,82 @@ export async function seedDatabase() {
       });
     }
     console.log("[Seed] Voice notes seeded");
+
+    // Seed Feature Flags (enable AI nudges)
+    const featureFlagsData = [
+      {
+        key: "ai_micro_nudges",
+        enabled: true,
+        description: "Enable AI micro-nudges for leads and invoices",
+        updatedAt: daysAgo(30),
+      },
+    ];
+
+    for (const flag of featureFlagsData) {
+      await db.insert(featureFlags).values(flag).onConflictDoUpdate({
+        target: featureFlags.key,
+        set: flag,
+      });
+    }
+    console.log("[Seed] Feature flags seeded");
+
+    // Seed AI Nudges for Today's Game Plan
+    const today = new Date().toISOString().split("T")[0];
+    const aiNudgesData = [
+      {
+        id: "seed-nudge-1",
+        userId: DEMO_USER_ID,
+        entityType: "lead",
+        entityId: "seed-lead-1",
+        nudgeType: "lead_follow_up",
+        priority: 90,
+        status: "active",
+        createdAt: hoursFromNow(-2),
+        explainText: "Follow up now — replies drop after 24h.",
+        actionPayload: JSON.stringify({
+          suggestedMessage: "Hi Jennifer! Just following up on your inquiry about bathroom remodel. When would be a good time to chat?",
+        }),
+        dedupeKey: `${DEMO_USER_ID}:lead:seed-lead-1:lead_follow_up:${today}`,
+      },
+      {
+        id: "seed-nudge-2",
+        userId: DEMO_USER_ID,
+        entityType: "invoice",
+        entityId: "seed-invoice-3",
+        nudgeType: "invoice_reminder",
+        priority: 88,
+        status: "active",
+        createdAt: hoursFromNow(-1),
+        explainText: "You're owed $150 — send a reminder?",
+        actionPayload: JSON.stringify({
+          reminderMessage: "Hi Sarah! Just a friendly reminder about invoice #INV-2026-003 for $163.50. Payment link: {link}",
+        }),
+        dedupeKey: `${DEMO_USER_ID}:invoice:seed-invoice-3:invoice_reminder:${today}`,
+      },
+      {
+        id: "seed-nudge-3",
+        userId: DEMO_USER_ID,
+        entityType: "lead",
+        entityId: "seed-lead-4",
+        nudgeType: "lead_follow_up",
+        priority: 85,
+        status: "active",
+        createdAt: hoursFromNow(-3),
+        explainText: "New lead — respond quickly to win the job.",
+        actionPayload: JSON.stringify({
+          suggestedMessage: "Hi Kevin! Got your message about the emergency pipe repair. I can help! When would be a good time to take a look?",
+        }),
+        dedupeKey: `${DEMO_USER_ID}:lead:seed-lead-4:lead_follow_up:${today}`,
+      },
+    ];
+
+    for (const nudge of aiNudgesData) {
+      await db.insert(aiNudges).values(nudge).onConflictDoUpdate({
+        target: aiNudges.id,
+        set: nudge,
+      });
+    }
+    console.log("[Seed] AI nudges seeded");
 
     console.log("[Seed] Database seeding completed successfully!");
     return true;
