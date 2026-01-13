@@ -1,4 +1,5 @@
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
 import { MessageSquareText, CreditCard, BellRing } from "lucide-react";
 import { motion } from "framer-motion";
@@ -41,6 +42,9 @@ export function WelcomeModal({ open, onClose, onStart }: WelcomeModalProps) {
         className="sm:max-w-md p-0 overflow-hidden border-0 bg-gradient-to-b from-background to-muted/50" 
         data-testid="dialog-welcome"
       >
+        <VisuallyHidden>
+          <DialogTitle>Welcome to GigAid</DialogTitle>
+        </VisuallyHidden>
         <div className="relative">
           <div className="absolute inset-0 overflow-hidden">
             <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-primary/30 to-violet-500/30 rounded-full blur-3xl" />

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 import { 
   DollarSign, 
   Banknote, 
@@ -14,7 +15,8 @@ import {
   Loader2,
   CheckCircle2,
   Star,
-  X
+  X,
+  FileText
 } from "lucide-react";
 import { SiVenmo, SiCashapp } from "react-icons/si";
 
@@ -40,7 +42,8 @@ const paymentMethods = [
 
 export function GetPaidDialog({ open, onClose, jobId, jobTitle, amount, clientName, depositPaidCents, totalAmountCents }: GetPaidDialogProps) {
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
-  const [step, setStep] = useState<"ask" | "method" | "success" | "review_sent">("ask");
+  const [step, setStep] = useState<"ask" | "method" | "success" | "review_sent" | "invoice_created">("ask");
+  const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -136,6 +139,36 @@ export function GetPaidDialog({ open, onClose, jobId, jobTitle, amount, clientNa
     requestReviewMutation.mutate();
   };
 
+  const createInvoiceMutation = useMutation({
+    mutationFn: async () => {
+      const invoiceAmount = totalAmountCents || amount || 0;
+      const response = await apiRequest("POST", `/api/invoices`, {
+        userId: "demo-user",
+        jobId,
+        clientName: clientName || "Customer",
+        serviceDescription: jobTitle,
+        amount: invoiceAmount,
+        status: "draft",
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      setStep("invoice_created");
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create invoice. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCreateInvoice = () => {
+    createInvoiceMutation.mutate();
+  };
+
   const handleClose = () => {
     setStep("ask");
     setSelectedMethod(null);
@@ -201,18 +234,21 @@ export function GetPaidDialog({ open, onClose, jobId, jobTitle, amount, clientNa
                 <Button
                   variant="outline"
                   className="flex-1 h-12 text-base"
-                  onClick={handleRequestPayment}
-                  disabled={sendPaymentLinkMutation.isPending}
-                  data-testid="button-request-payment"
+                  onClick={handleCreateInvoice}
+                  disabled={createInvoiceMutation.isPending}
+                  data-testid="button-create-invoice"
                 >
-                  {sendPaymentLinkMutation.isPending ? (
+                  {createInvoiceMutation.isPending ? (
                     <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                   ) : (
-                    <ExternalLink className="h-5 w-5 mr-2" />
+                    <FileText className="h-5 w-5 mr-2" />
                   )}
-                  {sendPaymentLinkMutation.isPending ? "Sending..." : "Request Payment"}
+                  {createInvoiceMutation.isPending ? "Creating..." : "Invoice Now"}
                 </Button>
               </div>
+              <p className="text-center text-xs text-muted-foreground">
+                Create an invoice to track payment and send reminders
+              </p>
             </div>
           </>
         )}
@@ -349,6 +385,48 @@ export function GetPaidDialog({ open, onClose, jobId, jobTitle, amount, clientNa
                 Done
               </Button>
             </DialogFooter>
+          </>
+        )}
+
+        {step === "invoice_created" && (
+          <>
+            <DialogHeader>
+              <div className="mx-auto p-4 rounded-full bg-blue-500/10 mb-2">
+                <FileText className="h-10 w-10 text-blue-600" />
+              </div>
+              <DialogTitle className="text-center text-xl">Invoice Created!</DialogTitle>
+              <DialogDescription className="text-center">
+                <span className="block mt-2">
+                  Your invoice for <span className="font-medium text-foreground">{jobTitle}</span> is ready.
+                </span>
+                {(totalAmountCents || amount) && (
+                  <span className="block text-2xl font-bold text-blue-600 mt-2">
+                    {formatAmount(totalAmountCents || amount || 0)}
+                  </span>
+                )}
+                <span className="block text-sm mt-2 text-muted-foreground">
+                  GigAid will remind you to follow up if unpaid.
+                </span>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex gap-3 mt-4">
+              <Button 
+                className="flex-1"
+                onClick={() => navigate("/invoices")}
+                data-testid="button-view-invoices"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                View Invoices
+              </Button>
+              <Button 
+                variant="outline"
+                className="flex-1"
+                onClick={handleClose}
+                data-testid="button-done-invoice"
+              >
+                Done
+              </Button>
+            </div>
           </>
         )}
       </DialogContent>

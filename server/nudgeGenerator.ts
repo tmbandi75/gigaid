@@ -97,42 +97,56 @@ function generateLeadNudges(lead: Lead, userId: string): NudgeCandidate[] {
 
 function generateInvoiceNudges(invoice: Invoice, userId: string): NudgeCandidate[] {
   const candidates: NudgeCandidate[] = [];
+  const amount = invoice.amount / 100;
+  const hours = hoursSince(invoice.sentAt);
 
-  if (
-    (invoice.status === "sent" || invoice.status === "draft") &&
-    invoice.sentAt &&
-    hoursAgo(invoice.sentAt, 24) &&
-    !invoice.paidAt
-  ) {
-    const amount = invoice.amount / 100;
-    candidates.push({
-      entityType: "invoice",
-      entityId: invoice.id,
-      nudgeType: "invoice_reminder",
-      priority: 90,
-      explainText: `You're owed $${amount.toFixed(0)} — send a reminder?`,
-      actionPayload: {
-        reminderMessage: `Hi ${invoice.clientName}! Just a friendly reminder about invoice #${invoice.invoiceNumber} for $${amount.toFixed(2)}. Payment link: {link}`,
-      },
-    });
-  }
-
-  if (
-    invoice.sentAt &&
-    hoursAgo(invoice.sentAt, 168) &&
-    !invoice.paidAt
-  ) {
-    const amount = invoice.amount / 100;
-    candidates.push({
-      entityType: "invoice",
-      entityId: invoice.id,
-      nudgeType: "invoice_overdue_escalation",
-      priority: 85,
-      explainText: "This invoice may need a nudge.",
-      actionPayload: {
-        firmerMessage: `Hi ${invoice.clientName}, I noticed invoice #${invoice.invoiceNumber} ($${amount.toFixed(2)}) is still outstanding. Please let me know if there's an issue I can help with.`,
-      },
-    });
+  // Only process unpaid invoices that have been sent
+  if (!invoice.paidAt && invoice.sentAt && (invoice.status === "sent" || invoice.status === "draft")) {
+    
+    // Level 1: Gentle reminder (24-72 hours)
+    if (hours >= 24 && hours < 72) {
+      candidates.push({
+        entityType: "invoice",
+        entityId: invoice.id,
+        nudgeType: "invoice_reminder",
+        priority: 90,
+        explainText: `You're owed $${amount.toFixed(0)} — send a friendly reminder?`,
+        actionPayload: {
+          reminderMessage: `Hi ${invoice.clientName}! Just a friendly reminder about invoice #${invoice.invoiceNumber} for $${amount.toFixed(2)}. Let me know if you have any questions! Payment link: {link}`,
+          escalationLevel: "gentle",
+        },
+      });
+    }
+    
+    // Level 2: Firm reminder (72 hours - 7 days)
+    else if (hours >= 72 && hours < 168) {
+      candidates.push({
+        entityType: "invoice",
+        entityId: invoice.id,
+        nudgeType: "invoice_reminder_firm",
+        priority: 92,
+        explainText: `$${amount.toFixed(0)} unpaid for 3+ days — follow up now.`,
+        actionPayload: {
+          reminderMessage: `Hi ${invoice.clientName}, following up on invoice #${invoice.invoiceNumber} for $${amount.toFixed(2)} sent a few days ago. Would appreciate if you could take a look when you get a chance. Payment link: {link}`,
+          escalationLevel: "firm",
+        },
+      });
+    }
+    
+    // Level 3: Urgent escalation (7+ days)
+    else if (hours >= 168) {
+      candidates.push({
+        entityType: "invoice",
+        entityId: invoice.id,
+        nudgeType: "invoice_overdue_escalation",
+        priority: 95,
+        explainText: `Invoice overdue 7+ days — $${amount.toFixed(0)} at risk. Take action now.`,
+        actionPayload: {
+          firmerMessage: `Hi ${invoice.clientName}, I noticed invoice #${invoice.invoiceNumber} ($${amount.toFixed(2)}) from over a week ago is still outstanding. Please let me know if there's an issue I can help resolve.`,
+          escalationLevel: "urgent",
+        },
+      });
+    }
   }
 
   return candidates;

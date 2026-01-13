@@ -33,6 +33,11 @@ const nudgeConfig: Record<string, { icon: typeof Sparkles; label: string; varian
     label: "Send reminder",
     variant: "default",
   },
+  invoice_reminder_firm: {
+    icon: DollarSign,
+    label: "Follow up",
+    variant: "secondary",
+  },
   invoice_overdue_escalation: {
     icon: AlertTriangle,
     label: "Overdue",

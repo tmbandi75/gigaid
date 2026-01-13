@@ -12,6 +12,7 @@ import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist
 import FollowUpCheckIn from "@/components/FollowUpCheckIn";
 import { TodaysGamePlan } from "@/components/TodaysGamePlan";
 import { NudgeCard } from "@/components/nudges/NudgeCard";
+import { GigAidImpact } from "@/components/GigAidImpact";
 import {
   Briefcase,
   Users,
@@ -264,6 +265,9 @@ export default function Dashboard() {
 
         {/* AI Micro-Nudges - contextual action suggestions */}
         <NudgeCard maxNudges={3} />
+
+        {/* GigAid Impact - outcomes attribution */}
+        <GigAidImpact />
 
         {/* Today's Game Plan - AI-powered daily priorities */}
         <TodaysGamePlan />

@@ -5624,6 +5624,76 @@ Return ONLY the message text, no JSON or formatting.`
     }
   });
 
+  // GigAid Impact - outcomes attribution stats
+  app.get("/api/ai/impact", async (req, res) => {
+    try {
+      const nudges = await storage.getAiNudges(defaultUserId);
+      const invoices = await storage.getInvoices(defaultUserId);
+      const leads = await storage.getLeads(defaultUserId);
+
+      // Count acted nudges by type
+      const actedNudges = nudges.filter(n => n.status === "acted");
+      
+      // Invoice reminders that were acted upon
+      const invoiceReminderActed = actedNudges.filter(n => 
+        n.nudgeType === "invoice_reminder" || 
+        n.nudgeType === "invoice_reminder_firm" || 
+        n.nudgeType === "invoice_overdue_escalation"
+      ).length;
+
+      // Leads converted via nudge action
+      const leadsConverted = actedNudges.filter(n => 
+        n.nudgeType === "lead_convert_to_job"
+      ).length;
+
+      // Invoices created from completed jobs via nudge
+      const invoicesFromNudge = actedNudges.filter(n => 
+        n.nudgeType === "invoice_create_from_job_done"
+      ).length;
+
+      // Calculate money collected through nudge-prompted reminders
+      // For now, approximate based on paid invoices that had reminder nudges
+      const invoiceIdsWithReminders = new Set(
+        actedNudges
+          .filter(n => n.nudgeType.startsWith("invoice_"))
+          .map(n => n.entityId)
+      );
+      
+      const moneyCollectedViaReminders = invoices
+        .filter(inv => inv.status === "paid" && invoiceIdsWithReminders.has(inv.id))
+        .reduce((sum, inv) => sum + (inv.amount + (inv.tax || 0) - (inv.discount || 0)), 0);
+
+      // Total nudges generated
+      const totalNudgesGenerated = nudges.length;
+      
+      // Action rate (how many nudges were acted on)
+      const actionRate = totalNudgesGenerated > 0 
+        ? Math.round((actedNudges.length / totalNudgesGenerated) * 100) 
+        : 0;
+
+      res.json({
+        moneyCollectedViaReminders,
+        invoiceRemindersActed: invoiceReminderActed,
+        leadsConverted,
+        invoicesFromNudge,
+        totalNudgesGenerated,
+        totalActed: actedNudges.length,
+        actionRate,
+        thisWeek: {
+          nudgesActed: actedNudges.filter(n => {
+            const nudgeData = nudges.find(nd => nd.id === n.id);
+            if (!nudgeData?.createdAt) return false;
+            const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            return new Date(nudgeData.createdAt) >= weekAgo;
+          }).length,
+        }
+      });
+    } catch (error) {
+      console.error("Get impact stats error:", error);
+      res.status(500).json({ error: "Failed to get impact stats" });
+    }
+  });
+
   // Feature flags endpoints
   app.get("/api/feature-flags", async (req, res) => {
     try {
@@ -5729,13 +5799,11 @@ Return ONLY the message text, no JSON or formatting.`
           dateTimeStart: aiResult.date && aiResult.time 
             ? `${aiResult.date}T${aiResult.time}:00` 
             : undefined,
-          locationText: aiResult.location || undefined,
           priceAmount: aiResult.price || undefined,
           currency: "USD",
           durationMins: aiResult.duration || 60,
           clientName: aiResult.clientName || undefined,
           clientPhone: aiResult.clientPhone || undefined,
-          clientEmail: aiResult.clientEmail || undefined,
         };
 
         // Calculate confidence based on filled fields
@@ -6027,7 +6095,6 @@ Return ONLY the message text, no JSON or formatting.`
           : "QuickBook Job",
         description: draft.sourceText,
         serviceType: parsedFields.service || "other",
-        location: parsedFields.locationText || "",
         scheduledDate: dateTimeStart.toISOString().split("T")[0],
         scheduledTime: dateTimeStart.toTimeString().slice(0, 5),
         duration: parsedFields.durationMins || 60,
@@ -6035,9 +6102,7 @@ Return ONLY the message text, no JSON or formatting.`
         price: parsedFields.priceAmount || null,
         clientName: clientName || parsedFields.clientName || "Customer",
         clientPhone: clientPhone || parsedFields.clientPhone || "",
-        clientEmail: clientEmail || parsedFields.clientEmail || "",
         paymentStatus: "unpaid",
-        createdAt: new Date().toISOString(),
       });
 
       // Update draft status

@@ -34,13 +34,15 @@ import {
   Send,
   ExternalLink
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useSendText } from "@/hooks/use-send-text";
 import { apiRequest } from "@/lib/queryClient";
-import type { Lead } from "@shared/schema";
+import type { Lead, AiNudge } from "@shared/schema";
 import FollowUpCheckIn from "@/components/FollowUpCheckIn";
+import { NudgeChips } from "@/components/nudges/NudgeChip";
+import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
 
 interface FollowUpMessage {
   message: string;
@@ -92,9 +94,10 @@ const filters = [
   { value: "lost", label: "Lost" },
 ];
 
-function LeadCard({ lead, onGenerateFollowUp, onSendText }: { lead: Lead; onGenerateFollowUp: (lead: Lead) => void; onSendText: (phone: string) => void }) {
+function LeadCard({ lead, nudges, onGenerateFollowUp, onSendText, onNudgeClick }: { lead: Lead; nudges: AiNudge[]; onGenerateFollowUp: (lead: Lead) => void; onSendText: (phone: string) => void; onNudgeClick: (nudge: AiNudge) => void }) {
   const config = statusConfig[lead.status] || statusConfig.new;
   const initials = lead.clientName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  const leadNudges = nudges.filter(n => n.entityType === "lead" && n.entityId === lead.id && n.status === "active");
   
   return (
     <Card className="border-0 shadow-sm hover-elevate overflow-hidden" data-testid={`lead-card-${lead.id}`}>
@@ -120,6 +123,11 @@ function LeadCard({ lead, onGenerateFollowUp, onSendText }: { lead: Lead; onGene
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground mb-2 capitalize">{lead.serviceType}</p>
+                  {leadNudges.length > 0 && (
+                    <div className="mb-2" onClick={(e) => e.preventDefault()}>
+                      <NudgeChips nudges={leadNudges} onNudgeClick={onNudgeClick} />
+                    </div>
+                  )}
                   <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                     <span>{formatDate(lead.createdAt)}</span>
                     {lead.score && (
@@ -225,11 +233,17 @@ export default function Leads() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [followUpMessage, setFollowUpMessage] = useState<string>("");
   const [tone, setTone] = useState<"friendly" | "professional" | "casual">("friendly");
+  const [selectedNudge, setSelectedNudge] = useState<AiNudge | null>(null);
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const { sendText } = useSendText();
   
   const { data: leads = [], isLoading } = useQuery<Lead[]>({
     queryKey: ["/api/leads"],
+  });
+
+  const { data: nudges = [] } = useQuery<AiNudge[]>({
+    queryKey: ["/api/nudges"],
   });
 
   const followUpMutation = useMutation({
@@ -375,9 +389,11 @@ export default function Leads() {
             {filteredLeads.map((lead) => (
               <LeadCard 
                 key={lead.id} 
-                lead={lead} 
+                lead={lead}
+                nudges={nudges}
                 onGenerateFollowUp={handleGenerateFollowUp}
                 onSendText={(phone) => sendText({ phoneNumber: phone, message: "" })}
+                onNudgeClick={(nudge) => setSelectedNudge(nudge)}
               />
             ))}
           </div>
@@ -479,6 +495,13 @@ export default function Leads() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <NudgeActionSheet
+        nudge={selectedNudge}
+        open={!!selectedNudge}
+        onClose={() => setSelectedNudge(null)}
+        onNavigate={(path) => navigate(path)}
+      />
     </div>
   );
 }

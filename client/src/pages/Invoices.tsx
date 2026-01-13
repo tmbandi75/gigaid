@@ -14,9 +14,11 @@ import {
   Sparkles,
   Receipt
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useState } from "react";
-import type { Invoice } from "@shared/schema";
+import type { Invoice, AiNudge } from "@shared/schema";
+import { NudgeChips } from "@/components/nudges/NudgeChip";
+import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
 
 const statusConfig: Record<string, { 
   color: string; 
@@ -80,10 +82,11 @@ function formatCurrency(cents: number): string {
   }).format(cents / 100);
 }
 
-function InvoiceCard({ invoice }: { invoice: Invoice }) {
+function InvoiceCard({ invoice, nudges, onNudgeClick }: { invoice: Invoice; nudges: AiNudge[]; onNudgeClick: (nudge: AiNudge) => void }) {
   const config = statusConfig[invoice.status] || statusConfig.draft;
   const StatusIcon = config.icon;
   const total = invoice.amount + (invoice.tax || 0) - (invoice.discount || 0);
+  const invoiceNudges = nudges.filter(n => n.entityType === "invoice" && n.entityId === invoice.id && n.status === "active");
   
   return (
     <Link href={`/invoices/${invoice.id}/view`} data-testid={`link-invoice-${invoice.id}`}>
@@ -117,6 +120,11 @@ function InvoiceCard({ invoice }: { invoice: Invoice }) {
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground truncate font-medium">{invoice.clientName}</p>
+                  {invoiceNudges.length > 0 && (
+                    <div className="mt-1" onClick={(e) => e.preventDefault()}>
+                      <NudgeChips nudges={invoiceNudges} onNudgeClick={onNudgeClick} />
+                    </div>
+                  )}
                   <p className="text-xs text-muted-foreground/70 mt-0.5">{formatDate(invoice.createdAt)}</p>
                 </div>
                 
@@ -171,9 +179,15 @@ function EmptyState({ filter }: { filter: string }) {
 
 export default function Invoices() {
   const [filter, setFilter] = useState<string>("all");
+  const [selectedNudge, setSelectedNudge] = useState<AiNudge | null>(null);
+  const [, navigate] = useLocation();
   
   const { data: invoices = [], isLoading } = useQuery<Invoice[]>({
     queryKey: ["/api/invoices"],
+  });
+
+  const { data: nudges = [] } = useQuery<AiNudge[]>({
+    queryKey: ["/api/nudges"],
   });
 
   const filteredInvoices = filter === "all" 
@@ -303,13 +317,25 @@ export default function Invoices() {
         ) : (
           <div className="space-y-3">
             {filteredInvoices.map((invoice) => (
-              <InvoiceCard key={invoice.id} invoice={invoice} />
+              <InvoiceCard 
+                key={invoice.id} 
+                invoice={invoice}
+                nudges={nudges}
+                onNudgeClick={(nudge) => setSelectedNudge(nudge)}
+              />
             ))}
           </div>
         )}
         
         <div className="h-8" />
       </div>
+
+      <NudgeActionSheet
+        nudge={selectedNudge}
+        open={!!selectedNudge}
+        onClose={() => setSelectedNudge(null)}
+        onNavigate={(path) => navigate(path)}
+      />
     </div>
   );
 }
