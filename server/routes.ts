@@ -345,6 +345,11 @@ export async function registerRoutes(
         }
       }
       
+      // Set completedAt timestamp when job transitions to completed
+      if (updates.status === "completed" && existingJob.status !== "completed") {
+        updates.completedAt = new Date().toISOString();
+      }
+      
       const job = await storage.updateJob(req.params.id, updates);
       if (!job) {
         return res.status(404).json({ error: "Job not found" });

@@ -275,6 +275,43 @@ npm run build && npx cap sync ios
 
 Then rebuild in Xcode.
 
+## No Silent Completion (Revenue Protection)
+
+GigAid implements a "No Silent Completion" system that prevents revenue leakage by ensuring every completed job has explicit payment resolution.
+
+### The Problem
+
+Gig workers often complete jobs but forget to invoice, losing revenue. The app previously allowed jobs to be marked as "completed" without any record of payment status.
+
+### The Solution
+
+A three-level enforcement system ensures EVERY completed job has a resolution:
+
+1. **UI Modal (Primary)**: When completing a job, a non-dismissable modal asks how payment was handled:
+   - Create Invoice (prefills invoice form)
+   - Mark as Paid (cash, Zelle, etc.)
+   - No Invoice Needed (with reason: warranty, redo, goodwill, internal)
+
+2. **API Guard (Backstop)**: PATCH /api/jobs/:id returns 409 if trying to complete without a resolution
+
+3. **Background Enforcer (Safety Net)**: Hourly scheduler creates max-priority nudges for completed jobs without resolutions
+
+### Feature Flag
+
+The enforcement is gated by the `enforce_no_silent_completion` feature flag (defaults to OFF for safe rollout).
+
+### Key Fields
+
+- `jobs.completedAt`: Timestamp when job status changed to 'completed' (for accurate grace period)
+- `job_resolutions`: Table storing payment resolution for each job
+
+### Key Files
+
+- `server/noSilentCompletionEnforcer.ts` - Background enforcement scheduler
+- `client/src/components/jobs/JobResolutionModal.tsx` - UI enforcement modal
+- `shared/schema.ts` - `jobResolutions` table and resolution types
+- `server/routes.ts` - API guard and resolution endpoints
+
 ## AI Micro-Nudges System
 
 GigAid includes an AI-powered nudge system that provides contextual action recommendations to help gig workers stay on top of their business.

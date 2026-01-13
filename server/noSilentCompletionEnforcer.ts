@@ -20,17 +20,76 @@ const NUDGE_TYPE = "job_unresolved_payment";
 const NUDGE_PRIORITY = 100; // Maximum priority - cannot be bypassed
 
 /**
- * Check if a job was completed more than the specified hours ago
+ * Check if a job qualifies for background enforcement
+ * 
+ * IMPORTANT: The background enforcer is a SAFETY NET for legacy data and edge cases.
+ * The UI modal and API guard handle new completions in real-time.
+ * 
+ * We use the authoritative completedAt timestamp when available:
+ * 1. If completedAt exists, check if it's more than 24 hours ago
+ * 2. For legacy jobs without completedAt, use conservative heuristics
+ * 
+ * This ensures we only enforce on truly stale unresolved jobs.
  */
-function completedMoreThanHoursAgo(job: Job, hours: number): boolean {
-  // Jobs don't have a completedAt field, so we use updatedAt or createdAt as proxy
-  // When status changes to completed, the job is updated
-  const jobDate = job.createdAt;
-  if (!jobDate) return false;
-  
-  const then = new Date(jobDate).getTime();
+function shouldEnforceJob(job: Job): boolean {
   const now = Date.now();
-  return now - then >= hours * 60 * 60 * 1000;
+  const GRACE_PERIOD_HOURS = 24;
+  const msInHour = 60 * 60 * 1000;
+  
+  // BEST CASE: We have the authoritative completedAt timestamp
+  if (job.completedAt) {
+    const completedTime = new Date(job.completedAt).getTime();
+    const hoursSinceCompleted = (now - completedTime) / msInHour;
+    return hoursSinceCompleted >= GRACE_PERIOD_HOURS;
+  }
+  
+  // FALLBACK for legacy jobs without completedAt:
+  // Use very conservative heuristics to avoid false positives
+  // 
+  // IMPORTANT: Jobs without completedAt are legacy data. We must ensure they
+  // have been in completed state long enough before enforcement.
+  
+  // If paidAt is recent (within 48h for legacy jobs), skip - might have just been completed
+  if (job.paidAt) {
+    const paidTime = new Date(job.paidAt).getTime();
+    const hoursSincePaid = (now - paidTime) / msInHour;
+    // Use 48h for legacy jobs since paidAt might be close to actual completion
+    if (hoursSincePaid < GRACE_PERIOD_HOURS * 2) {
+      return false;
+    }
+  }
+  
+  // For legacy jobs without completedAt: require ALL of the following:
+  // 1. Created more than 72 hours ago (extra buffer for safety)
+  // 2. Scheduled date in the past by at least 48h
+  // This is VERY conservative to avoid false positives on legacy data
+  const LEGACY_BUFFER_HOURS = 72;
+  
+  const createdTime = job.createdAt ? new Date(job.createdAt).getTime() : now;
+  const hoursSinceCreation = (now - createdTime) / msInHour;
+  
+  if (hoursSinceCreation < LEGACY_BUFFER_HOURS) {
+    return false;
+  }
+  
+  // Must have a valid scheduled date that's in the past by at least 48h
+  if (!job.scheduledDate) {
+    // No scheduled date - can't determine completion timing, skip
+    return false;
+  }
+  
+  try {
+    const scheduledTime = new Date(job.scheduledDate).getTime();
+    const hoursSinceScheduled = (now - scheduledTime) / msInHour;
+    if (hoursSinceScheduled < GRACE_PERIOD_HOURS * 2) {
+      return false;
+    }
+  } catch {
+    // Invalid date - be extra conservative and skip
+    return false;
+  }
+  
+  return true;
 }
 
 /**
@@ -73,26 +132,13 @@ function createUnresolvedPaymentNudge(job: Job, userId: string): InsertAiNudge {
 }
 
 /**
- * Main enforcement function - finds and flags unresolved completed jobs
+ * Check a single user's completed jobs for violations
  */
-export async function enforceNoSilentCompletion(): Promise<{
+async function enforceForUser(userId: string): Promise<{
   checked: number;
   violations: number;
   nudgesCreated: number;
 }> {
-  // Check if feature flag is enabled
-  const featureFlag = await storage.getFeatureFlag("enforce_no_silent_completion");
-  if (!featureFlag?.enabled) {
-    console.log("[NoSilentCompletion] Feature flag is OFF - skipping enforcement");
-    return { checked: 0, violations: 0, nudgesCreated: 0 };
-  }
-
-  console.log("[NoSilentCompletion] Running background enforcement check...");
-
-  // Get all users (we need to check each user's jobs)
-  // For now, use demo-user since that's our primary user
-  const userId = "demo-user";
-  
   const allJobs = await storage.getJobs(userId);
   const completedJobs = allJobs.filter(j => j.status === "completed");
   
@@ -100,9 +146,9 @@ export async function enforceNoSilentCompletion(): Promise<{
   let nudgesCreated = 0;
 
   for (const job of completedJobs) {
-    // Only enforce on jobs completed more than 24 hours ago
+    // Only enforce on jobs that meet our conservative criteria
     // This gives users time to complete the flow naturally
-    if (!completedMoreThanHoursAgo(job, 24)) {
+    if (!shouldEnforceJob(job)) {
       continue;
     }
 
@@ -115,7 +161,7 @@ export async function enforceNoSilentCompletion(): Promise<{
 
     // VIOLATION: Completed job without resolution
     violations++;
-    console.log(`[NoSilentCompletion] Violation found: Job ${job.id} (${job.title})`);
+    console.log(`[NoSilentCompletion] Violation found: Job ${job.id} (${job.title}) for user ${userId}`);
 
     // Check if we already have an active nudge for this job
     const existingNudges = await storage.getAiNudgesByEntity("job", job.id);
@@ -137,9 +183,9 @@ export async function enforceNoSilentCompletion(): Promise<{
       continue;
     }
 
-    await storage.createAiNudge(nudge);
+    const createdNudge = await storage.createAiNudge(nudge);
     await storage.createAiNudgeEvent({
-      nudgeId: nudge.dedupeKey!,
+      nudgeId: createdNudge.id,
       userId,
       eventType: "created",
       eventAt: new Date().toISOString(),
@@ -149,15 +195,49 @@ export async function enforceNoSilentCompletion(): Promise<{
     console.log(`[NoSilentCompletion] Created enforcement nudge for job ${job.id}`);
   }
 
+  return { checked: completedJobs.length, violations, nudgesCreated };
+}
+
+/**
+ * Main enforcement function - finds and flags unresolved completed jobs for all users
+ */
+export async function enforceNoSilentCompletion(): Promise<{
+  checked: number;
+  violations: number;
+  nudgesCreated: number;
+}> {
+  // Check if feature flag is enabled
+  const featureFlag = await storage.getFeatureFlag("enforce_no_silent_completion");
+  if (!featureFlag?.enabled) {
+    console.log("[NoSilentCompletion] Feature flag is OFF - skipping enforcement");
+    return { checked: 0, violations: 0, nudgesCreated: 0 };
+  }
+
+  console.log("[NoSilentCompletion] Running background enforcement check...");
+
+  // Get all users and check each user's jobs
+  const allUsers = await storage.getAllUsers();
+  
+  let totalChecked = 0;
+  let totalViolations = 0;
+  let totalNudgesCreated = 0;
+
+  for (const user of allUsers) {
+    const result = await enforceForUser(user.id);
+    totalChecked += result.checked;
+    totalViolations += result.violations;
+    totalNudgesCreated += result.nudgesCreated;
+  }
+
   console.log(
-    `[NoSilentCompletion] Check complete: ${completedJobs.length} completed jobs, ` +
-    `${violations} violations, ${nudgesCreated} new nudges created`
+    `[NoSilentCompletion] Check complete: ${allUsers.length} users, ${totalChecked} completed jobs, ` +
+    `${totalViolations} violations, ${totalNudgesCreated} new nudges created`
   );
 
   return {
-    checked: completedJobs.length,
-    violations,
-    nudgesCreated,
+    checked: totalChecked,
+    violations: totalViolations,
+    nudgesCreated: totalNudgesCreated,
   };
 }
 

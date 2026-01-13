@@ -166,6 +166,8 @@ export const jobs = pgTable("jobs", {
   reviewToken: text("review_token"),
   reviewRequestedAt: text("review_requested_at"),
   createdAt: text("created_at").notNull(),
+  // No Silent Completion: Track when job status changed to 'completed'
+  completedAt: text("completed_at"),
 });
 
 export const insertJobSchema = createInsertSchema(jobs).omit({

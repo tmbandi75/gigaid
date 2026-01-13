@@ -5,6 +5,7 @@ import { createServer } from "http";
 import { startReminderScheduler } from "./reminderScheduler";
 import { startAutoReleaseScheduler } from "./depositAutoRelease";
 import { startWeeklySummaryScheduler } from "./weeklyEmailSummary";
+import { startNoSilentCompletionScheduler } from "./noSilentCompletionEnforcer";
 
 const app = express();
 const httpServer = createServer(app);
@@ -100,6 +101,7 @@ app.use((req, res, next) => {
       startAutoReleaseScheduler();
       const baseUrl = process.env.FRONTEND_URL || `http://localhost:${port}`;
       startWeeklySummaryScheduler(baseUrl);
+      startNoSilentCompletionScheduler();
     },
   );
 })();
