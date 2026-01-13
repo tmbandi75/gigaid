@@ -23,9 +23,11 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
-import type { Job } from "@shared/schema";
+import type { Job, AiNudge } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { NudgeChips } from "@/components/nudges/NudgeChip";
+import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
 
 function formatTime(time: string): string {
   const [hours, minutes] = time.split(':');
@@ -90,11 +92,13 @@ const filters = [
   { value: "completed", label: "Done" },
 ];
 
-function JobCard({ job }: { job: Job }) {
+function JobCard({ job, nudges, onNudgeClick }: { job: Job; nudges: AiNudge[]; onNudgeClick?: (nudge: AiNudge) => void }) {
   const config = statusConfig[job.status] || statusConfig.scheduled;
   const StatusIcon = config.icon;
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  
+  const jobNudges = nudges.filter(n => n.entityType === "job" && n.entityId === job.id);
 
   const startJobMutation = useMutation({
     mutationFn: async () => {
@@ -220,6 +224,12 @@ function JobCard({ job }: { job: Job }) {
                       <span className="truncate">{job.location}</span>
                     </div>
                   )}
+
+                  {jobNudges.length > 0 && (
+                    <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                      <NudgeChips nudges={jobNudges} onNudgeClick={onNudgeClick} />
+                    </div>
+                  )}
                   
                   {(job.status === "scheduled" || job.status === "in_progress") && (
                     <div className="flex items-center gap-2 mt-3 flex-wrap" onClick={(e) => e.stopPropagation()}>
@@ -299,10 +309,19 @@ function EmptyState() {
 
 export default function Jobs() {
   const [filter, setFilter] = useState<string>("all");
+  const [selectedNudge, setSelectedNudge] = useState<AiNudge | null>(null);
   
   const { data: jobs = [], isLoading } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
   });
+
+  const { data: nudges = [] } = useQuery<AiNudge[]>({
+    queryKey: ["/api/ai/nudges"],
+  });
+
+  const handleNudgeClick = (nudge: AiNudge) => {
+    setSelectedNudge(nudge);
+  };
 
   const filteredJobs = filter === "all" 
     ? jobs 
@@ -412,7 +431,7 @@ export default function Jobs() {
                 </h2>
                 <div className="space-y-3">
                   {upcomingJobs.map((job) => (
-                    <JobCard key={job.id} job={job} />
+                    <JobCard key={job.id} job={job} nudges={nudges} onNudgeClick={handleNudgeClick} />
                   ))}
                 </div>
               </div>
@@ -426,7 +445,7 @@ export default function Jobs() {
                 </h2>
                 <div className="space-y-3">
                   {pastJobs.map((job) => (
-                    <JobCard key={job.id} job={job} />
+                    <JobCard key={job.id} job={job} nudges={nudges} onNudgeClick={handleNudgeClick} />
                   ))}
                 </div>
               </div>
@@ -436,6 +455,12 @@ export default function Jobs() {
         
         <div className="h-6" />
       </div>
+
+      <NudgeActionSheet
+        nudge={selectedNudge}
+        open={!!selectedNudge}
+        onClose={() => setSelectedNudge(null)}
+      />
     </div>
   );
 }

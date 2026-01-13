@@ -12,7 +12,9 @@ import {
   ChevronRight,
   Loader2,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  AlertCircle,
+  Flame
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -67,6 +69,27 @@ const nudgeConfig: Record<string, {
     color: "text-teal-600",
     bg: "bg-teal-500/10",
   },
+  invoice_reminder_firm: {
+    icon: DollarSign,
+    actionLabel: "Follow Up",
+    getRoute: (n) => `/invoices/${n.entityId}`,
+    color: "text-orange-600",
+    bg: "bg-orange-500/10",
+  },
+  lead_hot_alert: {
+    icon: Flame,
+    actionLabel: "Respond Now",
+    getRoute: (n) => `/leads/${n.entityId}`,
+    color: "text-red-600",
+    bg: "bg-red-500/10",
+  },
+  job_stuck: {
+    icon: AlertCircle,
+    actionLabel: "Update Job",
+    getRoute: (n) => `/jobs/${n.entityId}`,
+    color: "text-amber-600",
+    bg: "bg-amber-500/10",
+  },
 };
 
 function getActionText(nudge: AiNudge): string {
@@ -79,12 +102,18 @@ function getActionText(nudge: AiNudge): string {
       return "Ready to book this job?";
     case "lead_silent_rescue":
       return "Customer went quiet — check in";
+    case "lead_hot_alert":
+      return nudge.explainText || "Hot lead! Respond quickly";
     case "invoice_reminder":
       return nudge.explainText || "Send payment reminder";
+    case "invoice_reminder_firm":
+      return nudge.explainText || "Follow up on payment";
     case "invoice_overdue_escalation":
       return "Invoice overdue — nudge needed";
     case "invoice_create_from_job_done":
       return nudge.explainText || "Invoice this completed job";
+    case "job_stuck":
+      return nudge.explainText || "Scheduled job needs update";
     default:
       return nudge.explainText || "Take action";
   }

@@ -1,4 +1,4 @@
-import { eq, and, desc, asc, lte, or, ne, isNull } from "drizzle-orm";
+import { eq, and, desc, asc, lte, or, ne, isNull, sql } from "drizzle-orm";
 import { db } from "./db";
 import { 
   users, otpCodes, sessions, jobs, leads, invoices, reminders,
@@ -923,6 +923,17 @@ export class DatabaseStorage implements IStorage {
       metadata: event.metadata ?? "{}",
     }).returning();
     return created;
+  }
+
+  async getTodayNudgeCount(userId: string): Promise<number> {
+    const today = new Date().toISOString().split("T")[0];
+    const nudges = await db.select().from(aiNudges).where(
+      and(
+        eq(aiNudges.userId, userId),
+        sql`${aiNudges.createdAt} LIKE ${today + '%'}`
+      )
+    );
+    return nudges.length;
   }
 
   // Feature Flags

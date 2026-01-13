@@ -13,6 +13,7 @@ interface NudgeCandidate {
 
 const MAX_NUDGES_PER_RUN = 20;
 const MAX_ACTIVE_NUDGES_PER_ENTITY = 2;
+const MAX_NUDGES_PER_DAY = 10; // Daily cap per user
 
 function getDateString(): string {
   return new Date().toISOString().split("T")[0];
@@ -74,11 +75,15 @@ function generateLeadNudges(lead: Lead, userId: string): NudgeCandidate[] {
     !lead.convertedJobId &&
     hoursAgo(lead.createdAt, 2)
   ) {
+    // Boost priority based on lead score (clamp to 0 to avoid negative scores lowering priority)
+    const basePriority = 85;
+    const scoreBoost = lead.score && lead.score > 0 ? Math.min(lead.score * 0.1, 10) : 0;
+    
     candidates.push({
       entityType: "lead",
       entityId: lead.id,
       nudgeType: "lead_convert_to_job",
-      priority: 85,
+      priority: basePriority + scoreBoost,
       explainText: "Turn this into a job?",
       actionPayload: {
         jobPrefill: {
@@ -88,6 +93,27 @@ function generateLeadNudges(lead: Lead, userId: string): NudgeCandidate[] {
           serviceType: lead.serviceType,
           description: lead.description,
         },
+      },
+    });
+  }
+
+  // Hot lead alert: High score lead needing immediate action
+  if (
+    lead.score && 
+    lead.score >= 80 &&
+    (lead.status === "new" || lead.status === "response_sent") &&
+    hoursAgo(lead.createdAt, 1) &&
+    !hoursAgo(lead.createdAt, 24)
+  ) {
+    candidates.push({
+      entityType: "lead",
+      entityId: lead.id,
+      nudgeType: "lead_hot_alert",
+      priority: 95, // High priority
+      explainText: `Hot lead! Score: ${lead.score}. Respond quickly.`,
+      actionPayload: {
+        suggestedMessage: `Hi ${lead.clientName || "there"}! Thanks for reaching out about ${lead.serviceType || "our services"}. I'd love to help. What time works best for you?`,
+        leadScore: lead.score,
       },
     });
   }
@@ -155,6 +181,7 @@ function generateInvoiceNudges(invoice: Invoice, userId: string): NudgeCandidate
 function generateJobNudges(job: Job, userId: string, invoices: Invoice[]): NudgeCandidate[] {
   const candidates: NudgeCandidate[] = [];
 
+  // Job → Invoice nudge for completed jobs
   if (
     job.status === "completed" &&
     !invoices.some(inv => inv.jobId === job.id) &&
@@ -180,6 +207,29 @@ function generateJobNudges(job: Job, userId: string, invoices: Invoice[]): Nudge
     });
   }
 
+  // Job stuck: Scheduled job with no progress for 48+ hours after scheduled time
+  if (
+    job.status === "scheduled" &&
+    job.scheduledDate &&
+    job.scheduledTime
+  ) {
+    const scheduledDateTime = new Date(`${job.scheduledDate}T${job.scheduledTime}`);
+    const hoursSinceScheduled = (Date.now() - scheduledDateTime.getTime()) / (60 * 60 * 1000);
+    
+    if (hoursSinceScheduled >= 48) {
+      candidates.push({
+        entityType: "job",
+        entityId: job.id,
+        nudgeType: "job_stuck",
+        priority: 80,
+        explainText: "This job was scheduled 2+ days ago. Update status?",
+        actionPayload: {
+          suggestedActions: ["mark_completed", "reschedule", "cancel"],
+        },
+      });
+    }
+  }
+
   return candidates;
 }
 
@@ -188,6 +238,14 @@ export async function generateNudgesForUser(userId: string): Promise<{ createdCo
   if (!featureFlag?.enabled) {
     return { createdCount: 0, activeCount: 0 };
   }
+
+  // Check daily cap
+  const todayCount = await storage.getTodayNudgeCount(userId);
+  if (todayCount >= MAX_NUDGES_PER_DAY) {
+    const activeNudges = await storage.getActiveAiNudgesForUser(userId);
+    return { createdCount: 0, activeCount: activeNudges.length };
+  }
+  const remainingDailyCap = MAX_NUDGES_PER_DAY - todayCount;
 
   const [leads, invoices, jobs] = await Promise.all([
     storage.getLeads(userId),
@@ -215,6 +273,7 @@ export async function generateNudgesForUser(userId: string): Promise<{ createdCo
 
   for (const candidate of candidates) {
     if (createdCount >= MAX_NUDGES_PER_RUN) break;
+    if (createdCount >= remainingDailyCap) break; // Enforce daily cap
 
     const entityKey = `${candidate.entityType}:${candidate.entityId}`;
     const currentCount = entityNudgeCounts.get(entityKey) || 0;
@@ -227,6 +286,15 @@ export async function generateNudgesForUser(userId: string): Promise<{ createdCo
     const dedupeKey = `${userId}:${candidate.entityType}:${candidate.entityId}:${candidate.nudgeType}:${today}`;
     const existing = await storage.getAiNudgeByDedupeKey(dedupeKey);
     if (existing) continue;
+    
+    // Check for recently snoozed nudges of the same type to prevent immediate re-triggering
+    const recentNudges = existingNudges.filter(n => 
+      n.nudgeType === candidate.nudgeType && 
+      (n.status === "snoozed" || n.status === "dismissed") &&
+      n.createdAt && 
+      hoursSince(n.createdAt) < 24 // 24-hour cooldown after snooze/dismiss
+    );
+    if (recentNudges.length > 0) continue;
 
     const nudge: InsertAiNudge = {
       userId,

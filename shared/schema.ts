@@ -754,9 +754,11 @@ export const nudgeTypes = [
   "lead_silent_rescue",
   "lead_hot_alert",
   "invoice_reminder",
+  "invoice_reminder_firm",
   "invoice_overdue_escalation",
   "invoice_create_from_job_done",
-  "invoice_weekly_summary"
+  "invoice_weekly_summary",
+  "job_stuck"
 ] as const;
 export type NudgeType = (typeof nudgeTypes)[number];
 

@@ -1,4 +1,4 @@
-import { Sparkles, Flame, MessageSquare, FileText, Clock, DollarSign, AlertTriangle } from "lucide-react";
+import { Sparkles, Flame, MessageSquare, FileText, Clock, DollarSign, AlertTriangle, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { AiNudge } from "@shared/schema";
 
@@ -52,6 +52,11 @@ const nudgeConfig: Record<string, { icon: typeof Sparkles; label: string; varian
     icon: DollarSign,
     label: "Weekly summary",
     variant: "outline",
+  },
+  job_stuck: {
+    icon: AlertCircle,
+    label: "Update job",
+    variant: "secondary",
   },
 };
 

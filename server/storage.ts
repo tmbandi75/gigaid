@@ -182,6 +182,7 @@ export interface IStorage {
   // AI Nudge Events
   getAiNudgeEvents(nudgeId: string): Promise<AiNudgeEvent[]>;
   createAiNudgeEvent(event: InsertAiNudgeEvent): Promise<AiNudgeEvent>;
+  getTodayNudgeCount(userId: string): Promise<number>;
 
   // Feature Flags
   getFeatureFlag(key: string): Promise<FeatureFlag | undefined>;
@@ -1754,6 +1755,13 @@ export class MemStorage implements IStorage {
     };
     this.aiNudgeEvents.set(id, newEvent);
     return newEvent;
+  }
+
+  async getTodayNudgeCount(userId: string): Promise<number> {
+    const today = new Date().toISOString().split("T")[0];
+    return Array.from(this.aiNudges.values()).filter(n => 
+      n.userId === userId && n.createdAt?.startsWith(today)
+    ).length;
   }
 
   // Feature Flags

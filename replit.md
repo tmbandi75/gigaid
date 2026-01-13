@@ -274,3 +274,41 @@ npm run build && npx cap sync ios
 ```
 
 Then rebuild in Xcode.
+
+## AI Micro-Nudges System
+
+GigAid includes an AI-powered nudge system that provides contextual action recommendations to help gig workers stay on top of their business.
+
+### Nudge Types
+
+| Type | Trigger | Priority | Action |
+|------|---------|----------|--------|
+| `lead_follow_up` | New lead with no contact after 1h | 90 | Send follow-up message |
+| `lead_silent_rescue` | Engaged lead went quiet (48h) | 80 | Check-in message |
+| `lead_convert_to_job` | Engaged lead ready to convert | 85+ | Create job from lead |
+| `lead_hot_alert` | High-score lead (≥80) needs response | 95 | Respond quickly |
+| `invoice_reminder` | Unpaid invoice 24-72h | 90 | Send gentle reminder |
+| `invoice_reminder_firm` | Unpaid invoice 72h-7d | 92 | Send firm follow-up |
+| `invoice_overdue_escalation` | Unpaid invoice 7+ days | 95 | Take urgent action |
+| `invoice_create_from_job_done` | Completed job with no invoice | 88 | Create invoice |
+| `job_stuck` | Scheduled job 48h+ past schedule | 80 | Update job status |
+
+### Priority Boosting
+
+- Lead score integration: High-score leads (0-100) boost nudge priority by up to 10 points
+- Formula: `basePriority + min(leadScore * 0.1, 10)`
+- Negative scores are ignored (clamped to 0)
+
+### Daily Caps & Cooldowns
+
+- **Daily limit**: 10 nudges per user per day
+- **Cooldown**: 24 hours after dismiss/snooze before same nudge type regenerates
+- **Per-entity limit**: Max active nudges per entity to prevent spam
+
+### Key Files
+
+- `server/nudgeGenerator.ts` - Nudge generation logic
+- `shared/schema.ts` - `aiNudges` and `aiNudgeEvents` tables
+- `client/src/components/TodaysGamePlan.tsx` - Daily prioritization view
+- `client/src/components/nudges/NudgeChip.tsx` - Inline nudge display
+- `client/src/components/GigAidImpact.tsx` - Impact metrics
