@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
 import FollowUpCheckIn from "@/components/FollowUpCheckIn";
+import { TodaysGamePlan } from "@/components/TodaysGamePlan";
 import {
   Briefcase,
   Users,
@@ -259,6 +260,9 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
+
+        {/* Today's Game Plan - AI-powered daily priorities */}
+        <TodaysGamePlan />
 
         {/* Follow-up check-ins for leads */}
         <FollowUpCheckIn />
