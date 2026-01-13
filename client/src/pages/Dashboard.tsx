@@ -11,6 +11,7 @@ import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
 import FollowUpCheckIn from "@/components/FollowUpCheckIn";
 import { TodaysGamePlan } from "@/components/TodaysGamePlan";
+import { NudgeCard } from "@/components/nudges/NudgeCard";
 import {
   Briefcase,
   Users,
@@ -260,6 +261,9 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
+
+        {/* AI Micro-Nudges - contextual action suggestions */}
+        <NudgeCard maxNudges={3} />
 
         {/* Today's Game Plan - AI-powered daily priorities */}
         <TodaysGamePlan />
