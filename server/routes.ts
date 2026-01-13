@@ -31,6 +31,7 @@ import { geocodeAddress } from "./geocode";
 import { computeDepositState, calculateDepositAmount, getCancellationOutcome, formatDepositDisplay } from "./depositHelper";
 import { embedDepositMetadata, extractDepositMetadata, DepositMetadata, DerivedDepositState } from "@shared/schema";
 import { generateCelebrationMessage } from "./celebration";
+import { generateNudgesForUser } from "./nudgeGenerator";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -5825,6 +5826,66 @@ Return ONLY the message text, no JSON or formatting.`
     } catch (error) {
       console.error("Get impact stats error:", error);
       res.status(500).json({ error: "Failed to get impact stats" });
+    }
+  });
+
+  // Admin endpoint to force-regenerate nudges and backfill missing ones
+  app.post("/api/admin/backfill-nudges", async (req, res) => {
+    try {
+      // Force regenerate nudges for the user
+      const result = await generateNudgesForUser(defaultUserId);
+      
+      // Also check for completed jobs without invoices and create nudges
+      const jobs = await storage.getJobs(defaultUserId);
+      const invoices = await storage.getInvoices(defaultUserId);
+      
+      const completedWithoutInvoice = jobs.filter(job => 
+        job.status === "completed" && 
+        !invoices.some(inv => inv.jobId === job.id)
+      );
+      
+      // Create invoice_create_from_job_done nudges for any missed jobs
+      let backfilledCount = 0;
+      for (const job of completedWithoutInvoice) {
+        const amount = job.price ? job.price / 100 : 0;
+        const dedupeKey = `${defaultUserId}:job:${job.id}:invoice_create_from_job_done:backfill`;
+        
+        const existing = await storage.getAiNudgeByDedupeKey(dedupeKey);
+        if (!existing) {
+          await storage.createAiNudge({
+            userId: defaultUserId,
+            entityType: "job",
+            entityId: job.id,
+            nudgeType: "invoice_create_from_job_done",
+            priority: 92, // High priority for revenue protection
+            status: "active",
+            createdAt: new Date().toISOString(),
+            explainText: `$${amount.toFixed(0)} job completed but no invoice. Don't leave money on the table!`,
+            actionPayload: JSON.stringify({
+              invoicePrefill: {
+                clientName: job.clientName,
+                clientEmail: job.clientEmail,
+                clientPhone: job.clientPhone,
+                serviceDescription: job.title,
+                amount: job.price || 0,
+                jobId: job.id,
+              },
+            }),
+            dedupeKey,
+          });
+          backfilledCount++;
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        ...result,
+        backfilledJobNudges: backfilledCount,
+        completedJobsWithoutInvoice: completedWithoutInvoice.length,
+      });
+    } catch (error) {
+      console.error("Backfill nudges error:", error);
+      res.status(500).json({ error: "Failed to backfill nudges" });
     }
   });
 

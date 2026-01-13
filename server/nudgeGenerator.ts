@@ -70,8 +70,12 @@ function generateLeadNudges(lead: Lead, userId: string): NudgeCandidate[] {
     });
   }
 
+  // Convert to job: Engaged leads OR high-score leads in response_sent status
+  const isEngaged = lead.status === "engaged";
+  const isHighScoreResponded = lead.status === "response_sent" && lead.score && lead.score >= 80;
+  
   if (
-    lead.status === "engaged" &&
+    (isEngaged || isHighScoreResponded) &&
     !lead.convertedJobId &&
     hoursAgo(lead.createdAt, 2)
   ) {
@@ -84,7 +88,9 @@ function generateLeadNudges(lead: Lead, userId: string): NudgeCandidate[] {
       entityId: lead.id,
       nudgeType: "lead_convert_to_job",
       priority: basePriority + scoreBoost,
-      explainText: "Turn this into a job?",
+      explainText: isHighScoreResponded 
+        ? `High-intent lead (score ${lead.score}). Ready to book?` 
+        : "Turn this into a job?",
       actionPayload: {
         jobPrefill: {
           clientName: lead.clientName,
