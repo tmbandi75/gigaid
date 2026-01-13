@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -44,6 +44,11 @@ export default function QuickBook() {
   const [depositAmount, setDepositAmount] = useState(50);
   const [copied, setCopied] = useState(false);
 
+  // TODO: Analytics - quickbook_opened (fires once on component mount)
+  useEffect(() => {
+    // Track page view when component mounts
+  }, []);
+
   const parseMutation = useMutation({
     mutationFn: async (text: string) => {
       // TODO: Analytics - quickbook_parse_submitted
@@ -76,6 +81,7 @@ export default function QuickBook() {
 
   const sendLinkMutation = useMutation({
     mutationFn: async () => {
+      // TODO: Analytics - quickbook_send_link_clicked
       const paymentConfig: PaymentConfig = {
         type: paymentType,
         depositAmount: paymentType === "deposit" ? depositAmount * 100 : undefined,
