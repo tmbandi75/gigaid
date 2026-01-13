@@ -54,9 +54,10 @@ import {
   Send
 } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
-import type { Job } from "@shared/schema";
+import type { Job, JobResolutionType } from "@shared/schema";
 import { GetPaidDialog } from "@/components/job/GetPaidDialog";
 import { JobLocationMap } from "@/components/JobLocationMap";
+import { JobResolutionModal } from "@/components/jobs/JobResolutionModal";
 
 interface ScheduleSuggestion {
   date: string;
@@ -360,6 +361,10 @@ export default function JobForm() {
     totalAmountCents?: number;
   } | null>(null);
   const { celebration, celebrate, dismiss: dismissCelebration } = useCelebration();
+  
+  // Revenue Protection: Resolution modal state
+  const [showResolutionModal, setShowResolutionModal] = useState(false);
+  const [pendingCompletionData, setPendingCompletionData] = useState<JobFormData | null>(null);
 
   const urlParams = new URLSearchParams(searchString);
   const prefillClientName = urlParams.get("clientName") || "";
@@ -380,6 +385,16 @@ export default function JobForm() {
 
   const { data: existingJob, isLoading: isLoadingJob } = useQuery<Job>({
     queryKey: ["/api/jobs", id],
+    enabled: !!isEditing,
+  });
+
+  // Revenue Protection: Check if resolution is required before completing
+  const { data: resolutionCheck, isLoading: isLoadingResolutionCheck } = useQuery<{
+    required: boolean;
+    hasResolution: boolean;
+    resolution: unknown | null;
+  }>({
+    queryKey: ["/api/jobs", id, "resolution-required"],
     enabled: !!isEditing,
   });
 
@@ -643,10 +658,64 @@ export default function JobForm() {
   });
 
   const onSubmit = (data: JobFormData) => {
+    // Revenue Protection: Intercept completion attempts when enforcement is ON
+    const isAttemptingCompletion = 
+      data.status === "completed" && 
+      existingJob?.status !== "completed";
+    
+    // Block completion while resolution check is loading to prevent bypass
+    // Default to requiring resolution while loading (fail-safe)
+    const isResolutionCheckReady = !isLoadingResolutionCheck;
+    const needsResolution = isResolutionCheckReady
+      ? (resolutionCheck?.required && !resolutionCheck?.hasResolution)
+      : true; // Assume required while loading for safety
+    
+    if (isEditing && isAttemptingCompletion && needsResolution) {
+      if (!isResolutionCheckReady) {
+        toast({
+          title: "Please wait",
+          description: "Checking payment status...",
+        });
+        return;
+      }
+      // Store the form data and show resolution modal
+      setPendingCompletionData(data);
+      setShowResolutionModal(true);
+      return;
+    }
+    
     if (isEditing) {
       updateMutation.mutate(data);
     } else {
       createMutation.mutate(data);
+    }
+  };
+
+  // Handle resolution completed - proceed with job completion
+  const handleResolutionComplete = (resolutionType: JobResolutionType) => {
+    setShowResolutionModal(false);
+    queryClient.invalidateQueries({ queryKey: ["/api/jobs", id, "resolution-required"] });
+    
+    // Now complete the job since resolution exists
+    if (pendingCompletionData) {
+      updateMutation.mutate(pendingCompletionData);
+      setPendingCompletionData(null);
+    }
+  };
+
+  // Handle invoice creation from resolution modal
+  const handleOpenInvoiceFromResolution = () => {
+    setShowResolutionModal(false);
+    // Navigate to invoice creation with job prefill
+    if (existingJob) {
+      const params = new URLSearchParams({
+        jobId: existingJob.id,
+        clientName: existingJob.clientName || "",
+        clientPhone: existingJob.clientPhone || "",
+        amount: existingJob.price ? String(existingJob.price) : "",
+        description: existingJob.title || existingJob.serviceType || "",
+      });
+      navigate(`/invoices/new?${params.toString()}`);
     }
   };
 
@@ -1316,6 +1385,15 @@ export default function JobForm() {
           clientName={completedJobData.clientName}
           depositPaidCents={completedJobData.depositPaidCents}
           totalAmountCents={completedJobData.totalAmountCents}
+        />
+      )}
+
+      {showResolutionModal && existingJob && (
+        <JobResolutionModal
+          open={showResolutionModal}
+          job={existingJob}
+          onResolved={handleResolutionComplete}
+          onOpenInvoiceCreate={handleOpenInvoiceFromResolution}
         />
       )}
 

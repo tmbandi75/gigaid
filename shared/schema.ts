@@ -176,6 +176,37 @@ export const insertJobSchema = createInsertSchema(jobs).omit({
 export type InsertJob = z.infer<typeof insertJobSchema>;
 export type Job = typeof jobs.$inferSelect;
 
+// ============================================================
+// JOB RESOLUTION - Revenue Protection (No Silent Completion)
+// ============================================================
+// This table ensures every completed job has explicit payment resolution.
+// Without a resolution record, a job CANNOT be marked as completed.
+// This prevents revenue leakage from forgotten invoices.
+
+export const jobResolutionTypes = ["invoiced", "paid_without_invoice", "waived"] as const;
+export type JobResolutionType = (typeof jobResolutionTypes)[number];
+
+export const waiverReasons = ["warranty", "redo", "goodwill", "internal"] as const;
+export type WaiverReason = (typeof waiverReasons)[number];
+
+export const jobResolutions = pgTable("job_resolutions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").notNull().unique(), // Each job can only have one resolution
+  resolutionType: text("resolution_type").notNull(), // 'invoiced', 'paid_without_invoice', 'waived'
+  paymentMethod: text("payment_method"), // For paid_without_invoice: cash, zelle, etc.
+  waiverReason: text("waiver_reason"), // For waived: warranty, redo, goodwill, internal
+  resolvedAt: text("resolved_at").notNull(),
+  resolvedByUserId: varchar("resolved_by_user_id").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+export const insertJobResolutionSchema = createInsertSchema(jobResolutions).omit({
+  id: true,
+});
+
+export type InsertJobResolution = z.infer<typeof insertJobResolutionSchema>;
+export type JobResolution = typeof jobResolutions.$inferSelect;
+
 // Lead Status
 export const leadStatuses = ["new", "response_sent", "engaged", "price_confirmed", "cold", "lost"] as const;
 export type LeadStatus = (typeof leadStatuses)[number];
@@ -758,7 +789,8 @@ export const nudgeTypes = [
   "invoice_overdue_escalation",
   "invoice_create_from_job_done",
   "invoice_weekly_summary",
-  "job_stuck"
+  "job_stuck",
+  "job_unresolved_payment" // Blocking nudge for jobs completed without resolution
 ] as const;
 export type NudgeType = (typeof nudgeTypes)[number];
 

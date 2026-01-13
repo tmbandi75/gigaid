@@ -25,6 +25,7 @@ import {
   type AiNudgeEvent, type InsertAiNudgeEvent,
   type FeatureFlag,
   type JobDraft, type InsertJobDraft,
+  type JobResolution, type InsertJobResolution,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -196,6 +197,13 @@ export interface IStorage {
   createJobDraft(draft: InsertJobDraft): Promise<JobDraft>;
   updateJobDraft(id: string, updates: Partial<JobDraft>): Promise<JobDraft | undefined>;
   deleteJobDraft(id: string): Promise<boolean>;
+
+  // Job Resolutions (Revenue Protection - No Silent Completion)
+  // These methods ensure every completed job has explicit payment resolution
+  getJobResolution(jobId: string): Promise<JobResolution | undefined>;
+  getJobResolutionsByUser(userId: string): Promise<JobResolution[]>;
+  getUnresolvedCompletedJobs(userId: string): Promise<Job[]>;
+  createJobResolution(resolution: InsertJobResolution): Promise<JobResolution>;
 }
 
 export class MemStorage implements IStorage {
@@ -222,6 +230,7 @@ export class MemStorage implements IStorage {
   private aiNudgeEvents: Map<string, AiNudgeEvent>;
   private featureFlags: Map<string, FeatureFlag>;
   private jobDrafts: Map<string, JobDraft>;
+  private jobResolutions: Map<string, JobResolution>;
 
   constructor() {
     this.users = new Map();
@@ -247,12 +256,19 @@ export class MemStorage implements IStorage {
     this.aiNudgeEvents = new Map();
     this.featureFlags = new Map();
     this.jobDrafts = new Map();
+    this.jobResolutions = new Map();
     
     // Seed default feature flags
     this.featureFlags.set("ai_micro_nudges", {
       key: "ai_micro_nudges",
       enabled: true, // Enabled by default for demo
       description: "AI-powered micro-nudges for leads and invoices",
+      updatedAt: new Date().toISOString(),
+    });
+    this.featureFlags.set("enforce_no_silent_completion", {
+      key: "enforce_no_silent_completion",
+      enabled: false, // Default OFF for safe rollout - Revenue Protection
+      description: "Revenue Protection: Require explicit resolution (invoice/payment/waiver) before completing jobs",
       updatedAt: new Date().toISOString(),
     });
     
@@ -1827,6 +1843,40 @@ export class MemStorage implements IStorage {
 
   async deleteJobDraft(id: string): Promise<boolean> {
     return this.jobDrafts.delete(id);
+  }
+
+  // ============================================================
+  // Job Resolutions (Revenue Protection - No Silent Completion)
+  // ============================================================
+  // These methods ensure completed jobs have explicit payment resolution
+
+  async getJobResolution(jobId: string): Promise<JobResolution | undefined> {
+    return Array.from(this.jobResolutions.values()).find(r => r.jobId === jobId);
+  }
+
+  async getJobResolutionsByUser(userId: string): Promise<JobResolution[]> {
+    return Array.from(this.jobResolutions.values()).filter(
+      r => r.resolvedByUserId === userId
+    );
+  }
+
+  async getUnresolvedCompletedJobs(userId: string): Promise<Job[]> {
+    const completedJobs = Array.from(this.jobs.values()).filter(
+      j => j.userId === userId && j.status === "completed"
+    );
+    const resolutions = await this.getJobResolutionsByUser(userId);
+    const resolvedJobIds = new Set(resolutions.map(r => r.jobId));
+    return completedJobs.filter(j => !resolvedJobIds.has(j.id));
+  }
+
+  async createJobResolution(resolution: InsertJobResolution): Promise<JobResolution> {
+    const id = randomUUID();
+    const newResolution: JobResolution = {
+      ...resolution,
+      id,
+    };
+    this.jobResolutions.set(id, newResolution);
+    return newResolution;
   }
 }
 

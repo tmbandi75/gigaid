@@ -1,10 +1,10 @@
-import { eq, and, desc, asc, lte, or, ne, isNull, sql } from "drizzle-orm";
+import { eq, and, desc, asc, lte, or, ne, isNull, sql, notInArray } from "drizzle-orm";
 import { db } from "./db";
 import { 
   users, otpCodes, sessions, jobs, leads, invoices, reminders,
   crewMembers, referrals, bookingRequests, bookingEvents, voiceNotes,
   reviews, userPaymentMethods, jobPayments, crewInvites, crewJobPhotos, crewMessages,
-  priceConfirmations, aiNudges, aiNudgeEvents, featureFlags, jobDrafts,
+  priceConfirmations, aiNudges, aiNudgeEvents, featureFlags, jobDrafts, jobResolutions,
   type User, type InsertUser,
   type Job, type InsertJob,
   type Lead, type InsertLead,
@@ -31,6 +31,7 @@ import {
   type AiNudgeEvent, type InsertAiNudgeEvent,
   type FeatureFlag,
   type JobDraft, type InsertJobDraft,
+  type JobResolution, type InsertJobResolution,
 } from "@shared/schema";
 import { IStorage } from "./storage";
 import { randomUUID } from "crypto";
@@ -997,6 +998,43 @@ export class DatabaseStorage implements IStorage {
   async deleteJobDraft(id: string): Promise<boolean> {
     const result = await db.delete(jobDrafts).where(eq(jobDrafts.id, id));
     return result.rowCount! > 0;
+  }
+
+  // ============================================================
+  // Job Resolutions (Revenue Protection - No Silent Completion)
+  // ============================================================
+  // These methods ensure completed jobs have explicit payment resolution.
+  // Without a resolution, a job CANNOT be marked as completed.
+
+  async getJobResolution(jobId: string): Promise<JobResolution | undefined> {
+    const [resolution] = await db.select().from(jobResolutions).where(eq(jobResolutions.jobId, jobId));
+    return resolution;
+  }
+
+  async getJobResolutionsByUser(userId: string): Promise<JobResolution[]> {
+    return await db.select().from(jobResolutions).where(eq(jobResolutions.resolvedByUserId, userId));
+  }
+
+  async getUnresolvedCompletedJobs(userId: string): Promise<Job[]> {
+    // Get all completed jobs for user that don't have a resolution record
+    const completedJobs = await db.select().from(jobs).where(
+      and(
+        eq(jobs.userId, userId),
+        eq(jobs.status, "completed")
+      )
+    );
+    
+    // Get all resolved job IDs for this user
+    const resolutions = await this.getJobResolutionsByUser(userId);
+    const resolvedJobIds = new Set(resolutions.map(r => r.jobId));
+    
+    // Return jobs that aren't resolved
+    return completedJobs.filter(job => !resolvedJobIds.has(job.id));
+  }
+
+  async createJobResolution(resolution: InsertJobResolution): Promise<JobResolution> {
+    const [newResolution] = await db.insert(jobResolutions).values(resolution).returning();
+    return newResolution;
   }
 }
 

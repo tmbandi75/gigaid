@@ -324,12 +324,34 @@ export async function registerRoutes(
       }
       
       const updates = insertJobSchema.partial().parse(req.body);
+      
+      // ============================================================
+      // REVENUE PROTECTION: No Silent Completion API Guard
+      // ============================================================
+      // If feature flag is ON and trying to complete a job,
+      // reject unless a job_resolution record exists.
+      // This is a HARD backstop that prevents bypass via API.
+      if (updates.status === "completed" && existingJob.status !== "completed") {
+        const enforceFlag = await storage.getFeatureFlag("enforce_no_silent_completion");
+        if (enforceFlag?.enabled) {
+          const resolution = await storage.getJobResolution(req.params.id);
+          if (!resolution) {
+            return res.status(409).json({
+              error: "Completed jobs must be resolved with invoice, payment, or waiver.",
+              code: "RESOLUTION_REQUIRED",
+              message: "Please choose how to handle payment before completing this job.",
+            });
+          }
+        }
+      }
+      
       const job = await storage.updateJob(req.params.id, updates);
       if (!job) {
         return res.status(404).json({ error: "Job not found" });
       }
       
       // Revenue protection: Auto-create draft invoice when job is completed
+      // (Legacy behavior - still works when feature flag is OFF)
       if (updates.status === "completed" && existingJob.status !== "completed") {
         // Check if job already has an invoice
         const invoices = await storage.getInvoices(job.userId);
@@ -364,6 +386,111 @@ export async function registerRoutes(
         return res.status(400).json({ error: error.errors });
       }
       res.status(500).json({ error: "Failed to update job" });
+    }
+  });
+
+  // ============================================================
+  // JOB RESOLUTION ENDPOINTS (Revenue Protection)
+  // ============================================================
+  // Creates a resolution record for a job, required before completing
+  // when enforce_no_silent_completion feature flag is ON.
+  app.post("/api/jobs/:id/resolution", async (req, res) => {
+    try {
+      const jobId = req.params.id;
+      const job = await storage.getJob(jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      // Check if resolution already exists
+      const existingResolution = await storage.getJobResolution(jobId);
+      if (existingResolution) {
+        return res.status(409).json({ 
+          error: "Job already has a resolution",
+          resolution: existingResolution,
+        });
+      }
+
+      const { resolutionType, paymentMethod, waiverReason } = req.body;
+
+      // Validate resolution type
+      const validTypes = ["invoiced", "paid_without_invoice", "waived"];
+      if (!validTypes.includes(resolutionType)) {
+        return res.status(400).json({ 
+          error: "Invalid resolution type. Must be: invoiced, paid_without_invoice, or waived" 
+        });
+      }
+
+      // Validate payment method for paid_without_invoice
+      if (resolutionType === "paid_without_invoice" && !paymentMethod) {
+        return res.status(400).json({ 
+          error: "Payment method required for paid_without_invoice resolution" 
+        });
+      }
+
+      // Validate waiver reason for waived
+      if (resolutionType === "waived") {
+        const validWaiverReasons = ["warranty", "redo", "goodwill", "internal"];
+        if (!validWaiverReasons.includes(waiverReason)) {
+          return res.status(400).json({ 
+            error: "Invalid waiver reason. Must be: warranty, redo, goodwill, or internal" 
+          });
+        }
+      }
+
+      const now = new Date().toISOString();
+      const resolution = await storage.createJobResolution({
+        jobId,
+        resolutionType,
+        paymentMethod: resolutionType === "paid_without_invoice" ? paymentMethod : null,
+        waiverReason: resolutionType === "waived" ? waiverReason : null,
+        resolvedAt: now,
+        resolvedByUserId: job.userId,
+        createdAt: now,
+      });
+
+      // If paid_without_invoice, also update job payment status
+      if (resolutionType === "paid_without_invoice") {
+        await storage.updateJob(jobId, {
+          paymentStatus: "paid",
+          paymentMethod,
+          paidAt: now,
+        });
+      }
+
+      res.status(201).json(resolution);
+    } catch (error) {
+      console.error("Create job resolution error:", error);
+      res.status(500).json({ error: "Failed to create job resolution" });
+    }
+  });
+
+  // Get job resolution status
+  app.get("/api/jobs/:id/resolution", async (req, res) => {
+    try {
+      const resolution = await storage.getJobResolution(req.params.id);
+      if (!resolution) {
+        return res.status(404).json({ error: "No resolution found for this job" });
+      }
+      res.json(resolution);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get job resolution" });
+    }
+  });
+
+  // Check if resolution is required (for UI to know whether to show modal)
+  app.get("/api/jobs/:id/resolution-required", async (req, res) => {
+    try {
+      const enforceFlag = await storage.getFeatureFlag("enforce_no_silent_completion");
+      const resolution = await storage.getJobResolution(req.params.id);
+      
+      res.json({
+        required: enforceFlag?.enabled ?? false,
+        hasResolution: !!resolution,
+        resolution: resolution || null,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to check resolution requirement" });
     }
   });
 

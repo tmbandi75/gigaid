@@ -818,6 +818,12 @@ export async function seedDatabase() {
         description: "Enable QuickBook paste-to-booking flow",
         updatedAt: daysAgo(1),
       },
+      {
+        key: "enforce_no_silent_completion",
+        enabled: false, // Default OFF for safe rollout
+        description: "Revenue Protection: Require explicit resolution (invoice/payment/waiver) before completing jobs",
+        updatedAt: daysAgo(0),
+      },
     ];
 
     for (const flag of featureFlagsData) {
