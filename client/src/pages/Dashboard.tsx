@@ -139,10 +139,10 @@ export default function Dashboard() {
   const recentLeads = summary?.recentLeads ?? [];
 
   const quickActions = [
+    { icon: Zap, label: "QuickBook", href: "/quickbook", gradient: "from-amber-500 to-orange-500" },
     { icon: Plus, label: "New Job", href: "/jobs/new", gradient: "from-violet-500 to-purple-600" },
     { icon: UserPlus, label: "New Lead", href: "/leads/new", gradient: "from-emerald-500 to-teal-500" },
     { icon: FileText, label: "Invoice", href: "/invoices/new", gradient: "from-blue-500 to-cyan-500" },
-    { icon: Sparkles, label: "AI Tools", href: "/ai-tools", gradient: "from-amber-500 to-orange-500" },
   ];
 
   return (

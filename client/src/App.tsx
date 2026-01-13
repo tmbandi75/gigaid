@@ -38,6 +38,8 @@ import PayDeposit from "@/pages/PayDeposit";
 import OwnerView from "@/pages/OwnerView";
 import ShareCapture from "@/pages/ShareCapture";
 import PublicReview from "@/pages/PublicReview";
+import QuickBook from "@/pages/QuickBook";
+import QuickBookConfirm from "@/pages/QuickBookConfirm";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -68,6 +70,7 @@ function Router() {
       <Route path="/ai-tools" component={AITools} />
       <Route path="/booking-requests" component={BookingRequests} />
       <Route path="/share" component={ShareCapture} />
+      <Route path="/quickbook" component={QuickBook} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -100,6 +103,7 @@ function App() {
           <Route path="/pay-deposit/:token" component={PayDeposit} />
           <Route path="/crew-portal/:token" component={CrewPortal} />
           <Route path="/review/:token" component={PublicReview} />
+          <Route path="/qb/:token" component={QuickBookConfirm} />
           <Route path="/owner" component={OwnerView} />
           <Route>
             <MobileLayout>

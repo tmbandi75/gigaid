@@ -4,7 +4,7 @@ import {
   users, otpCodes, sessions, jobs, leads, invoices, reminders,
   crewMembers, referrals, bookingRequests, bookingEvents, voiceNotes,
   reviews, userPaymentMethods, jobPayments, crewInvites, crewJobPhotos, crewMessages,
-  priceConfirmations, aiNudges, aiNudgeEvents, featureFlags,
+  priceConfirmations, aiNudges, aiNudgeEvents, featureFlags, jobDrafts,
   type User, type InsertUser,
   type Job, type InsertJob,
   type Lead, type InsertLead,
@@ -30,6 +30,7 @@ import {
   type AiNudge, type InsertAiNudge,
   type AiNudgeEvent, type InsertAiNudgeEvent,
   type FeatureFlag,
+  type JobDraft, type InsertJobDraft,
 } from "@shared/schema";
 import { IStorage } from "./storage";
 import { randomUUID } from "crypto";
@@ -952,6 +953,39 @@ export class DatabaseStorage implements IStorage {
 
   async getAllFeatureFlags(): Promise<FeatureFlag[]> {
     return await db.select().from(featureFlags);
+  }
+
+  // Job Drafts (QuickBook)
+  async getJobDrafts(userId: string): Promise<JobDraft[]> {
+    return await db.select().from(jobDrafts).where(eq(jobDrafts.userId, userId)).orderBy(desc(jobDrafts.createdAt));
+  }
+
+  async getJobDraft(id: string): Promise<JobDraft | undefined> {
+    const [draft] = await db.select().from(jobDrafts).where(eq(jobDrafts.id, id));
+    return draft;
+  }
+
+  async getJobDraftByToken(token: string): Promise<JobDraft | undefined> {
+    const [draft] = await db.select().from(jobDrafts).where(eq(jobDrafts.bookingLinkToken, token));
+    return draft;
+  }
+
+  async createJobDraft(draft: InsertJobDraft): Promise<JobDraft> {
+    const [newDraft] = await db.insert(jobDrafts).values(draft).returning();
+    return newDraft;
+  }
+
+  async updateJobDraft(id: string, updates: Partial<JobDraft>): Promise<JobDraft | undefined> {
+    const [updated] = await db.update(jobDrafts)
+      .set({ ...updates, updatedAt: new Date().toISOString() })
+      .where(eq(jobDrafts.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteJobDraft(id: string): Promise<boolean> {
+    const result = await db.delete(jobDrafts).where(eq(jobDrafts.id, id));
+    return result.rowCount! > 0;
   }
 }
 

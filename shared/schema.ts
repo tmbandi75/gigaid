@@ -889,4 +889,59 @@ export function embedDepositMetadata(existingNotes: string | null, deposit: Depo
   return JSON.stringify({ ...existing, ...deposit });
 }
 
+// QuickBook Job Drafts - for "Paste message → booked" flow
+export const jobDraftStatuses = ["draft", "link_sent", "booked", "expired"] as const;
+export type JobDraftStatus = (typeof jobDraftStatuses)[number];
+
+export const jobDrafts = pgTable("job_drafts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  sourceText: text("source_text").notNull(),
+  parsedFields: text("parsed_fields").notNull().default("{}"),
+  confidence: text("confidence").notNull().default("{}"),
+  status: text("status").notNull().default("draft"),
+  bookingLinkUrl: text("booking_link_url"),
+  bookingLinkToken: text("booking_link_token"),
+  paymentConfig: text("payment_config").default("{}"),
+  jobId: varchar("job_id"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at"),
+  expiresAt: text("expires_at"),
+});
+
+export const insertJobDraftSchema = createInsertSchema(jobDrafts).omit({
+  id: true,
+});
+
+export type InsertJobDraft = z.infer<typeof insertJobDraftSchema>;
+export type JobDraft = typeof jobDrafts.$inferSelect;
+
+export interface ParsedJobFields {
+  service?: string;
+  dateTimeStart?: string;
+  dateTimeEnd?: string;
+  locationText?: string;
+  priceAmount?: number;
+  currency?: string;
+  durationMins?: number;
+  clientName?: string;
+  clientPhone?: string;
+  clientEmail?: string;
+}
+
+export interface FieldConfidence {
+  overall: number;
+  service?: number;
+  dateTime?: number;
+  location?: number;
+  price?: number;
+  client?: number;
+}
+
+export interface PaymentConfig {
+  type: "deposit" | "full" | "after";
+  depositAmount?: number;
+  depositPercent?: number;
+}
+
 export * from "./models/chat";

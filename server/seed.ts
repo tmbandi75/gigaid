@@ -804,13 +804,19 @@ export async function seedDatabase() {
     }
     console.log("[Seed] Voice notes seeded");
 
-    // Seed Feature Flags (enable AI nudges)
+    // Seed Feature Flags (enable AI nudges and QuickBook)
     const featureFlagsData = [
       {
         key: "ai_micro_nudges",
         enabled: true,
         description: "Enable AI micro-nudges for leads and invoices",
         updatedAt: daysAgo(30),
+      },
+      {
+        key: "quickbook_enabled",
+        enabled: true,
+        description: "Enable QuickBook paste-to-booking flow",
+        updatedAt: daysAgo(1),
       },
     ];
 

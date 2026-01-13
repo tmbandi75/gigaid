@@ -1,6 +1,6 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import crypto from "crypto";
+import crypto, { randomUUID } from "crypto";
 import { storage } from "./storage";
 import { 
   insertJobSchema, 
@@ -16,6 +16,9 @@ import {
   insertCrewMessageSchema,
   insertPriceConfirmationSchema,
   type Lead,
+  type ParsedJobFields,
+  type FieldConfidence,
+  type PaymentConfig,
 } from "@shared/schema";
 import { z } from "zod";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
@@ -2851,6 +2854,21 @@ export async function registerRoutes(
     }
   });
 
+  // Config endpoint - returns feature flags and settings for the client
+  app.get("/api/config", async (req, res) => {
+    try {
+      const quickbookFlag = await storage.getFeatureFlag("quickbook_enabled");
+      res.json({
+        features: {
+          quickbook_enabled: quickbookFlag?.enabled ?? false,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching config:", error);
+      res.status(500).json({ error: "Failed to fetch config" });
+    }
+  });
+
   // Onboarding endpoints
   app.get("/api/onboarding", async (req, res) => {
     try {
@@ -5638,6 +5656,377 @@ Return ONLY the message text, no JSON or formatting.`
     } catch (error) {
       console.error("Set feature flag error:", error);
       res.status(500).json({ error: "Failed to set feature flag" });
+    }
+  });
+
+  // ==================== QUICKBOOK ENDPOINTS ====================
+  // Feature-flagged "Paste message → booked" flow
+  
+  // Middleware to check if quickbook is enabled
+  const checkQuickbookEnabled = async (req: Request, res: Response, next: NextFunction) => {
+    const flag = await storage.getFeatureFlag("quickbook_enabled");
+    if (!flag?.enabled) {
+      return res.status(404).json({ error: "QuickBook feature is not enabled" });
+    }
+    next();
+  };
+
+  // POST /api/quickbook/parse - Parse pasted message and create draft
+  app.post("/api/quickbook/parse", checkQuickbookEnabled, async (req, res) => {
+    try {
+      const { messageText } = req.body;
+      
+      // Validation: required, trim, 10-2000 chars
+      if (!messageText || typeof messageText !== "string") {
+        return res.status(400).json({ error: "messageText is required" });
+      }
+      
+      const trimmed = messageText.trim();
+      if (trimmed.length < 10) {
+        return res.status(400).json({ error: "Message must be at least 10 characters" });
+      }
+      if (trimmed.length > 2000) {
+        return res.status(400).json({ error: "Message must be under 2000 characters" });
+      }
+
+      let parsedFields: ParsedJobFields = {};
+      let confidence: FieldConfidence = { overall: 0 };
+
+      try {
+        // Try AI parsing first
+        const { parseTextToPlan } = await import("./ai/aiService");
+        const aiResult = await parseTextToPlan(trimmed);
+        
+        parsedFields = {
+          service: aiResult.service || undefined,
+          dateTimeStart: aiResult.date && aiResult.time 
+            ? `${aiResult.date}T${aiResult.time}:00` 
+            : undefined,
+          locationText: aiResult.location || undefined,
+          priceAmount: aiResult.price || undefined,
+          currency: "USD",
+          durationMins: aiResult.duration || 60,
+          clientName: aiResult.clientName || undefined,
+          clientPhone: aiResult.clientPhone || undefined,
+          clientEmail: aiResult.clientEmail || undefined,
+        };
+
+        // Calculate confidence based on filled fields
+        let filledCount = 0;
+        let totalFields = 5;
+        if (parsedFields.service) filledCount++;
+        if (parsedFields.dateTimeStart) filledCount++;
+        if (parsedFields.locationText) filledCount++;
+        if (parsedFields.priceAmount) filledCount++;
+        if (parsedFields.clientName || parsedFields.clientPhone) filledCount++;
+
+        confidence = {
+          overall: Math.min(0.9, filledCount / totalFields + 0.2),
+          service: parsedFields.service ? 0.85 : 0.2,
+          dateTime: parsedFields.dateTimeStart ? 0.8 : 0.3,
+          location: parsedFields.locationText ? 0.75 : 0.2,
+          price: parsedFields.priceAmount ? 0.7 : 0.3,
+          client: (parsedFields.clientName || parsedFields.clientPhone) ? 0.8 : 0.2,
+        };
+      } catch (aiError) {
+        console.error("AI parsing failed, using rule-based fallback:", aiError);
+        
+        // Rule-based fallback
+        const dateMatch = trimmed.match(/\b(tomorrow|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday|next week|\d{1,2}\/\d{1,2}|\d{1,2}-\d{1,2})/i);
+        const timeMatch = trimmed.match(/\b(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\b/i);
+        const priceMatch = trimmed.match(/\$(\d+(?:\.\d{2})?)/);
+        const phoneMatch = trimmed.match(/(?:\+?1)?[\s.-]?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/);
+        
+        // Detect service keywords
+        const serviceKeywords: Record<string, string> = {
+          plumb: "plumbing",
+          pipe: "plumbing",
+          drain: "plumbing",
+          leak: "plumbing",
+          faucet: "plumbing",
+          toilet: "plumbing",
+          electric: "electrical",
+          outlet: "electrical",
+          switch: "electrical",
+          wire: "electrical",
+          clean: "cleaning",
+          maid: "cleaning",
+          handyman: "handyman",
+          repair: "handyman",
+          fix: "handyman",
+        };
+
+        let detectedService: string | undefined;
+        for (const [keyword, service] of Object.entries(serviceKeywords)) {
+          if (trimmed.toLowerCase().includes(keyword)) {
+            detectedService = service;
+            break;
+          }
+        }
+
+        parsedFields = {
+          service: detectedService,
+          priceAmount: priceMatch ? Math.round(parseFloat(priceMatch[1]) * 100) : undefined,
+          clientPhone: phoneMatch ? phoneMatch[0] : undefined,
+          durationMins: 60,
+          currency: "USD",
+        };
+
+        confidence = {
+          overall: 0.4,
+          service: detectedService ? 0.6 : 0.2,
+          dateTime: dateMatch ? 0.5 : 0.1,
+          location: 0.1,
+          price: priceMatch ? 0.7 : 0.2,
+          client: phoneMatch ? 0.6 : 0.2,
+        };
+      }
+
+      // Create draft in database
+      const draft = await storage.createJobDraft({
+        userId: defaultUserId,
+        sourceText: trimmed,
+        parsedFields: JSON.stringify(parsedFields),
+        confidence: JSON.stringify(confidence),
+        status: "draft",
+        createdAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+      });
+
+      res.json({
+        draftId: draft.id,
+        fields: parsedFields,
+        confidence,
+        suggestions: confidence.overall < 0.6 ? {
+          action: "edit",
+          message: "Quick check: update anything that looks off.",
+        } : undefined,
+      });
+    } catch (error) {
+      console.error("QuickBook parse error:", error);
+      res.status(500).json({ error: "Failed to parse message" });
+    }
+  });
+
+  // GET /api/quickbook/draft/:id - Get draft by ID
+  app.get("/api/quickbook/draft/:id", checkQuickbookEnabled, async (req, res) => {
+    try {
+      const draft = await storage.getJobDraft(req.params.id);
+      if (!draft) {
+        return res.status(404).json({ error: "Draft not found" });
+      }
+      if (draft.userId !== defaultUserId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      res.json({
+        ...draft,
+        parsedFields: JSON.parse(draft.parsedFields || "{}"),
+        confidence: JSON.parse(draft.confidence || "{}"),
+        paymentConfig: JSON.parse(draft.paymentConfig || "{}"),
+      });
+    } catch (error) {
+      console.error("Get draft error:", error);
+      res.status(500).json({ error: "Failed to get draft" });
+    }
+  });
+
+  // PATCH /api/quickbook/draft/:id - Update draft fields
+  app.patch("/api/quickbook/draft/:id", checkQuickbookEnabled, async (req, res) => {
+    try {
+      const draft = await storage.getJobDraft(req.params.id);
+      if (!draft) {
+        return res.status(404).json({ error: "Draft not found" });
+      }
+      if (draft.userId !== defaultUserId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const { fields } = req.body;
+      if (!fields || typeof fields !== "object") {
+        return res.status(400).json({ error: "fields object is required" });
+      }
+
+      // Validate fields
+      if (fields.priceAmount !== undefined && (fields.priceAmount < 0 || fields.priceAmount > 10000000)) {
+        return res.status(400).json({ error: "Price must be between 0 and $100,000" });
+      }
+      if (fields.durationMins !== undefined && (fields.durationMins < 15 || fields.durationMins > 480)) {
+        return res.status(400).json({ error: "Duration must be between 15 and 480 minutes" });
+      }
+      if (fields.dateTimeStart) {
+        const dt = new Date(fields.dateTimeStart);
+        if (isNaN(dt.getTime())) {
+          return res.status(400).json({ error: "Invalid date/time format" });
+        }
+      }
+
+      const currentFields = JSON.parse(draft.parsedFields || "{}");
+      const updatedFields = { ...currentFields, ...fields };
+
+      const updated = await storage.updateJobDraft(req.params.id, {
+        parsedFields: JSON.stringify(updatedFields),
+      });
+
+      res.json({
+        ...updated,
+        parsedFields: JSON.parse(updated?.parsedFields || "{}"),
+        confidence: JSON.parse(updated?.confidence || "{}"),
+      });
+    } catch (error) {
+      console.error("Update draft error:", error);
+      res.status(500).json({ error: "Failed to update draft" });
+    }
+  });
+
+  // POST /api/quickbook/draft/:id/send-link - Generate booking link and mark as sent
+  app.post("/api/quickbook/draft/:id/send-link", checkQuickbookEnabled, async (req, res) => {
+    try {
+      const draft = await storage.getJobDraft(req.params.id);
+      if (!draft) {
+        return res.status(404).json({ error: "Draft not found" });
+      }
+      if (draft.userId !== defaultUserId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const { paymentIntentConfig } = req.body;
+      const parsedFields: ParsedJobFields = JSON.parse(draft.parsedFields || "{}");
+
+      // Default payment config: $50 deposit if price >= $100, else 30%
+      let paymentConfig: PaymentConfig = { type: "deposit", depositAmount: 5000 };
+      
+      if (paymentIntentConfig?.type) {
+        paymentConfig.type = paymentIntentConfig.type;
+        if (paymentIntentConfig.depositAmount) {
+          paymentConfig.depositAmount = paymentIntentConfig.depositAmount;
+        } else if (paymentIntentConfig.depositPercent) {
+          paymentConfig.depositPercent = paymentIntentConfig.depositPercent;
+        }
+      } else if (parsedFields.priceAmount) {
+        if (parsedFields.priceAmount >= 10000) { // $100+
+          paymentConfig = { type: "deposit", depositAmount: 5000 }; // $50
+        } else if (parsedFields.priceAmount > 0) {
+          paymentConfig = { type: "deposit", depositPercent: 30 };
+        }
+      }
+
+      // Generate booking link token
+      const bookingToken = randomUUID();
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : (process.env.FRONTEND_URL || "https://gigaid.app");
+      const bookingLinkUrl = `${baseUrl}/qb/${bookingToken}`;
+
+      // Update draft with booking link
+      await storage.updateJobDraft(req.params.id, {
+        status: "link_sent",
+        bookingLinkUrl,
+        bookingLinkToken: bookingToken,
+        paymentConfig: JSON.stringify(paymentConfig),
+      });
+
+      res.json({
+        bookingLinkUrl,
+        paymentConfig,
+      });
+    } catch (error) {
+      console.error("Send booking link error:", error);
+      res.status(500).json({ error: "Failed to generate booking link" });
+    }
+  });
+
+  // GET /api/public/quickbook/:token - Public endpoint for customer to view booking
+  app.get("/api/public/quickbook/:token", async (req, res) => {
+    try {
+      const draft = await storage.getJobDraftByToken(req.params.token);
+      if (!draft) {
+        return res.status(404).json({ error: "Booking not found or expired" });
+      }
+
+      const parsedFields = JSON.parse(draft.parsedFields || "{}");
+      const paymentConfig = JSON.parse(draft.paymentConfig || "{}");
+      const user = await storage.getUser(draft.userId);
+
+      // Calculate deposit amount in cents
+      let depositAmountCents: number | undefined;
+      if (paymentConfig.depositAmount) {
+        depositAmountCents = paymentConfig.depositAmount;
+      } else if (paymentConfig.depositPercent && parsedFields.priceAmount) {
+        depositAmountCents = Math.round(parsedFields.priceAmount * (paymentConfig.depositPercent / 100));
+      }
+
+      res.json({
+        id: draft.id,
+        status: draft.status,
+        fields: parsedFields,
+        providerName: user?.businessName || user?.name || "Service Provider",
+        paymentType: paymentConfig.type || "after",
+        depositAmountCents,
+        expiresAt: draft.expiresAt,
+      });
+    } catch (error) {
+      console.error("Get public quickbook error:", error);
+      res.status(500).json({ error: "Failed to get booking details" });
+    }
+  });
+
+  // POST /api/public/quickbook/:token/confirm - Customer confirms booking
+  app.post("/api/public/quickbook/:token/confirm", async (req, res) => {
+    try {
+      const draft = await storage.getJobDraftByToken(req.params.token);
+      if (!draft) {
+        return res.status(404).json({ error: "Booking not found or expired" });
+      }
+      if (draft.status === "booked") {
+        return res.status(400).json({ error: "Booking already confirmed" });
+      }
+      if (draft.status === "expired") {
+        return res.status(400).json({ error: "Booking has expired" });
+      }
+
+      const { clientName, clientPhone, clientEmail } = req.body;
+      const parsedFields: ParsedJobFields = JSON.parse(draft.parsedFields || "{}");
+
+      // Create actual job from draft
+      const dateTimeStart = parsedFields.dateTimeStart 
+        ? new Date(parsedFields.dateTimeStart) 
+        : new Date();
+      
+      const job = await storage.createJob({
+        userId: draft.userId,
+        title: parsedFields.service 
+          ? `${parsedFields.service.charAt(0).toUpperCase() + parsedFields.service.slice(1)} Service`
+          : "QuickBook Job",
+        description: draft.sourceText,
+        serviceType: parsedFields.service || "other",
+        location: parsedFields.locationText || "",
+        scheduledDate: dateTimeStart.toISOString().split("T")[0],
+        scheduledTime: dateTimeStart.toTimeString().slice(0, 5),
+        duration: parsedFields.durationMins || 60,
+        status: "scheduled",
+        price: parsedFields.priceAmount || null,
+        clientName: clientName || parsedFields.clientName || "Customer",
+        clientPhone: clientPhone || parsedFields.clientPhone || "",
+        clientEmail: clientEmail || parsedFields.clientEmail || "",
+        paymentStatus: "unpaid",
+        createdAt: new Date().toISOString(),
+      });
+
+      // Update draft status
+      await storage.updateJobDraft(draft.id, {
+        status: "booked",
+        jobId: job.id,
+      });
+
+      res.json({
+        success: true,
+        jobId: job.id,
+        message: "Booking confirmed! The provider will be notified.",
+      });
+    } catch (error) {
+      console.error("Confirm quickbook error:", error);
+      res.status(500).json({ error: "Failed to confirm booking" });
     }
   });
 

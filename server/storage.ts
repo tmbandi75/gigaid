@@ -24,6 +24,7 @@ import {
   type AiNudge, type InsertAiNudge,
   type AiNudgeEvent, type InsertAiNudgeEvent,
   type FeatureFlag,
+  type JobDraft, type InsertJobDraft,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -186,6 +187,14 @@ export interface IStorage {
   getFeatureFlag(key: string): Promise<FeatureFlag | undefined>;
   setFeatureFlag(key: string, enabled: boolean, description?: string): Promise<FeatureFlag>;
   getAllFeatureFlags(): Promise<FeatureFlag[]>;
+
+  // Job Drafts (QuickBook)
+  getJobDrafts(userId: string): Promise<JobDraft[]>;
+  getJobDraft(id: string): Promise<JobDraft | undefined>;
+  getJobDraftByToken(token: string): Promise<JobDraft | undefined>;
+  createJobDraft(draft: InsertJobDraft): Promise<JobDraft>;
+  updateJobDraft(id: string, updates: Partial<JobDraft>): Promise<JobDraft | undefined>;
+  deleteJobDraft(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -211,6 +220,7 @@ export class MemStorage implements IStorage {
   private aiNudges: Map<string, AiNudge>;
   private aiNudgeEvents: Map<string, AiNudgeEvent>;
   private featureFlags: Map<string, FeatureFlag>;
+  private jobDrafts: Map<string, JobDraft>;
 
   constructor() {
     this.users = new Map();
@@ -235,6 +245,7 @@ export class MemStorage implements IStorage {
     this.aiNudges = new Map();
     this.aiNudgeEvents = new Map();
     this.featureFlags = new Map();
+    this.jobDrafts = new Map();
     
     // Seed default feature flags
     this.featureFlags.set("ai_micro_nudges", {
@@ -1764,6 +1775,50 @@ export class MemStorage implements IStorage {
 
   async getAllFeatureFlags(): Promise<FeatureFlag[]> {
     return Array.from(this.featureFlags.values());
+  }
+
+  // Job Drafts (QuickBook)
+  async getJobDrafts(userId: string): Promise<JobDraft[]> {
+    return Array.from(this.jobDrafts.values()).filter(d => d.userId === userId);
+  }
+
+  async getJobDraft(id: string): Promise<JobDraft | undefined> {
+    return this.jobDrafts.get(id);
+  }
+
+  async getJobDraftByToken(token: string): Promise<JobDraft | undefined> {
+    return Array.from(this.jobDrafts.values()).find(d => d.bookingLinkToken === token);
+  }
+
+  async createJobDraft(draft: InsertJobDraft): Promise<JobDraft> {
+    const id = randomUUID();
+    const newDraft: JobDraft = {
+      ...draft,
+      id,
+      status: draft.status ?? "draft",
+      parsedFields: draft.parsedFields ?? "{}",
+      confidence: draft.confidence ?? "{}",
+      paymentConfig: draft.paymentConfig ?? "{}",
+      bookingLinkUrl: draft.bookingLinkUrl ?? null,
+      bookingLinkToken: draft.bookingLinkToken ?? null,
+      jobId: draft.jobId ?? null,
+      updatedAt: null,
+      expiresAt: draft.expiresAt ?? null,
+    };
+    this.jobDrafts.set(id, newDraft);
+    return newDraft;
+  }
+
+  async updateJobDraft(id: string, updates: Partial<JobDraft>): Promise<JobDraft | undefined> {
+    const draft = this.jobDrafts.get(id);
+    if (!draft) return undefined;
+    const updated = { ...draft, ...updates, updatedAt: new Date().toISOString() };
+    this.jobDrafts.set(id, updated);
+    return updated;
+  }
+
+  async deleteJobDraft(id: string): Promise<boolean> {
+    return this.jobDrafts.delete(id);
   }
 }
 
