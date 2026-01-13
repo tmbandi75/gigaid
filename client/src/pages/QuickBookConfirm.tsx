@@ -228,17 +228,38 @@ export default function QuickBookConfirm() {
           </Card>
         )}
 
-        <Card className="bg-muted/30">
-          <CardContent className="pt-4">
-            <div className="flex items-start gap-3">
-              <Shield className="h-5 w-5 text-primary mt-0.5" />
-              <div className="space-y-1">
-                <p className="font-medium text-sm">Secure Booking</p>
-                <p className="text-xs text-muted-foreground">
-                  Your payment is protected. If the service provider doesn't show up, you'll receive a full refund.
-                </p>
-              </div>
+        <Card className="bg-muted/30" data-testid="trust-copy-block">
+          <CardContent className="pt-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              <p className="font-medium text-sm">Your payment is protected</p>
             </div>
+            <ul className="space-y-2 text-xs text-muted-foreground">
+              <li className="flex items-start gap-2">
+                <CheckCircle className="h-3.5 w-3.5 text-green-600 mt-0.5 flex-shrink-0" />
+                <span>You're only charged what's shown above</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle className="h-3.5 w-3.5 text-green-600 mt-0.5 flex-shrink-0" />
+                <span>Payments are processed securely</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle className="h-3.5 w-3.5 text-green-600 mt-0.5 flex-shrink-0" />
+                <span>Funds are released after the job is completed</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle className="h-3.5 w-3.5 text-green-600 mt-0.5 flex-shrink-0" />
+                <span>You'll receive reminders before your appointment</span>
+              </li>
+            </ul>
+            {draft.paymentType === "deposit" && draft.depositAmountCents && (
+              <p className="text-xs text-muted-foreground border-t pt-3 mt-3">
+                This deposit secures your appointment. The remaining balance is paid after the work is done.
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground/70 pt-1">
+              Secure payments powered by Stripe
+            </p>
           </CardContent>
         </Card>
 

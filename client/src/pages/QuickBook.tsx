@@ -46,6 +46,7 @@ export default function QuickBook() {
 
   const parseMutation = useMutation({
     mutationFn: async (text: string) => {
+      // TODO: Analytics - quickbook_parse_submitted
       const res = await apiRequest("POST", "/api/quickbook/parse", { messageText: text });
       return res.json() as Promise<ParseResponse>;
     },
@@ -55,6 +56,7 @@ export default function QuickBook() {
       setConfidence(data.confidence);
       setIsEditing(data.confidence.overall < 0.6);
       setStep("preview");
+      // TODO: Analytics - quickbook_preview_shown (with confidence: data.confidence.overall)
     },
     onError: (error: Error) => {
       toast({
@@ -86,6 +88,7 @@ export default function QuickBook() {
     onSuccess: (data) => {
       setBookingLinkUrl(data.bookingLinkUrl);
       setStep("sent");
+      // TODO: Analytics - quickbook_completed
     },
     onError: (error: Error) => {
       toast({
@@ -123,6 +126,7 @@ export default function QuickBook() {
     navigator.clipboard.writeText(bookingLinkUrl);
     setCopied(true);
     toast({ title: "Link copied!" });
+    // TODO: Analytics - quickbook_copy_link_clicked
     setTimeout(() => setCopied(false), 2000);
   };
 

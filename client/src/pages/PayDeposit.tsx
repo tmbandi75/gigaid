@@ -208,12 +208,34 @@ export default function PayDeposit() {
               </div>
             ) : (
               <>
-                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-sm" data-testid="section-trust-message">
-                  <h4 className="font-medium text-blue-700 dark:text-blue-400 mb-2">Why a deposit?</h4>
-                  <p className="text-blue-600 dark:text-blue-500">
-                    A small deposit helps us hold your spot and ensures we can provide 
-                    you with dedicated, quality service. Your deposit will be applied 
-                    to your final bill.
+                <div className="p-4 bg-muted/50 rounded-xl text-sm space-y-3" data-testid="section-trust-message">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-primary" />
+                    <h4 className="font-medium">Your payment is protected</h4>
+                  </div>
+                  <ul className="space-y-2 text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>You're only charged what's shown above</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>Payments are processed securely</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>Funds are released after the job is completed</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>You'll receive reminders before your appointment</span>
+                    </li>
+                  </ul>
+                  <p className="text-xs text-muted-foreground border-t pt-3">
+                    This deposit secures your appointment. The remaining balance is paid after the work is done.
+                  </p>
+                  <p className="text-xs text-muted-foreground/70">
+                    Secure payments powered by Stripe
                   </p>
                 </div>
 

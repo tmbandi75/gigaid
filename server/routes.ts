@@ -5671,9 +5671,36 @@ Return ONLY the message text, no JSON or formatting.`
     next();
   };
 
+  // Simple in-memory rate limiting for quickbook parse endpoint (10 requests per minute per user)
+  const quickbookParseRateLimits = new Map<string, { count: number; resetAt: number }>();
+  const QUICKBOOK_RATE_LIMIT = 10;
+  const QUICKBOOK_RATE_WINDOW_MS = 60 * 1000; // 1 minute
+
+  const checkQuickbookParseRateLimit = (userId: string): boolean => {
+    const now = Date.now();
+    const userLimit = quickbookParseRateLimits.get(userId);
+    
+    if (!userLimit || now > userLimit.resetAt) {
+      quickbookParseRateLimits.set(userId, { count: 1, resetAt: now + QUICKBOOK_RATE_WINDOW_MS });
+      return true;
+    }
+    
+    if (userLimit.count >= QUICKBOOK_RATE_LIMIT) {
+      return false;
+    }
+    
+    userLimit.count++;
+    return true;
+  };
+
   // POST /api/quickbook/parse - Parse pasted message and create draft
   app.post("/api/quickbook/parse", checkQuickbookEnabled, async (req, res) => {
     try {
+      // Rate limiting check
+      if (!checkQuickbookParseRateLimit(defaultUserId)) {
+        return res.status(429).json({ error: "Too many requests. Please wait a minute and try again." });
+      }
+
       const { messageText } = req.body;
       
       // Validation: required, trim, 10-2000 chars
