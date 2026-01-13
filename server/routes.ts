@@ -317,11 +317,46 @@ export async function registerRoutes(
 
   app.patch("/api/jobs/:id", async (req, res) => {
     try {
+      const existingJob = await storage.getJob(req.params.id);
+      if (!existingJob) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
       const updates = insertJobSchema.partial().parse(req.body);
       const job = await storage.updateJob(req.params.id, updates);
       if (!job) {
         return res.status(404).json({ error: "Job not found" });
       }
+      
+      // Revenue protection: Auto-create draft invoice when job is completed
+      if (updates.status === "completed" && existingJob.status !== "completed") {
+        // Check if job already has an invoice
+        const invoices = await storage.getInvoices(job.userId);
+        const hasInvoice = invoices.some(inv => inv.jobId === job.id);
+        
+        if (!hasInvoice && job.price) {
+          // Create draft invoice automatically
+          const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`;
+          const draftInvoice = await storage.createInvoice({
+            jobId: job.id,
+            userId: job.userId,
+            clientName: job.clientName || "Client",
+            clientPhone: job.clientPhone,
+            invoiceNumber,
+            amount: job.price,
+            status: "draft",
+            serviceDescription: `${job.title || job.serviceType || "Service"} - ${job.description || ""}`.trim(),
+          });
+          
+          // Return job with auto-created invoice info
+          return res.json({
+            ...job,
+            autoCreatedInvoice: draftInvoice,
+            autoInvoiceMessage: "Draft invoice created automatically. Review and send to client.",
+          });
+        }
+      }
+      
       res.json(job);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -5504,6 +5539,25 @@ Return ONLY the message text, no JSON or formatting.`
       if (mode === "daily") {
         // Already sorted by priority from storage, just take top 3
         const topNudges = nudges.slice(0, 3);
+        
+        // Update lastShownAt and create shown events for delivered nudges
+        const now = new Date().toISOString();
+        try {
+          await Promise.all(
+            topNudges.map(async n => {
+              await storage.updateAiNudge(n.id, { lastShownAt: now });
+              await storage.createAiNudgeEvent({
+                nudgeId: n.id,
+                userId: n.userId,
+                eventType: "shown",
+                eventAt: now,
+              });
+            })
+          );
+        } catch (err) {
+          console.error("Failed to update lastShownAt:", err);
+        }
+        
         return res.json(topNudges);
       }
 
@@ -5521,6 +5575,24 @@ Return ONLY the message text, no JSON or formatting.`
       }
 
       const limitedNudges = Array.from(entityNudges.values()).flat();
+      
+      // Update lastShownAt and create shown events for delivered nudges
+      const now = new Date().toISOString();
+      try {
+        await Promise.all(
+          limitedNudges.map(async n => {
+            await storage.updateAiNudge(n.id, { lastShownAt: now });
+            await storage.createAiNudgeEvent({
+              nudgeId: n.id,
+              userId: n.userId,
+              eventType: "shown",
+              eventAt: now,
+            });
+          })
+        );
+      } catch (err) {
+        console.error("Failed to update lastShownAt:", err);
+      }
       
       res.json(limitedNudges);
     } catch (error) {
@@ -5640,6 +5712,38 @@ Return ONLY the message text, no JSON or formatting.`
     }
   });
 
+  // Complete a nudge outcome - called when the action resulted in successful outcome
+  app.post("/api/ai/nudges/:id/complete", async (req, res) => {
+    try {
+      const { outcome_type, entity_id, metadata } = req.body;
+      const nudge = await storage.getAiNudge(req.params.id);
+      if (!nudge) {
+        return res.status(404).json({ error: "Nudge not found" });
+      }
+
+      // Update nudge status to completed
+      await storage.updateAiNudge(req.params.id, { status: "completed" });
+      
+      // Record completion event with outcome data
+      await storage.createAiNudgeEvent({
+        nudgeId: nudge.id,
+        userId: nudge.userId,
+        eventType: "completed",
+        eventAt: new Date().toISOString(),
+        metadata: JSON.stringify({ 
+          outcome_type, 
+          entity_id,
+          ...metadata,
+        }),
+      });
+
+      res.json({ success: true, status: "completed" });
+    } catch (error) {
+      console.error("Complete nudge error:", error);
+      res.status(500).json({ error: "Failed to complete nudge" });
+    }
+  });
+
   // GigAid Impact - outcomes attribution stats
   app.get("/api/ai/impact", async (req, res) => {
     try {
@@ -5647,8 +5751,9 @@ Return ONLY the message text, no JSON or formatting.`
       const invoices = await storage.getInvoices(defaultUserId);
       const leads = await storage.getLeads(defaultUserId);
 
-      // Count acted nudges by type
-      const actedNudges = nudges.filter(n => n.status === "acted");
+      // Count acted and completed nudges by type
+      const actedNudges = nudges.filter(n => n.status === "acted" || n.status === "completed");
+      const completedNudges = nudges.filter(n => n.status === "completed");
       
       // Invoice reminders that were acted upon
       const invoiceReminderActed = actedNudges.filter(n => 
@@ -5687,6 +5792,11 @@ Return ONLY the message text, no JSON or formatting.`
         ? Math.round((actedNudges.length / totalNudgesGenerated) * 100) 
         : 0;
 
+      // Completion rate (how many acted nudges resulted in completed outcomes)
+      const completionRate = actedNudges.length > 0 
+        ? Math.round((completedNudges.length / actedNudges.length) * 100) 
+        : 0;
+
       res.json({
         moneyCollectedViaReminders,
         invoiceRemindersActed: invoiceReminderActed,
@@ -5694,9 +5804,17 @@ Return ONLY the message text, no JSON or formatting.`
         invoicesFromNudge,
         totalNudgesGenerated,
         totalActed: actedNudges.length,
+        totalCompleted: completedNudges.length,
         actionRate,
+        completionRate,
         thisWeek: {
           nudgesActed: actedNudges.filter(n => {
+            const nudgeData = nudges.find(nd => nd.id === n.id);
+            if (!nudgeData?.createdAt) return false;
+            const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            return new Date(nudgeData.createdAt) >= weekAgo;
+          }).length,
+          nudgesCompleted: completedNudges.filter(n => {
             const nudgeData = nudges.find(nd => nd.id === n.id);
             if (!nudgeData?.createdAt) return false;
             const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
