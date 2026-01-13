@@ -1,0 +1,209 @@
+You are working in the GigAid Replit codebase:
+- Frontend: React + Vite
+- Backend: Node.js + Express
+- Express serves both API + React frontend
+
+Implement a new “Paste message → booked” quick-flow that creates a Job Draft from pasted client text, generates a booking link, and provides a one-tap “Send booking link” step. Do this with minimal, safe changes and without breaking existing Jobs/Leads/Booking/Payments flows.
+
+NON-NEGOTIABLES
+- Smallest safe diff. No broad refactors.
+- Feature-flag the new flow (server + client) so it can be rolled out gradually and disabled instantly.
+- Do not change existing routes or data contracts unless you add new ones.
+- All new endpoints must validate input and enforce auth.
+- If AI parsing fails or confidence is low, fall back to a manual “Edit details” screen instead of blocking.
+
+HIGH-LEVEL UX (exact)
+Entry point: A primary button visible on Dashboard and/or Jobs: “Paste a client message”
+Flow screens:
+1) Paste Screen
+   - Title: “Paste what your client sent you”
+   - Textarea placeholder example
+   - Helper text: “We’ll turn this into a booked job.”
+   - Primary CTA: “Create Booking”
+2) Preview Screen (“Here’s what we got 👇”)
+   - Job summary card with editable fields:
+     - Service
+     - Date & Time
+     - Location
+     - Price
+   - Payment section defaulted:
+     - “✔ $50 deposit now / Remaining after the job”
+     - A “Change” link that reveals options: deposit %, full upfront, pay after (if supported)
+   - Reminders: “✔ Automatic reminders sent to your client” (no toggle here)
+   - Primary CTA: “Send Booking Link”
+   - Secondary: “Edit details”
+3) Sent Screen
+   - “Booking link sent 🎉”
+   - “Your client can book and pay in seconds. You’ll be notified when it’s confirmed.”
+   - Bullet list:
+     - “You’ll get a confirmation”
+     - “The appointment is added to your schedule”
+     - “Reminders are sent automatically”
+   - Primary: “Done”
+
+PART A — FIND & REUSE EXISTING LOGIC
+1) Locate existing logic for:
+   - Creating a job/lead
+   - Generating/serving the public booking link
+   - Creating invoices/deposits (Stripe or current payment mechanism)
+   - Reminders creation/scheduling
+2) Reuse existing services/utilities. Do not duplicate business rules.
+
+PART B — DATA MODEL (minimal additions)
+Add a “JobDraft” concept (choose the smallest approach):
+Option 1 (preferred): Create a new table/collection/entity for drafts:
+- id
+- user_id
+- source_text (original pasted message)
+- parsed_fields JSON (service, datetime, location, price, duration)
+- confidence JSON (overall + per-field)
+- status: 'draft' | 'link_sent' | 'booked' | 'expired'
+- booking_link_url (generated)
+- created_at, updated_at
+
+Option 2: If you already have Leads or Jobs with a “draft” status, reuse that and add only the missing fields.
+
+Do NOT introduce complex state machines.
+
+PART C — BACKEND APIS (Express)
+Implement under /api/quickbook/* with auth middleware:
+
+1) POST /api/quickbook/parse
+Purpose: Accept pasted message text and return a parsed draft preview.
+Request:
+- { messageText: string }
+Validation:
+- required, trim, 10–2000 chars
+Response:
+- { draftId, fields: { service, dateTimeStart, dateTimeEnd, locationText, priceAmount, currency, durationMins }, confidence: {...}, suggestions?: {...} }
+
+Parsing behavior:
+- Use the existing AI integration if present.
+- If no AI exists, implement a rule-based fallback:
+  - Detect date/time phrases (tomorrow, next Friday, 3pm) with a simple library or conservative heuristics.
+  - If uncertain, return nulls + low confidence.
+Confidence thresholds:
+- overallConfidence >= 0.6: show preview normally
+- < 0.6: still create draft, but UI should guide user to “Edit details” immediately
+
+2) PATCH /api/quickbook/draft/:id
+Purpose: Update draft fields after user edits.
+Request:
+- partial fields object
+Validation:
+- enforce sane ranges (price >= 0, duration 15–480, date in future, etc.)
+Response:
+- updated draft
+
+3) POST /api/quickbook/draft/:id/send-link
+Purpose: Generate (or fetch) booking link and mark draft as link_sent.
+Also record the intended payment settings (deposit/full/etc.) on the draft or related object.
+Request:
+- { paymentIntentConfig: { type: 'deposit'|'full'|'after', depositAmount?: number, depositPercent?: number } }
+Response:
+- { bookingLinkUrl }
+Rules:
+- Default deposit to $50 if price >= $100, else 30% if price provided, else $25.
+- If payment isn’t supported yet, still create bookingLinkUrl and omit payment config gracefully.
+
+4) (Optional) POST /api/quickbook/draft/:id/mark-sent
+If you need to record that the user actually sent it. Otherwise log client-side event only.
+
+Security:
+- All endpoints require authenticated user and ownership checks.
+- Rate limit parse endpoint (per user) to prevent abuse.
+- Sanitize messageText (no HTML rendering).
+
+Feature flag:
+- Add QUICKBOOK_ENABLED boolean in server config.
+- If disabled, endpoints return 404 or {error:"disabled"}.
+
+PART D — FRONTEND (React)
+Add a new route: /quickbook (or a modal-driven flow)
+Implement 3-step wizard with local state + API calls:
+
+1) PasteStep component
+- textarea + Create Booking button
+- on submit: call POST /api/quickbook/parse
+- navigate to PreviewStep with draftId
+
+2) PreviewStep component
+- fetch draft by id or use parse response
+- render editable fields inline:
+  - Service (select or text)
+  - Date/time (picker)
+  - Location (text)
+  - Price (number)
+- Payment section:
+  - default shown as “✔ $50 deposit now / Remaining after the job”
+  - “Change” reveals choices
+- Primary CTA “Send Booking Link”:
+  - calls POST /api/quickbook/draft/:id/send-link with chosen payment config
+  - then navigate to SentStep
+- Secondary “Edit details” should just focus the edit UI (no new screen needed) OR open a simple edit panel.
+- If confidence low (<0.6), auto-open edit mode and show helper:
+  “Quick check: update anything that looks off.”
+
+3) SentStep component
+- show success copy exactly
+- show bookingLinkUrl with:
+  - “Copy link” button (clipboard API + toast “Link copied”)
+  - Optional “Share” if mobile later (not required now)
+- Done button returns to Dashboard
+
+Entry point button:
+- Add a primary button on Dashboard and/or Jobs list:
+  “Paste a client message”
+- Only show if QUICKBOOK_ENABLED is true (fetched from /api/config or similar).
+
+Tracking (only if analytics exists; otherwise add console TODO):
+- quickbook_opened
+- quickbook_parse_submitted
+- quickbook_preview_shown (with confidence)
+- quickbook_send_link_clicked
+- quickbook_completed
+- quickbook_copy_link_clicked
+
+PART E — CUSTOMER PAYMENT PAGE TRUST COPY
+On the public booking/payment page (where the client pays), add a “Your payment is protected” block:
+
+Header: “Your payment is protected”
+Bullets:
+- “You’re only charged what’s shown above”
+- “Payments are processed securely”
+- “Funds are released after the job is completed”
+- “You’ll receive reminders before your appointment”
+Footer: “Secure payments powered by Stripe”
+
+If deposit:
+Add below deposit amount:
+“This deposit secures your appointment. The remaining balance is paid after the work is done.”
+
+Only add this copy if a payment section exists on that page. Keep wording simple, no legalese.
+
+PART F — QA CHECKLIST (must pass)
+- Existing booking flow still works unchanged.
+- Feature flag off: button hidden and endpoints disabled.
+- Feature flag on: full quickbook flow works.
+- Parse failure: user can still manually edit and proceed.
+- Confetti NOT required here (separate task) unless it already exists in this flow.
+- Booking link generation is valid and opens correctly.
+- Copy link works and shows toast.
+- All endpoints enforce auth + ownership.
+
+DELIVERABLES
+- PR-ready implementation:
+  - new API routes under /api/quickbook
+  - new React route /quickbook or a modal wizard
+  - minimal updates to Dashboard for entry button
+  - trust copy block added to public payment page
+- Add short comments at integration points explaining why.
+
+Proceed carefully:
+1) Locate existing booking link + job creation services
+2) Implement draft storage (reuse existing entity if possible)
+3) Add parse endpoint with AI + fallback
+4) Build the 3-step UI
+5) Add send-link endpoint and connect UI
+6) Add trust copy to payment page
+7) Run through QA checklist and fix regressions
