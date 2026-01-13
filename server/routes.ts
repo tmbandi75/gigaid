@@ -4987,6 +4987,8 @@ Return ONLY the message text, no JSON or formatting.`
       const crewMembers = await storage.getCrewMembers(defaultUserId);
       const reviews = await storage.getReviews(defaultUserId);
       const user = await storage.getUser(defaultUserId);
+      const aiNudges = await storage.getAiNudges(defaultUserId);
+      const featureFlags = await storage.getAllFeatureFlags();
 
       const exportData = {
         exportedAt: new Date().toISOString(),
@@ -5007,6 +5009,8 @@ Return ONLY the message text, no JSON or formatting.`
           reminders,
           crewMembers,
           reviews,
+          aiNudges,
+          featureFlags,
         },
         summary: {
           totalJobs: jobs.length,
@@ -5015,6 +5019,8 @@ Return ONLY the message text, no JSON or formatting.`
           totalReminders: reminders.length,
           totalCrewMembers: crewMembers.length,
           totalReviews: reviews.length,
+          totalAiNudges: aiNudges.length,
+          totalFeatureFlags: featureFlags.length,
         }
       };
 
