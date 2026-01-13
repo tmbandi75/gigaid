@@ -288,8 +288,24 @@ export async function registerRoutes(
 
   app.post("/api/jobs", async (req, res) => {
     try {
-      const validated = insertJobSchema.parse(req.body);
+      // Extract leadId from body (not part of job schema)
+      const { leadId, ...jobData } = req.body;
+      
+      const validated = insertJobSchema.parse(jobData);
       const job = await storage.createJob(validated);
+      
+      // Auto-link lead if leadId provided
+      if (leadId && typeof leadId === "string") {
+        const lead = await storage.getLead(leadId);
+        if (lead && lead.userId === validated.userId) {
+          await storage.updateLead(leadId, {
+            status: "converted",
+            convertedAt: new Date().toISOString(),
+            convertedJobId: job.id,
+          });
+        }
+      }
+      
       res.status(201).json(job);
     } catch (error) {
       if (error instanceof z.ZodError) {

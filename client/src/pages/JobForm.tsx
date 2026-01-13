@@ -364,6 +364,7 @@ export default function JobForm() {
   const urlParams = new URLSearchParams(searchString);
   const prefillClientName = urlParams.get("clientName") || "";
   const parsedPrefill = parseClientName(prefillClientName);
+  const leadId = urlParams.get("leadId") || null;
   
   const prefillData = {
     serviceType: urlParams.get("serviceType") || "",
@@ -544,12 +545,17 @@ export default function JobForm() {
         clientPhone: data.clientPhone,
         userId: "demo-user",
         status: "scheduled",
+        leadId: leadId || undefined, // Auto-link lead to job
       };
       return apiRequest("POST", "/api/jobs", payload);
     },
     onSuccess: async (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
+      if (leadId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/leads", leadId] });
+      }
       
       const clientName = [variables.clientFirstName, variables.clientLastName]
         .filter(Boolean)
