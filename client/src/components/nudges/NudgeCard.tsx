@@ -34,7 +34,8 @@ export function NudgeCard({ maxNudges = 3 }: NudgeCardProps) {
     if (prefill.clientName) params.set("clientName", prefill.clientName);
     if (prefill.clientPhone) params.set("clientPhone", prefill.clientPhone);
     if (prefill.clientEmail) params.set("clientEmail", prefill.clientEmail);
-    if (prefill.title) params.set("title", prefill.title);
+    if (prefill.serviceType) params.set("serviceType", prefill.serviceType);
+    if (prefill.description) params.set("description", prefill.description);
     navigate(`/jobs/new?${params.toString()}`);
   };
 
@@ -42,6 +43,9 @@ export function NudgeCard({ maxNudges = 3 }: NudgeCardProps) {
     const params = new URLSearchParams();
     if (prefill.jobId) params.set("jobId", prefill.jobId);
     if (prefill.clientName) params.set("clientName", prefill.clientName);
+    if (prefill.clientEmail) params.set("clientEmail", prefill.clientEmail);
+    if (prefill.clientPhone) params.set("clientPhone", prefill.clientPhone);
+    if (prefill.serviceDescription) params.set("serviceDescription", prefill.serviceDescription);
     if (prefill.amount) params.set("amount", String(prefill.amount));
     navigate(`/invoices/new?${params.toString()}`);
   };
