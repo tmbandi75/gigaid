@@ -5830,10 +5830,13 @@ Return ONLY the message text, no JSON or formatting.`
   });
 
   // Admin endpoint to force-regenerate nudges and backfill missing ones
+  // ?force=true bypasses daily cap (for testing only)
   app.post("/api/admin/backfill-nudges", async (req, res) => {
     try {
+      const forceBypass = req.query.force === "true";
+      
       // Force regenerate nudges for the user
-      const result = await generateNudgesForUser(defaultUserId);
+      const result = await generateNudgesForUser(defaultUserId, forceBypass);
       
       // Also check for completed jobs without invoices and create nudges
       const jobs = await storage.getJobs(defaultUserId);

@@ -82,12 +82,13 @@ function generateLeadNudges(lead: Lead, userId: string): NudgeCandidate[] {
     // Boost priority based on lead score (clamp to 0 to avoid negative scores lowering priority)
     const basePriority = 85;
     const scoreBoost = lead.score && lead.score > 0 ? Math.min(lead.score * 0.1, 10) : 0;
+    const finalPriority = Math.round(basePriority + scoreBoost);
     
     candidates.push({
       entityType: "lead",
       entityId: lead.id,
       nudgeType: "lead_convert_to_job",
-      priority: basePriority + scoreBoost,
+      priority: finalPriority,
       explainText: isHighScoreResponded 
         ? `High-intent lead (score ${lead.score}). Ready to book?` 
         : "Turn this into a job?",
@@ -239,19 +240,19 @@ function generateJobNudges(job: Job, userId: string, invoices: Invoice[]): Nudge
   return candidates;
 }
 
-export async function generateNudgesForUser(userId: string): Promise<{ createdCount: number; activeCount: number }> {
+export async function generateNudgesForUser(userId: string, forceBypassCap: boolean = false): Promise<{ createdCount: number; activeCount: number }> {
   const featureFlag = await storage.getFeatureFlag("ai_micro_nudges");
   if (!featureFlag?.enabled) {
     return { createdCount: 0, activeCount: 0 };
   }
 
-  // Check daily cap
+  // Check daily cap (can be bypassed for testing)
   const todayCount = await storage.getTodayNudgeCount(userId);
-  if (todayCount >= MAX_NUDGES_PER_DAY) {
+  if (!forceBypassCap && todayCount >= MAX_NUDGES_PER_DAY) {
     const activeNudges = await storage.getActiveAiNudgesForUser(userId);
     return { createdCount: 0, activeCount: activeNudges.length };
   }
-  const remainingDailyCap = MAX_NUDGES_PER_DAY - todayCount;
+  const remainingDailyCap = forceBypassCap ? 100 : MAX_NUDGES_PER_DAY - todayCount;
 
   const [leads, invoices, jobs] = await Promise.all([
     storage.getLeads(userId),
