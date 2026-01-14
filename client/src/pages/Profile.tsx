@@ -20,7 +20,20 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useUpload } from "@/hooks/use-upload";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Camera, Loader2, User, Mail, Phone, Building2, MapPin, FileText, Sparkles } from "lucide-react";
+import { 
+  ArrowLeft, 
+  Camera, 
+  Loader2, 
+  Mail, 
+  Phone, 
+  Building2, 
+  MapPin, 
+  Pencil,
+  X,
+  Check,
+  Briefcase,
+  Globe,
+} from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { BioEditor } from "@/components/settings/BioEditor";
 
@@ -55,12 +68,28 @@ function parseStoredName(name: string | null): { firstName: string; lastName: st
   return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
 }
 
+function ProfileInfoRow({ icon: Icon, label, value }: { icon: typeof Mail; label: string; value: string | null }) {
+  if (!value) return null;
+  return (
+    <div className="flex items-start gap-3 py-3">
+      <div className="h-9 w-9 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-sm font-medium text-foreground break-words">{value}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function Profile() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   const { data: profile, isLoading } = useQuery<UserProfile>({
     queryKey: ["/api/profile"],
@@ -107,6 +136,7 @@ export default function Profile() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
       toast({ title: "Profile updated successfully" });
+      setIsEditing(false);
     },
     onError: () => {
       toast({ title: "Failed to update profile", variant: "destructive" });
@@ -142,6 +172,22 @@ export default function Profile() {
       }
       await uploadFile(file);
     }
+  };
+
+  const handleCancelEdit = () => {
+    // Reset form with the current profile data (not empty defaults)
+    if (profile) {
+      form.reset({
+        firstName: parsedName.firstName,
+        lastName: parsedName.lastName,
+        email: profile.email || "",
+        companyName: profile.businessName || "",
+        phone: profile.phone || "",
+        bio: profile.bio || "",
+        serviceArea: profile.serviceArea || "",
+      });
+    }
+    setIsEditing(false);
   };
 
   const currentPhoto = photoUrl || profile?.photo;
@@ -180,26 +226,148 @@ export default function Profile() {
     );
   }
 
+  // VIEW MODE
+  if (!isEditing) {
+    return (
+      <div className="min-h-screen bg-background pb-24" data-testid="page-profile">
+        <div className="relative overflow-hidden bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 text-white px-4 pt-6 pb-28">
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 -left-10 w-32 h-32 bg-slate-400/10 rounded-full blur-2xl" />
+          </div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-6">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/more")}
+                className="-ml-2 text-white/80 hover:text-white hover:bg-white/10"
+                data-testid="button-back"
+              >
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Back
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsEditing(true)}
+                className="text-white/80 hover:text-white hover:bg-white/10"
+                data-testid="button-edit-profile"
+              >
+                <Pencil className="h-4 w-4 mr-1" />
+                Edit
+              </Button>
+            </div>
+            <h1 className="text-2xl font-bold">My Profile</h1>
+          </div>
+        </div>
+
+        <div className="px-4 -mt-20 relative z-10">
+          <Card className="border-0 shadow-lg">
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center text-center">
+                <div className="relative mb-4">
+                  <Avatar className="h-24 w-24 ring-4 ring-background shadow-lg">
+                    {currentPhoto ? (
+                      <AvatarImage src={currentPhoto} alt="Profile" />
+                    ) : null}
+                    <AvatarFallback className="bg-gradient-to-br from-primary to-violet-600 text-white text-2xl font-semibold">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+                
+                <h2 className="text-xl font-bold text-foreground">{displayName}</h2>
+                {profile?.businessName && (
+                  <p className="text-sm text-muted-foreground mt-0.5">{profile.businessName}</p>
+                )}
+                <Badge variant="secondary" className="mt-3">Free Plan</Badge>
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-border/50">
+                <ProfileInfoRow 
+                  icon={Mail} 
+                  label="Email" 
+                  value={profile?.email ?? null} 
+                />
+                <ProfileInfoRow 
+                  icon={Phone} 
+                  label="Phone" 
+                  value={profile?.phone ?? null} 
+                />
+                <ProfileInfoRow 
+                  icon={MapPin} 
+                  label="Service Area" 
+                  value={profile?.serviceArea ?? null} 
+                />
+                {profile?.services && profile.services.length > 0 && (
+                  <div className="flex items-start gap-3 py-3">
+                    <div className="h-9 w-9 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
+                      <Briefcase className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground">Services</p>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {profile.services.map((service, i) => (
+                          <Badge key={i} variant="outline" className="text-xs capitalize">
+                            {service}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {profile?.bio && (
+            <Card className="border-0 shadow-md mt-4">
+              <CardContent className="pt-6">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">About</h3>
+                <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                  {profile.bio}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          <Button
+            className="w-full mt-6 h-12"
+            onClick={() => setIsEditing(true)}
+            data-testid="button-edit-profile-bottom"
+          >
+            <Pencil className="h-4 w-4 mr-2" />
+            Edit Profile
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // EDIT MODE
   return (
-    <div className="min-h-screen bg-background pb-24" data-testid="page-profile">
+    <div className="min-h-screen bg-background pb-24" data-testid="page-profile-edit">
       <div className="relative overflow-hidden bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 text-white px-4 pt-6 pb-24">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
           <div className="absolute bottom-0 -left-10 w-32 h-32 bg-slate-400/10 rounded-full blur-2xl" />
         </div>
         <div className="relative">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate("/more")}
-            className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
-            data-testid="button-back"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back
-          </Button>
-          <h1 className="text-2xl font-bold">Profile</h1>
-          <p className="text-slate-300/80 mt-1">Manage your personal information</p>
+          <div className="flex items-center justify-between mb-6">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCancelEdit}
+              className="-ml-2 text-white/80 hover:text-white hover:bg-white/10"
+              data-testid="button-cancel-edit"
+            >
+              <X className="h-4 w-4 mr-1" />
+              Cancel
+            </Button>
+          </div>
+          <h1 className="text-2xl font-bold">Edit Profile</h1>
+          <p className="text-slate-300/80 mt-1">Update your personal information</p>
         </div>
       </div>
 
@@ -237,11 +405,7 @@ export default function Profile() {
                 data-testid="input-photo"
               />
             </div>
-            <h2 className="font-semibold text-lg">{displayName}</h2>
-            {profile?.businessName && (
-              <p className="text-sm text-muted-foreground">{profile.businessName}</p>
-            )}
-            <Badge variant="secondary" className="mt-2">Free Plan</Badge>
+            <p className="text-sm text-muted-foreground">Tap to change photo</p>
           </CardContent>
         </Card>
 
@@ -249,8 +413,7 @@ export default function Profile() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <Card className="border-0 shadow-md">
               <CardContent className="pt-6">
-                <h3 className="font-medium mb-4 flex items-center gap-2 text-sm text-muted-foreground uppercase tracking-wide">
-                  <User className="h-4 w-4" />
+                <h3 className="font-medium mb-4 text-sm text-muted-foreground uppercase tracking-wide">
                   Personal Info
                 </h3>
                 <div className="space-y-4">
@@ -341,8 +504,7 @@ export default function Profile() {
 
             <Card className="border-0 shadow-md">
               <CardContent className="pt-6">
-                <h3 className="font-medium mb-4 flex items-center gap-2 text-sm text-muted-foreground uppercase tracking-wide">
-                  <Building2 className="h-4 w-4" />
+                <h3 className="font-medium mb-4 text-sm text-muted-foreground uppercase tracking-wide">
                   Business Info
                 </h3>
                 <div className="space-y-4">
@@ -351,7 +513,10 @@ export default function Profile() {
                     name="companyName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Company Name</FormLabel>
+                        <FormLabel className="flex items-center gap-2">
+                          <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                          Company Name
+                        </FormLabel>
                         <FormControl>
                           <Input
                             placeholder="Your Company Name"
@@ -393,8 +558,7 @@ export default function Profile() {
 
             <Card className="border-0 shadow-md">
               <CardContent className="pt-6">
-                <h3 className="font-medium mb-4 flex items-center gap-2 text-sm text-muted-foreground uppercase tracking-wide">
-                  <FileText className="h-4 w-4" />
+                <h3 className="font-medium mb-4 text-sm text-muted-foreground uppercase tracking-wide">
                   About You
                 </h3>
                 <BioEditor
@@ -406,21 +570,35 @@ export default function Profile() {
               </CardContent>
             </Card>
 
-            <Button
-              type="submit"
-              className="w-full h-12 text-base"
-              disabled={updateMutation.isPending}
-              data-testid="button-save"
-            >
-              {updateMutation.isPending ? (
-                <>
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Changes"
-              )}
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 h-12"
+                onClick={handleCancelEdit}
+                data-testid="button-cancel"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 h-12"
+                disabled={updateMutation.isPending}
+                data-testid="button-save"
+              >
+                {updateMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-5 w-5 mr-2" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
           </form>
         </Form>
       </div>
