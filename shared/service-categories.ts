@@ -1,7 +1,37 @@
+export type ServiceIconName =
+  | "Wrench"
+  | "Droplets"
+  | "Zap"
+  | "Sparkles"
+  | "LayoutGrid"
+  | "TreePine"
+  | "PanelTop"
+  | "Layers"
+  | "Hammer"
+  | "Thermometer"
+  | "Package"
+  | "Car"
+  | "Lock"
+  | "Scissors"
+  | "Baby"
+  | "Dog"
+  | "Home"
+  | "Heart"
+  | "Camera"
+  | "PartyPopper"
+  | "GraduationCap"
+  | "ShowerHead"
+  | "Shield"
+  | "Monitor"
+  | "Briefcase"
+  | "ClipboardCheck"
+  | "Snowflake"
+  | "MoreHorizontal";
+
 export interface ServiceCategory {
   id: string;
   name: string;
-  icon: string;
+  icon: ServiceIconName;
   services: string[];
 }
 
@@ -9,7 +39,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "handyman",
     name: "Handyman / General Home Services",
-    icon: "🛠️",
+    icon: "Wrench",
     services: [
       "General Handyman Work",
       "Furniture Assembly",
@@ -23,7 +53,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "plumbing",
     name: "Plumbing",
-    icon: "🚿",
+    icon: "Droplets",
     services: [
       "Faucet Repair / Replacement",
       "Toilet Repair",
@@ -37,7 +67,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "electrical",
     name: "Electrical",
-    icon: "⚡",
+    icon: "Zap",
     services: [
       "Light Fixture Installation",
       "Outlet / Switch Repair",
@@ -50,7 +80,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "cleaning",
     name: "Cleaning",
-    icon: "🧹",
+    icon: "Sparkles",
     services: [
       "Standard Home Cleaning",
       "Deep Cleaning",
@@ -64,7 +94,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "interior-care",
     name: "Interior Care & Organization",
-    icon: "🧽",
+    icon: "LayoutGrid",
     services: [
       "Home Organization",
       "Decluttering Services",
@@ -76,7 +106,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "lawn-outdoor",
     name: "Lawn & Outdoor",
-    icon: "🌿",
+    icon: "TreePine",
     services: [
       "Lawn Mowing",
       "Yard Cleanup",
@@ -90,7 +120,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "windows-exterior",
     name: "Windows & Exterior Care",
-    icon: "🪟",
+    icon: "PanelTop",
     services: [
       "Window Cleaning",
       "Gutter Cleaning",
@@ -101,7 +131,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "flooring",
     name: "Flooring & Surfaces",
-    icon: "🧱",
+    icon: "Layers",
     services: [
       "Tile Repair",
       "Floor Installation (Vinyl / Laminate)",
@@ -113,7 +143,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "carpentry",
     name: "Carpentry & Light Remodeling",
-    icon: "🪚",
+    icon: "Hammer",
     services: [
       "Cabinet Installation",
       "Trim & Molding",
@@ -125,7 +155,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "hvac",
     name: "HVAC (Light / Non-Licensed)",
-    icon: "❄️",
+    icon: "Thermometer",
     services: [
       "AC Tune-Up",
       "Furnace Check",
@@ -137,7 +167,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "moving",
     name: "Moving & Labor",
-    icon: "📦",
+    icon: "Package",
     services: [
       "Local Moving Help",
       "Furniture Moving",
@@ -149,7 +179,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "auto",
     name: "Auto & Mobile Services",
-    icon: "🚗",
+    icon: "Car",
     services: [
       "Mobile Car Wash",
       "Interior Detailing",
@@ -161,7 +191,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "security",
     name: "Security & Smart Home",
-    icon: "🔐",
+    icon: "Lock",
     services: [
       "Smart Lock Installation",
       "Camera Installation",
@@ -172,7 +202,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "hair-beauty",
     name: "Hair & Beauty",
-    icon: "✂️",
+    icon: "Scissors",
     services: [
       "Men's Haircut",
       "Women's Haircut",
@@ -190,7 +220,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "child-care",
     name: "Child Care",
-    icon: "👶",
+    icon: "Baby",
     services: [
       "Babysitting (Hourly)",
       "After-School Care",
@@ -202,7 +232,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "pet-care",
     name: "Pet Care",
-    icon: "🐶",
+    icon: "Dog",
     services: [
       "Dog Walking",
       "Dog Sitting",
@@ -214,7 +244,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "house-care",
     name: "House Care / Sitting",
-    icon: "🏡",
+    icon: "Home",
     services: [
       "House Sitting",
       "Plant Care",
@@ -225,7 +255,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "wellness",
     name: "Wellness & Personal Services",
-    icon: "💆",
+    icon: "Heart",
     services: [
       "Massage Therapy",
       "Personal Training",
@@ -238,7 +268,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "creative",
     name: "Creative & Media",
-    icon: "📸",
+    icon: "Camera",
     services: [
       "Photography (Events / Portraits)",
       "Videography (Short-Form)",
@@ -251,7 +281,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "events",
     name: "Events & Entertainment",
-    icon: "🎉",
+    icon: "PartyPopper",
     services: [
       "DJ Services",
       "MC / Host",
@@ -264,7 +294,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "education",
     name: "Education & Tutoring",
-    icon: "🧠",
+    icon: "GraduationCap",
     services: [
       "Academic Tutoring",
       "Test Prep",
@@ -277,7 +307,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "specialty-cleaning",
     name: "Specialty Cleaning & Restoration",
-    icon: "🧼",
+    icon: "ShowerHead",
     services: [
       "Hoarding Cleanup",
       "Biohazard Cleaning",
@@ -289,7 +319,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "professional",
     name: "Professional Solo Services",
-    icon: "🛡️",
+    icon: "Shield",
     services: [
       "Notary Public",
       "Process Server",
@@ -301,7 +331,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "tech-help",
     name: "Tech Help (Non-Enterprise)",
-    icon: "🧑‍💻",
+    icon: "Monitor",
     services: [
       "Computer Setup",
       "Wi-Fi Troubleshooting",
@@ -314,7 +344,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "concierge",
     name: "Personal & Concierge Services",
-    icon: "🧳",
+    icon: "Briefcase",
     services: [
       "Errand Running",
       "Personal Assistant (Hourly)",
@@ -325,7 +355,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "inspection",
     name: "Inspection & Verification",
-    icon: "🪜",
+    icon: "ClipboardCheck",
     services: [
       "Property Walkthroughs",
       "Move-Out Inspections",
@@ -337,7 +367,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "seasonal",
     name: "Seasonal / On-Demand",
-    icon: "🎄",
+    icon: "Snowflake",
     services: [
       "Holiday Decorating",
       "Holiday Light Installation",
@@ -349,7 +379,7 @@ export const serviceCategories: ServiceCategory[] = [
   {
     id: "other",
     name: "Other",
-    icon: "🧰",
+    icon: "MoreHorizontal",
     services: ["Custom Job / Other"],
   },
 ];
@@ -364,7 +394,7 @@ export function findCategoryForService(
   return serviceCategories.find((cat) => cat.services.includes(service));
 }
 
-export function getCategoryIcon(service: string): string {
+export function getCategoryIconName(service: string): ServiceIconName {
   const category = findCategoryForService(service);
-  return category?.icon || "🧰";
+  return category?.icon || "MoreHorizontal";
 }

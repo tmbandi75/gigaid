@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { BioEditor } from "@/components/settings/BioEditor";
+import { ServicesMultiSelect } from "@/components/ui/services-multi-select";
 
 interface UserProfile {
   id: string;
@@ -57,6 +58,7 @@ const profileFormSchema = z.object({
   phone: z.string().optional(),
   bio: z.string().optional(),
   serviceArea: z.string().optional(),
+  services: z.array(z.string()).optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileFormSchema>;
@@ -117,6 +119,7 @@ export default function Profile() {
       phone: "",
       bio: "",
       serviceArea: "",
+      services: [],
     },
     values: profile ? {
       firstName: parsedName.firstName,
@@ -126,11 +129,12 @@ export default function Profile() {
       phone: profile.phone || "",
       bio: profile.bio || "",
       serviceArea: profile.serviceArea || "",
+      services: profile.services || [],
     } : undefined,
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (data: Partial<{ name: string; email: string; phone: string; photo: string; businessName: string; bio: string; serviceArea: string }>) => {
+    mutationFn: async (data: Partial<{ name: string; email: string; phone: string; photo: string; businessName: string; bio: string; serviceArea: string; services: string[] }>) => {
       return apiRequest("PATCH", "/api/profile", data);
     },
     onSuccess: () => {
@@ -152,6 +156,7 @@ export default function Profile() {
       businessName: data.companyName || "",
       bio: data.bio || "",
       serviceArea: data.serviceArea || "",
+      services: data.services || [],
     });
   };
 
@@ -185,6 +190,7 @@ export default function Profile() {
         phone: profile.phone || "",
         bio: profile.bio || "",
         serviceArea: profile.serviceArea || "",
+        services: profile.services || [],
       });
     }
     setIsEditing(false);
@@ -559,13 +565,40 @@ export default function Profile() {
             <Card className="border-0 shadow-md">
               <CardContent className="pt-6">
                 <h3 className="font-medium mb-4 text-sm text-muted-foreground uppercase tracking-wide">
+                  Services You Offer
+                </h3>
+                <FormField
+                  control={form.control}
+                  name="services"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <ServicesMultiSelect
+                          value={field.value || []}
+                          onChange={field.onChange}
+                          maxServices={20}
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Select up to 20 services you provide
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-md">
+              <CardContent className="pt-6">
+                <h3 className="font-medium mb-4 text-sm text-muted-foreground uppercase tracking-wide">
                   About You
                 </h3>
                 <BioEditor
                   value={form.watch("bio") || ""}
                   onChange={(bio) => form.setValue("bio", bio)}
                   businessName={form.watch("companyName") || ""}
-                  services={profile?.services || []}
+                  services={form.watch("services") || []}
                 />
               </CardContent>
             </Card>
