@@ -37,6 +37,8 @@ Preferred communication style: Simple, everyday language.
 - **Google Maps Integration**: Provides geocoding, location tracking, distance calculation, and navigation for job locations and provider positions.
 - **No Silent Completion**: A three-level enforcement system (UI modal, API guard, background enforcer) ensures every completed job has an explicit payment resolution, preventing revenue loss.
 - **AI Micro-Nudges System**: Contextual, AI-powered recommendations help users manage leads, invoices, and jobs effectively, with dynamic priority boosting, daily caps, and cooldowns.
+- **Today's Money Plan**: Global action queue prioritizing leads, jobs, and invoices by revenue impact. Features smart prioritization (urgent/important/normal), snooze functionality, and deduplication. Enable via `today_money_plan` feature flag.
+- **Outcome Attribution**: Conservative impact metrics showing time and money saved through GigAid suggestions. Calculates days saved (0.5 per acted nudge) and cash acceleration. Enable via `outcome_attribution` feature flag.
 - **iOS App Build (Capacitor)**: The web application is packaged as a native iOS app using Capacitor, enabling native features and App Store distribution.
 
 ## External Dependencies
