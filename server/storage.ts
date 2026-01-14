@@ -28,6 +28,8 @@ import {
   type JobResolution, type InsertJobResolution,
   type ActionQueueItem, type InsertActionQueueItem,
   type OutcomeMetricsDaily, type InsertOutcomeMetricsDaily,
+  type PhotoAsset, type InsertPhotoAsset,
+  type PhotoSourceType,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -225,6 +227,14 @@ export interface IStorage {
   getOutcomeMetricsDailyByDate(userId: string, metricDate: string): Promise<OutcomeMetricsDaily | undefined>;
   createOutcomeMetricsDaily(metrics: InsertOutcomeMetricsDaily): Promise<OutcomeMetricsDaily>;
   updateOutcomeMetricsDaily(id: string, updates: Partial<OutcomeMetricsDaily>): Promise<OutcomeMetricsDaily | undefined>;
+
+  // Photo Assets (Booking/Review/Job photos)
+  getPhotoAssets(sourceType: PhotoSourceType, sourceId: string): Promise<PhotoAsset[]>;
+  getPhotoAsset(id: string): Promise<PhotoAsset | undefined>;
+  getPhotoAssetsByWorkspace(workspaceUserId: string, sourceType?: PhotoSourceType): Promise<PhotoAsset[]>;
+  createPhotoAsset(asset: InsertPhotoAsset): Promise<PhotoAsset>;
+  updatePhotoAsset(id: string, updates: Partial<PhotoAsset>): Promise<PhotoAsset | undefined>;
+  deletePhotoAsset(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -254,6 +264,7 @@ export class MemStorage implements IStorage {
   private jobResolutions: Map<string, JobResolution>;
   private actionQueueItems: Map<string, ActionQueueItem>;
   private outcomeMetricsDaily: Map<string, OutcomeMetricsDaily>;
+  private photoAssets: Map<string, PhotoAsset>;
 
   constructor() {
     this.users = new Map();
@@ -282,6 +293,7 @@ export class MemStorage implements IStorage {
     this.jobResolutions = new Map();
     this.actionQueueItems = new Map();
     this.outcomeMetricsDaily = new Map();
+    this.photoAssets = new Map();
     
     // Seed default feature flags
     this.featureFlags.set("ai_micro_nudges", {
@@ -2048,6 +2060,49 @@ export class MemStorage implements IStorage {
     const updated = { ...metrics, ...updates };
     this.outcomeMetricsDaily.set(id, updated);
     return updated;
+  }
+
+  // ============================================================
+  // Photo Assets (Booking/Review/Job photos)
+  // ============================================================
+
+  async getPhotoAssets(sourceType: PhotoSourceType, sourceId: string): Promise<PhotoAsset[]> {
+    return Array.from(this.photoAssets.values())
+      .filter(p => p.sourceType === sourceType && p.sourceId === sourceId);
+  }
+
+  async getPhotoAsset(id: string): Promise<PhotoAsset | undefined> {
+    return this.photoAssets.get(id);
+  }
+
+  async getPhotoAssetsByWorkspace(workspaceUserId: string, sourceType?: PhotoSourceType): Promise<PhotoAsset[]> {
+    return Array.from(this.photoAssets.values())
+      .filter(p => p.workspaceUserId === workspaceUserId && (!sourceType || p.sourceType === sourceType));
+  }
+
+  async createPhotoAsset(asset: InsertPhotoAsset): Promise<PhotoAsset> {
+    const id = randomUUID();
+    const newAsset: PhotoAsset = {
+      ...asset,
+      id,
+      ownerUserId: asset.ownerUserId ?? null,
+      visibility: asset.visibility ?? "private",
+      createdAt: new Date().toISOString(),
+    };
+    this.photoAssets.set(id, newAsset);
+    return newAsset;
+  }
+
+  async updatePhotoAsset(id: string, updates: Partial<PhotoAsset>): Promise<PhotoAsset | undefined> {
+    const asset = this.photoAssets.get(id);
+    if (!asset) return undefined;
+    const updated = { ...asset, ...updates };
+    this.photoAssets.set(id, updated);
+    return updated;
+  }
+
+  async deletePhotoAsset(id: string): Promise<boolean> {
+    return this.photoAssets.delete(id);
   }
 }
 

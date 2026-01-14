@@ -1054,6 +1054,35 @@ export const insertOutcomeMetricsDailySchema = createInsertSchema(outcomeMetrics
 export type InsertOutcomeMetricsDaily = z.infer<typeof insertOutcomeMetricsDailySchema>;
 export type OutcomeMetricsDaily = typeof outcomeMetricsDaily.$inferSelect;
 
+// ============================================================
+// PHOTO ASSETS - User-uploaded photos for bookings, reviews, jobs
+// ============================================================
+export const photoSourceTypes = ["booking", "review", "job"] as const;
+export type PhotoSourceType = (typeof photoSourceTypes)[number];
+
+export const photoVisibilities = ["private", "public"] as const;
+export type PhotoVisibility = (typeof photoVisibilities)[number];
+
+export const photoAssets = pgTable("photo_assets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ownerUserId: varchar("owner_user_id"), // null for customer-uploaded (booking/review)
+  workspaceUserId: varchar("workspace_user_id").notNull(), // the provider's user ID
+  sourceType: text("source_type").notNull(), // booking, review, job
+  sourceId: varchar("source_id").notNull(), // ID of the booking/review/job
+  storageBucket: text("storage_bucket").notNull(),
+  storagePath: text("storage_path").notNull(),
+  visibility: text("visibility").notNull().default("private"), // private, public
+  createdAt: text("created_at").notNull(),
+});
+
+export const insertPhotoAssetSchema = createInsertSchema(photoAssets).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertPhotoAsset = z.infer<typeof insertPhotoAssetSchema>;
+export type PhotoAsset = typeof photoAssets.$inferSelect;
+
 // Aggregated outcome stats for UI display
 export interface OutcomeStats {
   totalCollected: number; // cents

@@ -5,7 +5,7 @@ import {
   crewMembers, referrals, bookingRequests, bookingEvents, voiceNotes,
   reviews, userPaymentMethods, jobPayments, crewInvites, crewJobPhotos, crewMessages,
   priceConfirmations, aiNudges, aiNudgeEvents, featureFlags, jobDrafts, jobResolutions,
-  actionQueueItems, outcomeMetricsDaily,
+  actionQueueItems, outcomeMetricsDaily, photoAssets,
   type User, type InsertUser,
   type Job, type InsertJob,
   type Lead, type InsertLead,
@@ -35,6 +35,8 @@ import {
   type JobResolution, type InsertJobResolution,
   type ActionQueueItem, type InsertActionQueueItem,
   type OutcomeMetricsDaily, type InsertOutcomeMetricsDaily,
+  type PhotoAsset, type InsertPhotoAsset,
+  type PhotoSourceType,
 } from "@shared/schema";
 import { IStorage } from "./storage";
 import { randomUUID } from "crypto";
@@ -1130,6 +1132,56 @@ export class DatabaseStorage implements IStorage {
       .where(eq(outcomeMetricsDaily.id, id))
       .returning();
     return updated;
+  }
+
+  // ============================================================
+  // Photo Assets (Booking/Review/Job photos)
+  // ============================================================
+
+  async getPhotoAssets(sourceType: PhotoSourceType, sourceId: string): Promise<PhotoAsset[]> {
+    return await db.select().from(photoAssets)
+      .where(and(
+        eq(photoAssets.sourceType, sourceType),
+        eq(photoAssets.sourceId, sourceId)
+      ))
+      .orderBy(desc(photoAssets.createdAt));
+  }
+
+  async getPhotoAsset(id: string): Promise<PhotoAsset | undefined> {
+    const [asset] = await db.select().from(photoAssets)
+      .where(eq(photoAssets.id, id));
+    return asset;
+  }
+
+  async getPhotoAssetsByWorkspace(workspaceUserId: string, sourceType?: PhotoSourceType): Promise<PhotoAsset[]> {
+    const conditions = [eq(photoAssets.workspaceUserId, workspaceUserId)];
+    if (sourceType) {
+      conditions.push(eq(photoAssets.sourceType, sourceType));
+    }
+    return await db.select().from(photoAssets)
+      .where(and(...conditions))
+      .orderBy(desc(photoAssets.createdAt));
+  }
+
+  async createPhotoAsset(asset: InsertPhotoAsset): Promise<PhotoAsset> {
+    const [newAsset] = await db.insert(photoAssets).values({
+      ...asset,
+      createdAt: new Date().toISOString(),
+    }).returning();
+    return newAsset;
+  }
+
+  async updatePhotoAsset(id: string, updates: Partial<PhotoAsset>): Promise<PhotoAsset | undefined> {
+    const [updated] = await db.update(photoAssets)
+      .set(updates)
+      .where(eq(photoAssets.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deletePhotoAsset(id: string): Promise<boolean> {
+    const result = await db.delete(photoAssets).where(eq(photoAssets.id, id));
+    return result.rowCount! > 0;
   }
 }
 
