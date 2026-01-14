@@ -354,7 +354,7 @@ export class MemStorage implements IStorage {
       email: "gig@example.com",
       photo: null,
       businessName: "Pro Gig Services",
-      services: ["plumbing", "electrical", "cleaning"],
+      services: ["Faucet Repair / Replacement", "Drain Cleaning", "Light Fixture Installation", "Standard Home Cleaning"],
       bio: "Professional gig worker serving the Springfield area.",
       serviceArea: null,
       onboardingCompleted: false,

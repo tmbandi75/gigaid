@@ -54,7 +54,7 @@ export async function seedDatabase() {
       email: "gig@example.com",
       businessName: "Pro Gig Services",
       bio: "Professional gig worker serving the Bay Area with plumbing, electrical, and cleaning services. Over 10 years of experience.",
-      services: ["plumbing", "electrical", "cleaning"],
+      services: ["Faucet Repair / Replacement", "Drain Cleaning", "Light Fixture Installation", "Standard Home Cleaning"],
       serviceArea: "San Francisco Bay Area",
       availability: JSON.stringify({
         monday: { enabled: true, ranges: [{ start: "09:00", end: "12:00" }, { start: "14:00", end: "17:00" }] },
