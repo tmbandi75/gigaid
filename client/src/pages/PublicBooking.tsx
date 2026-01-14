@@ -36,6 +36,7 @@ interface PublicProfile {
     comment: string;
     createdAt: string;
     providerResponse?: string | null;
+    photos?: string[];
   }>;
   depositEnabled?: boolean;
   depositType?: string;
@@ -865,6 +866,26 @@ export default function PublicBooking() {
                     <div className="flex">{renderStars(review.rating)}</div>
                   </div>
                   <p className="text-sm text-muted-foreground">{review.comment}</p>
+                  {review.photos && review.photos.length > 0 && (
+                    <div className="flex gap-2 mt-3 overflow-x-auto pb-2">
+                      {review.photos.map((photoUrl, idx) => (
+                        <a
+                          key={idx}
+                          href={photoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="shrink-0"
+                          data-testid={`review-photo-${review.id}-${idx}`}
+                        >
+                          <img
+                            src={photoUrl}
+                            alt={`Review photo ${idx + 1}`}
+                            className="w-20 h-20 object-cover rounded-lg border"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </CardContent>

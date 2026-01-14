@@ -1,0 +1,213 @@
+You are adding PHOTO UPLOAD CAPABILITY to the GigAid app.
+
+THIS IS A CONTROLLED MVP ADDITION.
+Do NOT add photos globally or expand scope beyond what is specified.
+
+====================================================
+GOALS (EXACT)
+====================================================
+
+Implement photo uploads in ONLY these three places:
+
+1) Customers upload photos when BOOKING a job
+2) Customers upload photos when LEAVING A REVIEW
+3) Gig workers optionally upload photos DURING A JOB (non-blocking)
+
+Photos must:
+- Be optional everywhere
+- Never block job completion
+- Never be required to proceed
+- Be bounded and permissioned
+
+====================================================
+CRITICAL CONSTRAINTS
+====================================================
+
+- ADDITIVE changes only
+- Do NOT refactor existing schemas
+- Do NOT introduce chat/messaging photos
+- Do NOT require photos for any workflow
+- Do NOT auto-publish photos publicly without consent
+- Must support future deletion by user
+
+====================================================
+STORAGE STRATEGY
+====================================================
+
+Use object storage (Supabase Storage or equivalent).
+
+Create buckets:
+- booking_photos
+- review_photos
+- job_photos
+
+Rules:
+- Private by default
+- Public access ONLY for approved review photos
+- Enforce max file size: 5MB
+- Enforce mime types: image/jpeg, image/png, image/webp
+
+====================================================
+DATA MODEL (ADDITIVE)
+====================================================
+
+Create table: photo_assets
+
+Columns:
+- id uuid pk
+- owner_user_id uuid
+- workspace_id uuid
+- source_type text 
+  check (source_type in ('booking','review','job'))
+- source_id uuid
+- storage_bucket text
+- storage_path text
+- visibility text default 'private'
+  check (visibility in ('private','public'))
+- created_at timestamptz default now()
+
+Indexes:
+- (source_type, source_id)
+- (workspace_id)
+
+Enable RLS:
+- owner_user_id or workspace owner can read
+- only owner can delete
+
+====================================================
+PART 1 — CUSTOMER PHOTOS AT BOOKING (REQUIRED)
+====================================================
+
+When a customer is booking:
+
+- Add optional photo upload section:
+  Label:
+  “Add photos (optional) – helps the pro prepare and quote accurately”
+
+Rules:
+- Max 5 photos
+- Upload before final booking submit
+- Attach photos to:
+  source_type = 'booking'
+  source_id = booking.id
+- Visibility = private
+- Photos visible ONLY to the gig worker
+
+Do NOT:
+- Require upload
+- Show errors if skipped
+
+====================================================
+PART 2 — CUSTOMER PHOTOS WITH REVIEWS (REQUIRED)
+====================================================
+
+When a customer leaves a review:
+
+- Add optional photo upload section:
+  Label:
+  “Add photos (optional) – show the work that was done”
+
+Rules:
+- Max 3 photos
+- Attach photos to:
+  source_type = 'review'
+  source_id = review.id
+- Default visibility = public
+- Show toggle:
+  “Make photos public on my review”
+- If toggle off → keep private
+
+Only allow review photos for:
+- Completed jobs
+
+====================================================
+PART 3 — GIG WORKER PHOTOS DURING JOB (OPTIONAL / NON-BLOCKING)
+====================================================
+
+On job detail page (worker view only):
+
+- Add optional “Add Job Photos” section
+
+Rules:
+- Max 10 photos per job
+- Attach photos to:
+  source_type = 'job'
+  source_id = job.id
+- Visibility = private
+- Purpose text:
+  “Optional: keep records or share later if needed”
+
+IMPORTANT:
+- These photos must NOT be required to:
+  - complete job
+  - invoice
+  - mark paid
+- Do NOT auto-share with customer
+- Do NOT show in reviews automatically
+
+====================================================
+PERMISSIONS & ACCESS
+====================================================
+
+Booking photos:
+- Visible to gig worker only
+
+Review photos:
+- Public only if customer explicitly approves
+
+Job photos:
+- Visible to gig worker only
+
+====================================================
+DELETION & SAFETY
+====================================================
+
+Allow:
+- Customer to delete booking photos before job starts
+- Customer to delete review photos
+- Worker to delete job photos
+
+Soft-delete DB records if needed.
+
+====================================================
+PERFORMANCE & UX
+====================================================
+
+- Upload asynchronously
+- Show thumbnail previews
+- Do NOT block page submission on upload failure
+- Gracefully handle partial uploads
+
+====================================================
+ACCEPTANCE TESTS (PASS / FAIL)
+====================================================
+
+1) Booking can be completed with ZERO photos
+2) Reviews can be submitted with ZERO photos
+3) Job can be completed with ZERO photos
+4) Photos respect visibility rules
+5) Public review photos appear on public profile
+6) No other screens accept photo uploads
+
+====================================================
+DO NOT IMPLEMENT
+====================================================
+
+- Photo editing
+- Video uploads
+- Messaging photos
+- Mandatory uploads
+- Auto AI image analysis (future)
+
+====================================================
+DELIVERABLES
+====================================================
+
+Provide:
+- Storage setup
+- SQL migration for photo_assets
+- Upload components
+- Permission logic
+- Minimal UI changes only where specified
+
+Proceed step-by-step.

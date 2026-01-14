@@ -2758,6 +2758,20 @@ export async function registerRoutes(
         ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length 
         : 0;
       
+      // Get public photos for reviews
+      const reviewsWithPhotos = await Promise.all(
+        (user.showReviewsOnBooking !== false ? reviews.slice(0, 5) : []).map(async (review) => {
+          const photos = await storage.getPhotoAssets("review", review.id);
+          const publicPhotos = photos
+            .filter(p => p.visibility === "public")
+            .map(p => p.storagePath);
+          return {
+            ...review,
+            photos: publicPhotos.length > 0 ? publicPhotos : undefined,
+          };
+        })
+      );
+      
       res.json({
         name: user.name || `${user.firstName || ""} ${user.lastName || ""}`.trim(),
         photo: user.photo,
@@ -2766,7 +2780,7 @@ export async function registerRoutes(
         bio: user.bio,
         rating: Math.round(avgRating * 10) / 10,
         reviewCount: reviews.length,
-        reviews: user.showReviewsOnBooking !== false ? reviews.slice(0, 5) : [],
+        reviews: reviewsWithPhotos,
         showReviews: user.showReviewsOnBooking !== false,
         availability: user.availability,
         slotDuration: user.slotDuration,
