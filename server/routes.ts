@@ -790,7 +790,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "sourceType and sourceId are required" });
       }
       const photos = await storage.getPhotoAssets(
-        sourceType as string,
+        sourceType as "booking" | "review" | "job",
         sourceId as string
       );
       res.json(photos);
