@@ -1,5 +1,5 @@
 import { storage } from "./storage";
-import type { Lead, Invoice, Job, AiNudge, InsertAiNudge } from "@shared/schema";
+import type { Lead, Invoice, Job, AiNudge, InsertAiNudge, JobResolution } from "@shared/schema";
 
 interface NudgeCandidate {
   entityType: "lead" | "invoice" | "job";
@@ -14,6 +14,8 @@ interface NudgeCandidate {
 const MAX_NUDGES_PER_RUN = 20;
 const MAX_ACTIVE_NUDGES_PER_ENTITY = 2;
 const MAX_NUDGES_PER_DAY = 10; // Daily cap per user
+const DEFAULT_COOLDOWN_HOURS = 24; // Standard cooldown
+const TRUST_MEMORY_COOLDOWN_HOURS = 72; // 3-day cooldown when trust memory is ON
 
 function getDateString(): string {
   return new Date().toISOString().split("T")[0];
@@ -125,6 +127,37 @@ function generateLeadNudges(lead: Lead, userId: string): NudgeCandidate[] {
     });
   }
 
+  // PHASE 2 ENFORCEMENT: Lead Conversion Required
+  // High-score engaged leads that haven't been converted to jobs
+  // Spec: score >= 85, status = engaged, no job, lastContactedAt > 24h ago
+  if (
+    lead.score && 
+    lead.score >= 85 &&
+    lead.status === "engaged" &&
+    !lead.convertedJobId &&
+    lead.lastContactedAt &&
+    hoursAgo(lead.lastContactedAt, 24)
+  ) {
+    candidates.push({
+      entityType: "lead",
+      entityId: lead.id,
+      nudgeType: "lead_conversion_required",
+      priority: 92, // High priority - this is enforcement, not suggestion
+      explainText: "This lead is highly likely to convert. Turning it into a job protects the opportunity.",
+      actionPayload: {
+        jobPrefill: {
+          clientName: lead.clientName,
+          clientPhone: lead.clientPhone,
+          clientEmail: lead.clientEmail,
+          serviceType: lead.serviceType,
+          description: lead.description,
+        },
+        leadScore: lead.score,
+        enforcement: true, // Mark as enforcement nudge
+      },
+    });
+  }
+
   return candidates;
 }
 
@@ -185,7 +218,12 @@ function generateInvoiceNudges(invoice: Invoice, userId: string): NudgeCandidate
   return candidates;
 }
 
-function generateJobNudges(job: Job, userId: string, invoices: Invoice[]): NudgeCandidate[] {
+function generateJobNudges(
+  job: Job, 
+  userId: string, 
+  invoices: Invoice[],
+  jobResolutions: JobResolution[]
+): NudgeCandidate[] {
   const candidates: NudgeCandidate[] = [];
 
   // Job → Invoice nudge for completed jobs
@@ -237,6 +275,37 @@ function generateJobNudges(job: Job, userId: string, invoices: Invoice[]): Nudge
     }
   }
 
+  // PHASE 2 ENFORCEMENT: Job → Invoice Escalation
+  // For completed jobs with non-invoiced resolution, escalate after 48h if not paid
+  // Spec: job.status='completed', resolution exists BUT type != 'invoiced', 
+  //       paymentStatus != 'paid', 48 hours pass
+  const resolution = jobResolutions.find(r => r.jobId === job.id);
+  if (
+    job.status === "completed" &&
+    resolution &&
+    resolution.resolutionType !== "invoiced" &&
+    job.paymentStatus !== "paid" &&
+    resolution.resolvedAt &&
+    hoursAgo(resolution.resolvedAt, 48)
+  ) {
+    const amount = job.price ? job.price / 100 : 0;
+    candidates.push({
+      entityType: "job",
+      entityId: job.id,
+      nudgeType: "job_invoice_escalation",
+      priority: 90, // High priority escalation
+      explainText: amount > 0 
+        ? `Job completed but $${amount.toFixed(0)} still unpaid after 48h. Resolve payment now.`
+        : "Job completed 48h ago but payment unresolved. Take action.",
+      actionPayload: {
+        resolutionType: resolution.resolutionType,
+        paymentMethod: resolution.paymentMethod,
+        suggestedActions: ["create_invoice", "mark_paid", "follow_up"],
+        enforcement: true, // Mark as enforcement nudge
+      },
+    });
+  }
+
   return candidates;
 }
 
@@ -246,6 +315,14 @@ export async function generateNudgesForUser(userId: string, forceBypassCap: bool
     return { createdCount: 0, activeCount: 0 };
   }
 
+  // Check trust memory flag for cooldown duration
+  // When ON: 72-hour cooldown after dismiss (3 days)
+  // When OFF: 24-hour cooldown (default)
+  const trustMemoryFlag = await storage.getFeatureFlag("nudge_trust_memory");
+  const cooldownHours = trustMemoryFlag?.enabled 
+    ? TRUST_MEMORY_COOLDOWN_HOURS 
+    : DEFAULT_COOLDOWN_HOURS;
+
   // Check daily cap (can be bypassed for testing)
   const todayCount = await storage.getTodayNudgeCount(userId);
   if (!forceBypassCap && todayCount >= MAX_NUDGES_PER_DAY) {
@@ -254,10 +331,12 @@ export async function generateNudgesForUser(userId: string, forceBypassCap: bool
   }
   const remainingDailyCap = forceBypassCap ? 100 : MAX_NUDGES_PER_DAY - todayCount;
 
-  const [leads, invoices, jobs] = await Promise.all([
+  // Fetch all data including job resolutions for Phase 2 enforcement
+  const [leads, invoices, jobs, jobResolutions] = await Promise.all([
     storage.getLeads(userId),
     storage.getInvoices(userId),
     storage.getJobs(userId),
+    storage.getJobResolutionsByUser(userId),
   ]);
 
   const candidates: NudgeCandidate[] = [];
@@ -272,7 +351,7 @@ export async function generateNudgesForUser(userId: string, forceBypassCap: bool
   }
 
   for (const job of jobs) {
-    candidates.push(...generateJobNudges(job, userId, invoices));
+    candidates.push(...generateJobNudges(job, userId, invoices, jobResolutions));
   }
 
   let createdCount = 0;
@@ -294,12 +373,16 @@ export async function generateNudgesForUser(userId: string, forceBypassCap: bool
     const existing = await storage.getAiNudgeByDedupeKey(dedupeKey);
     if (existing) continue;
     
-    // Check for recently snoozed nudges of the same type to prevent immediate re-triggering
+    // TRUST MEMORY: Check for recently dismissed/snoozed nudges of the same type
+    // Cooldown depends on feature flag:
+    // - nudge_trust_memory=ON: 72 hours (3 days) - prevents same nudge type reappearing
+    // - nudge_trust_memory=OFF: 24 hours (default)
+    // Note: Blocking nudges (priority=100, dismissable=false) ignore this cooldown
     const recentNudges = existingNudges.filter(n => 
       n.nudgeType === candidate.nudgeType && 
       (n.status === "snoozed" || n.status === "dismissed") &&
       n.createdAt && 
-      hoursSince(n.createdAt) < 24 // 24-hour cooldown after snooze/dismiss
+      hoursSince(n.createdAt) < cooldownHours
     );
     if (recentNudges.length > 0) continue;
 
