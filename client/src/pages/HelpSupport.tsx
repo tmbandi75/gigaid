@@ -37,15 +37,19 @@ const faqs = [
     questions: [
       {
         q: "How do I create my first job?",
-        a: "Tap the '+' button on the Jobs page or use the quick action on your dashboard. Fill in the client details, service type, date/time, and save. Your job will appear in your schedule.",
+        a: "Tap the '+' button on the Jobs page or use the quick action on your dashboard. Fill in the client details, select a service type from the organized dropdown, add date/time, and save. Your job will appear in your schedule.",
       },
       {
         q: "How do I set up my booking page?",
-        a: "Go to Settings > Public Profile & Booking. Enable your public profile, set your URL, add your services, and configure your availability. Share your booking link with clients!",
+        a: "Go to Settings > Public Profile & Booking. Enable your public profile, set your URL, select your services from the catalog (up to 20), and configure your availability. Share your booking link with clients!",
       },
       {
         q: "How do I add my services?",
-        a: "In Settings, scroll to Services. You can click preset services like plumbing or electrical, or type in your own custom service and press the + button to add it.",
+        a: "Go to More > Profile and tap 'Edit Services'. You'll see 28 categories (Plumbing, Electrical, Cleaning, Hair & Beauty, and more) with over 150 specific services. Select up to 20 services that you offer.",
+      },
+      {
+        q: "What service categories are available?",
+        a: "GigAid offers 28 service categories including: Handyman, Plumbing, Electrical, Cleaning, Lawn & Outdoor, Hair & Beauty, Pet Care, Child Care, Moving, Auto Services, Tech Help, Wellness, Creative & Media, Events, Education, and more!",
       },
       {
         q: "What's the typical workflow for a new gig?",
@@ -73,6 +77,33 @@ const faqs = [
       {
         q: "How do I use Quick Capture from Facebook?",
         a: "When you see a job post on Facebook, tap Share → GigAid (or copy the post text). GigAid will extract all the details and create a lead automatically. No typing required!",
+      },
+      {
+        q: "How do I select a service type for leads?",
+        a: "When creating a lead, use the service dropdown which shows all 28 categories organized by type. The AI will also try to match the service from the captured text to a category.",
+      },
+    ],
+  },
+  {
+    category: "Photos & Attachments",
+    icon: FileText,
+    color: "from-amber-500 to-orange-500",
+    questions: [
+      {
+        q: "Can clients send photos when booking?",
+        a: "Yes! When clients book through your public booking page, they can upload up to 5 photos showing the work needed. This helps you prepare and quote accurately.",
+      },
+      {
+        q: "Can I add photos to my jobs?",
+        a: "Absolutely! When creating or editing a job, you can upload up to 10 photos. Great for documenting before/after work, materials used, or site conditions.",
+      },
+      {
+        q: "Can clients add photos to reviews?",
+        a: "Yes! Clients can attach up to 3 photos when leaving a review. They choose whether each photo is public (visible on your profile) or private (only you can see it).",
+      },
+      {
+        q: "Where are my photos stored?",
+        a: "All photos are securely stored in the cloud and linked to the relevant booking, job, or review. You can view them anytime from the associated record.",
       },
     ],
   },
@@ -187,7 +218,11 @@ const faqs = [
       },
       {
         q: "How does the review process work?",
-        a: "The client receives a link, taps it, sees the job details, gives a star rating (1-5), and optionally adds a comment. The review appears in your Reviews section.",
+        a: "The client receives a link, taps it, sees the job details, gives a star rating (1-5), and optionally adds a comment and up to 3 photos. The review appears in your Reviews section.",
+      },
+      {
+        q: "Can clients add photos to reviews?",
+        a: "Yes! When clients submit a review, they can attach up to 3 photos showing your completed work. They can choose whether each photo is public (shown on your profile) or private (only you see it).",
       },
       {
         q: "Can clients only leave one review per job?",
@@ -219,6 +254,14 @@ const faqs = [
       {
         q: "What job statuses are available?",
         a: "Jobs can be: Scheduled (upcoming), In Progress (you're working on it), Completed (finished), or Cancelled. Update the status as you work.",
+      },
+      {
+        q: "Can I add photos to jobs?",
+        a: "Yes! When creating or editing a job, you can upload up to 10 photos. Use this to document before/after work, materials, or site conditions.",
+      },
+      {
+        q: "How do I select the service type for a job?",
+        a: "When creating a job, tap the service dropdown to see all categories. Services are organized into groups like Plumbing, Electrical, Cleaning, etc. Select the specific service that matches the work.",
       },
     ],
   },
