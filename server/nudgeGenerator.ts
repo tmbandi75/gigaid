@@ -378,13 +378,21 @@ export async function generateNudgesForUser(userId: string, forceBypassCap: bool
     // - nudge_trust_memory=ON: 72 hours (3 days) - prevents same nudge type reappearing
     // - nudge_trust_memory=OFF: 24 hours (default)
     // Note: Blocking nudges (priority=100, dismissable=false) ignore this cooldown
-    const recentNudges = existingNudges.filter(n => 
+    // IMPORTANT: Check the dismiss/snooze EVENT time, not the nudge creation time
+    const dismissedNudges = existingNudges.filter(n => 
       n.nudgeType === candidate.nudgeType && 
-      (n.status === "snoozed" || n.status === "dismissed") &&
-      n.createdAt && 
-      hoursSince(n.createdAt) < cooldownHours
+      (n.status === "snoozed" || n.status === "dismissed")
     );
-    if (recentNudges.length > 0) continue;
+    
+    if (dismissedNudges.length > 0) {
+      // Get the latest dismiss/snooze event time from the events table
+      const nudgeIds = dismissedNudges.map(n => n.id);
+      const latestDismissTime = await storage.getLatestDismissEventTime(nudgeIds);
+      
+      if (latestDismissTime && hoursSince(latestDismissTime) < cooldownHours) {
+        continue; // Still within cooldown period from last dismiss/snooze
+      }
+    }
 
     const nudge: InsertAiNudge = {
       userId,

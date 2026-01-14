@@ -184,6 +184,9 @@ export interface IStorage {
   getAiNudgeEvents(nudgeId: string): Promise<AiNudgeEvent[]>;
   createAiNudgeEvent(event: InsertAiNudgeEvent): Promise<AiNudgeEvent>;
   getTodayNudgeCount(userId: string): Promise<number>;
+  // Get the latest dismiss/snooze event time for a list of nudge IDs
+  // Used for Trust Memory cooldown - returns null if no dismiss/snooze events found
+  getLatestDismissEventTime(nudgeIds: string[]): Promise<string | null>;
 
   // Feature Flags
   getFeatureFlag(key: string): Promise<FeatureFlag | undefined>;
@@ -1784,6 +1787,22 @@ export class MemStorage implements IStorage {
     return Array.from(this.aiNudges.values()).filter(n => 
       n.userId === userId && n.createdAt?.startsWith(today)
     ).length;
+  }
+
+  // Get the latest dismiss/snooze event time for Trust Memory cooldown
+  // Returns the most recent event timestamp where eventType is 'dismissed' or 'snoozed'
+  async getLatestDismissEventTime(nudgeIds: string[]): Promise<string | null> {
+    if (nudgeIds.length === 0) return null;
+    
+    const nudgeIdSet = new Set(nudgeIds);
+    const events = Array.from(this.aiNudgeEvents.values())
+      .filter(e => 
+        nudgeIdSet.has(e.nudgeId) && 
+        (e.eventType === "dismissed" || e.eventType === "snoozed")
+      )
+      .sort((a, b) => new Date(b.eventAt).getTime() - new Date(a.eventAt).getTime());
+    
+    return events.length > 0 ? events[0].eventAt : null;
   }
 
   // Feature Flags
