@@ -1,0 +1,216 @@
+You are implementing a STRICT revenue-protection enforcement rule for the GigAid app.
+
+====================================================
+RULE NAME
+====================================================
+NO SILENT COMPLETION
+
+====================================================
+GOAL (NON-NEGOTIABLE)
+====================================================
+
+It must be IMPOSSIBLE for a job to reach or remain in a “completed” state
+without one of the following being explicitly recorded:
+
+A) An invoice created and linked to the job
+B) A payment recorded without invoice (explicit manual payment)
+C) An invoice waiver with a required reason
+
+If none of these occur, the system MUST intervene.
+
+This rule is REQUIRED to unlock the 9.0 product score.
+
+====================================================
+CRITICAL CONSTRAINTS
+====================================================
+
+- Additive changes ONLY
+- Do NOT refactor existing job, invoice, or payment schemas
+- Do NOT auto-send invoices or payments
+- User must explicitly confirm all money actions
+- Must work even if user goes offline or bypasses UI
+- Must be enforceable at BOTH UI and API levels
+- Feature-flagged for safety
+- Fully reversible
+
+====================================================
+FEATURE FLAG
+====================================================
+
+Add / use feature flag:
+- key: enforce_no_silent_completion
+- default: false
+
+If flag is OFF:
+- App behaves EXACTLY as it does today
+
+====================================================
+DATA MODEL (ADDITIVE ONLY)
+====================================================
+
+Add table: job_resolution
+
+Columns:
+- id (uuid, pk)
+- job_id (uuid, required, unique)
+- resolution_type (enum: 'invoiced', 'paid_without_invoice', 'waived')
+- payment_method (nullable text)
+- waiver_reason (nullable enum: 'warranty','redo','goodwill','internal')
+- resolved_at (timestamptz)
+- resolved_by_user_id (uuid)
+- created_at (timestamptz default now)
+
+Add index on job_id
+Enable RLS: user must own job_id
+
+====================================================
+ENFORCEMENT POINTS (MANDATORY)
+====================================================
+
+ENFORCE AT THREE LEVELS:
+1) UI
+2) API
+3) BACKGROUND SAFETY CHECK
+
+----------------------------------------------------
+1️⃣ UI ENFORCEMENT (PRIMARY)
+----------------------------------------------------
+
+When user attempts:
+- job.status → "completed"
+
+AND feature flag is ON
+
+DO NOT allow job completion to finalize until user selects ONE path:
+
+Present a blocking modal (cannot dismiss):
+
+TITLE:
+"Finish Job & Protect Payment"
+
+OPTIONS (user must choose exactly one):
+
+OPTION A — Create Invoice
+- Open invoice creation screen
+- Prefill from job
+- On save:
+  - create invoice
+  - insert job_resolution (resolution_type = 'invoiced')
+
+OPTION B — Mark as Paid (No Invoice)
+- Require:
+  - payment method
+- On confirm:
+  - record payment fields on job
+  - insert job_resolution (resolution_type = 'paid_without_invoice')
+
+OPTION C — No Invoice Needed
+- Require:
+  - waiver reason (enum)
+- On confirm:
+  - insert job_resolution (resolution_type = 'waived')
+
+Only AFTER resolution record exists:
+- Allow job.status = 'completed'
+
+----------------------------------------------------
+2️⃣ API ENFORCEMENT (HARD BACKSTOP)
+----------------------------------------------------
+
+In job update endpoint:
+
+IF request attempts:
+- status = 'completed'
+
+AND feature flag is ON
+
+THEN:
+- Query job_resolution for job_id
+
+IF no record exists:
+- Reject request with 409 error
+- Message:
+  "Completed jobs must be resolved with invoice, payment, or waiver."
+
+This ensures:
+- No silent completion via API
+- No bypass via edge cases
+
+----------------------------------------------------
+3️⃣ BACKGROUND ENFORCEMENT (SAFETY NET)
+----------------------------------------------------
+
+Scheduled task (run hourly):
+
+Query:
+- jobs WHERE status = 'completed'
+- AND completed_at < now() - interval '24 hours'
+- AND NO job_resolution exists
+
+For each result:
+- Create a BLOCKING AI nudge:
+  nudgeType = 'job_unresolved_payment'
+  priority = 100
+  dismissable = false
+  explainText:
+    "This completed job still needs to be resolved to protect your payment."
+
+This nudge:
+- Cannot be dismissed
+- Only actions allowed:
+  - Create invoice
+  - Mark as paid
+  - Waive invoice
+
+====================================================
+WHAT IS NOT ALLOWED
+====================================================
+
+- Silent job completion
+- Auto-creating invoices without confirmation
+- Background auto-payments
+- Soft warnings only
+- Non-blocking reminders for unresolved jobs
+
+====================================================
+ACCEPTANCE TESTS (PASS / FAIL)
+====================================================
+
+This feature is COMPLETE only when ALL are true:
+
+1) Zero jobs exist where:
+   - status = completed
+   - AND no job_resolution exists
+
+2) UI makes it impossible to complete a job
+   without choosing invoice / paid / waived
+
+3) API rejects silent completion attempts
+
+4) Background task surfaces any legacy violations
+
+If ANY completed job exists without resolution:
+→ FEATURE IS NOT COMPLETE
+
+====================================================
+DO NOT IMPLEMENT
+====================================================
+
+- Convert-to-job logic
+- Dashboard redesign
+- Global prioritization
+- Trust attribution
+- Phase 2 features
+
+====================================================
+DELIVERABLES
+====================================================
+
+Provide:
+- SQL migration for job_resolution
+- Updated job completion UI logic
+- API guard logic
+- Background enforcement task
+- Clear inline comments explaining why this rule exists
+
+Proceed step by step.
