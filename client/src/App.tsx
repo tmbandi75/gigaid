@@ -40,6 +40,7 @@ import ShareCapture from "@/pages/ShareCapture";
 import PublicReview from "@/pages/PublicReview";
 import QuickBook from "@/pages/QuickBook";
 import QuickBookConfirm from "@/pages/QuickBookConfirm";
+import MoneyPlanPage from "@/pages/MoneyPlanPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -71,6 +72,7 @@ function Router() {
       <Route path="/booking-requests" component={BookingRequests} />
       <Route path="/share" component={ShareCapture} />
       <Route path="/quickbook" component={QuickBook} />
+      <Route path="/money-plan" component={MoneyPlanPage} />
       <Route component={NotFound} />
     </Switch>
   );

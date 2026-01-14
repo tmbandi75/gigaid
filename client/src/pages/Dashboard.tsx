@@ -13,6 +13,7 @@ import FollowUpCheckIn from "@/components/FollowUpCheckIn";
 import { TodaysGamePlan } from "@/components/TodaysGamePlan";
 import { NudgeCard } from "@/components/nudges/NudgeCard";
 import { GigAidImpact } from "@/components/GigAidImpact";
+import { MoneyPlanWidget } from "@/components/MoneyPlanWidget";
 import {
   Briefcase,
   Users,
@@ -262,6 +263,9 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
+
+        {/* Today's Money Plan - global prioritization across leads, jobs, invoices */}
+        <MoneyPlanWidget />
 
         {/* AI Micro-Nudges - contextual action suggestions */}
         <NudgeCard maxNudges={3} />
