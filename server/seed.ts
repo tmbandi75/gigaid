@@ -838,7 +838,7 @@ export async function seedDatabase() {
       },
       {
         key: "outcome_attribution",
-        enabled: false, // Default OFF - Outcome Attribution impact metrics
+        enabled: true, // Default ON - Outcome Attribution impact metrics
         description: "Outcome Attribution: Show 'GigAid helped you collect $X faster' with conservative calculations",
         updatedAt: daysAgo(0),
       },

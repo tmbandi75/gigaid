@@ -5659,12 +5659,22 @@ Return ONLY the message text, no JSON or formatting.`
       const { entity_type, entity_id, mode } = req.query;
       
       let nudges;
+      const currentTime = new Date().toISOString();
       if (entity_type && entity_id) {
         nudges = await storage.getAiNudgesByEntity(
           entity_type as string, 
           entity_id as string
         );
-        nudges = nudges.filter(n => n.status === "active");
+        // Filter by active/snoozed status AND ensure snoozed nudges are suppressed until window expires
+        // Match behavior from nudgeService.ts: allow "active" nudges, and "snoozed" nudges whose window has expired
+        nudges = nudges.filter(n => {
+          if (n.status !== "active" && n.status !== "snoozed") return false;
+          // Suppress snoozed nudges only while snooze window is still active
+          if (n.status === "snoozed" && n.snoozedUntil) {
+            if (n.snoozedUntil > currentTime) return false;
+          }
+          return true;
+        });
       } else {
         nudges = await storage.getActiveAiNudgesForUser(user.id);
       }
