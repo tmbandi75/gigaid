@@ -6024,6 +6024,250 @@ Return ONLY the message text, no JSON or formatting.`
     }
   });
 
+  // ==================== TODAY'S MONEY PLAN - ACTION QUEUE ====================
+  // Global prioritization view for leads, jobs, and invoices
+
+  // Generate/refresh the action queue
+  app.post("/api/action-queue/generate", async (req, res) => {
+    try {
+      const flag = await storage.getFeatureFlag("today_money_plan");
+      if (!flag?.enabled) {
+        return res.status(403).json({ 
+          error: "Today's Money Plan feature is not enabled",
+          featureFlag: "today_money_plan" 
+        });
+      }
+
+      const { ActionQueueGenerator } = await import("./actionQueueGenerator");
+      const generator = new ActionQueueGenerator(storage);
+      const items = await generator.generateQueue("demo-user");
+      
+      res.json({ 
+        success: true, 
+        count: items.length,
+        items 
+      });
+    } catch (error) {
+      console.error("Generate action queue error:", error);
+      res.status(500).json({ error: "Failed to generate action queue" });
+    }
+  });
+
+  // Get action queue items
+  app.get("/api/action-queue", async (req, res) => {
+    try {
+      const flag = await storage.getFeatureFlag("today_money_plan");
+      if (!flag?.enabled) {
+        return res.json([]);
+      }
+
+      const { status } = req.query;
+      const items = await storage.getActionQueueItems(
+        "demo-user", 
+        status as string | undefined
+      );
+      res.json(items);
+    } catch (error) {
+      console.error("Get action queue error:", error);
+      res.status(500).json({ error: "Failed to get action queue" });
+    }
+  });
+
+  // Mark action as done
+  app.post("/api/action-queue/:id/done", async (req, res) => {
+    try {
+      const item = await storage.getActionQueueItem(req.params.id);
+      if (!item) {
+        return res.status(404).json({ error: "Action not found" });
+      }
+
+      const updated = await storage.updateActionQueueItem(req.params.id, {
+        status: "done",
+      });
+      res.json(updated);
+    } catch (error) {
+      console.error("Mark action done error:", error);
+      res.status(500).json({ error: "Failed to mark action as done" });
+    }
+  });
+
+  // Dismiss action
+  app.post("/api/action-queue/:id/dismiss", async (req, res) => {
+    try {
+      const item = await storage.getActionQueueItem(req.params.id);
+      if (!item) {
+        return res.status(404).json({ error: "Action not found" });
+      }
+
+      const updated = await storage.updateActionQueueItem(req.params.id, {
+        status: "dismissed",
+      });
+      res.json(updated);
+    } catch (error) {
+      console.error("Dismiss action error:", error);
+      res.status(500).json({ error: "Failed to dismiss action" });
+    }
+  });
+
+  // Snooze action
+  app.post("/api/action-queue/:id/snooze", async (req, res) => {
+    try {
+      const item = await storage.getActionQueueItem(req.params.id);
+      if (!item) {
+        return res.status(404).json({ error: "Action not found" });
+      }
+
+      const { hours = 4 } = req.body;
+      const snoozeUntil = new Date();
+      snoozeUntil.setHours(snoozeUntil.getHours() + hours);
+
+      const updated = await storage.updateActionQueueItem(req.params.id, {
+        status: "snoozed",
+        snoozedUntil: snoozeUntil.toISOString(),
+      });
+      res.json(updated);
+    } catch (error) {
+      console.error("Snooze action error:", error);
+      res.status(500).json({ error: "Failed to snooze action" });
+    }
+  });
+
+  // ==================== OUTCOME ATTRIBUTION ====================
+  // GigAid Impact metrics showing "GigAid helped you collect $X faster"
+
+  // Compute daily outcome metrics
+  app.post("/api/outcomes/compute", async (req, res) => {
+    try {
+      const flag = await storage.getFeatureFlag("outcome_attribution");
+      if (!flag?.enabled) {
+        return res.status(403).json({ 
+          error: "Outcome Attribution feature is not enabled",
+          featureFlag: "outcome_attribution" 
+        });
+      }
+
+      const { date } = req.body;
+      const metricDate = date || new Date().toISOString().split('T')[0];
+      const userId = "demo-user";
+
+      // Check if metrics already exist for this date
+      const existing = await storage.getOutcomeMetricsDailyByDate(userId, metricDate);
+      
+      // Get data for calculations
+      const invoices = await storage.getInvoices(userId);
+      const nudges = await storage.getActiveAiNudgesForUser(userId);
+      const nudgeEvents = await storage.getAiNudgeEvents(userId);
+      const leads = await storage.getLeads(userId);
+
+      // Count invoices paid today
+      const paidToday = invoices.filter(i => 
+        i.status === "paid" && 
+        i.paidAt && 
+        i.paidAt.split('T')[0] === metricDate
+      );
+      const invoicesPaidCount = paidToday.length;
+      const invoicesPaidAmount = paidToday.reduce((sum, i) => sum + (i.amount || 0), 0);
+
+      // Calculate average days to paid (conservative)
+      const paidInvoicesWithSentDate = paidToday.filter(i => i.sentAt && i.paidAt);
+      let avgDaysToPaid: number | null = null;
+      if (paidInvoicesWithSentDate.length > 0) {
+        const totalDays = paidInvoicesWithSentDate.reduce((sum, i) => {
+          const sent = new Date(i.sentAt!);
+          const paid = new Date(i.paidAt!);
+          return sum + Math.max(0, Math.floor((paid.getTime() - sent.getTime()) / (1000 * 60 * 60 * 24)));
+        }, 0);
+        avgDaysToPaid = Math.round(totalDays / paidInvoicesWithSentDate.length);
+      }
+
+      // Count acted nudges today
+      const actedToday = nudgeEvents.filter(e => 
+        e.eventType === "acted" && 
+        e.eventAt.split('T')[0] === metricDate
+      );
+      const nudgesActedCount = actedToday.length;
+
+      // Count leads converted today
+      const convertedToday = leads.filter(l => 
+        l.status === "won" && 
+        l.convertedAt && 
+        l.convertedAt.split('T')[0] === metricDate
+      );
+      const leadsConvertedCount = convertedToday.length;
+
+      // Conservative estimate: each acted nudge saves 0.5 days of delay
+      // Each reminder saves 1 day on average (industry standard)
+      const estimatedDaysSaved = Math.floor(nudgesActedCount * 0.5);
+
+      // Conservative cash acceleration: $X collected Y days faster
+      // Using the formula: amount * (days_saved / 30) * 0.5 (conservative factor)
+      const estimatedCashAccelerated = Math.floor(
+        invoicesPaidAmount * (estimatedDaysSaved / 30) * 0.5
+      );
+
+      const metrics = {
+        userId,
+        metricDate,
+        invoicesPaidCount,
+        invoicesPaidAmount,
+        avgDaysToPaid,
+        remindersSentCount: 0, // Would need to track this separately
+        nudgesActedCount,
+        leadsConvertedCount,
+        estimatedDaysSaved,
+        estimatedCashAccelerated,
+        createdAt: new Date().toISOString(),
+      };
+
+      let result;
+      if (existing) {
+        result = await storage.updateOutcomeMetricsDaily(existing.id, metrics);
+      } else {
+        result = await storage.createOutcomeMetricsDaily(metrics);
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Compute outcomes error:", error);
+      res.status(500).json({ error: "Failed to compute outcome metrics" });
+    }
+  });
+
+  // Get outcome metrics for date range
+  app.get("/api/outcomes", async (req, res) => {
+    try {
+      const flag = await storage.getFeatureFlag("outcome_attribution");
+      if (!flag?.enabled) {
+        return res.json({ metrics: [], summary: null });
+      }
+
+      const { startDate, endDate } = req.query;
+      const end = (endDate as string) || new Date().toISOString().split('T')[0];
+      const start = (startDate as string) || (() => {
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
+        return d.toISOString().split('T')[0];
+      })();
+
+      const metrics = await storage.getOutcomeMetricsDaily("demo-user", start, end);
+
+      // Calculate summary
+      const summary = {
+        totalInvoicesPaid: metrics.reduce((sum, m) => sum + (m.invoicesPaidCount || 0), 0),
+        totalAmountCollected: metrics.reduce((sum, m) => sum + (m.invoicesPaidAmount || 0), 0),
+        totalNudgesActed: metrics.reduce((sum, m) => sum + (m.nudgesActedCount || 0), 0),
+        totalLeadsConverted: metrics.reduce((sum, m) => sum + (m.leadsConvertedCount || 0), 0),
+        totalDaysSaved: metrics.reduce((sum, m) => sum + (m.estimatedDaysSaved || 0), 0),
+        totalCashAccelerated: metrics.reduce((sum, m) => sum + (m.estimatedCashAccelerated || 0), 0),
+      };
+
+      res.json({ metrics, summary });
+    } catch (error) {
+      console.error("Get outcomes error:", error);
+      res.status(500).json({ error: "Failed to get outcome metrics" });
+    }
+  });
+
   // Feature flags endpoints
   app.get("/api/feature-flags", async (req, res) => {
     try {
