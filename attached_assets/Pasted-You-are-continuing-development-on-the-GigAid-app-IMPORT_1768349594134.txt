@@ -1,0 +1,232 @@
+You are continuing development on the GigAid app.
+
+IMPORTANT CONTEXT
+- Phase 1 AI micro-nudges are already implemented and working
+- Some Phase 2 nudges exist (convert-to-job, job→invoice suggestions)
+- HOWEVER, enforcement, trust memory, and API backstops are missing
+- Do NOT reimplement existing nudges
+- Do NOT refactor existing schemas
+- Additive changes ONLY
+
+Your goal is to complete ALL missing pieces required to:
+1) Eliminate silent revenue leaks
+2) Make nudges enforceable and trustworthy
+3) Fully satisfy the locked scoring rubric
+
+====================================================
+FEATURE FLAGS (MUST USE)
+====================================================
+
+Add / use these flags:
+- enforce_no_silent_completion (default: false)
+- nudge_trust_memory (default: false)
+
+All new behavior must be disabled if flags are OFF.
+
+====================================================
+PART 1 — ENFORCE “NO SILENT COMPLETION” (CRITICAL)
+====================================================
+
+Implement the rule:
+
+A job CANNOT be completed unless it is explicitly resolved as:
+- invoiced
+- paid without invoice
+- waived with reason
+
+----------------------------------------------------
+DATA MODEL (ADDITIVE)
+----------------------------------------------------
+
+Create table: job_resolution
+
+Columns:
+- id (uuid, pk)
+- job_id (uuid, unique, required)
+- resolution_type (enum: 'invoiced','paid_without_invoice','waived')
+- payment_method (nullable text)
+- waiver_reason (nullable enum: 'warranty','redo','goodwill','internal')
+- resolved_at (timestamptz)
+- resolved_by_user_id (uuid)
+- created_at (timestamptz default now)
+
+Enable RLS: user must own job_id.
+
+----------------------------------------------------
+UI ENFORCEMENT
+----------------------------------------------------
+
+When user attempts to mark job.status = "completed"
+AND enforce_no_silent_completion = true
+
+Block completion with a mandatory modal:
+
+Title:
+"Finish Job & Protect Payment"
+
+User must choose EXACTLY ONE:
+
+1) Create Invoice
+   - Open invoice creation (prefilled)
+   - On save:
+     - create invoice
+     - insert job_resolution (resolution_type='invoiced')
+
+2) Mark as Paid (No Invoice)
+   - Require payment method
+   - Record paidAt + paymentMethod
+   - insert job_resolution (resolution_type='paid_without_invoice')
+
+3) No Invoice Needed
+   - Require waiver reason
+   - insert job_resolution (resolution_type='waived')
+
+Job cannot complete until job_resolution exists.
+
+----------------------------------------------------
+API ENFORCEMENT (NON-NEGOTIABLE)
+----------------------------------------------------
+
+In job update endpoint:
+
+IF status is set to "completed"
+AND enforce_no_silent_completion = true
+AND no job_resolution exists
+
+→ Reject request (HTTP 409)
+→ Message:
+  "Completed jobs must be resolved with invoice, payment, or waiver."
+
+----------------------------------------------------
+BACKGROUND SAFETY NET
+----------------------------------------------------
+
+Hourly background job:
+
+Query:
+- jobs where status='completed'
+- AND completedAt < now() - 24 hours
+- AND no job_resolution exists
+
+For each:
+- Create BLOCKING AI nudge:
+  nudgeType = 'job_unresolved_payment'
+  priority = 100
+  dismissable = false
+  explainText =
+    "This completed job still needs to be resolved to protect your payment."
+
+User must act; cannot dismiss.
+
+====================================================
+PART 2 — ADD TRUST MEMORY TO AI NUDGES
+====================================================
+
+Currently nudges are explainable but NOT remembered.
+
+Implement nudge lifecycle memory.
+
+----------------------------------------------------
+DATA MODEL (ADDITIVE)
+----------------------------------------------------
+
+Create table: ai_nudge_events
+
+Columns:
+- id (uuid, pk)
+- nudge_id (uuid)
+- user_id (uuid)
+- event_type (enum: 'shown','dismissed','snoozed','acted')
+- event_at (timestamptz default now)
+- metadata (jsonb)
+
+Enable RLS: user owns nudge_id.
+
+----------------------------------------------------
+BEHAVIOR RULES
+----------------------------------------------------
+
+When nudge_trust_memory = true:
+
+- Record 'shown' when nudge is rendered
+- Record 'dismissed' when user dismisses
+- Record 'snoozed' when user snoozes
+- Record 'acted' when CTA is used
+
+Rules:
+- Same nudge_type for same entity cannot reappear for 3 days after dismiss
+- Snooze hides nudge until snoozed_until
+- Blocking nudges ignore dismiss/snooze
+
+====================================================
+PART 3 — PHASE 2 ENFORCEMENT (NOT JUST SUGGESTIONS)
+====================================================
+
+Upgrade existing Phase 2 nudges from advisory → assertive.
+
+----------------------------------------------------
+LEAD → JOB ENFORCEMENT
+----------------------------------------------------
+
+If:
+- lead.score >= 85
+- status = 'engaged'
+- no job created
+- lastContactedAt > 24h ago
+
+Then:
+- Create HIGH priority nudge:
+  nudgeType = 'lead_conversion_required'
+  dismissable = true
+  explainText:
+    "This lead is highly likely to convert. Turning it into a job protects the opportunity."
+
+----------------------------------------------------
+JOB → INVOICE ESCALATION
+----------------------------------------------------
+
+If:
+- job.status='completed'
+- job_resolution exists BUT resolution_type != 'invoiced'
+- paymentStatus != 'paid'
+- 48 hours pass
+
+Then:
+- Create escalation nudge
+- priority >= 90
+- CTA: Resolve payment
+
+====================================================
+PART 4 — ACCEPTANCE TESTS (MUST PASS)
+====================================================
+
+Implementation is COMPLETE only if:
+
+1) Zero completed jobs exist without job_resolution
+2) API cannot silently complete a job
+3) Blocking nudges cannot be dismissed
+4) Dismissed nudges do not reappear for 3 days
+5) Phase 2 nudges escalate, not just suggest
+
+====================================================
+DO NOT IMPLEMENT
+====================================================
+
+- Dashboard redesign
+- Global prioritization view
+- Outcome attribution
+- New AI models
+- Any Phase 3 features
+
+====================================================
+DELIVERABLES
+====================================================
+
+Provide:
+- SQL migrations
+- UI changes
+- API guards
+- Background job
+- Clear inline comments explaining enforcement logic
+
+Proceed carefully and show each change.
