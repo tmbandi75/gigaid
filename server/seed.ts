@@ -87,13 +87,14 @@ export async function seedDatabase() {
     console.log("[Seed] Demo user seeded");
 
     // Seed Jobs with various statuses and locations
+    // Using service names from predefined catalog (shared/service-categories.ts)
     const jobsData = [
       {
         id: "seed-job-1",
         userId: DEMO_USER_ID,
         title: "Kitchen Sink Repair",
         description: "Fix leaking kitchen sink and replace faucet",
-        serviceType: "plumbing",
+        serviceType: "Faucet Repair / Replacement",
         location: "123 Main Street, San Francisco, CA 94102",
         scheduledDate: daysFromNow(1),
         scheduledTime: "10:00",
@@ -115,7 +116,7 @@ export async function seedDatabase() {
         userId: DEMO_USER_ID,
         title: "Bathroom Renovation",
         description: "Complete bathroom tile work and fixture installation",
-        serviceType: "plumbing",
+        serviceType: "Toilet Repair",
         location: "456 Oak Avenue, San Francisco, CA 94110",
         scheduledDate: daysFromNow(3),
         scheduledTime: "09:00",
@@ -134,7 +135,7 @@ export async function seedDatabase() {
         userId: DEMO_USER_ID,
         title: "Water Heater Installation",
         description: "Install new tankless water heater",
-        serviceType: "plumbing",
+        serviceType: "Water Heater Service",
         location: "789 Pine Street, Oakland, CA 94607",
         scheduledDate: daysFromNow(0),
         scheduledTime: "14:00",
@@ -156,7 +157,7 @@ export async function seedDatabase() {
         userId: DEMO_USER_ID,
         title: "Electrical Panel Upgrade",
         description: "Upgrade 100A to 200A electrical panel",
-        serviceType: "electrical",
+        serviceType: "Circuit Breaker Issues",
         location: "321 Elm Street, Berkeley, CA 94704",
         scheduledDate: daysAgo(3),
         scheduledTime: "08:00",
@@ -178,7 +179,7 @@ export async function seedDatabase() {
         userId: DEMO_USER_ID,
         title: "Deep House Cleaning",
         description: "Full house deep cleaning including windows",
-        serviceType: "cleaning",
+        serviceType: "Deep Cleaning",
         location: "555 Market Street, San Francisco, CA 94105",
         scheduledDate: daysAgo(7),
         scheduledTime: "10:00",
@@ -200,7 +201,7 @@ export async function seedDatabase() {
         userId: DEMO_USER_ID,
         title: "Outdoor Lighting Installation",
         description: "Install landscape lighting in backyard",
-        serviceType: "electrical",
+        serviceType: "Light Fixture Installation",
         location: "888 Sunset Blvd, Sausalito, CA 94965",
         scheduledDate: daysFromNow(5),
         scheduledTime: "11:00",
@@ -225,6 +226,7 @@ export async function seedDatabase() {
     console.log("[Seed] Jobs seeded");
 
     // Seed Leads with various statuses
+    // Using service names from predefined catalog (shared/service-categories.ts)
     const leadsData = [
       {
         id: "seed-lead-1",
@@ -232,7 +234,7 @@ export async function seedDatabase() {
         clientName: "Jennifer Martinez",
         clientPhone: "415-555-2222",
         clientEmail: "j.martinez@email.com",
-        serviceType: "plumbing",
+        serviceType: "Toilet Repair",
         description: "Need quote for bathroom remodel",
         status: "new",
         source: "booking_form",
@@ -245,7 +247,7 @@ export async function seedDatabase() {
         clientName: "Thomas Anderson",
         clientPhone: "510-555-3333",
         clientEmail: "t.anderson@email.com",
-        serviceType: "electrical",
+        serviceType: "Smart Device Installation",
         description: "EV charger installation inquiry",
         status: "contacted",
         source: "referral",
@@ -260,7 +262,7 @@ export async function seedDatabase() {
         clientName: "Amanda Foster",
         clientPhone: "415-555-4444",
         clientEmail: "a.foster@email.com",
-        serviceType: "cleaning",
+        serviceType: "Standard Home Cleaning",
         description: "Regular weekly cleaning service",
         status: "converted",
         source: "social",
@@ -275,7 +277,7 @@ export async function seedDatabase() {
         clientName: "Kevin Brown",
         clientPhone: "510-555-5555",
         clientEmail: "k.brown@email.com",
-        serviceType: "plumbing",
+        serviceType: "Emergency Plumbing",
         description: "Emergency pipe repair needed",
         status: "new",
         source: "manual",
