@@ -38,8 +38,11 @@ export class ActionQueueGenerator {
 
     actions.sort((a, b) => b.priorityScore - a.priorityScore);
 
+    // Max 25 open items as per spec
+    const limitedActions = actions.slice(0, 25);
+
     const items: ActionQueueItem[] = [];
-    for (const action of actions) {
+    for (const action of limitedActions) {
       const dedupeKey = `${action.sourceType}:${action.sourceId}:${action.actionType}`;
       
       const existing = await this.storage.getActionQueueItemByDedupeKey(dedupeKey);

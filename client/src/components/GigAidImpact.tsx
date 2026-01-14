@@ -137,35 +137,43 @@ export function GigAidImpact() {
           </div>
 
           {outcomeFlag?.enabled && outcomes?.summary && (
-            <div className="mb-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-              <div className="flex items-center gap-2 mb-2">
-                <Clock className="h-4 w-4 text-emerald-600" />
-                <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                  Time & Money Saved
-                </span>
+            hasOutcomes ? (
+              <div className="mb-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="h-4 w-4 text-emerald-600" />
+                  <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                    Time & Money Saved
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-4">
+                  {outcomes.summary.totalDaysSaved > 0 && (
+                    <div>
+                      <span className="text-2xl font-bold text-emerald-600">
+                        {outcomes.summary.totalDaysSaved}
+                      </span>
+                      <span className="text-sm text-muted-foreground ml-1">days faster</span>
+                    </div>
+                  )}
+                  {outcomes.summary.totalCashAccelerated > 0 && (
+                    <div>
+                      <span className="text-2xl font-bold text-emerald-600">
+                        {formatCurrency(outcomes.summary.totalCashAccelerated * 100)}
+                      </span>
+                      <span className="text-sm text-muted-foreground ml-1">accelerated</span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Based on {outcomes.summary.totalNudgesActed} actions taken
+                </p>
               </div>
-              <div className="flex items-baseline gap-4">
-                {outcomes.summary.totalDaysSaved > 0 && (
-                  <div>
-                    <span className="text-2xl font-bold text-emerald-600">
-                      {outcomes.summary.totalDaysSaved}
-                    </span>
-                    <span className="text-sm text-muted-foreground ml-1">days faster</span>
-                  </div>
-                )}
-                {outcomes.summary.totalCashAccelerated > 0 && (
-                  <div>
-                    <span className="text-2xl font-bold text-emerald-600">
-                      {formatCurrency(outcomes.summary.totalCashAccelerated * 100)}
-                    </span>
-                    <span className="text-sm text-muted-foreground ml-1">accelerated</span>
-                  </div>
-                )}
+            ) : (
+              <div className="mb-3 p-3 rounded-xl bg-muted/50 border border-muted">
+                <p className="text-sm text-muted-foreground" data-testid="text-not-enough-data">
+                  We'll show your impact once we have more payment history.
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Based on {outcomes.summary.totalNudgesActed} actions taken
-              </p>
-            </div>
+            )
           )}
 
           <div className="grid grid-cols-2 gap-3">

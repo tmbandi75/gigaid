@@ -84,7 +84,7 @@ export function MoneyPlanWidget() {
   }
 
   const openItems = items?.filter(i => i.status === "open") || [];
-  const topItems = openItems.slice(0, 3);
+  const topItems = openItems.slice(0, 5); // Show up to 5 items on dashboard
   const totalCount = openItems.length;
 
   const handleAction = (item: ActionQueueItem) => {
