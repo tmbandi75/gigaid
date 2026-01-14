@@ -4,8 +4,11 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Star, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { PhotoUpload } from "@/components/ui/photo-upload";
 
 interface ReviewData {
   jobId: string;
@@ -21,6 +24,8 @@ export default function PublicReview() {
   const [hoveredRating, setHoveredRating] = useState(0);
   const [comment, setComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [reviewPhotos, setReviewPhotos] = useState<string[]>([]);
+  const [photosPublic, setPhotosPublic] = useState(true);
 
   const { data, isLoading, error } = useQuery<ReviewData>({
     queryKey: [`/api/public/review/${token}`],
@@ -32,7 +37,12 @@ export default function PublicReview() {
       const response = await fetch(`/api/public/review/${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rating, comment }),
+        body: JSON.stringify({ 
+          rating, 
+          comment,
+          photos: reviewPhotos.length > 0 ? reviewPhotos : undefined,
+          photosPublic: reviewPhotos.length > 0 ? photosPublic : undefined,
+        }),
       });
       if (!response.ok) throw new Error("Failed to submit review");
       return response.json();
@@ -149,6 +159,30 @@ export default function PublicReview() {
                     className="mb-4 min-h-[100px]"
                     data-testid="input-comment"
                   />
+
+                  <div className="mb-4">
+                    <PhotoUpload
+                      photos={reviewPhotos}
+                      onPhotosChange={setReviewPhotos}
+                      maxPhotos={3}
+                      label="Add photos (optional)"
+                      helpText="Show the work that was done"
+                    />
+
+                    {reviewPhotos.length > 0 && (
+                      <div className="flex items-center justify-between mt-3 p-3 rounded-lg bg-muted/50">
+                        <Label htmlFor="photos-public" className="text-sm">
+                          Make photos public on review
+                        </Label>
+                        <Switch
+                          id="photos-public"
+                          checked={photosPublic}
+                          onCheckedChange={setPhotosPublic}
+                          data-testid="switch-photos-public"
+                        />
+                      </div>
+                    )}
+                  </div>
 
                   <Button
                     className="w-full h-12 text-base bg-gradient-to-r from-primary to-violet-600"

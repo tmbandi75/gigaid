@@ -2457,6 +2457,24 @@ export async function registerRoutes(
         ...geocodedData,
       });
 
+      // Store photo assets if any photos were uploaded
+      const { photos } = req.body;
+      if (photos && Array.isArray(photos) && photos.length > 0) {
+        for (const photoPath of photos) {
+          if (typeof photoPath === "string" && photoPath.startsWith("/objects/")) {
+            await storage.createPhotoAsset({
+              ownerUserId: null, // Customer-uploaded (not logged in)
+              workspaceUserId: user.id,
+              sourceType: "booking",
+              sourceId: request.id,
+              storageBucket: process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID || "",
+              storagePath: photoPath,
+              visibility: "private",
+            });
+          }
+        }
+      }
+
       // Send confirmation notifications to the client
       const providerFirstName = user.name?.split(" ")[0] || "Your service provider";
       const serviceName = request.serviceType || "service";
@@ -5617,6 +5635,24 @@ Return ONLY the message text, no JSON or formatting.`
         comment: comment || undefined,
         isPublic: true,
       });
+
+      // Store photo assets if any photos were uploaded
+      const { photos, photosPublic } = req.body;
+      if (photos && Array.isArray(photos) && photos.length > 0) {
+        for (const photoPath of photos) {
+          if (typeof photoPath === "string" && photoPath.startsWith("/objects/")) {
+            await storage.createPhotoAsset({
+              ownerUserId: null, // Customer-uploaded (not logged in)
+              workspaceUserId: job.userId,
+              sourceType: "review",
+              sourceId: review.id,
+              storageBucket: process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID || "",
+              storagePath: photoPath,
+              visibility: photosPublic === true ? "public" : "private",
+            });
+          }
+        }
+      }
 
       res.json({ success: true, review });
     } catch (error) {

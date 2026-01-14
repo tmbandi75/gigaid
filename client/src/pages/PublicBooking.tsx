@@ -18,6 +18,7 @@ import { PriceEstimator } from "@/components/booking/PriceEstimator";
 import { Confetti } from "@/components/booking/Confetti";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { AddressAutocomplete } from "@/components/booking/AddressAutocomplete";
+import { PhotoUpload } from "@/components/ui/photo-upload";
 
 interface PublicProfile {
   name: string;
@@ -90,6 +91,7 @@ export default function PublicBooking() {
     location: "",
     description: "",
   });
+  const [bookingPhotos, setBookingPhotos] = useState<string[]>([]);
   const [clientZipCode, setClientZipCode] = useState("");
   const [zipConfirmed, setZipConfirmed] = useState(false);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
@@ -170,7 +172,7 @@ export default function PublicBooking() {
   });
 
   const submitMutation = useMutation({
-    mutationFn: (data: { clientName: string; clientPhone: string; clientEmail: string; serviceType: string; location: string; description: string; preferredDate: string; preferredTime: string }) =>
+    mutationFn: (data: { clientName: string; clientPhone: string; clientEmail: string; serviceType: string; location: string; description: string; preferredDate: string; preferredTime: string; photos?: string[] }) =>
       apiRequest("POST", `/api/public/book/${slug}`, data),
     onSuccess: () => {
       saveToBookingHistory({
@@ -214,6 +216,7 @@ export default function PublicBooking() {
       description: formData.description,
       preferredDate: selectedDateStr!,
       preferredTime: selectedTime,
+      photos: bookingPhotos.length > 0 ? bookingPhotos : undefined,
     });
   };
 
@@ -765,6 +768,14 @@ export default function PublicBooking() {
                     placeholder="Please describe what you need help with..."
                   />
                 </div>
+
+                <PhotoUpload
+                  photos={bookingPhotos}
+                  onPhotosChange={setBookingPhotos}
+                  maxPhotos={5}
+                  label="Add photos (optional)"
+                  helpText="Helps the pro prepare and quote accurately"
+                />
 
                 {selectedDate && selectedTime && (
                   <div className="p-3 rounded-lg bg-muted">
