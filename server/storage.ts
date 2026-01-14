@@ -26,6 +26,8 @@ import {
   type FeatureFlag,
   type JobDraft, type InsertJobDraft,
   type JobResolution, type InsertJobResolution,
+  type ActionQueueItem, type InsertActionQueueItem,
+  type OutcomeMetricsDaily, type InsertOutcomeMetricsDaily,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -207,6 +209,21 @@ export interface IStorage {
   getJobResolutionsByUser(userId: string): Promise<JobResolution[]>;
   getUnresolvedCompletedJobs(userId: string): Promise<Job[]>;
   createJobResolution(resolution: InsertJobResolution): Promise<JobResolution>;
+
+  // Action Queue (Today's Money Plan - Global Prioritization)
+  getActionQueueItems(userId: string, status?: string): Promise<ActionQueueItem[]>;
+  getActionQueueItem(id: string): Promise<ActionQueueItem | undefined>;
+  getActionQueueItemByDedupeKey(dedupeKey: string): Promise<ActionQueueItem | undefined>;
+  createActionQueueItem(item: InsertActionQueueItem): Promise<ActionQueueItem>;
+  updateActionQueueItem(id: string, updates: Partial<ActionQueueItem>): Promise<ActionQueueItem | undefined>;
+  deleteActionQueueItem(id: string): Promise<boolean>;
+  clearActionQueue(userId: string): Promise<number>;
+
+  // Outcome Metrics Daily (GigAid Impact - Outcome Attribution)
+  getOutcomeMetricsDaily(userId: string, startDate: string, endDate: string): Promise<OutcomeMetricsDaily[]>;
+  getOutcomeMetricsDailyByDate(userId: string, metricDate: string): Promise<OutcomeMetricsDaily | undefined>;
+  createOutcomeMetricsDaily(metrics: InsertOutcomeMetricsDaily): Promise<OutcomeMetricsDaily>;
+  updateOutcomeMetricsDaily(id: string, updates: Partial<OutcomeMetricsDaily>): Promise<OutcomeMetricsDaily | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -234,6 +251,8 @@ export class MemStorage implements IStorage {
   private featureFlags: Map<string, FeatureFlag>;
   private jobDrafts: Map<string, JobDraft>;
   private jobResolutions: Map<string, JobResolution>;
+  private actionQueueItems: Map<string, ActionQueueItem>;
+  private outcomeMetricsDaily: Map<string, OutcomeMetricsDaily>;
 
   constructor() {
     this.users = new Map();
@@ -260,6 +279,8 @@ export class MemStorage implements IStorage {
     this.featureFlags = new Map();
     this.jobDrafts = new Map();
     this.jobResolutions = new Map();
+    this.actionQueueItems = new Map();
+    this.outcomeMetricsDaily = new Map();
     
     // Seed default feature flags
     this.featureFlags.set("ai_micro_nudges", {
@@ -278,6 +299,18 @@ export class MemStorage implements IStorage {
       key: "nudge_trust_memory",
       enabled: false, // Default OFF - Trust Memory for AI Nudges
       description: "Trust Memory: 72-hour cooldown after dismissing nudges, prevents same nudge type from reappearing for 3 days",
+      updatedAt: new Date().toISOString(),
+    });
+    this.featureFlags.set("today_money_plan", {
+      key: "today_money_plan",
+      enabled: false, // Default OFF - Today's Money Plan
+      description: "Today's Money Plan: Global prioritization view showing ranked action queue across leads, jobs, and invoices",
+      updatedAt: new Date().toISOString(),
+    });
+    this.featureFlags.set("outcome_attribution", {
+      key: "outcome_attribution",
+      enabled: false, // Default OFF - Outcome Attribution
+      description: "Outcome Attribution: Show 'GigAid helped you collect $X faster' with conservative calculations",
       updatedAt: new Date().toISOString(),
     });
     
@@ -1902,6 +1935,109 @@ export class MemStorage implements IStorage {
     };
     this.jobResolutions.set(id, newResolution);
     return newResolution;
+  }
+
+  // ============================================================
+  // Action Queue (Today's Money Plan - Global Prioritization)
+  // ============================================================
+
+  async getActionQueueItems(userId: string, status?: string): Promise<ActionQueueItem[]> {
+    let items = Array.from(this.actionQueueItems.values())
+      .filter(item => item.userId === userId);
+    if (status) {
+      items = items.filter(item => item.status === status);
+    }
+    return items.sort((a, b) => b.priorityScore - a.priorityScore);
+  }
+
+  async getActionQueueItem(id: string): Promise<ActionQueueItem | undefined> {
+    return this.actionQueueItems.get(id);
+  }
+
+  async getActionQueueItemByDedupeKey(dedupeKey: string): Promise<ActionQueueItem | undefined> {
+    return Array.from(this.actionQueueItems.values()).find(item => item.dedupeKey === dedupeKey);
+  }
+
+  async createActionQueueItem(item: InsertActionQueueItem): Promise<ActionQueueItem> {
+    const id = randomUUID();
+    const newItem: ActionQueueItem = {
+      ...item,
+      id,
+      subtitle: item.subtitle ?? "",
+      explainText: item.explainText ?? "",
+      ctaPrimaryAction: item.ctaPrimaryAction ?? "{}",
+      ctaSecondaryLabel: item.ctaSecondaryLabel ?? null,
+      ctaSecondaryAction: item.ctaSecondaryAction ?? null,
+      dueAt: item.dueAt ?? null,
+      status: item.status ?? "open",
+      snoozedUntil: item.snoozedUntil ?? null,
+      sourceId: item.sourceId ?? null,
+    };
+    this.actionQueueItems.set(id, newItem);
+    return newItem;
+  }
+
+  async updateActionQueueItem(id: string, updates: Partial<ActionQueueItem>): Promise<ActionQueueItem | undefined> {
+    const item = this.actionQueueItems.get(id);
+    if (!item) return undefined;
+    const updated = { ...item, ...updates, updatedAt: new Date().toISOString() };
+    this.actionQueueItems.set(id, updated);
+    return updated;
+  }
+
+  async deleteActionQueueItem(id: string): Promise<boolean> {
+    return this.actionQueueItems.delete(id);
+  }
+
+  async clearActionQueue(userId: string): Promise<number> {
+    const items = Array.from(this.actionQueueItems.entries())
+      .filter(([_, item]) => item.userId === userId);
+    for (const [id] of items) {
+      this.actionQueueItems.delete(id);
+    }
+    return items.length;
+  }
+
+  // ============================================================
+  // Outcome Metrics Daily (GigAid Impact - Outcome Attribution)
+  // ============================================================
+
+  async getOutcomeMetricsDaily(userId: string, startDate: string, endDate: string): Promise<OutcomeMetricsDaily[]> {
+    return Array.from(this.outcomeMetricsDaily.values())
+      .filter(m => m.userId === userId && m.metricDate >= startDate && m.metricDate <= endDate)
+      .sort((a, b) => a.metricDate.localeCompare(b.metricDate));
+  }
+
+  async getOutcomeMetricsDailyByDate(userId: string, metricDate: string): Promise<OutcomeMetricsDaily | undefined> {
+    return Array.from(this.outcomeMetricsDaily.values())
+      .find(m => m.userId === userId && m.metricDate === metricDate);
+  }
+
+  async createOutcomeMetricsDaily(metrics: InsertOutcomeMetricsDaily): Promise<OutcomeMetricsDaily> {
+    const id = randomUUID();
+    const newMetrics: OutcomeMetricsDaily = {
+      ...metrics,
+      id,
+      invoicesPaidCount: metrics.invoicesPaidCount ?? 0,
+      invoicesPaidAmount: metrics.invoicesPaidAmount ?? 0,
+      avgDaysToPaid: metrics.avgDaysToPaid ?? null,
+      remindersSentCount: metrics.remindersSentCount ?? 0,
+      nudgesActedCount: metrics.nudgesActedCount ?? 0,
+      leadsConvertedCount: metrics.leadsConvertedCount ?? 0,
+      estimatedDaysSaved: metrics.estimatedDaysSaved ?? 0,
+      estimatedCashAccelerated: metrics.estimatedCashAccelerated ?? 0,
+      createdAt: metrics.createdAt ?? new Date().toISOString(),
+    };
+    this.outcomeMetricsDaily.set(id, newMetrics);
+    return newMetrics;
+  }
+
+  async updateOutcomeMetricsDaily(id: string, updates: Partial<OutcomeMetricsDaily>): Promise<OutcomeMetricsDaily | undefined> {
+    const metrics = this.outcomeMetricsDaily.get(id);
+    if (!metrics) return undefined;
+    const updated = { ...metrics, ...updates };
+    this.outcomeMetricsDaily.set(id, updated);
+    return updated;
   }
 }
 

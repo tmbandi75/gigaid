@@ -830,6 +830,18 @@ export async function seedDatabase() {
         description: "Trust Memory: 72-hour cooldown after dismissing nudges, prevents same nudge type from reappearing for 3 days",
         updatedAt: daysAgo(0),
       },
+      {
+        key: "today_money_plan",
+        enabled: false, // Default OFF - Today's Money Plan global prioritization
+        description: "Today's Money Plan: Global prioritization view showing ranked action queue across leads, jobs, and invoices",
+        updatedAt: daysAgo(0),
+      },
+      {
+        key: "outcome_attribution",
+        enabled: false, // Default OFF - Outcome Attribution impact metrics
+        description: "Outcome Attribution: Show 'GigAid helped you collect $X faster' with conservative calculations",
+        updatedAt: daysAgo(0),
+      },
     ];
 
     for (const flag of featureFlagsData) {

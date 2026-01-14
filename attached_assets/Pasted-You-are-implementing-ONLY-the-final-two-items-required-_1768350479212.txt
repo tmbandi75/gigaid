@@ -1,0 +1,284 @@
+You are implementing ONLY the final two items required to reach a 10.0 product score for GigAid:
+
+1) Global Prioritization: “Today’s Money Plan”
+2) Outcome Attribution: “GigAid helped you collect $X faster”
+
+DO NOT touch or refactor existing Jobs/Leads/Invoices/Nudges/Enforcement logic.
+Additive changes only. Feature-flag everything.
+
+====================================================
+FEATURE FLAGS (MANDATORY)
+====================================================
+
+Add / use:
+- today_money_plan (default false)
+- outcome_attribution (default false)
+
+If flags are OFF:
+- No UI changes
+- No background jobs
+- No additional queries executed on core views
+
+====================================================
+PART A — GLOBAL PRIORITIZATION: “TODAY’S MONEY PLAN”
+====================================================
+
+GOAL:
+Create a single, ranked list of the most important actions across leads, jobs, and invoices.
+This is NOT another dashboard. It is a prioritized action queue.
+
+----------------------------------------------------
+DATA MODEL (ADDITIVE)
+----------------------------------------------------
+
+Create table: action_queue_items
+
+Columns:
+- id uuid pk default gen_random_uuid()
+- workspace_id uuid not null
+- user_id uuid not null
+- source_type text not null check (source_type in ('lead','job','invoice','nudge','system'))
+- source_id uuid null
+- action_type text not null
+  check (action_type in (
+    'follow_up_lead',
+    'reply_hot_lead',
+    'convert_lead_to_job',
+    'navigate_to_job',
+    'start_job',
+    'complete_job',
+    'create_invoice',
+    'send_invoice_reminder',
+    'resolve_payment',
+    'review_unpaid_invoices',
+    'review_stalled_leads'
+  ))
+- title text not null
+- subtitle text not null default ''
+- explain_text text not null default ''
+- cta_primary_label text not null
+- cta_primary_action jsonb not null default '{}'::jsonb
+- cta_secondary_label text null
+- cta_secondary_action jsonb null
+- priority_score int not null
+- due_at timestamptz null
+- status text not null default 'open'
+  check (status in ('open','done','dismissed','snoozed'))
+- snoozed_until timestamptz null
+- created_at timestamptz not null default now()
+- updated_at timestamptz not null default now()
+- dedupe_key text not null
+
+Indexes:
+- (workspace_id, user_id, status, priority_score desc)
+Unique:
+- dedupe_key
+
+RLS:
+- user can select/update only their own rows (user_id = auth.uid())
+
+----------------------------------------------------
+ACTION QUEUE GENERATOR (DETERMINISTIC)
+----------------------------------------------------
+
+Create API endpoint:
+POST /api/action-queue/generate
+
+Rules:
+- Runs on demand (initially) and can later be scheduled
+- Idempotent via dedupe_key
+- Max 25 open items
+- Keep only most relevant; do not spam
+
+Priority scoring:
+- 100: Blocking unresolved payment (if your system creates such nudges)
+- 95: Hot lead replied within last 2 hours
+- 90: Unpaid invoice > 24h since sent
+- 85: Lead engaged and not converted > 24h
+- 80: Job starting within next 2 hours
+- 70: New lead not contacted within 12–24h
+- 60: Weekly review items (low priority)
+
+Data sources:
+- Use existing aiNudges if present (strong signal)
+- Use jobs table for upcoming schedule
+- Use invoices table for sent/unpaid
+- Use leads table for new/engaged/stalled
+
+For each generated item:
+- Must include a clear CTA payload that deep-links to the correct entity screen
+- Must include explain_text (1 sentence: “Why this matters”)
+
+CTAs are NOT allowed to auto-send anything.
+They may open an edit screen or confirmation sheet.
+
+API endpoint:
+GET /api/action-queue
+- returns open items sorted by priority_score desc, due_at asc
+
+Mutations:
+POST /api/action-queue/:id/done
+POST /api/action-queue/:id/dismiss
+POST /api/action-queue/:id/snooze {hours: 24|48|72}
+
+----------------------------------------------------
+FRONTEND UI: TODAY’S MONEY PLAN
+----------------------------------------------------
+
+If today_money_plan flag is ON:
+
+1) Add a new dashboard section at the top:
+   Header: “Today’s Money Plan”
+   Show up to 5 items with:
+   - title
+   - subtitle
+   - primary CTA button
+   - small “Why” text (explain_text)
+   - overflow menu: Dismiss / Snooze
+
+2) Add a “View All” link:
+   Opens /money-plan page that shows full list (up to 25)
+
+3) Each item click:
+   - Executes the deep-link / opens the correct sheet
+   - Marks the item as “done” when user completes the action flow (manual signal)
+
+UI constraints:
+- No charts
+- No clutter
+- 1 tap to act
+- Never show more than 1 global banner
+
+====================================================
+PART B — OUTCOME ATTRIBUTION: “GIGAID HELPED YOU COLLECT $X FASTER”
+====================================================
+
+GOAL:
+Show the user, with credible math, how GigAid improved outcomes.
+Must be transparent and conservative (no inflated claims).
+
+----------------------------------------------------
+DATA MODEL (ADDITIVE)
+----------------------------------------------------
+
+Create table: outcome_metrics_daily
+
+Columns:
+- id uuid pk default gen_random_uuid()
+- workspace_id uuid not null
+- user_id uuid not null
+- metric_date date not null
+- invoices_paid_count int not null default 0
+- invoices_paid_amount numeric not null default 0
+- avg_days_to_paid numeric null
+- reminders_sent_count int not null default 0
+- nudges_acted_count int not null default 0
+- leads_converted_count int not null default 0
+- estimated_days_saved numeric not null default 0
+- estimated_cash_accelerated numeric not null default 0
+- created_at timestamptz default now()
+
+Unique:
+- (workspace_id, user_id, metric_date)
+
+RLS:
+- user owns row
+
+----------------------------------------------------
+METRICS COMPUTATION (CONSERVATIVE)
+----------------------------------------------------
+
+If outcome_attribution flag is ON:
+
+Create a daily job (or on-demand endpoint first):
+POST /api/outcomes/compute?range=30d
+
+Compute for last 30 days:
+
+1) avg_days_to_paid:
+   - For each invoice with sentAt and paidAt:
+     days = paidAt - sentAt
+   - average those days
+
+2) reminders_sent_count:
+   - count reminder events (if you have reminder logs), otherwise count “invoice_reminder acted” events
+
+3) nudges_acted_count:
+   - count ai_nudge_events where event_type='acted' in period
+   - if events missing, implement minimal logging now (do not refactor)
+
+4) estimated_cash_accelerated (CONSERVATIVE MODEL):
+   - Only count invoices that had a reminder sent AND were paid within 7 days after reminder
+   - Estimate acceleration = min(2 days, (paidAt - reminderSentAt) positive delta saved vs baseline)
+   - Baseline = user’s avg_days_to_paid (or fallback 7 days if insufficient data)
+   - cash_accelerated += invoice.amount * (estimated_days_saved / baseline_days)
+
+If insufficient data:
+- Show “Not enough data yet” instead of making claims.
+
+Output:
+- Save daily rollups into outcome_metrics_daily
+
+----------------------------------------------------
+FRONTEND UI: OUTCOME ATTRIBUTION CARD
+----------------------------------------------------
+
+If outcome_attribution flag is ON:
+
+Add a card on Dashboard below Money Plan:
+
+Title:
+“GigAid Impact (Last 30 Days)”
+
+Show:
+- “Collected: $X from Y invoices”
+- “Average time to get paid: Z days”
+- If enough data:
+  “Estimated cash accelerated: $A”
+  “Estimated time saved: B days”
+- If not enough data:
+  “We’ll show your impact once we have more payment history.”
+
+Add a small “How we calculate this” link:
+- Opens a simple modal explaining the conservative rules (no marketing fluff)
+
+====================================================
+ACCEPTANCE TESTS (MUST PASS)
+====================================================
+
+1) With flags OFF:
+   - App behavior unchanged
+
+2) With today_money_plan ON:
+   - A ranked list appears
+   - Items deep-link correctly
+   - Dedupe prevents duplicates
+   - Max 25 open items
+   - Snooze/dismiss works
+
+3) With outcome_attribution ON:
+   - Impact card renders
+   - Uses only real payment history
+   - Shows “Not enough data” if insufficient history
+   - No inflated numbers
+
+4) Performance:
+   - No heavy queries on every page load
+   - Generate/compute endpoints are called explicitly (on dashboard mount ONLY when flags ON)
+
+====================================================
+DELIVERABLES
+====================================================
+
+Provide:
+- SQL migrations
+- API endpoints
+- Generator logic
+- UI components:
+  - MoneyPlanWidget
+  - MoneyPlanPage
+  - ImpactCard
+  - CalculationModal
+- Notes on assumptions and any missing data sources used
+
+Proceed step-by-step and do not exceed the scope.

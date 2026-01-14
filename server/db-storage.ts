@@ -1,10 +1,11 @@
-import { eq, and, desc, asc, lte, or, ne, isNull, sql, notInArray } from "drizzle-orm";
+import { eq, and, desc, asc, lte, gte, or, ne, isNull, sql, notInArray } from "drizzle-orm";
 import { db } from "./db";
 import { 
   users, otpCodes, sessions, jobs, leads, invoices, reminders,
   crewMembers, referrals, bookingRequests, bookingEvents, voiceNotes,
   reviews, userPaymentMethods, jobPayments, crewInvites, crewJobPhotos, crewMessages,
   priceConfirmations, aiNudges, aiNudgeEvents, featureFlags, jobDrafts, jobResolutions,
+  actionQueueItems, outcomeMetricsDaily,
   type User, type InsertUser,
   type Job, type InsertJob,
   type Lead, type InsertLead,
@@ -32,6 +33,8 @@ import {
   type FeatureFlag,
   type JobDraft, type InsertJobDraft,
   type JobResolution, type InsertJobResolution,
+  type ActionQueueItem, type InsertActionQueueItem,
+  type OutcomeMetricsDaily, type InsertOutcomeMetricsDaily,
 } from "@shared/schema";
 import { IStorage } from "./storage";
 import { randomUUID } from "crypto";
@@ -1035,6 +1038,93 @@ export class DatabaseStorage implements IStorage {
   async createJobResolution(resolution: InsertJobResolution): Promise<JobResolution> {
     const [newResolution] = await db.insert(jobResolutions).values(resolution).returning();
     return newResolution;
+  }
+
+  // ============================================================
+  // Action Queue (Today's Money Plan - Global Prioritization)
+  // ============================================================
+
+  async getActionQueueItems(userId: string, status?: string): Promise<ActionQueueItem[]> {
+    if (status) {
+      return await db.select().from(actionQueueItems)
+        .where(and(
+          eq(actionQueueItems.userId, userId),
+          eq(actionQueueItems.status, status)
+        ))
+        .orderBy(desc(actionQueueItems.priorityScore));
+    }
+    return await db.select().from(actionQueueItems)
+      .where(eq(actionQueueItems.userId, userId))
+      .orderBy(desc(actionQueueItems.priorityScore));
+  }
+
+  async getActionQueueItem(id: string): Promise<ActionQueueItem | undefined> {
+    const [item] = await db.select().from(actionQueueItems).where(eq(actionQueueItems.id, id));
+    return item;
+  }
+
+  async getActionQueueItemByDedupeKey(dedupeKey: string): Promise<ActionQueueItem | undefined> {
+    const [item] = await db.select().from(actionQueueItems).where(eq(actionQueueItems.dedupeKey, dedupeKey));
+    return item;
+  }
+
+  async createActionQueueItem(item: InsertActionQueueItem): Promise<ActionQueueItem> {
+    const [newItem] = await db.insert(actionQueueItems).values(item).returning();
+    return newItem;
+  }
+
+  async updateActionQueueItem(id: string, updates: Partial<ActionQueueItem>): Promise<ActionQueueItem | undefined> {
+    const [updated] = await db.update(actionQueueItems)
+      .set({ ...updates, updatedAt: new Date().toISOString() })
+      .where(eq(actionQueueItems.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteActionQueueItem(id: string): Promise<boolean> {
+    const result = await db.delete(actionQueueItems).where(eq(actionQueueItems.id, id));
+    return result.rowCount! > 0;
+  }
+
+  async clearActionQueue(userId: string): Promise<number> {
+    const result = await db.delete(actionQueueItems).where(eq(actionQueueItems.userId, userId));
+    return result.rowCount || 0;
+  }
+
+  // ============================================================
+  // Outcome Metrics Daily (GigAid Impact - Outcome Attribution)
+  // ============================================================
+
+  async getOutcomeMetricsDaily(userId: string, startDate: string, endDate: string): Promise<OutcomeMetricsDaily[]> {
+    return await db.select().from(outcomeMetricsDaily)
+      .where(and(
+        eq(outcomeMetricsDaily.userId, userId),
+        gte(outcomeMetricsDaily.metricDate, startDate),
+        lte(outcomeMetricsDaily.metricDate, endDate)
+      ))
+      .orderBy(asc(outcomeMetricsDaily.metricDate));
+  }
+
+  async getOutcomeMetricsDailyByDate(userId: string, metricDate: string): Promise<OutcomeMetricsDaily | undefined> {
+    const [metrics] = await db.select().from(outcomeMetricsDaily)
+      .where(and(
+        eq(outcomeMetricsDaily.userId, userId),
+        eq(outcomeMetricsDaily.metricDate, metricDate)
+      ));
+    return metrics;
+  }
+
+  async createOutcomeMetricsDaily(metrics: InsertOutcomeMetricsDaily): Promise<OutcomeMetricsDaily> {
+    const [newMetrics] = await db.insert(outcomeMetricsDaily).values(metrics).returning();
+    return newMetrics;
+  }
+
+  async updateOutcomeMetricsDaily(id: string, updates: Partial<OutcomeMetricsDaily>): Promise<OutcomeMetricsDaily | undefined> {
+    const [updated] = await db.update(outcomeMetricsDaily)
+      .set(updates)
+      .where(eq(outcomeMetricsDaily.id, id))
+      .returning();
+    return updated;
   }
 }
 

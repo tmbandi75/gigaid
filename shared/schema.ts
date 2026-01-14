@@ -980,4 +980,91 @@ export interface PaymentConfig {
   depositPercent?: number;
 }
 
+// Action Queue Items - for "Today's Money Plan" global prioritization
+export const actionQueueSourceTypes = ["lead", "job", "invoice", "nudge", "system"] as const;
+export type ActionQueueSourceType = (typeof actionQueueSourceTypes)[number];
+
+export const actionQueueActionTypes = [
+  "follow_up_lead",
+  "reply_hot_lead",
+  "convert_lead_to_job",
+  "navigate_to_job",
+  "start_job",
+  "complete_job",
+  "create_invoice",
+  "send_invoice_reminder",
+  "resolve_payment",
+  "review_unpaid_invoices",
+  "review_stalled_leads"
+] as const;
+export type ActionQueueActionType = (typeof actionQueueActionTypes)[number];
+
+export const actionQueueStatuses = ["open", "done", "dismissed", "snoozed"] as const;
+export type ActionQueueStatus = (typeof actionQueueStatuses)[number];
+
+export const actionQueueItems = pgTable("action_queue_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  sourceType: text("source_type").notNull(), // lead, job, invoice, nudge, system
+  sourceId: varchar("source_id"), // nullable - system items may not have source
+  actionType: text("action_type").notNull(),
+  title: text("title").notNull(),
+  subtitle: text("subtitle").notNull().default(""),
+  explainText: text("explain_text").notNull().default(""),
+  ctaPrimaryLabel: text("cta_primary_label").notNull(),
+  ctaPrimaryAction: text("cta_primary_action").notNull().default("{}"), // JSON
+  ctaSecondaryLabel: text("cta_secondary_label"),
+  ctaSecondaryAction: text("cta_secondary_action"), // JSON
+  priorityScore: integer("priority_score").notNull(),
+  dueAt: text("due_at"),
+  status: text("status").notNull().default("open"),
+  snoozedUntil: text("snoozed_until"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+  dedupeKey: text("dedupe_key").notNull().unique(),
+});
+
+export const insertActionQueueItemSchema = createInsertSchema(actionQueueItems).omit({
+  id: true,
+});
+
+export type InsertActionQueueItem = z.infer<typeof insertActionQueueItemSchema>;
+export type ActionQueueItem = typeof actionQueueItems.$inferSelect;
+
+// Outcome Metrics Daily - for "GigAid Impact" attribution
+export const outcomeMetricsDaily = pgTable("outcome_metrics_daily", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  metricDate: text("metric_date").notNull(), // YYYY-MM-DD
+  invoicesPaidCount: integer("invoices_paid_count").notNull().default(0),
+  invoicesPaidAmount: integer("invoices_paid_amount").notNull().default(0), // cents
+  avgDaysToPaid: doublePrecision("avg_days_to_paid"),
+  remindersSentCount: integer("reminders_sent_count").notNull().default(0),
+  nudgesActedCount: integer("nudges_acted_count").notNull().default(0),
+  leadsConvertedCount: integer("leads_converted_count").notNull().default(0),
+  estimatedDaysSaved: doublePrecision("estimated_days_saved").notNull().default(0),
+  estimatedCashAccelerated: integer("estimated_cash_accelerated").notNull().default(0), // cents
+  createdAt: text("created_at"),
+});
+
+export const insertOutcomeMetricsDailySchema = createInsertSchema(outcomeMetricsDaily).omit({
+  id: true,
+});
+
+export type InsertOutcomeMetricsDaily = z.infer<typeof insertOutcomeMetricsDailySchema>;
+export type OutcomeMetricsDaily = typeof outcomeMetricsDaily.$inferSelect;
+
+// Aggregated outcome stats for UI display
+export interface OutcomeStats {
+  totalCollected: number; // cents
+  invoicesPaidCount: number;
+  avgDaysToPaid: number | null;
+  remindersSentCount: number;
+  nudgesActedCount: number;
+  leadsConvertedCount: number;
+  estimatedDaysSaved: number;
+  estimatedCashAccelerated: number; // cents
+  hasEnoughData: boolean;
+}
+
 export * from "./models/chat";
