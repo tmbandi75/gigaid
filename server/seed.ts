@@ -824,6 +824,12 @@ export async function seedDatabase() {
         description: "Revenue Protection: Require explicit resolution (invoice/payment/waiver) before completing jobs",
         updatedAt: daysAgo(0),
       },
+      {
+        key: "nudge_trust_memory",
+        enabled: false, // Default OFF - Trust Memory for AI Nudges
+        description: "Trust Memory: 72-hour cooldown after dismissing nudges, prevents same nudge type from reappearing for 3 days",
+        updatedAt: daysAgo(0),
+      },
     ];
 
     for (const flag of featureFlagsData) {
