@@ -1,0 +1,187 @@
+You are fixing a CRITICAL regression in the GigAid application.
+
+====================================================
+PROBLEM STATEMENT (NON-NEGOTIABLE)
+====================================================
+
+The system currently allows jobs to reach a "completed" state
+WITHOUT any of the following being recorded:
+
+- an invoice
+- a payment without invoice
+- a waiver with reason
+
+This is a revenue-leak regression and MUST be fixed.
+
+The fix must be:
+- deterministic
+- enforced at data + API level
+- regression-proof
+- safe for seed data and migrations
+
+====================================================
+SCOPE (STRICT)
+====================================================
+
+DO NOT:
+- add new features
+- refactor unrelated code
+- change existing schemas except where explicitly allowed
+- redesign UI
+
+ONLY:
+- restore enforcement
+- harden enforcement
+- add regression guards
+
+====================================================
+ROOT CAUSE ASSUMPTIONS (HANDLE ALL)
+====================================================
+
+Assume ALL of the following are possible:
+1. Feature flag was OFF
+2. Enforcement exists only in UI
+3. Seed data bypasses enforcement
+4. API update path bypasses enforcement
+5. job_resolution table exists but is not required
+6. job_resolution table does NOT exist in some environments
+
+Your solution MUST handle all cases.
+
+====================================================
+STEP 1 — DATA LAYER HARDENING (MANDATORY)
+====================================================
+
+Ensure the existence of a job resolution record.
+
+If table `job_resolution` does NOT exist:
+- Create it (additive migration)
+
+Table: job_resolution
+- id uuid pk
+- job_id uuid unique not null
+- resolution_type enum('invoiced','paid_without_invoice','waived')
+- payment_method text null
+- waiver_reason enum('warranty','redo','goodwill','internal') null
+- resolved_at timestamptz not null
+- created_at timestamptz default now()
+
+Add constraint:
+- job.status = 'completed' MUST NOT exist without job_resolution
+
+If DB constraints cannot reference jobs table directly:
+- Enforce via trigger (see below)
+
+----------------------------------------------------
+TRIGGER (HARD GUARANTEE)
+----------------------------------------------------
+
+Create DB trigger:
+
+BEFORE UPDATE ON jobs
+WHEN NEW.status = 'completed'
+
+IF NOT EXISTS (
+  SELECT 1 FROM job_resolution WHERE job_id = NEW.id
+)
+THEN
+  RAISE EXCEPTION
+    'Completed jobs must have invoice, payment, or waiver'
+END
+
+This trigger MUST apply:
+- regardless of UI
+- regardless of feature flags
+- regardless of seed scripts
+
+====================================================
+STEP 2 — API ENFORCEMENT (SECONDARY)
+====================================================
+
+In job update endpoint:
+
+IF status -> 'completed'
+AND no job_resolution exists
+
+Return:
+- HTTP 409
+- error: "Job must be resolved before completion"
+
+This is defense-in-depth.
+
+====================================================
+STEP 3 — SEED DATA REPAIR (CRITICAL)
+====================================================
+
+Scan existing data:
+
+Find all jobs where:
+- status = 'completed'
+- AND no job_resolution exists
+
+For each:
+- Create job_resolution with:
+  resolution_type = 'waived'
+  waiver_reason = 'internal'
+  resolved_at = job.completedAt
+
+This ensures:
+- migrations do not fail
+- legacy data is healed
+- enforcement can activate safely
+
+====================================================
+STEP 4 — FEATURE FLAG ALIGNMENT
+====================================================
+
+Feature flags may control UI behavior,
+BUT MUST NOT disable data-level enforcement.
+
+Ensure:
+- DB trigger always active
+- API guard always active
+- Feature flag only affects UI modal behavior
+
+====================================================
+STEP 5 — REGRESSION TEST (MANDATORY)
+====================================================
+
+Add test:
+
+Attempt:
+- update job.status = 'completed'
+- without job_resolution
+
+Expected:
+- DB exception OR 409 error
+
+Test must fail if enforcement is removed.
+
+====================================================
+ACCEPTANCE CRITERIA (PASS / FAIL)
+====================================================
+
+This fix is COMPLETE only when:
+
+1. ZERO completed jobs exist without job_resolution
+2. It is IMPOSSIBLE to insert such a job via:
+   - UI
+   - API
+   - seed script
+   - migration
+3. Enforcement holds even if feature flags are OFF
+4. Test suite fails if enforcement is removed
+
+====================================================
+DELIVERABLES
+====================================================
+
+Provide:
+- SQL migration(s)
+- DB trigger
+- API guard changes
+- Seed data repair script
+- Regression test
+- Inline comments explaining why this MUST NEVER be removed
+
+Proceed carefully. Do not overbuild.

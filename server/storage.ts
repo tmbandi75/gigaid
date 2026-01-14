@@ -209,6 +209,7 @@ export interface IStorage {
   getJobResolutionsByUser(userId: string): Promise<JobResolution[]>;
   getUnresolvedCompletedJobs(userId: string): Promise<Job[]>;
   createJobResolution(resolution: InsertJobResolution): Promise<JobResolution>;
+  deleteJobResolution(jobId: string): Promise<boolean>;
 
   // Action Queue (Today's Money Plan - Global Prioritization)
   getActionQueueItems(userId: string, status?: string): Promise<ActionQueueItem[]>;
@@ -1935,6 +1936,15 @@ export class MemStorage implements IStorage {
     };
     this.jobResolutions.set(id, newResolution);
     return newResolution;
+  }
+
+  async deleteJobResolution(jobId: string): Promise<boolean> {
+    const resolution = Array.from(this.jobResolutions.entries()).find(([, r]) => r.jobId === jobId);
+    if (resolution) {
+      this.jobResolutions.delete(resolution[0]);
+      return true;
+    }
+    return false;
   }
 
   // ============================================================

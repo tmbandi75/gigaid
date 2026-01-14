@@ -6,6 +6,7 @@ import { startReminderScheduler } from "./reminderScheduler";
 import { startAutoReleaseScheduler } from "./depositAutoRelease";
 import { startWeeklySummaryScheduler } from "./weeklyEmailSummary";
 import { startNoSilentCompletionScheduler } from "./noSilentCompletionEnforcer";
+import { initializeDbEnforcement } from "./dbEnforcement";
 
 const app = express();
 const httpServer = createServer(app);
@@ -64,6 +65,10 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize database enforcement (triggers + data repair) BEFORE routes
+  // CRITICAL: This ensures no job can be completed without resolution
+  await initializeDbEnforcement();
+  
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

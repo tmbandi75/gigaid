@@ -1040,6 +1040,11 @@ export class DatabaseStorage implements IStorage {
     return newResolution;
   }
 
+  async deleteJobResolution(jobId: string): Promise<boolean> {
+    const result = await db.delete(jobResolutions).where(eq(jobResolutions.jobId, jobId));
+    return (result.rowCount ?? 0) > 0;
+  }
+
   // ============================================================
   // Action Queue (Today's Money Plan - Global Prioritization)
   // ============================================================

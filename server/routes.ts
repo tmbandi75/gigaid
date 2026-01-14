@@ -328,20 +328,21 @@ export async function registerRoutes(
       // ============================================================
       // REVENUE PROTECTION: No Silent Completion API Guard
       // ============================================================
-      // If feature flag is ON and trying to complete a job,
-      // reject unless a job_resolution record exists.
-      // This is a HARD backstop that prevents bypass via API.
+      // CRITICAL: This guard is ALWAYS ON regardless of feature flags.
+      // Feature flags only control UI modal behavior, NOT data enforcement.
+      // This is a HARD backstop that prevents revenue leakage via API bypass.
+      // 
+      // DO NOT REMOVE THIS CHECK. IT MUST NEVER BE GATED BY FEATURE FLAGS.
+      // See spec: "Feature flags may control UI behavior, BUT MUST NOT disable
+      // data-level enforcement."
       if (updates.status === "completed" && existingJob.status !== "completed") {
-        const enforceFlag = await storage.getFeatureFlag("enforce_no_silent_completion");
-        if (enforceFlag?.enabled) {
-          const resolution = await storage.getJobResolution(req.params.id);
-          if (!resolution) {
-            return res.status(409).json({
-              error: "Completed jobs must be resolved with invoice, payment, or waiver.",
-              code: "RESOLUTION_REQUIRED",
-              message: "Please choose how to handle payment before completing this job.",
-            });
-          }
+        const resolution = await storage.getJobResolution(req.params.id);
+        if (!resolution) {
+          return res.status(409).json({
+            error: "Completed jobs must be resolved with invoice, payment, or waiver.",
+            code: "RESOLUTION_REQUIRED",
+            message: "Please choose how to handle payment before completing this job.",
+          });
         }
       }
       
@@ -6717,6 +6718,169 @@ Return ONLY the message text, no JSON or formatting.`
     } catch (error) {
       console.error("Celebration message error:", error);
       res.status(500).json({ error: "Failed to generate celebration message" });
+    }
+  });
+
+  // ============================================================
+  // REGRESSION TEST: No Silent Completion Enforcement
+  // ============================================================
+  // This endpoint tests that the revenue protection enforcement works.
+  // It tests BOTH paths: UPDATE to completed and INSERT with completed status.
+  // 
+  // CRITICAL: This test MUST pass. If it fails, revenue protection is broken.
+  app.post("/api/test/no-silent-completion", async (req, res) => {
+    const results: { test: string; passed: boolean; details: string }[] = [];
+    
+    try {
+      // TEST 1: UPDATE path - create job then try to complete without resolution
+      try {
+        const testJob = await storage.createJob({
+          userId: defaultUserId,
+          title: "Test Enforcement Job (UPDATE)",
+          serviceType: "Test",
+          status: "scheduled",
+          scheduledDate: new Date().toISOString().split("T")[0],
+          scheduledTime: "10:00",
+          price: 10000,
+          clientName: "Test Client",
+          clientPhone: "555-0000",
+        });
+
+        let updateBlocked = false;
+        try {
+          await storage.updateJob(testJob.id, { status: "completed" });
+          updateBlocked = false;
+        } catch (err: any) {
+          updateBlocked = true;
+          results.push({
+            test: "UPDATE_PATH",
+            passed: true,
+            details: err.message || "Update correctly blocked",
+          });
+        }
+
+        await storage.deleteJob(testJob.id);
+
+        if (!updateBlocked) {
+          results.push({
+            test: "UPDATE_PATH",
+            passed: false,
+            details: "Job was completed via UPDATE without resolution - ENFORCEMENT BROKEN",
+          });
+        }
+      } catch (err: any) {
+        results.push({ test: "UPDATE_PATH", passed: false, details: `Setup error: ${err.message}` });
+      }
+
+      // TEST 2: INSERT path - try to insert a job directly with completed status
+      try {
+        let insertBlocked = false;
+        try {
+          await storage.createJob({
+            userId: defaultUserId,
+            title: "Test Enforcement Job (INSERT)",
+            serviceType: "Test",
+            status: "completed", // Directly inserting as completed - MUST fail
+            scheduledDate: new Date().toISOString().split("T")[0],
+            scheduledTime: "10:00",
+            price: 10000,
+            clientName: "Test Client",
+            clientPhone: "555-0001",
+          });
+          insertBlocked = false;
+        } catch (err: any) {
+          insertBlocked = true;
+          results.push({
+            test: "INSERT_PATH",
+            passed: true,
+            details: err.message || "Insert correctly blocked",
+          });
+        }
+
+        if (!insertBlocked) {
+          results.push({
+            test: "INSERT_PATH",
+            passed: false,
+            details: "Job was created via INSERT with completed status without resolution - ENFORCEMENT BROKEN",
+          });
+        }
+      } catch (err: any) {
+        results.push({ test: "INSERT_PATH", passed: false, details: `Setup error: ${err.message}` });
+      }
+
+      // TEST 3: LEGITIMATE FLOW - create job, add resolution, then complete
+      try {
+        const legitJob = await storage.createJob({
+          userId: defaultUserId,
+          title: "Test Legitimate Flow",
+          serviceType: "Test",
+          status: "scheduled",
+          scheduledDate: new Date().toISOString().split("T")[0],
+          scheduledTime: "10:00",
+          price: 10000,
+          clientName: "Test Client",
+          clientPhone: "555-0002",
+        });
+
+        // Create resolution FIRST
+        await storage.createJobResolution({
+          jobId: legitJob.id,
+          resolutionType: "waived",
+          waiverReason: "internal",
+          resolvedAt: new Date().toISOString(),
+          resolvedByUserId: defaultUserId,
+          createdAt: new Date().toISOString(),
+        });
+
+        // Now complete should work
+        let legitFlowWorked = false;
+        try {
+          const completed = await storage.updateJob(legitJob.id, { status: "completed" });
+          if (completed?.status === "completed") {
+            legitFlowWorked = true;
+            results.push({
+              test: "LEGITIMATE_FLOW",
+              passed: true,
+              details: "Job with resolution was completed successfully",
+            });
+          }
+        } catch (err: any) {
+          legitFlowWorked = false;
+          results.push({
+            test: "LEGITIMATE_FLOW",
+            passed: false,
+            details: `Legitimate flow blocked unexpectedly: ${err.message}`,
+          });
+        }
+
+        // Clean up
+        await storage.deleteJobResolution(legitJob.id);
+        await storage.deleteJob(legitJob.id);
+      } catch (err: any) {
+        results.push({ test: "LEGITIMATE_FLOW", passed: false, details: `Setup error: ${err.message}` });
+      }
+
+      // Summary
+      const allPassed = results.every(r => r.passed);
+      if (allPassed) {
+        res.json({
+          passed: true,
+          message: "All enforcement tests passed",
+          results,
+        });
+      } else {
+        res.status(500).json({
+          passed: false,
+          message: "CRITICAL: Some enforcement tests FAILED",
+          results,
+        });
+      }
+    } catch (error: any) {
+      res.status(500).json({
+        passed: false,
+        message: "Test error",
+        details: error.message,
+      });
     }
   });
 
