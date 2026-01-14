@@ -55,6 +55,7 @@ import {
 } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { PhotoUpload } from "@/components/ui/photo-upload";
+import { ServiceTypeSelect } from "@/components/ui/service-type-select";
 import type { Job, JobResolutionType } from "@shared/schema";
 import { GetPaidDialog } from "@/components/job/GetPaidDialog";
 import { JobLocationMap } from "@/components/JobLocationMap";
@@ -316,16 +317,6 @@ const jobFormSchema = z.object({
 
 type JobFormData = z.infer<typeof jobFormSchema>;
 
-const serviceTypes = [
-  { value: "plumbing", label: "Plumbing", icon: "🔧" },
-  { value: "electrical", label: "Electrical", icon: "⚡" },
-  { value: "cleaning", label: "Cleaning", icon: "✨" },
-  { value: "hvac", label: "HVAC", icon: "❄️" },
-  { value: "painting", label: "Painting", icon: "🎨" },
-  { value: "carpentry", label: "Carpentry", icon: "🪚" },
-  { value: "landscaping", label: "Landscaping", icon: "🌳" },
-  { value: "general", label: "General Maintenance", icon: "🔨" },
-];
 
 const jobStatuses = [
   { value: "scheduled", label: "Scheduled", color: "bg-blue-500" },
@@ -876,23 +867,15 @@ export default function JobForm() {
                       <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         Service Type
                       </FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="h-12" data-testid="select-service-type">
-                            <SelectValue placeholder="Select service type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {serviceTypes.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              <span className="flex items-center gap-2">
-                                <span>{type.icon}</span>
-                                <span>{type.label}</span>
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <ServiceTypeSelect
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          placeholder="Select service type"
+                          className="h-12"
+                          data-testid="select-service-type"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

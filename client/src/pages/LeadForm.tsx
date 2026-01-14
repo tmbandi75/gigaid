@@ -37,6 +37,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, Loader2, DollarSign, Send, Check, Clock, Eye, ExternalLink } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { ServiceTypeSelect } from "@/components/ui/service-type-select";
 import type { Lead, PriceConfirmation } from "@shared/schema";
 import { ReplyComposer } from "@/components/lead/ReplyComposer";
 
@@ -52,16 +53,6 @@ const leadFormSchema = z.object({
 
 type LeadFormData = z.infer<typeof leadFormSchema>;
 
-const serviceTypes = [
-  { value: "plumbing", label: "Plumbing" },
-  { value: "electrical", label: "Electrical" },
-  { value: "cleaning", label: "Cleaning" },
-  { value: "hvac", label: "HVAC" },
-  { value: "painting", label: "Painting" },
-  { value: "carpentry", label: "Carpentry" },
-  { value: "landscaping", label: "Landscaping" },
-  { value: "general", label: "General Maintenance" },
-];
 
 const statusOptions = [
   { value: "new", label: "New" },
@@ -379,20 +370,14 @@ export default function LeadForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Service Needed</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-service-type">
-                            <SelectValue placeholder="Select service type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {serviceTypes.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <ServiceTypeSelect
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          placeholder="Select service type"
+                          data-testid="select-service-type"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
