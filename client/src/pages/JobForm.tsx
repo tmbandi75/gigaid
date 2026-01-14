@@ -54,6 +54,7 @@ import {
   Send
 } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { PhotoUpload } from "@/components/ui/photo-upload";
 import type { Job, JobResolutionType } from "@shared/schema";
 import { GetPaidDialog } from "@/components/job/GetPaidDialog";
 import { JobLocationMap } from "@/components/JobLocationMap";
@@ -418,6 +419,30 @@ export default function JobForm() {
     enabled: !!isEditing,
   });
 
+  // Job owner photos (from photo_assets table)
+  interface PhotoAsset {
+    id: string;
+    storagePath: string;
+    visibility: string;
+  }
+  const { data: existingJobPhotos = [] } = useQuery<PhotoAsset[]>({
+    queryKey: ["/api/photo-assets", "job", id],
+    queryFn: async () => {
+      const res = await fetch(`/api/photo-assets?sourceType=job&sourceId=${id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!isEditing,
+  });
+  const [jobPhotos, setJobPhotos] = useState<string[]>([]);
+  const [photosInitialized, setPhotosInitialized] = useState(false);
+
+  // Sync existing photos to state when loaded
+  if (isEditing && existingJobPhotos.length > 0 && !photosInitialized) {
+    setJobPhotos(existingJobPhotos.map(p => p.storagePath));
+    setPhotosInitialized(true);
+  }
+
   const { data: crewMembers = [] } = useQuery<CrewMember[]>({
     queryKey: ["/api/crew"],
     enabled: !!isEditing,
@@ -639,6 +664,19 @@ export default function JobForm() {
     },
     onError: () => {
       toast({ title: "Failed to update job", variant: "destructive" });
+    },
+  });
+
+  // Save job photos mutation
+  const savePhotosMutation = useMutation({
+    mutationFn: async (photos: string[]) => {
+      return apiRequest("POST", `/api/jobs/${id}/photos`, { photos });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/photo-assets", "job", id] });
+    },
+    onError: () => {
+      toast({ title: "Failed to save photos", variant: "destructive" });
     },
   });
 
@@ -880,6 +918,21 @@ export default function JobForm() {
                     </FormItem>
                   )}
                 />
+
+                {isEditing && (
+                  <div className="pt-2">
+                    <PhotoUpload
+                      photos={jobPhotos}
+                      onPhotosChange={(newPhotos) => {
+                        setJobPhotos(newPhotos);
+                        savePhotosMutation.mutate(newPhotos);
+                      }}
+                      maxPhotos={10}
+                      label="Job Photos (optional)"
+                      helpText="Document the work with up to 10 photos"
+                    />
+                  </div>
+                )}
 
                 {isEditing && (
                   <FormField

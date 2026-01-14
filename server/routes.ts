@@ -782,6 +782,71 @@ export async function registerRoutes(
     }
   });
 
+  // Photo assets endpoints
+  app.get("/api/photo-assets", async (req, res) => {
+    try {
+      const { sourceType, sourceId } = req.query;
+      if (!sourceType || !sourceId) {
+        return res.status(400).json({ error: "sourceType and sourceId are required" });
+      }
+      const photos = await storage.getPhotoAssets(
+        sourceType as string,
+        sourceId as string
+      );
+      res.json(photos);
+    } catch (error) {
+      console.error("Failed to fetch photo assets:", error);
+      res.status(500).json({ error: "Failed to fetch photo assets" });
+    }
+  });
+
+  app.post("/api/jobs/:id/photos", async (req, res) => {
+    try {
+      const job = await storage.getJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      const { photos } = req.body;
+      if (!photos || !Array.isArray(photos)) {
+        return res.status(400).json({ error: "photos array is required" });
+      }
+
+      // Get existing photos for this job
+      const existingPhotos = await storage.getPhotoAssets("job", job.id);
+      const existingPaths = new Set(existingPhotos.map(p => p.storagePath));
+      const newPaths = new Set(photos);
+
+      // Delete photos that are no longer in the list
+      for (const existing of existingPhotos) {
+        if (!newPaths.has(existing.storagePath)) {
+          await storage.deletePhotoAsset(existing.id);
+        }
+      }
+
+      // Add new photos that don't exist yet
+      for (const photoPath of photos) {
+        if (typeof photoPath === "string" && photoPath.startsWith("/objects/") && !existingPaths.has(photoPath)) {
+          await storage.createPhotoAsset({
+            ownerUserId: job.userId,
+            workspaceUserId: job.userId,
+            sourceType: "job",
+            sourceId: job.id,
+            storageBucket: process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID || "",
+            storagePath: photoPath,
+            visibility: "private",
+          });
+        }
+      }
+
+      const updatedPhotos = await storage.getPhotoAssets("job", job.id);
+      res.json(updatedPhotos);
+    } catch (error) {
+      console.error("Failed to save job photos:", error);
+      res.status(500).json({ error: "Failed to save job photos" });
+    }
+  });
+
   app.delete("/api/jobs/:id", async (req, res) => {
     try {
       const deleted = await storage.deleteJob(req.params.id);
