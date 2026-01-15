@@ -374,10 +374,7 @@ export default function HelpSupport() {
 
   const createTicketMutation = useMutation({
     mutationFn: async (data: { subject: string; description: string; category: string; priority: string }) => {
-      return apiRequest("/api/support/tickets", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      return apiRequest("POST", "/api/support/tickets", data);
     },
     onSuccess: () => {
       toast({ title: "Support ticket created! We'll respond as soon as possible." });

@@ -7012,15 +7012,39 @@ Return ONLY the message text, no JSON or formatting.`
 
   // ============ ZENDESK SUPPORT TICKET ROUTES ============
 
+  // Validation schema for support ticket creation
+  const createTicketSchema = z.object({
+    subject: z.string().min(1, "Subject is required").max(200, "Subject too long"),
+    description: z.string().min(1, "Description is required").max(10000, "Description too long"),
+    priority: z.enum(["low", "normal", "high", "urgent"]).optional().default("normal"),
+    type: z.enum(["question", "incident", "problem", "task"]).optional().default("question"),
+    category: z.string().optional(),
+  });
+
   // Create a new support ticket
   app.post("/api/support/tickets", async (req, res) => {
     try {
-      const { subject, description, priority, type, category } = req.body;
+      // Validate input
+      const parseResult = createTicketSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid request", 
+          details: parseResult.error.errors 
+        });
+      }
+      
+      const { subject, description, priority, type, category } = parseResult.data;
       
       // Get user info for the ticket
       const user = await storage.getUser(defaultUserId);
-      const requesterEmail = user?.email || "unknown@example.com";
-      const requesterName = user?.name || "GigAid User";
+      if (!user?.email) {
+        return res.status(400).json({ 
+          error: "Please add an email to your profile before creating a support ticket" 
+        });
+      }
+      
+      const requesterEmail = user.email;
+      const requesterName = user.name || "GigAid User";
 
       const tags = ["gigaid", "app-support"];
       if (category) tags.push(category);
