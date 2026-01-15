@@ -3,7 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { MobileLayout } from "@/components/layout/MobileLayout";
+import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
 import { VoiceFAB } from "@/components/layout/VoiceFAB";
 import { useEffect } from "react";
 
@@ -108,9 +108,9 @@ function App() {
           <Route path="/qb/:token" component={QuickBookConfirm} />
           <Route path="/owner" component={OwnerView} />
           <Route>
-            <MobileLayout>
+            <ResponsiveLayout>
               <Router />
-            </MobileLayout>
+            </ResponsiveLayout>
             <VoiceFAB />
           </Route>
         </Switch>

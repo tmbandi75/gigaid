@@ -335,72 +335,92 @@ export default function Jobs() {
 
   return (
     <div className="flex flex-col min-h-full bg-background" data-testid="page-jobs">
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-violet-600 text-primary-foreground px-4 pt-6 pb-8">
+      <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-violet-600 text-primary-foreground px-4 md:px-6 lg:px-8 pt-6 pb-8 md:pb-6">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
           <div className="absolute bottom-0 -left-10 w-32 h-32 bg-violet-400/20 rounded-full blur-2xl" />
         </div>
         
-        <div className="relative">
+        <div className="relative max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold">Jobs</h1>
+              <h1 className="text-2xl md:text-3xl font-bold">Jobs</h1>
               <p className="text-sm text-primary-foreground/80">Manage your work schedule</p>
             </div>
             <Link href="/jobs/new">
-              <Button size="icon" className="bg-white/20 hover:bg-white/30 text-white" data-testid="button-add-job-header">
+              <Button className="bg-white/20 hover:bg-white/30 text-white hidden md:flex" data-testid="button-add-job-header-desktop">
+                <Plus className="h-5 w-5 mr-2" />
+                Add Job
+              </Button>
+              <Button size="icon" className="bg-white/20 hover:bg-white/30 text-white md:hidden" data-testid="button-add-job-header">
                 <Plus className="h-5 w-5" />
               </Button>
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-1">
                 <Calendar className="h-4 w-4 text-primary-foreground/80" />
-                <span className="text-xs text-primary-foreground/80">Active Jobs</span>
+                <span className="text-xs text-primary-foreground/80">Active</span>
               </div>
-              <p className="text-2xl font-bold" data-testid="text-active-count">{activeCount}</p>
+              <p className="text-2xl md:text-3xl font-bold" data-testid="text-active-count">{activeCount}</p>
             </div>
             <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-1">
                 <TrendingUp className="h-4 w-4 text-primary-foreground/80" />
                 <span className="text-xs text-primary-foreground/80">Earned</span>
               </div>
-              <p className="text-2xl font-bold" data-testid="text-total-earned">{formatCurrency(totalEarnings)}</p>
+              <p className="text-2xl md:text-3xl font-bold" data-testid="text-total-earned">{formatCurrency(totalEarnings)}</p>
+            </div>
+            <div className="hidden md:block bg-white/15 backdrop-blur rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <CheckCircle2 className="h-4 w-4 text-primary-foreground/80" />
+                <span className="text-xs text-primary-foreground/80">Completed</span>
+              </div>
+              <p className="text-2xl md:text-3xl font-bold" data-testid="text-completed-count">{jobs.filter(j => j.status === "completed").length}</p>
+            </div>
+            <div className="hidden md:block bg-white/15 backdrop-blur rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Briefcase className="h-4 w-4 text-primary-foreground/80" />
+                <span className="text-xs text-primary-foreground/80">Total</span>
+              </div>
+              <p className="text-2xl md:text-3xl font-bold" data-testid="text-total-jobs">{jobs.length}</p>
             </div>
           </div>
         </div>
       </div>
       
-      <div className="flex-1 px-4 py-6 -mt-4">
-        <Card className="border-0 shadow-md mb-4 overflow-hidden">
-          <CardContent className="p-1">
-            <div className="flex gap-1">
-              {filters.map((f) => (
-                <button
-                  key={f.value}
-                  onClick={() => setFilter(f.value)}
-                  className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all ${
-                    filter === f.value
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-muted/50"
-                  }`}
-                  data-testid={`filter-${f.value}`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex-1 px-4 md:px-6 lg:px-8 py-6 -mt-4 max-w-7xl mx-auto w-full">
+        <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <Card className="border-0 shadow-md overflow-hidden flex-1">
+            <CardContent className="p-1">
+              <div className="flex gap-1">
+                {filters.map((f) => (
+                  <button
+                    key={f.value}
+                    onClick={() => setFilter(f.value)}
+                    className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all ${
+                      filter === f.value
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:bg-muted/50"
+                    }`}
+                    data-testid={`filter-${f.value}`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
-        <Link href="/jobs/new">
-          <Button className="w-full mb-6 h-12 bg-gradient-to-r from-primary to-violet-600 shadow-lg" data-testid="button-add-job">
-            <Plus className="h-5 w-5 mr-2" />
-            Add New Job
-          </Button>
-        </Link>
+          <Link href="/jobs/new" className="md:hidden">
+            <Button className="w-full h-12 bg-gradient-to-r from-primary to-violet-600 shadow-lg" data-testid="button-add-job">
+              <Plus className="h-5 w-5 mr-2" />
+              Add New Job
+            </Button>
+          </Link>
+        </div>
 
         {isLoading ? (
           <div className="space-y-3">
@@ -422,12 +442,12 @@ export default function Jobs() {
         ) : filteredJobs.length === 0 ? (
           <EmptyState />
         ) : (
-          <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {upcomingJobs.length > 0 && (
-              <div>
+              <div className={pastJobs.length === 0 ? "lg:col-span-2" : ""}>
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  Upcoming
+                  Upcoming ({upcomingJobs.length})
                 </h2>
                 <div className="space-y-3">
                   {upcomingJobs.map((job) => (
@@ -438,10 +458,10 @@ export default function Jobs() {
             )}
             
             {pastJobs.length > 0 && (
-              <div>
+              <div className={upcomingJobs.length === 0 ? "lg:col-span-2" : ""}>
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4" />
-                  Past Jobs
+                  Past Jobs ({pastJobs.length})
                 </h2>
                 <div className="space-y-3">
                   {pastJobs.map((job) => (

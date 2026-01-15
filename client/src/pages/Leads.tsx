@@ -304,36 +304,54 @@ export default function Leads() {
         <div className="relative">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold">Leads</h1>
+              <h1 className="text-2xl md:text-3xl font-bold">Leads</h1>
               <p className="text-sm text-white/80">Track potential clients</p>
             </div>
             <Link href="/leads/new">
-              <Button size="icon" className="bg-white/20 hover:bg-white/30 text-white" data-testid="button-add-lead-header">
+              <Button className="bg-white/20 hover:bg-white/30 text-white hidden md:flex" data-testid="button-add-lead-header-desktop">
+                <Plus className="h-5 w-5 mr-2" />
+                Add Lead
+              </Button>
+              <Button size="icon" className="bg-white/20 hover:bg-white/30 text-white md:hidden" data-testid="button-add-lead-header">
                 <Plus className="h-5 w-5" />
               </Button>
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-1">
                 <Users className="h-4 w-4 text-white/80" />
-                <span className="text-xs text-white/80">New Leads</span>
+                <span className="text-xs text-white/80">New</span>
               </div>
-              <p className="text-2xl font-bold" data-testid="text-new-count">{newCount}</p>
+              <p className="text-2xl md:text-3xl font-bold" data-testid="text-new-count">{newCount}</p>
             </div>
             <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-1">
                 <TrendingUp className="h-4 w-4 text-white/80" />
                 <span className="text-xs text-white/80">Converted</span>
               </div>
-              <p className="text-2xl font-bold" data-testid="text-converted-count">{convertedCount}</p>
+              <p className="text-2xl md:text-3xl font-bold" data-testid="text-converted-count">{convertedCount}</p>
+            </div>
+            <div className="hidden md:block bg-white/15 backdrop-blur rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <MessageSquare className="h-4 w-4 text-white/80" />
+                <span className="text-xs text-white/80">Contacted</span>
+              </div>
+              <p className="text-2xl md:text-3xl font-bold" data-testid="text-contacted-count">{filteredLeads.filter(l => l.status === "response_sent").length}</p>
+            </div>
+            <div className="hidden md:block bg-white/15 backdrop-blur rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Star className="h-4 w-4 text-white/80" />
+                <span className="text-xs text-white/80">Total</span>
+              </div>
+              <p className="text-2xl md:text-3xl font-bold" data-testid="text-total-leads">{filteredLeads.length}</p>
             </div>
           </div>
         </div>
       </div>
       
-      <div className="flex-1 px-4 py-6 -mt-4">
+      <div className="flex-1 px-4 md:px-6 lg:px-8 py-6 -mt-4 max-w-7xl mx-auto w-full">
         <Card className="border-0 shadow-md mb-4 overflow-hidden">
           <CardContent className="p-1">
             <div className="flex gap-1">

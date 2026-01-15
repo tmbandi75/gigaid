@@ -150,36 +150,62 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col min-h-full bg-background" data-testid="page-dashboard">
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-violet-600 text-primary-foreground px-4 pt-6 pb-8">
+      <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-violet-600 text-primary-foreground px-4 md:px-6 lg:px-8 pt-6 pb-8 md:pb-6">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
           <div className="absolute bottom-0 -left-10 w-32 h-32 bg-violet-400/20 rounded-full blur-2xl" />
         </div>
 
-        <div className="relative">
-          <div className="flex items-center justify-between mb-6">
+        <div className="relative max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-4 md:mb-6">
             <div>
               <p className="text-primary-foreground/80 text-sm">{getGreeting()}</p>
-              <h1 className="text-2xl font-bold">GigAid</h1>
+              <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
             </div>
-            <Link href="/reminders">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-primary-foreground hover:bg-white/20 relative"
-                data-testid="button-notifications"
-              >
-                <Bell className="h-5 w-5" />
-                {(summary?.pendingReminders ?? 0) > 0 && (
-                  <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-[10px] font-bold flex items-center justify-center">
-                    {summary?.pendingReminders}
-                  </span>
-                )}
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              <div className="hidden md:flex gap-2">
+                <button
+                  onClick={() => setPeriod("weekly")}
+                  className={`py-2 px-4 rounded-xl text-sm font-medium transition-all ${
+                    period === "weekly"
+                      ? "bg-white/25 text-white"
+                      : "bg-white/10 text-white/70 hover:bg-white/15"
+                  }`}
+                  data-testid="tab-weekly-desktop"
+                >
+                  Weekly
+                </button>
+                <button
+                  onClick={() => setPeriod("monthly")}
+                  className={`py-2 px-4 rounded-xl text-sm font-medium transition-all ${
+                    period === "monthly"
+                      ? "bg-white/25 text-white"
+                      : "bg-white/10 text-white/70 hover:bg-white/15"
+                  }`}
+                  data-testid="tab-monthly-desktop"
+                >
+                  Monthly
+                </button>
+              </div>
+              <Link href="/reminders" className="md:hidden">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-primary-foreground hover:bg-white/20 relative"
+                  data-testid="button-notifications"
+                >
+                  <Bell className="h-5 w-5" />
+                  {(summary?.pendingReminders ?? 0) > 0 && (
+                    <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-[10px] font-bold flex items-center justify-center">
+                      {summary?.pendingReminders}
+                    </span>
+                  )}
+                </Button>
+              </Link>
+            </div>
           </div>
 
-          <div className="flex gap-2 mb-4">
+          <div className="flex gap-2 mb-4 md:hidden">
             <button
               onClick={() => setPeriod("weekly")}
               className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-all ${
@@ -204,18 +230,32 @@ export default function Dashboard() {
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-1">
                 <DollarSign className="h-4 w-4 text-primary-foreground/80" />
                 <span className="text-xs text-primary-foreground/80">{periodLabel}</span>
               </div>
-              <p className="text-2xl font-bold" data-testid="text-period-earnings">
+              <p className="text-2xl md:text-3xl font-bold" data-testid="text-period-earnings">
                 {isLoading ? "..." : formatCurrency(period === "weekly" ? (summary?.weeklyStats?.earningsThisWeek ?? 0) : (summary?.monthlyStats?.earningsThisMonth ?? 0))}
               </p>
               <div className="flex items-center gap-1 mt-1 text-xs text-primary-foreground/80">
                 <TrendingUp className="h-3 w-3" />
-                <span>{period === "weekly" ? (summary?.weeklyStats?.jobsThisWeek ?? 0) : (summary?.monthlyStats?.jobsThisMonth ?? 0)} jobs</span>
+                <span>Revenue</span>
+              </div>
+            </div>
+
+            <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Briefcase className="h-4 w-4 text-primary-foreground/80" />
+                <span className="text-xs text-primary-foreground/80">Jobs</span>
+              </div>
+              <p className="text-2xl md:text-3xl font-bold" data-testid="text-period-jobs">
+                {isLoading ? "..." : (period === "weekly" ? (summary?.weeklyStats?.jobsThisWeek ?? 0) : (summary?.monthlyStats?.jobsThisMonth ?? 0))}
+              </p>
+              <div className="flex items-center gap-1 mt-1 text-xs text-primary-foreground/80">
+                <TrendingUp className="h-3 w-3" />
+                <span>{completionRate}% done</span>
               </div>
             </div>
 
@@ -224,7 +264,7 @@ export default function Dashboard() {
                 <Users className="h-4 w-4 text-primary-foreground/80" />
                 <span className="text-xs text-primary-foreground/80">Leads</span>
               </div>
-              <p className="text-2xl font-bold" data-testid="text-period-leads">
+              <p className="text-2xl md:text-3xl font-bold" data-testid="text-period-leads">
                 {isLoading ? "..." : (period === "weekly" ? (summary?.weeklyStats?.leadsThisWeek ?? 0) : (summary?.monthlyStats?.leadsThisMonth ?? 0))}
               </p>
               <div className="flex items-center gap-1 mt-1 text-xs text-primary-foreground/80">
@@ -232,11 +272,25 @@ export default function Dashboard() {
                 <span>{summary?.newLeads ?? 0} new</span>
               </div>
             </div>
+
+            <div className="hidden md:block bg-white/15 backdrop-blur rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <CheckCircle2 className="h-4 w-4 text-primary-foreground/80" />
+                <span className="text-xs text-primary-foreground/80">Completion</span>
+              </div>
+              <p className="text-2xl md:text-3xl font-bold" data-testid="text-completion-rate">
+                {isLoading ? "..." : `${completionRate}%`}
+              </p>
+              <div className="flex items-center gap-1 mt-1 text-xs text-primary-foreground/80">
+                <TrendingUp className="h-3 w-3" />
+                <span>Rate</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 px-4 py-6 space-y-6 -mt-4">
+      <div className="flex-1 px-4 md:px-6 lg:px-8 py-6 space-y-6 -mt-4 max-w-7xl mx-auto w-full">
         {!onboarding?.completed && onboarding?.step !== undefined && (
           <OnboardingChecklist
             currentStep={onboarding.step}
@@ -246,154 +300,140 @@ export default function Dashboard() {
           />
         )}
 
-        <div>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-            Quick Actions
-          </h2>
-          <div className="grid grid-cols-4 gap-2">
-            {quickActions.map((action) => (
-              <Link key={action.label} href={action.href} data-testid={`link-quick-${action.label.toLowerCase().replace(/\s+/g, "-")}`}>
-                <div className="flex flex-col items-center gap-2 p-3 rounded-xl hover-elevate cursor-pointer" data-testid={`quick-action-${action.label.toLowerCase().replace(/\s+/g, "-")}`}>
-                  <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${action.gradient} flex items-center justify-center shadow-lg`}>
-                    <action.icon className="h-5 w-5 text-white" />
-                  </div>
-                  <span className="text-xs font-medium text-center">{action.label}</span>
-                </div>
-              </Link>
-            ))}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <div>
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                Quick Actions
+              </h2>
+              <div className="grid grid-cols-4 md:grid-cols-4 gap-2 md:gap-3">
+                {quickActions.map((action) => (
+                  <Link key={action.label} href={action.href} data-testid={`link-quick-${action.label.toLowerCase().replace(/\s+/g, "-")}`}>
+                    <Card className="border-0 shadow-sm hover-elevate cursor-pointer" data-testid={`quick-action-${action.label.toLowerCase().replace(/\s+/g, "-")}`}>
+                      <CardContent className="flex flex-col items-center gap-2 p-3 md:p-4">
+                        <div className={`h-12 w-12 md:h-14 md:w-14 rounded-xl bg-gradient-to-br ${action.gradient} flex items-center justify-center shadow-lg`}>
+                          <action.icon className="h-5 w-5 md:h-6 md:w-6 text-white" />
+                        </div>
+                        <span className="text-xs md:text-sm font-medium text-center">{action.label}</span>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Today's Money Plan - global prioritization across leads, jobs, invoices */}
+            <MoneyPlanWidget />
+
+            {/* Follow-up check-ins for leads */}
+            <FollowUpCheckIn />
+          </div>
+
+          <div className="space-y-6">
+            {/* AI Micro-Nudges - contextual action suggestions */}
+            <NudgeCard maxNudges={3} />
+
+            {/* GigAid Impact - outcomes attribution */}
+            <GigAidImpact />
+
+            {/* Today's Game Plan - AI-powered daily priorities */}
+            <TodaysGamePlan />
           </div>
         </div>
 
-        {/* Today's Money Plan - global prioritization across leads, jobs, invoices */}
-        <MoneyPlanWidget />
-
-        {/* AI Micro-Nudges - contextual action suggestions */}
-        <NudgeCard maxNudges={3} />
-
-        {/* GigAid Impact - outcomes attribution */}
-        <GigAidImpact />
-
-        {/* Today's Game Plan - AI-powered daily priorities */}
-        <TodaysGamePlan />
-
-        {/* Follow-up check-ins for leads */}
-        <FollowUpCheckIn />
-
-        {periodJobs > 0 && (
-          <Card className="overflow-hidden border-0 shadow-sm" data-testid="card-progress">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <CheckCircle2 className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">{periodLabel} Progress</p>
-                    <p className="text-xs text-muted-foreground">
-                      {Math.round(periodJobs * completionRate / 100)} of {periodJobs} jobs done
-                    </p>
-                  </div>
-                </div>
-                <span className="text-lg font-bold text-primary">{completionRate}%</span>
-              </div>
-              <Progress value={completionRate} className="h-2" />
-            </CardContent>
-          </Card>
-        )}
-
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              Upcoming Jobs
-            </h2>
-            <Link href="/jobs">
-              <Button variant="ghost" size="sm" className="text-primary h-8 px-2" data-testid="link-view-all-jobs">
-                View All
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </Link>
-          </div>
-
-          {isLoading ? (
-            <div className="space-y-3">
-              {[1, 2].map((i) => (
-                <Card key={i} className="border-0 shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="flex gap-3 animate-pulse">
-                      <div className="h-12 w-12 rounded-xl bg-muted" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-4 w-32 bg-muted rounded" />
-                        <div className="h-3 w-48 bg-muted rounded" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                Upcoming Jobs
+              </h2>
+              <Link href="/jobs">
+                <Button variant="ghost" size="sm" className="text-primary h-8 px-2" data-testid="link-view-all-jobs">
+                  View All
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </Link>
             </div>
-          ) : upcomingJobs.length === 0 ? (
-            <Card className="border-0 shadow-sm" data-testid="card-no-jobs">
-              <CardContent className="py-8 text-center">
-                <div className="h-16 w-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
-                  <Calendar className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <p className="font-medium mb-1">No upcoming jobs</p>
-                <p className="text-sm text-muted-foreground mb-4">Schedule your first job to get started</p>
-                <Link href="/jobs/new">
-                  <Button data-testid="button-add-first-job">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Job
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {upcomingJobs.slice(0, 3).map((job: Job) => (
-                <Link key={job.id} href={`/jobs/${job.id}`} data-testid={`link-job-${job.id}`}>
-                  <Card className="border-0 shadow-sm hover-elevate cursor-pointer overflow-hidden" data-testid={`job-card-${job.id}`}>
-                    <CardContent className="p-0">
-                      <div className="flex">
-                        <div className={`w-1 ${job.status === "in_progress" ? "bg-amber-500" : "bg-primary"}`} />
-                        <div className="flex-1 p-4">
-                          <div className="flex items-start gap-3">
-                            <div className={`h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 ${job.status === "in_progress" ? "bg-amber-500/10" : "bg-primary/10"}`}>
-                              <Briefcase className={`h-5 w-5 ${job.status === "in_progress" ? "text-amber-500" : "text-primary"}`} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <p className="font-semibold truncate">{job.title}</p>
-                                {job.status === "in_progress" && (
-                                  <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 text-[10px] px-1.5">
-                                    In Progress
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  {formatDate(job.scheduledDate)} at {formatTime(job.scheduledTime)}
-                                </span>
-                              </div>
-                              {job.location && (
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                                  <MapPin className="h-3 w-3" />
-                                  <span className="truncate">{job.location}</span>
-                                </div>
-                              )}
-                            </div>
-                            <ChevronRight className="h-5 w-5 text-muted-foreground/50 flex-shrink-0" />
-                          </div>
+
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1, 2].map((i) => (
+                  <Card key={i} className="border-0 shadow-sm">
+                    <CardContent className="p-4">
+                      <div className="flex gap-3 animate-pulse">
+                        <div className="h-12 w-12 rounded-xl bg-muted" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 w-32 bg-muted rounded" />
+                          <div className="h-3 w-48 bg-muted rounded" />
                         </div>
                       </div>
                     </CardContent>
                   </Card>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            ) : upcomingJobs.length === 0 ? (
+              <Card className="border-0 shadow-sm" data-testid="card-no-jobs">
+                <CardContent className="py-8 text-center">
+                  <div className="h-16 w-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                    <Calendar className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <p className="font-medium mb-1">No upcoming jobs</p>
+                  <p className="text-sm text-muted-foreground mb-4">Schedule your first job to get started</p>
+                  <Link href="/jobs/new">
+                    <Button data-testid="button-add-first-job">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Job
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {upcomingJobs.slice(0, 4).map((job: Job) => (
+                  <Link key={job.id} href={`/jobs/${job.id}`} data-testid={`link-job-${job.id}`}>
+                    <Card className="border-0 shadow-sm hover-elevate cursor-pointer overflow-hidden" data-testid={`job-card-${job.id}`}>
+                      <CardContent className="p-0">
+                        <div className="flex">
+                          <div className={`w-1 ${job.status === "in_progress" ? "bg-amber-500" : "bg-primary"}`} />
+                          <div className="flex-1 p-4">
+                            <div className="flex items-start gap-3">
+                              <div className={`h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 ${job.status === "in_progress" ? "bg-amber-500/10" : "bg-primary/10"}`}>
+                                <Briefcase className={`h-5 w-5 ${job.status === "in_progress" ? "text-amber-500" : "text-primary"}`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="font-semibold truncate">{job.title}</p>
+                                  {job.status === "in_progress" && (
+                                    <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 text-[10px] px-1.5">
+                                      In Progress
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    {formatDate(job.scheduledDate)} at {formatTime(job.scheduledTime)}
+                                  </span>
+                                </div>
+                                {job.location && (
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                    <MapPin className="h-3 w-3" />
+                                    <span className="truncate">{job.location}</span>
+                                  </div>
+                                )}
+                              </div>
+                              <ChevronRight className="h-5 w-5 text-muted-foreground/50 flex-shrink-0" />
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
 
-        {recentLeads.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
@@ -407,33 +447,75 @@ export default function Dashboard() {
               </Link>
             </div>
 
-            <ScrollArea className="w-full">
-              <div className="flex gap-3 pb-2">
-                {recentLeads.slice(0, 5).map((lead: Lead) => (
+            {recentLeads.length === 0 ? (
+              <Card className="border-0 shadow-sm" data-testid="card-no-leads">
+                <CardContent className="py-8 text-center">
+                  <div className="h-16 w-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                    <Users className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <p className="font-medium mb-1">No leads yet</p>
+                  <p className="text-sm text-muted-foreground mb-4">Capture your first lead to get started</p>
+                  <Link href="/leads/new">
+                    <Button data-testid="button-add-first-lead">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Lead
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {recentLeads.slice(0, 4).map((lead: Lead) => (
                   <Link key={lead.id} href={`/leads/${lead.id}`} data-testid={`link-lead-${lead.id}`}>
-                    <Card className="border-0 shadow-sm hover-elevate cursor-pointer min-w-[200px]" data-testid={`lead-card-${lead.id}`}>
+                    <Card className="border-0 shadow-sm hover-elevate cursor-pointer" data-testid={`lead-card-${lead.id}`}>
                       <CardContent className="p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className={`h-8 w-8 rounded-full flex items-center justify-center ${lead.status === "new" ? "bg-emerald-500/10" : "bg-blue-500/10"}`}>
-                            <Users className={`h-4 w-4 ${lead.status === "new" ? "text-emerald-500" : "text-blue-500"}`} />
+                        <div className="flex items-center gap-3">
+                          <div className={`h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 ${lead.status === "new" ? "bg-emerald-500/10" : "bg-blue-500/10"}`}>
+                            <Users className={`h-5 w-5 ${lead.status === "new" ? "text-emerald-500" : "text-blue-500"}`} />
                           </div>
-                          <Badge variant="secondary" className={`text-[10px] px-1.5 ${lead.status === "new" ? "bg-emerald-500/10 text-emerald-600" : "bg-blue-500/10 text-blue-600"}`}>
-                            {lead.status === "new" ? "New" : "Contacted"}
-                          </Badge>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-semibold truncate">{lead.clientName}</p>
+                              <Badge variant="secondary" className={`text-[10px] px-1.5 ${lead.status === "new" ? "bg-emerald-500/10 text-emerald-600" : "bg-blue-500/10 text-blue-600"}`}>
+                                {lead.status === "new" ? "New" : "Contacted"}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate">{lead.serviceType}</p>
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-muted-foreground/50 flex-shrink-0" />
                         </div>
-                        <p className="font-semibold text-sm truncate">{lead.clientName}</p>
-                        <p className="text-xs text-muted-foreground truncate">{lead.serviceType}</p>
                       </CardContent>
                     </Card>
                   </Link>
                 ))}
               </div>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
+            )}
           </div>
-        )}
+        </div>
 
-        <Card className="bg-gradient-to-br from-primary/5 to-violet-500/5 border-primary/20" data-testid="card-ai-tip">
+        <Card className="bg-gradient-to-br from-primary/5 to-violet-500/5 border-primary/20 hidden md:block" data-testid="card-ai-tip">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-6">
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+                <Zap className="h-7 w-7 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-base mb-1">AI Assistant Ready</p>
+                <p className="text-sm text-muted-foreground">
+                  Use voice commands to create jobs, send invoices, and manage your business hands-free.
+                </p>
+              </div>
+              <Link href="/ai-tools">
+                <Button variant="outline" data-testid="button-try-ai">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Explore AI Tools
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-primary/5 to-violet-500/5 border-primary/20 md:hidden" data-testid="card-ai-tip-mobile">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
               <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center flex-shrink-0 shadow-lg">
@@ -445,7 +527,7 @@ export default function Dashboard() {
                   Use voice commands to create jobs, send invoices, and manage your business hands-free.
                 </p>
                 <Link href="/ai-tools">
-                  <Button size="sm" variant="outline" className="h-8" data-testid="button-try-ai">
+                  <Button size="sm" variant="outline" className="h-8" data-testid="button-try-ai-mobile">
                     <Sparkles className="h-3 w-3 mr-2" />
                     Explore AI Tools
                   </Button>
@@ -455,7 +537,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <div className="h-20" />
+        <div className="h-20 md:h-8" />
       </div>
 
       <WelcomeModal
