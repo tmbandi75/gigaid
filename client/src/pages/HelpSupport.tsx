@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   HelpCircle, 
   MessageCircle, 
@@ -27,6 +30,10 @@ import {
   Book,
   Headphones,
   ChevronRight,
+  Ticket,
+  CheckCircle,
+  Clock,
+  AlertCircle,
 } from "lucide-react";
 
 const faqs = [
@@ -313,6 +320,40 @@ const faqs = [
   },
 ];
 
+interface SupportTicket {
+  id: number;
+  subject: string;
+  status: string;
+  priority: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case "solved":
+    case "closed":
+      return <CheckCircle className="h-4 w-4 text-green-500" />;
+    case "pending":
+    case "hold":
+      return <Clock className="h-4 w-4 text-amber-500" />;
+    default:
+      return <AlertCircle className="h-4 w-4 text-blue-500" />;
+  }
+};
+
+const getStatusLabel = (status: string) => {
+  switch (status) {
+    case "new": return "New";
+    case "open": return "Open";
+    case "pending": return "Pending";
+    case "hold": return "On Hold";
+    case "solved": return "Solved";
+    case "closed": return "Closed";
+    default: return status;
+  }
+};
+
 export default function HelpSupport() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -320,9 +361,37 @@ export default function HelpSupport() {
   const [contactForm, setContactForm] = useState({
     subject: "",
     message: "",
+    category: "general",
+    priority: "normal",
   });
-  const [isSending, setIsSending] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [showTickets, setShowTickets] = useState(false);
+
+  const { data: ticketsData, isLoading: ticketsLoading } = useQuery<{ tickets: SupportTicket[] }>({
+    queryKey: ["/api/support/tickets"],
+    enabled: showTickets,
+  });
+
+  const createTicketMutation = useMutation({
+    mutationFn: async (data: { subject: string; description: string; category: string; priority: string }) => {
+      return apiRequest("/api/support/tickets", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Support ticket created! We'll respond as soon as possible." });
+      setContactForm({ subject: "", message: "", category: "general", priority: "normal" });
+      queryClient.invalidateQueries({ queryKey: ["/api/support/tickets"] });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to create ticket", 
+        description: error.message || "Please try again or email us directly.",
+        variant: "destructive" 
+      });
+    },
+  });
 
   const filteredFaqs = faqs.map(category => ({
     ...category,
@@ -340,11 +409,12 @@ export default function HelpSupport() {
       return;
     }
     
-    setIsSending(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsSending(false);
-    setContactForm({ subject: "", message: "" });
-    toast({ title: "Message sent! We'll get back to you soon." });
+    createTicketMutation.mutate({
+      subject: contactForm.subject,
+      description: contactForm.message,
+      category: contactForm.category,
+      priority: contactForm.priority,
+    });
   };
 
   return (
@@ -477,8 +547,8 @@ export default function HelpSupport() {
         <Card className="border-0 shadow-md" data-testid="card-contact">
           <CardContent className="p-4">
             <h2 className="font-semibold mb-4 flex items-center gap-2">
-              <MessageCircle className="h-5 w-5 text-primary" />
-              Send Us a Message
+              <Ticket className="h-5 w-5 text-primary" />
+              Submit a Support Ticket
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -492,13 +562,50 @@ export default function HelpSupport() {
                   data-testid="input-subject"
                 />
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select
+                    value={contactForm.category}
+                    onValueChange={(value) => setContactForm({ ...contactForm, category: value })}
+                  >
+                    <SelectTrigger className="h-12" data-testid="select-category">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="general">General Question</SelectItem>
+                      <SelectItem value="billing">Billing & Payments</SelectItem>
+                      <SelectItem value="technical">Technical Issue</SelectItem>
+                      <SelectItem value="feature">Feature Request</SelectItem>
+                      <SelectItem value="account">Account Help</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Priority</Label>
+                  <Select
+                    value={contactForm.priority}
+                    onValueChange={(value) => setContactForm({ ...contactForm, priority: value })}
+                  >
+                    <SelectTrigger className="h-12" data-testid="select-priority">
+                      <SelectValue placeholder="Select priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="normal">Normal</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="urgent">Urgent</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="message">Message</Label>
                 <Textarea
                   id="message"
                   value={contactForm.message}
                   onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
-                  placeholder="Describe your issue or question..."
+                  placeholder="Describe your issue or question in detail..."
                   className="min-h-[120px] resize-none"
                   data-testid="textarea-message"
                 />
@@ -506,17 +613,71 @@ export default function HelpSupport() {
               <Button 
                 type="submit" 
                 className="w-full h-12"
-                disabled={isSending}
+                disabled={createTicketMutation.isPending}
                 data-testid="button-send-message"
               >
-                {isSending ? (
+                {createTicketMutation.isPending ? (
                   <Loader2 className="h-5 w-5 animate-spin mr-2" />
                 ) : (
                   <Send className="h-5 w-5 mr-2" />
                 )}
-                Send Message
+                Submit Ticket
               </Button>
             </form>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-md" data-testid="card-my-tickets">
+          <CardContent className="p-4">
+            <button 
+              className="w-full flex items-center justify-between"
+              onClick={() => setShowTickets(!showTickets)}
+            >
+              <h2 className="font-semibold flex items-center gap-2">
+                <MessageCircle className="h-5 w-5 text-primary" />
+                My Support Tickets
+              </h2>
+              <ChevronRight className={`h-5 w-5 text-muted-foreground transition-transform ${showTickets ? "rotate-90" : ""}`} />
+            </button>
+            
+            {showTickets && (
+              <div className="mt-4 space-y-3">
+                {ticketsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : ticketsData?.tickets && ticketsData.tickets.length > 0 ? (
+                  ticketsData.tickets.map((ticket) => (
+                    <div 
+                      key={ticket.id} 
+                      className="p-3 border rounded-lg hover-elevate cursor-pointer"
+                      data-testid={`ticket-${ticket.id}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        {getStatusIcon(ticket.status)}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{ticket.subject}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="secondary" className="text-xs">
+                              {getStatusLabel(ticket.status)}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(ticket.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-8 text-center">
+                    <Ticket className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+                    <p className="text-sm text-muted-foreground">No support tickets yet</p>
+                    <p className="text-xs text-muted-foreground mt-1">Submit a ticket above if you need help</p>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 

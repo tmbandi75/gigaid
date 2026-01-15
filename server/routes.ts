@@ -32,6 +32,7 @@ import { computeDepositState, calculateDepositAmount, getCancellationOutcome, fo
 import { embedDepositMetadata, extractDepositMetadata, DepositMetadata, DerivedDepositState } from "@shared/schema";
 import { generateCelebrationMessage } from "./celebration";
 import { generateNudgesForUser } from "./nudgeGenerator";
+import { createSupportTicket, getTicketsByEmail, getTicketById, addTicketComment, getTicketComments } from "./zendesk";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -7005,6 +7006,133 @@ Return ONLY the message text, no JSON or formatting.`
         passed: false,
         message: "Test error",
         details: error.message,
+      });
+    }
+  });
+
+  // ============ ZENDESK SUPPORT TICKET ROUTES ============
+
+  // Create a new support ticket
+  app.post("/api/support/tickets", async (req, res) => {
+    try {
+      const { subject, description, priority, type, category } = req.body;
+      
+      // Get user info for the ticket
+      const user = await storage.getUser(defaultUserId);
+      const requesterEmail = user?.email || "unknown@example.com";
+      const requesterName = user?.name || "GigAid User";
+
+      const tags = ["gigaid", "app-support"];
+      if (category) tags.push(category);
+
+      const ticket = await createSupportTicket({
+        subject,
+        description,
+        priority: priority || "normal",
+        type: type || "question",
+        tags,
+        requesterEmail,
+        requesterName,
+      });
+
+      res.json({
+        success: true,
+        ticketId: ticket.ticket.id,
+        message: "Support ticket created successfully",
+      });
+    } catch (error: any) {
+      console.error("Error creating support ticket:", error);
+      res.status(500).json({ 
+        error: "Failed to create support ticket",
+        details: error.message 
+      });
+    }
+  });
+
+  // Get user's support tickets
+  app.get("/api/support/tickets", async (req, res) => {
+    try {
+      const user = await storage.getUser(defaultUserId);
+      const email = user?.email;
+      
+      if (!email) {
+        return res.json({ tickets: [] });
+      }
+
+      const result = await getTicketsByEmail(email);
+      const tickets = result.results?.map((t: any) => ({
+        id: t.id,
+        subject: t.subject,
+        status: t.status,
+        priority: t.priority,
+        createdAt: t.created_at,
+        updatedAt: t.updated_at,
+      })) || [];
+
+      res.json({ tickets });
+    } catch (error: any) {
+      console.error("Error fetching tickets:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch support tickets",
+        details: error.message 
+      });
+    }
+  });
+
+  // Get a specific ticket with comments
+  app.get("/api/support/tickets/:ticketId", async (req, res) => {
+    try {
+      const ticketId = parseInt(req.params.ticketId);
+      
+      const [ticketResult, commentsResult] = await Promise.all([
+        getTicketById(ticketId),
+        getTicketComments(ticketId),
+      ]);
+
+      res.json({
+        ticket: {
+          id: ticketResult.ticket.id,
+          subject: ticketResult.ticket.subject,
+          description: ticketResult.ticket.description,
+          status: ticketResult.ticket.status,
+          priority: ticketResult.ticket.priority,
+          createdAt: ticketResult.ticket.created_at,
+          updatedAt: ticketResult.ticket.updated_at,
+        },
+        comments: commentsResult.comments?.map((c: any) => ({
+          id: c.id,
+          body: c.body,
+          author: c.author_id,
+          createdAt: c.created_at,
+          public: c.public,
+        })) || [],
+      });
+    } catch (error: any) {
+      console.error("Error fetching ticket:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch ticket details",
+        details: error.message 
+      });
+    }
+  });
+
+  // Add comment to a ticket
+  app.post("/api/support/tickets/:ticketId/comments", async (req, res) => {
+    try {
+      const ticketId = parseInt(req.params.ticketId);
+      const { comment } = req.body;
+
+      await addTicketComment(ticketId, comment, true);
+
+      res.json({
+        success: true,
+        message: "Comment added successfully",
+      });
+    } catch (error: any) {
+      console.error("Error adding comment:", error);
+      res.status(500).json({ 
+        error: "Failed to add comment",
+        details: error.message 
       });
     }
   });
