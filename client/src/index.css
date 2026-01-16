@@ -308,3 +308,21 @@
     inset: -1px;
   }
 }
+
+/* Constrained content container for action-heavy pages */
+.content-container {
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1024px) {
+  .content-container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

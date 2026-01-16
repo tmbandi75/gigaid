@@ -273,7 +273,7 @@ export default function BookingRequests() {
         </div>
       </div>
       
-      <div className="px-4 -mt-4 relative z-10">
+      <div className="content-container -mt-4 relative z-10">
         <Card className="border-0 shadow-lg mb-4">
           <CardContent className="p-2">
             <div className="flex gap-1 overflow-x-auto">

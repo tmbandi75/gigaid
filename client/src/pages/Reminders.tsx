@@ -236,7 +236,7 @@ export default function Reminders() {
         </div>
       </div>
 
-      <div className="px-4 space-y-4">
+      <div className="content-container space-y-4">
         {/* Filter tabs */}
         <Tabs value={filterStatus} onValueChange={(v) => setFilterStatus(v as FilterStatus)}>
           <TabsList className="w-full grid grid-cols-4">

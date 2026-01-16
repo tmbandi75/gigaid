@@ -1,0 +1,110 @@
+You are adjusting the layout width of the main content area in the GigAid web app
+to improve readability on table-heavy pages (Jobs, Get Paid, New Requests, Reminders).
+
+GOAL:
+Reduce horizontal eye travel by constraining the middle content pane,
+while keeping the background, sidebar, and header full-width.
+
+This is a POLISH change, not a redesign.
+
+------------------------------------------------
+IMPORTANT CONSTRAINTS
+------------------------------------------------
+- Do NOT change the sidebar width
+- Do NOT change global background gradients
+- Do NOT break mobile layouts
+- Do NOT affect modals, full-screen onboarding, or auth pages
+- Do NOT remove or hide any table columns
+
+------------------------------------------------
+IMPLEMENTATION STRATEGY
+------------------------------------------------
+Introduce a reusable content container wrapper
+that constrains width only for action-heavy pages.
+
+------------------------------------------------
+CSS IMPLEMENTATION
+------------------------------------------------
+
+Create or update a shared CSS class:
+
+/* Constrained content container for action-heavy pages */
+.content-container {
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+------------------------------------------------
+WHERE TO APPLY
+------------------------------------------------
+Wrap the main content area (NOT the sidebar, NOT the header)
+with <div class="content-container"> on these pages:
+
+- Jobs
+- Get Paid (Invoices)
+- New Requests (Leads)
+- Reminders
+- Bookings
+
+Example JSX / HTML structure:
+
+<main class="page-background">
+  <div class="content-container">
+    <!-- page-specific content (tables, cards, actions) -->
+  </div>
+</main>
+
+------------------------------------------------
+WHERE NOT TO APPLY
+------------------------------------------------
+Do NOT use .content-container on:
+- Game Plan / Dashboard (overview pages)
+- Full-screen onboarding flows
+- Modals and slide-ins
+- Auth / login / signup pages
+
+These pages should remain wide for visual impact.
+
+------------------------------------------------
+TABLE-SPECIFIC SAFETY
+------------------------------------------------
+Ensure tables remain responsive inside the container:
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+Do NOT force horizontal scrolling unless screen width is below tablet size.
+
+------------------------------------------------
+RESPONSIVE BEHAVIOR
+------------------------------------------------
+On screens smaller than 1024px:
+- content-container should naturally collapse
+- padding remains 16–24px
+- no max-width override needed
+
+Do NOT add new breakpoints unless required.
+
+------------------------------------------------
+FINAL VISUAL CHECKS
+------------------------------------------------
+After implementation, verify:
+- Job title, date, price, and action buttons are visible without head movement
+- “Start” / “Complete” buttons feel visually connected to their rows
+- Background gradients still span full width
+- Sidebar alignment remains unchanged
+
+------------------------------------------------
+RATIONALE (FOR FUTURE DEV CONTEXT)
+------------------------------------------------
+This constraint improves scannability and reduces fatigue
+for gig workers performing repetitive, action-driven tasks.
+
+Implement cleanly and conservatively.
