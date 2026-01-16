@@ -19,7 +19,9 @@ import {
   Shield,
   Play,
   Navigation,
-  Loader2
+  Loader2,
+  LayoutGrid,
+  List
 } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
@@ -28,6 +30,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { NudgeChips } from "@/components/nudges/NudgeChip";
 import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
+import { JobsTableView } from "@/components/jobs/JobsTableView";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 function formatTime(time: string): string {
   const [hours, minutes] = time.split(':');
@@ -310,6 +314,8 @@ function EmptyState() {
 export default function Jobs() {
   const [filter, setFilter] = useState<string>("all");
   const [selectedNudge, setSelectedNudge] = useState<AiNudge | null>(null);
+  const [viewMode, setViewMode] = useState<"cards" | "table">("table");
+  const isMobile = useIsMobile();
   
   const { data: jobs = [], isLoading } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
@@ -332,6 +338,8 @@ export default function Jobs() {
 
   const totalEarnings = jobs.filter(j => j.status === "completed").reduce((sum, j) => sum + (j.price || 0), 0);
   const activeCount = jobs.filter(j => j.status === "scheduled" || j.status === "in_progress").length;
+
+  const showTableView = !isMobile && viewMode === "table";
 
   return (
     <div className="flex flex-col min-h-full bg-background" data-testid="page-jobs">
@@ -414,6 +422,31 @@ export default function Jobs() {
             </CardContent>
           </Card>
 
+          {!isMobile && (
+            <div className="hidden md:flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
+              <Button
+                variant={viewMode === "table" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("table")}
+                className="h-9"
+                data-testid="view-mode-table"
+              >
+                <List className="h-4 w-4 mr-2" />
+                Table
+              </Button>
+              <Button
+                variant={viewMode === "cards" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("cards")}
+                className="h-9"
+                data-testid="view-mode-cards"
+              >
+                <LayoutGrid className="h-4 w-4 mr-2" />
+                Cards
+              </Button>
+            </div>
+          )}
+
           <Link href="/jobs/new" className="md:hidden">
             <Button className="w-full h-12 bg-gradient-to-r from-primary to-violet-600 shadow-lg" data-testid="button-add-job">
               <Plus className="h-5 w-5 mr-2" />
@@ -423,24 +456,49 @@ export default function Jobs() {
         </div>
 
         {isLoading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="border-0 shadow-sm">
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="h-12 w-12 bg-muted animate-pulse rounded-xl" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-4 w-32 bg-muted animate-pulse rounded" />
-                      <div className="h-3 w-24 bg-muted animate-pulse rounded" />
-                      <div className="h-3 w-40 bg-muted animate-pulse rounded" />
+          showTableView ? (
+            <JobsTableView jobs={[]} isLoading={true} />
+          ) : (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="border-0 shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="h-12 w-12 bg-muted animate-pulse rounded-xl" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 w-32 bg-muted animate-pulse rounded" />
+                        <div className="h-3 w-24 bg-muted animate-pulse rounded" />
+                        <div className="h-3 w-40 bg-muted animate-pulse rounded" />
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )
         ) : filteredJobs.length === 0 ? (
           <EmptyState />
+        ) : showTableView ? (
+          <div className="space-y-6">
+            {upcomingJobs.length > 0 && (
+              <div>
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Upcoming ({upcomingJobs.length})
+                </h2>
+                <JobsTableView jobs={upcomingJobs} />
+              </div>
+            )}
+            {pastJobs.length > 0 && (
+              <div>
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Past Jobs ({pastJobs.length})
+                </h2>
+                <JobsTableView jobs={pastJobs} />
+              </div>
+            )}
+          </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {upcomingJobs.length > 0 && (

@@ -12,13 +12,17 @@ import {
   AlertCircle,
   TrendingUp,
   Sparkles,
-  Receipt
+  Receipt,
+  List,
+  LayoutGrid
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import type { Invoice, AiNudge } from "@shared/schema";
 import { NudgeChips } from "@/components/nudges/NudgeChip";
 import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
+import { InvoicesTableView } from "@/components/invoices/InvoicesTableView";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const statusConfig: Record<string, { 
   color: string; 
@@ -180,7 +184,9 @@ function EmptyState({ filter }: { filter: string }) {
 export default function Invoices() {
   const [filter, setFilter] = useState<string>("all");
   const [selectedNudge, setSelectedNudge] = useState<AiNudge | null>(null);
+  const [viewMode, setViewMode] = useState<"cards" | "table">("table");
   const [, navigate] = useLocation();
+  const isMobile = useIsMobile();
   
   const { data: invoices = [], isLoading } = useQuery<Invoice[]>({
     queryKey: ["/api/invoices"],
@@ -189,6 +195,8 @@ export default function Invoices() {
   const { data: nudges = [] } = useQuery<AiNudge[]>({
     queryKey: ["/api/nudges"],
   });
+
+  const showTableView = !isMobile && viewMode === "table";
 
   const filteredInvoices = filter === "all" 
     ? invoices 
@@ -276,70 +284,101 @@ export default function Invoices() {
       </div>
       
       <div className="flex-1 px-4 md:px-6 lg:px-8 pt-4 max-w-7xl mx-auto w-full">
-        <Card className="border-0 shadow-lg mb-4 overflow-hidden bg-card">
-          <CardContent className="p-1.5">
-            <div className="flex gap-1">
-              {filters.map((f) => {
-                const FilterIcon = f.icon;
-                const count = stats.count[f.value as keyof typeof stats.count] || 0;
-                return (
-                  <button
-                    key={f.value}
-                    onClick={() => setFilter(f.value)}
-                    className={`flex-1 py-2.5 px-2 rounded-xl text-xs font-semibold transition-all flex flex-col items-center gap-1 ${
-                      filter === f.value
-                        ? "bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-md"
-                        : "text-muted-foreground hover:bg-muted/50"
-                    }`}
-                    data-testid={`filter-${f.value}`}
-                  >
-                    <FilterIcon className="h-4 w-4" />
-                    <span>{f.label}</span>
-                    {f.value !== "all" && count > 0 && (
-                      <span className={`text-[10px] ${filter === f.value ? "text-white/80" : "text-muted-foreground/60"}`}>
-                        {count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <Card className="border-0 shadow-lg overflow-hidden bg-card flex-1">
+            <CardContent className="p-1.5">
+              <div className="flex gap-1">
+                {filters.map((f) => {
+                  const FilterIcon = f.icon;
+                  const count = stats.count[f.value as keyof typeof stats.count] || 0;
+                  return (
+                    <button
+                      key={f.value}
+                      onClick={() => setFilter(f.value)}
+                      className={`flex-1 py-2.5 px-2 rounded-xl text-xs font-semibold transition-all flex flex-col items-center gap-1 ${
+                        filter === f.value
+                          ? "bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-md"
+                          : "text-muted-foreground hover:bg-muted/50"
+                      }`}
+                      data-testid={`filter-${f.value}`}
+                    >
+                      <FilterIcon className="h-4 w-4" />
+                      <span>{f.label}</span>
+                      {f.value !== "all" && count > 0 && (
+                        <span className={`text-[10px] ${filter === f.value ? "text-white/80" : "text-muted-foreground/60"}`}>
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
 
-        <Link href="/invoices/new">
-          <Button className="w-full mb-5 h-14 text-base font-semibold bg-gradient-to-r from-blue-500 to-cyan-500 shadow-lg shadow-blue-500/20 rounded-xl" data-testid="button-add-invoice">
-            <div className="h-8 w-8 rounded-lg bg-white/20 flex items-center justify-center mr-3">
-              <Plus className="h-5 w-5" />
+          {!isMobile && (
+            <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
+              <Button
+                variant={viewMode === "table" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("table")}
+                data-testid="view-mode-table"
+              >
+                <List className="h-4 w-4 mr-2" />
+                Table
+              </Button>
+              <Button
+                variant={viewMode === "cards" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("cards")}
+                data-testid="view-mode-cards"
+              >
+                <LayoutGrid className="h-4 w-4 mr-2" />
+                Cards
+              </Button>
             </div>
-            Create New Invoice
-          </Button>
-        </Link>
+          )}
+
+          <Link href="/invoices/new" className="md:hidden">
+            <Button className="w-full h-14 text-base font-semibold bg-gradient-to-r from-blue-500 to-cyan-500 shadow-lg shadow-blue-500/20 rounded-xl" data-testid="button-add-invoice">
+              <div className="h-8 w-8 rounded-lg bg-white/20 flex items-center justify-center mr-3">
+                <Plus className="h-5 w-5" />
+              </div>
+              Create New Invoice
+            </Button>
+          </Link>
+        </div>
 
         {isLoading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="border-0 shadow-sm overflow-hidden">
-                <CardContent className="p-0">
-                  <div className="flex">
-                    <div className="w-1.5 bg-muted animate-pulse" />
-                    <div className="flex-1 p-4">
-                      <div className="flex items-center gap-4">
-                        <div className="h-14 w-14 bg-muted animate-pulse rounded-2xl" />
-                        <div className="flex-1 space-y-2">
-                          <div className="h-4 w-32 bg-muted animate-pulse rounded-lg" />
-                          <div className="h-3 w-24 bg-muted animate-pulse rounded-lg" />
+          showTableView ? (
+            <InvoicesTableView invoices={[]} isLoading={true} />
+          ) : (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="border-0 shadow-sm overflow-hidden">
+                  <CardContent className="p-0">
+                    <div className="flex">
+                      <div className="w-1.5 bg-muted animate-pulse" />
+                      <div className="flex-1 p-4">
+                        <div className="flex items-center gap-4">
+                          <div className="h-14 w-14 bg-muted animate-pulse rounded-2xl" />
+                          <div className="flex-1 space-y-2">
+                            <div className="h-4 w-32 bg-muted animate-pulse rounded-lg" />
+                            <div className="h-3 w-24 bg-muted animate-pulse rounded-lg" />
+                          </div>
+                          <div className="h-6 w-16 bg-muted animate-pulse rounded-lg" />
                         </div>
-                        <div className="h-6 w-16 bg-muted animate-pulse rounded-lg" />
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )
         ) : filteredInvoices.length === 0 ? (
           <EmptyState filter={filter} />
+        ) : showTableView ? (
+          <InvoicesTableView invoices={filteredInvoices} />
         ) : (
           <div className="space-y-3">
             {filteredInvoices.map((invoice) => (

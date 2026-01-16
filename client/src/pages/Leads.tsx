@@ -32,7 +32,9 @@ import {
   Star,
   Mail,
   Send,
-  ExternalLink
+  ExternalLink,
+  List,
+  LayoutGrid
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
@@ -43,6 +45,8 @@ import type { Lead, AiNudge } from "@shared/schema";
 import FollowUpCheckIn from "@/components/FollowUpCheckIn";
 import { NudgeChips } from "@/components/nudges/NudgeChip";
 import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
+import { LeadsTableView } from "@/components/leads/LeadsTableView";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface FollowUpMessage {
   message: string;
@@ -234,9 +238,11 @@ export default function Leads() {
   const [followUpMessage, setFollowUpMessage] = useState<string>("");
   const [tone, setTone] = useState<"friendly" | "professional" | "casual">("friendly");
   const [selectedNudge, setSelectedNudge] = useState<AiNudge | null>(null);
+  const [viewMode, setViewMode] = useState<"cards" | "table">("table");
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { sendText } = useSendText();
+  const isMobile = useIsMobile();
   
   const { data: leads = [], isLoading } = useQuery<Lead[]>({
     queryKey: ["/api/leads"],
@@ -245,6 +251,8 @@ export default function Leads() {
   const { data: nudges = [] } = useQuery<AiNudge[]>({
     queryKey: ["/api/nudges"],
   });
+
+  const showTableView = !isMobile && viewMode === "table";
 
   const followUpMutation = useMutation({
     mutationFn: async (params: {
@@ -352,56 +360,87 @@ export default function Leads() {
       </div>
       
       <div className="flex-1 px-4 md:px-6 lg:px-8 py-6 -mt-4 max-w-7xl mx-auto w-full">
-        <Card className="border-0 shadow-md mb-4 overflow-hidden">
-          <CardContent className="p-1">
-            <div className="flex gap-1">
-              {filters.map((f) => (
-                <button
-                  key={f.value}
-                  onClick={() => setFilter(f.value)}
-                  className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all ${
-                    filter === f.value
-                      ? "bg-emerald-500 text-white shadow-sm"
-                      : "text-muted-foreground hover:bg-muted/50"
-                  }`}
-                  data-testid={`filter-${f.value}`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <Card className="border-0 shadow-md overflow-hidden flex-1">
+            <CardContent className="p-1">
+              <div className="flex gap-1">
+                {filters.map((f) => (
+                  <button
+                    key={f.value}
+                    onClick={() => setFilter(f.value)}
+                    className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all ${
+                      filter === f.value
+                        ? "bg-emerald-500 text-white shadow-sm"
+                        : "text-muted-foreground hover:bg-muted/50"
+                    }`}
+                    data-testid={`filter-${f.value}`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
-        <Link href="/leads/new">
-          <Button className="w-full mb-4 h-12 bg-gradient-to-r from-emerald-500 to-teal-500 shadow-lg" data-testid="button-add-lead">
-            <Plus className="h-5 w-5 mr-2" />
-            Add New Lead
-          </Button>
-        </Link>
+          {!isMobile && (
+            <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
+              <Button
+                variant={viewMode === "table" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("table")}
+                data-testid="view-mode-table"
+              >
+                <List className="h-4 w-4 mr-2" />
+                Table
+              </Button>
+              <Button
+                variant={viewMode === "cards" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("cards")}
+                data-testid="view-mode-cards"
+              >
+                <LayoutGrid className="h-4 w-4 mr-2" />
+                Cards
+              </Button>
+            </div>
+          )}
+
+          <Link href="/leads/new" className="md:hidden">
+            <Button className="w-full h-12 bg-gradient-to-r from-emerald-500 to-teal-500 shadow-lg" data-testid="button-add-lead">
+              <Plus className="h-5 w-5 mr-2" />
+              Add New Lead
+            </Button>
+          </Link>
+        </div>
 
         {/* Follow-up check-ins */}
         <FollowUpCheckIn />
 
         {isLoading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="border-0 shadow-sm">
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="h-12 w-12 bg-muted animate-pulse rounded-full" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-4 w-32 bg-muted animate-pulse rounded" />
-                      <div className="h-3 w-24 bg-muted animate-pulse rounded" />
-                      <div className="h-3 w-40 bg-muted animate-pulse rounded" />
+          showTableView ? (
+            <LeadsTableView leads={[]} isLoading={true} />
+          ) : (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="border-0 shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="h-12 w-12 bg-muted animate-pulse rounded-full" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 w-32 bg-muted animate-pulse rounded" />
+                        <div className="h-3 w-24 bg-muted animate-pulse rounded" />
+                        <div className="h-3 w-40 bg-muted animate-pulse rounded" />
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )
         ) : filteredLeads.length === 0 ? (
           <EmptyState />
+        ) : showTableView ? (
+          <LeadsTableView leads={filteredLeads} />
         ) : (
           <div className="space-y-3">
             {filteredLeads.map((lead) => (

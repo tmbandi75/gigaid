@@ -2,11 +2,29 @@ import { Link, useLocation } from "wouter";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { LayoutDashboard, Briefcase, Users, FileText, MoreHorizontal, Bell, Search } from "lucide-react";
+import { 
+  LayoutDashboard, 
+  Briefcase, 
+  Users, 
+  FileText, 
+  MoreHorizontal, 
+  Bell, 
+  Search,
+  Plus,
+  Command
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -23,6 +41,21 @@ interface ResponsiveLayoutProps {
 interface DashboardSummary {
   pendingReminders?: number;
 }
+
+interface UserProfile {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  photo: string | null;
+  businessName?: string | null;
+}
+
+const quickActions = [
+  { label: "New Job", path: "/jobs/new", icon: Briefcase },
+  { label: "New Lead", path: "/leads/new", icon: Users },
+  { label: "New Invoice", path: "/invoices/new", icon: FileText },
+];
 
 const mobileNavItems = [
   { path: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -93,61 +126,144 @@ function MobileBottomNav() {
 }
 
 function DesktopHeader() {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
 
   const { data: summary } = useQuery<DashboardSummary>({
     queryKey: ["/api/dashboard/summary"],
   });
 
+  const { data: profile } = useQuery<UserProfile>({
+    queryKey: ["/api/profile"],
+  });
+
   const currentRoute = routeLabels[location] || { label: "Page" };
   const parentRoute = currentRoute.parent ? routeLabels[currentRoute.parent] : null;
 
+  const displayName = profile?.name || "User";
+  const initials = displayName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
   return (
-    <header className="hidden md:flex h-14 shrink-0 items-center gap-2 border-b px-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <SidebarTrigger className="-ml-1" data-testid="button-sidebar-toggle" />
-      <Separator orientation="vertical" className="mr-2 h-4" />
+    <header className="hidden md:flex h-16 shrink-0 items-center gap-4 border-b px-6 bg-background">
+      <SidebarTrigger className="-ml-2" data-testid="button-sidebar-toggle" />
+      <Separator orientation="vertical" className="h-6" />
       
       <Breadcrumb>
         <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/">Home</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
           {parentRoute && (
             <>
-              <BreadcrumbItem className="hidden md:block">
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
                 <BreadcrumbLink asChild>
                   <Link href={currentRoute.parent!}>{parentRoute.label}</Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden md:block" />
             </>
           )}
-          <BreadcrumbItem>
-            <BreadcrumbPage>{currentRoute.label}</BreadcrumbPage>
-          </BreadcrumbItem>
+          {currentRoute.label !== "Dashboard" && (
+            <>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage className="font-medium">{currentRoute.label}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </>
+          )}
         </BreadcrumbList>
       </Breadcrumb>
 
       <div className="flex-1" />
 
-      <div className="flex items-center gap-2">
-        <div className="relative hidden lg:block">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="flex items-center gap-3">
+        <div className="relative hidden lg:flex items-center">
+          <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search..."
-            className="w-64 pl-9 h-9"
+            placeholder="Search jobs, leads, invoices..."
+            className="w-80 pl-10 h-10 bg-muted/50 border-0 focus-visible:bg-background focus-visible:ring-1"
             data-testid="input-search"
           />
+          <kbd className="absolute right-3 pointer-events-none hidden xl:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+            <Command className="h-3 w-3" />K
+          </kbd>
         </div>
 
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="default" size="sm" className="h-9 gap-2" data-testid="button-quick-add">
+              <Plus className="h-4 w-4" />
+              <span className="hidden xl:inline">New</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            {quickActions.map((action) => (
+              <DropdownMenuItem
+                key={action.path}
+                onClick={() => navigate(action.path)}
+                data-testid={`quick-add-${action.label.toLowerCase().replace(/\s+/g, "-")}`}
+              >
+                <action.icon className="h-4 w-4 mr-2" />
+                {action.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <Separator orientation="vertical" className="h-6 hidden lg:block" />
+
         <Link href="/reminders">
-          <Button variant="ghost" size="icon" className="relative" data-testid="button-notifications">
+          <Button variant="ghost" size="icon" className="relative h-9 w-9" data-testid="button-notifications">
             <Bell className="h-5 w-5" />
             {(summary?.pendingReminders ?? 0) > 0 && (
-              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-[10px] font-bold flex items-center justify-center text-destructive-foreground">
+              <span className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full bg-destructive text-[10px] font-bold flex items-center justify-center text-destructive-foreground animate-pulse">
                 {summary?.pendingReminders}
               </span>
             )}
           </Button>
         </Link>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" data-testid="header-user-menu">
+              <Avatar className="h-8 w-8">
+                {profile?.photo ? (
+                  <AvatarImage src={profile.photo} alt="Profile" />
+                ) : null}
+                <AvatarFallback className="bg-gradient-to-br from-primary to-violet-600 text-white text-xs font-semibold">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <div className="px-2 py-1.5">
+              <p className="text-sm font-medium">{displayName}</p>
+              <p className="text-xs text-muted-foreground">{profile?.email || "user@example.com"}</p>
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => navigate("/profile")} data-testid="header-dropdown-profile">
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/settings")} data-testid="header-dropdown-settings">
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/help")} data-testid="header-dropdown-help">
+              Help & Support
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-destructive" data-testid="header-dropdown-logout">
+              Log Out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
