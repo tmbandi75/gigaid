@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
 import { VoiceFAB } from "@/components/layout/VoiceFAB";
 import { OnboardingWrapper } from "@/components/onboarding/OnboardingWrapper";
+import { PostHogProvider } from "@/components/PostHogProvider";
 import { useEffect } from "react";
 
 import TodaysGamePlanPage from "@/pages/TodaysGamePlanPage";
@@ -98,9 +99,10 @@ function ThemeInitializer() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <ThemeInitializer />
-        <Switch>
+      <PostHogProvider>
+        <TooltipProvider>
+          <ThemeInitializer />
+          <Switch>
           <Route path="/book/:slug" component={PublicBooking} />
           <Route path="/booking/:token" component={CustomerBookingDetail} />
           <Route path="/invoice/:token" component={PublicInvoice} />
@@ -119,9 +121,10 @@ function App() {
               <VoiceFAB />
             </OnboardingWrapper>
           </Route>
-        </Switch>
-        <Toaster />
-      </TooltipProvider>
+          </Switch>
+          <Toaster />
+        </TooltipProvider>
+      </PostHogProvider>
     </QueryClientProvider>
   );
 }
