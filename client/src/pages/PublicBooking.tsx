@@ -324,7 +324,7 @@ export default function PublicBooking() {
           <div className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1">
             Powered by{" "}
             <a 
-              href="http://www.gigaid.com" 
+              href="https://gigaid.ai" 
               target="_blank" 
               rel="noopener noreferrer"
               className="hover:underline"
@@ -895,7 +895,7 @@ export default function PublicBooking() {
         <div className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1">
           Powered by{" "}
           <a 
-            href="http://www.gigaid.com" 
+            href="https://gigaid.ai" 
             target="_blank" 
             rel="noopener noreferrer"
             className="hover:underline"
