@@ -137,9 +137,10 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const createJobMutation = useMutation({
     mutationFn: async (data: typeof jobData) => {
       const res = await apiRequest("POST", "/api/jobs", {
+        userId: "demo-user",
         title: data.title,
         scheduledDate: data.scheduledDate,
-        scheduledTime: data.scheduledTime || null,
+        scheduledTime: data.scheduledTime || "09:00",
         price: data.price ? Math.round(parseFloat(data.price) * 100) : null,
         clientName: data.clientName || "New Client",
         clientPhone: data.clientPhone || null,
