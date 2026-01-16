@@ -1,0 +1,110 @@
+You are upgrading the GigAid web app to be a proper Progressive Web App (PWA)
+so it can be packaged into an Android APK / AAB for the Google Play Store.
+
+GOAL:
+Make the app pass all PWABuilder checks:
+- Web App Manifest
+- Service Worker
+- Installable PWA
+
+DO NOT change existing app behavior or routing.
+
+------------------------------------------------
+STEP 1 — ADD WEB APP MANIFEST
+------------------------------------------------
+Create a file at: /public/manifest.json
+
+Contents:
+
+{
+  "name": "GigAid",
+  "short_name": "GigAid",
+  "description": "Run your gig business. Jobs, payments, and reminders in one place.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0A63F3",
+  "theme_color": "#0A63F3",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
+
+------------------------------------------------
+STEP 2 — LINK MANIFEST IN HTML
+------------------------------------------------
+In the main HTML file (index.html or equivalent),
+add inside <head>:
+
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0A63F3">
+
+------------------------------------------------
+STEP 3 — ADD ICON ASSETS
+------------------------------------------------
+Ensure these files exist:
+- /public/icons/icon-192.png
+- /public/icons/icon-512.png
+
+If icons do not exist:
+- Generate them from the GigAid logo
+- Square, transparent background
+- No rounded corners (Android handles that)
+
+------------------------------------------------
+STEP 4 — ADD SERVICE WORKER
+------------------------------------------------
+Create a file at: /public/service-worker.js
+
+Contents:
+
+self.addEventListener("install", (event) => {
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener("fetch", (event) => {
+  event.respondWith(
+    fetch(event.request).catch(() => caches.match(event.request))
+  );
+});
+
+------------------------------------------------
+STEP 5 — REGISTER SERVICE WORKER
+------------------------------------------------
+In your main client entry file (e.g. main.tsx / index.tsx / main.js):
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js");
+  });
+}
+
+------------------------------------------------
+STEP 6 — FINAL CHECK
+------------------------------------------------
+- Do NOT cache API requests
+- Do NOT cache authenticated pages
+- This service worker is intentionally minimal and safe
+
+------------------------------------------------
+EXPECTED RESULT
+------------------------------------------------
+- Chrome shows “Install App”
+- PWABuilder shows NO errors
+- “Package for Stores” button becomes active
+
+Implement cleanly and conservatively.
