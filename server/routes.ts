@@ -1659,6 +1659,55 @@ export async function registerRoutes(
     }
   });
 
+  // Public endpoint: Create Stripe PaymentIntent for deposit
+  app.post("/api/public/deposit/:token/create-payment-intent", async (req, res) => {
+    try {
+      const job = await storage.getJob(req.params.token);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      // Get deposit state
+      const payments = await storage.getJobPaymentsByJob(job.id);
+      const depositState = computeDepositState(job, payments);
+
+      if (!depositState.hasDeposit) {
+        return res.status(400).json({ error: "No deposit requested for this job" });
+      }
+
+      if (depositState.isDepositFullyPaid) {
+        return res.status(400).json({ error: "Deposit already paid" });
+      }
+
+      const amountToCharge = depositState.depositOutstandingCents || depositState.depositRequestedCents;
+
+      // Create Stripe PaymentIntent
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amountToCharge,
+        currency: "usd",
+        automatic_payment_methods: { enabled: true },
+        metadata: {
+          jobId: job.id,
+          type: "deposit",
+          clientName: job.clientName || "",
+        },
+        description: `Deposit for ${job.title}`,
+      });
+
+      res.json({
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+      });
+    } catch (error) {
+      console.error("Create deposit payment intent error:", error);
+      res.status(500).json({ error: "Failed to create payment intent" });
+    }
+  });
+
   app.get("/api/invoices", async (req, res) => {
     try {
       const invoices = await storage.getInvoices(defaultUserId);
