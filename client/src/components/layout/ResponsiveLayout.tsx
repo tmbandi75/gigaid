@@ -149,57 +149,62 @@ function DesktopHeader() {
     .slice(0, 2);
 
   return (
-    <header className="hidden md:flex h-16 shrink-0 items-center gap-4 border-b px-6 bg-background">
-      <SidebarTrigger className="-ml-2" data-testid="button-sidebar-toggle" />
-      <Separator orientation="vertical" className="h-6" />
+    <header className="hidden md:flex h-16 shrink-0 items-center gap-4 px-6 bg-gradient-to-r from-primary via-primary/95 to-violet-600 text-primary-foreground shadow-md relative overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
+        <div className="absolute -bottom-4 left-1/4 w-24 h-24 bg-violet-400/10 rounded-full blur-xl" />
+      </div>
       
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href="/">Home</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          {parentRoute && (
-            <>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <Link href={currentRoute.parent!}>{parentRoute.label}</Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-            </>
-          )}
-          {currentRoute.label !== "Game Plan" && (
-            <>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="font-medium">{currentRoute.label}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </>
-          )}
-        </BreadcrumbList>
-      </Breadcrumb>
+      <div className="relative flex items-center gap-4 flex-1">
+        <SidebarTrigger className="-ml-2 text-primary-foreground hover:bg-white/10" data-testid="button-sidebar-toggle" />
+        <Separator orientation="vertical" className="h-6 bg-white/20" />
+        
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild className="text-primary-foreground/80 hover:text-primary-foreground">
+                <Link href="/">Home</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            {parentRoute && (
+              <>
+                <BreadcrumbSeparator className="text-primary-foreground/50" />
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild className="text-primary-foreground/80 hover:text-primary-foreground">
+                    <Link href={currentRoute.parent!}>{parentRoute.label}</Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+              </>
+            )}
+            {currentRoute.label !== "Game Plan" && (
+              <>
+                <BreadcrumbSeparator className="text-primary-foreground/50" />
+                <BreadcrumbItem>
+                  <BreadcrumbPage className="font-medium text-primary-foreground">{currentRoute.label}</BreadcrumbPage>
+                </BreadcrumbItem>
+              </>
+            )}
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
 
-      <div className="flex-1" />
-
-      <div className="flex items-center gap-3">
+      <div className="relative flex items-center gap-3">
         <div className="relative hidden lg:flex items-center">
-          <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 h-4 w-4 text-primary-foreground/60" />
           <Input
             type="search"
             placeholder="Search jobs, leads, invoices..."
-            className="w-80 pl-10 h-10 bg-muted/50 border-0 focus-visible:bg-background focus-visible:ring-1"
+            className="w-80 pl-10 h-10 bg-white/10 border-white/20 text-primary-foreground placeholder:text-primary-foreground/50 focus-visible:bg-white/20 focus-visible:ring-1 focus-visible:ring-white/30"
             data-testid="input-search"
           />
-          <kbd className="absolute right-3 pointer-events-none hidden xl:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+          <kbd className="absolute right-3 pointer-events-none hidden xl:inline-flex h-5 select-none items-center gap-1 rounded border border-white/20 bg-white/10 px-1.5 font-mono text-[10px] font-medium text-primary-foreground/70">
             <Command className="h-3 w-3" />K
           </kbd>
         </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="default" size="sm" className="h-9 gap-2" data-testid="button-quick-add">
+            <Button variant="secondary" size="sm" className="h-9 gap-2 bg-white/20 hover:bg-white/30 border-0 text-primary-foreground" data-testid="button-quick-add">
               <Plus className="h-4 w-4" />
               <span className="hidden xl:inline">New</span>
             </Button>
@@ -218,13 +223,13 @@ function DesktopHeader() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Separator orientation="vertical" className="h-6 hidden lg:block" />
+        <Separator orientation="vertical" className="h-6 hidden lg:block bg-white/20" />
 
         <Link href="/reminders">
-          <Button variant="ghost" size="icon" className="relative h-9 w-9" data-testid="button-notifications">
+          <Button variant="ghost" size="icon" className="relative h-9 w-9 text-primary-foreground hover:bg-white/10" data-testid="button-notifications">
             <Bell className="h-5 w-5" />
             {(summary?.pendingReminders ?? 0) > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full bg-destructive text-[10px] font-bold flex items-center justify-center text-destructive-foreground animate-pulse">
+              <span className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full bg-white text-primary text-[10px] font-bold flex items-center justify-center animate-pulse">
                 {summary?.pendingReminders}
               </span>
             )}
@@ -233,12 +238,12 @@ function DesktopHeader() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" data-testid="header-user-menu">
-              <Avatar className="h-8 w-8">
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-white/10" data-testid="header-user-menu">
+              <Avatar className="h-8 w-8 ring-2 ring-white/30">
                 {profile?.photo ? (
                   <AvatarImage src={profile.photo} alt="Profile" />
                 ) : null}
-                <AvatarFallback className="bg-gradient-to-br from-primary to-violet-600 text-white text-xs font-semibold">
+                <AvatarFallback className="bg-white/20 text-primary-foreground text-xs font-semibold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
