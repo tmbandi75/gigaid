@@ -27,6 +27,7 @@ import {
   FileText,
   XCircle,
   Play,
+  Image,
 } from "lucide-react";
 import type { Job } from "@shared/schema";
 import { JobLocationMap } from "@/components/JobLocationMap";
@@ -75,6 +76,22 @@ export default function JobSummary() {
 
   const { data: job, isLoading } = useQuery<Job>({
     queryKey: ["/api/jobs", id],
+    enabled: !!id,
+  });
+
+  // Fetch job photos
+  interface PhotoAsset {
+    id: string;
+    storagePath: string;
+    visibility: string;
+  }
+  const { data: jobPhotos = [] } = useQuery<PhotoAsset[]>({
+    queryKey: ["/api/photo-assets", "job", id],
+    queryFn: async () => {
+      const res = await fetch(`/api/photo-assets?sourceType=job&sourceId=${id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
     enabled: !!id,
   });
 
@@ -363,6 +380,35 @@ export default function JobSummary() {
                 <h3 className="font-semibold text-sm">Notes</h3>
               </div>
               <p className="text-sm text-muted-foreground" data-testid="text-notes">{job.notes}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {jobPhotos.length > 0 && (
+          <Card className="border-0 shadow-md" data-testid="card-photos">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Image className="h-4 w-4 text-pink-500" />
+                <h3 className="font-semibold text-sm">Photos ({jobPhotos.length})</h3>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {jobPhotos.map((photo) => (
+                  <a
+                    key={photo.id}
+                    href={photo.storagePath}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="aspect-square rounded-lg overflow-hidden bg-muted relative group"
+                    data-testid={`job-photo-${photo.id}`}
+                  >
+                    <img
+                      src={photo.storagePath}
+                      alt="Job photo"
+                      className="w-full h-full object-cover"
+                    />
+                  </a>
+                ))}
+              </div>
             </CardContent>
           </Card>
         )}
