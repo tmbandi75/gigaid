@@ -1,0 +1,137 @@
+You are fixing PWA support for a React app built with Vite and deployed on Replit.
+
+GOAL:
+Make the app fully PWA-compliant so PWABuilder can detect:
+- Web App Manifest
+- Icons
+- Service Worker
+
+Do this in ONE pass.
+Do NOT break existing app behavior.
+
+----------------------------------------
+STEP 1 — ENSURE PUBLIC STATIC DIRECTORY
+----------------------------------------
+Confirm that Vite uses "public" as the static directory.
+
+Open vite.config.ts or vite.config.js and ensure it contains:
+
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+
+export default defineConfig({
+  plugins: [react()],
+  publicDir: "public"
+});
+
+----------------------------------------
+STEP 2 — CREATE WEB APP MANIFEST
+----------------------------------------
+Create the file:
+
+/public/manifest.json
+
+with EXACT contents:
+
+{
+  "name": "GigAid",
+  "short_name": "GigAid",
+  "description": "Run your gig business. Jobs, payments, and reminders in one place.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0A63F3",
+  "theme_color": "#0A63F3",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
+
+----------------------------------------
+STEP 3 — ADD ICON FILES
+----------------------------------------
+Ensure these files exist:
+
+/public/icons/icon-192.png
+/public/icons/icon-512.png
+
+If missing, generate square PNGs from the GigAid logo.
+
+----------------------------------------
+STEP 4 — LINK MANIFEST IN ROOT HTML
+----------------------------------------
+Open /index.html (Vite root HTML file).
+
+Inside <head>, add:
+
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#0A63F3" />
+
+Do NOT add this in React components.
+
+----------------------------------------
+STEP 5 — ADD SERVICE WORKER FILE
+----------------------------------------
+Create:
+
+/public/service-worker.js
+
+with contents:
+
+self.addEventListener("install", () => {
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
+----------------------------------------
+STEP 6 — REGISTER SERVICE WORKER IN REACT
+----------------------------------------
+Open /src/main.tsx (or main.jsx).
+
+Add this at the BOTTOM of the file:
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js");
+  });
+}
+
+----------------------------------------
+STEP 7 — REBUILD AND DEPLOY
+----------------------------------------
+After applying changes:
+
+1. Stop the running Replit app
+2. Run the production build
+3. Restart the app
+4. Redeploy
+
+----------------------------------------
+EXPECTED RESULT
+----------------------------------------
+These URLs must work:
+
+https://gigaid.ai/manifest.json      → shows JSON
+https://gigaid.ai/service-worker.js → shows JS
+https://gigaid.ai/icons/icon-192.png → image loads
+
+Chrome should show:
+- “Install App” in address bar
+
+PWABuilder should show:
+- No manifest error
+- No service worker warning
+- “Package for Stores” enabled
