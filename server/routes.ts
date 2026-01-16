@@ -3484,7 +3484,22 @@ export async function registerRoutes(
         measurementLinear,
       });
 
-      res.json(result);
+      const basedOn = result.basedOn || ["Service category", "Job details"];
+      const formattedOutput = `Suggested Estimate:
+$${result.lowEstimate} – $${result.highEstimate}
+
+Confidence:
+${result.confidence}
+
+Based on:
+${basedOn.map(f => `• ${f}`).join("\n")}
+
+Final price confirmed onsite.`;
+
+      res.json({
+        ...result,
+        formattedOutput,
+      });
     } catch (error) {
       console.error("Error generating category estimate:", error);
       res.json({
@@ -3729,13 +3744,29 @@ export async function registerRoutes(
         disclaimers.push("Photo-based estimates are approximate and used only to assist pricing");
       }
 
+      const factors = estimate.factors || [];
+      const lowDollars = Math.round(estimate.priceRange.min / 100);
+      const highDollars = Math.round(estimate.priceRange.max / 100);
+      
+      const formattedOutput = `Suggested Estimate:
+$${lowDollars} – $${highDollars}
+
+Confidence:
+${estimate.confidence.charAt(0).toUpperCase() + estimate.confidence.slice(1)}
+
+Based on:
+${factors.map(f => `• ${f}`).join("\n")}
+
+Final price confirmed onsite.`;
+
       res.json({
         priceRange: estimate.priceRange,
         confidence: estimate.confidence,
-        factors: estimate.factors || [],
+        factors,
         disclaimers,
         aiGenerated: true,
         photosAnalyzed: photos && photos.length > 0,
+        formattedOutput,
       });
     } catch (error) {
       console.error("Error generating in-app estimate:", error);
