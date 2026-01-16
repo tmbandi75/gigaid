@@ -45,6 +45,16 @@ export function EstimationTool({ onEstimateComplete }: EstimationToolProps) {
 
   const estimateMutation = useMutation({
     mutationFn: async (data: { category: string; description: string; squareFootage?: number; photos?: string[] }) => {
+      const payloadSize = JSON.stringify(data).length;
+      console.log(`[Estimation] Sending request, payload size: ${Math.round(payloadSize / 1024)}KB, photos: ${data.photos?.length || 0}`);
+      
+      if (payloadSize > 4 * 1024 * 1024) {
+        console.warn("[Estimation] Payload too large, attempting without photos");
+        const { photos, ...dataWithoutPhotos } = data;
+        const response = await apiRequest("POST", "/api/estimation/in-app", dataWithoutPhotos);
+        return response.json();
+      }
+      
       const response = await apiRequest("POST", "/api/estimation/in-app", data);
       return response.json();
     },
@@ -52,11 +62,14 @@ export function EstimationTool({ onEstimateComplete }: EstimationToolProps) {
       setResult(data);
       onEstimateComplete?.(data);
     },
+    onError: (error) => {
+      console.error("[Estimation] Error:", error);
+    },
   });
 
   const selectedProfile: EstimationProfile | null = category ? CATEGORY_ESTIMATION_PROFILES[category] : null;
 
-  const compressImage = (file: File, maxWidth: number = 800): Promise<string> => {
+  const compressImage = (file: File, maxWidth: number = 600): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -75,7 +88,7 @@ export function EstimationTool({ onEstimateComplete }: EstimationToolProps) {
           canvas.height = height;
           const ctx = canvas.getContext("2d");
           ctx?.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL("image/jpeg", 0.7));
+          resolve(canvas.toDataURL("image/jpeg", 0.5));
         };
         img.onerror = reject;
         img.src = e.target?.result as string;
