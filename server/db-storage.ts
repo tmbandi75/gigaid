@@ -5,7 +5,7 @@ import {
   crewMembers, referrals, bookingRequests, bookingEvents, voiceNotes,
   reviews, userPaymentMethods, jobPayments, crewInvites, crewJobPhotos, crewMessages,
   priceConfirmations, aiNudges, aiNudgeEvents, featureFlags, jobDrafts, jobResolutions,
-  actionQueueItems, outcomeMetricsDaily, photoAssets,
+  actionQueueItems, outcomeMetricsDaily, photoAssets, estimationRequests,
   type User, type InsertUser,
   type Job, type InsertJob,
   type Lead, type InsertLead,
@@ -37,6 +37,7 @@ import {
   type OutcomeMetricsDaily, type InsertOutcomeMetricsDaily,
   type PhotoAsset, type InsertPhotoAsset,
   type PhotoSourceType,
+  type EstimationRequest, type InsertEstimationRequest,
 } from "@shared/schema";
 import { IStorage } from "./storage";
 import { randomUUID } from "crypto";
@@ -1181,6 +1182,58 @@ export class DatabaseStorage implements IStorage {
 
   async deletePhotoAsset(id: string): Promise<boolean> {
     const result = await db.delete(photoAssets).where(eq(photoAssets.id, id));
+    return result.rowCount! > 0;
+  }
+
+  // ============================================================
+  // Estimation Requests (Provider Review Required flow)
+  // ============================================================
+
+  async getEstimationRequests(providerId: string): Promise<EstimationRequest[]> {
+    return await db.select().from(estimationRequests)
+      .where(eq(estimationRequests.providerId, providerId))
+      .orderBy(desc(estimationRequests.createdAt));
+  }
+
+  async getEstimationRequest(id: string): Promise<EstimationRequest | undefined> {
+    const [request] = await db.select().from(estimationRequests)
+      .where(eq(estimationRequests.id, id));
+    return request;
+  }
+
+  async getEstimationRequestByToken(token: string): Promise<EstimationRequest | undefined> {
+    const [request] = await db.select().from(estimationRequests)
+      .where(eq(estimationRequests.confirmToken, token));
+    return request;
+  }
+
+  async getPendingEstimationRequests(providerId: string): Promise<EstimationRequest[]> {
+    return await db.select().from(estimationRequests)
+      .where(and(
+        eq(estimationRequests.providerId, providerId),
+        eq(estimationRequests.status, "pending")
+      ))
+      .orderBy(desc(estimationRequests.createdAt));
+  }
+
+  async createEstimationRequest(request: InsertEstimationRequest): Promise<EstimationRequest> {
+    const [newRequest] = await db.insert(estimationRequests).values({
+      ...request,
+      createdAt: new Date().toISOString(),
+    }).returning();
+    return newRequest;
+  }
+
+  async updateEstimationRequest(id: string, updates: Partial<EstimationRequest>): Promise<EstimationRequest | undefined> {
+    const [updated] = await db.update(estimationRequests)
+      .set(updates)
+      .where(eq(estimationRequests.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteEstimationRequest(id: string): Promise<boolean> {
+    const result = await db.delete(estimationRequests).where(eq(estimationRequests.id, id));
     return result.rowCount! > 0;
   }
 }

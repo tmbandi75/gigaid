@@ -14,6 +14,7 @@ import { UnlockNudge } from "@/components/ai/UnlockNudge";
 import { NewServiceAIInput } from "@/components/ai/NewServiceAIInput";
 import { ReviewDraftGenerator } from "@/components/ai/ReviewDraftGenerator";
 import { ClientTags } from "@/components/ai/ClientTags";
+import { EstimationTool } from "@/components/ai/EstimationTool";
 import { 
   Sparkles, 
   Calendar, 
@@ -29,6 +30,7 @@ import {
   Zap,
   ChevronRight,
   X,
+  Calculator,
 } from "lucide-react";
 
 interface AIFeature {
@@ -194,6 +196,21 @@ export default function AITools() {
         <UnlockNudge
           completedFeatures={["profile"]}
           incompleteFeatures={["services", "availability", "public_profile"]}
+        />
+      ),
+    },
+    {
+      id: "estimation-tool",
+      title: "Price Estimator",
+      description: "AI-powered estimates for any job type",
+      icon: Calculator,
+      category: "create",
+      gradient: "from-emerald-500 to-green-600",
+      component: (
+        <EstimationTool
+          onEstimateComplete={(estimate) => {
+            console.log("Estimate generated:", estimate);
+          }}
         />
       ),
     },

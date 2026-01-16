@@ -70,6 +70,8 @@ export async function registerRoutes(
         publicProfileSlug: user.publicProfileSlug,
         notifyBySms: user.notifyBySms,
         notifyByEmail: user.notifyByEmail,
+        showReviewsOnBooking: user.showReviewsOnBooking,
+        publicEstimationEnabled: user.publicEstimationEnabled,
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch profile" });
@@ -3088,6 +3090,7 @@ export async function registerRoutes(
         depositValue: user.depositValue || 0,
         lateRescheduleWindowHours: user.lateRescheduleWindowHours || 24,
         lateRescheduleRetainPctFirst: user.lateRescheduleRetainPctFirst || 40,
+        publicEstimationEnabled: user.publicEstimationEnabled !== false,
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch profile" });
@@ -3109,6 +3112,7 @@ export async function registerRoutes(
         availability,
         slotDuration,
         showReviewsOnBooking,
+        publicEstimationEnabled,
       } = req.body;
       
       const user = await storage.updateUser(defaultUserId, {
@@ -3123,6 +3127,7 @@ export async function registerRoutes(
         availability,
         slotDuration,
         showReviewsOnBooking,
+        publicEstimationEnabled,
       });
       
       res.json(user);
@@ -3432,6 +3437,302 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error estimating price:", error);
       res.json({ estimateRange: "Contact for quote" });
+    }
+  });
+
+  // Category-based estimation with guardrails
+  app.post("/api/public/ai/category-estimate", async (req, res) => {
+    try {
+      const { description, slug, categoryId, serviceType, measurementArea, measurementLinear } = req.body;
+      
+      if (!description || !categoryId) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Import estimation profile helpers
+      const { getEstimationProfile, shouldShowInstantEstimate } = await import("@shared/estimation-profiles");
+      const profile = getEstimationProfile(categoryId);
+      
+      // Fail-safe: If category not enabled or missing, deny estimation
+      if (!profile.enabled) {
+        return res.status(400).json({ error: "Estimation not available for this category" });
+      }
+
+      // Check provider settings
+      let providerEnabled = true;
+      if (slug) {
+        const user = await storage.getUserByPublicSlug(slug);
+        if (user) {
+          providerEnabled = user.publicEstimationEnabled !== false;
+        }
+      }
+
+      // Only allow instant estimate if category AND provider settings permit
+      if (!shouldShowInstantEstimate(categoryId, providerEnabled)) {
+        return res.status(400).json({ 
+          error: "Public estimation not available", 
+          requiresReview: profile.flow === "PROVIDER_REVIEW_REQUIRED" 
+        });
+      }
+
+      const { generateCategoryEstimate } = await import("./ai/aiService");
+      const result = await generateCategoryEstimate({
+        categoryId,
+        serviceType: serviceType || "",
+        description,
+        measurementArea,
+        measurementLinear,
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating category estimate:", error);
+      res.json({
+        lowEstimate: 100,
+        highEstimate: 300,
+        confidence: "Low",
+        basedOn: ["Service category", "General pricing"],
+      });
+    }
+  });
+
+  // Provider in-app estimation (always available)
+  app.post("/api/ai/provider-estimate", async (req, res) => {
+    try {
+      const { description, categoryId, serviceType, measurementArea, measurementLinear, photos } = req.body;
+      
+      if (!description) {
+        return res.status(400).json({ error: "Missing description" });
+      }
+
+      const { generateProviderEstimate } = await import("./ai/aiService");
+      const result = await generateProviderEstimate({
+        categoryId: categoryId || "other",
+        serviceType: serviceType || "",
+        description,
+        measurementArea,
+        measurementLinear,
+        photos,
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error generating provider estimate:", error);
+      res.json({
+        lowEstimate: 150,
+        highEstimate: 400,
+        confidence: "Low",
+        basedOn: ["Service category", "General pricing"],
+      });
+    }
+  });
+
+  // ============================================================
+  // Estimation Requests (Provider Review Required flow)
+  // ============================================================
+
+  // Create an estimation request (public - from booking page)
+  app.post("/api/public/estimation-request", async (req, res) => {
+    try {
+      const { slug, categoryId, serviceType, clientName, clientPhone, clientEmail, description, photos, measurementArea, measurementLinear, location } = req.body;
+
+      if (!slug || !categoryId || !clientName) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const user = await storage.getUserByPublicSlug(slug);
+      if (!user) {
+        return res.status(404).json({ error: "Provider not found" });
+      }
+
+      const { requiresProviderReview } = await import("@shared/estimation-profiles");
+      if (!requiresProviderReview(categoryId)) {
+        return res.status(400).json({ error: "This category does not require provider review" });
+      }
+
+      const confirmToken = randomUUID();
+      const request = await storage.createEstimationRequest({
+        providerId: user.id,
+        categoryId,
+        serviceType,
+        clientName,
+        clientPhone,
+        clientEmail,
+        description,
+        photos,
+        measurementArea,
+        measurementLinear,
+        location,
+        status: "pending",
+        confirmToken,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      });
+
+      res.json({ success: true, requestId: request.id });
+    } catch (error) {
+      console.error("Error creating estimation request:", error);
+      res.status(500).json({ error: "Failed to create estimation request" });
+    }
+  });
+
+  // Get pending estimation requests (provider)
+  app.get("/api/estimation-requests", async (req, res) => {
+    try {
+      const requests = await storage.getPendingEstimationRequests(defaultUserId);
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching estimation requests:", error);
+      res.status(500).json({ error: "Failed to fetch estimation requests" });
+    }
+  });
+
+  // Get all estimation requests (provider)
+  app.get("/api/estimation-requests/all", async (req, res) => {
+    try {
+      const requests = await storage.getEstimationRequests(defaultUserId);
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching estimation requests:", error);
+      res.status(500).json({ error: "Failed to fetch estimation requests" });
+    }
+  });
+
+  // Review and send estimate (provider)
+  app.post("/api/estimation-requests/:id/review", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { providerEstimateLow, providerEstimateHigh, providerNotes } = req.body;
+
+      const request = await storage.getEstimationRequest(id);
+      if (!request || request.providerId !== defaultUserId) {
+        return res.status(404).json({ error: "Request not found" });
+      }
+
+      const updated = await storage.updateEstimationRequest(id, {
+        providerEstimateLow,
+        providerEstimateHigh,
+        providerNotes,
+        status: "reviewed",
+        reviewedAt: new Date().toISOString(),
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error reviewing estimation request:", error);
+      res.status(500).json({ error: "Failed to review estimation request" });
+    }
+  });
+
+  // Send estimate to customer (provider)
+  app.post("/api/estimation-requests/:id/send", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const request = await storage.getEstimationRequest(id);
+      
+      if (!request || request.providerId !== defaultUserId) {
+        return res.status(404).json({ error: "Request not found" });
+      }
+
+      if (!request.providerEstimateLow || !request.providerEstimateHigh) {
+        return res.status(400).json({ error: "Estimate not reviewed yet" });
+      }
+
+      const user = await storage.getUser(defaultUserId);
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+        : "https://gigaid.ai";
+      const confirmUrl = `${baseUrl}/confirm-estimate/${request.confirmToken}`;
+
+      if (request.clientPhone) {
+        const message = `${user?.businessName || user?.name || "Your provider"} has reviewed your request and prepared an estimate of $${request.providerEstimateLow} - $${request.providerEstimateHigh}. View and confirm: ${confirmUrl}`;
+        await sendSMS(request.clientPhone, message);
+      }
+
+      const updated = await storage.updateEstimationRequest(id, {
+        status: "sent",
+        sentAt: new Date().toISOString(),
+      });
+
+      res.json({ success: true, request: updated });
+    } catch (error) {
+      console.error("Error sending estimate:", error);
+      res.status(500).json({ error: "Failed to send estimate" });
+    }
+  });
+
+  // Confirm estimate (public - from customer link)
+  app.post("/api/public/confirm-estimate/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const { scheduledDate, scheduledTime } = req.body;
+
+      const request = await storage.getEstimationRequestByToken(token);
+      if (!request) {
+        return res.status(404).json({ error: "Estimate not found" });
+      }
+
+      if (request.status !== "sent") {
+        return res.status(400).json({ error: "Estimate already confirmed or expired" });
+      }
+
+      const job = await storage.createJob({
+        userId: request.providerId,
+        title: request.serviceType || "Service Request",
+        description: request.description,
+        serviceType: request.serviceType || request.categoryId,
+        location: request.location,
+        scheduledDate: scheduledDate || new Date().toISOString().split("T")[0],
+        scheduledTime: scheduledTime || "09:00",
+        price: request.providerEstimateHigh ? request.providerEstimateHigh * 100 : null,
+        clientName: request.clientName,
+        clientPhone: request.clientPhone,
+        clientEmail: request.clientEmail,
+        status: "scheduled",
+        clientConfirmStatus: "confirmed",
+        clientConfirmedAt: new Date().toISOString(),
+      });
+
+      await storage.updateEstimationRequest(request.id, {
+        confirmedAt: new Date().toISOString(),
+        convertedToJobId: job.id,
+      });
+
+      res.json({ success: true, jobId: job.id });
+    } catch (error) {
+      console.error("Error confirming estimate:", error);
+      res.status(500).json({ error: "Failed to confirm estimate" });
+    }
+  });
+
+  // In-app estimation tool (provider-only, always enabled)
+  app.post("/api/estimation/in-app", async (req, res) => {
+    try {
+      const { category, description, squareFootage } = req.body;
+      
+      if (!category || !description) {
+        return res.status(400).json({ error: "Category and description are required" });
+      }
+
+      const { generateAIEstimate, getEstimationGuardrails } = await import("./ai/aiService");
+      const guardrails = getEstimationGuardrails();
+
+      const estimate = await generateAIEstimate({
+        category,
+        description,
+        squareFootage,
+        isPublic: false,
+      });
+
+      res.json({
+        priceRange: estimate.priceRange,
+        confidence: estimate.confidence,
+        factors: estimate.factors || [],
+        disclaimers: guardrails.disclaimers,
+        aiGenerated: true,
+      });
+    } catch (error) {
+      console.error("Error generating in-app estimate:", error);
+      res.status(500).json({ error: "Failed to generate estimate" });
     }
   });
 

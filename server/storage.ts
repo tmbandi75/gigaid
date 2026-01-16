@@ -30,6 +30,7 @@ import {
   type OutcomeMetricsDaily, type InsertOutcomeMetricsDaily,
   type PhotoAsset, type InsertPhotoAsset,
   type PhotoSourceType,
+  type EstimationRequest, type InsertEstimationRequest,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -235,6 +236,15 @@ export interface IStorage {
   createPhotoAsset(asset: InsertPhotoAsset): Promise<PhotoAsset>;
   updatePhotoAsset(id: string, updates: Partial<PhotoAsset>): Promise<PhotoAsset | undefined>;
   deletePhotoAsset(id: string): Promise<boolean>;
+
+  // Estimation Requests (Provider Review Required flow)
+  getEstimationRequests(providerId: string): Promise<EstimationRequest[]>;
+  getEstimationRequest(id: string): Promise<EstimationRequest | undefined>;
+  getEstimationRequestByToken(token: string): Promise<EstimationRequest | undefined>;
+  getPendingEstimationRequests(providerId: string): Promise<EstimationRequest[]>;
+  createEstimationRequest(request: InsertEstimationRequest): Promise<EstimationRequest>;
+  updateEstimationRequest(id: string, updates: Partial<EstimationRequest>): Promise<EstimationRequest | undefined>;
+  deleteEstimationRequest(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {

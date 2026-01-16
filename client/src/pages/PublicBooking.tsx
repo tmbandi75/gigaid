@@ -15,6 +15,7 @@ import { SmartServiceRecommender } from "@/components/booking/SmartServiceRecomm
 import { JobNotesAutocomplete } from "@/components/booking/JobNotesAutocomplete";
 import { FAQAssistant } from "@/components/booking/FAQAssistant";
 import { PriceEstimator } from "@/components/booking/PriceEstimator";
+import { CategoryEstimator } from "@/components/booking/CategoryEstimator";
 import { Confetti } from "@/components/booking/Confetti";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { AddressAutocomplete } from "@/components/booking/AddressAutocomplete";
@@ -43,6 +44,7 @@ interface PublicProfile {
   depositValue?: number;
   lateRescheduleWindowHours?: number;
   lateRescheduleRetainPctFirst?: number;
+  publicEstimationEnabled?: boolean;
 }
 
 interface BookingHistoryItem {
@@ -851,7 +853,17 @@ export default function PublicBooking() {
           </Card>
         </div>
 
-        <PriceEstimator slug={slug || ""} />
+        {formData.serviceType && (
+          <CategoryEstimator
+            slug={slug || ""}
+            serviceType={formData.serviceType}
+            providerPublicEstimationEnabled={profile.publicEstimationEnabled !== false}
+          />
+        )}
+
+        {!formData.serviceType && (
+          <PriceEstimator slug={slug || ""} />
+        )}
 
         {profile.reviews.length > 0 && (
           <Card data-testid="card-reviews">

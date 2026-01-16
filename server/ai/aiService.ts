@@ -829,3 +829,309 @@ Return ONLY valid JSON.`
 
   return JSON.parse(content) as ClientTags;
 }
+
+// ============================================================
+// Category-Based Price Estimation with Guardrails
+// ============================================================
+export interface CategoryEstimateParams {
+  categoryId: string;
+  serviceType: string;
+  description: string;
+  measurementArea?: number;
+  measurementLinear?: number;
+}
+
+export interface CategoryEstimateResult {
+  lowEstimate: number;
+  highEstimate: number;
+  confidence: "Low" | "Medium" | "High";
+  basedOn: string[];
+}
+
+export async function generateCategoryEstimate(params: CategoryEstimateParams): Promise<CategoryEstimateResult> {
+  const { categoryId, serviceType, description, measurementArea, measurementLinear } = params;
+
+  const measurementInfo = [];
+  if (measurementArea) {
+    measurementInfo.push(`Area: approximately ${measurementArea} sq ft`);
+  }
+  if (measurementLinear) {
+    measurementInfo.push(`Linear measurement: approximately ${measurementLinear} ft`);
+  }
+
+  const response = await getOpenAI().chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `You are a pricing assistant for gig workers. Generate a price RANGE estimate based on job details.
+
+STRICT RULES (MUST FOLLOW):
+1. ONLY output price RANGES (never exact prices)
+2. Use round numbers only (no decimals, no cents)
+3. Range should be realistic (low should be minimum reasonable, high should be maximum reasonable)
+4. NEVER guarantee pricing - this is an estimate only
+5. Confidence should reflect how much information was provided
+
+Category: ${categoryId}
+Service type: ${serviceType}
+${measurementInfo.length > 0 ? `Measurements: ${measurementInfo.join(", ")}` : "No measurements provided"}
+
+Analyze the job description and provide a price range estimate.
+
+Return a JSON object with:
+- lowEstimate: The lower end of the price range (integer, no decimals)
+- highEstimate: The higher end of the price range (integer, no decimals)
+- confidence: "Low", "Medium", or "High" based on detail provided
+- basedOn: Array of 2-4 brief factors used in estimation
+
+IMPORTANT: Prices must be realistic for the service industry. Consider labor, materials, and typical market rates.
+
+Return ONLY valid JSON.`
+      },
+      {
+        role: "user",
+        content: description
+      }
+    ],
+    response_format: { type: "json_object" },
+    max_completion_tokens: 300,
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    return {
+      lowEstimate: 100,
+      highEstimate: 300,
+      confidence: "Low",
+      basedOn: ["Service category", "Typical local pricing"],
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(content) as CategoryEstimateResult;
+    return {
+      lowEstimate: Math.round(parsed.lowEstimate),
+      highEstimate: Math.round(parsed.highEstimate),
+      confidence: parsed.confidence || "Low",
+      basedOn: parsed.basedOn || ["Service category", "Job description"],
+    };
+  } catch {
+    return {
+      lowEstimate: 100,
+      highEstimate: 300,
+      confidence: "Low",
+      basedOn: ["Service category", "Typical local pricing"],
+    };
+  }
+}
+
+// Private in-app estimation for providers (always available)
+export async function generateProviderEstimate(params: CategoryEstimateParams & {
+  photos?: string[];
+  providerHistory?: { avgPrice?: number; completedJobs?: number };
+}): Promise<CategoryEstimateResult> {
+  const { categoryId, serviceType, description, measurementArea, measurementLinear, providerHistory } = params;
+
+  const contextInfo = [];
+  if (measurementArea) {
+    contextInfo.push(`Area: ${measurementArea} sq ft`);
+  }
+  if (measurementLinear) {
+    contextInfo.push(`Linear: ${measurementLinear} ft`);
+  }
+  if (providerHistory?.avgPrice) {
+    contextInfo.push(`Provider's average price for similar jobs: $${Math.round(providerHistory.avgPrice / 100)}`);
+  }
+  if (providerHistory?.completedJobs) {
+    contextInfo.push(`Provider has completed ${providerHistory.completedJobs} similar jobs`);
+  }
+
+  const response = await getOpenAI().chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `You are a pricing assistant helping a service provider create an estimate for a customer.
+
+STRICT RULES:
+1. Output price RANGES only (low to high)
+2. Use round numbers (no decimals)
+3. Be realistic for the ${categoryId} service category
+4. Consider all provided context
+
+Context:
+- Category: ${categoryId}
+- Service: ${serviceType}
+${contextInfo.length > 0 ? `- ${contextInfo.join("\n- ")}` : "- No additional context"}
+
+Provide a suggested price range the provider can review and adjust.
+
+Return JSON with:
+- lowEstimate: Lower price (integer)
+- highEstimate: Higher price (integer)
+- confidence: "Low", "Medium", or "High"
+- basedOn: Array of factors considered
+
+Return ONLY valid JSON.`
+      },
+      {
+        role: "user",
+        content: description
+      }
+    ],
+    response_format: { type: "json_object" },
+    max_completion_tokens: 300,
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    return {
+      lowEstimate: 150,
+      highEstimate: 400,
+      confidence: "Low",
+      basedOn: ["Service category", "Typical pricing"],
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(content) as CategoryEstimateResult;
+    return {
+      lowEstimate: Math.round(parsed.lowEstimate),
+      highEstimate: Math.round(parsed.highEstimate),
+      confidence: parsed.confidence || "Low",
+      basedOn: parsed.basedOn || ["Service category", "Job details"],
+    };
+  } catch {
+    return {
+      lowEstimate: 150,
+      highEstimate: 400,
+      confidence: "Low",
+      basedOn: ["Service category", "Typical pricing"],
+    };
+  }
+}
+
+export interface EstimationGuardrails {
+  disclaimers: string[];
+  noExactPrices: boolean;
+  requiresRange: boolean;
+  confidenceLevels: string[];
+}
+
+export function getEstimationGuardrails(): EstimationGuardrails {
+  return {
+    disclaimers: [
+      "This is an AI-generated estimate and may vary based on actual conditions",
+      "Final pricing will be confirmed after assessment",
+      "Additional work discovered during the job may affect the price",
+    ],
+    noExactPrices: true,
+    requiresRange: true,
+    confidenceLevels: ["low", "medium", "high"],
+  };
+}
+
+export interface AIEstimateInput {
+  category: string;
+  description: string;
+  squareFootage?: number;
+  photos?: string[];
+  isPublic: boolean;
+}
+
+export interface AIEstimateResult {
+  priceRange: { min: number; max: number };
+  confidence: "low" | "medium" | "high";
+  factors: string[];
+  notes?: string;
+}
+
+export async function generateAIEstimate(input: AIEstimateInput): Promise<AIEstimateResult> {
+  const { category, description, squareFootage, isPublic } = input;
+
+  const contextParts: string[] = [];
+  if (squareFootage) {
+    contextParts.push(`Area: approximately ${squareFootage} sq ft`);
+  }
+  if (isPublic) {
+    contextParts.push("This is a public booking estimate - be conservative with ranges");
+  }
+
+  const response = await getOpenAI().chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: `You are a pricing assistant for gig workers in the ${category} industry.
+
+IMPORTANT GUARDRAILS:
+- NEVER give exact prices - always provide ranges
+- Use round numbers for estimates
+- Be conservative - err on the side of wider ranges
+- Consider regional pricing variations
+
+Context:
+${contextParts.join("\n")}
+
+Given the job description, provide:
+1. A price RANGE (min and max in cents)
+2. Confidence level: "low", "medium", or "high"
+3. Key factors that influenced the estimate
+
+Return JSON with:
+- priceRange: { min: number, max: number } (in cents)
+- confidence: "low" | "medium" | "high"
+- factors: string[] (list of factors considered)
+
+Return ONLY valid JSON.`
+      },
+      {
+        role: "user",
+        content: description
+      }
+    ],
+    response_format: { type: "json_object" },
+    max_completion_tokens: 400,
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    return getDefaultEstimate(category);
+  }
+
+  try {
+    const parsed = JSON.parse(content) as AIEstimateResult;
+    return {
+      priceRange: {
+        min: Math.round(parsed.priceRange.min / 100) * 100,
+        max: Math.round(parsed.priceRange.max / 100) * 100,
+      },
+      confidence: parsed.confidence || "low",
+      factors: parsed.factors || ["Service type", "General scope"],
+    };
+  } catch {
+    return getDefaultEstimate(category);
+  }
+}
+
+function getDefaultEstimate(category: string): AIEstimateResult {
+  const categoryDefaults: Record<string, { min: number; max: number }> = {
+    "cleaning": { min: 10000, max: 25000 },
+    "plumbing": { min: 15000, max: 40000 },
+    "electrical": { min: 12000, max: 35000 },
+    "handyman": { min: 8000, max: 20000 },
+    "lawn-outdoor": { min: 5000, max: 15000 },
+    "flooring": { min: 30000, max: 80000 },
+    "carpentry": { min: 20000, max: 60000 },
+    "moving": { min: 15000, max: 50000 },
+  };
+
+  const defaultRange = categoryDefaults[category] || { min: 10000, max: 30000 };
+
+  return {
+    priceRange: defaultRange,
+    confidence: "low",
+    factors: ["Service category", "Typical pricing for this type of work"],
+  };
+}

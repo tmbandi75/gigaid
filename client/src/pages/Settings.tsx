@@ -28,6 +28,7 @@ import {
   Globe,
   Sparkles,
   ChevronRight,
+  DollarSign,
 } from "lucide-react";
 import { AvailabilityEditor, DEFAULT_AVAILABILITY } from "@/components/settings/AvailabilityEditor";
 import { PaymentMethodsSettings } from "@/components/PaymentMethodsSettings";
@@ -83,6 +84,7 @@ export default function Settings() {
     availability: null as WeeklyAvailability | null,
     slotDuration: 60,
     showReviewsOnBooking: true,
+    publicEstimationEnabled: true,
   });
   const [customServiceInput, setCustomServiceInput] = useState("");
 
@@ -107,6 +109,7 @@ export default function Settings() {
         availability: parsedAvailability,
         slotDuration: profile.slotDuration || 60,
         showReviewsOnBooking: profile.showReviewsOnBooking !== false,
+        publicEstimationEnabled: profile.publicEstimationEnabled !== false,
       });
     }
   }, [profile]);
@@ -132,6 +135,7 @@ export default function Settings() {
       availability: settings.availability ? JSON.stringify(settings.availability) : null,
       slotDuration: settings.slotDuration,
       showReviewsOnBooking: settings.showReviewsOnBooking,
+      publicEstimationEnabled: settings.publicEstimationEnabled,
     };
     updateMutation.mutate(dataToSave);
   };
@@ -369,6 +373,23 @@ export default function Settings() {
                       checked={settings.showReviewsOnBooking}
                       onCheckedChange={(checked) => setSettings({ ...settings, showReviewsOnBooking: checked })}
                       data-testid="switch-show-reviews"
+                    />
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium text-sm">Public Price Estimates</p>
+                        <p className="text-xs text-muted-foreground">Allow customers to get AI estimates on booking page</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={settings.publicEstimationEnabled}
+                      onCheckedChange={(checked) => setSettings({ ...settings, publicEstimationEnabled: checked })}
+                      data-testid="switch-public-estimation"
                     />
                   </div>
                 </>

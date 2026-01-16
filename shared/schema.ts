@@ -48,6 +48,9 @@ export const users = pgTable("users", {
   lateRescheduleRetainPctFirst: integer("late_reschedule_retain_pct_first").default(40),
   lateRescheduleRetainPctSecond: integer("late_reschedule_retain_pct_second").default(60),
   lateRescheduleRetainPctCap: integer("late_reschedule_retain_pct_cap").default(75),
+  
+  // Public estimation setting for providers
+  publicEstimationEnabled: boolean("public_estimation_enabled").default(true),
 });
 
 // Availability type for frontend use
@@ -1095,5 +1098,49 @@ export interface OutcomeStats {
   estimatedCashAccelerated: number; // cents
   hasEnoughData: boolean;
 }
+
+// ============================================================
+// ESTIMATION REQUESTS - For Provider Review Required flow
+// ============================================================
+export const estimationRequestStatuses = ["pending", "reviewed", "sent", "expired", "cancelled"] as const;
+export type EstimationRequestStatus = (typeof estimationRequestStatuses)[number];
+
+export const estimationRequests = pgTable("estimation_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  providerId: varchar("provider_id").notNull(),
+  categoryId: text("category_id").notNull(),
+  serviceType: text("service_type"),
+  clientName: text("client_name").notNull(),
+  clientPhone: text("client_phone"),
+  clientEmail: text("client_email"),
+  description: text("description"),
+  photos: text("photos").array(),
+  measurementArea: doublePrecision("measurement_area"),
+  measurementLinear: doublePrecision("measurement_linear"),
+  measurementUnit: text("measurement_unit"),
+  location: text("location"),
+  aiEstimateLow: integer("ai_estimate_low"),
+  aiEstimateHigh: integer("ai_estimate_high"),
+  aiConfidence: text("ai_confidence"),
+  providerEstimateLow: integer("provider_estimate_low"),
+  providerEstimateHigh: integer("provider_estimate_high"),
+  providerNotes: text("provider_notes"),
+  status: text("status").notNull().default("pending"),
+  reviewedAt: text("reviewed_at"),
+  sentAt: text("sent_at"),
+  confirmToken: text("confirm_token"),
+  confirmedAt: text("confirmed_at"),
+  convertedToJobId: varchar("converted_to_job_id"),
+  createdAt: text("created_at").notNull(),
+  expiresAt: text("expires_at"),
+});
+
+export const insertEstimationRequestSchema = createInsertSchema(estimationRequests).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertEstimationRequest = z.infer<typeof insertEstimationRequestSchema>;
+export type EstimationRequest = typeof estimationRequests.$inferSelect;
 
 export * from "./models/chat";
