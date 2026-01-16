@@ -36,8 +36,6 @@ import {
   Moon,
   Sun,
 } from "lucide-react";
-// Logo is in public directory, use direct URL reference
-const gigaidLogo = "/gigaid-logo.png";
 import { useState, useEffect } from "react";
 import {
   DropdownMenu,
@@ -122,16 +120,9 @@ export function AppSidebar() {
     <Sidebar data-testid="sidebar-desktop">
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <Link href="/">
-          <div className="flex items-center gap-3 cursor-pointer" data-testid="sidebar-logo">
-            <img 
-              src={gigaidLogo} 
-              alt="GigAid Logo" 
-              className="h-10 w-10 rounded-xl object-contain"
-            />
-            <div className="flex flex-col">
-              <span className="font-bold text-lg text-sidebar-foreground">GigAid</span>
-              <span className="text-xs text-sidebar-foreground/60">Pro Dashboard</span>
-            </div>
+          <div className="flex flex-col cursor-pointer" data-testid="sidebar-header">
+            <span className="font-bold text-lg text-sidebar-foreground">GigAid</span>
+            <span className="text-xs text-sidebar-foreground/60">Pro Dashboard</span>
           </div>
         </Link>
       </SidebarHeader>
