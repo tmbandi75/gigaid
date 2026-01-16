@@ -38,6 +38,7 @@ export default function Reminders() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
+  const [selectedReminder, setSelectedReminder] = useState<Reminder | null>(null);
   const [formData, setFormData] = useState({
     clientName: "",
     clientPhone: "",
@@ -83,6 +84,23 @@ export default function Reminders() {
       scheduledAt: "",
       jobId: "",
     });
+    setSelectedReminder(null);
+  };
+
+  const handleReminderClick = (reminder: Reminder) => {
+    setSelectedReminder(reminder);
+    const scheduledDate = new Date(reminder.scheduledAt);
+    const formattedDate = scheduledDate.toISOString().slice(0, 16);
+    setFormData({
+      clientName: reminder.clientName,
+      clientPhone: reminder.clientPhone || "",
+      clientEmail: reminder.clientEmail || "",
+      message: reminder.message,
+      channel: reminder.channel as "sms" | "voice" | "email",
+      scheduledAt: formattedDate,
+      jobId: reminder.jobId || "",
+    });
+    setIsDialogOpen(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -288,7 +306,8 @@ export default function Reminders() {
               return (
                 <Card 
                   key={reminder.id} 
-                  className={`overflow-hidden transition-all hover:shadow-md ${isPast && reminder.status === "pending" ? "border-amber-300 dark:border-amber-700" : ""}`}
+                  className={`overflow-hidden transition-all hover-elevate cursor-pointer ${isPast && reminder.status === "pending" ? "border-amber-300 dark:border-amber-700" : ""}`}
+                  onClick={() => handleReminderClick(reminder)}
                   data-testid={`card-reminder-${reminder.id}`}
                 >
                   <CardContent className="p-0">
@@ -343,7 +362,10 @@ export default function Reminders() {
                                 variant="ghost"
                                 size="sm"
                                 className="h-8 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => deleteMutation.mutate(reminder.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteMutation.mutate(reminder.id);
+                                }}
                                 disabled={deleteMutation.isPending}
                                 data-testid={`button-delete-reminder-${reminder.id}`}
                               >
@@ -362,16 +384,22 @@ export default function Reminders() {
         )}
       </div>
 
-      {/* Create Reminder Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {/* Create/Edit Reminder Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        setIsDialogOpen(open);
+        if (!open) resetForm();
+      }}>
         <DialogContent className="max-w-md" data-testid="dialog-create-reminder">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Bell className="h-5 w-5 text-violet-500" />
-              Schedule Reminder
+              {selectedReminder ? "Edit Reminder" : "Schedule Reminder"}
             </DialogTitle>
             <DialogDescription>
-              Send an automated reminder to your client via SMS, voice, or email.
+              {selectedReminder 
+                ? "Update the reminder details and reschedule if needed."
+                : "Send an automated reminder to your client via SMS, voice, or email."
+              }
             </DialogDescription>
           </DialogHeader>
 
@@ -499,7 +527,10 @@ export default function Reminders() {
             </div>
 
             <DialogFooter className="gap-2 sm:gap-0">
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => {
+                setIsDialogOpen(false);
+                resetForm();
+              }}>
                 Cancel
               </Button>
               <Button 
@@ -513,7 +544,7 @@ export default function Reminders() {
                 ) : (
                   <Send className="h-4 w-4 mr-2" />
                 )}
-                Schedule Reminder
+                {selectedReminder ? "Update Reminder" : "Schedule Reminder"}
               </Button>
             </DialogFooter>
           </form>
