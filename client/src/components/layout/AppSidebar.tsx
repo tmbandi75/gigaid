@@ -36,6 +36,8 @@ import {
   Moon,
   Sun,
 } from "lucide-react";
+// Logo is in public directory, use direct URL reference
+const gigaidLogo = "/gigaid-logo.png";
 import { useState, useEffect } from "react";
 import {
   DropdownMenu,
@@ -118,21 +120,23 @@ export function AppSidebar() {
 
   return (
     <Sidebar data-testid="sidebar-desktop">
-      <SidebarHeader className="p-4">
+      <SidebarHeader className="p-4 border-b border-sidebar-border">
         <Link href="/">
           <div className="flex items-center gap-3 cursor-pointer" data-testid="sidebar-logo">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center shadow-lg">
-              <Zap className="h-5 w-5 text-white" />
-            </div>
+            <img 
+              src={gigaidLogo} 
+              alt="GigAid Logo" 
+              className="h-10 w-10 rounded-xl object-contain"
+            />
             <div className="flex flex-col">
-              <span className="font-bold text-lg text-foreground">GigAid</span>
-              <span className="text-xs text-muted-foreground">Pro Dashboard</span>
+              <span className="font-bold text-lg text-sidebar-foreground">GigAid</span>
+              <span className="text-xs text-sidebar-foreground/60">Pro Dashboard</span>
             </div>
           </div>
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="px-2">
+      <SidebarContent className="px-3 py-2">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -155,10 +159,10 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarSeparator />
+        <SidebarSeparator className="my-2" />
 
         <SidebarGroup>
-          <SidebarGroupLabel>Tools</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/50 uppercase text-xs tracking-wider font-semibold px-2">Tools</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {toolsItems.map((item) => (
@@ -185,10 +189,10 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarSeparator />
+        <SidebarSeparator className="my-2" />
 
         <SidebarGroup>
-          <SidebarGroupLabel>Business</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/50 uppercase text-xs tracking-wider font-semibold px-2">Business</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {businessItems.map((item) => (
@@ -216,10 +220,13 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-2">
+      <SidebarFooter className="p-3 border-t border-sidebar-border">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={toggleDarkMode} data-testid="sidebar-theme-toggle">
+            <SidebarMenuButton 
+              onClick={toggleDarkMode} 
+              data-testid="sidebar-theme-toggle"
+            >
               {darkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
               <span>{darkMode ? "Dark Mode" : "Light Mode"}</span>
             </SidebarMenuButton>
@@ -239,19 +246,19 @@ export function AppSidebar() {
                 {profile?.photo ? (
                   <AvatarImage src={profile.photo} alt="Profile" />
                 ) : null}
-                <AvatarFallback className="bg-gradient-to-br from-primary to-violet-600 text-white text-xs font-semibold">
+                <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-xs font-semibold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col items-start text-left">
-                <span className="text-sm font-medium truncate max-w-[120px]">
+                <span className="text-sm font-medium truncate max-w-[120px] text-sidebar-foreground">
                   {displayName}
                 </span>
-                <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                <span className="text-xs text-sidebar-foreground/60 truncate max-w-[120px]">
                   {businessName}
                 </span>
               </div>
-              <ChevronUp className="ml-auto h-4 w-4" />
+              <ChevronUp className="ml-auto h-4 w-4 text-sidebar-foreground/50" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
