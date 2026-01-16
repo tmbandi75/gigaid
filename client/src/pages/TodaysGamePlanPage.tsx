@@ -136,12 +136,12 @@ export default function TodaysGamePlanPage() {
 
   return (
     <div className="min-h-screen bg-background" data-testid="page-game-plan">
-      <div className="p-4 lg:p-8 lg:max-w-5xl lg:mx-auto space-y-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground" data-testid="heading-game-plan">
+      <div className="p-4 lg:p-8 lg:max-w-2xl lg:mx-auto space-y-6">
+        <div className="mb-4">
+          <h1 className="text-xl font-bold text-foreground" data-testid="heading-game-plan">
             Today's Game Plan
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Do these things to stay on track and get paid
           </p>
         </div>
