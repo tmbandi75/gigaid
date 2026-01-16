@@ -49,4 +49,35 @@ Preferred communication style: Simple, everyday language.
 - **Development Tools**: Vite, tsx, drizzle-kit
 - **Payment Processing**: Stripe Connect (requires `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_CLIENT_ID`, `FRONTEND_URL`)
 - **Mapping & Geocoding**: Google Maps API (requires `GOOGLE_MAPS_API_KEY`, `VITE_GOOGLE_MAPS_API_KEY`), Google Maps JavaScript API, Geocoding API, Places API
-- **Mobile Packaging**: Capacitor (for iOS)
+- **Mobile Packaging**: Capacitor (for iOS), PWA for Android (via PWABuilder)
+
+## UI Policies
+
+### Emoji Usage Policy
+
+**Global Rules:**
+- Emojis are allowed ONLY in the UI presentation layer (React components)
+- Emojis are FORBIDDEN in: JSON schemas, database fields, API requests/responses, enums, constants, AI prompts, logs, analytics
+
+**UI Usage Rules:**
+- Limit to ONE emoji per UI element
+- Emojis appear BEFORE text labels
+- Emojis must NEVER replace text labels
+- Allowed only for: status indicators, primary action buttons, success confirmations, onboarding guidance
+
+**Prohibited UI Locations:**
+- Error/warning messages
+- Legal, billing, payment disclaimers
+- Settings, admin, configuration screens
+- Data tables with multiple columns
+- Marketing/branding copy
+
+**Approved Emoji Whitelist:**
+- Status: 🆕 ⏳ 📅 🔧 ✅ 💰 ❌
+- Actions: 📤 💬 📍 💳 🔔
+- Success: 🎉 💵 ⭐
+
+**Enforcement:**
+- All emoji usage must come from the approved whitelist
+- UI must remain fully understandable with emojis removed
+- Prefer Lucide icons over emojis when possible

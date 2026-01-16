@@ -207,7 +207,7 @@ export default function QuickBook() {
         {step === "preview" && (
           <div className="space-y-6">
             <div className="text-center py-2">
-              <h2 className="text-xl font-semibold mb-1">Here's what we got 👇</h2>
+              <h2 className="text-xl font-semibold mb-1">Here's what we got</h2>
               {confidence.overall < 0.6 && (
                 <p className="text-amber-600 text-sm">Quick check: update anything that looks off.</p>
               )}

@@ -26,8 +26,8 @@ interface ReplyComposerProps {
 const replyScenarios = [
   { id: "quote", label: "Quote", emoji: "💰" },
   { id: "availability", label: "Availability", emoji: "📅" },
-  { id: "followup", label: "Follow-up", emoji: "👋" },
-  { id: "details", label: "Ask details", emoji: "❓" },
+  { id: "followup", label: "Follow-up", emoji: "🔔" },
+  { id: "details", label: "Ask details", emoji: "💬" },
 ];
 
 export function ReplyComposer({ lead }: ReplyComposerProps) {

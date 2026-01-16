@@ -24,7 +24,17 @@ import {
   AlertCircle,
   Briefcase,
   ChevronDown,
-  X
+  X,
+  Wrench,
+  Plug,
+  SprayCan,
+  Hammer,
+  Thermometer,
+  TreeDeciduous,
+  Paintbrush,
+  Package,
+  MoreHorizontal,
+  type LucideIcon
 } from "lucide-react";
 import { 
   SiFacebook, 
@@ -79,16 +89,16 @@ const SOURCE_CONFIG: Record<string, { icon: React.ComponentType<{ className?: st
   manual: { icon: null, color: "bg-slate-500", label: "Other" },
 };
 
-const SERVICE_TYPES = [
-  { value: "plumbing", label: "Plumbing", icon: "🔧" },
-  { value: "electrical", label: "Electrical", icon: "⚡" },
-  { value: "cleaning", label: "Cleaning", icon: "✨" },
-  { value: "handyman", label: "Handyman", icon: "🛠️" },
-  { value: "hvac", label: "HVAC", icon: "❄️" },
-  { value: "landscaping", label: "Landscaping", icon: "🌿" },
-  { value: "painting", label: "Painting", icon: "🎨" },
-  { value: "moving", label: "Moving", icon: "📦" },
-  { value: "other", label: "Other", icon: "📋" },
+const SERVICE_TYPES: { value: string; label: string; icon: LucideIcon }[] = [
+  { value: "plumbing", label: "Plumbing", icon: Wrench },
+  { value: "electrical", label: "Electrical", icon: Plug },
+  { value: "cleaning", label: "Cleaning", icon: SprayCan },
+  { value: "handyman", label: "Handyman", icon: Hammer },
+  { value: "hvac", label: "HVAC", icon: Thermometer },
+  { value: "landscaping", label: "Landscaping", icon: TreeDeciduous },
+  { value: "painting", label: "Painting", icon: Paintbrush },
+  { value: "moving", label: "Moving", icon: Package },
+  { value: "other", label: "Other", icon: MoreHorizontal },
 ];
 
 const SOURCES = [
@@ -410,8 +420,9 @@ Hi, I need a plumber to fix a leaky faucet. My name is Sarah, call me at 555-123
                           {sourceConfig.label}
                         </Badge>
                         {selectedService && (
-                          <Badge variant="secondary">
-                            {selectedService.icon} {selectedService.label}
+                          <Badge variant="secondary" className="gap-1">
+                            <selectedService.icon className="h-3 w-3" />
+                            {selectedService.label}
                           </Badge>
                         )}
                         {parsedLead.extractedDetails?.urgency && (
@@ -487,8 +498,13 @@ Hi, I need a plumber to fix a leaky faucet. My name is Sarah, call me at 555-123
                     onClick={() => setShowServicePicker(!showServicePicker)}
                     className="w-full h-12 px-4 flex items-center justify-between bg-card border-2 rounded-md text-base hover:border-primary/50 transition-colors"
                   >
-                    <span className={editedLead.serviceType ? "" : "text-muted-foreground"}>
-                      {selectedService ? `${selectedService.icon} ${selectedService.label}` : "Select service"}
+                    <span className={`flex items-center gap-2 ${editedLead.serviceType ? "" : "text-muted-foreground"}`}>
+                      {selectedService ? (
+                        <>
+                          <selectedService.icon className="h-4 w-4" />
+                          {selectedService.label}
+                        </>
+                      ) : "Select service"}
                     </span>
                     <ChevronDown className={`w-4 h-4 transition-transform ${showServicePicker ? "rotate-180" : ""}`} />
                   </button>
@@ -514,7 +530,9 @@ Hi, I need a plumber to fix a leaky faucet. My name is Sarah, call me at 555-123
                                   : "bg-card border hover-elevate"
                               }`}
                             >
-                              <div className="text-xl mb-1">{service.icon}</div>
+                              <div className="flex justify-center mb-1">
+                                <service.icon className="h-5 w-5" />
+                              </div>
                               <div className="text-xs font-medium">{service.label}</div>
                             </button>
                           ))}
