@@ -268,7 +268,7 @@ export default function Profile() {
           </div>
         </div>
 
-        <div className="px-4 -mt-20 relative z-10">
+        <div className="px-4 -mt-20 relative z-10 lg:px-8 lg:max-w-5xl lg:mx-auto">
           <Card className="border-0 shadow-lg">
             <CardContent className="pt-6">
               <div className="flex flex-col items-center text-center">
@@ -377,7 +377,7 @@ export default function Profile() {
         </div>
       </div>
 
-      <div className="px-4 -mt-16 relative z-10">
+      <div className="px-4 -mt-16 relative z-10 lg:px-8 lg:max-w-5xl lg:mx-auto">
         <Card className="border-0 shadow-lg mb-6">
           <CardContent className="pt-6 flex flex-col items-center">
             <div className="relative mb-4">

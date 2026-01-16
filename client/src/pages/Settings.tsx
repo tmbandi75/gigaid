@@ -196,7 +196,7 @@ export default function Settings() {
         </div>
       </div>
 
-      <div className="px-4 py-4 space-y-4">
+      <div className="px-4 py-4 space-y-4 lg:px-8 lg:max-w-5xl lg:mx-auto">
         <Card className="border-0 shadow-md" data-testid="card-notifications">
           <CardContent className="p-4">
             <h3 className="font-semibold mb-4 flex items-center gap-2">

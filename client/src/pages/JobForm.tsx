@@ -827,7 +827,7 @@ export default function JobForm() {
         </div>
       </div>
       
-      <div className="flex-1 px-4 py-6 -mt-2">
+      <div className="flex-1 px-4 py-6 -mt-2 lg:px-8 lg:max-w-5xl lg:mx-auto lg:w-full">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             <Card className="border-0 shadow-md overflow-hidden">
@@ -1123,116 +1123,118 @@ export default function JobForm() {
               </div>
             )}
 
-            <Card className="border-0 shadow-md overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
-              <CardContent className="pt-5 space-y-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <User className="h-4 w-4 text-emerald-500" />
-                  <h3 className="font-semibold text-sm">Client Information</h3>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              <Card className="border-0 shadow-md overflow-hidden">
+                <div className="h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
+                <CardContent className="pt-5 space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <User className="h-4 w-4 text-emerald-500" />
+                    <h3 className="font-semibold text-sm">Client Information</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField
+                      control={form.control}
+                      name="clientFirstName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            First Name
+                          </FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="John"
+                              className="h-12"
+                              {...field}
+                              data-testid="input-client-first-name"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="clientLastName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            Last Name
+                          </FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Doe"
+                              className="h-12"
+                              {...field}
+                              data-testid="input-client-last-name"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
                   <FormField
                     control={form.control}
-                    name="clientFirstName"
+                    name="clientPhone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                          First Name
+                        <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                          <Phone className="h-3 w-3" />
+                          Phone Number
                         </FormLabel>
                         <FormControl>
-                          <Input 
-                            placeholder="John"
+                          <PhoneInput
+                            value={field.value || ""}
+                            onChange={field.onChange}
                             className="h-12"
-                            {...field}
-                            data-testid="input-client-first-name"
+                            data-testid="input-client-phone"
                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                </CardContent>
+              </Card>
 
+              <Card className="border-0 shadow-md overflow-hidden">
+                <div className="h-1 bg-gradient-to-r from-amber-500 to-orange-500" />
+                <CardContent className="pt-5 space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <DollarSign className="h-4 w-4 text-amber-500" />
+                    <h3 className="font-semibold text-sm">Pricing</h3>
+                  </div>
+                  
                   <FormField
                     control={form.control}
-                    name="clientLastName"
+                    name="price"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                          Last Name
+                          Job Price ($)
                         </FormLabel>
                         <FormControl>
-                          <Input 
-                            placeholder="Doe"
-                            className="h-12"
-                            {...field}
-                            data-testid="input-client-last-name"
-                          />
+                          <div className="relative">
+                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input 
+                              type="number"
+                              placeholder="0.00"
+                              className="h-12 pl-9 text-lg font-semibold"
+                              {...field}
+                              data-testid="input-price"
+                            />
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="clientPhone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
-                        <Phone className="h-3 w-3" />
-                        Phone Number
-                      </FormLabel>
-                      <FormControl>
-                        <PhoneInput
-                          value={field.value || ""}
-                          onChange={field.onChange}
-                          className="h-12"
-                          data-testid="input-client-phone"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
-
-            <Card className="border-0 shadow-md overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-amber-500 to-orange-500" />
-              <CardContent className="pt-5 space-y-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="h-4 w-4 text-amber-500" />
-                  <h3 className="font-semibold text-sm">Pricing</h3>
-                </div>
-                
-                <FormField
-                  control={form.control}
-                  name="price"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Job Price ($)
-                      </FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input 
-                            type="number"
-                            placeholder="0.00"
-                            className="h-12 pl-9 text-lg font-semibold"
-                            {...field}
-                            data-testid="input-price"
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
 
             {isEditing && existingJob?.price && existingJob.price > 0 && (
               <DepositSection job={existingJob} />
