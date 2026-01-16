@@ -58,21 +58,22 @@ const quickActions = [
 ];
 
 const mobileNavItems = [
-  { path: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { path: "/", icon: LayoutDashboard, label: "Plan" },
   { path: "/jobs", icon: Briefcase, label: "Jobs" },
-  { path: "/leads", icon: Users, label: "Leads" },
-  { path: "/invoices", icon: FileText, label: "Invoices" },
+  { path: "/leads", icon: Users, label: "Requests" },
+  { path: "/invoices", icon: FileText, label: "Get Paid" },
   { path: "/more", icon: MoreHorizontal, label: "More" },
 ];
 
 const routeLabels: Record<string, { label: string; parent?: string }> = {
-  "/": { label: "Dashboard" },
+  "/": { label: "Game Plan" },
+  "/dashboard": { label: "Game Plan" },
   "/jobs": { label: "Jobs" },
-  "/jobs/new": { label: "New Job", parent: "/jobs" },
-  "/leads": { label: "Leads" },
-  "/leads/new": { label: "New Lead", parent: "/leads" },
-  "/invoices": { label: "Invoices" },
-  "/invoices/new": { label: "New Invoice", parent: "/invoices" },
+  "/jobs/new": { label: "Add a Job", parent: "/jobs" },
+  "/leads": { label: "New Requests" },
+  "/leads/new": { label: "New Request", parent: "/leads" },
+  "/invoices": { label: "Get Paid" },
+  "/invoices/new": { label: "Ask for Payment", parent: "/invoices" },
   "/reminders": { label: "Reminders" },
   "/crew": { label: "Crew" },
   "/settings": { label: "Settings" },
@@ -169,7 +170,7 @@ function DesktopHeader() {
               </BreadcrumbItem>
             </>
           )}
-          {currentRoute.label !== "Dashboard" && (
+          {currentRoute.label !== "Game Plan" && (
             <>
               <BreadcrumbSeparator />
               <BreadcrumbItem>

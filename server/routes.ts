@@ -131,6 +131,208 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/dashboard/game-plan", async (req, res) => {
+    try {
+      const now = new Date();
+      const today = now.toISOString().split("T")[0];
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+      const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+      const [jobs, leads, invoices, reminders] = await Promise.all([
+        storage.getJobs(defaultUserId),
+        storage.getLeads(defaultUserId),
+        storage.getInvoices(defaultUserId),
+        storage.getReminders(defaultUserId),
+      ]);
+
+      interface ActionItem {
+        id: string;
+        type: "invoice" | "job" | "lead" | "reminder";
+        priority: number;
+        title: string;
+        subtitle: string;
+        actionLabel: string;
+        actionRoute: string;
+        urgency: "critical" | "high" | "normal";
+        amount?: number;
+      }
+
+      const actionItems: ActionItem[] = [];
+
+      invoices.forEach(inv => {
+        if (inv.status === "draft") {
+          const daysSinceCreated = Math.floor((now.getTime() - new Date(inv.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+          actionItems.push({
+            id: inv.id,
+            type: "invoice",
+            priority: daysSinceCreated > 3 ? 1 : 5,
+            title: `Send invoice to ${inv.clientName}`,
+            subtitle: `$${(inv.amount / 100).toFixed(0)} • Draft`,
+            actionLabel: "Send Invoice",
+            actionRoute: `/invoices/${inv.id}/view`,
+            urgency: daysSinceCreated > 3 ? "critical" : "high",
+            amount: inv.amount,
+          });
+        } else if (inv.status === "sent") {
+          const sentDate = inv.sentAt ? new Date(inv.sentAt) : new Date(inv.createdAt);
+          const daysSinceSent = Math.floor((now.getTime() - sentDate.getTime()) / (1000 * 60 * 60 * 24));
+          if (daysSinceSent >= 7) {
+            actionItems.push({
+              id: inv.id,
+              type: "invoice",
+              priority: 2,
+              title: `Payment overdue from ${inv.clientName}`,
+              subtitle: `$${(inv.amount / 100).toFixed(0)} • ${daysSinceSent} days`,
+              actionLabel: "Send Reminder",
+              actionRoute: `/invoices/${inv.id}/view`,
+              urgency: "critical",
+              amount: inv.amount,
+            });
+          } else if (daysSinceSent >= 3) {
+            actionItems.push({
+              id: inv.id,
+              type: "invoice",
+              priority: 6,
+              title: `Waiting on ${inv.clientName}`,
+              subtitle: `$${(inv.amount / 100).toFixed(0)} • ${daysSinceSent} days`,
+              actionLabel: "Follow Up",
+              actionRoute: `/invoices/${inv.id}/view`,
+              urgency: "high",
+              amount: inv.amount,
+            });
+          }
+        }
+      });
+
+      jobs.forEach(job => {
+        if (job.status === "scheduled") {
+          const jobDate = new Date(`${job.scheduledDate}T${job.scheduledTime || "00:00"}`);
+          const hoursUntil = (jobDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+          
+          if (hoursUntil > 0 && hoursUntil <= 24 && !job.reminder24hSent) {
+            actionItems.push({
+              id: job.id,
+              type: "job",
+              priority: 3,
+              title: `Remind ${job.clientName || job.title}`,
+              subtitle: `Tomorrow at ${job.scheduledTime || "TBD"}`,
+              actionLabel: "Send Reminder",
+              actionRoute: `/jobs/${job.id}`,
+              urgency: "high",
+              amount: job.price || 0,
+            });
+          } else if (hoursUntil > 24 && hoursUntil <= 48) {
+            actionItems.push({
+              id: job.id,
+              type: "job",
+              priority: 8,
+              title: `Job with ${job.clientName || job.title}`,
+              subtitle: `Tomorrow at ${job.scheduledTime || "TBD"}`,
+              actionLabel: "View Job",
+              actionRoute: `/jobs/${job.id}`,
+              urgency: "normal",
+              amount: job.price || 0,
+            });
+          }
+        }
+      });
+
+      leads.forEach(lead => {
+        if (lead.status === "new" || lead.status === "response_sent") {
+          const lastContact = lead.lastContactedAt ? new Date(lead.lastContactedAt) : new Date(lead.createdAt);
+          const hoursSinceContact = (now.getTime() - lastContact.getTime()) / (1000 * 60 * 60);
+          
+          if (hoursSinceContact >= 24 && lead.status === "response_sent") {
+            actionItems.push({
+              id: lead.id,
+              type: "lead",
+              priority: 4,
+              title: `No reply from ${lead.clientName}`,
+              subtitle: "Follow up?",
+              actionLabel: "Follow Up",
+              actionRoute: `/leads/${lead.id}`,
+              urgency: "high",
+            });
+          } else if (lead.status === "new" && hoursSinceContact >= 2) {
+            actionItems.push({
+              id: lead.id,
+              type: "lead",
+              priority: 7,
+              title: `New request from ${lead.clientName}`,
+              subtitle: lead.serviceType,
+              actionLabel: "Respond",
+              actionRoute: `/leads/${lead.id}`,
+              urgency: "normal",
+            });
+          }
+        }
+      });
+
+      actionItems.sort((a, b) => a.priority - b.priority);
+      const priorityItem = actionItems[0] || null;
+      const upNextItems = actionItems.slice(1, 4);
+
+      const todaysJobs = jobs.filter(j => j.scheduledDate === today);
+      const jobsToday = todaysJobs.length;
+      
+      const todaysPayments = invoices.filter(inv => 
+        inv.status === "paid" && inv.paidAt && inv.paidAt.startsWith(today)
+      );
+      const moneyCollectedToday = todaysPayments.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+      
+      const pendingInvoices = invoices.filter(inv => inv.status === "sent");
+      const moneyWaiting = pendingInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+      
+      const pendingReminders = reminders.filter(r => r.status === "pending").length;
+
+      const recentlyCompleted: { id: string; type: string; title: string; completedAt: string }[] = [];
+      
+      invoices
+        .filter(inv => inv.status === "paid" && inv.paidAt)
+        .sort((a, b) => new Date(b.paidAt!).getTime() - new Date(a.paidAt!).getTime())
+        .slice(0, 3)
+        .forEach(inv => {
+          recentlyCompleted.push({
+            id: inv.id,
+            type: "invoice_paid",
+            title: `Payment from ${inv.clientName}`,
+            completedAt: inv.paidAt!,
+          });
+        });
+
+      jobs
+        .filter(j => j.status === "completed" && j.completedAt)
+        .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime())
+        .slice(0, 3)
+        .forEach(job => {
+          recentlyCompleted.push({
+            id: job.id,
+            type: "job_completed",
+            title: `Finished ${job.title}`,
+            completedAt: job.completedAt!,
+          });
+        });
+
+      recentlyCompleted.sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+
+      res.json({
+        priorityItem,
+        upNextItems,
+        stats: {
+          jobsToday,
+          moneyCollectedToday,
+          moneyWaiting,
+          messagesToSend: pendingReminders,
+        },
+        recentlyCompleted: recentlyCompleted.slice(0, 3),
+      });
+    } catch (error) {
+      console.error("Game plan error:", error);
+      res.status(500).json({ error: "Failed to fetch game plan" });
+    }
+  });
+
   app.get("/api/owner/metrics", async (req, res) => {
     try {
       const user = await storage.getUser(defaultUserId);

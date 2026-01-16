@@ -57,10 +57,10 @@ interface UserProfile {
 }
 
 const mainNavItems = [
-  { path: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { path: "/", icon: LayoutDashboard, label: "Game Plan" },
   { path: "/jobs", icon: Briefcase, label: "Jobs" },
-  { path: "/leads", icon: Users, label: "Leads" },
-  { path: "/invoices", icon: FileText, label: "Invoices" },
+  { path: "/leads", icon: Users, label: "New Requests" },
+  { path: "/invoices", icon: FileText, label: "Get Paid" },
 ];
 
 const toolsItems = [

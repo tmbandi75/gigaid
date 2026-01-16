@@ -7,6 +7,7 @@ import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
 import { VoiceFAB } from "@/components/layout/VoiceFAB";
 import { useEffect } from "react";
 
+import TodaysGamePlanPage from "@/pages/TodaysGamePlanPage";
 import Dashboard from "@/pages/Dashboard";
 import Jobs from "@/pages/Jobs";
 import JobForm from "@/pages/JobForm";
@@ -46,7 +47,9 @@ import NotFound from "@/pages/not-found";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
+      <Route path="/" component={TodaysGamePlanPage} />
+      <Route path="/dashboard" component={TodaysGamePlanPage} />
+      <Route path="/dashboard-overview" component={Dashboard} />
       <Route path="/jobs" component={Jobs} />
       <Route path="/jobs/new" component={JobForm} />
       <Route path="/jobs/:id" component={JobSummary} />

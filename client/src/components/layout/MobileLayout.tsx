@@ -6,10 +6,10 @@ interface MobileLayoutProps {
 }
 
 const navItems = [
-  { path: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { path: "/", icon: LayoutDashboard, label: "Plan" },
   { path: "/jobs", icon: Briefcase, label: "Jobs" },
-  { path: "/leads", icon: Users, label: "Leads" },
-  { path: "/invoices", icon: FileText, label: "Invoices" },
+  { path: "/leads", icon: Users, label: "Requests" },
+  { path: "/invoices", icon: FileText, label: "Get Paid" },
   { path: "/more", icon: MoreHorizontal, label: "More" },
 ];
 
