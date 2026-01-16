@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Loader2,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ActionItem {
   id: string;
@@ -94,23 +95,36 @@ function getUrgencyStyles(urgency: "critical" | "high" | "normal") {
     case "critical":
       return {
         border: "border-l-4 border-l-red-500",
-        iconBg: "bg-red-500/10",
-        iconColor: "text-red-600",
+        iconBg: "bg-red-500",
+        iconColor: "text-white",
       };
     case "high":
       return {
         border: "border-l-4 border-l-orange-500",
-        iconBg: "bg-orange-500/10",
-        iconColor: "text-orange-600",
+        iconBg: "bg-orange-500",
+        iconColor: "text-white",
       };
     default:
       return {
         border: "border-l-4 border-l-emerald-500",
-        iconBg: "bg-emerald-500/10",
-        iconColor: "text-emerald-600",
+        iconBg: "bg-emerald-500",
+        iconColor: "text-white",
       };
   }
 }
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.06 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
+};
 
 export default function TodaysGamePlanPage() {
   const [, navigate] = useLocation();
@@ -136,83 +150,104 @@ export default function TodaysGamePlanPage() {
 
   return (
     <div className="min-h-screen bg-background" data-testid="page-game-plan">
-      <div className="p-4 lg:p-8 lg:max-w-2xl lg:mx-auto space-y-6">
-        <div className="mb-4">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="p-4 lg:p-8 lg:max-w-2xl lg:mx-auto space-y-6"
+      >
+        <motion.div variants={itemVariants} className="mb-4">
           <h1 className="text-xl font-bold text-foreground" data-testid="heading-game-plan">
             Today's Game Plan
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Do these things to stay on track and get paid
           </p>
-        </div>
+        </motion.div>
 
-        <section aria-labelledby="do-this-first">
+        <motion.section variants={itemVariants} aria-labelledby="do-this-first">
           <h2 id="do-this-first" className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
             Do This First
           </h2>
-          {priorityItem ? (
-            <Card
-              className={`border-0 shadow-md overflow-hidden ${getUrgencyStyles(priorityItem.urgency).border}`}
-              data-testid="card-priority-item"
-            >
-              <CardContent className="p-4 lg:p-6">
-                <div className="flex items-start gap-4">
-                  <div
-                    className={`h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                      getUrgencyStyles(priorityItem.urgency).iconBg
-                    }`}
-                  >
-                    {(() => {
-                      const Icon = getIconForType(priorityItem.type);
-                      return (
-                        <Icon
-                          className={`h-6 w-6 ${getUrgencyStyles(priorityItem.urgency).iconColor}`}
-                        />
-                      );
-                    })()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-foreground text-lg">
-                      {priorityItem.title}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {priorityItem.subtitle}
-                    </p>
-                    <Button
-                      className="mt-4"
-                      onClick={() => navigate(priorityItem.actionRoute)}
-                      data-testid="button-priority-action"
-                    >
-                      {priorityItem.actionLabel}
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="border-0 shadow-sm bg-emerald-50 dark:bg-emerald-950/30" data-testid="card-all-caught-up">
-              <CardContent className="p-4 lg:p-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-emerald-700 dark:text-emerald-400">
-                      You're all caught up
-                    </p>
-                    <p className="text-sm text-emerald-600/80 dark:text-emerald-500/80">
-                      No urgent actions right now
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </section>
+          <AnimatePresence mode="wait">
+            {priorityItem ? (
+              <motion.div
+                key="priority"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+              >
+                <Card
+                  className={`border-0 shadow-md overflow-hidden ${getUrgencyStyles(priorityItem.urgency).border}`}
+                  data-testid="card-priority-item"
+                >
+                  <CardContent className="p-4 lg:p-6">
+                    <div className="flex items-start gap-4">
+                      <div
+                        className={`h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                          getUrgencyStyles(priorityItem.urgency).iconBg
+                        }`}
+                      >
+                        {(() => {
+                          const Icon = getIconForType(priorityItem.type);
+                          return (
+                            <Icon
+                              className={`h-6 w-6 ${getUrgencyStyles(priorityItem.urgency).iconColor}`}
+                            />
+                          );
+                        })()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-foreground text-lg">
+                          {priorityItem.title}
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {priorityItem.subtitle}
+                        </p>
+                        <Button
+                          className="mt-4"
+                          onClick={() => navigate(priorityItem.actionRoute)}
+                          data-testid="button-priority-action"
+                        >
+                          {priorityItem.actionLabel}
+                          <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="caught-up"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+              >
+                <Card className="border-0 shadow-sm bg-emerald-50 dark:bg-emerald-950/30" data-testid="card-all-caught-up">
+                  <CardContent className="p-4 lg:p-6">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                        <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-emerald-700 dark:text-emerald-400">
+                          You're all caught up
+                        </p>
+                        <p className="text-sm text-emerald-600/80 dark:text-emerald-500/80">
+                          No urgent actions right now
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.section>
 
         {upNextItems.length > 0 && (
-          <section aria-labelledby="up-next">
+          <motion.section variants={itemVariants} aria-labelledby="up-next">
             <h2 id="up-next" className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
               Up Next
             </h2>
@@ -249,27 +284,27 @@ export default function TodaysGamePlanPage() {
                 );
               })}
             </div>
-          </section>
+          </motion.section>
         )}
 
-        <section aria-labelledby="today-glance">
+        <motion.section variants={itemVariants} aria-labelledby="today-glance">
           <h2 id="today-glance" className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
             Today at a Glance
           </h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <Card className="border-0 shadow-sm" data-testid="stat-jobs-today">
+            <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-500/10 to-transparent" data-testid="stat-jobs-today">
               <CardContent className="p-4 text-center">
-                <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center mx-auto mb-2">
-                  <Briefcase className="h-5 w-5 text-blue-600" />
+                <div className="h-10 w-10 rounded-xl bg-blue-500 flex items-center justify-center mx-auto mb-2">
+                  <Briefcase className="h-5 w-5 text-white" />
                 </div>
                 <p className="text-2xl font-bold text-foreground">{stats.jobsToday}</p>
                 <p className="text-xs text-muted-foreground">Jobs today</p>
               </CardContent>
             </Card>
-            <Card className="border-0 shadow-sm" data-testid="stat-money-collected">
+            <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-500/10 to-transparent" data-testid="stat-money-collected">
               <CardContent className="p-4 text-center">
-                <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-2">
-                  <DollarSign className="h-5 w-5 text-emerald-600" />
+                <div className="h-10 w-10 rounded-xl bg-emerald-500 flex items-center justify-center mx-auto mb-2">
+                  <DollarSign className="h-5 w-5 text-white" />
                 </div>
                 <p className="text-2xl font-bold text-foreground">
                   {formatCurrency(stats.moneyCollectedToday)}
@@ -277,10 +312,10 @@ export default function TodaysGamePlanPage() {
                 <p className="text-xs text-muted-foreground">Collected today</p>
               </CardContent>
             </Card>
-            <Card className="border-0 shadow-sm" data-testid="stat-money-waiting">
+            <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-500/10 to-transparent" data-testid="stat-money-waiting">
               <CardContent className="p-4 text-center">
-                <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center mx-auto mb-2">
-                  <Clock className="h-5 w-5 text-amber-600" />
+                <div className="h-10 w-10 rounded-xl bg-amber-500 flex items-center justify-center mx-auto mb-2">
+                  <Clock className="h-5 w-5 text-white" />
                 </div>
                 <p className="text-2xl font-bold text-foreground">
                   {formatCurrency(stats.moneyWaiting)}
@@ -288,19 +323,19 @@ export default function TodaysGamePlanPage() {
                 <p className="text-xs text-muted-foreground">Money waiting</p>
               </CardContent>
             </Card>
-            <Card className="border-0 shadow-sm" data-testid="stat-messages">
+            <Card className="border-0 shadow-sm bg-gradient-to-br from-violet-500/10 to-transparent" data-testid="stat-messages">
               <CardContent className="p-4 text-center">
-                <div className="h-10 w-10 rounded-xl bg-violet-500/10 flex items-center justify-center mx-auto mb-2">
-                  <MessageSquare className="h-5 w-5 text-violet-600" />
+                <div className="h-10 w-10 rounded-xl bg-violet-500 flex items-center justify-center mx-auto mb-2">
+                  <MessageSquare className="h-5 w-5 text-white" />
                 </div>
                 <p className="text-2xl font-bold text-foreground">{stats.messagesToSend}</p>
                 <p className="text-xs text-muted-foreground">Messages to send</p>
               </CardContent>
             </Card>
           </div>
-        </section>
+        </motion.section>
 
-        <section aria-labelledby="quick-actions">
+        <motion.section variants={itemVariants} aria-labelledby="quick-actions">
           <h2 id="quick-actions" className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
             Quick Actions
           </h2>
@@ -354,10 +389,10 @@ export default function TodaysGamePlanPage() {
               </CardContent>
             </Card>
           </div>
-        </section>
+        </motion.section>
 
         {recentlyCompleted.length > 0 && (
-          <section aria-labelledby="done-recently">
+          <motion.section variants={itemVariants} aria-labelledby="done-recently">
             <h2 id="done-recently" className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
               Done Recently
             </h2>
@@ -383,9 +418,9 @@ export default function TodaysGamePlanPage() {
                 );
               })}
             </div>
-          </section>
+          </motion.section>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }
