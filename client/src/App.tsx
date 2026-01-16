@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
 import { VoiceFAB } from "@/components/layout/VoiceFAB";
+import { OnboardingWrapper } from "@/components/onboarding/OnboardingWrapper";
 import { useEffect } from "react";
 
 import TodaysGamePlanPage from "@/pages/TodaysGamePlanPage";
@@ -111,10 +112,12 @@ function App() {
           <Route path="/qb/:token" component={QuickBookConfirm} />
           <Route path="/owner" component={OwnerView} />
           <Route>
-            <ResponsiveLayout>
-              <Router />
-            </ResponsiveLayout>
-            <VoiceFAB />
+            <OnboardingWrapper>
+              <ResponsiveLayout>
+                <Router />
+              </ResponsiveLayout>
+              <VoiceFAB />
+            </OnboardingWrapper>
           </Route>
         </Switch>
         <Toaster />

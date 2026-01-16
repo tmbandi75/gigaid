@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -71,13 +71,18 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     amount: "",
     message: "",
   });
-  const [skipPayment, setSkipPayment] = useState(false);
 
-  const updateOnboardingMutation = useMutation({
-    mutationFn: async (data: { step?: number; completed?: boolean }) => {
-      return apiRequest("POST", "/api/onboarding/progress", data);
+  const completeOnboardingMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("PATCH", "/api/onboarding", { completed: true });
     },
   });
+
+  useEffect(() => {
+    if (step === 3 && (!createdJobId || !invoiceData.message)) {
+      setStep(2);
+    }
+  }, [step, createdJobId, invoiceData.message]);
 
   const createJobMutation = useMutation({
     mutationFn: async (data: typeof jobData) => {
@@ -102,7 +107,6 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         message: `Hi! Thanks for choosing us. Here's your invoice for ${jobData.title}. You can pay securely online.`,
       });
       setStep(3);
-      updateOnboardingMutation.mutate({ step: 3 });
     },
     onError: () => {
       toast({ title: "Failed to create job", variant: "destructive" });
@@ -111,6 +115,9 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
   const createInvoiceMutation = useMutation({
     mutationFn: async () => {
+      if (!createdJobId) {
+        throw new Error("No job created");
+      }
       const res = await apiRequest("POST", "/api/invoices", {
         jobId: createdJobId,
         clientName: jobData.clientName || "New Client",
@@ -134,8 +141,8 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   });
 
   const completeOnboarding = async () => {
-    await updateOnboardingMutation.mutateAsync({ completed: true });
-    queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
+    await completeOnboardingMutation.mutateAsync();
+    queryClient.invalidateQueries({ queryKey: ["/api/onboarding"] });
     setStep(4);
     
     setTimeout(() => {
@@ -161,7 +168,6 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       toast({ title: "Please select a service type" });
       return;
     }
-    updateOnboardingMutation.mutate({ step: 2 });
     setStep(2);
   };
 
@@ -174,6 +180,11 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   };
 
   const handleSendPaymentRequest = () => {
+    if (!createdJobId) {
+      toast({ title: "Please create a job first", variant: "destructive" });
+      setStep(2);
+      return;
+    }
     if (!invoiceData.amount || parseFloat(invoiceData.amount) <= 0) {
       toast({ title: "Please enter an amount" });
       return;
@@ -182,7 +193,6 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   };
 
   const handleSkipPayment = () => {
-    setSkipPayment(true);
     completeOnboarding();
   };
 
@@ -201,7 +211,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             <div className="mb-8">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-muted-foreground">Step {step} of 4</span>
-                {step > 1 && (
+                {step > 1 && step < 3 && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -274,7 +284,8 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               </div>
 
               <Button
-                className="w-full h-12"
+                size="lg"
+                className="w-full"
                 onClick={handleContinueToStep2}
                 disabled={!selectedService}
                 data-testid="button-continue"
@@ -373,7 +384,8 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               </div>
 
               <Button
-                className="w-full h-12"
+                size="lg"
+                className="w-full"
                 onClick={handleAddJob}
                 disabled={createJobMutation.isPending}
                 data-testid="button-add-job"
@@ -390,7 +402,13 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             </div>
           )}
 
-          {step === 3 && (
+          {step === 3 && (!createdJobId || !invoiceData.message) && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
+          {step === 3 && createdJobId && invoiceData.message && (
             <div className="space-y-6" data-testid="step-payment-request">
               <div className="text-center">
                 <h1 className="text-2xl font-bold text-foreground mb-2">
@@ -434,7 +452,8 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
               <div className="space-y-3">
                 <Button
-                  className="w-full h-12"
+                  size="lg"
+                  className="w-full"
                   onClick={handleSendPaymentRequest}
                   disabled={createInvoiceMutation.isPending}
                   data-testid="button-send-payment"
@@ -477,7 +496,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 <div className="grid grid-cols-2 gap-3">
                   <Button
                     variant="outline"
-                    className="h-12"
+                    size="lg"
                     onClick={() => window.open("https://apps.apple.com", "_blank")}
                     data-testid="button-app-store"
                   >
@@ -485,7 +504,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                   </Button>
                   <Button
                     variant="outline"
-                    className="h-12"
+                    size="lg"
                     onClick={() => window.open("https://play.google.com", "_blank")}
                     data-testid="button-play-store"
                   >
@@ -498,7 +517,8 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               </div>
 
               <Button
-                className="w-full h-12"
+                size="lg"
+                className="w-full"
                 onClick={handleGoToDashboard}
                 data-testid="button-go-dashboard"
               >
