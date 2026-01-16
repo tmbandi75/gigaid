@@ -126,8 +126,16 @@ export default function JobSummary() {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
       toast({ title: "Job completed!", description: "Great work! Don't forget to get paid." });
     },
-    onError: () => {
-      toast({ title: "Failed to complete job", variant: "destructive" });
+    onError: (error: Error) => {
+      if (error.message?.includes("RESOLUTION_REQUIRED")) {
+        setShowGetPaid(true);
+        toast({ 
+          title: "Choose how to get paid first", 
+          description: "Before marking complete, decide how to handle payment.",
+        });
+      } else {
+        toast({ title: "Failed to complete job", variant: "destructive" });
+      }
     },
   });
 

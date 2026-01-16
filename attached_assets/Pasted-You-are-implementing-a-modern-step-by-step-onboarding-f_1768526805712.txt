@@ -1,0 +1,157 @@
+You are implementing a modern, step-by-step onboarding flow for GigAid.
+
+GOAL:
+Get a new user to their first real “win” (job + payment request) in under 3 minutes,
+then celebrate success and send them to the main dashboard.
+
+DO NOT show a traditional product tour.
+DO NOT explain features upfront.
+This onboarding must feel like “doing real work,” not setup.
+
+------------------------------------------------
+ENTRY POINT
+------------------------------------------------
+Trigger onboarding immediately after first successful signup/login.
+
+If user has completed onboarding before, skip entirely.
+
+------------------------------------------------
+ONBOARDING STRUCTURE
+------------------------------------------------
+Use a full-screen modal or stepper overlay.
+Show progress indicator: Step X of 4
+Allow Back, but discourage skipping.
+
+Modern, clean, calm tone.
+No jargon.
+
+------------------------------------------------
+STEP 1 — WHAT KIND OF WORK DO YOU DO?
+------------------------------------------------
+Title:
+“Let’s get you ready to get paid”
+
+Subtitle:
+“What kind of work do you usually do?”
+
+Selectable options (large cards with icons):
+- Plumbing
+- Electrical
+- Cleaning
+- Handyman
+- Landscaping
+- Other
+
+Save selection to user profile as primaryServiceType.
+
+Primary CTA:
+[ Continue ]
+
+------------------------------------------------
+STEP 2 — ADD A REAL JOB (PRE-FILLED)
+------------------------------------------------
+Title:
+“Let’s add a job”
+
+Subtitle:
+“This can be a past job or one coming up — we’ll help.”
+
+Show a simplified job form with smart defaults:
+- Job Title (auto-filled based on service type)
+- Date (default: today)
+- Time (optional)
+- Price (optional, clearly optional)
+
+No empty state.
+Fields should already contain suggested values.
+
+Primary CTA:
+[ Add Job ]
+
+------------------------------------------------
+STEP 3 — WANT TO GET PAID?
+------------------------------------------------
+After job creation, immediately show this step.
+
+Title:
+“Want to get paid for this job?”
+
+Subtitle:
+“We’ll send a simple payment request to your client.”
+
+Show:
+- Amount (pre-filled if entered)
+- Message (AI-generated, editable)
+- Delivery method suggestion (SMS or Email)
+
+Primary CTA:
+[ Send Payment Request ]
+
+Secondary CTA:
+[ I’ll do this later ]
+
+If sent successfully:
+- Mark onboarding as ACTIVATED
+- Record time-to-first-invoice metric
+
+------------------------------------------------
+STEP 4 — YOU’RE ALL SET 🎉
+------------------------------------------------
+Trigger full-screen celebration.
+
+🎊 CONFETTI ANIMATION (required)
+🎉 Subtle sound effect (optional)
+
+Title:
+“Nice work!”
+
+Encouraging message examples (pick one randomly):
+- “You’re officially set up. Let’s keep the momentum going.”
+- “That’s how easy it is. We’ll help you stay on track.”
+- “You’re ready. We’ll tell you what to do next.”
+
+------------------------------------------------
+APP DOWNLOAD PROMPT (IMPORTANT)
+------------------------------------------------
+Below the message, show two large buttons:
+
+📱 “Get the GigAid App”
+- Button 1: Download on the App Store
+- Button 2: Get it on Google Play
+
+Text below buttons:
+“Install the app so you don’t miss jobs, payments, or reminders.”
+
+Buttons should:
+- Open App Store / Google Play if links are available
+- Otherwise show “Coming soon” gracefully
+
+------------------------------------------------
+FINAL CTA
+------------------------------------------------
+Primary CTA:
+[ Go to Dashboard ]
+
+Route user to:
+ /dashboard (Today’s Game Plan)
+
+Set onboardingCompleted = true
+
+------------------------------------------------
+DESIGN & UX NOTES
+------------------------------------------------
+- No walls of text
+- Large buttons
+- Plain language only
+- Mobile-first spacing
+- Confetti should feel celebratory, not childish
+
+------------------------------------------------
+FINAL CHECKS
+------------------------------------------------
+- Onboarding completes in under 3 minutes
+- User reaches dashboard with at least one job created
+- Payment request encouraged but not forced
+- App download is clearly promoted before dashboard
+
+Implement cleanly and conservatively.
