@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, type ChangeEvent } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,9 @@ import {
   AlertTriangle,
   CheckCircle,
   Info,
+  Camera,
+  X,
+  Image as ImageIcon,
 } from "lucide-react";
 
 interface EstimateResult {
@@ -24,6 +27,7 @@ interface EstimateResult {
   factors: string[];
   disclaimers: string[];
   aiGenerated: boolean;
+  photosAnalyzed?: boolean;
 }
 
 interface EstimationToolProps {
@@ -34,10 +38,13 @@ export function EstimationTool({ onEstimateComplete }: EstimationToolProps) {
   const [category, setCategory] = useState<string>("");
   const [description, setDescription] = useState("");
   const [squareFootage, setSquareFootage] = useState("");
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<EstimateResult | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const estimateMutation = useMutation({
-    mutationFn: async (data: { category: string; description: string; squareFootage?: number }) => {
+    mutationFn: async (data: { category: string; description: string; squareFootage?: number; photos?: string[] }) => {
       const response = await apiRequest("POST", "/api/estimation/in-app", data);
       return response.json();
     },
@@ -49,6 +56,69 @@ export function EstimationTool({ onEstimateComplete }: EstimationToolProps) {
 
   const selectedProfile: EstimationProfile | null = category ? CATEGORY_ESTIMATION_PROFILES[category] : null;
 
+  const compressImage = (file: File, maxWidth: number = 800): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", 0.7));
+        };
+        img.onerror = reject;
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handlePhotoUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const maxFileSize = 5 * 1024 * 1024;
+    const validFiles = Array.from(files).filter(f => 
+      f.type.startsWith("image/") && f.size <= maxFileSize
+    );
+
+    if (validFiles.length === 0) return;
+
+    setUploading(true);
+    const newPhotos: string[] = [];
+
+    for (const file of validFiles.slice(0, 4 - photos.length)) {
+      try {
+        const dataUrl = await compressImage(file);
+        newPhotos.push(dataUrl);
+      } catch {
+        console.error("Failed to process image");
+      }
+    }
+
+    setPhotos(prev => [...prev, ...newPhotos].slice(0, 4));
+    setUploading(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotos(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleEstimate = () => {
     if (!category || !description.trim()) return;
     
@@ -56,6 +126,7 @@ export function EstimationTool({ onEstimateComplete }: EstimationToolProps) {
       category,
       description,
       squareFootage: squareFootage ? parseInt(squareFootage) : undefined,
+      photos: photos.length > 0 ? photos : undefined,
     });
   };
 
@@ -140,6 +211,72 @@ export function EstimationTool({ onEstimateComplete }: EstimationToolProps) {
           </div>
         )}
 
+        {selectedProfile?.photo && (
+          <div className="space-y-2">
+            <Label>Photos (optional, up to 4)</Label>
+            <div className="space-y-3">
+              {photos.length > 0 && (
+                <div className="grid grid-cols-4 gap-2">
+                  {photos.map((photo, index) => (
+                    <div key={index} className="relative group">
+                      <img 
+                        src={photo} 
+                        alt={`Upload ${index + 1}`}
+                        className="w-full h-16 object-cover rounded-md border"
+                        data-testid={`img-photo-preview-${index}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(index)}
+                        className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                        data-testid={`button-remove-photo-${index}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {photos.length < 4 && (
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                    id="photo-upload"
+                    data-testid="input-photo-upload"
+                  />
+                  <label htmlFor="photo-upload">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="cursor-pointer"
+                      disabled={uploading}
+                      onClick={() => fileInputRef.current?.click()}
+                      data-testid="button-upload-photos"
+                    >
+                      {uploading ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Camera className="mr-2 h-4 w-4" />
+                      )}
+                      {photos.length === 0 ? "Add Photos" : "Add More"}
+                    </Button>
+                  </label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Photos help the AI assess job scope and complexity
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <Button
           onClick={handleEstimate}
           disabled={!category || !description.trim() || estimateMutation.isPending}
@@ -174,10 +311,16 @@ export function EstimationTool({ onEstimateComplete }: EstimationToolProps) {
       {result && (
         <Card className="border-green-200 bg-green-50/50 dark:bg-green-950/20" data-testid="card-estimation-result">
           <CardContent className="p-4 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-green-600" />
                 <span className="font-semibold">Estimate Ready</span>
+                {result.photosAnalyzed && (
+                  <Badge variant="outline" className="text-xs">
+                    <ImageIcon className="h-3 w-3 mr-1" />
+                    Photos Analyzed
+                  </Badge>
+                )}
               </div>
               {getConfidenceBadge(result.confidence)}
             </div>

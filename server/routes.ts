@@ -3707,7 +3707,7 @@ export async function registerRoutes(
   // In-app estimation tool (provider-only, always enabled)
   app.post("/api/estimation/in-app", async (req, res) => {
     try {
-      const { category, description, squareFootage } = req.body;
+      const { category, description, squareFootage, photos } = req.body;
       
       if (!category || !description) {
         return res.status(400).json({ error: "Category and description are required" });
@@ -3720,15 +3720,22 @@ export async function registerRoutes(
         category,
         description,
         squareFootage,
+        photos,
         isPublic: false,
       });
+
+      const disclaimers = [...guardrails.disclaimers];
+      if (photos && photos.length > 0) {
+        disclaimers.push("Photo-based estimates are approximate and used only to assist pricing");
+      }
 
       res.json({
         priceRange: estimate.priceRange,
         confidence: estimate.confidence,
         factors: estimate.factors || [],
-        disclaimers: guardrails.disclaimers,
+        disclaimers,
         aiGenerated: true,
+        photosAnalyzed: photos && photos.length > 0,
       });
     } catch (error) {
       console.error("Error generating in-app estimate:", error);
