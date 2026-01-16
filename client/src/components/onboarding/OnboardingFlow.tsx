@@ -170,6 +170,8 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         throw new Error("No job created");
       }
       const res = await apiRequest("POST", "/api/invoices", {
+        userId: "demo-user",
+        invoiceNumber: `INV-${Date.now()}`,
         jobId: createdJobId,
         clientName: jobData.clientName || "New Client",
         clientPhone: jobData.clientPhone || null,
