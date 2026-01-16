@@ -366,7 +366,7 @@ export default function TodaysGamePlanPage() {
             </Card>
             <Card
               className="border shadow-sm hover-elevate cursor-pointer"
-              onClick={() => navigate("/reminders/new")}
+              onClick={() => navigate("/reminders")}
               data-testid="button-message-client"
             >
               <CardContent className="p-4 flex flex-col items-center gap-2">
@@ -378,7 +378,7 @@ export default function TodaysGamePlanPage() {
             </Card>
             <Card
               className="border shadow-sm hover-elevate cursor-pointer"
-              onClick={() => navigate("/ai-tools/voice-notes")}
+              onClick={() => navigate("/ai-tools")}
               data-testid="button-talk-it-in"
             >
               <CardContent className="p-4 flex flex-col items-center gap-2">
