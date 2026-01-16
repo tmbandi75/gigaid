@@ -8,41 +8,91 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import confetti from "canvas-confetti";
 import {
   Wrench,
+  Droplets,
   Zap,
   Sparkles,
+  LayoutGrid,
+  TreePine,
+  PanelTop,
+  Layers,
   Hammer,
-  Flower2,
+  Thermometer,
+  Package,
+  Car,
+  Lock,
+  Scissors,
+  Baby,
+  Dog,
+  Home,
+  Heart,
+  Camera,
+  PartyPopper,
+  GraduationCap,
+  ShowerHead,
+  Shield,
+  Monitor,
+  Briefcase,
+  ClipboardCheck,
+  Snowflake,
   MoreHorizontal,
   ChevronLeft,
   ChevronRight,
   Loader2,
   CheckCircle2,
   Smartphone,
+  type LucideIcon,
 } from "lucide-react";
+import { serviceCategories, type ServiceIconName } from "@shared/service-categories";
 
 interface OnboardingFlowProps {
   onComplete: () => void;
 }
 
-const serviceTypes = [
-  { id: "plumbing", label: "Plumbing", icon: Wrench },
-  { id: "electrical", label: "Electrical", icon: Zap },
-  { id: "cleaning", label: "Cleaning", icon: Sparkles },
-  { id: "handyman", label: "Handyman", icon: Hammer },
-  { id: "landscaping", label: "Landscaping", icon: Flower2 },
-  { id: "other", label: "Other", icon: MoreHorizontal },
-];
+const iconMap: Record<ServiceIconName, LucideIcon> = {
+  Wrench,
+  Droplets,
+  Zap,
+  Sparkles,
+  LayoutGrid,
+  TreePine,
+  PanelTop,
+  Layers,
+  Hammer,
+  Thermometer,
+  Package,
+  Car,
+  Lock,
+  Scissors,
+  Baby,
+  Dog,
+  Home,
+  Heart,
+  Camera,
+  PartyPopper,
+  GraduationCap,
+  ShowerHead,
+  Shield,
+  Monitor,
+  Briefcase,
+  ClipboardCheck,
+  Snowflake,
+  MoreHorizontal,
+};
 
-const jobTitleSuggestions: Record<string, string> = {
-  plumbing: "Plumbing Repair",
-  electrical: "Electrical Work",
-  cleaning: "Home Cleaning",
-  handyman: "Handyman Service",
-  landscaping: "Lawn Care",
-  other: "Service Call",
+const getIconForCategory = (iconName: ServiceIconName): LucideIcon => {
+  return iconMap[iconName] || MoreHorizontal;
+};
+
+const getJobTitleSuggestion = (categoryId: string): string => {
+  const category = serviceCategories.find(c => c.id === categoryId);
+  if (category && category.services.length > 0) {
+    return category.services[0];
+  }
+  return "Service Call";
 };
 
 const celebrationMessages = [
@@ -159,7 +209,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     setSelectedService(serviceId);
     setJobData((prev) => ({
       ...prev,
-      title: jobTitleSuggestions[serviceId] || "Service Call",
+      title: getJobTitleSuggestion(serviceId),
     }));
   };
 
@@ -243,45 +293,47 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                {serviceTypes.map((service) => {
-                  const Icon = service.icon;
-                  const isSelected = selectedService === service.id;
-                  return (
-                    <Card
-                      key={service.id}
-                      className={`cursor-pointer transition-all ${
-                        isSelected
-                          ? "border-primary bg-primary/5 ring-2 ring-primary"
-                          : "hover-elevate"
-                      }`}
-                      onClick={() => handleServiceSelect(service.id)}
-                      data-testid={`service-${service.id}`}
-                    >
-                      <CardContent className="p-4 flex flex-col items-center gap-2">
-                        <div
-                          className={`h-12 w-12 rounded-xl flex items-center justify-center ${
-                            isSelected ? "bg-primary/10" : "bg-muted"
-                          }`}
-                        >
-                          <Icon
-                            className={`h-6 w-6 ${
-                              isSelected ? "text-primary" : "text-muted-foreground"
+              <ScrollArea className="h-[400px] pr-4">
+                <div className="grid grid-cols-2 gap-3">
+                  {serviceCategories.map((category) => {
+                    const Icon = getIconForCategory(category.icon);
+                    const isSelected = selectedService === category.id;
+                    return (
+                      <Card
+                        key={category.id}
+                        className={`cursor-pointer transition-all ${
+                          isSelected
+                            ? "border-primary bg-primary/5 ring-2 ring-primary"
+                            : "hover-elevate"
+                        }`}
+                        onClick={() => handleServiceSelect(category.id)}
+                        data-testid={`service-${category.id}`}
+                      >
+                        <CardContent className="p-3 flex flex-col items-center gap-1.5">
+                          <div
+                            className={`h-10 w-10 rounded-xl flex items-center justify-center ${
+                              isSelected ? "bg-primary/10" : "bg-muted"
                             }`}
-                          />
-                        </div>
-                        <span
-                          className={`font-medium text-sm ${
-                            isSelected ? "text-primary" : "text-foreground"
-                          }`}
-                        >
-                          {service.label}
-                        </span>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
+                          >
+                            <Icon
+                              className={`h-5 w-5 ${
+                                isSelected ? "text-primary" : "text-muted-foreground"
+                              }`}
+                            />
+                          </div>
+                          <span
+                            className={`font-medium text-xs text-center leading-tight ${
+                              isSelected ? "text-primary" : "text-foreground"
+                            }`}
+                          >
+                            {category.name}
+                          </span>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
 
               <Button
                 size="lg"
