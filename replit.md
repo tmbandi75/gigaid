@@ -56,7 +56,7 @@ Preferred communication style: Simple, everyday language.
 ### Emoji Usage Policy
 
 **Global Rules:**
-- Emojis are allowed ONLY in the UI presentation layer (React components)
+- Emojis are allowed ONLY in user-facing presentation layers (React components and email templates)
 - Emojis are FORBIDDEN in: JSON schemas, database fields, API requests/responses, enums, constants, AI prompts, logs, analytics
 
 **UI Usage Rules:**

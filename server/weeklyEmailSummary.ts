@@ -102,7 +102,7 @@ function buildEmailHtml(
 
     <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
       <div style="display: flex; align-items: center; gap: 12px;">
-        <div style="font-size: 28px;">🛠</div>
+        <div style="font-size: 28px;">🔧</div>
         <div>
           <p style="margin: 0; color: #64748b; font-size: 14px;">Jobs Completed</p>
           <p style="margin: 0; color: #334155; font-size: 24px; font-weight: 700;">${metrics.jobsCompleted}</p>
@@ -112,7 +112,7 @@ function buildEmailHtml(
 
     <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
       <div style="display: flex; align-items: center; gap: 12px;">
-        <div style="font-size: 28px;">📥</div>
+        <div style="font-size: 28px;">🆕</div>
         <div>
           <p style="margin: 0; color: #64748b; font-size: 14px;">New Leads</p>
           <p style="margin: 0; color: #334155; font-size: 24px; font-weight: 700;">${metrics.newLeads}</p>
@@ -123,7 +123,7 @@ function buildEmailHtml(
     ${metrics.outstandingInvoicesCount > 0 ? `
     <div style="background: #fffbeb; border-radius: 12px; padding: 20px; border: 1px solid #fcd34d;">
       <div style="display: flex; align-items: center; gap: 12px;">
-        <div style="font-size: 28px;">⚠️</div>
+        <div style="font-size: 28px;">💳</div>
         <div>
           <p style="margin: 0; color: #92400e; font-size: 14px;">Unpaid Invoices</p>
           <p style="margin: 0; color: #92400e; font-size: 24px; font-weight: 700;">${metrics.outstandingInvoicesCount} (${formatCurrency(metrics.outstandingInvoicesTotal)})</p>
@@ -171,9 +171,9 @@ Hi ${userName || "there"},
 Here's how your business did last week:
 
 💰 Revenue: ${formatCurrency(metrics.weeklyRevenue)}
-🛠 Jobs Completed: ${metrics.jobsCompleted}
-📥 New Leads: ${metrics.newLeads}
-${metrics.outstandingInvoicesCount > 0 ? `⚠️ Unpaid Invoices: ${metrics.outstandingInvoicesCount} (${formatCurrency(metrics.outstandingInvoicesTotal)})` : ""}
+🔧 Jobs Completed: ${metrics.jobsCompleted}
+🆕 New Leads: ${metrics.newLeads}
+${metrics.outstandingInvoicesCount > 0 ? `💳 Unpaid Invoices: ${metrics.outstandingInvoicesCount} (${formatCurrency(metrics.outstandingInvoicesTotal)})` : ""}
 📅 Jobs Coming Up: ${metrics.upcomingJobsCount}
 
 View your full Owner Summary: ${ownerViewUrl}
