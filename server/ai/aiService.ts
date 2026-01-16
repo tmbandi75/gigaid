@@ -1052,12 +1052,19 @@ export async function analyzePhotosForEstimate(photos: string[], category: strin
     return "";
   }
 
-  const imageContents = photos.slice(0, 4).map(url => ({
-    type: "image_url" as const,
-    image_url: { url, detail: "low" as const }
-  }));
+  console.log(`[PhotoAnalysis] Analyzing ${photos.length} photos for ${category}`);
+  
+  const imageContents = photos.slice(0, 4).map((url, idx) => {
+    const urlLength = url.length;
+    console.log(`[PhotoAnalysis] Photo ${idx + 1} data URL length: ${urlLength} chars`);
+    return {
+      type: "image_url" as const,
+      image_url: { url, detail: "low" as const }
+    };
+  });
 
   try {
+    console.log("[PhotoAnalysis] Sending to GPT-4o vision...");
     const response = await getOpenAI().chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -1085,9 +1092,14 @@ Focus on: scope/size, condition, materials visible, and complexity indicators.`
       max_tokens: 300,
     });
 
-    return response.choices[0]?.message?.content || "";
-  } catch (error) {
-    console.error("Photo analysis error:", error);
+    const result = response.choices[0]?.message?.content || "";
+    console.log(`[PhotoAnalysis] Success: ${result.substring(0, 100)}...`);
+    return result;
+  } catch (error: any) {
+    console.error("[PhotoAnalysis] Error:", error?.message || error);
+    if (error?.response) {
+      console.error("[PhotoAnalysis] API error details:", error.response.status, error.response.data);
+    }
     return "";
   }
 }

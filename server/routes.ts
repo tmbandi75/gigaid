@@ -3728,6 +3728,8 @@ Final price confirmed onsite.`;
         return res.status(400).json({ error: "Category and description are required" });
       }
 
+      console.log(`[Estimation] In-app request: category=${category}, hasPhotos=${photos?.length > 0 ? photos.length : 0}`);
+
       const { generateAIEstimate, getEstimationGuardrails } = await import("./ai/aiService");
       const guardrails = getEstimationGuardrails();
 
@@ -3768,9 +3770,12 @@ Final price confirmed onsite.`;
         photosAnalyzed: photos && photos.length > 0,
         formattedOutput,
       });
-    } catch (error) {
-      console.error("Error generating in-app estimate:", error);
-      res.status(500).json({ error: "Failed to generate estimate" });
+    } catch (error: any) {
+      console.error("[Estimation] Error generating in-app estimate:", error?.message || error);
+      if (error?.response) {
+        console.error("[Estimation] API response error:", error.response.status, error.response.data);
+      }
+      res.status(500).json({ error: "Failed to generate estimate. Please try again." });
     }
   });
 
