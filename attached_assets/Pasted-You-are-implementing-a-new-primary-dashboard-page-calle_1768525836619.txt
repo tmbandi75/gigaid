@@ -1,0 +1,138 @@
+You are implementing a new primary dashboard page called “Today’s Game Plan”.
+
+GOAL:
+Replace the existing Dashboard landing experience with a single action-oriented screen that tells the gig worker exactly what to do next to stay on track and get paid.
+
+DO NOT remove any existing pages or routes.
+This is a NEW dashboard view that becomes the default landing page after login.
+
+------------------------------------------------
+ROUTE & STRUCTURE
+------------------------------------------------
+Route: /dashboard (default after login)
+
+Page Title: “Today’s Game Plan”
+Subtitle: “Do these things to stay on track and get paid”
+
+Use existing layout, sidebar, top navigation, and styling system.
+Do NOT introduce new colors or typography systems.
+
+------------------------------------------------
+SECTION 1: DO THIS FIRST (HIGHEST PRIORITY)
+------------------------------------------------
+Show a single high-priority task if one exists.
+
+Priority order:
+1. Overdue invoice not sent
+2. Invoice sent but overdue for payment
+3. Upcoming job within 24 hours without reminder sent
+4. Lead with no response after 24 hours
+
+Display format:
+- Card with red or orange accent border
+- Icon based on task type (invoice, job, message)
+
+Example content:
+“Send invoice to Michael Chen”
+“$450 • Due today”
+Primary CTA button:
+- “Send Invoice”
+- “Send Reminder”
+- “Follow Up”
+
+If NO priority items exist:
+Display a green success state:
+“✅ You’re all caught up”
+
+------------------------------------------------
+SECTION 2: UP NEXT (MAX 3 ITEMS)
+------------------------------------------------
+Show the next 3 actionable items in priority order.
+
+Each item includes:
+- Icon
+- Short sentence (plain language)
+- One primary action button
+
+Examples:
+- “Job with Sarah — Tomorrow at 10:00 AM” → [View Job]
+- “Client hasn’t replied — Follow up?” → [Send Message]
+- “Invoice not sent — $100” → [Send Invoice]
+
+Do NOT show more than 3 items.
+
+------------------------------------------------
+SECTION 3: TODAY AT A GLANCE
+------------------------------------------------
+Simple stat row (no charts):
+
+- Jobs today
+- Money collected today
+- Money waiting
+- Messages to send
+
+Use existing stat card components.
+Keep text large and readable.
+
+------------------------------------------------
+SECTION 4: QUICK ACTIONS
+------------------------------------------------
+Large, thumb-friendly buttons (2x2 grid on desktop, stacked on mobile):
+
+- “Add a Job” → /jobs/new
+- “Ask for Payment” → /invoices/new
+- “Message a Client” → /reminders/new
+- “Talk It In” → /ai-tools/voice-notes
+
+Reuse existing button components.
+
+------------------------------------------------
+SECTION 5: DONE RECENTLY (OPTIONAL)
+------------------------------------------------
+Show last 3 completed actions:
+- Invoice paid
+- Reminder sent
+- Job completed
+
+This section is low-contrast and visually quiet.
+
+------------------------------------------------
+DATA SOURCES & LOGIC
+------------------------------------------------
+Use existing tables/models:
+- jobs
+- invoices
+- reminders
+- leads
+
+Create a derived “nextActions” selector that:
+- Evaluates urgency
+- Returns ordered actionable items
+- Limits results to 1 (priority) + 3 (up next)
+
+Do NOT change database schemas.
+
+------------------------------------------------
+LABEL LANGUAGE (IMPORTANT)
+------------------------------------------------
+Use gig-worker language ONLY:
+- “Get Paid” instead of Invoices
+- “Ask for Payment” instead of Create Invoice
+- “New Requests” instead of Leads
+- “Client Messages” instead of Reminders
+
+------------------------------------------------
+MOBILE BEHAVIOR
+------------------------------------------------
+- Stack sections vertically
+- Keep primary CTA visible without scrolling
+- Avoid tables on this screen
+
+------------------------------------------------
+FINAL CHECKS
+------------------------------------------------
+- Page loads in under 1 second
+- No breaking changes to existing routes
+- Dashboard immediately communicates “what should I do now?”
+
+Implement cleanly and conservatively.
