@@ -1129,6 +1129,53 @@ export async function registerRoutes(
     }
   });
 
+  // Convert lead to job
+  app.post("/api/leads/:id/convert", async (req, res) => {
+    try {
+      const lead = await storage.getLead(req.params.id);
+      if (!lead) {
+        return res.status(404).json({ error: "Lead not found" });
+      }
+
+      // Check if already converted
+      if (lead.convertedJobId) {
+        return res.status(400).json({ 
+          error: "Lead already converted", 
+          jobId: lead.convertedJobId 
+        });
+      }
+
+      // Create job from lead data
+      const jobData = {
+        userId: lead.userId,
+        title: `${lead.serviceType} - ${lead.clientName}`,
+        clientName: lead.clientName,
+        clientPhone: lead.clientPhone || null,
+        clientEmail: lead.clientEmail || null,
+        serviceType: lead.serviceType || "General Service",
+        status: "scheduled" as const,
+        notes: lead.notes || lead.description || null,
+        description: lead.description || null,
+        scheduledDate: new Date().toISOString().split('T')[0],
+        scheduledTime: "09:00",
+      };
+
+      const job = await storage.createJob(jobData);
+
+      // Update lead with converted status
+      await storage.updateLead(req.params.id, {
+        status: "converted",
+        convertedAt: new Date().toISOString(),
+        convertedJobId: job.id,
+      });
+
+      res.status(201).json({ jobId: job.id, job });
+    } catch (error) {
+      console.error("Failed to convert lead:", error);
+      res.status(500).json({ error: "Failed to convert lead to job" });
+    }
+  });
+
   // Response Tracking - mark response as copied and start follow-up timer
   app.post("/api/leads/:id/response-copied", async (req, res) => {
     try {
