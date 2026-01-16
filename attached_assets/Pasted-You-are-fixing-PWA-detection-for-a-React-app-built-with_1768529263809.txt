@@ -1,0 +1,133 @@
+You are fixing PWA detection for a React app built with Vite.
+The app is deployed on Replit and must be compatible with PWABuilder.
+
+GOAL:
+Make /manifest.json publicly accessible as real JSON
+and stop Vite from hijacking it with the SPA fallback.
+
+------------------------------------------------
+STEP 1 — CREATE MANIFEST IN THE CORRECT LOCATION
+------------------------------------------------
+Create this file exactly:
+
+/public/manifest.json
+
+Contents:
+
+{
+  "name": "GigAid",
+  "short_name": "GigAid",
+  "description": "Run your gig business. Jobs, payments, and reminders in one place.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0A63F3",
+  "theme_color": "#0A63F3",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
+
+------------------------------------------------
+STEP 2 — ENSURE ICONS ARE SERVED BY VITE
+------------------------------------------------
+Place icon files here:
+
+/public/icons/icon-192.png
+/public/icons/icon-512.png
+
+Icons must be:
+- PNG
+- Square
+- Publicly accessible
+
+------------------------------------------------
+STEP 3 — LINK MANIFEST IN THE REAL HTML FILE
+------------------------------------------------
+Open:
+
+/index.html   (Vite root HTML file)
+
+Inside <head>, add:
+
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#0A63F3" />
+
+IMPORTANT:
+This must be in index.html, NOT in a React component.
+
+------------------------------------------------
+STEP 4 — ADD SERVICE WORKER FILE
+------------------------------------------------
+Create this file:
+
+/public/service-worker.js
+
+Contents:
+
+self.addEventListener("install", () => {
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
+------------------------------------------------
+STEP 5 — REGISTER SERVICE WORKER IN REACT ENTRY
+------------------------------------------------
+Open:
+
+/src/main.tsx  (or main.jsx)
+
+Add this at the bottom:
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js");
+  });
+}
+
+------------------------------------------------
+STEP 6 — IMPORTANT VITE CONFIG CHECK
+------------------------------------------------
+Open vite.config.ts or vite.config.js.
+
+CONFIRM:
+- base is NOT set to "./"
+- base is "/" or undefined
+
+Example GOOD config:
+
+export default defineConfig({
+  plugins: [react()]
+});
+
+DO NOT use relative base paths for PWAs.
+
+------------------------------------------------
+STEP 7 — REDEPLOY AND VERIFY
+------------------------------------------------
+After changes:
+1. Stop the Replit app
+2. Restart it
+3. Redeploy
+4. Hard refresh browser (Cmd + Shift + R)
+
+Then open:
+https://gigaid.ai/manifest.json
+
+EXPECTED RESULT:
+- Raw JSON text
+- Not blank
+- Not HTML
