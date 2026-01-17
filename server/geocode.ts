@@ -7,6 +7,13 @@ interface GeocodeResult {
   lng: number;
 }
 
+export interface DrivingDistanceResult {
+  distanceText: string;
+  distanceMeters: number;
+  durationText: string;
+  durationSeconds: number;
+}
+
 export async function geocodeAddress(address: string): Promise<GeocodeResult | null> {
   if (!GOOGLE_MAPS_API_KEY) {
     console.warn("[Geocode] No Google Maps API key configured");
@@ -50,6 +57,55 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult | n
     };
   } catch (error) {
     console.error("[Geocode] Error geocoding address:", error);
+    return null;
+  }
+}
+
+export async function getDrivingDistance(
+  originLat: number,
+  originLng: number,
+  destLat: number,
+  destLng: number
+): Promise<DrivingDistanceResult | null> {
+  if (!GOOGLE_MAPS_API_KEY) {
+    console.warn("[DrivingDistance] No Google Maps API key configured");
+    return null;
+  }
+
+  try {
+    const origin = `${originLat},${originLng}`;
+    const destination = `${destLat},${destLng}`;
+    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origin}&destinations=${destination}&mode=driving&units=imperial&key=${GOOGLE_MAPS_API_KEY}`;
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      console.error("[DrivingDistance] API request failed:", response.status, response.statusText);
+      return null;
+    }
+
+    const data = await response.json();
+    
+    if (data.status !== "OK") {
+      console.warn("[DrivingDistance] API returned status:", data.status);
+      return null;
+    }
+
+    const element = data.rows?.[0]?.elements?.[0];
+    
+    if (!element || element.status !== "OK") {
+      console.warn("[DrivingDistance] No route found, element status:", element?.status);
+      return null;
+    }
+
+    return {
+      distanceText: element.distance.text,
+      distanceMeters: element.distance.value,
+      durationText: element.duration.text,
+      durationSeconds: element.duration.value,
+    };
+  } catch (error) {
+    console.error("[DrivingDistance] Error calculating distance:", error);
     return null;
   }
 }

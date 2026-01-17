@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Navigation, Clock, AlertCircle, Loader2, ExternalLink } from "lucide-react";
+import { MapPin, Navigation, Clock, AlertCircle, Loader2, ExternalLink, Car } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
 
 interface JobLocationMapProps {
   customerLat: number;
@@ -101,13 +102,33 @@ export function JobLocationMap({
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const hasProviderLocation = providerLat !== undefined && providerLng !== undefined;
 
-  const distance = hasProviderLocation
+  const straightLineDistance = hasProviderLocation
     ? calculateHaversineDistance(customerLat, customerLng, providerLat!, providerLng!)
     : null;
 
   const relativeTime = providerLocationUpdatedAt
     ? formatDistanceToNow(new Date(providerLocationUpdatedAt), { addSuffix: true })
     : null;
+
+  // Fetch driving distance and time from API
+  const { data: drivingData, isLoading: isDrivingLoading } = useQuery<{
+    distanceText: string;
+    distanceMeters: number;
+    durationText: string;
+    durationSeconds: number;
+  }>({
+    queryKey: ["/api/driving-distance", providerLat, providerLng, customerLat, customerLng],
+    queryFn: async () => {
+      if (!hasProviderLocation) return null;
+      const res = await fetch(
+        `/api/driving-distance?originLat=${providerLat}&originLng=${providerLng}&destLat=${customerLat}&destLng=${customerLng}`
+      );
+      if (!res.ok) throw new Error("Failed to fetch driving distance");
+      return res.json();
+    },
+    enabled: hasProviderLocation,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
 
   const googleMapsUrl = hasProviderLocation
     ? `https://www.google.com/maps/dir/?api=1&origin=${providerLat},${providerLng}&destination=${customerLat},${customerLng}`
@@ -299,18 +320,28 @@ export function JobLocationMap({
             <div className="text-sm">
               <span className="font-medium">Your Location</span>
               {hasProviderLocation ? (
-                <div className="text-muted-foreground text-xs flex items-center gap-1 flex-wrap">
-                  {distance !== null && (
-                    <span data-testid="text-distance">{formatDistance(distance)} away</span>
-                  )}
-                  {relativeTime && (
-                    <>
+                <div className="text-muted-foreground text-xs space-y-0.5">
+                  {/* Driving distance and time */}
+                  {drivingData ? (
+                    <div className="flex items-center gap-1.5 text-foreground font-medium" data-testid="text-driving-info">
+                      <Car className="h-3 w-3" />
+                      <span>{drivingData.distanceText}</span>
                       <span>•</span>
-                      <span className="flex items-center gap-0.5" data-testid="text-location-updated">
-                        <Clock className="h-3 w-3" />
-                        Updated {relativeTime}
-                      </span>
-                    </>
+                      <span>{drivingData.durationText} drive</span>
+                    </div>
+                  ) : isDrivingLoading ? (
+                    <div className="flex items-center gap-1" data-testid="text-driving-loading">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span>Calculating route...</span>
+                    </div>
+                  ) : straightLineDistance !== null ? (
+                    <span data-testid="text-distance">{formatDistance(straightLineDistance)} away (straight line)</span>
+                  ) : null}
+                  {relativeTime && (
+                    <div className="flex items-center gap-0.5" data-testid="text-location-updated">
+                      <Clock className="h-3 w-3" />
+                      <span>Updated {relativeTime}</span>
+                    </div>
                   )}
                 </div>
               ) : (

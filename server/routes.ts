@@ -27,7 +27,7 @@ import { parseSharedContent, generateQuickReplies } from "./ai/shareParser";
 import { getOpenAI } from "./ai/openaiClient";
 import { sendSMS } from "./twilio";
 import { sendEmail } from "./sendgrid";
-import { geocodeAddress } from "./geocode";
+import { geocodeAddress, getDrivingDistance } from "./geocode";
 import { computeDepositState, calculateDepositAmount, getCancellationOutcome, formatDepositDisplay } from "./depositHelper";
 import { embedDepositMetadata, extractDepositMetadata, DepositMetadata, DerivedDepositState } from "@shared/schema";
 import { generateCelebrationMessage } from "./celebration";
@@ -6380,6 +6380,33 @@ Return ONLY the message text, no JSON or formatting.`
     } catch (error) {
       console.error("On the way error:", error);
       res.status(500).json({ error: "Failed to send notification" });
+    }
+  });
+
+  // Driving Distance Calculator
+  app.get("/api/driving-distance", async (req, res) => {
+    try {
+      const { originLat, originLng, destLat, destLng } = req.query;
+      
+      if (!originLat || !originLng || !destLat || !destLng) {
+        return res.status(400).json({ error: "Missing required coordinates" });
+      }
+
+      const result = await getDrivingDistance(
+        parseFloat(originLat as string),
+        parseFloat(originLng as string),
+        parseFloat(destLat as string),
+        parseFloat(destLng as string)
+      );
+
+      if (!result) {
+        return res.status(404).json({ error: "Unable to calculate driving distance" });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Driving distance error:", error);
+      res.status(500).json({ error: "Failed to calculate driving distance" });
     }
   });
 
