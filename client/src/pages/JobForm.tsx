@@ -364,13 +364,15 @@ export default function JobForm() {
   const leadId = urlParams.get("leadId") || null;
   
   const prefillData = {
+    title: urlParams.get("title") || "",
     serviceType: urlParams.get("serviceType") || "",
-    date: urlParams.get("date") || "",
-    time: urlParams.get("time") || "",
+    date: urlParams.get("date") || urlParams.get("scheduledDate") || "",
+    time: urlParams.get("time") || urlParams.get("scheduledTime") || "",
     clientFirstName: parsedPrefill.firstName,
     clientLastName: parsedPrefill.lastName,
     clientPhone: urlParams.get("clientPhone") || "",
     description: urlParams.get("description") || "",
+    notes: urlParams.get("notes") || "",
     duration: urlParams.get("duration") ? parseInt(urlParams.get("duration")!) : undefined,
     price: urlParams.get("price") ? parseInt(urlParams.get("price")!) / 100 : undefined,
   };
@@ -502,9 +504,9 @@ export default function JobForm() {
   const form = useForm<JobFormData>({
     resolver: zodResolver(jobFormSchema),
     defaultValues: {
-      title: prefillData.description || "",
+      title: prefillData.title || prefillData.description || "",
       serviceType: prefillData.serviceType || "",
-      description: prefillData.description || "",
+      description: prefillData.notes || prefillData.description || "",
       location: "",
       scheduledDate: prefillData.date || new Date().toISOString().split('T')[0],
       scheduledTime: prefillData.time || "09:00",

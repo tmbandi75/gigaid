@@ -26,6 +26,8 @@ import type { Job } from "@shared/schema";
 interface VoiceNoteSummary {
   transcript: string;
   summary: string;
+  serviceTitle: string;
+  clientName?: string;
   type: "job" | "update" | "shareable" | "other";
   keyPoints: string[];
 }
@@ -169,6 +171,14 @@ export function VoiceNoteSummarizer({ onSummaryComplete, onNoteSaved }: VoiceNot
   const handleCreateJob = () => {
     if (summary) {
       const params = new URLSearchParams();
+      // Use serviceTitle as the job title if available
+      if (summary.serviceTitle) {
+        params.set("title", summary.serviceTitle);
+      }
+      // Use clientName if extracted from the voice note
+      if (summary.clientName) {
+        params.set("clientName", summary.clientName);
+      }
       params.set("description", summary.summary);
       if (summary.keyPoints.length > 0) {
         params.set("notes", summary.keyPoints.join("\n"));
@@ -261,9 +271,16 @@ export function VoiceNoteSummarizer({ onSummaryComplete, onNoteSaved }: VoiceNot
         )}
 
         {summary && (
-          <div className="space-y-3 p-3 rounded-lg bg-muted/50">
+          <div className="space-y-3 p-3 rounded-md bg-muted/50">
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <p className="text-sm font-medium">Summary</p>
+              <div className="space-y-1">
+                {summary.serviceTitle && (
+                  <p className="text-sm font-semibold">{summary.serviceTitle}</p>
+                )}
+                {summary.clientName && (
+                  <p className="text-xs text-muted-foreground">Client: {summary.clientName}</p>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 {savedNoteId && (
                   <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
@@ -282,7 +299,7 @@ export function VoiceNoteSummarizer({ onSummaryComplete, onNoteSaved }: VoiceNot
                 <ul className="text-sm space-y-1">
                   {summary.keyPoints.map((point, idx) => (
                     <li key={idx} className="flex items-start gap-2">
-                      <span className="text-primary">•</span>
+                      <span className="text-muted-foreground">•</span>
                       {point}
                     </li>
                   ))}

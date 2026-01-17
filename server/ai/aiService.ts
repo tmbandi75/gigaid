@@ -430,6 +430,8 @@ Return ONLY valid JSON.`
 export interface VoiceNoteSummary {
   transcript: string;
   summary: string;
+  serviceTitle: string;
+  clientName?: string;
   type: "job" | "update" | "shareable" | "other";
   keyPoints: string[];
 }
@@ -440,22 +442,34 @@ export async function summarizeVoiceNote(transcript: string): Promise<VoiceNoteS
     messages: [
       {
         role: "system",
-        content: `You are a helpful assistant that summarizes voice notes for gig workers.
+        content: `You are a helpful assistant that summarizes voice notes for gig workers (plumbers, electricians, cleaners, contractors, etc.).
+
+IMPORTANT: Your output will be used for professional business communications with clients. Never use third-person language like "the speaker" or "the user" - write in action-focused, professional language.
 
 Analyze the transcript and:
-1. Create a concise summary (1-2 sentences)
-2. Identify the type of note:
+1. Create a professional SERVICE TITLE that describes the job/service (e.g., "Kitchen Faucet Repair", "Floor Tile Installation", "Bathroom Deep Clean"). This will be used as the lead/job title visible to clients.
+2. Extract the CLIENT NAME if mentioned (first name, last name, or business name)
+3. Create a concise summary (1-2 sentences) in professional language. Avoid "the speaker" - instead describe the service need directly.
+4. Identify the type of note:
    - "job": Related to a specific job or task
-   - "update": Status update or progress report
+   - "update": Status update or progress report  
    - "shareable": Something that could be shared with clients
    - "other": General notes or reminders
-3. Extract 2-4 key points
+5. Extract 2-4 key points about the job/task
 
 Return a JSON object with:
-- transcript: The original transcript (cleaned up)
-- summary: A brief summary
+- transcript: The original transcript (cleaned up for readability)
+- serviceTitle: A short, professional title for the service/job (3-5 words max)
+- clientName: The client's name if mentioned, or null if not mentioned
+- summary: A brief professional summary (avoid "the speaker" language)
 - type: The note type
 - keyPoints: Array of key points
+
+Examples of good serviceTitle values:
+- "Kitchen Faucet Replacement"
+- "Living Room Floor Installation" 
+- "Bathroom Plumbing Repair"
+- "Office Deep Cleaning Service"
 
 Return ONLY valid JSON.`
       },
@@ -465,15 +479,20 @@ Return ONLY valid JSON.`
       }
     ],
     response_format: { type: "json_object" },
-    max_completion_tokens: 400,
+    max_completion_tokens: 500,
   });
 
   const content = response.choices[0]?.message?.content;
   if (!content) {
-    return { transcript, summary: transcript, type: "other", keyPoints: [] };
+    return { transcript, summary: transcript, serviceTitle: "Service Request", type: "other", keyPoints: [] };
   }
 
-  return JSON.parse(content) as VoiceNoteSummary;
+  const result = JSON.parse(content) as VoiceNoteSummary;
+  // Ensure serviceTitle has a fallback
+  if (!result.serviceTitle) {
+    result.serviceTitle = "Service Request";
+  }
+  return result;
 }
 
 // Referral Message Optimizer
