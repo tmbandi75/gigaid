@@ -1,0 +1,111 @@
+Connecting to '<URL>' violates the following Content Security Policy directive: "connect-src 'none'". The policy is report-only, so the violation has been logged but no further action has been taken.
+AddressAutocomplete.tsx:177 <gmpx-api-loader>: Found multiple instances of this element on the same page. The Google Maps JavaScript API can only be configured once; please ensure you only have a single instance. <gmpx-api-loader key=​"AIzaSyCtegxRz1ZN6h80u2xsvPWYr3RvIj0zYGM" solution-channel=​"GMP_GE_mapsplatform_v1" version=​"beta">​…​</gmpx-api-loader>​
+(anonymous) @ rrweb-plugin-console-record.js:160
+warn @ chunk-SIXGR6NC.js?v=2061f6f9:2201
+connectedCallback @ chunk-SIXGR6NC.js?v=2061f6f9:2305
+(anonymous) @ AddressAutocomplete.tsx:177
+commitHookEffectListMount @ chunk-LPF6KSF2.js?v=2061f6f9:16963
+commitPassiveMountOnFiber @ chunk-LPF6KSF2.js?v=2061f6f9:18206
+commitPassiveMountEffects_complete @ chunk-LPF6KSF2.js?v=2061f6f9:18179
+commitPassiveMountEffects_begin @ chunk-LPF6KSF2.js?v=2061f6f9:18169
+commitPassiveMountEffects @ chunk-LPF6KSF2.js?v=2061f6f9:18159
+flushPassiveEffectsImpl @ chunk-LPF6KSF2.js?v=2061f6f9:19543
+flushPassiveEffects @ chunk-LPF6KSF2.js?v=2061f6f9:19500
+(anonymous) @ chunk-LPF6KSF2.js?v=2061f6f9:19381
+workLoop @ chunk-LPF6KSF2.js?v=2061f6f9:197
+flushWork @ chunk-LPF6KSF2.js?v=2061f6f9:176
+performWorkUntilDeadline @ chunk-LPF6KSF2.js?v=2061f6f9:384Understand this warning
+places.js:48 As of March 1st, 2025, google.maps.places.Autocomplete is not available to new customers. Please use google.maps.places.PlaceAutocompleteElement instead. At this time, google.maps.places.Autocomplete is not scheduled to be discontinued, but google.maps.places.PlaceAutocompleteElement is recommended over google.maps.places.Autocomplete. While google.maps.places.Autocomplete will continue to receive bug fixes for any major regressions, existing bugs in google.maps.places.Autocomplete will not be addressed. At least 12 months notice will be given before support is discontinued. Please see https://developers.google.com/maps/legacy for additional details and https://developers.google.com/maps/documentation/javascript/places-migration-overview for the migration guide.
+(anonymous) @ rrweb-plugin-console-record.js:160
+ED @ places.js:48
+initializeAutocomplete @ chunk-IQ3BCYC6.js?v=2061f6f9:899
+await in initializeAutocomplete
+firstUpdated @ chunk-IQ3BCYC6.js?v=2061f6f9:837
+_$didUpdate @ chunk-SIXGR6NC.js?v=2061f6f9:784
+performUpdate @ chunk-SIXGR6NC.js?v=2061f6f9:752
+scheduleUpdate @ chunk-SIXGR6NC.js?v=2061f6f9:688
+__enqueueUpdate @ chunk-SIXGR6NC.js?v=2061f6f9:664
+await in __enqueueUpdate
+requestUpdate @ chunk-SIXGR6NC.js?v=2061f6f9:631
+__initialize @ chunk-SIXGR6NC.js?v=2061f6f9:454
+ReactiveElement @ chunk-SIXGR6NC.js?v=2061f6f9:444
+LitElement @ chunk-SIXGR6NC.js?v=2061f6f9:1897
+BaseComponent @ chunk-SIXGR6NC.js?v=2061f6f9:2219
+PlacePicker2 @ chunk-IQ3BCYC6.js?v=2061f6f9:766
+(anonymous) @ AddressAutocomplete.tsx:112
+commitHookEffectListMount @ chunk-LPF6KSF2.js?v=2061f6f9:16963
+commitPassiveMountOnFiber @ chunk-LPF6KSF2.js?v=2061f6f9:18206
+commitPassiveMountEffects_complete @ chunk-LPF6KSF2.js?v=2061f6f9:18179
+commitPassiveMountEffects_begin @ chunk-LPF6KSF2.js?v=2061f6f9:18169
+commitPassiveMountEffects @ chunk-LPF6KSF2.js?v=2061f6f9:18159
+flushPassiveEffectsImpl @ chunk-LPF6KSF2.js?v=2061f6f9:19543
+flushPassiveEffects @ chunk-LPF6KSF2.js?v=2061f6f9:19500
+(anonymous) @ chunk-LPF6KSF2.js?v=2061f6f9:19381
+workLoop @ chunk-LPF6KSF2.js?v=2061f6f9:197
+flushWork @ chunk-LPF6KSF2.js?v=2061f6f9:176
+performWorkUntilDeadline @ chunk-LPF6KSF2.js?v=2061f6f9:384Understand this warning
+AddressAutocomplete.tsx:69 You must enable Billing on the Google Cloud Project at https://console.cloud.google.com/project/_/billing/enable Learn more at https://developers.google.com/maps/gmp-get-started Places API error: BillingNotEnabledMapError
+https://developers.google.com/maps/documentation/javascript/error-messages#billing-not-enabled-map-error
+(anonymous) @ rrweb-plugin-console-record.js:160
+console.error @ AddressAutocomplete.tsx:69
+_.Fm @ main.js:176
+(anonymous) @ places_impl.js:11
+(anonymous) @ places_impl.js:9
+e @ places_impl.js:7
+c @ common.js:111
+(anonymous) @ AutocompletionService.GetPredictions?1s51&4sen-US&7scountry%3Aus&15e3&20s5BA9EA9A9F11419AB464C93726B8AC4Dqy2j&21m1&2e1&r_url=https%3A%2F%2Fc75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev%2Fjobs%2Fca4d54df-274b-4a09-9930-d0641bea79d2%2Fedit&callback=_xdc_._2caydm&key=AIzaSyCtegxRz1ZN6h80u2xsvPWYr3RvIj0zYGM&token=31407:1Understand this error
+AddressAutocomplete.tsx:177 <gmpx-api-loader>: Found multiple instances of this element on the same page. The Google Maps JavaScript API can only be configured once; please ensure you only have a single instance. <gmpx-api-loader key=​"AIzaSyCtegxRz1ZN6h80u2xsvPWYr3RvIj0zYGM" solution-channel=​"GMP_GE_mapsplatform_v1" version=​"beta">​…​</gmpx-api-loader>​
+(anonymous) @ rrweb-plugin-console-record.js:160
+warn @ chunk-SIXGR6NC.js?v=2061f6f9:2201
+connectedCallback @ chunk-SIXGR6NC.js?v=2061f6f9:2305
+(anonymous) @ AddressAutocomplete.tsx:177
+commitHookEffectListMount @ chunk-LPF6KSF2.js?v=2061f6f9:16963
+commitPassiveMountOnFiber @ chunk-LPF6KSF2.js?v=2061f6f9:18206
+commitPassiveMountEffects_complete @ chunk-LPF6KSF2.js?v=2061f6f9:18179
+commitPassiveMountEffects_begin @ chunk-LPF6KSF2.js?v=2061f6f9:18169
+commitPassiveMountEffects @ chunk-LPF6KSF2.js?v=2061f6f9:18159
+flushPassiveEffectsImpl @ chunk-LPF6KSF2.js?v=2061f6f9:19543
+flushPassiveEffects @ chunk-LPF6KSF2.js?v=2061f6f9:19500
+(anonymous) @ chunk-LPF6KSF2.js?v=2061f6f9:19381
+workLoop @ chunk-LPF6KSF2.js?v=2061f6f9:197
+flushWork @ chunk-LPF6KSF2.js?v=2061f6f9:176
+performWorkUntilDeadline @ chunk-LPF6KSF2.js?v=2061f6f9:384Understand this warning
+places.js:48 As of March 1st, 2025, google.maps.places.Autocomplete is not available to new customers. Please use google.maps.places.PlaceAutocompleteElement instead. At this time, google.maps.places.Autocomplete is not scheduled to be discontinued, but google.maps.places.PlaceAutocompleteElement is recommended over google.maps.places.Autocomplete. While google.maps.places.Autocomplete will continue to receive bug fixes for any major regressions, existing bugs in google.maps.places.Autocomplete will not be addressed. At least 12 months notice will be given before support is discontinued. Please see https://developers.google.com/maps/legacy for additional details and https://developers.google.com/maps/documentation/javascript/places-migration-overview for the migration guide.
+(anonymous) @ rrweb-plugin-console-record.js:160
+ED @ places.js:48
+initializeAutocomplete @ chunk-IQ3BCYC6.js?v=2061f6f9:899
+await in initializeAutocomplete
+firstUpdated @ chunk-IQ3BCYC6.js?v=2061f6f9:837
+_$didUpdate @ chunk-SIXGR6NC.js?v=2061f6f9:784
+performUpdate @ chunk-SIXGR6NC.js?v=2061f6f9:752
+scheduleUpdate @ chunk-SIXGR6NC.js?v=2061f6f9:688
+__enqueueUpdate @ chunk-SIXGR6NC.js?v=2061f6f9:664
+await in __enqueueUpdate
+requestUpdate @ chunk-SIXGR6NC.js?v=2061f6f9:631
+__initialize @ chunk-SIXGR6NC.js?v=2061f6f9:454
+ReactiveElement @ chunk-SIXGR6NC.js?v=2061f6f9:444
+LitElement @ chunk-SIXGR6NC.js?v=2061f6f9:1897
+BaseComponent @ chunk-SIXGR6NC.js?v=2061f6f9:2219
+PlacePicker2 @ chunk-IQ3BCYC6.js?v=2061f6f9:766
+(anonymous) @ AddressAutocomplete.tsx:112
+commitHookEffectListMount @ chunk-LPF6KSF2.js?v=2061f6f9:16963
+commitPassiveMountOnFiber @ chunk-LPF6KSF2.js?v=2061f6f9:18206
+commitPassiveMountEffects_complete @ chunk-LPF6KSF2.js?v=2061f6f9:18179
+commitPassiveMountEffects_begin @ chunk-LPF6KSF2.js?v=2061f6f9:18169
+commitPassiveMountEffects @ chunk-LPF6KSF2.js?v=2061f6f9:18159
+flushPassiveEffectsImpl @ chunk-LPF6KSF2.js?v=2061f6f9:19543
+flushPassiveEffects @ chunk-LPF6KSF2.js?v=2061f6f9:19500
+(anonymous) @ chunk-LPF6KSF2.js?v=2061f6f9:19381
+workLoop @ chunk-LPF6KSF2.js?v=2061f6f9:197
+flushWork @ chunk-LPF6KSF2.js?v=2061f6f9:176
+performWorkUntilDeadline @ chunk-LPF6KSF2.js?v=2061f6f9:384Understand this warning
+AddressAutocomplete.tsx:69 You must enable Billing on the Google Cloud Project at https://console.cloud.google.com/project/_/billing/enable Learn more at https://developers.google.com/maps/gmp-get-started Places API error: BillingNotEnabledMapError
+https://developers.google.com/maps/documentation/javascript/error-messages#billing-not-enabled-map-error
+(anonymous) @ rrweb-plugin-console-record.js:160
+console.error @ AddressAutocomplete.tsx:69
+_.Fm @ main.js:176
+(anonymous) @ places_impl.js:11
+(anonymous) @ places_impl.js:9
+e @ places_impl.js:7
+c @ common.js:111
+(anonymous) @ AutocompletionService.GetPredictions?1s51&4sen-US&7scountry%3Aus&15e3&20s534D41F5C8274AD6BB37D399EF4BB837ka1g&21m1&2e1&r_url=https%3A%2F%2Fc75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev%2Fjobs%2Fca4d54df-274b-4a09-9930-d0641bea79d2%2Fedit&callback=_xdc_._ih7th9&key=AIzaSyCtegxRz1ZN6h80u2xsvPWYr3RvIj0zYGM&token=24876:1Understand this error
