@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TextToPlanInput } from "@/components/ai/TextToPlanInput";
 import { SmartScheduling } from "@/components/ai/SmartScheduling";
 import { FollowUpComposer } from "@/components/ai/FollowUpComposer";
 import { VoiceNoteSummarizer } from "@/components/ai/VoiceNoteSummarizer";
+import { VoiceNotesHistory } from "@/components/ai/VoiceNotesHistory";
 import { ReferralMessageAI } from "@/components/ai/ReferralMessageAI";
 import { BookingInsightsDashboard } from "@/components/ai/BookingInsightsDashboard";
 import { UnlockNudge } from "@/components/ai/UnlockNudge";
@@ -102,11 +104,22 @@ export default function AITools() {
       category: "create",
       gradient: "from-rose-500 to-pink-500",
       component: (
-        <VoiceNoteSummarizer
-          onSummaryComplete={(summary) => {
-            console.log("Summary:", summary);
-          }}
-        />
+        <Tabs defaultValue="record" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="record" data-testid="tab-record">Record</TabsTrigger>
+            <TabsTrigger value="history" data-testid="tab-history">Saved Notes</TabsTrigger>
+          </TabsList>
+          <TabsContent value="record">
+            <VoiceNoteSummarizer
+              onSummaryComplete={(summary) => {
+                console.log("Summary:", summary);
+              }}
+            />
+          </TabsContent>
+          <TabsContent value="history">
+            <VoiceNotesHistory />
+          </TabsContent>
+        </Tabs>
       ),
     },
     {

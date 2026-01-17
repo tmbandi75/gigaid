@@ -1,12 +1,27 @@
 import { useState, useRef } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { Mic, MicOff, Loader2, FileText, Copy, Check, Sparkles } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { 
+  Mic, 
+  MicOff, 
+  Loader2, 
+  FileText, 
+  Copy, 
+  Check, 
+  Sparkles, 
+  Save,
+  Plus,
+  Link as LinkIcon,
+  CheckCircle
+} from "lucide-react";
+import type { Job } from "@shared/schema";
 
 interface VoiceNoteSummary {
   transcript: string;
@@ -17,15 +32,26 @@ interface VoiceNoteSummary {
 
 interface VoiceNoteSummarizerProps {
   onSummaryComplete?: (summary: VoiceNoteSummary) => void;
+  onNoteSaved?: (noteId: string) => void;
 }
 
-export function VoiceNoteSummarizer({ onSummaryComplete }: VoiceNoteSummarizerProps) {
+export function VoiceNoteSummarizer({ onSummaryComplete, onNoteSaved }: VoiceNoteSummarizerProps) {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [summary, setSummary] = useState<VoiceNoteSummary | null>(null);
   const [copied, setCopied] = useState(false);
+  const [savedNoteId, setSavedNoteId] = useState<string | null>(null);
+  const [showJobSelector, setShowJobSelector] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string>("");
   const recognitionRef = useRef<any>(null);
+
+  const { data: jobs = [] } = useQuery<Job[]>({
+    queryKey: ["/api/jobs"],
+  });
+
+  const activeJobs = jobs.filter(j => j.status !== "completed" && j.status !== "cancelled");
 
   const summarizeMutation = useMutation({
     mutationFn: async (text: string) => {
@@ -39,6 +65,38 @@ export function VoiceNoteSummarizer({ onSummaryComplete }: VoiceNoteSummarizerPr
     },
     onError: () => {
       toast({ title: "Failed to summarize", variant: "destructive" });
+    },
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: { transcript: string; summary: string; keyPoints: string[]; type: string; jobId?: string }) => {
+      const response = await apiRequest("POST", "/api/voice-notes", data);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setSavedNoteId(data.id);
+      onNoteSaved?.(data.id);
+      queryClient.invalidateQueries({ queryKey: ["/api/voice-notes"] });
+      toast({ title: "Voice note saved!" });
+    },
+    onError: () => {
+      toast({ title: "Failed to save note", variant: "destructive" });
+    },
+  });
+
+  const attachToJobMutation = useMutation({
+    mutationFn: async ({ noteId, jobId }: { noteId: string; jobId: string }) => {
+      const response = await apiRequest("PATCH", `/api/voice-notes/${noteId}`, { jobId });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/voice-notes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      setShowJobSelector(false);
+      toast({ title: "Note attached to job!" });
+    },
+    onError: () => {
+      toast({ title: "Failed to attach note", variant: "destructive" });
     },
   });
 
@@ -97,6 +155,42 @@ export function VoiceNoteSummarizer({ onSummaryComplete }: VoiceNoteSummarizerPr
     }
   };
 
+  const handleSave = () => {
+    if (summary && transcript) {
+      saveMutation.mutate({
+        transcript: transcript,
+        summary: summary.summary,
+        keyPoints: summary.keyPoints || [],
+        type: summary.type || "other",
+      });
+    }
+  };
+
+  const handleCreateJob = () => {
+    if (summary) {
+      const params = new URLSearchParams();
+      params.set("description", summary.summary);
+      if (summary.keyPoints.length > 0) {
+        params.set("notes", summary.keyPoints.join("\n"));
+      }
+      navigate(`/jobs/new?${params.toString()}`);
+    }
+  };
+
+  const handleAttachToJob = () => {
+    if (savedNoteId && selectedJobId) {
+      attachToJobMutation.mutate({ noteId: savedNoteId, jobId: selectedJobId });
+    }
+  };
+
+  const handleNewRecording = () => {
+    setTranscript("");
+    setSummary(null);
+    setSavedNoteId(null);
+    setShowJobSelector(false);
+    setSelectedJobId("");
+  };
+
   const typeLabels = {
     job: "Job Related",
     update: "Status Update",
@@ -124,7 +218,7 @@ export function VoiceNoteSummarizer({ onSummaryComplete }: VoiceNoteSummarizerPr
           <Button
             size="lg"
             variant={isRecording ? "destructive" : "default"}
-            className="h-16 w-16 rounded-full"
+            className="rounded-full"
             onClick={isRecording ? stopRecording : startRecording}
             disabled={summarizeMutation.isPending}
             data-testid="button-record-voice"
@@ -168,9 +262,17 @@ export function VoiceNoteSummarizer({ onSummaryComplete }: VoiceNoteSummarizerPr
 
         {summary && (
           <div className="space-y-3 p-3 rounded-lg bg-muted/50">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <p className="text-sm font-medium">Summary</p>
-              <Badge className={typeColors[summary.type]}>{typeLabels[summary.type]}</Badge>
+              <div className="flex items-center gap-2">
+                {savedNoteId && (
+                  <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Saved
+                  </Badge>
+                )}
+                <Badge className={typeColors[summary.type]}>{typeLabels[summary.type]}</Badge>
+              </div>
             </div>
             <p className="text-sm">{summary.summary}</p>
             
@@ -188,10 +290,93 @@ export function VoiceNoteSummarizer({ onSummaryComplete }: VoiceNoteSummarizerPr
               </div>
             )}
 
-            <Button variant="outline" size="sm" onClick={handleCopy} data-testid="button-copy-summary">
-              {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
-              {copied ? "Copied!" : "Copy Summary"}
-            </Button>
+            <div className="flex flex-wrap gap-2 pt-2">
+              <Button variant="outline" size="sm" onClick={handleCopy} data-testid="button-copy-summary">
+                {copied ? <Check className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
+                {copied ? "Copied" : "Copy"}
+              </Button>
+              
+              {!savedNoteId && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleSave}
+                  disabled={saveMutation.isPending}
+                  data-testid="button-save-note"
+                >
+                  {saveMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-1" />
+                  )}
+                  Save
+                </Button>
+              )}
+
+              <Button 
+                variant="default" 
+                size="sm" 
+                onClick={handleCreateJob}
+                data-testid="button-create-job-from-note"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Create Job
+              </Button>
+
+              {savedNoteId && !showJobSelector && activeJobs.length > 0 && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setShowJobSelector(true)}
+                  data-testid="button-attach-to-job"
+                >
+                  <LinkIcon className="h-4 w-4 mr-1" />
+                  Attach to Job
+                </Button>
+              )}
+            </div>
+
+            {showJobSelector && activeJobs.length > 0 && (
+              <div className="flex gap-2 pt-2">
+                <Select value={selectedJobId} onValueChange={setSelectedJobId}>
+                  <SelectTrigger className="flex-1" data-testid="select-job">
+                    <SelectValue placeholder="Select a job..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeJobs.map((job) => (
+                      <SelectItem key={job.id} value={job.id}>
+                        {job.title} - {job.clientName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="sm"
+                  onClick={handleAttachToJob}
+                  disabled={!selectedJobId || attachToJobMutation.isPending}
+                  data-testid="button-confirm-attach"
+                >
+                  {attachToJobMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {savedNoteId && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleNewRecording}
+                className="w-full mt-2"
+                data-testid="button-new-recording"
+              >
+                <Mic className="h-4 w-4 mr-1" />
+                New Recording
+              </Button>
+            )}
           </div>
         )}
       </CardContent>
