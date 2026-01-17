@@ -155,6 +155,7 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
     placePicker.setAttribute("country", "us");
     placePicker.setAttribute("placeholder", placeholder);
     placePicker.style.width = "100%";
+    placePicker.style.minWidth = "300px";
     placePicker.style.setProperty("--gmpx-color-surface", "hsl(var(--background))");
     placePicker.style.setProperty("--gmpx-color-on-surface", "hsl(var(--foreground))");
     placePicker.style.setProperty("--gmpx-color-on-surface-variant", "hsl(var(--muted-foreground))");
