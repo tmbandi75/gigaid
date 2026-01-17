@@ -949,7 +949,7 @@ export async function registerRoutes(
         return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
       };
 
-      const confirmUrl = `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : "https://gigaid.com"}/confirm/${confirmToken}`;
+      const confirmUrl = `${process.env.FRONTEND_URL || "https://account.gigaid.ai"}/confirm/${confirmToken}`;
       
       const smsMessage = `You're booked for ${formatDate(job.scheduledDate)} at ${formatTime(job.scheduledTime)}. Reply YES to confirm. Or click: ${confirmUrl}`;
 
@@ -1734,7 +1734,11 @@ export async function registerRoutes(
   // Public invoice view by token (for customers)
   app.get("/api/public/invoice/:token", async (req, res) => {
     try {
-      const invoice = await storage.getInvoiceByPublicToken(req.params.token);
+      // Try to find by publicToken first, then fall back to shareLink
+      let invoice = await storage.getInvoiceByPublicToken(req.params.token);
+      if (!invoice) {
+        invoice = await storage.getInvoiceByShareLink(req.params.token);
+      }
       if (!invoice) {
         return res.status(404).json({ error: "Invoice not found" });
       }
@@ -3988,7 +3992,7 @@ Final price confirmed onsite.`;
         return res.status(400).json({ error: "Booking link not set up yet" });
       }
 
-      const bookingUrl = `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : "https://gigaid.com"}/book/${user.publicProfileSlug}`;
+      const bookingUrl = `${process.env.FRONTEND_URL || "https://account.gigaid.ai"}/book/${user.publicProfileSlug}`;
       
       const message = `Here's your GigAid booking link! Share it with your next customer: ${bookingUrl}`;
 
@@ -4482,8 +4486,8 @@ Return ONLY the message text, no JSON or formatting.`
           },
         ],
         mode: "payment",
-        success_url: `${req.protocol}://${req.get("host")}/invoice/${invoice.id}/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${req.protocol}://${req.get("host")}/invoice/${invoice.id}`,
+        success_url: `${process.env.FRONTEND_URL || "https://account.gigaid.ai"}/invoice/${invoice.id}/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.FRONTEND_URL || "https://account.gigaid.ai"}/invoice/${invoice.id}`,
         metadata: {
           invoiceId: invoice.id,
           userId: invoice.userId,
@@ -4546,8 +4550,8 @@ Return ONLY the message text, no JSON or formatting.`
           },
         ],
         mode: "payment",
-        success_url: `${req.protocol}://${req.get("host")}/payment-success/${job.id}?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${req.protocol}://${req.get("host")}/payment/${job.id}`,
+        success_url: `${process.env.FRONTEND_URL || "https://account.gigaid.ai"}/payment-success/${job.id}?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.FRONTEND_URL || "https://account.gigaid.ai"}/payment/${job.id}`,
         metadata: {
           jobId: job.id,
           userId: job.userId,
