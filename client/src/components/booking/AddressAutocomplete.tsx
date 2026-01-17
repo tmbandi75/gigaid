@@ -9,6 +9,8 @@ interface AddressComponents {
   state: string;
   zipCode: string;
   fullAddress: string;
+  lat?: number;
+  lng?: number;
 }
 
 interface AddressAutocompleteProps {
@@ -115,9 +117,9 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
         autocomplete.addEventListener("gmp-placeselect", async (event: any) => {
           const place = event.place;
           
-          // Fetch address components
+          // Fetch address components and location
           await place.fetchFields({
-            fields: ["addressComponents", "formattedAddress", "displayName"],
+            fields: ["addressComponents", "formattedAddress", "displayName", "location"],
           });
 
           const components = place.addressComponents || [];
@@ -146,6 +148,10 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
 
           const streetAddress = [streetNumber, route].filter(Boolean).join(" ");
           const fullAddress = place.formattedAddress || place.displayName || "";
+          
+          // Extract coordinates
+          const lat = place.location?.lat?.();
+          const lng = place.location?.lng?.();
 
           onChange(fullAddress, {
             streetAddress,
@@ -153,6 +159,8 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
             state,
             zipCode,
             fullAddress,
+            lat,
+            lng,
           });
         });
 

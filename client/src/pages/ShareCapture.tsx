@@ -44,6 +44,7 @@ import {
   SiWhatsapp,
   SiLinkedin
 } from "react-icons/si";
+import { AddressAutocomplete } from "@/components/booking/AddressAutocomplete";
 
 interface ParsedLead {
   clientName: string;
@@ -561,12 +562,10 @@ Hi, I need a plumber to fix a leaky faucet. My name is Sarah, call me at 555-123
                   <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
                     <MapPin className="w-3.5 h-3.5" /> Location
                   </label>
-                  <Input
-                    data-testid="input-location"
+                  <AddressAutocomplete
                     value={editedLead.location}
-                    onChange={(e) => setEditedLead({ ...editedLead, location: e.target.value })}
-                    placeholder="Address or area"
-                    className="h-12 text-base bg-card border-2 focus:border-primary"
+                    onChange={(fullAddress) => setEditedLead({ ...editedLead, location: fullAddress })}
+                    placeholder="Start typing an address..."
                   />
                 </div>
 

@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Copy, Check, Edit2, DollarSign, Calendar, MapPin, Clock, User, Sparkles, Send, PartyPopper } from "lucide-react";
 import type { ParsedJobFields, FieldConfidence, PaymentConfig } from "@shared/schema";
+import { AddressAutocomplete } from "@/components/booking/AddressAutocomplete";
 
 type Step = "paste" | "preview" | "sent";
 
@@ -281,11 +282,10 @@ export default function QuickBook() {
                   <div className="flex-1">
                     <Label className="text-xs text-muted-foreground">Location</Label>
                     {isEditing ? (
-                      <Input
+                      <AddressAutocomplete
                         value={fields.locationText || ""}
-                        onChange={(e) => handleFieldChange("locationText", e.target.value)}
-                        placeholder="Enter address"
-                        data-testid="input-location"
+                        onChange={(fullAddress) => handleFieldChange("locationText", fullAddress)}
+                        placeholder="Start typing an address..."
                       />
                     ) : (
                       <p className="font-medium">{fields.locationText || "Not specified"}</p>

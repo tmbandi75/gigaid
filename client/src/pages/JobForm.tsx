@@ -60,6 +60,7 @@ import type { Job, JobResolutionType } from "@shared/schema";
 import { GetPaidDialog } from "@/components/job/GetPaidDialog";
 import { JobLocationMap } from "@/components/JobLocationMap";
 import { JobResolutionModal } from "@/components/jobs/JobResolutionModal";
+import { AddressAutocomplete } from "@/components/booking/AddressAutocomplete";
 
 interface ScheduleSuggestion {
   date: string;
@@ -354,6 +355,9 @@ export default function JobForm() {
   } | null>(null);
   const { celebration, celebrate, dismiss: dismissCelebration } = useCelebration();
   
+  // Coordinates from address autocomplete
+  const [addressCoords, setAddressCoords] = useState<{ lat?: number; lng?: number }>({});
+  
   // Revenue Protection: Resolution modal state
   const [showResolutionModal, setShowResolutionModal] = useState(false);
   const [pendingCompletionData, setPendingCompletionData] = useState<JobFormData | null>(null);
@@ -579,6 +583,8 @@ export default function JobForm() {
         userId: "demo-user",
         status: "scheduled",
         leadId: leadId || undefined, // Auto-link lead to job
+        customerLat: addressCoords.lat,
+        customerLng: addressCoords.lng,
       };
       return apiRequest("POST", "/api/jobs", payload);
     },
@@ -617,7 +623,7 @@ export default function JobForm() {
         .join(" ")
         .trim();
       
-      const payload = {
+      const payload: Record<string, any> = {
         title: data.title,
         serviceType: data.serviceType,
         description: data.description,
@@ -630,6 +636,12 @@ export default function JobForm() {
         clientPhone: data.clientPhone,
         status: data.status,
       };
+      
+      // Include coordinates if we have new ones from address selection
+      if (addressCoords.lat !== undefined && addressCoords.lng !== undefined) {
+        payload.customerLat = addressCoords.lat;
+        payload.customerLng = addressCoords.lng;
+      }
       
       const response = await apiRequest("PATCH", `/api/jobs/${id}`, payload);
       return { data, clientName, response };
@@ -1095,11 +1107,15 @@ export default function JobForm() {
                           Location
                         </FormLabel>
                         <FormControl>
-                          <Input 
-                            placeholder="Address"
-                            className="h-12"
-                            {...field}
-                            data-testid="input-location"
+                          <AddressAutocomplete
+                            value={field.value || ""}
+                            onChange={(fullAddress, components) => {
+                              field.onChange(fullAddress);
+                              if (components.lat && components.lng) {
+                                setAddressCoords({ lat: components.lat, lng: components.lng });
+                              }
+                            }}
+                            placeholder="Start typing an address..."
                           />
                         </FormControl>
                         <FormMessage />
