@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MapPin, AlertCircle, Loader2 } from "lucide-react";
@@ -71,7 +71,13 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
   
   const containerRef = useRef<HTMLDivElement>(null);
   const autocompleteElementRef = useRef<any>(null);
+  const onChangeRef = useRef(onChange);
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+  // Keep the ref updated with the latest onChange
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useEffect(() => {
     if (!apiKey) {
@@ -153,7 +159,7 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
           const lat = place.location?.lat?.();
           const lng = place.location?.lng?.();
 
-          onChange(fullAddress, {
+          onChangeRef.current(fullAddress, {
             streetAddress,
             city,
             state,
@@ -188,7 +194,7 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
         autocompleteElementRef.current.remove();
       }
     };
-  }, [apiKey, onChange]);
+  }, [apiKey]);
 
   const handleManualChange = (field: keyof typeof manualFields, val: string) => {
     const updated = { ...manualFields, [field]: val };
