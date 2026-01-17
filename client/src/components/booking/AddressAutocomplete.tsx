@@ -100,14 +100,22 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
     }
 
     let mounted = true;
+    let initTimeout: NodeJS.Timeout;
 
     const init = async () => {
       try {
         await loadGoogleMapsScript(apiKey);
         
-        if (!mounted || !inputRef.current) return;
+        if (!mounted) return;
 
         const google = (window as any).google;
+        if (!google?.maps?.places?.Autocomplete) {
+          throw new Error("Places library not available");
+        }
+
+        if (!inputRef.current) {
+          throw new Error("Input ref not available");
+        }
         
         const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
           componentRestrictions: { country: "us" },
@@ -169,7 +177,9 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
         });
 
         autocompleteRef.current = autocomplete;
-        setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+        }
       } catch (err: any) {
         console.error("[AddressAutocomplete] Failed to load:", err?.message || err);
         if (mounted) {
@@ -180,10 +190,21 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
       }
     };
 
+    // Safety timeout - if loading takes more than 8 seconds, fall back to manual mode
+    initTimeout = setTimeout(() => {
+      if (mounted && isLoading) {
+        console.warn("[AddressAutocomplete] Timeout - falling back to manual mode");
+        setError("Address suggestions unavailable");
+        setManualMode(true);
+        setIsLoading(false);
+      }
+    }, 8000);
+
     init();
 
     return () => {
       mounted = false;
+      clearTimeout(initTimeout);
       if (autocompleteRef.current) {
         const google = (window as any).google;
         if (google?.maps?.event) {
@@ -272,17 +293,6 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className={className}>
-        <div className="flex items-center gap-2 h-10 px-3 border rounded-md bg-muted/50">
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">Loading address search...</span>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className={className}>
       <div className="relative">
@@ -292,11 +302,15 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
           type="text"
           value={inputValue}
           onChange={handleInputChange}
-          placeholder={placeholder}
+          placeholder={isLoading ? "Loading address search..." : placeholder}
           className="pl-9"
           data-testid="input-address-autocomplete"
           autoComplete="off"
+          disabled={isLoading}
         />
+        {isLoading && (
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+        )}
       </div>
       <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
         <MapPin className="h-2.5 w-2.5" />
