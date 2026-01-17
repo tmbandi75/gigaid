@@ -284,7 +284,13 @@ export default function QuickBook() {
                     {isEditing ? (
                       <AddressAutocomplete
                         value={fields.locationText || ""}
-                        onChange={(fullAddress) => handleFieldChange("locationText", fullAddress)}
+                        onChange={(fullAddress, components) => {
+                          handleFieldChange("locationText", fullAddress);
+                          if (components?.lat && components?.lng) {
+                            handleFieldChange("locationLat", components.lat);
+                            handleFieldChange("locationLng", components.lng);
+                          }
+                        }}
                         placeholder="Start typing an address..."
                       />
                     ) : (

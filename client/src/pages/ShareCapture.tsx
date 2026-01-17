@@ -142,6 +142,8 @@ export default function ShareCapture() {
     source: "manual",
     sourceUrl: "",
     location: "",
+    locationLat: undefined as number | undefined,
+    locationLng: undefined as number | undefined,
   });
 
   const { data: profile } = useQuery<{ name: string; services: string[] }>({
@@ -564,7 +566,14 @@ Hi, I need a plumber to fix a leaky faucet. My name is Sarah, call me at 555-123
                   </label>
                   <AddressAutocomplete
                     value={editedLead.location}
-                    onChange={(fullAddress) => setEditedLead({ ...editedLead, location: fullAddress })}
+                    onChange={(fullAddress, components) => {
+                      setEditedLead({ 
+                        ...editedLead, 
+                        location: fullAddress,
+                        locationLat: components?.lat,
+                        locationLng: components?.lng
+                      });
+                    }}
                     placeholder="Start typing an address..."
                   />
                 </div>

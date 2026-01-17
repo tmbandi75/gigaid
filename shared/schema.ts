@@ -966,6 +966,8 @@ export interface ParsedJobFields {
   dateTimeStart?: string;
   dateTimeEnd?: string;
   locationText?: string;
+  locationLat?: number;
+  locationLng?: number;
   priceAmount?: number;
   currency?: string;
   durationMins?: number;
