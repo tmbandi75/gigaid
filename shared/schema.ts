@@ -1179,4 +1179,147 @@ export const insertSmsMessageSchema = createInsertSchema(smsMessages).omit({
 export type InsertSmsMessage = z.infer<typeof insertSmsMessageSchema>;
 export type SmsMessage = typeof smsMessages.$inferSelect;
 
+// ============================================================
+// CO-PILOT / ADMIN COCKPIT - Founder analytics and guidance
+// ============================================================
+
+// Canonical Events - All business events for analytics
+export const eventsCanonical = pgTable("events_canonical", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  occurredAt: text("occurred_at").notNull(),
+  userId: varchar("user_id"), // nullable for system events
+  orgId: varchar("org_id"), // nullable
+  eventName: text("event_name").notNull(),
+  context: text("context"), // JSON
+  source: text("source").notNull().default("system"), // web, mobile, system
+  version: integer("version").notNull().default(1),
+});
+
+export const insertEventsCanonicalSchema = createInsertSchema(eventsCanonical).omit({
+  id: true,
+});
+
+export type InsertEventsCanonical = z.infer<typeof insertEventsCanonicalSchema>;
+export type EventsCanonical = typeof eventsCanonical.$inferSelect;
+
+// Signal types for Co-Pilot alerts
+export const copilotSignalTypes = ["informational", "warning", "critical", "opportunity"] as const;
+export type CopilotSignalType = (typeof copilotSignalTypes)[number];
+
+export const copilotSignalStatuses = ["active", "resolved"] as const;
+export type CopilotSignalStatus = (typeof copilotSignalStatuses)[number];
+
+// Co-Pilot Signals - Alerts and anomalies detected
+export const copilotSignals = pgTable("copilot_signals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  createdAt: text("created_at").notNull(),
+  signalType: text("signal_type").notNull(), // informational, warning, critical, opportunity
+  signalKey: text("signal_key").notNull(), // e.g. activation_rate_down_wow
+  windowStart: text("window_start"),
+  windowEnd: text("window_end"),
+  severity: integer("severity").notNull().default(50), // 0-100
+  summary: text("summary").notNull(),
+  explanation: text("explanation"), // why it fired
+  status: text("status").notNull().default("active"), // active, resolved
+  resolvedAt: text("resolved_at"),
+  links: text("links"), // JSON - deep links to external dashboards
+});
+
+export const insertCopilotSignalSchema = createInsertSchema(copilotSignals).omit({
+  id: true,
+});
+
+export type InsertCopilotSignal = z.infer<typeof insertCopilotSignalSchema>;
+export type CopilotSignal = typeof copilotSignals.$inferSelect;
+
+// Health states for recommendations
+export const copilotHealthStates = ["green", "yellow", "red"] as const;
+export type CopilotHealthState = (typeof copilotHealthStates)[number];
+
+// Primary bottlenecks
+export const copilotBottlenecks = ["activation", "retention", "monetization"] as const;
+export type CopilotBottleneck = (typeof copilotBottlenecks)[number];
+
+export const copilotRecommendationStatuses = ["active", "expired", "superseded"] as const;
+export type CopilotRecommendationStatus = (typeof copilotRecommendationStatuses)[number];
+
+// Co-Pilot Recommendations - Focus guidance
+export const copilotRecommendations = pgTable("copilot_recommendations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  createdAt: text("created_at").notNull(),
+  recKey: text("rec_key").notNull(), // e.g. focus_send_estimates
+  healthState: text("health_state").notNull(), // green, yellow, red
+  primaryBottleneck: text("primary_bottleneck").notNull(), // activation, retention, monetization
+  biggestFunnelLeak: text("biggest_funnel_leak"),
+  recommendationText: text("recommendation_text").notNull(),
+  rationale: text("rationale"), // explains drivers + metrics
+  urgencyScore: integer("urgency_score").notNull().default(50), // 0-100
+  impactEstimate: text("impact_estimate"), // JSON - revenue_at_risk, users_affected
+  expiresAt: text("expires_at"),
+  status: text("status").notNull().default("active"), // active, expired, superseded
+});
+
+export const insertCopilotRecommendationSchema = createInsertSchema(copilotRecommendations).omit({
+  id: true,
+});
+
+export type InsertCopilotRecommendation = z.infer<typeof insertCopilotRecommendationSchema>;
+export type CopilotRecommendation = typeof copilotRecommendations.$inferSelect;
+
+// Metrics Daily - Aggregated daily rollup for fast queries
+export const metricsDaily = pgTable("metrics_daily", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  metricDate: text("metric_date").notNull().unique(), // YYYY-MM-DD
+  totalUsers: integer("total_users").notNull().default(0),
+  newUsersToday: integer("new_users_today").notNull().default(0),
+  activeUsers7d: integer("active_users_7d").notNull().default(0),
+  activeUsers30d: integer("active_users_30d").notNull().default(0),
+  payingCustomers: integer("paying_customers").notNull().default(0),
+  mrr: integer("mrr").notNull().default(0), // cents
+  netChurnPct: doublePrecision("net_churn_pct").notNull().default(0),
+  firstBookingRate: doublePrecision("first_booking_rate"),
+  medianTimeToFirstBooking: doublePrecision("median_time_to_first_booking"), // hours
+  failedPayments24h: integer("failed_payments_24h").notNull().default(0),
+  failedPayments7d: integer("failed_payments_7d").notNull().default(0),
+  revenueAtRisk: integer("revenue_at_risk").notNull().default(0), // cents
+  chargebacks30d: integer("chargebacks_30d").notNull().default(0),
+  payingUsersInactive7d: integer("paying_users_inactive_7d").notNull().default(0),
+  churnedUsers7d: integer("churned_users_7d").notNull().default(0),
+  churnedUsers30d: integer("churned_users_30d").notNull().default(0),
+  bookingsPerActiveUser: doublePrecision("bookings_per_active_user"),
+  totalLeads: integer("total_leads").notNull().default(0),
+  leadsConverted: integer("leads_converted").notNull().default(0),
+  totalJobs: integer("total_jobs").notNull().default(0),
+  jobsCompleted: integer("jobs_completed").notNull().default(0),
+  totalInvoices: integer("total_invoices").notNull().default(0),
+  invoicesPaid: integer("invoices_paid").notNull().default(0),
+  createdAt: text("created_at"),
+});
+
+export const insertMetricsDailySchema = createInsertSchema(metricsDaily).omit({
+  id: true,
+});
+
+export type InsertMetricsDaily = z.infer<typeof insertMetricsDailySchema>;
+export type MetricsDaily = typeof metricsDaily.$inferSelect;
+
+// Attribution Daily - Channel performance tracking
+export const attributionDaily = pgTable("attribution_daily", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  metricDate: text("metric_date").notNull(), // YYYY-MM-DD
+  channel: text("channel").notNull(), // utm_source / referrer grouping
+  signups: integer("signups").notNull().default(0),
+  activations: integer("activations").notNull().default(0),
+  activationRate: doublePrecision("activation_rate"),
+  notes: text("notes"), // JSON
+  createdAt: text("created_at"),
+});
+
+export const insertAttributionDailySchema = createInsertSchema(attributionDaily).omit({
+  id: true,
+});
+
+export type InsertAttributionDaily = z.infer<typeof insertAttributionDailySchema>;
+export type AttributionDaily = typeof attributionDaily.$inferSelect;
+
 export * from "./models/chat";

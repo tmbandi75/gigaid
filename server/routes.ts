@@ -33,6 +33,8 @@ import { embedDepositMetadata, extractDepositMetadata, DepositMetadata, DerivedD
 import { generateCelebrationMessage } from "./celebration";
 import { generateNudgesForUser } from "./nudgeGenerator";
 import { createSupportTicket, getTicketsByEmail, getTicketById, addTicketComment, getTicketComments } from "./zendesk";
+import cockpitRoutes from "./copilot/routes";
+import { startCopilotScheduler } from "./copilot/engine";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -41,6 +43,10 @@ export async function registerRoutes(
   const defaultUserId = "demo-user";
 
   registerObjectStorageRoutes(app);
+  
+  app.use("/api/admin/cockpit", cockpitRoutes);
+  
+  startCopilotScheduler();
 
   app.get("/api/profile", async (req, res) => {
     try {

@@ -45,6 +45,7 @@ import QuickBook from "@/pages/QuickBook";
 import QuickBookConfirm from "@/pages/QuickBookConfirm";
 import MoneyPlanPage from "@/pages/MoneyPlanPage";
 import Messages from "@/pages/Messages";
+import AdminCockpit from "@/pages/AdminCockpit";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -81,6 +82,7 @@ function Router() {
       <Route path="/money-plan" component={MoneyPlanPage} />
       <Route path="/messages" component={Messages} />
       <Route path="/owner" component={OwnerView} />
+      <Route path="/admin/cockpit" component={AdminCockpit} />
       <Route component={NotFound} />
     </Switch>
   );
