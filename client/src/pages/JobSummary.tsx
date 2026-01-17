@@ -156,6 +156,37 @@ export default function JobSummary() {
     },
   });
 
+  const updateLocationMutation = useMutation({
+    mutationFn: async () => {
+      return new Promise<{ lat: number; lng: number }>((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(new Error("Geolocation not supported"));
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const { latitude, longitude } = position.coords;
+            await apiRequest("PATCH", `/api/jobs/${id}`, {
+              providerLat: latitude,
+              providerLng: longitude,
+              providerLocationUpdatedAt: new Date().toISOString(),
+            });
+            resolve({ lat: latitude, lng: longitude });
+          },
+          (error) => reject(error),
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] });
+      toast({ title: "Location updated!", description: "Your current location has been saved." });
+    },
+    onError: () => {
+      toast({ title: "Failed to get location", description: "Please allow location access and try again.", variant: "destructive" });
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -330,6 +361,8 @@ export default function JobSummary() {
                     providerLng={job.providerLng ?? undefined}
                     providerLocationUpdatedAt={job.providerLocationUpdatedAt ?? undefined}
                     jobLocation={job.location || ""}
+                    onUpdateLocation={() => updateLocationMutation.mutate()}
+                    isUpdatingLocation={updateLocationMutation.isPending}
                   />
                 </div>
               )}
