@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MapPin, AlertCircle } from "lucide-react";
@@ -21,10 +21,53 @@ interface AddressAutocompleteProps {
   className?: string;
 }
 
+// Track global API loader state
+let apiLoaderKey: string | null = null;
+let apiLoadPromise: Promise<void> | null = null;
+
+async function ensureApiLoaded(apiKey: string): Promise<void> {
+  // Check if we need to reinitialize due to key change
+  if (apiLoaderKey && apiLoaderKey !== apiKey) {
+    const existingLoader = document.querySelector("gmpx-api-loader");
+    if (existingLoader) {
+      existingLoader.remove();
+    }
+    apiLoaderKey = null;
+    apiLoadPromise = null;
+  }
+  
+  if (apiLoaderKey === apiKey) return;
+  
+  if (apiLoadPromise) return apiLoadPromise;
+  
+  apiLoadPromise = (async () => {
+    try {
+      await import("@googlemaps/extended-component-library/api_loader.js");
+      await import("@googlemaps/extended-component-library/place_picker.js");
+      
+      // Create global API loader
+      const existingLoader = document.querySelector("gmpx-api-loader");
+      if (!existingLoader) {
+        const apiLoader = document.createElement("gmpx-api-loader");
+        apiLoader.setAttribute("key", apiKey);
+        apiLoader.setAttribute("solution-channel", "GMP_GE_mapsplatform_v1");
+        document.body.appendChild(apiLoader);
+      }
+      
+      apiLoaderKey = apiKey;
+    } catch (err) {
+      apiLoadPromise = null;
+      throw err;
+    }
+  })();
+  
+  return apiLoadPromise;
+}
+
 export function AddressAutocomplete({ value, onChange, placeholder = "Start typing an address...", className }: AddressAutocompleteProps) {
   const [manualMode, setManualMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [apiLoaded, setApiLoaded] = useState(false);
+  const [ready, setReady] = useState(false);
   const [manualFields, setManualFields] = useState({
     streetAddress: "",
     city: "",
@@ -33,6 +76,7 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
   });
   
   const containerRef = useRef<HTMLDivElement>(null);
+  const placePickerRef = useRef<HTMLElement | null>(null);
   const onChangeRef = useRef(onChange);
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
@@ -48,19 +92,12 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
     }
   }, [apiKey]);
 
-  // Listen for Google Maps API errors
+  // Listen for billing errors
   useEffect(() => {
-    const handleError = (event: ErrorEvent) => {
-      const message = event.message || "";
-      if (message.includes("BillingNotEnabled") || message.includes("billing")) {
-        setManualMode(true);
-        setError("Google Maps requires billing - using manual entry");
-      }
-    };
-
-    // Also check for console errors related to billing
+    if (manualMode) return;
+    
     const originalError = console.error;
-    console.error = function(...args) {
+    const errorHandler = function(...args: any[]) {
       const message = args.join(" ");
       if (message.includes("BillingNotEnabled") || message.includes("enable Billing")) {
         setManualMode(true);
@@ -68,47 +105,52 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
       }
       originalError.apply(console, args);
     };
-
-    window.addEventListener("error", handleError);
+    
+    console.error = errorHandler;
     
     return () => {
-      window.removeEventListener("error", handleError);
       console.error = originalError;
     };
-  }, []);
+  }, [manualMode]);
 
-  // Initialize PlacePicker web component
+  // Load API
   useEffect(() => {
     if (!apiKey || manualMode) return;
-
-    const initPlacePicker = async () => {
+    
+    let cancelled = false;
+    
+    async function init() {
       try {
-        // Dynamically import the components
-        await import("@googlemaps/extended-component-library/api_loader.js");
-        await import("@googlemaps/extended-component-library/place_picker.js");
-        setApiLoaded(true);
+        await ensureApiLoaded(apiKey);
+        if (cancelled) return;
+        setReady(true);
       } catch (err) {
-        console.error("[AddressAutocomplete] Failed to load components:", err);
+        if (cancelled) return;
+        console.error("[AddressAutocomplete] Failed to load:", err);
         setManualMode(true);
         setError("Failed to load address lookup");
       }
+    }
+    
+    init();
+    
+    return () => {
+      cancelled = true;
     };
-
-    initPlacePicker();
   }, [apiKey, manualMode]);
 
-  // Setup the place picker after API loads
+  // Create/update place picker element
   useEffect(() => {
-    if (!apiLoaded || !containerRef.current || manualMode) return;
-
+    if (!ready || !containerRef.current || manualMode) return;
+    
     const container = containerRef.current;
     
-    // Create API loader
-    const apiLoader = document.createElement("gmpx-api-loader");
-    apiLoader.setAttribute("key", apiKey);
-    apiLoader.setAttribute("solution-channel", "GMP_GE_mapsplatform_v1");
+    // Update placeholder if element exists
+    if (placePickerRef.current) {
+      placePickerRef.current.setAttribute("placeholder", placeholder);
+      return;
+    }
     
-    // Create place picker
     const placePicker = document.createElement("gmpx-place-picker");
     placePicker.setAttribute("country", "us");
     placePicker.setAttribute("placeholder", placeholder);
@@ -120,8 +162,7 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
     placePicker.style.setProperty("--gmpx-font-family-base", "inherit");
     placePicker.style.setProperty("--gmpx-font-size-base", "0.875rem");
 
-    // Handle place selection
-    placePicker.addEventListener("gmpx-placechange", async (event: any) => {
+    const handlePlaceChange = async (event: any) => {
       try {
         const place = event.target?.value;
         if (!place) return;
@@ -172,21 +213,20 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
       } catch (err) {
         console.error("[AddressAutocomplete] Error processing place:", err);
       }
-    });
+    };
 
-    container.appendChild(apiLoader);
+    placePicker.addEventListener("gmpx-placechange", handlePlaceChange);
     container.appendChild(placePicker);
-
-    // Set a timeout to check if billing error occurs
-    const billingCheckTimeout = setTimeout(() => {
-      // If we haven't switched to manual mode, the API is working
-    }, 3000);
+    placePickerRef.current = placePicker;
 
     return () => {
-      clearTimeout(billingCheckTimeout);
-      container.innerHTML = "";
+      placePicker.removeEventListener("gmpx-placechange", handlePlaceChange);
+      if (placePickerRef.current && container.contains(placePickerRef.current)) {
+        container.removeChild(placePickerRef.current);
+      }
+      placePickerRef.current = null;
     };
-  }, [apiLoaded, manualMode, apiKey, placeholder]);
+  }, [ready, manualMode, placeholder]);
 
   const handleManualChange = (field: keyof typeof manualFields, val: string) => {
     const updated = { ...manualFields, [field]: val };
@@ -265,7 +305,7 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
   return (
     <div className={className}>
       <div ref={containerRef} data-testid="input-address-autocomplete" />
-      <div className="flex items-center justify-between mt-1">
+      <div className="flex items-center justify-between gap-2 mt-1">
         <p className="text-[10px] text-muted-foreground flex items-center gap-1">
           <MapPin className="h-2.5 w-2.5" />
           Powered by Google
