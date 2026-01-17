@@ -58,7 +58,10 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
     
     await client.send({
       to: options.to,
-      from: fromEmail,
+      from: {
+        email: fromEmail,
+        name: "GigAid Notification"
+      },
       subject: options.subject,
       text: options.text,
       html: options.html || options.text,
