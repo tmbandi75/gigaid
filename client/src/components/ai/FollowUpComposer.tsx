@@ -102,6 +102,9 @@ export function FollowUpComposer() {
       await apiRequest("POST", "/api/sms/send", {
         to: selectedClient.phone,
         message: message,
+        clientName: selectedClient.name,
+        relatedJobId: selectedClient.type === "job" ? selectedClient.id : null,
+        relatedLeadId: selectedClient.type === "lead" ? selectedClient.id : null,
       });
       toast({ title: "Message sent successfully!" });
       setMessage("");

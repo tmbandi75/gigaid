@@ -2063,15 +2063,25 @@ export async function registerRoutes(
     }
   });
 
-  // SMS Send Endpoint
+  // SMS Send Endpoint - logs outgoing messages to database
   app.post("/api/sms/send", async (req, res) => {
     try {
-      const { to, message } = req.body;
+      const { to, message, clientName, relatedJobId, relatedLeadId } = req.body;
       if (!to || !message) {
         return res.status(400).json({ error: "Phone number and message are required" });
       }
       const success = await sendSMS(to, message);
       if (success) {
+        // Log the outgoing message to the database
+        await storage.createSmsMessage({
+          userId: defaultUserId,
+          clientPhone: to,
+          clientName: clientName || null,
+          direction: "outbound",
+          body: message,
+          relatedJobId: relatedJobId || null,
+          relatedLeadId: relatedLeadId || null,
+        });
         res.json({ success: true, message: "SMS sent successfully" });
       } else {
         res.status(500).json({ error: "Failed to send SMS" });
@@ -2079,6 +2089,140 @@ export async function registerRoutes(
     } catch (error) {
       console.error("SMS send error:", error);
       res.status(500).json({ error: "Failed to send SMS" });
+    }
+  });
+
+  // Twilio Webhook for incoming SMS - routes replies to the correct gig worker
+  app.post("/api/sms/webhook", async (req, res) => {
+    try {
+      const { From, Body, MessageSid } = req.body;
+      
+      if (!From || !Body) {
+        console.error("Missing required fields in Twilio webhook:", req.body);
+        return res.status(400).send("Missing required fields");
+      }
+
+      // Find the last outbound message to this phone number to determine the worker
+      const lastOutbound = await storage.getLastOutboundMessageByPhone(From);
+      
+      if (lastOutbound) {
+        // Route the incoming message to the same worker
+        await storage.createSmsMessage({
+          userId: lastOutbound.userId,
+          clientPhone: From,
+          clientName: lastOutbound.clientName,
+          direction: "inbound",
+          body: Body,
+          twilioSid: MessageSid,
+          relatedJobId: lastOutbound.relatedJobId,
+          relatedLeadId: lastOutbound.relatedLeadId,
+          isRead: false,
+        });
+        console.log(`Incoming SMS from ${From} routed to worker ${lastOutbound.userId}`);
+      } else {
+        // No previous conversation found - route to default user
+        // In a multi-user system, you might handle this differently
+        await storage.createSmsMessage({
+          userId: defaultUserId,
+          clientPhone: From,
+          clientName: null,
+          direction: "inbound",
+          body: Body,
+          twilioSid: MessageSid,
+          isRead: false,
+        });
+        console.log(`Incoming SMS from ${From} - no previous conversation, routed to default user`);
+      }
+
+      // Respond to Twilio with empty TwiML to acknowledge receipt
+      res.set("Content-Type", "text/xml");
+      res.send("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response></Response>");
+    } catch (error) {
+      console.error("Twilio webhook error:", error);
+      res.status(500).send("Internal server error");
+    }
+  });
+
+  // SMS Inbox Endpoints
+  app.get("/api/sms/messages", async (req, res) => {
+    try {
+      const messages = await storage.getSmsMessages(defaultUserId);
+      res.json(messages);
+    } catch (error) {
+      console.error("SMS messages fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch messages" });
+    }
+  });
+
+  app.get("/api/sms/conversations", async (req, res) => {
+    try {
+      const messages = await storage.getSmsMessages(defaultUserId);
+      
+      // Group by client phone and get latest message per conversation
+      const conversationsMap = new Map<string, {
+        clientPhone: string;
+        clientName: string | null;
+        lastMessage: string;
+        lastMessageAt: string;
+        unreadCount: number;
+        relatedJobId: string | null;
+        relatedLeadId: string | null;
+      }>();
+
+      for (const msg of messages) {
+        const normalizedPhone = msg.clientPhone.replace(/\D/g, '');
+        const existing = conversationsMap.get(normalizedPhone);
+        
+        if (!existing || msg.createdAt > existing.lastMessageAt) {
+          const unreadCount = existing?.unreadCount || 0;
+          conversationsMap.set(normalizedPhone, {
+            clientPhone: msg.clientPhone,
+            clientName: msg.clientName || existing?.clientName || null,
+            lastMessage: msg.body,
+            lastMessageAt: msg.createdAt,
+            unreadCount: msg.direction === "inbound" && !msg.isRead 
+              ? unreadCount + 1 
+              : unreadCount,
+            relatedJobId: msg.relatedJobId || existing?.relatedJobId || null,
+            relatedLeadId: msg.relatedLeadId || existing?.relatedLeadId || null,
+          });
+        } else if (msg.direction === "inbound" && !msg.isRead) {
+          existing.unreadCount++;
+        }
+      }
+
+      const conversations = Array.from(conversationsMap.values())
+        .sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt));
+
+      res.json(conversations);
+    } catch (error) {
+      console.error("SMS conversations fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch conversations" });
+    }
+  });
+
+  app.get("/api/sms/conversation/:phone", async (req, res) => {
+    try {
+      const { phone } = req.params;
+      const messages = await storage.getSmsMessagesByPhone(defaultUserId, phone);
+      
+      // Mark messages as read
+      await storage.markSmsMessagesAsRead(defaultUserId, phone);
+      
+      res.json(messages);
+    } catch (error) {
+      console.error("SMS conversation fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch conversation" });
+    }
+  });
+
+  app.get("/api/sms/unread-count", async (req, res) => {
+    try {
+      const count = await storage.getUnreadSmsCount(defaultUserId);
+      res.json({ count });
+    } catch (error) {
+      console.error("Unread count fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch unread count" });
     }
   });
 
