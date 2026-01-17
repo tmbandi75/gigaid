@@ -1395,7 +1395,7 @@ export async function registerRoutes(
       }
       
       const provider = await storage.getUser(defaultUserId);
-      const baseUrl = process.env.FRONTEND_URL || `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+      const baseUrl = process.env.FRONTEND_URL || "https://account.gigaid.ai";
       const confirmationUrl = `${baseUrl}/confirm-price/${confirmation.confirmationToken}`;
       
       const priceFormatted = `$${(confirmation.agreedPrice / 100).toFixed(2)}`;
@@ -1834,7 +1834,7 @@ export async function registerRoutes(
 
       // Generate public token if not already present
       const publicToken = existingInvoice.publicToken || `inv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const frontendUrl = process.env.FRONTEND_URL || `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER?.toLowerCase()}.repl.co`;
+      const frontendUrl = process.env.FRONTEND_URL || "https://account.gigaid.ai";
       const invoiceUrl = `${frontendUrl}/invoice/${publicToken}`;
 
       // Get provider's payment methods for the email/SMS
@@ -2421,11 +2421,7 @@ export async function registerRoutes(
       });
 
       // Build magic link
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : process.env.REPLIT_DOMAINS?.split(",")[0] 
-          ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
-          : "http://localhost:5000";
+      const baseUrl = process.env.FRONTEND_URL || "https://account.gigaid.ai";
       const magicLink = `${baseUrl}/crew-portal/${token}`;
 
       let deliveredVia = "";
@@ -2796,11 +2792,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid invite data" });
       }
 
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : process.env.REPLIT_DOMAINS?.split(",")[0] 
-          ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
-          : "http://localhost:5000";
+      const baseUrl = process.env.FRONTEND_URL || "https://account.gigaid.ai";
       const magicLink = `${baseUrl}/crew-portal/${invite.token}`;
 
       let formattedDate = "TBD";
@@ -3816,9 +3808,7 @@ Final price confirmed onsite.`;
       }
 
       const user = await storage.getUser(defaultUserId);
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-        : "https://gigaid.ai";
+      const baseUrl = process.env.FRONTEND_URL || "https://account.gigaid.ai";
       const confirmUrl = `${baseUrl}/confirm-estimate/${request.confirmToken}`;
 
       if (request.clientPhone) {
@@ -4735,7 +4725,7 @@ Return ONLY the message text, no JSON or formatting.`
         });
       }
 
-      const baseUrl = `${req.protocol}://${req.get("host")}`;
+      const baseUrl = process.env.FRONTEND_URL || "https://account.gigaid.ai";
       const accountLink = await stripe.accountLinks.create({
         account: accountId,
         refresh_url: `${baseUrl}/settings?stripe_refresh=true`,
@@ -6400,7 +6390,7 @@ Return ONLY the message text, no JSON or formatting.`
       const providerName = user?.businessName || "Your service provider";
       
       // Build the review URL
-      const baseUrl = process.env.FRONTEND_URL || `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+      const baseUrl = process.env.FRONTEND_URL || "https://account.gigaid.ai";
       const reviewUrl = `${baseUrl}/review/${reviewToken}`;
       
       const message = `Hi ${job.clientName || "there"}! Thank you for using ${providerName}. We'd love your feedback! Please leave a quick review: ${reviewUrl}`;
@@ -7514,9 +7504,7 @@ Return ONLY the message text, no JSON or formatting.`
 
       // Generate booking link token
       const bookingToken = randomUUID();
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : (process.env.FRONTEND_URL || "https://gigaid.app");
+      const baseUrl = process.env.FRONTEND_URL || "https://account.gigaid.ai";
       const bookingLinkUrl = `${baseUrl}/qb/${bookingToken}`;
 
       // Update draft with booking link
