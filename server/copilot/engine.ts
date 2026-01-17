@@ -13,7 +13,8 @@ import {
   CopilotHealthState,
   CopilotBottleneck
 } from "@shared/schema";
-import { sql, eq, and, gte, lte, count, desc, asc } from "drizzle-orm";
+import { sql, eq, and, gte, lte, lt, count, desc, asc } from "drizzle-orm";
+import { emitCanonicalEvent } from "./canonicalEvents";
 
 interface CopilotEvaluationResult {
   healthState: CopilotHealthState;
@@ -297,6 +298,32 @@ export async function runCopilotEvaluation(): Promise<void> {
         .where(eq(metricsDaily.metricDate, today));
     } else {
       await db.insert(metricsDaily).values(dailyMetric);
+    }
+
+    // Emit user_inactive_7d events for users who crossed the 7-day inactivity threshold
+    // Only emit once per user by checking if lastActiveAt is within 7-8 day window (newly inactive)
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const eightDaysAgo = new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000);
+    
+    // Only get users who became inactive in the last hour (crossed 7-day threshold recently)
+    const newlyInactiveUsers = await db.select({ id: users.id })
+      .from(users)
+      .where(and(
+        lt(users.lastActiveAt, sevenDaysAgo.toISOString()),
+        gte(users.lastActiveAt, eightDaysAgo.toISOString())
+      ));
+    
+    for (const user of newlyInactiveUsers) {
+      await emitCanonicalEvent({
+        eventName: "user_inactive_7d",
+        userId: user.id,
+        context: { detectedAt: now.toISOString() },
+        source: "system",
+      });
+    }
+    
+    if (newlyInactiveUsers.length > 0) {
+      console.log(`[CoPilot] Emitted user_inactive_7d for ${newlyInactiveUsers.length} newly inactive users`);
     }
 
     console.log(`[CoPilot] Evaluation complete. Health: ${evaluation.healthState}, Bottleneck: ${evaluation.primaryBottleneck}`);

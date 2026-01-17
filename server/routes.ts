@@ -95,6 +95,13 @@ export async function registerRoutes(
           username: "demo",
           password: "demo123",
         });
+        
+        emitCanonicalEvent({
+          eventName: "user_signed_up",
+          userId: user.id,
+          context: { source: "demo_creation" },
+          source: "web",
+        });
       }
       
       // Only update fields that are explicitly provided (not undefined)
@@ -6079,7 +6086,7 @@ Return ONLY the message text, no JSON or formatting.`
               
               emitCanonicalEvent({
                 eventName: "payment_succeeded",
-                userId: booking.providerId,
+                userId: booking.userId,
                 context: { bookingId, amount: paymentIntent.amount, paymentIntentId: paymentIntent.id },
                 source: "system",
               });
@@ -6165,13 +6172,88 @@ Return ONLY the message text, no JSON or formatting.`
             
             emitCanonicalEvent({
               eventName: "chargeback_opened",
-              userId: booking.providerId,
+              userId: booking.userId,
               context: { bookingId: booking.id, disputeId: dispute.id, reason: dispute.reason, amount: dispute.amount },
               source: "system",
             });
             
             console.log(`Stripe dispute created for booking ${booking.id}`);
           }
+          break;
+        }
+
+        case "payment_intent.payment_failed": {
+          const paymentIntent = event.data.object as any;
+          const bookingId = paymentIntent.metadata?.booking_id;
+          const userId = paymentIntent.metadata?.user_id || defaultUserId;
+          
+          emitCanonicalEvent({
+            eventName: "payment_failed",
+            userId,
+            context: { 
+              bookingId, 
+              paymentIntentId: paymentIntent.id,
+              failureCode: paymentIntent.last_payment_error?.code,
+              failureMessage: paymentIntent.last_payment_error?.message,
+            },
+            source: "system",
+          });
+          
+          console.log(`Payment failed for booking ${bookingId || "unknown"}`);
+          break;
+        }
+
+        case "customer.subscription.created": {
+          const subscription = event.data.object as any;
+          const customerId = subscription.customer;
+          const userId = subscription.metadata?.user_id || defaultUserId;
+          
+          const user = await storage.getUser(userId);
+          if (user && !user.isPro) {
+            await storage.updateUser(userId, { isPro: true });
+            
+            emitCanonicalEvent({
+              eventName: "user_became_paying",
+              userId,
+              context: { subscriptionId: subscription.id, customerId },
+              source: "system",
+            });
+          }
+          
+          emitCanonicalEvent({
+            eventName: "subscription_started",
+            userId,
+            context: { 
+              subscriptionId: subscription.id, 
+              customerId,
+              planId: subscription.items?.data?.[0]?.price?.id,
+              amount: subscription.items?.data?.[0]?.price?.unit_amount,
+            },
+            source: "system",
+          });
+          
+          console.log(`Subscription started for user ${userId}`);
+          break;
+        }
+
+        case "customer.subscription.deleted": {
+          const subscription = event.data.object as any;
+          const userId = subscription.metadata?.user_id || defaultUserId;
+          
+          await storage.updateUser(userId, { isPro: false });
+          
+          emitCanonicalEvent({
+            eventName: "subscription_canceled",
+            userId,
+            context: { 
+              subscriptionId: subscription.id, 
+              canceledAt: subscription.canceled_at,
+              reason: subscription.cancellation_details?.reason,
+            },
+            source: "system",
+          });
+          
+          console.log(`Subscription canceled for user ${userId}`);
           break;
         }
       }
