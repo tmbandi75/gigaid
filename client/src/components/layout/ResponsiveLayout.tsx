@@ -11,7 +11,8 @@ import {
   Bell, 
   Search,
   Plus,
-  Command
+  Command,
+  MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,10 @@ interface ResponsiveLayoutProps {
 
 interface DashboardSummary {
   pendingReminders?: number;
+}
+
+interface UnreadCount {
+  count: number;
 }
 
 interface UserProfile {
@@ -91,6 +96,45 @@ const routeLabels: Record<string, { label: string; parent?: string }> = {
   "/more": { label: "More" },
 };
 
+function MobileHeader() {
+  const { data: summary } = useQuery<DashboardSummary>({
+    queryKey: ["/api/dashboard/summary"],
+  });
+
+  const { data: unreadSms } = useQuery<UnreadCount>({
+    queryKey: ["/api/sms/unread-count"],
+    refetchInterval: 30000,
+  });
+
+  return (
+    <header className="sticky top-0 z-[100] flex h-14 items-center justify-between px-4 bg-card border-b border-card-border md:hidden" data-testid="mobile-header">
+      <span className="font-bold text-lg text-foreground">GigAid</span>
+      <div className="flex items-center gap-1">
+        <Link href="/reminders">
+          <Button variant="ghost" size="icon" className="relative" data-testid="mobile-button-notifications">
+            <Bell className="h-5 w-5" />
+            {(summary?.pendingReminders ?? 0) > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                {summary?.pendingReminders}
+              </span>
+            )}
+          </Button>
+        </Link>
+        <Link href="/messages">
+          <Button variant="ghost" size="icon" className="relative" data-testid="mobile-button-messages">
+            <MessageSquare className="h-5 w-5" />
+            {(unreadSms?.count ?? 0) > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                {unreadSms?.count}
+              </span>
+            )}
+          </Button>
+        </Link>
+      </div>
+    </header>
+  );
+}
+
 function MobileBottomNav() {
   const [location] = useLocation();
 
@@ -135,6 +179,11 @@ function DesktopHeader() {
 
   const { data: profile } = useQuery<UserProfile>({
     queryKey: ["/api/profile"],
+  });
+
+  const { data: unreadSms } = useQuery<UnreadCount>({
+    queryKey: ["/api/sms/unread-count"],
+    refetchInterval: 30000,
   });
 
   const currentRoute = routeLabels[location] || { label: "Page" };
@@ -236,6 +285,17 @@ function DesktopHeader() {
           </Button>
         </Link>
 
+        <Link href="/messages">
+          <Button variant="ghost" size="icon" className="relative h-9 w-9 text-primary-foreground hover:bg-white/10" data-testid="button-messages">
+            <MessageSquare className="h-5 w-5" />
+            {(unreadSms?.count ?? 0) > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full bg-white text-primary text-[10px] font-bold flex items-center justify-center animate-pulse">
+                {unreadSms?.count}
+              </span>
+            )}
+          </Button>
+        </Link>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-white/10" data-testid="header-user-menu">
@@ -286,6 +346,7 @@ export function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
   if (isMobile) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
+        <MobileHeader />
         <main className="flex-1 overflow-auto pb-20">{children}</main>
         <MobileBottomNav />
       </div>
