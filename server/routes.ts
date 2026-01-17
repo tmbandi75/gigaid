@@ -4005,28 +4005,6 @@ Final price confirmed onsite.`;
     }
   });
 
-  // Invoice sharing
-  app.get("/api/public/invoice/:shareLink", async (req, res) => {
-    try {
-      const invoice = await storage.getInvoiceByShareLink(req.params.shareLink);
-      if (!invoice) {
-        return res.status(404).json({ error: "Invoice not found" });
-      }
-      res.json({
-        invoiceNumber: invoice.invoiceNumber,
-        clientName: invoice.clientName,
-        serviceDescription: invoice.serviceDescription,
-        amount: invoice.amount,
-        tax: invoice.tax,
-        discount: invoice.discount,
-        status: invoice.status,
-        createdAt: invoice.createdAt,
-      });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch invoice" });
-    }
-  });
-
   // AI Bio Rewrite
   app.post("/api/ai/rewrite-bio", async (req, res) => {
     try {
