@@ -494,7 +494,19 @@ export async function registerRoutes(
       const { leadId, ...jobData } = req.body;
       
       const validated = insertJobSchema.parse(jobData);
-      const job = await storage.createJob(validated);
+      
+      // Server-side geocoding fallback: if location provided but no coordinates, geocode it
+      let jobWithCoords = { ...validated };
+      if (validated.location && (!validated.customerLat || !validated.customerLng)) {
+        const coords = await geocodeAddress(validated.location);
+        if (coords) {
+          jobWithCoords.customerLat = coords.lat;
+          jobWithCoords.customerLng = coords.lng;
+          console.log(`[Jobs] Geocoded address for new job: ${validated.location} -> (${coords.lat}, ${coords.lng})`);
+        }
+      }
+      
+      const job = await storage.createJob(jobWithCoords);
       
       // Auto-link lead if leadId provided
       if (leadId && typeof leadId === "string") {
@@ -525,6 +537,19 @@ export async function registerRoutes(
       }
       
       const updates = insertJobSchema.partial().parse(req.body);
+      
+      // Server-side geocoding fallback: if location is being updated without coordinates, geocode it
+      if (updates.location && updates.location !== existingJob.location) {
+        // Only geocode if new coordinates aren't provided
+        if (!updates.customerLat || !updates.customerLng) {
+          const coords = await geocodeAddress(updates.location);
+          if (coords) {
+            updates.customerLat = coords.lat;
+            updates.customerLng = coords.lng;
+            console.log(`[Jobs] Geocoded updated address: ${updates.location} -> (${coords.lat}, ${coords.lng})`);
+          }
+        }
+      }
       
       // ============================================================
       // REVENUE PROTECTION: No Silent Completion API Guard
