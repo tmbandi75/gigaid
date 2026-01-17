@@ -1,0 +1,50 @@
+https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=a1c85c37:1921:11)
+    at Menu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=a1c85c37:99:11)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=a1c85c37:37:15)
+    at DropdownMenu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=a1c85c37:896:5)
+    at div
+    at SidebarFooter (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:489:26)
+    at div
+    at div
+    at div
+    at Sidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:151:3)
+    at AppSidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/AppSidebar.tsx:88:32)
+    at div
+    at div
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=a1c85c37:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=a1c85c37:64:5)
+    at SidebarProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:59:3)
+    at ResponsiveLayout (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/ResponsiveLayout.tsx:586:36)
+    at OnboardingWrapper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/onboarding/OnboardingWrapper.tsx:21:37)
+    at Route (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=a1c85c37:264:16)
+    at Switch (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=a1c85c37:320:17)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=a1c85c37:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=a1c85c37:64:5)
+    at PostHogProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/PostHogProvider.tsx:22:35)
+    at QueryClientProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=a1c85c37:2747:3)
+    at App
+printWarning @ chunk-LPF6KSF2.js?v=a1c85c37:521Understand this error
+60759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2Understand this warning
+rrweb-plugin-console-record.js:160 As of March 1st, 2025, google.maps.places.Autocomplete is not available to new customers. Please use google.maps.places.PlaceAutocompleteElement instead. At this time, google.maps.places.Autocomplete is not scheduled to be discontinued, but google.maps.places.PlaceAutocompleteElement is recommended over google.maps.places.Autocomplete. While google.maps.places.Autocomplete will continue to receive bug fixes for any major regressions, existing bugs in google.maps.places.Autocomplete will not be addressed. At least 12 months notice will be given before support is discontinued. Please see https://developers.google.com/maps/legacy for additional details and https://developers.google.com/maps/documentation/javascript/places-migration-overview for the migration guide.
+(anonymous) @ rrweb-plugin-console-record.js:160Understand this warning
+rrweb-plugin-console-record.js:160 [AddressAutocomplete] Timeout - falling back to manual mode
+(anonymous) @ rrweb-plugin-console-record.js:160Understand this warning
+20759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2Understand this warning
+4370 log entries are not shown.Understand this warning
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2Understand this warning
