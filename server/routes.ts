@@ -338,11 +338,7 @@ export async function registerRoutes(
   app.get("/api/owner/metrics", async (req, res) => {
     try {
       const user = await storage.getUser(defaultUserId);
-      const isPro = user?.isPro ?? false;
-
-      if (!isPro) {
-        return res.json({ isPro: false });
-      }
+      const isPro = user?.isPro ?? true; // Owner View now available to all users
 
       const now = new Date();
       const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);

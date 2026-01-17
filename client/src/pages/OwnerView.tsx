@@ -186,8 +186,13 @@ export default function OwnerView() {
     );
   }
 
-  if (!metrics?.isPro) {
-    return <UpgradeGate />;
+  // Owner View is now available to all users
+  if (!metrics) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 flex items-center justify-center">
+        <p className="text-muted-foreground">Unable to load metrics</p>
+      </div>
+    );
   }
 
   const formatCurrency = (cents: number) => {
