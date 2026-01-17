@@ -36,6 +36,8 @@ import {
   type ActionQueueItem, type InsertActionQueueItem,
   type OutcomeMetricsDaily, type InsertOutcomeMetricsDaily,
   type PhotoAsset, type InsertPhotoAsset,
+  type SmsMessage, type InsertSmsMessage,
+  smsMessages,
   type PhotoSourceType,
   type EstimationRequest, type InsertEstimationRequest,
 } from "@shared/schema";
@@ -1235,6 +1237,72 @@ export class DatabaseStorage implements IStorage {
   async deleteEstimationRequest(id: string): Promise<boolean> {
     const result = await db.delete(estimationRequests).where(eq(estimationRequests.id, id));
     return result.rowCount! > 0;
+  }
+
+  // ============================================================
+  // SMS Messages (Inbox with routing)
+  // ============================================================
+
+  private normalizePhone(phone: string): string {
+    return phone.replace(/\D/g, '');
+  }
+
+  async getSmsMessages(userId: string): Promise<SmsMessage[]> {
+    return await db.select().from(smsMessages)
+      .where(eq(smsMessages.userId, userId))
+      .orderBy(desc(smsMessages.createdAt));
+  }
+
+  async getSmsMessagesByPhone(userId: string, clientPhone: string): Promise<SmsMessage[]> {
+    const normalizedPhone = this.normalizePhone(clientPhone);
+    const allMessages = await db.select().from(smsMessages)
+      .where(eq(smsMessages.userId, userId))
+      .orderBy(smsMessages.createdAt);
+    return allMessages.filter(m => this.normalizePhone(m.clientPhone) === normalizedPhone);
+  }
+
+  async getUnreadSmsCount(userId: string): Promise<number> {
+    const unread = await db.select().from(smsMessages)
+      .where(and(
+        eq(smsMessages.userId, userId),
+        eq(smsMessages.direction, "inbound"),
+        eq(smsMessages.isRead, false)
+      ));
+    return unread.length;
+  }
+
+  async getLastOutboundMessageByPhone(clientPhone: string): Promise<SmsMessage | undefined> {
+    const normalizedPhone = this.normalizePhone(clientPhone);
+    const allOutbound = await db.select().from(smsMessages)
+      .where(eq(smsMessages.direction, "outbound"))
+      .orderBy(desc(smsMessages.createdAt));
+    return allOutbound.find(m => this.normalizePhone(m.clientPhone) === normalizedPhone);
+  }
+
+  async createSmsMessage(message: InsertSmsMessage): Promise<SmsMessage> {
+    const [newMessage] = await db.insert(smsMessages).values({
+      ...message,
+      createdAt: new Date().toISOString(),
+    }).returning();
+    return newMessage;
+  }
+
+  async markSmsMessagesAsRead(userId: string, clientPhone: string): Promise<number> {
+    const normalizedPhone = this.normalizePhone(clientPhone);
+    const messages = await db.select().from(smsMessages)
+      .where(and(
+        eq(smsMessages.userId, userId),
+        eq(smsMessages.direction, "inbound"),
+        eq(smsMessages.isRead, false)
+      ));
+    
+    const toUpdate = messages.filter(m => this.normalizePhone(m.clientPhone) === normalizedPhone);
+    for (const msg of toUpdate) {
+      await db.update(smsMessages)
+        .set({ isRead: true })
+        .where(eq(smsMessages.id, msg.id));
+    }
+    return toUpdate.length;
   }
 }
 

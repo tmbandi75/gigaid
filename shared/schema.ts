@@ -1149,4 +1149,32 @@ export const insertEstimationRequestSchema = createInsertSchema(estimationReques
 export type InsertEstimationRequest = z.infer<typeof insertEstimationRequestSchema>;
 export type EstimationRequest = typeof estimationRequests.$inferSelect;
 
+// ============================================================
+// SMS MESSAGES - For tracking sent/received SMS with routing
+// ============================================================
+export const smsMessageDirections = ["outbound", "inbound"] as const;
+export type SmsMessageDirection = (typeof smsMessageDirections)[number];
+
+export const smsMessages = pgTable("sms_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(), // The gig worker who owns this conversation
+  clientPhone: text("client_phone").notNull(), // The customer's phone number
+  clientName: text("client_name"), // Optional client name for display
+  direction: text("direction").notNull(), // "outbound" or "inbound"
+  body: text("body").notNull(), // The message content
+  twilioSid: text("twilio_sid"), // Twilio message SID for tracking
+  relatedJobId: varchar("related_job_id"), // Optional link to a job
+  relatedLeadId: varchar("related_lead_id"), // Optional link to a lead
+  isRead: boolean("is_read").default(false), // For inbound messages
+  createdAt: text("created_at").notNull(),
+});
+
+export const insertSmsMessageSchema = createInsertSchema(smsMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSmsMessage = z.infer<typeof insertSmsMessageSchema>;
+export type SmsMessage = typeof smsMessages.$inferSelect;
+
 export * from "./models/chat";

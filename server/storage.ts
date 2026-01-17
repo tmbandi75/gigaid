@@ -31,6 +31,7 @@ import {
   type PhotoAsset, type InsertPhotoAsset,
   type PhotoSourceType,
   type EstimationRequest, type InsertEstimationRequest,
+  type SmsMessage, type InsertSmsMessage,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -245,6 +246,14 @@ export interface IStorage {
   createEstimationRequest(request: InsertEstimationRequest): Promise<EstimationRequest>;
   updateEstimationRequest(id: string, updates: Partial<EstimationRequest>): Promise<EstimationRequest | undefined>;
   deleteEstimationRequest(id: string): Promise<boolean>;
+
+  // SMS Messages (Inbox with routing)
+  getSmsMessages(userId: string): Promise<SmsMessage[]>;
+  getSmsMessagesByPhone(userId: string, clientPhone: string): Promise<SmsMessage[]>;
+  getUnreadSmsCount(userId: string): Promise<number>;
+  getLastOutboundMessageByPhone(clientPhone: string): Promise<SmsMessage | undefined>;
+  createSmsMessage(message: InsertSmsMessage): Promise<SmsMessage>;
+  markSmsMessagesAsRead(userId: string, clientPhone: string): Promise<number>;
 }
 
 export class MemStorage implements IStorage {
@@ -275,6 +284,7 @@ export class MemStorage implements IStorage {
   private actionQueueItems: Map<string, ActionQueueItem>;
   private outcomeMetricsDaily: Map<string, OutcomeMetricsDaily>;
   private photoAssets: Map<string, PhotoAsset>;
+  private smsMessages: Map<string, SmsMessage>;
 
   constructor() {
     this.users = new Map();
@@ -304,6 +314,7 @@ export class MemStorage implements IStorage {
     this.actionQueueItems = new Map();
     this.outcomeMetricsDaily = new Map();
     this.photoAssets = new Map();
+    this.smsMessages = new Map();
     
     // Seed default feature flags
     this.featureFlags.set("ai_micro_nudges", {
@@ -2113,6 +2124,69 @@ export class MemStorage implements IStorage {
 
   async deletePhotoAsset(id: string): Promise<boolean> {
     return this.photoAssets.delete(id);
+  }
+
+  // ============================================================
+  // SMS Messages (Inbox with routing)
+  // ============================================================
+
+  async getSmsMessages(userId: string): Promise<SmsMessage[]> {
+    return Array.from(this.smsMessages.values())
+      .filter(m => m.userId === userId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async getSmsMessagesByPhone(userId: string, clientPhone: string): Promise<SmsMessage[]> {
+    const normalizedPhone = this.normalizePhone(clientPhone);
+    return Array.from(this.smsMessages.values())
+      .filter(m => m.userId === userId && this.normalizePhone(m.clientPhone) === normalizedPhone)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
+  async getUnreadSmsCount(userId: string): Promise<number> {
+    return Array.from(this.smsMessages.values())
+      .filter(m => m.userId === userId && m.direction === "inbound" && !m.isRead).length;
+  }
+
+  async getLastOutboundMessageByPhone(clientPhone: string): Promise<SmsMessage | undefined> {
+    const normalizedPhone = this.normalizePhone(clientPhone);
+    const messages = Array.from(this.smsMessages.values())
+      .filter(m => m.direction === "outbound" && this.normalizePhone(m.clientPhone) === normalizedPhone)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return messages[0];
+  }
+
+  async createSmsMessage(message: InsertSmsMessage): Promise<SmsMessage> {
+    const id = randomUUID();
+    const newMessage: SmsMessage = {
+      ...message,
+      id,
+      clientName: message.clientName ?? null,
+      twilioSid: message.twilioSid ?? null,
+      relatedJobId: message.relatedJobId ?? null,
+      relatedLeadId: message.relatedLeadId ?? null,
+      isRead: message.isRead ?? false,
+      createdAt: new Date().toISOString(),
+    };
+    this.smsMessages.set(id, newMessage);
+    return newMessage;
+  }
+
+  async markSmsMessagesAsRead(userId: string, clientPhone: string): Promise<number> {
+    const normalizedPhone = this.normalizePhone(clientPhone);
+    let count = 0;
+    for (const [id, msg] of this.smsMessages.entries()) {
+      if (msg.userId === userId && this.normalizePhone(msg.clientPhone) === normalizedPhone && 
+          msg.direction === "inbound" && !msg.isRead) {
+        this.smsMessages.set(id, { ...msg, isRead: true });
+        count++;
+      }
+    }
+    return count;
+  }
+
+  private normalizePhone(phone: string): string {
+    return phone.replace(/\D/g, '');
   }
 }
 
