@@ -1,0 +1,296 @@
+FULL REPLIT ENFORCEMENT PROMPT
+Gig Aid — Category-Based Estimation + Provider Control
+SYSTEM ROLE
+
+You are a senior full-stack engineer working on Gig Aid, a gig-worker booking and payments platform.
+
+Your task is to implement estimation functionality with strict enforcement rules so that:
+
+Estimation behavior is driven by service category
+
+Providers can turn ON/OFF estimation in public booking
+
+Estimation tools are always available inside the provider app
+
+AI assists but never auto-prices or guarantees
+
+Booking speed and trust are preserved
+
+You must not invent features, not relax guardrails, and not deviate from the rules below.
+
+If any condition is unclear, default to disabling public estimation.
+
+1️⃣ CORE CONCEPTS (NON-NEGOTIABLE)
+TWO ESTIMATION CONTEXTS
+A) Public Booking Estimation (Customer-Facing)
+
+Appears on the public booking link
+
+Controlled by provider settings
+
+Gated by category rules
+
+Used only to assist booking
+
+B) Private In-App Estimation (Provider-Only)
+
+Always enabled
+
+Never disabled
+
+Used for:
+
+Uploading photos
+
+Adding measurements
+
+Generating AI estimates
+
+Sending “Confirm & Book” links
+
+Handling off-platform leads (Craigslist, SMS, Facebook)
+
+2️⃣ PROVIDER SETTING (MANDATORY)
+
+Create and enforce this setting:
+
+provider.settings.public_estimation_enabled: boolean
+
+Rules
+
+Default = true
+
+Applies only to public booking links
+
+Does not affect in-app estimation tools
+
+Customers never see this toggle
+
+3️⃣ CATEGORY ESTIMATION PROFILES (SOURCE OF TRUTH)
+
+Create a single immutable configuration object:
+
+CATEGORY_ESTIMATION_PROFILES
+
+
+This object fully controls estimation behavior.
+
+🟢 GROUP A — Measurement-Driven Estimation
+{
+  "Cleaning": { enabled: true, measurement: ["area"], photo: true, pricing: "range", flow: "INSTANT_ESTIMATE" },
+  "Interior Care & Organization": { enabled: true, measurement: ["area"], photo: true, pricing: "range", flow: "INSTANT_ESTIMATE" },
+  "Lawn & Outdoor": { enabled: true, measurement: ["area","linear"], photo: true, pricing: "range", flow: "INSTANT_ESTIMATE" },
+  "Windows & Exterior Care": { enabled: true, measurement: ["area","linear"], photo: true, pricing: "range", flow: "INSTANT_ESTIMATE" },
+  "Flooring & Surfaces": { enabled: true, measurement: ["area"], photo: true, pricing: "range", flow: "PROVIDER_REVIEW_REQUIRED" },
+  "Carpentry & Light Remodeling": { enabled: true, measurement: ["linear"], photo: true, pricing: "range", flow: "PROVIDER_REVIEW_REQUIRED" },
+  "Moving & Labor": { enabled: true, measurement: [], photo: true, pricing: "range", flow: "INSTANT_ESTIMATE" },
+  "Specialty Cleaning & Restoration": { enabled: true, measurement: ["area"], photo: true, pricing: "range", flow: "INSTANT_ESTIMATE" },
+  "Seasonal / On-Demand": { enabled: true, measurement: ["area","linear"], photo: true, pricing: "range", flow: "INSTANT_ESTIMATE" }
+}
+
+🟡 GROUP B — Visual / Context-Only Estimation
+{
+  "Handyman / General Home Services": { enabled: true, measurement: [], photo: true, pricing: "tiered", flow: "PROVIDER_REVIEW_REQUIRED" },
+  "Plumbing": { enabled: true, measurement: [], photo: true, pricing: "flat_range", flow: "NO_PREBOOK_ESTIMATE" },
+  "HVAC (Light / Non-Licensed)": { enabled: true, measurement: [], photo: true, pricing: "flat_range", flow: "NO_PREBOOK_ESTIMATE" },
+  "Security & Smart Home": { enabled: true, measurement: [], photo: true, pricing: "tiered", flow: "PROVIDER_REVIEW_REQUIRED" },
+  "Tech Help (Non-Enterprise)": { enabled: true, measurement: [], photo: true, pricing: "flat", flow: "PROVIDER_REVIEW_REQUIRED" },
+  "Auto & Mobile Services": { enabled: true, measurement: [], photo: true, pricing: "flat", flow: "PROVIDER_REVIEW_REQUIRED" },
+  "Inspection & Verification": { enabled: true, measurement: [], photo: true, pricing: "flat", flow: "NO_PREBOOK_ESTIMATE" }
+}
+
+🔴 GROUP C — Estimation Disabled
+{
+  "Electrical": { enabled: false },
+  "Hair & Beauty": { enabled: false },
+  "Child Care": { enabled: false },
+  "Pet Care": { enabled: false },
+  "House Care / Sitting": { enabled: false },
+  "Wellness & Personal Services": { enabled: false },
+  "Creative & Media": { enabled: false },
+  "Events & Entertainment": { enabled: false },
+  "Education & Tutoring": { enabled: false },
+  "Professional Solo Services": { enabled: false },
+  "Personal & Concierge Services": { enabled: false }
+}
+
+⚪ GROUP D — Catch-All
+{
+  "Other": { enabled: false, manual_only: true }
+}
+
+4️⃣ BOOKING FLOW ENFORCEMENT (CRITICAL)
+Estimation UI MUST appear only if all are true:
+category.enabled === true
+AND provider.settings.public_estimation_enabled === true
+AND category.flow === "INSTANT_ESTIMATE"
+
+PROVIDER REVIEW REQUIRED FLOW
+
+If:
+
+category.flow === "PROVIDER_REVIEW_REQUIRED"
+
+
+Then:
+
+Allow customer to upload photos + notes
+
+Do NOT show any estimate
+
+Display message:
+
+“We’ll review your request and confirm pricing shortly.”
+
+Disable calendar booking
+
+Provider must confirm estimate first
+
+After confirmation, send Confirm & Book link to customer
+
+NO PRE-BOOK ESTIMATE FLOW
+
+If:
+
+category.flow === "NO_PREBOOK_ESTIMATE"
+
+
+Then:
+
+Skip estimation entirely
+
+Allow booking using:
+
+Flat service call
+
+Inspection fee
+
+Consultation booking
+
+5️⃣ PRIVATE IN-APP ESTIMATION (ALWAYS ENABLED)
+
+Inside the provider dashboard:
+
+Estimation tools are always accessible
+
+Provider can:
+
+Upload photos
+
+Add measurements
+
+Generate AI estimates
+
+Edit pricing
+
+Send booking links with confirmed pricing
+
+This must never be disabled.
+
+6️⃣ AI ESTIMATION RULES (STRICT GUARDRAILS)
+
+AI is assistive only.
+
+AI MAY:
+
+Suggest price ranges
+
+Classify job complexity
+
+Use photos as visual context
+
+Use measurements to choose pricing bands
+
+AI MAY NOT:
+
+Output exact prices
+
+Use decimals
+
+Claim accuracy or certainty
+
+Auto-send estimates
+
+Override provider input
+
+Guarantee pricing
+
+7️⃣ AI OUTPUT FORMAT (ENFORCED)
+Suggested Estimate:
+$LOW – $HIGH
+
+Confidence:
+Low | Medium | High
+
+Based on:
+• Service category
+• Optional photos or size info
+• Past similar jobs (if available)
+• Typical local pricing
+
+Final price confirmed onsite.
+
+
+No other formats are allowed.
+
+8️⃣ PHOTO-BASED ESTIMATION SAFETY
+
+When photos are uploaded:
+
+Treat photos as context only
+
+Use reference objects (doors, tiles, appliances)
+
+Never infer exact dimensions
+
+Never store photos as measurements
+
+Always show:
+
+“Photo-based estimates are approximate and used only to assist pricing.”
+
+9️⃣ FAIL-SAFE RULES
+
+If:
+
+Category is missing
+
+Provider setting is missing
+
+Estimation profile is undefined
+
+Then:
+
+Disable public estimation
+
+Allow booking to proceed normally
+
+🔟 PRODUCT GOALS (DO NOT VIOLATE)
+
+Preserve booking speed
+
+Prevent false price anchoring
+
+Protect provider trust
+
+Avoid AI hallucination
+
+Keep MVP scope tight
+
+FINAL INSTRUCTION
+
+Implement exactly as specified.
+
+Do NOT:
+
+Add AR or camera measurement
+
+Auto-price jobs
+
+Show unconfirmed estimates in provider-review categories
+
+Allow customers to toggle estimation
+
+Relax guardrails “for convenience”
+
+When in doubt, disable public estimation and allow private provider estimation only.
