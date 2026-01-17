@@ -1,0 +1,109 @@
+6Connecting to '<URL>' violates the following Content Security Policy directive: "connect-src 'none'". The policy is report-only, so the violation has been logged but no further action has been taken.
+places.js:48 As of March 1st, 2025, google.maps.places.Autocomplete is not available to new customers. Please use google.maps.places.PlaceAutocompleteElement instead. At this time, google.maps.places.Autocomplete is not scheduled to be discontinued, but google.maps.places.PlaceAutocompleteElement is recommended over google.maps.places.Autocomplete. While google.maps.places.Autocomplete will continue to receive bug fixes for any major regressions, existing bugs in google.maps.places.Autocomplete will not be addressed. At least 12 months notice will be given before support is discontinued. Please see https://developers.google.com/maps/legacy for additional details and https://developers.google.com/maps/documentation/javascript/places-migration-overview for the migration guide.
+(anonymous) @ rrweb-plugin-console-record.js:160
+ED @ places.js:48
+initializeAutocomplete @ @googlemaps_extended-component-library_react.js?v=1b2e1be6:6767
+await in initializeAutocomplete
+firstUpdated @ @googlemaps_extended-component-library_react.js?v=1b2e1be6:6705
+_$didUpdate @ @googlemaps_extended-component-library_react.js?v=1b2e1be6:903
+performUpdate @ @googlemaps_extended-component-library_react.js?v=1b2e1be6:871
+scheduleUpdate @ @googlemaps_extended-component-library_react.js?v=1b2e1be6:807
+__enqueueUpdate @ @googlemaps_extended-component-library_react.js?v=1b2e1be6:783
+await in __enqueueUpdate
+requestUpdate @ @googlemaps_extended-component-library_react.js?v=1b2e1be6:750
+__initialize @ @googlemaps_extended-component-library_react.js?v=1b2e1be6:573
+ReactiveElement @ @googlemaps_extended-component-library_react.js?v=1b2e1be6:563
+LitElement @ @googlemaps_extended-component-library_react.js?v=1b2e1be6:2016
+BaseComponent @ @googlemaps_extended-component-library_react.js?v=1b2e1be6:2338
+PlacePicker2 @ @googlemaps_extended-component-library_react.js?v=1b2e1be6:6634
+createElement @ chunk-LPF6KSF2.js?v=1b2e1be6:7538
+createInstance @ chunk-LPF6KSF2.js?v=1b2e1be6:8383
+completeWork @ chunk-LPF6KSF2.js?v=1b2e1be6:16338
+completeUnitOfWork @ chunk-LPF6KSF2.js?v=1b2e1be6:19277
+performUnitOfWork @ chunk-LPF6KSF2.js?v=1b2e1be6:19259
+workLoopSync @ chunk-LPF6KSF2.js?v=1b2e1be6:19190
+renderRootSync @ chunk-LPF6KSF2.js?v=1b2e1be6:19169
+performSyncWorkOnRoot @ chunk-LPF6KSF2.js?v=1b2e1be6:18927
+flushSyncCallbacks @ chunk-LPF6KSF2.js?v=1b2e1be6:9166
+(anonymous) @ chunk-LPF6KSF2.js?v=1b2e1be6:18677Understand this warning
+main.js:176 You must enable Billing on the Google Cloud Project at https://console.cloud.google.com/project/_/billing/enable Learn more at https://developers.google.com/maps/gmp-get-started Places API error: BillingNotEnabledMapError
+https://developers.google.com/maps/documentation/javascript/error-messages#billing-not-enabled-map-error
+(anonymous) @ rrweb-plugin-console-record.js:160
+_.Fm @ main.js:176
+(anonymous) @ places_impl.js:11
+(anonymous) @ places_impl.js:9
+e @ places_impl.js:7
+c @ common.js:111
+(anonymous) @ VM2633 AutocompletionService.GetPredictions:1Understand this error
+main.js:176 You must enable Billing on the Google Cloud Project at https://console.cloud.google.com/project/_/billing/enable Learn more at https://developers.google.com/maps/gmp-get-started Places API error: BillingNotEnabledMapError
+https://developers.google.com/maps/documentation/javascript/error-messages#billing-not-enabled-map-error
+(anonymous) @ rrweb-plugin-console-record.js:160
+_.Fm @ main.js:176
+(anonymous) @ places_impl.js:11
+(anonymous) @ places_impl.js:9
+e @ places_impl.js:7
+c @ common.js:111
+(anonymous) @ VM2634 AutocompletionService.GetPredictions:1Understand this error
+main.js:176 You must enable Billing on the Google Cloud Project at https://console.cloud.google.com/project/_/billing/enable Learn more at https://developers.google.com/maps/gmp-get-started Places API error: BillingNotEnabledMapError
+https://developers.google.com/maps/documentation/javascript/error-messages#billing-not-enabled-map-error
+(anonymous) @ rrweb-plugin-console-record.js:160
+_.Fm @ main.js:176
+(anonymous) @ places_impl.js:11
+(anonymous) @ places_impl.js:9
+e @ places_impl.js:7
+c @ common.js:111
+(anonymous) @ AutocompletionService.GetPredictions?1s2380&4sen-US&7scountry%3Aus&15e3&20s351AE9AF65EB47B99DC66D4F3988BE2194w3&21m1&2e1&r_url=https%3A%2F%2Fc75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev%2Fjobs%2Fca4d54df-274b-4a09-9930-d0641bea79d2%2Fedit&callback=_xdc_._m8krsr&key=AIzaSyCtegxRz1ZN6h80u2xsvPWYr3RvIj0zYGM&token=90881:1Understand this error
+main.js:176 You must enable Billing on the Google Cloud Project at https://console.cloud.google.com/project/_/billing/enable Learn more at https://developers.google.com/maps/gmp-get-started Places API error: BillingNotEnabledMapError
+https://developers.google.com/maps/documentation/javascript/error-messages#billing-not-enabled-map-error
+(anonymous) @ rrweb-plugin-console-record.js:160
+_.Fm @ main.js:176
+(anonymous) @ places_impl.js:11
+(anonymous) @ places_impl.js:9
+e @ places_impl.js:7
+c @ common.js:111
+(anonymous) @ AutocompletionService.GetPredictions?1s238&4sen-US&7scountry%3Aus&15e3&20s351AE9AF65EB47B99DC66D4F3988BE2194w3&21m1&2e1&r_url=https%3A%2F%2Fc75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev%2Fjobs%2Fca4d54df-274b-4a09-9930-d0641bea79d2%2Fedit&callback=_xdc_._vst3oh&key=AIzaSyCtegxRz1ZN6h80u2xsvPWYr3RvIj0zYGM&token=36896:1Understand this error
+main.js:176 You must enable Billing on the Google Cloud Project at https://console.cloud.google.com/project/_/billing/enable Learn more at https://developers.google.com/maps/gmp-get-started Places API error: BillingNotEnabledMapError
+https://developers.google.com/maps/documentation/javascript/error-messages#billing-not-enabled-map-error
+(anonymous) @ rrweb-plugin-console-record.js:160
+_.Fm @ main.js:176
+(anonymous) @ places_impl.js:11
+(anonymous) @ places_impl.js:9
+e @ places_impl.js:7
+c @ common.js:111
+(anonymous) @ AutocompletionService.GetPredictions?1s23&4sen-US&7scountry%3Aus&15e3&20s351AE9AF65EB47B99DC66D4F3988BE2194w3&21m1&2e1&r_url=https%3A%2F%2Fc75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev%2Fjobs%2Fca4d54df-274b-4a09-9930-d0641bea79d2%2Fedit&callback=_xdc_._9xgbj3&key=AIzaSyCtegxRz1ZN6h80u2xsvPWYr3RvIj0zYGM&token=123091:1Understand this error
+main.js:176 You must enable Billing on the Google Cloud Project at https://console.cloud.google.com/project/_/billing/enable Learn more at https://developers.google.com/maps/gmp-get-started Places API error: BillingNotEnabledMapError
+https://developers.google.com/maps/documentation/javascript/error-messages#billing-not-enabled-map-error
+(anonymous) @ rrweb-plugin-console-record.js:160
+_.Fm @ main.js:176
+(anonymous) @ places_impl.js:11
+(anonymous) @ places_impl.js:9
+e @ places_impl.js:7
+c @ common.js:111
+(anonymous) @ AutocompletionService.GetPredictions?1s2&4sen-US&7scountry%3Aus&15e3&20s351AE9AF65EB47B99DC66D4F3988BE2194w3&21m1&2e1&r_url=https%3A%2F%2Fc75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev%2Fjobs%2Fca4d54df-274b-4a09-9930-d0641bea79d2%2Fedit&callback=_xdc_._g3b5ur&key=AIzaSyCtegxRz1ZN6h80u2xsvPWYr3RvIj0zYGM&token=22968:1Understand this error
+main.js:176 You must enable Billing on the Google Cloud Project at https://console.cloud.google.com/project/_/billing/enable Learn more at https://developers.google.com/maps/gmp-get-started Places API error: BillingNotEnabledMapError
+https://developers.google.com/maps/documentation/javascript/error-messages#billing-not-enabled-map-error
+(anonymous) @ rrweb-plugin-console-record.js:160
+_.Fm @ main.js:176
+(anonymous) @ places_impl.js:11
+(anonymous) @ places_impl.js:9
+e @ places_impl.js:7
+c @ common.js:111
+(anonymous) @ AutocompletionService.GetPredictions?1s5&4sen-US&7scountry%3Aus&15e3&20s351AE9AF65EB47B99DC66D4F3988BE2194w3&21m1&2e1&r_url=https%3A%2F%2Fc75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev%2Fjobs%2Fca4d54df-274b-4a09-9930-d0641bea79d2%2Fedit&callback=_xdc_._tlrc3l&key=AIzaSyCtegxRz1ZN6h80u2xsvPWYr3RvIj0zYGM&token=55315:1Understand this error
+main.js:176 You must enable Billing on the Google Cloud Project at https://console.cloud.google.com/project/_/billing/enable Learn more at https://developers.google.com/maps/gmp-get-started Places API error: BillingNotEnabledMapError
+https://developers.google.com/maps/documentation/javascript/error-messages#billing-not-enabled-map-error
+(anonymous) @ rrweb-plugin-console-record.js:160
+_.Fm @ main.js:176
+(anonymous) @ places_impl.js:11
+(anonymous) @ places_impl.js:9
+e @ places_impl.js:7
+c @ common.js:111
+(anonymous) @ AutocompletionService.GetPredictions?1s51&4sen-US&7scountry%3Aus&15e3&20s351AE9AF65EB47B99DC66D4F3988BE2194w3&21m1&2e1&r_url=https%3A%2F%2Fc75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev%2Fjobs%2Fca4d54df-274b-4a09-9930-d0641bea79d2%2Fedit&callback=_xdc_._ucfh8a&key=AIzaSyCtegxRz1ZN6h80u2xsvPWYr3RvIj0zYGM&token=21938:1Understand this error
+main.js:176 You must enable Billing on the Google Cloud Project at https://console.cloud.google.com/project/_/billing/enable Learn more at https://developers.google.com/maps/gmp-get-started Places API error: BillingNotEnabledMapError
+https://developers.google.com/maps/documentation/javascript/error-messages#billing-not-enabled-map-error
+(anonymous) @ rrweb-plugin-console-record.js:160
+_.Fm @ main.js:176
+(anonymous) @ places_impl.js:11
+(anonymous) @ places_impl.js:9
+e @ places_impl.js:7
+c @ common.js:111
+(anonymous) @ AutocompletionService.GetPredictions?1s512&4sen-US&7scountry%3Aus&15e3&20s351AE9AF65EB47B99DC66D4F3988BE2194w3&21m1&2e1&r_url=https%3A%2F%2Fc75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev%2Fjobs%2Fca4d54df-274b-4a09-9930-d0641bea79d2%2Fedit&callback=_xdc_._1pi99e&key=AIzaSyCtegxRz1ZN6h80u2xsvPWYr3RvIj0zYGM&token=1869:1Understand this error
