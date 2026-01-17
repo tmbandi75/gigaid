@@ -30,7 +30,7 @@ export function NewServiceAIInput({ onServicesCreated }: NewServiceAIInputProps)
   const buildMutation = useMutation({
     mutationFn: async (desc: string) => {
       const response = await apiRequest("POST", "/api/ai/build-services", { description: desc });
-      return response as unknown as { services: ServiceSuggestion[] };
+      return response.json() as Promise<{ services: ServiceSuggestion[] }>;
     },
     onSuccess: (data) => {
       const services = data.services || [];

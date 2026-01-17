@@ -34,7 +34,7 @@ export function UnlockNudge({
         completedFeatures,
         incompleteFeatures,
       });
-      return response as unknown as FeatureNudge;
+      return response.json() as Promise<FeatureNudge>;
     },
     onSuccess: (data) => {
       setNudge(data);

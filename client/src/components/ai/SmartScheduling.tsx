@@ -36,7 +36,7 @@ export function SmartScheduling({ jobDuration = 60, onSelectSlot }: SmartSchedul
         duration,
         preferredDate: preferredDate || undefined,
       });
-      return response as unknown as { suggestions: ScheduleSuggestion[] };
+      return response.json() as Promise<{ suggestions: ScheduleSuggestion[] }>;
     },
     onError: () => {
       toast({ title: "Failed to get schedule suggestions", variant: "destructive" });

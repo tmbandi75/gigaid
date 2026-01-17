@@ -30,7 +30,7 @@ export function VoiceNoteSummarizer({ onSummaryComplete }: VoiceNoteSummarizerPr
   const summarizeMutation = useMutation({
     mutationFn: async (text: string) => {
       const response = await apiRequest("POST", "/api/ai/summarize-voice-note", { transcript: text });
-      return response as unknown as VoiceNoteSummary;
+      return response.json() as Promise<VoiceNoteSummary>;
     },
     onSuccess: (data) => {
       setSummary(data);

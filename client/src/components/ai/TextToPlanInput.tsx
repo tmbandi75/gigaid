@@ -35,7 +35,7 @@ export function TextToPlanInput({ onJobCreated, onSave }: TextToPlanInputProps) 
   const parseMutation = useMutation({
     mutationFn: async (message: string) => {
       const response = await apiRequest("POST", "/api/ai/text-to-plan", { message });
-      return response as unknown as JobDraft;
+      return response.json() as Promise<JobDraft>;
     },
     onSuccess: (data) => {
       setJobDraft(data);

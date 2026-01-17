@@ -36,7 +36,7 @@ export function ClientTags({ clientHistory, onTagsGenerated }: ClientTagsProps) 
   const tagMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/ai/tag-client", { clientHistory });
-      return response as unknown as ClientTagsResult;
+      return response.json() as Promise<ClientTagsResult>;
     },
     onSuccess: (data) => {
       setResult(data);

@@ -42,7 +42,7 @@ export function FollowUpComposer({
         lastService,
         tone,
       });
-      return response as unknown as FollowUpMessage;
+      return response.json() as Promise<FollowUpMessage>;
     },
     onSuccess: (data) => {
       setMessage(data.message);

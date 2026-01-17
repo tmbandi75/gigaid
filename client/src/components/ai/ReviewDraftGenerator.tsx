@@ -33,7 +33,7 @@ export function ReviewDraftGenerator({ clientName, jobName, onSend }: ReviewDraf
         jobName,
         tone,
       });
-      return response as unknown as ReviewDraft;
+      return response.json() as Promise<ReviewDraft>;
     },
     onSuccess: (data) => {
       setMessage(data.review);

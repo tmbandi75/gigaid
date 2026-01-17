@@ -42,7 +42,7 @@ export function ReferralMessageAI({
         providerName,
         serviceCategory,
       });
-      return response as unknown as ReferralMessage;
+      return response.json() as Promise<ReferralMessage>;
     },
     onSuccess: (data) => {
       setMessage(data.message);
