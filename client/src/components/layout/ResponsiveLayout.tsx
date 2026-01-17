@@ -103,7 +103,7 @@ function MobileHeader() {
 
   const { data: unreadSms } = useQuery<UnreadCount>({
     queryKey: ["/api/sms/unread-count"],
-    refetchInterval: 30000,
+    refetchInterval: 10000,
   });
 
   return (
@@ -183,7 +183,7 @@ function DesktopHeader() {
 
   const { data: unreadSms } = useQuery<UnreadCount>({
     queryKey: ["/api/sms/unread-count"],
-    refetchInterval: 30000,
+    refetchInterval: 10000,
   });
 
   const currentRoute = routeLabels[location] || { label: "Page" };
