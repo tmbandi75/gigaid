@@ -2063,6 +2063,25 @@ export async function registerRoutes(
     }
   });
 
+  // SMS Send Endpoint
+  app.post("/api/sms/send", async (req, res) => {
+    try {
+      const { to, message } = req.body;
+      if (!to || !message) {
+        return res.status(400).json({ error: "Phone number and message are required" });
+      }
+      const success = await sendSMS(to, message);
+      if (success) {
+        res.json({ success: true, message: "SMS sent successfully" });
+      } else {
+        res.status(500).json({ error: "Failed to send SMS" });
+      }
+    } catch (error) {
+      console.error("SMS send error:", error);
+      res.status(500).json({ error: "Failed to send SMS" });
+    }
+  });
+
   // Reminders Endpoints
   app.get("/api/reminders", async (req, res) => {
     try {

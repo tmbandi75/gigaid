@@ -88,13 +88,7 @@ export default function AITools() {
       icon: Send,
       category: "automate",
       gradient: "from-emerald-500 to-teal-500",
-      component: (
-        <FollowUpComposer
-          clientName="Demo Client"
-          context="job_completed"
-          lastService="Plumbing Repair"
-        />
-      ),
+      component: <FollowUpComposer />,
     },
     {
       id: "voice-notes",
