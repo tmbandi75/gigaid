@@ -35,6 +35,7 @@ import { generateNudgesForUser } from "./nudgeGenerator";
 import { createSupportTicket, getTicketsByEmail, getTicketById, addTicketComment, getTicketComments } from "./zendesk";
 import cockpitRoutes from "./copilot/routes";
 import { startCopilotScheduler } from "./copilot/engine";
+import { emitCanonicalEvent } from "./copilot/canonicalEvents";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -514,6 +515,13 @@ export async function registerRoutes(
       
       const job = await storage.createJob(jobWithCoords);
       
+      emitCanonicalEvent({
+        eventName: "booking_created",
+        userId: job.userId,
+        context: { jobId: job.id, serviceType: job.serviceType, price: job.price, leadId },
+        source: "web",
+      });
+      
       // Auto-link lead if leadId provided
       if (leadId && typeof leadId === "string") {
         const lead = await storage.getLead(leadId);
@@ -581,6 +589,13 @@ export async function registerRoutes(
       // Set completedAt timestamp when job transitions to completed
       if (updates.status === "completed" && existingJob.status !== "completed") {
         updates.completedAt = new Date().toISOString();
+        
+        emitCanonicalEvent({
+          eventName: "booking_completed",
+          userId: existingJob.userId,
+          context: { jobId: existingJob.id, serviceType: existingJob.serviceType, price: existingJob.price },
+          source: "web",
+        });
       }
       
       const job = await storage.updateJob(req.params.id, updates);
@@ -1072,6 +1087,16 @@ export async function registerRoutes(
       }
 
       const updatedPhotos = await storage.getPhotoAssets("job", job.id);
+      
+      if (updatedPhotos.length > 0) {
+        emitCanonicalEvent({
+          eventName: "photos_uploaded",
+          userId: job.userId,
+          context: { jobId: job.id, photoCount: updatedPhotos.length },
+          source: "web",
+        });
+      }
+      
       res.json(updatedPhotos);
     } catch (error) {
       console.error("Failed to save job photos:", error);
@@ -1121,6 +1146,14 @@ export async function registerRoutes(
       };
       const validated = insertLeadSchema.parse(dataWithUser);
       const lead = await storage.createLead(validated);
+      
+      emitCanonicalEvent({
+        eventName: "lead_received",
+        userId: lead.userId,
+        context: { leadId: lead.id, serviceType: lead.serviceType, source: lead.source },
+        source: "web",
+      });
+      
       res.status(201).json(lead);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1468,6 +1501,13 @@ export async function registerRoutes(
         sentAt: new Date().toISOString(),
       });
       
+      emitCanonicalEvent({
+        eventName: "estimate_sent",
+        userId: confirmation.userId,
+        context: { confirmationId: confirmation.id, leadId: confirmation.leadId, price: confirmation.agreedPrice },
+        source: "web",
+      });
+      
       res.json({
         ...updated,
         confirmationUrl,
@@ -1574,6 +1614,20 @@ export async function registerRoutes(
         status: "price_confirmed",
         convertedAt: new Date().toISOString(),
         convertedJobId: job.id,
+      });
+      
+      emitCanonicalEvent({
+        eventName: "estimate_confirmed",
+        userId: confirmation.userId,
+        context: { confirmationId: confirmation.id, leadId: lead.id, jobId: job.id, price: confirmation.agreedPrice },
+        source: "web",
+      });
+      
+      emitCanonicalEvent({
+        eventName: "booking_created",
+        userId: job.userId,
+        context: { jobId: job.id, serviceType: job.serviceType, price: job.price, leadId: lead.id, fromPriceConfirmation: true },
+        source: "web",
       });
       
       res.json({
@@ -4005,10 +4059,23 @@ Final price confirmed onsite.`;
   app.patch("/api/onboarding", async (req, res) => {
     try {
       const { step, completed } = req.body;
+      const previousUser = await storage.getUser(defaultUserId);
+      const previousStep = previousUser?.onboardingStep || 0;
+      
       const user = await storage.updateUser(defaultUserId, {
         onboardingStep: step,
         onboardingCompleted: completed,
       });
+      
+      if (step !== undefined && step > previousStep) {
+        emitCanonicalEvent({
+          eventName: "onboarding_step_completed",
+          userId: defaultUserId,
+          context: { step, previousStep, completed },
+          source: "web",
+        });
+      }
+      
       res.json({
         completed: user?.onboardingCompleted || false,
         step: user?.onboardingStep || 0,
@@ -4035,6 +4102,13 @@ Final price confirmed onsite.`;
       const message = `Here's your GigAid booking link! Share it with your next customer: ${bookingUrl}`;
 
       await sendSMS(phoneNumber, message);
+      
+      emitCanonicalEvent({
+        eventName: "booking_link_shared",
+        userId: defaultUserId,
+        context: { bookingUrl, phoneNumber: phoneNumber.slice(-4) },
+        source: "web",
+      });
 
       res.json({ success: true, message: "Booking link sent to your phone!" });
     } catch (error) {
@@ -6002,6 +6076,14 @@ Return ONLY the message text, no JSON or formatting.`
                   paymentIntentId: paymentIntent.id,
                 }),
               });
+              
+              emitCanonicalEvent({
+                eventName: "payment_succeeded",
+                userId: booking.providerId,
+                context: { bookingId, amount: paymentIntent.amount, paymentIntentId: paymentIntent.id },
+                source: "system",
+              });
+              
               console.log(`Deposit captured for booking ${bookingId}`);
             }
           }
@@ -6080,6 +6162,14 @@ Return ONLY the message text, no JSON or formatting.`
                 chargeId,
               }),
             });
+            
+            emitCanonicalEvent({
+              eventName: "chargeback_opened",
+              userId: booking.providerId,
+              context: { bookingId: booking.id, disputeId: dispute.id, reason: dispute.reason, amount: dispute.amount },
+              source: "system",
+            });
+            
             console.log(`Stripe dispute created for booking ${booking.id}`);
           }
           break;
