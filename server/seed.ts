@@ -834,7 +834,7 @@ export async function seedDatabase() {
       },
       {
         key: "today_money_plan",
-        enabled: false, // Default OFF - Today's Money Plan global prioritization
+        enabled: true, // Enabled for all users - Today's Money Plan global prioritization
         description: "Today's Money Plan: Global prioritization view showing ranked action queue across leads, jobs, and invoices",
         updatedAt: daysAgo(0),
       },
