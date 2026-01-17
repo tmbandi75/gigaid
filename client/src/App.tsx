@@ -80,6 +80,7 @@ function Router() {
       <Route path="/quickbook" component={QuickBook} />
       <Route path="/money-plan" component={MoneyPlanPage} />
       <Route path="/messages" component={Messages} />
+      <Route path="/owner" component={OwnerView} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -114,7 +115,6 @@ function App() {
           <Route path="/crew-portal/:token" component={CrewPortal} />
           <Route path="/review/:token" component={PublicReview} />
           <Route path="/qb/:token" component={QuickBookConfirm} />
-          <Route path="/owner" component={OwnerView} />
           <Route>
             <OnboardingWrapper>
               <ResponsiveLayout>

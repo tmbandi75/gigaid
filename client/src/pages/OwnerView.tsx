@@ -13,7 +13,6 @@ import {
   TrendingUp,
   TrendingDown,
   ArrowRight,
-  ArrowLeft,
   Crown,
   Lock,
   ChevronRight,
@@ -206,32 +205,8 @@ export default function OwnerView() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950" data-testid="page-owner-view">
-      <header className="bg-white dark:bg-slate-900 border-b border-border sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => navigate("/more")}
-                data-testid="button-back"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center">
-                <BarChart3 className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold">Owner View</h1>
-                <p className="text-sm text-muted-foreground">Business snapshot</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-6 py-8">
+    <div className="flex flex-col min-h-full bg-background pb-20" data-testid="page-owner-view">
+      <div className="max-w-7xl mx-auto px-4 py-6 w-full">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <MetricCard
             title="Weekly Revenue"
@@ -421,7 +396,7 @@ export default function OwnerView() {
             </CardContent>
           </Card>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
