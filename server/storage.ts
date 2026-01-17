@@ -254,6 +254,13 @@ export interface IStorage {
   getLastOutboundMessageByPhone(clientPhone: string): Promise<SmsMessage | undefined>;
   createSmsMessage(message: InsertSmsMessage): Promise<SmsMessage>;
   markSmsMessagesAsRead(userId: string, clientPhone: string): Promise<number>;
+  
+  // Phone-based lookups for SMS routing (efficient single-query lookups)
+  findClientByPhone(userId: string, phone: string): Promise<{
+    clientName: string | null;
+    relatedJobId: string | null;
+    relatedLeadId: string | null;
+  } | undefined>;
 }
 
 export class MemStorage implements IStorage {

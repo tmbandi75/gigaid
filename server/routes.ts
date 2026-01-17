@@ -2122,20 +2122,31 @@ export async function registerRoutes(
           relatedLeadId: lastOutbound.relatedLeadId,
           isRead: false,
         });
-        console.log(`Incoming SMS from ${From} routed to worker ${lastOutbound.userId}`);
+        console.log(`[SMS Webhook] Incoming from ${From} routed to worker ${lastOutbound.userId} (matched previous conversation)`);
       } else {
-        // No previous conversation found - route to default user
-        // In a multi-user system, you might handle this differently
+        // No previous conversation found - try to identify sender from jobs/leads/invoices
+        console.log(`[SMS Webhook] No previous conversation found for ${From}, attempting to identify sender...`);
+        
+        // Use efficient phone lookup to find client info
+        const clientInfo = await storage.findClientByPhone(defaultUserId, From);
+        
+        if (clientInfo) {
+          console.log(`[SMS Webhook] Matched to client: ${clientInfo.clientName}`);
+        }
+        
+        // Store the message with whatever info we found
         await storage.createSmsMessage({
           userId: defaultUserId,
           clientPhone: From,
-          clientName: null,
+          clientName: clientInfo?.clientName || "Unknown Sender",
           direction: "inbound",
           body: Body,
           twilioSid: MessageSid,
+          relatedJobId: clientInfo?.relatedJobId || null,
+          relatedLeadId: clientInfo?.relatedLeadId || null,
           isRead: false,
         });
-        console.log(`Incoming SMS from ${From} - no previous conversation, routed to default user`);
+        console.log(`[SMS Webhook] Incoming from ${From} (${clientInfo?.clientName || 'Unknown'}) stored for default user`);
       }
 
       // Respond to Twilio with empty TwiML to acknowledge receipt

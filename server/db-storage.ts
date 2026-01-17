@@ -1304,6 +1304,73 @@ export class DatabaseStorage implements IStorage {
     }
     return toUpdate.length;
   }
+
+  async findClientByPhone(userId: string, phone: string): Promise<{
+    clientName: string | null;
+    relatedJobId: string | null;
+    relatedLeadId: string | null;
+  } | undefined> {
+    const normalizedPhone = this.normalizePhone(phone);
+    
+    // First try to find in jobs (most recent first)
+    const allJobs = await db.select({
+      id: jobs.id,
+      clientName: jobs.clientName,
+      clientPhone: jobs.clientPhone,
+    }).from(jobs)
+      .where(eq(jobs.userId, userId))
+      .orderBy(desc(jobs.createdAt))
+      .limit(100);
+    
+    const matchingJob = allJobs.find(j => j.clientPhone && this.normalizePhone(j.clientPhone) === normalizedPhone);
+    if (matchingJob) {
+      return {
+        clientName: matchingJob.clientName,
+        relatedJobId: matchingJob.id,
+        relatedLeadId: null,
+      };
+    }
+    
+    // Try leads
+    const allLeads = await db.select({
+      id: leads.id,
+      clientName: leads.clientName,
+      clientPhone: leads.clientPhone,
+    }).from(leads)
+      .where(eq(leads.userId, userId))
+      .orderBy(desc(leads.createdAt))
+      .limit(100);
+    
+    const matchingLead = allLeads.find(l => l.clientPhone && this.normalizePhone(l.clientPhone) === normalizedPhone);
+    if (matchingLead) {
+      return {
+        clientName: matchingLead.clientName,
+        relatedLeadId: matchingLead.id,
+        relatedJobId: null,
+      };
+    }
+    
+    // Try invoices
+    const allInvoices = await db.select({
+      clientName: invoices.clientName,
+      clientPhone: invoices.clientPhone,
+      jobId: invoices.jobId,
+    }).from(invoices)
+      .where(eq(invoices.userId, userId))
+      .orderBy(desc(invoices.createdAt))
+      .limit(100);
+    
+    const matchingInvoice = allInvoices.find(i => i.clientPhone && this.normalizePhone(i.clientPhone) === normalizedPhone);
+    if (matchingInvoice) {
+      return {
+        clientName: matchingInvoice.clientName,
+        relatedJobId: matchingInvoice.jobId,
+        relatedLeadId: null,
+      };
+    }
+    
+    return undefined;
+  }
 }
 
 export const dbStorage = new DatabaseStorage();
