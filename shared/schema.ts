@@ -636,14 +636,20 @@ export const insertBookingEventSchema = createInsertSchema(bookingEvents).omit({
 export type InsertBookingEvent = z.infer<typeof insertBookingEventSchema>;
 export type BookingEvent = typeof bookingEvents.$inferSelect;
 
+// Voice note types
+export const voiceNoteTypes = ["job", "update", "shareable", "other"] as const;
+export type VoiceNoteType = (typeof voiceNoteTypes)[number];
+
 // Voice notes table
 export const voiceNotes = pgTable("voice_notes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(),
   jobId: varchar("job_id"),
-  audioUrl: text("audio_url").notNull(),
+  audioUrl: text("audio_url"),
   transcript: text("transcript"),
   summary: text("summary"),
+  keyPoints: text("key_points").array(),
+  type: text("type").default("other"),
   duration: integer("duration"),
   createdAt: text("created_at").notNull(),
 });
