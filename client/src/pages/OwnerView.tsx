@@ -13,6 +13,7 @@ import {
   TrendingUp,
   TrendingDown,
   ArrowRight,
+  ArrowLeft,
   Crown,
   Lock,
   ChevronRight,
@@ -210,6 +211,14 @@ export default function OwnerView() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => navigate("/more")}
+                data-testid="button-back"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
               <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center">
                 <BarChart3 className="h-5 w-5 text-white" />
               </div>
@@ -218,10 +227,6 @@ export default function OwnerView() {
                 <p className="text-sm text-muted-foreground">Business snapshot</p>
               </div>
             </div>
-            <Badge className="bg-gradient-to-r from-amber-500 to-yellow-500 text-white border-0">
-              <Crown className="h-3 w-3 mr-1" />
-              Pro
-            </Badge>
           </div>
         </div>
       </header>
