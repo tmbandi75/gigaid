@@ -44,6 +44,7 @@ import PublicReview from "@/pages/PublicReview";
 import QuickBook from "@/pages/QuickBook";
 import QuickBookConfirm from "@/pages/QuickBookConfirm";
 import MoneyPlanPage from "@/pages/MoneyPlanPage";
+import Messages from "@/pages/Messages";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -78,6 +79,7 @@ function Router() {
       <Route path="/share" component={ShareCapture} />
       <Route path="/quickbook" component={QuickBook} />
       <Route path="/money-plan" component={MoneyPlanPage} />
+      <Route path="/messages" component={Messages} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -35,6 +35,7 @@ import {
   ChevronUp,
   Moon,
   Sun,
+  MessageSquare,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
@@ -64,6 +65,7 @@ const mainNavItems = [
 const toolsItems = [
   { path: "/quickbook", icon: Zap, label: "QuickBook", badge: "New" },
   { path: "/ai-tools", icon: Sparkles, label: "AI Tools" },
+  { path: "/messages", icon: MessageSquare, label: "Messages" },
   { path: "/crew", icon: Users, label: "Crew" },
   { path: "/reminders", icon: Bell, label: "Reminders" },
   { path: "/booking-requests", icon: Calendar, label: "Bookings" },
@@ -83,6 +85,11 @@ export function AppSidebar() {
 
   const { data: profile } = useQuery<UserProfile>({
     queryKey: ["/api/profile"],
+  });
+
+  const { data: unreadSmsData } = useQuery<{ count: number }>({
+    queryKey: ["/api/sms/unread-count"],
+    refetchInterval: 30000,
   });
 
   useEffect(() => {
@@ -156,26 +163,34 @@ export function AppSidebar() {
           <SidebarGroupLabel className="text-sidebar-foreground/50 uppercase text-xs tracking-wider font-semibold px-2">Tools</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {toolsItems.map((item) => (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.path)}
-                    tooltip={item.label}
-                    data-testid={`sidebar-tool-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
-                  >
-                    <Link href={item.path}>
-                      <item.icon className="h-4 w-4" />
-                      <span className="flex-1">{item.label}</span>
-                      {item.badge && (
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                          {item.badge}
-                        </Badge>
-                      )}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {toolsItems.map((item) => {
+                const unreadCount = item.path === "/messages" ? (unreadSmsData?.count || 0) : 0;
+                return (
+                  <SidebarMenuItem key={item.path}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.path)}
+                      tooltip={item.label}
+                      data-testid={`sidebar-tool-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+                    >
+                      <Link href={item.path}>
+                        <item.icon className="h-4 w-4" />
+                        <span className="flex-1">{item.label}</span>
+                        {item.badge && (
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                            {item.badge}
+                          </Badge>
+                        )}
+                        {unreadCount > 0 && (
+                          <Badge variant="default" className="text-[10px] px-1.5 py-0 min-w-5 flex items-center justify-center">
+                            {unreadCount}
+                          </Badge>
+                        )}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
