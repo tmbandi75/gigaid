@@ -46,6 +46,8 @@ import QuickBookConfirm from "@/pages/QuickBookConfirm";
 import MoneyPlanPage from "@/pages/MoneyPlanPage";
 import Messages from "@/pages/Messages";
 import AdminCockpit from "@/pages/AdminCockpit";
+import AdminUsers from "@/pages/AdminUsers";
+import AdminUserDetail from "@/pages/AdminUserDetail";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -83,6 +85,8 @@ function Router() {
       <Route path="/messages" component={Messages} />
       <Route path="/owner" component={OwnerView} />
       <Route path="/admin/cockpit" component={AdminCockpit} />
+      <Route path="/admin/users" component={AdminUsers} />
+      <Route path="/admin/users/:userId" component={AdminUserDetail} />
       <Route component={NotFound} />
     </Switch>
   );

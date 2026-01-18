@@ -19,8 +19,10 @@ import {
   Zap,
   ArrowUpRight,
   ArrowDownRight,
-  Minus
+  Minus,
+  UserCog
 } from "lucide-react";
+import { Link } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -234,16 +236,24 @@ export default function AdminCockpit() {
               </h1>
               <p className="text-slate-300 text-sm mt-1">Business health at a glance</p>
             </div>
-            <Button 
-              variant="secondary" 
-              size="sm"
-              onClick={() => refreshMutation.mutate()}
-              disabled={refreshMutation.isPending}
-              data-testid="button-refresh"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${refreshMutation.isPending ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
+            <div className="flex gap-2">
+              <Link href="/admin/users">
+                <Button variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10" data-testid="button-user-ops">
+                  <UserCog className="h-4 w-4 mr-2" />
+                  User Ops
+                </Button>
+              </Link>
+              <Button 
+                variant="secondary" 
+                size="sm"
+                onClick={() => refreshMutation.mutate()}
+                disabled={refreshMutation.isPending}
+                data-testid="button-refresh"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${refreshMutation.isPending ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
           </div>
         </div>
       </div>

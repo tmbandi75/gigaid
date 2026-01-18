@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, doublePrecision, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -1321,5 +1321,107 @@ export const insertAttributionDailySchema = createInsertSchema(attributionDaily)
 
 export type InsertAttributionDaily = z.infer<typeof insertAttributionDailySchema>;
 export type AttributionDaily = typeof attributionDaily.$inferSelect;
+
+// ============================================================
+// ADMIN ACTION AUDIT - Immutable log of admin actions
+// ============================================================
+export const adminActionKeys = [
+  "user_flagged",
+  "add_note",
+  "reset_onboarding_state",
+  "trigger_webhook_retry",
+  "suppress_messaging",
+  "unsuppress_messaging",
+  "send_one_off_push"
+] as const;
+export type AdminActionKey = (typeof adminActionKeys)[number];
+
+export const adminActionAudit = pgTable("admin_action_audit", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  createdAt: text("created_at").notNull(),
+  actorUserId: varchar("actor_user_id").notNull(),
+  actorEmail: text("actor_email"),
+  targetUserId: varchar("target_user_id"),
+  actionKey: text("action_key").notNull(),
+  reason: text("reason").notNull(),
+  payload: text("payload"), // JSON
+  source: text("source").notNull().default("admin_ui"),
+}, (table) => [
+  index("admin_action_audit_target_user_idx").on(table.targetUserId, table.createdAt),
+  index("admin_action_audit_action_key_idx").on(table.actionKey, table.createdAt),
+]);
+
+export const insertAdminActionAuditSchema = createInsertSchema(adminActionAudit).omit({
+  id: true,
+});
+
+export type InsertAdminActionAudit = z.infer<typeof insertAdminActionAuditSchema>;
+export type AdminActionAudit = typeof adminActionAudit.$inferSelect;
+
+// ============================================================
+// USER ADMIN NOTES - Internal notes on users
+// ============================================================
+export const userAdminNotes = pgTable("user_admin_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at"),
+  actorUserId: varchar("actor_user_id").notNull(),
+  targetUserId: varchar("target_user_id").notNull(),
+  note: text("note").notNull(),
+}, (table) => [
+  index("user_admin_notes_target_user_idx").on(table.targetUserId, table.createdAt),
+]);
+
+export const insertUserAdminNoteSchema = createInsertSchema(userAdminNotes).omit({
+  id: true,
+});
+
+export type InsertUserAdminNote = z.infer<typeof insertUserAdminNoteSchema>;
+export type UserAdminNote = typeof userAdminNotes.$inferSelect;
+
+// ============================================================
+// USER FLAGS - Flagged users for admin attention
+// ============================================================
+export const userFlags = pgTable("user_flags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  flaggedAt: text("flagged_at").notNull(),
+  flaggedBy: varchar("flagged_by").notNull(),
+  reason: text("reason").notNull(),
+  unflaggedAt: text("unflagged_at"),
+  unflaggedBy: varchar("unflagged_by"),
+}, (table) => [
+  index("user_flags_user_idx").on(table.userId),
+]);
+
+export const insertUserFlagSchema = createInsertSchema(userFlags).omit({
+  id: true,
+});
+
+export type InsertUserFlag = z.infer<typeof insertUserFlagSchema>;
+export type UserFlag = typeof userFlags.$inferSelect;
+
+// ============================================================
+// MESSAGING SUPPRESSION - Temporarily suppress messaging for users
+// ============================================================
+export const messagingSuppression = pgTable("messaging_suppression", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  suppressedAt: text("suppressed_at").notNull(),
+  suppressedBy: varchar("suppressed_by").notNull(),
+  suppressUntil: text("suppress_until").notNull(),
+  reason: text("reason").notNull(),
+  unsuppressedAt: text("unsuppressed_at"),
+  unsuppressedBy: varchar("unsuppressed_by"),
+}, (table) => [
+  index("messaging_suppression_user_idx").on(table.userId),
+]);
+
+export const insertMessagingSuppressionSchema = createInsertSchema(messagingSuppression).omit({
+  id: true,
+});
+
+export type InsertMessagingSuppression = z.infer<typeof insertMessagingSuppressionSchema>;
+export type MessagingSuppression = typeof messagingSuppression.$inferSelect;
 
 export * from "./models/chat";

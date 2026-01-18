@@ -34,6 +34,7 @@ import { generateCelebrationMessage } from "./celebration";
 import { generateNudgesForUser } from "./nudgeGenerator";
 import { createSupportTicket, getTicketsByEmail, getTicketById, addTicketComment, getTicketComments } from "./zendesk";
 import cockpitRoutes from "./copilot/routes";
+import adminUsersRoutes from "./admin/usersRoutes";
 import { startCopilotScheduler } from "./copilot/engine";
 import { emitCanonicalEvent } from "./copilot/canonicalEvents";
 
@@ -46,6 +47,7 @@ export async function registerRoutes(
   registerObjectStorageRoutes(app);
   
   app.use("/api/admin/cockpit", cockpitRoutes);
+  app.use("/api/admin/users", adminUsersRoutes);
   
   startCopilotScheduler();
 
