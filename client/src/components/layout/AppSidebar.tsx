@@ -128,7 +128,7 @@ export function AppSidebar() {
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <Link href="/">
           <div className="flex flex-col cursor-pointer" data-testid="sidebar-header">
-            <img src="/gigaid-logo.png" alt="GigAid" className="h-10" />
+            <img src="/gigaid-logo.png" alt="GigAid" className="h-[120px]" />
             <span className="text-xs text-sidebar-foreground/60 mt-1">Pro Dashboard</span>
           </div>
         </Link>
