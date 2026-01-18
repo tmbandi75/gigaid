@@ -1,0 +1,293 @@
+You are working in the existing GigAid codebase (React + Vite frontend served by a Node/Express backend). Implement an Admin / Ops User Management Interface exactly per the requirements below, with strict separation from the Founder Cockpit. This must be safe, auditable, and role-gated.
+
+NON-NEGOTIABLES
+- The Founder Cockpit remains READ-ONLY and aggregated. No user-level management actions in the Cockpit.
+- All user-level actions live ONLY in the Admin / Ops interface.
+- No Stripe embeds. No direct Stripe operations. Stripe is system of record. Admin UI may deep-link to Stripe only.
+- No campaign building inside Admin UI. Customer.io and OneSignal are linked out (and limited one-off actions only where explicitly allowed).
+- All admin actions must be logged immutably with actor, timestamp, action, and reason.
+- Bi-directional linking is required:
+  - Cockpit → Admin (filtered views / context-based drill-outs)
+  - Admin → Cockpit (link back to the originating metric/alert/focus)
+- Do not break existing flows. Add behind feature flags where sensible.
+
+SCOPE
+A) New Admin / Ops User Management UI (user-level inspection + limited controls)
+B) Backend APIs to support search, user detail, timelines, actions, and auditing
+C) External tool deep links: Amplitude, Customer.io, OneSignal, Stripe
+D) Navigation links between Cockpit and Admin
+
+TECH ASSUMPTIONS
+- Backend: Node.js + Express
+- Frontend: React + Vite
+- DB: Use existing DB layer/patterns
+- Auth: Use existing auth. Add strict role gates for admin routes.
+
+========================================================
+PART 1 — ROUTING & NAVIGATION
+========================================================
+1) Create a new Admin route group:
+- Frontend: /admin/users
+- Backend: /api/admin/users/*
+
+2) Create bi-directional links:
+- Cockpit page must include a “User Ops” link in the header/nav → /admin/users
+- Admin user views must include “Back to Cockpit” link:
+  - Default: /admin/cockpit
+  - If navigated from a specific Cockpit metric/alert/focus, preserve query params like:
+    ?from=cockpit&metric=activation_leak or ?from=cockpit&alert=lead_conversion_low
+
+3) Cockpit → Admin drill-outs must be “filtered views”, not arbitrary browsing:
+- Example links:
+  - Users stuck in onboarding → /admin/users?view=onboarding_stalled
+  - High-intent users (shared link, no booking) → /admin/users?view=high_intent_no_booking
+  - Payment failures → /admin/users?view=payment_failed_recent
+
+IMPORTANT: Cockpit remains aggregated; these links are the only bridge.
+
+========================================================
+PART 2 — ACCESS CONTROL (MANDATORY)
+========================================================
+1) Backend middleware for /api/admin/*:
+- Only users with role ADMIN/OPS/ROOT may access.
+- If roles are not present today, implement env-based allowlist:
+  - ADMIN_EMAILS or ADMIN_USER_IDS
+- Deny by default.
+
+2) Frontend route protection:
+- Non-admin users attempting /admin/users are redirected to standard app home/dashboard.
+- Show a “Not authorized” toast.
+
+========================================================
+PART 3 — DATA MODEL (MIGRATIONS)
+========================================================
+Add tables (adapt names to existing conventions):
+
+A) admin_action_audit
+- id (uuid)
+- created_at (timestamp)
+- actor_user_id (string/uuid)
+- actor_email (string nullable)
+- target_user_id (string/uuid nullable)
+- action_key (string)        // e.g., user_flagged, onboarding_reset, suppress_push
+- reason (text)              // REQUIRED for any write action
+- payload (jsonb)            // action details
+- source (string)            // admin_ui
+Indexes:
+- (target_user_id, created_at)
+- (action_key, created_at)
+
+B) user_admin_notes (optional but recommended)
+- id (uuid)
+- created_at (timestamp)
+- updated_at (timestamp)
+- actor_user_id (string/uuid)
+- target_user_id (string/uuid)
+- note (text)
+Indexes:
+- (target_user_id, created_at)
+
+If the system already has an audit log table, extend it instead of duplicating.
+
+========================================================
+PART 4 — ADMIN BACKEND APIs (READ + LIMITED WRITE)
+========================================================
+All endpoints are admin-gated.
+
+1) GET /api/admin/users/search?q=...
+- Search by email, user_id, phone (if exists)
+- Return minimal results:
+  - user_id, email, role, status, signup_date, last_active_at
+- Limit results to 25.
+
+2) GET /api/admin/users/views?view=<key>
+- Returns paginated, FILTERED lists only, based on pre-defined views:
+  - onboarding_stalled
+  - high_intent_no_booking
+  - payment_failed_recent
+  - inactive_7d_paying
+  - churned_30d
+IMPORTANT:
+- These are allowed because this is the Admin interface (not Cockpit).
+- Keep pagination and avoid returning excessive PII.
+
+3) GET /api/admin/users/:userId
+Return a full “User Overview” object:
+- Profile header:
+  - user_id, email, role, account_status, signup_at, last_active_at
+  - subscription status summary (read-only)
+  - lifecycle stage summary
+- Funnel state summary:
+  - onboarding steps completed
+  - booking link created Y/N
+  - leads received count
+  - estimates sent/confirmed
+  - first booking timestamp (if any)
+  - payments milestones (summary)
+
+Include a “context” object if query param from=cockpit is present:
+- from=cockpit
+- metric/alert/focus identifiers
+
+4) GET /api/admin/users/:userId/timeline
+- Return canonical event timeline (chronological)
+- Use existing canonical events if present (events_canonical)
+- If not present, implement a minimal timeline derived from current event logging
+- Must include: event_name, occurred_at, source, context (sanitized)
+
+5) GET /api/admin/users/:userId/messaging
+Return messaging status (read-only), best effort:
+- Customer.io:
+  - last message sent, active journeys (if retrievable), next scheduled step (if retrievable)
+- OneSignal:
+  - push enabled, last push sent, platform/device summary (if retrievable)
+If APIs aren’t available, show “Link out only” with placeholders.
+
+6) GET /api/admin/users/:userId/payments
+Read-only summary:
+- subscription summary
+- invoice summary counts
+- last payment status
+- dunning state (if known)
+- chargeback count (if known)
+No Stripe actions.
+
+7) POST /api/admin/users/:userId/actions
+Limited write actions ONLY (MUST LOG + REQUIRE reason):
+Allowed action_key values:
+- user_flagged
+- add_note
+- reset_onboarding_state (only if feature exists; otherwise stub + log)
+- trigger_webhook_retry (internal retry only; no Stripe operations)
+- suppress_messaging (duration required)
+- unsuppress_messaging
+- send_one_off_push (ALLOWED but heavily constrained)
+Constraints:
+- Each action must require:
+  - reason (non-empty)
+  - confirmation on frontend
+- Must write to admin_action_audit ALWAYS.
+- If action impacts messaging:
+  - “send_one_off_push” must be rate-limited and logged
+  - Must include deep_link and message content
+- Must NOT allow:
+  - delete_user
+  - refund
+  - cancel_subscription
+  - edit_plan
+  - bulk actions (v1)
+
+========================================================
+PART 5 — EXTERNAL TOOL LINKS (MANDATORY)
+========================================================
+On each user detail page, display link buttons (open in new tab):
+- “Open in Amplitude”
+- “Open in Customer.io”
+- “Open in OneSignal”
+- “Open in Stripe”
+These must be deep links where possible.
+Add env vars for base URLs:
+- AMPLITUDE_BASE_URL (or build link pattern)
+- CUSTOMERIO_BASE_URL
+- ONESIGNAL_BASE_URL
+- STRIPE_DASHBOARD_BASE_URL
+If deep link patterns vary, implement configurable templates:
+- e.g., AMPLITUDE_USER_URL_TEMPLATE="https://app.amplitude.com/.../user/{{USER_ID}}"
+
+Do not embed these tools.
+
+========================================================
+PART 6 — FRONTEND ADMIN UI REQUIREMENTS
+========================================================
+Create /admin/users with the following:
+
+A) User Search bar (top)
+- Search by email/user id/phone
+- Show minimal results list
+- Clicking opens user detail page
+
+B) Saved Views (left panel or tabs)
+- Onboarding Stalled
+- High-Intent No Booking
+- Payment Failed (recent)
+- Paying Inactive 7d
+- Churned 30d
+Each view shows a paginated list with:
+- email (masked if needed), user_id, status, signup date, last active, key reason tag
+Click row → user detail page
+
+C) User Detail Page /admin/users/:userId
+Sections:
+1) Profile Header + Context Banner
+   - Show why they were surfaced (if from=cockpit)
+   - Show “Back to Cockpit” link
+2) Lifecycle & Funnel State (read-only)
+3) Activity Timeline (canonical events)
+4) Messaging Status (read-only + link out)
+5) Payments Summary (read-only + link out)
+6) Admin Actions (limited controls)
+   - Flag user (requires reason)
+   - Add internal note (requires reason)
+   - Suppress messaging (duration + reason)
+   - One-off push (requires reason + confirmation + deep link)
+All actions must show “This will be logged” text.
+
+UI STYLE
+- Modern, clean, not overly wide
+- Use existing component library (ShadCN/Tailwind if present)
+- Clear separation between “Read-only” panels and “Actions” panel
+- Strong confirmation modals for any action
+
+========================================================
+PART 7 — AUDITABILITY & SAFETY
+========================================================
+- Every write action must:
+  - Require reason
+  - Create an admin_action_audit row
+  - Include actor identity and target_user_id
+- Add server-side validation:
+  - action_key must be in allowlist
+  - reason required
+  - rate limit send_one_off_push per actor (e.g., 20/day)
+- Add a read-only audit view:
+  - /admin/users/:userId/audit
+  - Shows admin actions chronologically
+
+========================================================
+PART 8 — TESTING & VERIFICATION
+========================================================
+- Unit tests:
+  - admin access middleware
+  - action allowlist enforcement
+  - reason-required enforcement
+  - audit log created on actions
+- Integration tests (basic):
+  - search endpoint
+  - views endpoint pagination
+  - user detail loads
+- Manual QA checklist:
+  - Cockpit links to Admin views correctly
+  - Admin links back to Cockpit correctly
+  - External links open correctly
+  - No actions appear in Cockpit
+  - Unauthorized users cannot access Admin UI
+
+========================================================
+IMPLEMENTATION ORDER (DO THIS IN ORDER)
+========================================================
+1) Add DB migrations (audit + notes)
+2) Add backend admin middleware + role gating
+3) Implement search + views + user detail APIs
+4) Implement timeline endpoint
+5) Implement actions endpoint with strict allowlist + audit logging
+6) Build /admin/users UI (search + views + user detail)
+7) Add external tool deep links (env-based templates)
+8) Add “Back to Cockpit” and Cockpit → Admin links
+9) Add tests + QA checklist
+
+OUTPUT REQUIREMENTS
+- Provide a short summary of files added/changed
+- Provide instructions to run migrations and start dev
+- Ensure the Cockpit remains aggregated and read-only
+- Ensure all admin actions are logged with reason
+- Do not refactor unrelated code

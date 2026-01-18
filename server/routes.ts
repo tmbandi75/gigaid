@@ -8024,6 +8024,34 @@ Return ONLY the message text, no JSON or formatting.`
     }
   });
 
+  // Admin User Management Tests
+  app.post("/api/test/admin-users", async (req, res) => {
+    try {
+      const { runAllAdminTests } = await import("./tests/adminUsers.test");
+      const results = await runAllAdminTests();
+      
+      const passed = results.failed === 0;
+      const message = passed 
+        ? `All ${results.total} admin tests passed`
+        : `${results.failed}/${results.total} admin tests failed`;
+      
+      res.status(passed ? 200 : 500).json({
+        passed,
+        message,
+        total: results.total,
+        passedCount: results.passed,
+        failedCount: results.failed,
+        results: results.results
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        passed: false,
+        message: "Test runner error",
+        error: error.message,
+      });
+    }
+  });
+
   // ============ ZENDESK SUPPORT TICKET ROUTES ============
 
   // Validation schema for support ticket creation
