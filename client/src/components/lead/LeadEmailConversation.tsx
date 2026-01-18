@@ -28,56 +28,63 @@ const replyScenarios = [
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit'
-  });
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) {
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  } else if (diffDays === 1) {
+    return 'Yesterday';
+  } else if (diffDays < 7) {
+    return date.toLocaleDateString('en-US', { weekday: 'short' });
+  }
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function EmailMessage({ email }: { email: LeadEmail }) {
-  const [expanded, setExpanded] = useState(false);
+function EmailMessage({ email, isExpanded, onToggle }: { email: LeadEmail; isExpanded: boolean; onToggle: () => void }) {
   const isOutbound = email.direction === "outbound";
+  
+  // Get preview text (first line or first 60 chars)
+  const previewText = email.bodyText.split('\n')[0].substring(0, 60) + (email.bodyText.length > 60 ? '...' : '');
   
   return (
     <div 
-      className={`p-3 rounded-lg ${isOutbound ? "bg-primary/10 ml-4" : "bg-muted mr-4"}`}
+      className={`border-b border-border last:border-b-0 cursor-pointer hover-elevate transition-colors ${isExpanded ? 'bg-muted/30' : ''}`}
+      onClick={onToggle}
       data-testid={`email-message-${email.id}`}
     >
-      <div className="flex items-center gap-2 mb-2">
-        {isOutbound ? (
-          <ArrowUpRight className="h-4 w-4 text-primary" />
-        ) : (
-          <ArrowDownLeft className="h-4 w-4 text-green-600" />
-        )}
-        <span className="text-xs font-medium">
-          {isOutbound ? "You" : email.fromEmail}
-        </span>
-        <span className="text-xs text-muted-foreground ml-auto">
-          {formatDate(email.sentAt || email.receivedAt || email.createdAt)}
-        </span>
-      </div>
-      <div className="text-sm font-medium mb-1">{email.subject}</div>
-      <div 
-        className={`text-sm text-muted-foreground whitespace-pre-wrap ${!expanded && "line-clamp-3"}`}
-      >
-        {email.bodyText}
-      </div>
-      {email.bodyText.length > 200 && (
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="mt-1 h-6 px-2 text-xs"
-          onClick={() => setExpanded(!expanded)}
-        >
-          {expanded ? (
-            <><ChevronUp className="h-3 w-3 mr-1" /> Less</>
+      <div className="p-3">
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full shrink-0 ${isOutbound ? 'bg-primary' : 'bg-green-500'}`} />
+          <span className="text-sm font-medium truncate flex-1">
+            {isOutbound ? 'You' : email.fromEmail?.split('@')[0] || 'Client'}
+          </span>
+          <span className="text-xs text-muted-foreground shrink-0">
+            {formatDate(email.sentAt || email.receivedAt || email.createdAt)}
+          </span>
+          {isExpanded ? (
+            <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
           ) : (
-            <><ChevronDown className="h-3 w-3 mr-1" /> More</>
+            <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
           )}
-        </Button>
-      )}
+        </div>
+        
+        {!isExpanded && (
+          <div className="ml-4 mt-1">
+            <span className="text-xs font-medium text-foreground">{email.subject}</span>
+            <span className="text-xs text-muted-foreground"> - {previewText}</span>
+          </div>
+        )}
+        
+        {isExpanded && (
+          <div className="ml-4 mt-3 space-y-2">
+            <div className="text-sm font-medium">{email.subject}</div>
+            <div className="text-sm text-muted-foreground whitespace-pre-wrap bg-background p-3 rounded-md border">
+              {email.bodyText}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -90,11 +97,17 @@ export function LeadEmailConversation({ leadId, clientEmail, clientName, service
   const [body, setBody] = useState("");
   const [includeSignature, setIncludeSignature] = useState(true);
   const [selectedScenario, setSelectedScenario] = useState<string | null>(null);
+  const [expandedEmailId, setExpandedEmailId] = useState<string | null>(null);
+  const [showAllEmails, setShowAllEmails] = useState(false);
 
   const { data: emails = [], isLoading } = useQuery<LeadEmail[]>({
     queryKey: ["/api/leads", leadId, "emails"],
     enabled: !!leadId,
   });
+
+  // Show only latest 3 emails by default, all if expanded
+  const visibleEmails = showAllEmails ? emails : emails.slice(0, 3);
+  const hiddenCount = emails.length - 3;
 
   const generateReplyMutation = useMutation({
     mutationFn: async (scenario: string) => {
@@ -301,10 +314,39 @@ export function LeadEmailConversation({ leadId, clientEmail, clientName, service
             <span className="text-xs">Send an email to start the conversation</span>
           </div>
         ) : (
-          <div className="space-y-3">
-            {emails.map((email) => (
-              <EmailMessage key={email.id} email={email} />
+          <div className="border rounded-lg overflow-hidden">
+            {visibleEmails.map((email) => (
+              <EmailMessage 
+                key={email.id} 
+                email={email}
+                isExpanded={expandedEmailId === email.id}
+                onToggle={() => setExpandedEmailId(expandedEmailId === email.id ? null : email.id)}
+              />
             ))}
+            {hiddenCount > 0 && !showAllEmails && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full py-2 text-xs text-muted-foreground"
+                onClick={() => setShowAllEmails(true)}
+                data-testid="button-show-more-emails"
+              >
+                <ChevronDown className="h-3 w-3 mr-1" />
+                Show {hiddenCount} more email{hiddenCount > 1 ? 's' : ''}
+              </Button>
+            )}
+            {showAllEmails && emails.length > 3 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full py-2 text-xs text-muted-foreground"
+                onClick={() => setShowAllEmails(false)}
+                data-testid="button-show-less-emails"
+              >
+                <ChevronUp className="h-3 w-3 mr-1" />
+                Show less
+              </Button>
+            )}
           </div>
         )}
       </CardContent>
