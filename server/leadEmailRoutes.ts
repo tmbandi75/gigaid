@@ -121,17 +121,17 @@ router.post("/leads/:leadId/emails", async (req: Request, res: Response) => {
       finalBodyHtml += signature.html;
     }
     
-    // Use subdomain for reply-to so replies route through SendGrid Inbound Parse
-    const replyToEmail = `lead-${leadId}@replies.gigaid.ai`;
+    // Use subdomain for from/reply-to so replies route through SendGrid Inbound Parse
+    const leadEmail = `lead-${leadId}@replies.gigaid.ai`;
     
     const msg = {
       to: lead.clientEmail,
       from: {
-        email: fromEmail,
+        email: leadEmail,
         name: user.businessName || user.name || "GigAid"
       },
       replyTo: {
-        email: replyToEmail,
+        email: leadEmail,
         name: user.businessName || user.name || "GigAid"
       },
       subject: subject,
@@ -156,7 +156,7 @@ router.post("/leads/:leadId/emails", async (req: Request, res: Response) => {
       leadId: leadId,
       userId: userId,
       direction: "outbound",
-      fromEmail: fromEmail,
+      fromEmail: leadEmail,
       toEmail: lead.clientEmail,
       subject: subject,
       bodyText: finalBodyText,
