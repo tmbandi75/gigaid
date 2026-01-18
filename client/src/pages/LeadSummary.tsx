@@ -147,7 +147,10 @@ export default function LeadSummary() {
 
   const handleEmail = () => {
     if (lead.clientEmail) {
-      window.location.href = `mailto:${lead.clientEmail}`;
+      const emailSection = document.querySelector('[data-testid="lead-email-section"]');
+      if (emailSection) {
+        emailSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
   };
 
