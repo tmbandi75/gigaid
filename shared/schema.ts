@@ -51,6 +51,11 @@ export const users = pgTable("users", {
   
   // Public estimation setting for providers
   publicEstimationEnabled: boolean("public_estimation_enabled").default(true),
+  
+  // Email signature settings
+  emailSignatureText: text("email_signature_text"),
+  emailSignatureLogoUrl: text("email_signature_logo_url"),
+  emailSignatureIncludeLogo: boolean("email_signature_include_logo").default(true),
 });
 
 // Availability type for frontend use
@@ -267,6 +272,36 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
 
 export type InsertLead = z.infer<typeof insertLeadSchema>;
 export type Lead = typeof leads.$inferSelect;
+
+// Lead Email Conversations - track emails sent to/from leads
+export const leadEmailDirections = ["outbound", "inbound"] as const;
+export type LeadEmailDirection = (typeof leadEmailDirections)[number];
+
+export const leadEmails = pgTable("lead_emails", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  leadId: varchar("lead_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  direction: text("direction").notNull(), // 'outbound' or 'inbound'
+  fromEmail: text("from_email").notNull(),
+  toEmail: text("to_email").notNull(),
+  subject: text("subject").notNull(),
+  bodyText: text("body_text").notNull(),
+  bodyHtml: text("body_html"),
+  trackingId: text("tracking_id"), // Unique ID for matching replies
+  inReplyToTrackingId: text("in_reply_to_tracking_id"), // For threading
+  sendgridMessageId: text("sendgrid_message_id"),
+  sentAt: text("sent_at"),
+  receivedAt: text("received_at"),
+  createdAt: text("created_at").notNull(),
+});
+
+export const insertLeadEmailSchema = createInsertSchema(leadEmails).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertLeadEmail = z.infer<typeof insertLeadEmailSchema>;
+export type LeadEmail = typeof leadEmails.$inferSelect;
 
 // Payment Methods (expanded for hybrid system)
 export const paymentMethods = ["stripe", "zelle", "venmo", "cashapp", "cash", "check", "other"] as const;
