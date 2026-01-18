@@ -121,7 +121,8 @@ router.post("/leads/:leadId/emails", async (req: Request, res: Response) => {
       finalBodyHtml += signature.html;
     }
     
-    const replyToEmail = fromEmail;
+    // Use subdomain for reply-to so replies route through SendGrid Inbound Parse
+    const replyToEmail = `lead-${leadId}@replies.gigaid.ai`;
     
     const msg = {
       to: lead.clientEmail,
@@ -129,7 +130,10 @@ router.post("/leads/:leadId/emails", async (req: Request, res: Response) => {
         email: fromEmail,
         name: user.businessName || user.name || "GigAid"
       },
-      replyTo: replyToEmail,
+      replyTo: {
+        email: replyToEmail,
+        name: user.businessName || user.name || "GigAid"
+      },
       subject: subject,
       text: finalBodyText,
       html: finalBodyHtml,
@@ -231,6 +235,15 @@ router.post("/webhooks/sendgrid/inbound", async (req: Request, res: Response) =>
     let trackingId: string | null = null;
     let leadId: string | null = null;
     
+    // Extract lead ID from the "to" address (e.g., lead-{uuid}@replies.gigaid.ai)
+    if (to) {
+      const toMatch = to.match(/lead-([a-f0-9-]+)@replies\.gigaid\.ai/i);
+      if (toMatch) {
+        leadId = toMatch[1];
+        console.log("Extracted leadId from to address:", leadId);
+      }
+    }
+    
     if (headers) {
       const headerLines = headers.split("\n");
       for (const line of headerLines) {
@@ -238,7 +251,7 @@ router.post("/webhooks/sendgrid/inbound", async (req: Request, res: Response) =>
           trackingId = line.split(":")[1]?.trim();
         }
         if (line.toLowerCase().startsWith("x-gigaid-lead-id:")) {
-          leadId = line.split(":")[1]?.trim();
+          leadId = leadId || line.split(":")[1]?.trim();
         }
         if (line.toLowerCase().startsWith("in-reply-to:")) {
           const inReplyTo = line.split(":")[1]?.trim();
