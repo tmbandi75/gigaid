@@ -1,0 +1,356 @@
+You are working in the existing GigAid codebase (React + Vite frontend served by Node/Express backend). Implement the “Founder / Admin Cockpit” BRD + the “Backend Co-Pilot Addendum” exactly as defined below.
+
+NON-NEGOTIABLES
+- This is a READ-ONLY cockpit. No destructive per-user actions. No user suspension/ban/refund/edit. No notification sending UI. No Stripe embeds. No support workflows.
+- Every metric is aggregated. Any drill-out is via external links (Stripe dashboard / Ops Console), not deeper per-user tables inside the cockpit.
+- Cockpit is signal-driven and action-guiding, not action-executing.
+- All business logic for signals/recommendations lives in our backend “Co-Pilot” layer. Amplitude/Customer.io/OneSignal are execution/observation tools only—no business logic should be authored inside their dashboards.
+- Do not break existing flows. Add new code behind feature flags where sensible.
+
+SCOPE TO IMPLEMENT
+A) Founder / Admin Cockpit UI (single screen, read-only)
+B) Backend Co-Pilot layer (event ingestion, state evaluation, recommendations, alerting)
+C) Integrations plumbing for Amplitude + Customer.io + OneSignal (server-side fan-out; no UI controls)
+D) Data model + aggregation endpoints to power the cockpit
+
+TECH STACK ASSUMPTIONS
+- Backend: Node.js + Express
+- Frontend: React + Vite
+- DB: Use existing GigAid DB layer (if using Postgres/Supabase, follow existing patterns). If unknown, implement using existing ORM/query utilities found in repo.
+- Auth: Use existing auth. Add a “root/admin” gate for cockpit access (read-only).
+
+DELIVERABLES
+1) New /admin/cockpit page that matches the BRD layout:
+   [Top KPI Strip]
+   [Health & Alerts Strip]
+   [Growth & Activation]
+   [Revenue & Payments]
+   [Risk & Leakage]
+   [Focus Guidance]
+2) Backend endpoints that return aggregated values and lists (no raw user lists).
+3) Co-Pilot engine that computes:
+   - Overall health (Green/Yellow/Red)
+   - Primary bottleneck (Activation/Retention/Monetization)
+   - Biggest funnel leak
+   - System-generated focus recommendation
+   - Alerts & anomaly strip (non-dismissible until resolved; explain why fired)
+4) Integrations:
+   - Amplitude: receive all canonical business events (observe only)
+   - Customer.io: receive lifecycle signals/state changes (journey execution only)
+   - OneSignal: receive immediate operational nudges only (delivery only)
+   IMPORTANT: The cockpit UI does not send messages; integrations are server-side only.
+
+========================================================
+PART 1 — DATA MODEL (add migrations)
+========================================================
+Create tables (names can be prefixed gigaid_ if conventions require):
+
+1) events_canonical
+- id (uuid)
+- occurred_at (timestamp)
+- user_id (string/uuid nullable if system event)
+- org_id (nullable)
+- event_name (string)  // e.g. lead_received, photos_uploaded, estimate_confirmed
+- context (jsonb)      // job_id, service_type, price, confidence, etc.
+- source (string)      // web, mobile, system
+- version (int)        // schema version
+Indexes:
+- (event_name, occurred_at)
+- (user_id, occurred_at)
+
+2) copilot_signals
+- id (uuid)
+- created_at (timestamp)
+- signal_type (string)    // informational | warning | critical | opportunity
+- signal_key (string)     // e.g. activation_rate_down_wow
+- window_start (timestamp)
+- window_end (timestamp)
+- severity (int 0-100)
+- summary (string)
+- explanation (text)      // why it fired (include thresholds + deltas)
+- status (string)         // active | resolved
+- resolved_at (timestamp nullable)
+- links (jsonb)           // deep links to Stripe/Ops console
+Indexes:
+- (status, created_at)
+- (signal_key, status)
+
+3) copilot_recommendations
+- id (uuid)
+- created_at (timestamp)
+- rec_key (string)         // e.g. focus_send_estimates
+- health_state (string)    // green | yellow | red
+- primary_bottleneck (string) // activation | retention | monetization
+- biggest_funnel_leak (string)
+- recommendation_text (text)
+- rationale (text)         // explain drivers + metrics
+- urgency_score (int 0-100)
+- impact_estimate (jsonb)  // revenue_at_risk, users_affected, etc.
+- expires_at (timestamp)
+- status (string)          // active | expired | superseded
+Indexes:
+- (status, created_at)
+
+4) attribution_daily (optional but recommended)
+- date (date)
+- channel (string)          // utm_source / referrer grouping
+- signups (int)
+- activations (int)         // defined by Activation North Star choice
+- activation_rate (float)
+- notes (jsonb)
+
+5) metrics_daily (recommended for performance)
+- date (date)
+- total_users (int)
+- active_users_7d (int)
+- active_users_30d (int)
+- paying_customers (int)
+- mrr (numeric)
+- net_churn_pct (float)
+- first_booking_rate (float) OR median_time_to_first_booking (float)
+- failed_payments_24h (int)
+- failed_payments_7d (int)
+- revenue_at_risk (numeric)
+- chargebacks_30d (int)
+- paying_users_inactive_7d (int)
+- churned_users_7d (int)
+- churned_users_30d (int)
+- bookings_per_active_user (float)
+
+If a daily rollup system already exists, adapt to it.
+
+========================================================
+PART 2 — CANONICAL EVENTS (backend)
+========================================================
+Implement a single canonical event emitter function:
+- emitCanonicalEvent(event_name, { user_id, org_id, occurred_at?, context, source })
+This must:
+1) Write to events_canonical
+2) Fan-out to integrations (Amplitude / Customer.io / OneSignal) based on routing rules
+3) Never block core product flows if third-party calls fail (use try/catch + async queue pattern)
+
+Create canonical events at minimum:
+- user_signed_up
+- onboarding_step_completed
+- booking_link_shared
+- lead_received
+- photos_uploaded
+- estimate_sent
+- estimate_confirmed
+- booking_created
+- booking_completed
+- payment_succeeded
+- payment_failed
+- subscription_started
+- subscription_canceled
+- user_became_paying
+- user_inactive_7d
+- chargeback_opened (if available)
+If some don’t exist yet, add them at the appropriate points in current code.
+
+========================================================
+PART 3 — INTEGRATION ROUTING RULES (server-side)
+========================================================
+A) Amplitude (observe only)
+- Send ALL canonical events to Amplitude.
+- Include: user_id, device_id if available, occurred_at, event_name, context.
+- No recommendation/signal objects are sent to Amplitude as events (unless explicitly for internal telemetry like copilot_signal_fired, which is allowed but must be separate and optional).
+
+B) Customer.io (lifecycle)
+- Customer.io should receive ONLY state/lifecycle signals derived by the Co-Pilot engine, such as:
+  - onboarding_stalled
+  - no_estimate_24h
+  - inactive_7_days
+  - first_booking_completed
+  - churn_risk_detected
+Implementation:
+- Create a function sendCioEventOrAttribute(user_id, name, payload)
+- Use it only when Co-Pilot creates a signal that is lifecycle-relevant.
+- Do not author core business rules inside Customer.io.
+
+C) OneSignal (real-time operational nudges)
+- OneSignal should receive immediate, high-clarity events ONLY:
+  - lead_received
+  - photos_uploaded
+  - job_starts_soon (if exists)
+  - payment_succeeded
+  - booking_canceled (if exists)
+Implementation:
+- Create sendOneSignalPush(user_id, title, message, deep_link, meta)
+- Trigger from Co-Pilot router ONLY when rules say “immediate”.
+
+IMPORTANT: Cockpit UI must not expose “send push” or “start journey”.
+
+========================================================
+PART 4 — CO-PILOT ENGINE (backend)
+========================================================
+Create a Co-Pilot evaluation job that runs on a schedule (e.g., every hour) plus can be triggered manually in dev:
+- evaluateCopilot()
+
+It must:
+1) Compute all cockpit metrics (aggregated only).
+2) Detect anomalies and create/resolve copilot_signals:
+   Examples:
+   - Activation rate down WoW
+   - Failed payments spike
+   - Booking creation declining
+   - Churn spike
+   - Traffic surge from new channel
+Rules:
+- Signals are informational/non-dismissible in UI until resolved.
+- Each signal must include an explanation: baseline, current value, threshold, time window.
+- Signals must auto-resolve when metrics return within normal bounds.
+
+3) Generate exactly one active “focus recommendation” (copilot_recommendations):
+   Required fields:
+   - overall health: green/yellow/red
+   - primary bottleneck: activation/retention/monetization
+   - biggest funnel leak
+   - recommended focus this week
+   Include rationale that references the metrics driving it.
+
+4) Persist daily rollups into metrics_daily (if implemented) to keep UI fast.
+
+Health State Rules (implement simple deterministic thresholds; keep configurable):
+- Green: stable or improving across activation, retention, payments
+- Yellow: one major warning signal or consistent soft decline
+- Red: critical spikes (failed payments, churn) or severe activation drop
+
+Primary bottleneck logic:
+- Activation bottleneck if First-booking rate down or time-to-first-booking up + onboarding stuck increasing
+- Retention bottleneck if paying users inactive rising + churn rising
+- Monetization bottleneck if trial->paid down + failed payments/dunning up + revenue at risk up
+
+Biggest funnel leak:
+- Determine the largest relative drop across the funnel stages you can measure:
+  signup -> activation -> first booking -> paying -> retained paying
+
+========================================================
+PART 5 — COCKPIT BACKEND API (read-only)
+========================================================
+Add endpoints under /api/admin/cockpit (admin-gated):
+- GET /summary
+  Returns:
+  - Top KPI strip: total_users, active_7d, active_30d, paying_customers, mrr, net_churn_pct
+  - deltas: WoW and MoM where applicable
+  - health states for each KPI (green/yellow/red)
+
+- GET /growth-activation
+  Returns:
+  - top acquisition channels by activation quality (not volume)
+  - users stuck in onboarding (count + % of new signups)
+  - high-intent users count (shared link, no booking) for last 7/14 days
+  - Activation North Star (choose ONE):
+    - first_booking_rate OR median_time_to_first_booking
+  Note: Do not return per-user lists.
+
+- GET /revenue-payments
+  Returns:
+  - mrr, paying_customers, arpu/arpa, trial_to_paid_pct
+  - failed_payments 24h/7d, users_in_dunning, revenue_at_risk, chargebacks_30d
+  - payment momentum: new subs 7d, cancellations 7d, upgrades/downgrades 7d
+  - links: Stripe dashboard deep link(s), Ops console deep link(s)
+
+- GET /risk-leakage
+  Returns:
+  - paying users inactive 7 days
+  - churned users 7/30
+  - bookings per active user trend
+
+- GET /alerts
+  Returns active signals from copilot_signals (ordered by severity desc)
+
+- GET /focus
+  Returns the active recommendation from copilot_recommendations
+
+- GET /links
+  Returns configured external links (Stripe dashboard base, Ops console base) used by UI
+
+All endpoints must be aggregated and read-only.
+
+========================================================
+PART 6 — FRONTEND COCKPIT UI
+========================================================
+Create route: /admin/cockpit
+- Must be a single screen layout:
+  1) Top KPI Strip (always visible)
+  2) Health & Alerts Strip
+  3) Growth & Activation Panel
+  4) Revenue & Payments Panel
+  5) Risk & Leakage Panel
+  6) Founder Focus Panel (Truth Panel)
+
+UI requirements:
+- Show current value + WoW/MoM delta where available
+- Green/Yellow/Red state indicators for KPIs
+- Alerts are inline, non-dismissible; show explanation text
+- Every metric that drills out must provide external link buttons:
+  - “Open in Stripe”
+  - “Open in Ops Console”
+No per-user drilldown tables. No search for users. No action buttons other than external links.
+
+Founder Focus Panel (mandatory):
+- Overall health: Green/Yellow/Red
+- Primary bottleneck: Activation/Retention/Monetization
+- Biggest current funnel leak
+- Recommended focus this week (single statement)
+- Rationale (short, metric-backed)
+
+Make the UI modern, clean, and narrow enough (avoid overly wide center pane). Use existing component system (ShadCN/Tailwind if present). Do not introduce heavy new UI libraries.
+
+========================================================
+PART 7 — ADMIN ACCESS CONTROL
+========================================================
+- Add an admin gate middleware on backend routes:
+  - Only root/admin users can access /api/admin/*
+- Add frontend route protection:
+  - Non-admin users get redirected to normal app dashboard
+- If a “root user” concept exists, reuse it; otherwise create a config-based list of admin emails/ids via env var:
+  - ADMIN_USER_IDS or ADMIN_EMAILS
+
+========================================================
+PART 8 — CONFIG / SECRETS
+========================================================
+Add env vars (do not hardcode):
+- AMPLITUDE_API_KEY (or server key depending on your implementation)
+- CUSTOMERIO_SITE_ID
+- CUSTOMERIO_API_KEY
+- ONESIGNAL_APP_ID
+- ONESIGNAL_REST_API_KEY
+- STRIPE_DASHBOARD_BASE_URL (for deep links)
+- OPS_CONSOLE_BASE_URL (for deep links)
+- COPILOT_EVAL_SCHEDULE (optional)
+
+Implement safe fallbacks:
+- If any key missing, integrations are disabled but app still works.
+
+========================================================
+PART 9 — TESTING & VERIFICATION
+========================================================
+- Add unit tests for:
+  - event emitter writes to DB
+  - routing rules (Amplitude gets all; CIO gets only lifecycle; OS gets only immediate)
+  - copilot evaluation creates signals and resolves them
+  - focus recommendation selection returns exactly one active
+- Add simple admin “diagnostics” dev-only endpoint:
+  - POST /api/admin/cockpit/evaluate (dev only) to run evaluateCopilot()
+
+========================================================
+PART 10 — IMPLEMENTATION PLAN (DO THIS IN ORDER)
+========================================================
+1) Add migrations/tables
+2) Implement canonical event emitter + DB write
+3) Implement integrations clients (Amplitude, Customer.io, OneSignal) with safe failure handling
+4) Add Co-Pilot evaluator job + deterministic thresholds
+5) Implement aggregated metrics queries + rollups
+6) Add admin API endpoints
+7) Build /admin/cockpit UI using the endpoints
+8) Add admin access control
+9) Add tests + dev diagnostics endpoint
+
+OUTPUT REQUIREMENTS
+- Provide a short summary of files changed/added
+- Provide instructions to run migrations and start dev server
+- Ensure lint/type checks pass
+- Do not remove or refactor unrelated code
+- Keep the cockpit read-only, aggregated, and within scope
