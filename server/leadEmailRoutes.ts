@@ -7,6 +7,15 @@ import { randomUUID } from "crypto";
 
 const router = Router();
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 const defaultUserId = "demo-user";
 
 function buildEmailSignature(user: typeof users.$inferSelect): { text: string; html: string } {
@@ -27,16 +36,18 @@ function buildEmailSignature(user: typeof users.$inferSelect): { text: string; h
   let htmlSignature = '<br><br><hr style="border: none; border-top: 1px solid #e5e5e5; margin: 20px 0;">';
   
   if (user.emailSignatureIncludeLogo && user.emailSignatureLogoUrl) {
-    htmlSignature += `<img src="${user.emailSignatureLogoUrl}" alt="${businessName}" style="max-width: 150px; max-height: 60px; margin-bottom: 10px;"><br>`;
+    const safeLogoUrl = escapeHtml(user.emailSignatureLogoUrl);
+    const safeBusinessName = escapeHtml(businessName);
+    htmlSignature += `<img src="${safeLogoUrl}" alt="${safeBusinessName}" style="max-width: 150px; max-height: 60px; margin-bottom: 10px;"><br>`;
   }
   
   if (signatureText) {
-    htmlSignature += `<p style="color: #666; font-size: 14px; margin: 0; white-space: pre-line;">${signatureText}</p>`;
+    htmlSignature += `<p style="color: #666; font-size: 14px; margin: 0; white-space: pre-line;">${escapeHtml(signatureText)}</p>`;
   } else {
     htmlSignature += `<p style="color: #666; font-size: 14px; margin: 0;">`;
-    htmlSignature += `<strong>${businessName}</strong><br>`;
-    if (phone) htmlSignature += `${phone}<br>`;
-    if (email) htmlSignature += `${email}`;
+    htmlSignature += `<strong>${escapeHtml(businessName)}</strong><br>`;
+    if (phone) htmlSignature += `${escapeHtml(phone)}<br>`;
+    if (email) htmlSignature += `${escapeHtml(email)}`;
     htmlSignature += `</p>`;
   }
   
@@ -102,7 +113,7 @@ router.post("/leads/:leadId/emails", async (req: Request, res: Response) => {
     const trackingId = randomUUID();
     
     let finalBodyText = body;
-    let finalBodyHtml = `<div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6;">${body.replace(/\n/g, '<br>')}</div>`;
+    let finalBodyHtml = `<div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6;">${escapeHtml(body).replace(/\n/g, '<br>')}</div>`;
     
     if (includeSignature) {
       const signature = buildEmailSignature(user);
