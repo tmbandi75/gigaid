@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import type { Lead, PriceConfirmation, AiNudge } from "@shared/schema";
 import { LeadEmailConversation } from "@/components/lead/LeadEmailConversation";
+import { LeadTextComposer } from "@/components/lead/LeadTextComposer";
 import { useState, useEffect } from "react";
 import { useNudges, useGenerateNudges, useFeatureFlag } from "@/hooks/use-nudges";
 import { NudgeChips } from "@/components/nudges/NudgeChip";
@@ -318,6 +319,14 @@ export default function LeadSummary() {
             </CardContent>
           </Card>
         )}
+
+        <LeadTextComposer
+          leadId={lead.id}
+          clientPhone={lead.clientPhone}
+          clientName={lead.clientName}
+          serviceType={lead.serviceType}
+          description={lead.description || undefined}
+        />
 
         <LeadEmailConversation 
           leadId={lead.id} 
