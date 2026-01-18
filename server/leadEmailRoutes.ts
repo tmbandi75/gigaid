@@ -121,17 +121,17 @@ router.post("/leads/:leadId/emails", async (req: Request, res: Response) => {
       finalBodyHtml += signature.html;
     }
     
-    // Use verified domain for sending, but reply-to goes to inbound parse subdomain
-    const replyToEmail = `lead-${leadId}@replies.gigaid.ai`;
+    // Use lead-specific email for from/reply-to (replies.gigaid.ai domain must be authenticated in SendGrid)
+    const leadEmail = `lead-${leadId}@replies.gigaid.ai`;
     
     const msg = {
       to: lead.clientEmail,
       from: {
-        email: fromEmail,
+        email: leadEmail,
         name: user.businessName || user.name || "GigAid"
       },
       replyTo: {
-        email: replyToEmail,
+        email: leadEmail,
         name: user.businessName || user.name || "GigAid"
       },
       subject: subject,
@@ -156,7 +156,7 @@ router.post("/leads/:leadId/emails", async (req: Request, res: Response) => {
       leadId: leadId,
       userId: userId,
       direction: "outbound",
-      fromEmail: fromEmail,
+      fromEmail: leadEmail,
       toEmail: lead.clientEmail,
       subject: subject,
       bodyText: finalBodyText,
