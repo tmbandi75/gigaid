@@ -107,7 +107,7 @@ function MobileHeader() {
   });
 
   return (
-    <header className="sticky top-0 z-[100] flex h-14 items-center justify-between px-4 bg-card border-b border-card-border md:hidden" data-testid="mobile-header">
+    <header className="sticky top-0 z-[100] flex h-14 items-center justify-between pl-0 pr-4 bg-card border-b border-card-border md:hidden" data-testid="mobile-header">
       <img src="/gigaid-logo.png" alt="GigAid" className="h-[120px]" />
       <div className="flex items-center gap-1">
         <Link href="/reminders">
