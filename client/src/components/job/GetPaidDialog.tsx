@@ -142,12 +142,14 @@ export function GetPaidDialog({ open, onClose, jobId, jobTitle, amount, clientNa
   const createInvoiceMutation = useMutation({
     mutationFn: async () => {
       const invoiceAmount = totalAmountCents || amount || 0;
+      const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`;
       const response = await apiRequest("POST", `/api/invoices`, {
         userId: "demo-user",
         jobId,
         clientName: clientName || "Customer",
         serviceDescription: jobTitle,
         amount: invoiceAmount,
+        invoiceNumber,
         status: "draft",
       });
       return response.json();
