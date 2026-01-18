@@ -8,14 +8,23 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Mail, Send, Loader2, Inbox, ArrowUpRight, ArrowDownLeft, ChevronDown, ChevronUp } from "lucide-react";
+import { Mail, Send, Loader2, Inbox, ArrowUpRight, ArrowDownLeft, ChevronDown, ChevronUp, Sparkles, RefreshCw } from "lucide-react";
 import type { LeadEmail } from "@shared/schema";
 
 interface LeadEmailConversationProps {
   leadId: string;
   clientEmail: string | null;
   clientName: string;
+  serviceType?: string;
+  description?: string;
 }
+
+const replyScenarios = [
+  { id: "quote", label: "Quote", icon: "DollarSign" },
+  { id: "availability", label: "Availability", icon: "Calendar" },
+  { id: "followup", label: "Follow-up", icon: "Bell" },
+  { id: "details", label: "Ask details", icon: "MessageCircle" },
+];
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -73,18 +82,50 @@ function EmailMessage({ email }: { email: LeadEmail }) {
   );
 }
 
-export function LeadEmailConversation({ leadId, clientEmail, clientName }: LeadEmailConversationProps) {
+export function LeadEmailConversation({ leadId, clientEmail, clientName, serviceType, description }: LeadEmailConversationProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showCompose, setShowCompose] = useState(false);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [includeSignature, setIncludeSignature] = useState(true);
+  const [selectedScenario, setSelectedScenario] = useState<string | null>(null);
 
   const { data: emails = [], isLoading } = useQuery<LeadEmail[]>({
     queryKey: ["/api/leads", leadId, "emails"],
     enabled: !!leadId,
   });
+
+  const generateReplyMutation = useMutation({
+    mutationFn: async (scenario: string) => {
+      const response = await apiRequest("POST", "/api/ai/generate-negotiation-reply", {
+        leadId,
+        scenario,
+        clientName,
+        serviceType: serviceType || "service",
+        description: description || "",
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setBody(data.reply);
+      if (!subject) {
+        setSubject(`Re: ${serviceType || "Your inquiry"}`);
+      }
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to generate reply. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleScenarioSelect = (scenario: string) => {
+    setSelectedScenario(scenario);
+    generateReplyMutation.mutate(scenario);
+  };
 
   const sendEmailMutation = useMutation({
     mutationFn: async (data: { subject: string; body: string; includeSignature: boolean }) => {
@@ -96,6 +137,7 @@ export function LeadEmailConversation({ leadId, clientEmail, clientName }: LeadE
       queryClient.invalidateQueries({ queryKey: ["/api/leads", leadId] });
       setSubject("");
       setBody("");
+      setSelectedScenario(null);
       setShowCompose(false);
     },
     onError: () => {
@@ -151,6 +193,45 @@ export function LeadEmailConversation({ leadId, clientEmail, clientName }: LeadE
               <Label htmlFor="email-to" className="text-xs text-muted-foreground">To</Label>
               <div className="text-sm font-medium">{clientName} &lt;{clientEmail}&gt;</div>
             </div>
+            
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-violet-500" />
+                AI Reply Composer
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {replyScenarios.map((scenario) => (
+                  <Button
+                    key={scenario.id}
+                    type="button"
+                    variant={selectedScenario === scenario.id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleScenarioSelect(scenario.id)}
+                    disabled={generateReplyMutation.isPending}
+                    data-testid={`button-ai-scenario-${scenario.id}`}
+                  >
+                    {generateReplyMutation.isPending && selectedScenario === scenario.id ? (
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                    ) : null}
+                    {scenario.label}
+                  </Button>
+                ))}
+                {selectedScenario && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleScenarioSelect(selectedScenario)}
+                    disabled={generateReplyMutation.isPending}
+                    data-testid="button-regenerate-reply"
+                  >
+                    <RefreshCw className={`h-3 w-3 mr-1 ${generateReplyMutation.isPending ? "animate-spin" : ""}`} />
+                    Regenerate
+                  </Button>
+                )}
+              </div>
+            </div>
+            
             <div>
               <Label htmlFor="email-subject">Subject</Label>
               <Input
@@ -165,7 +246,7 @@ export function LeadEmailConversation({ leadId, clientEmail, clientName }: LeadE
               <Label htmlFor="email-body">Message</Label>
               <Textarea
                 id="email-body"
-                placeholder="Write your message..."
+                placeholder="Write your message or use AI Reply Composer above..."
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
                 rows={6}

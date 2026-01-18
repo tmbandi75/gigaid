@@ -27,7 +27,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { Lead, PriceConfirmation, AiNudge } from "@shared/schema";
-import { ReplyComposer } from "@/components/lead/ReplyComposer";
 import { LeadEmailConversation } from "@/components/lead/LeadEmailConversation";
 import { useState, useEffect } from "react";
 import { useNudges, useGenerateNudges, useFeatureFlag } from "@/hooks/use-nudges";
@@ -324,6 +323,8 @@ export default function LeadSummary() {
           leadId={lead.id} 
           clientEmail={lead.clientEmail} 
           clientName={lead.clientName}
+          serviceType={lead.serviceType}
+          description={lead.description || undefined}
         />
 
         {lead.sourceUrl && (
@@ -377,14 +378,6 @@ export default function LeadSummary() {
             </CardContent>
           </Card>
         )}
-
-        <Separator className="my-2" />
-
-        <Card className="border-0 shadow-md" data-testid="card-reply-composer">
-          <CardContent className="p-4">
-            <ReplyComposer lead={lead} />
-          </CardContent>
-        </Card>
 
         <Separator className="my-2" />
 
