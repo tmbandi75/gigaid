@@ -1,12 +1,12 @@
 {
   "name": "GigAid",
   "short_name": "GigAid",
-  "description": "Run your gig business. Jobs, payments, and reminders in one place.",
+  "description": "GigAid is an all-in-one scheduling and payments app built for solo gig workers. It helps you turn messages into confirmed bookings, share a simple booking link with clients, send automatic reminders, and get paid faster — all from one easy-to-use dashboard. Designed for plumbers, cleaners, handymen, and other independent workers, GigAid removes the chaos of texts, missed appointments, and unpaid jobs so you can focus on doing the work, not managing it.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0A63F3",
-  "theme_color": "#0A63F3",
+  "background_color": "#ffffff",
+  "theme_color": "#5276b0",
   "orientation": "portrait",
   "icons": [
     {
@@ -19,5 +19,11 @@
       "sizes": "512x512",
       "type": "image/png"
     }
+  ],
+  "categories": [
+    "business",
+    "finance",
+    "productivity",
+    "utilities"
   ]
 }
