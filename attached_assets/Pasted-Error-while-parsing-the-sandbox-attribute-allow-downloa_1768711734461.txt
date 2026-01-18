@@ -1,0 +1,2172 @@
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+ed1e693c96a75807.js:2 Unrecognized feature: 'ambient-light-sensor'.
+z @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+iA @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+ed1e693c96a75807.js:2 Unrecognized feature: 'battery'.
+z @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+iA @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+ed1e693c96a75807.js:2 Unrecognized feature: 'execution-while-not-rendered'.
+z @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+iA @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+ed1e693c96a75807.js:2 Unrecognized feature: 'execution-while-out-of-viewport'.
+z @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+iA @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+ed1e693c96a75807.js:2 Unrecognized feature: 'layout-animations'.
+z @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+iA @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+ed1e693c96a75807.js:2 Unrecognized feature: 'legacy-image-formats'.
+z @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+iA @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+ed1e693c96a75807.js:2 Unrecognized feature: 'navigation-override'.
+z @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+iA @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+ed1e693c96a75807.js:2 Unrecognized feature: 'oversized-images'.
+z @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+iA @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+ed1e693c96a75807.js:2 Unrecognized feature: 'publickey-credentials'.
+z @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+iA @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+ed1e693c96a75807.js:2 Unrecognized feature: 'speaker-selection'.
+z @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+iA @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+ed1e693c96a75807.js:2 Unrecognized feature: 'unoptimized-images'.
+z @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+iA @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+ed1e693c96a75807.js:2 Unrecognized feature: 'unsized-media'.
+z @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+iA @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+ed1e693c96a75807.js:2 Unrecognized feature: 'pointer-lock'.
+z @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+iA @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+ed1e693c96a75807.js:2 Allow attribute will take precedence over 'allowfullscreen'.
+z @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+iA @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+ed1e693c96a75807.js:2 Allow attribute will take precedence over 'allowpaymentrequest'.
+z @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+iA @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'ambient-light-sensor'.
+Unrecognized feature: 'battery'.
+Unrecognized feature: 'battery'.
+Unrecognized feature: 'battery'.
+Unrecognized feature: 'battery'.
+Unrecognized feature: 'battery'.
+Unrecognized feature: 'battery'.
+Unrecognized feature: 'battery'.
+Unrecognized feature: 'battery'.
+Unrecognized feature: 'battery'.
+Unrecognized feature: 'battery'.
+Unrecognized feature: 'battery'.
+Unrecognized feature: 'battery'.
+Unrecognized feature: 'battery'.
+Unrecognized feature: 'battery'.
+Unrecognized feature: 'battery'.
+Unrecognized feature: 'battery'.
+Unrecognized feature: 'battery'.
+Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-not-rendered'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'execution-while-out-of-viewport'.
+Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'layout-animations'.
+Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'legacy-image-formats'.
+Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'navigation-override'.
+Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'oversized-images'.
+Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'publickey-credentials'.
+Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'speaker-selection'.
+Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unoptimized-images'.
+Unrecognized feature: 'unsized-media'.
+Unrecognized feature: 'unsized-media'.
+Unrecognized feature: 'unsized-media'.
+Unrecognized feature: 'unsized-media'.
+Unrecognized feature: 'unsized-media'.
+Unrecognized feature: 'unsized-media'.
+Unrecognized feature: 'unsized-media'.
+Unrecognized feature: 'unsized-media'.
+Unrecognized feature: 'unsized-media'.
+Unrecognized feature: 'unsized-media'.
+Unrecognized feature: 'unsized-media'.
+Unrecognized feature: 'unsized-media'.
+Unrecognized feature: 'unsized-media'.
+Unrecognized feature: 'unsized-media'.
+Unrecognized feature: 'unsized-media'.
+Unrecognized feature: 'unsized-media'.
+Unrecognized feature: 'unsized-media'.
+Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowfullscreen'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+Allow attribute will take precedence over 'allowpaymentrequest'.
+chunk-LPF6KSF2.js?v=23aa2b88:521 Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?
+
+Check the render method of `Primitive.button.SlotClone`.
+    at SidebarMenuButton (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:737:3)
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1929:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:146:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:931:13
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Popper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1921:11)
+    at Menu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:100:11)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at DropdownMenu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:897:5)
+    at div
+    at SidebarFooter (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:489:26)
+    at div
+    at div
+    at div
+    at Sidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:151:3)
+    at AppSidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/AppSidebar.tsx:88:32)
+    at div
+    at div
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at SidebarProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:59:3)
+    at ResponsiveLayout (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/ResponsiveLayout.tsx:586:36)
+    at OnboardingWrapper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/onboarding/OnboardingWrapper.tsx:21:37)
+    at Route (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:264:16)
+    at Switch (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:320:17)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at PostHogProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/PostHogProvider.tsx:22:35)
+    at QueryClientProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=23aa2b88:2747:3)
+    at App
+printWarning @ chunk-LPF6KSF2.js?v=23aa2b88:521
+error @ chunk-LPF6KSF2.js?v=23aa2b88:505
+validateFunctionComponentInDev @ chunk-LPF6KSF2.js?v=23aa2b88:15061
+mountIndeterminateComponent @ chunk-LPF6KSF2.js?v=23aa2b88:15036
+beginWork @ chunk-LPF6KSF2.js?v=23aa2b88:15962
+beginWork$1 @ chunk-LPF6KSF2.js?v=23aa2b88:19806
+performUnitOfWork @ chunk-LPF6KSF2.js?v=23aa2b88:19251
+workLoopSync @ chunk-LPF6KSF2.js?v=23aa2b88:19190
+renderRootSync @ chunk-LPF6KSF2.js?v=23aa2b88:19169
+performConcurrentWorkOnRoot @ chunk-LPF6KSF2.js?v=23aa2b88:18728
+workLoop @ chunk-LPF6KSF2.js?v=23aa2b88:197
+flushWork @ chunk-LPF6KSF2.js?v=23aa2b88:176
+performWorkUntilDeadline @ chunk-LPF6KSF2.js?v=23aa2b88:384
+posthog-recorder.js?v=1.324.1:1 [vite] server connection lost. Polling for restart...
+chunk-LPF6KSF2.js?v=23aa2b88:521 Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?
+
+Check the render method of `Primitive.button.SlotClone`.
+    at SidebarMenuButton (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:737:3)
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1929:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:146:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:931:13
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Popper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1921:11)
+    at Menu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:100:11)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at DropdownMenu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:897:5)
+    at div
+    at SidebarFooter (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:489:26)
+    at div
+    at div
+    at div
+    at Sidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:151:3)
+    at AppSidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/AppSidebar.tsx:88:32)
+    at div
+    at div
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at SidebarProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:59:3)
+    at ResponsiveLayout (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/ResponsiveLayout.tsx:586:36)
+    at OnboardingWrapper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/onboarding/OnboardingWrapper.tsx:21:37)
+    at Route (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:264:16)
+    at Switch (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:320:17)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at PostHogProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/PostHogProvider.tsx:22:35)
+    at QueryClientProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=23aa2b88:2747:3)
+    at App
+printWarning @ chunk-LPF6KSF2.js?v=23aa2b88:521
+error @ chunk-LPF6KSF2.js?v=23aa2b88:505
+validateFunctionComponentInDev @ chunk-LPF6KSF2.js?v=23aa2b88:15061
+mountIndeterminateComponent @ chunk-LPF6KSF2.js?v=23aa2b88:15036
+beginWork @ chunk-LPF6KSF2.js?v=23aa2b88:15962
+beginWork$1 @ chunk-LPF6KSF2.js?v=23aa2b88:19806
+performUnitOfWork @ chunk-LPF6KSF2.js?v=23aa2b88:19251
+workLoopSync @ chunk-LPF6KSF2.js?v=23aa2b88:19190
+renderRootSync @ chunk-LPF6KSF2.js?v=23aa2b88:19169
+performConcurrentWorkOnRoot @ chunk-LPF6KSF2.js?v=23aa2b88:18728
+workLoop @ chunk-LPF6KSF2.js?v=23aa2b88:197
+flushWork @ chunk-LPF6KSF2.js?v=23aa2b88:176
+performWorkUntilDeadline @ chunk-LPF6KSF2.js?v=23aa2b88:384
+posthog-recorder.js?v=1.324.1:1 [vite] server connection lost. Polling for restart...
+chunk-LPF6KSF2.js?v=23aa2b88:521 Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?
+
+Check the render method of `Primitive.button.SlotClone`.
+    at SidebarMenuButton (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:737:3)
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1929:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:146:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:931:13
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Popper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1921:11)
+    at Menu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:100:11)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at DropdownMenu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:897:5)
+    at div
+    at SidebarFooter (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:489:26)
+    at div
+    at div
+    at div
+    at Sidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:151:3)
+    at AppSidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/AppSidebar.tsx:88:32)
+    at div
+    at div
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at SidebarProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:59:3)
+    at ResponsiveLayout (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/ResponsiveLayout.tsx:586:36)
+    at OnboardingWrapper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/onboarding/OnboardingWrapper.tsx:21:37)
+    at Route (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:264:16)
+    at Switch (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:320:17)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at PostHogProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/PostHogProvider.tsx:22:35)
+    at QueryClientProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=23aa2b88:2747:3)
+    at App
+printWarning @ chunk-LPF6KSF2.js?v=23aa2b88:521
+error @ chunk-LPF6KSF2.js?v=23aa2b88:505
+validateFunctionComponentInDev @ chunk-LPF6KSF2.js?v=23aa2b88:15061
+mountIndeterminateComponent @ chunk-LPF6KSF2.js?v=23aa2b88:15036
+beginWork @ chunk-LPF6KSF2.js?v=23aa2b88:15962
+beginWork$1 @ chunk-LPF6KSF2.js?v=23aa2b88:19806
+performUnitOfWork @ chunk-LPF6KSF2.js?v=23aa2b88:19251
+workLoopSync @ chunk-LPF6KSF2.js?v=23aa2b88:19190
+renderRootSync @ chunk-LPF6KSF2.js?v=23aa2b88:19169
+performConcurrentWorkOnRoot @ chunk-LPF6KSF2.js?v=23aa2b88:18728
+workLoop @ chunk-LPF6KSF2.js?v=23aa2b88:197
+flushWork @ chunk-LPF6KSF2.js?v=23aa2b88:176
+performWorkUntilDeadline @ chunk-LPF6KSF2.js?v=23aa2b88:384
+posthog-recorder.js?v=1.324.1:1 [vite] server connection lost. Polling for restart...
+chunk-LPF6KSF2.js?v=23aa2b88:521 Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?
+
+Check the render method of `Primitive.button.SlotClone`.
+    at SidebarMenuButton (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:737:3)
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1929:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:146:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:931:13
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Popper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1921:11)
+    at Menu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:100:11)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at DropdownMenu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:897:5)
+    at div
+    at SidebarFooter (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:489:26)
+    at div
+    at div
+    at div
+    at Sidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:151:3)
+    at AppSidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/AppSidebar.tsx:88:32)
+    at div
+    at div
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at SidebarProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:59:3)
+    at ResponsiveLayout (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/ResponsiveLayout.tsx:586:36)
+    at OnboardingWrapper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/onboarding/OnboardingWrapper.tsx:21:37)
+    at Route (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:264:16)
+    at Switch (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:320:17)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at PostHogProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/PostHogProvider.tsx:22:35)
+    at QueryClientProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=23aa2b88:2747:3)
+    at App
+printWarning @ chunk-LPF6KSF2.js?v=23aa2b88:521
+error @ chunk-LPF6KSF2.js?v=23aa2b88:505
+validateFunctionComponentInDev @ chunk-LPF6KSF2.js?v=23aa2b88:15061
+mountIndeterminateComponent @ chunk-LPF6KSF2.js?v=23aa2b88:15036
+beginWork @ chunk-LPF6KSF2.js?v=23aa2b88:15962
+beginWork$1 @ chunk-LPF6KSF2.js?v=23aa2b88:19806
+performUnitOfWork @ chunk-LPF6KSF2.js?v=23aa2b88:19251
+workLoopSync @ chunk-LPF6KSF2.js?v=23aa2b88:19190
+renderRootSync @ chunk-LPF6KSF2.js?v=23aa2b88:19169
+performConcurrentWorkOnRoot @ chunk-LPF6KSF2.js?v=23aa2b88:18728
+workLoop @ chunk-LPF6KSF2.js?v=23aa2b88:197
+flushWork @ chunk-LPF6KSF2.js?v=23aa2b88:176
+performWorkUntilDeadline @ chunk-LPF6KSF2.js?v=23aa2b88:384
+posthog-recorder.js?v=1.324.1:1 [vite] server connection lost. Polling for restart...
+chunk-LPF6KSF2.js?v=23aa2b88:521 Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?
+
+Check the render method of `Primitive.button.SlotClone`.
+    at SidebarMenuButton (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:737:3)
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1929:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:146:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:931:13
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Popper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1921:11)
+    at Menu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:100:11)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at DropdownMenu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:897:5)
+    at div
+    at SidebarFooter (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:489:26)
+    at div
+    at div
+    at div
+    at Sidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:151:3)
+    at AppSidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/AppSidebar.tsx:88:32)
+    at div
+    at div
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at SidebarProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:59:3)
+    at ResponsiveLayout (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/ResponsiveLayout.tsx:586:36)
+    at OnboardingWrapper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/onboarding/OnboardingWrapper.tsx:21:37)
+    at Route (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:264:16)
+    at Switch (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:320:17)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at PostHogProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/PostHogProvider.tsx:22:35)
+    at QueryClientProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=23aa2b88:2747:3)
+    at App
+printWarning @ chunk-LPF6KSF2.js?v=23aa2b88:521
+error @ chunk-LPF6KSF2.js?v=23aa2b88:505
+validateFunctionComponentInDev @ chunk-LPF6KSF2.js?v=23aa2b88:15061
+mountIndeterminateComponent @ chunk-LPF6KSF2.js?v=23aa2b88:15036
+beginWork @ chunk-LPF6KSF2.js?v=23aa2b88:15962
+beginWork$1 @ chunk-LPF6KSF2.js?v=23aa2b88:19806
+performUnitOfWork @ chunk-LPF6KSF2.js?v=23aa2b88:19251
+workLoopSync @ chunk-LPF6KSF2.js?v=23aa2b88:19190
+renderRootSync @ chunk-LPF6KSF2.js?v=23aa2b88:19169
+performConcurrentWorkOnRoot @ chunk-LPF6KSF2.js?v=23aa2b88:18728
+workLoop @ chunk-LPF6KSF2.js?v=23aa2b88:197
+flushWork @ chunk-LPF6KSF2.js?v=23aa2b88:176
+performWorkUntilDeadline @ chunk-LPF6KSF2.js?v=23aa2b88:384
+posthog-recorder.js?v=1.324.1:1 [vite] server connection lost. Polling for restart...
+chunk-LPF6KSF2.js?v=23aa2b88:521 Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?
+
+Check the render method of `Primitive.button.SlotClone`.
+    at SidebarMenuButton (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:737:3)
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1929:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:146:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:931:13
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Popper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1921:11)
+    at Menu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:100:11)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at DropdownMenu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:897:5)
+    at div
+    at SidebarFooter (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:489:26)
+    at div
+    at div
+    at div
+    at Sidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:151:3)
+    at AppSidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/AppSidebar.tsx:88:32)
+    at div
+    at div
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at SidebarProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:59:3)
+    at ResponsiveLayout (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/ResponsiveLayout.tsx:586:36)
+    at OnboardingWrapper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/onboarding/OnboardingWrapper.tsx:21:37)
+    at Route (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:264:16)
+    at Switch (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:320:17)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at PostHogProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/PostHogProvider.tsx:22:35)
+    at QueryClientProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=23aa2b88:2747:3)
+    at App
+printWarning @ chunk-LPF6KSF2.js?v=23aa2b88:521
+error @ chunk-LPF6KSF2.js?v=23aa2b88:505
+validateFunctionComponentInDev @ chunk-LPF6KSF2.js?v=23aa2b88:15061
+mountIndeterminateComponent @ chunk-LPF6KSF2.js?v=23aa2b88:15036
+beginWork @ chunk-LPF6KSF2.js?v=23aa2b88:15962
+beginWork$1 @ chunk-LPF6KSF2.js?v=23aa2b88:19806
+performUnitOfWork @ chunk-LPF6KSF2.js?v=23aa2b88:19251
+workLoopSync @ chunk-LPF6KSF2.js?v=23aa2b88:19190
+renderRootSync @ chunk-LPF6KSF2.js?v=23aa2b88:19169
+performConcurrentWorkOnRoot @ chunk-LPF6KSF2.js?v=23aa2b88:18728
+workLoop @ chunk-LPF6KSF2.js?v=23aa2b88:197
+flushWork @ chunk-LPF6KSF2.js?v=23aa2b88:176
+performWorkUntilDeadline @ chunk-LPF6KSF2.js?v=23aa2b88:384
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+posthog-recorder.js?v=1.324.1:1 [vite] server connection lost. Polling for restart...
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+chunk-LPF6KSF2.js?v=23aa2b88:521 Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?
+
+Check the render method of `Primitive.button.SlotClone`.
+    at SidebarMenuButton (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:737:3)
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1929:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:146:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:931:13
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Popper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1921:11)
+    at Menu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:100:11)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at DropdownMenu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:897:5)
+    at div
+    at SidebarFooter (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:489:26)
+    at div
+    at div
+    at div
+    at Sidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:151:3)
+    at AppSidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/AppSidebar.tsx:88:32)
+    at div
+    at div
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at SidebarProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:59:3)
+    at ResponsiveLayout (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/ResponsiveLayout.tsx:586:36)
+    at OnboardingWrapper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/onboarding/OnboardingWrapper.tsx:21:37)
+    at Route (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:264:16)
+    at Switch (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:320:17)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at PostHogProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/PostHogProvider.tsx:22:35)
+    at QueryClientProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=23aa2b88:2747:3)
+    at App
+printWarning @ chunk-LPF6KSF2.js?v=23aa2b88:521
+error @ chunk-LPF6KSF2.js?v=23aa2b88:505
+validateFunctionComponentInDev @ chunk-LPF6KSF2.js?v=23aa2b88:15061
+mountIndeterminateComponent @ chunk-LPF6KSF2.js?v=23aa2b88:15036
+beginWork @ chunk-LPF6KSF2.js?v=23aa2b88:15962
+beginWork$1 @ chunk-LPF6KSF2.js?v=23aa2b88:19806
+performUnitOfWork @ chunk-LPF6KSF2.js?v=23aa2b88:19251
+workLoopSync @ chunk-LPF6KSF2.js?v=23aa2b88:19190
+renderRootSync @ chunk-LPF6KSF2.js?v=23aa2b88:19169
+performConcurrentWorkOnRoot @ chunk-LPF6KSF2.js?v=23aa2b88:18728
+workLoop @ chunk-LPF6KSF2.js?v=23aa2b88:197
+flushWork @ chunk-LPF6KSF2.js?v=23aa2b88:176
+performWorkUntilDeadline @ chunk-LPF6KSF2.js?v=23aa2b88:384
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+queryClient.ts:19  GET https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/api/leads/follow-up-needed 404 (Not Found)
+(anonymous) @ queryClient.ts:32
+fetchFn @ @tanstack_react-query.js?v=23aa2b88:812
+run @ @tanstack_react-query.js?v=23aa2b88:477
+start @ @tanstack_react-query.js?v=23aa2b88:518
+fetch @ @tanstack_react-query.js?v=23aa2b88:893
+#executeFetch @ @tanstack_react-query.js?v=23aa2b88:1963
+onSubscribe @ @tanstack_react-query.js?v=23aa2b88:1840
+subscribe @ @tanstack_react-query.js?v=23aa2b88:19
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:2962
+subscribeToStore @ chunk-LPF6KSF2.js?v=23aa2b88:12032
+commitHookEffectListMount @ chunk-LPF6KSF2.js?v=23aa2b88:16963
+commitPassiveMountOnFiber @ chunk-LPF6KSF2.js?v=23aa2b88:18206
+commitPassiveMountEffects_complete @ chunk-LPF6KSF2.js?v=23aa2b88:18179
+commitPassiveMountEffects_begin @ chunk-LPF6KSF2.js?v=23aa2b88:18169
+commitPassiveMountEffects @ chunk-LPF6KSF2.js?v=23aa2b88:18159
+flushPassiveEffectsImpl @ chunk-LPF6KSF2.js?v=23aa2b88:19543
+flushPassiveEffects @ chunk-LPF6KSF2.js?v=23aa2b88:19500
+commitRootImpl @ chunk-LPF6KSF2.js?v=23aa2b88:19469
+commitRoot @ chunk-LPF6KSF2.js?v=23aa2b88:19330
+performSyncWorkOnRoot @ chunk-LPF6KSF2.js?v=23aa2b88:18948
+flushSyncCallbacks @ chunk-LPF6KSF2.js?v=23aa2b88:9166
+(anonymous) @ chunk-LPF6KSF2.js?v=23aa2b88:18677
+posthog-recorder.js?v=1.324.1:1 [vite] server connection lost. Polling for restart...
+chunk-LPF6KSF2.js?v=23aa2b88:521 Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?
+
+Check the render method of `Primitive.button.SlotClone`.
+    at SidebarMenuButton (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:737:3)
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1929:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:146:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:931:13
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Popper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1921:11)
+    at Menu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:100:11)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at DropdownMenu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:897:5)
+    at div
+    at SidebarFooter (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:489:26)
+    at div
+    at div
+    at div
+    at Sidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:151:3)
+    at AppSidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/AppSidebar.tsx:88:32)
+    at div
+    at div
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at SidebarProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:59:3)
+    at ResponsiveLayout (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/ResponsiveLayout.tsx:586:36)
+    at OnboardingWrapper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/onboarding/OnboardingWrapper.tsx:21:37)
+    at Route (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:264:16)
+    at Switch (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:320:17)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at PostHogProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/PostHogProvider.tsx:22:35)
+    at QueryClientProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=23aa2b88:2747:3)
+    at App
+printWarning @ chunk-LPF6KSF2.js?v=23aa2b88:521
+error @ chunk-LPF6KSF2.js?v=23aa2b88:505
+validateFunctionComponentInDev @ chunk-LPF6KSF2.js?v=23aa2b88:15061
+mountIndeterminateComponent @ chunk-LPF6KSF2.js?v=23aa2b88:15036
+beginWork @ chunk-LPF6KSF2.js?v=23aa2b88:15962
+beginWork$1 @ chunk-LPF6KSF2.js?v=23aa2b88:19806
+performUnitOfWork @ chunk-LPF6KSF2.js?v=23aa2b88:19251
+workLoopSync @ chunk-LPF6KSF2.js?v=23aa2b88:19190
+renderRootSync @ chunk-LPF6KSF2.js?v=23aa2b88:19169
+performConcurrentWorkOnRoot @ chunk-LPF6KSF2.js?v=23aa2b88:18728
+workLoop @ chunk-LPF6KSF2.js?v=23aa2b88:197
+flushWork @ chunk-LPF6KSF2.js?v=23aa2b88:176
+performWorkUntilDeadline @ chunk-LPF6KSF2.js?v=23aa2b88:384
+posthog-recorder.js?v=1.324.1:1 [vite] server connection lost. Polling for restart...
+chunk-LPF6KSF2.js?v=23aa2b88:521 Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?
+
+Check the render method of `Primitive.button.SlotClone`.
+    at SidebarMenuButton (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:737:3)
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1929:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:146:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:931:13
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Popper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1921:11)
+    at Menu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:100:11)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at DropdownMenu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:897:5)
+    at div
+    at SidebarFooter (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:489:26)
+    at div
+    at div
+    at div
+    at Sidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:151:3)
+    at AppSidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/AppSidebar.tsx:88:32)
+    at div
+    at div
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at SidebarProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:59:3)
+    at ResponsiveLayout (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/ResponsiveLayout.tsx:586:36)
+    at OnboardingWrapper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/onboarding/OnboardingWrapper.tsx:21:37)
+    at Route (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:264:16)
+    at Switch (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:320:17)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at PostHogProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/PostHogProvider.tsx:22:35)
+    at QueryClientProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=23aa2b88:2747:3)
+    at App
+printWarning @ chunk-LPF6KSF2.js?v=23aa2b88:521
+error @ chunk-LPF6KSF2.js?v=23aa2b88:505
+validateFunctionComponentInDev @ chunk-LPF6KSF2.js?v=23aa2b88:15061
+mountIndeterminateComponent @ chunk-LPF6KSF2.js?v=23aa2b88:15036
+beginWork @ chunk-LPF6KSF2.js?v=23aa2b88:15962
+beginWork$1 @ chunk-LPF6KSF2.js?v=23aa2b88:19806
+performUnitOfWork @ chunk-LPF6KSF2.js?v=23aa2b88:19251
+workLoopSync @ chunk-LPF6KSF2.js?v=23aa2b88:19190
+renderRootSync @ chunk-LPF6KSF2.js?v=23aa2b88:19169
+performConcurrentWorkOnRoot @ chunk-LPF6KSF2.js?v=23aa2b88:18728
+workLoop @ chunk-LPF6KSF2.js?v=23aa2b88:197
+flushWork @ chunk-LPF6KSF2.js?v=23aa2b88:176
+performWorkUntilDeadline @ chunk-LPF6KSF2.js?v=23aa2b88:384
+posthog-recorder.js?v=1.324.1:1 [vite] server connection lost. Polling for restart...
+chunk-LPF6KSF2.js?v=23aa2b88:521 Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?
+
+Check the render method of `Primitive.button.SlotClone`.
+    at SidebarMenuButton (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:737:3)
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1929:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:146:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:931:13
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Popper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1921:11)
+    at Menu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:100:11)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at DropdownMenu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:897:5)
+    at div
+    at SidebarFooter (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:489:26)
+    at div
+    at div
+    at div
+    at Sidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:151:3)
+    at AppSidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/AppSidebar.tsx:88:32)
+    at div
+    at div
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at SidebarProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:59:3)
+    at ResponsiveLayout (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/ResponsiveLayout.tsx:586:36)
+    at OnboardingWrapper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/onboarding/OnboardingWrapper.tsx:21:37)
+    at Route (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:264:16)
+    at Switch (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:320:17)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at PostHogProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/PostHogProvider.tsx:22:35)
+    at QueryClientProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=23aa2b88:2747:3)
+    at App
+printWarning @ chunk-LPF6KSF2.js?v=23aa2b88:521
+error @ chunk-LPF6KSF2.js?v=23aa2b88:505
+validateFunctionComponentInDev @ chunk-LPF6KSF2.js?v=23aa2b88:15061
+mountIndeterminateComponent @ chunk-LPF6KSF2.js?v=23aa2b88:15036
+beginWork @ chunk-LPF6KSF2.js?v=23aa2b88:15962
+beginWork$1 @ chunk-LPF6KSF2.js?v=23aa2b88:19806
+performUnitOfWork @ chunk-LPF6KSF2.js?v=23aa2b88:19251
+workLoopSync @ chunk-LPF6KSF2.js?v=23aa2b88:19190
+renderRootSync @ chunk-LPF6KSF2.js?v=23aa2b88:19169
+performConcurrentWorkOnRoot @ chunk-LPF6KSF2.js?v=23aa2b88:18728
+workLoop @ chunk-LPF6KSF2.js?v=23aa2b88:197
+flushWork @ chunk-LPF6KSF2.js?v=23aa2b88:176
+performWorkUntilDeadline @ chunk-LPF6KSF2.js?v=23aa2b88:384
+posthog-recorder.js?v=1.324.1:1 [vite] server connection lost. Polling for restart...
+chunk-LPF6KSF2.js?v=23aa2b88:521 Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?
+
+Check the render method of `Primitive.button.SlotClone`.
+    at SidebarMenuButton (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:737:3)
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1929:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:146:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:931:13
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Popper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1921:11)
+    at Menu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:100:11)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at DropdownMenu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:897:5)
+    at div
+    at SidebarFooter (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:489:26)
+    at div
+    at div
+    at div
+    at Sidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:151:3)
+    at AppSidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/AppSidebar.tsx:88:32)
+    at div
+    at div
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at SidebarProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:59:3)
+    at ResponsiveLayout (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/ResponsiveLayout.tsx:586:36)
+    at OnboardingWrapper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/onboarding/OnboardingWrapper.tsx:21:37)
+    at Route (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:264:16)
+    at Switch (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:320:17)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at PostHogProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/PostHogProvider.tsx:22:35)
+    at QueryClientProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=23aa2b88:2747:3)
+    at App
+printWarning @ chunk-LPF6KSF2.js?v=23aa2b88:521
+error @ chunk-LPF6KSF2.js?v=23aa2b88:505
+validateFunctionComponentInDev @ chunk-LPF6KSF2.js?v=23aa2b88:15061
+mountIndeterminateComponent @ chunk-LPF6KSF2.js?v=23aa2b88:15036
+beginWork @ chunk-LPF6KSF2.js?v=23aa2b88:15962
+beginWork$1 @ chunk-LPF6KSF2.js?v=23aa2b88:19806
+performUnitOfWork @ chunk-LPF6KSF2.js?v=23aa2b88:19251
+workLoopSync @ chunk-LPF6KSF2.js?v=23aa2b88:19190
+renderRootSync @ chunk-LPF6KSF2.js?v=23aa2b88:19169
+performConcurrentWorkOnRoot @ chunk-LPF6KSF2.js?v=23aa2b88:18728
+workLoop @ chunk-LPF6KSF2.js?v=23aa2b88:197
+flushWork @ chunk-LPF6KSF2.js?v=23aa2b88:176
+performWorkUntilDeadline @ chunk-LPF6KSF2.js?v=23aa2b88:384
+posthog-recorder.js?v=1.324.1:1 [vite] server connection lost. Polling for restart...
+chunk-LPF6KSF2.js?v=23aa2b88:521 Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?
+
+Check the render method of `Primitive.button.SlotClone`.
+    at SidebarMenuButton (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:737:3)
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1929:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:146:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:931:13
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Popper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1921:11)
+    at Menu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:100:11)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at DropdownMenu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:897:5)
+    at div
+    at SidebarFooter (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:489:26)
+    at div
+    at div
+    at div
+    at Sidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:151:3)
+    at AppSidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/AppSidebar.tsx:88:32)
+    at div
+    at div
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at SidebarProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:59:3)
+    at ResponsiveLayout (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/ResponsiveLayout.tsx:586:36)
+    at OnboardingWrapper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/onboarding/OnboardingWrapper.tsx:21:37)
+    at Route (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:264:16)
+    at Switch (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:320:17)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at PostHogProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/PostHogProvider.tsx:22:35)
+    at QueryClientProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=23aa2b88:2747:3)
+    at App
+printWarning @ chunk-LPF6KSF2.js?v=23aa2b88:521
+error @ chunk-LPF6KSF2.js?v=23aa2b88:505
+validateFunctionComponentInDev @ chunk-LPF6KSF2.js?v=23aa2b88:15061
+mountIndeterminateComponent @ chunk-LPF6KSF2.js?v=23aa2b88:15036
+beginWork @ chunk-LPF6KSF2.js?v=23aa2b88:15962
+beginWork$1 @ chunk-LPF6KSF2.js?v=23aa2b88:19806
+performUnitOfWork @ chunk-LPF6KSF2.js?v=23aa2b88:19251
+workLoopSync @ chunk-LPF6KSF2.js?v=23aa2b88:19190
+renderRootSync @ chunk-LPF6KSF2.js?v=23aa2b88:19169
+performConcurrentWorkOnRoot @ chunk-LPF6KSF2.js?v=23aa2b88:18728
+workLoop @ chunk-LPF6KSF2.js?v=23aa2b88:197
+flushWork @ chunk-LPF6KSF2.js?v=23aa2b88:176
+performWorkUntilDeadline @ chunk-LPF6KSF2.js?v=23aa2b88:384
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+posthog-recorder.js?v=1.324.1:1 [vite] server connection lost. Polling for restart...
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+chunk-LPF6KSF2.js?v=23aa2b88:521 Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?
+
+Check the render method of `Primitive.button.SlotClone`.
+    at SidebarMenuButton (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:737:3)
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1929:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:146:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:931:13
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Popper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1921:11)
+    at Menu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:100:11)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at DropdownMenu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:897:5)
+    at div
+    at SidebarFooter (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:489:26)
+    at div
+    at div
+    at div
+    at Sidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:151:3)
+    at AppSidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/AppSidebar.tsx:88:32)
+    at div
+    at div
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at SidebarProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:59:3)
+    at ResponsiveLayout (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/ResponsiveLayout.tsx:586:36)
+    at OnboardingWrapper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/onboarding/OnboardingWrapper.tsx:21:37)
+    at Route (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:264:16)
+    at Switch (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:320:17)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at PostHogProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/PostHogProvider.tsx:22:35)
+    at QueryClientProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=23aa2b88:2747:3)
+    at App
+printWarning @ chunk-LPF6KSF2.js?v=23aa2b88:521
+error @ chunk-LPF6KSF2.js?v=23aa2b88:505
+validateFunctionComponentInDev @ chunk-LPF6KSF2.js?v=23aa2b88:15061
+mountIndeterminateComponent @ chunk-LPF6KSF2.js?v=23aa2b88:15036
+beginWork @ chunk-LPF6KSF2.js?v=23aa2b88:15962
+beginWork$1 @ chunk-LPF6KSF2.js?v=23aa2b88:19806
+performUnitOfWork @ chunk-LPF6KSF2.js?v=23aa2b88:19251
+workLoopSync @ chunk-LPF6KSF2.js?v=23aa2b88:19190
+renderRootSync @ chunk-LPF6KSF2.js?v=23aa2b88:19169
+performConcurrentWorkOnRoot @ chunk-LPF6KSF2.js?v=23aa2b88:18728
+workLoop @ chunk-LPF6KSF2.js?v=23aa2b88:197
+flushWork @ chunk-LPF6KSF2.js?v=23aa2b88:176
+performWorkUntilDeadline @ chunk-LPF6KSF2.js?v=23aa2b88:384
+posthog-recorder.js?v=1.324.1:1 [vite] server connection lost. Polling for restart...
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+chunk-LPF6KSF2.js?v=23aa2b88:521 Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?
+
+Check the render method of `Primitive.button.SlotClone`.
+    at SidebarMenuButton (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:737:3)
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1929:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:146:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:931:13
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Popper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1921:11)
+    at Menu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:100:11)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at DropdownMenu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:897:5)
+    at div
+    at SidebarFooter (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:489:26)
+    at div
+    at div
+    at div
+    at Sidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:151:3)
+    at AppSidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/AppSidebar.tsx:88:32)
+    at div
+    at div
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at SidebarProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:59:3)
+    at ResponsiveLayout (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/ResponsiveLayout.tsx:586:36)
+    at OnboardingWrapper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/onboarding/OnboardingWrapper.tsx:21:37)
+    at Route (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:264:16)
+    at Switch (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:320:17)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at PostHogProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/PostHogProvider.tsx:22:35)
+    at QueryClientProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=23aa2b88:2747:3)
+    at App
+printWarning @ chunk-LPF6KSF2.js?v=23aa2b88:521
+error @ chunk-LPF6KSF2.js?v=23aa2b88:505
+validateFunctionComponentInDev @ chunk-LPF6KSF2.js?v=23aa2b88:15061
+mountIndeterminateComponent @ chunk-LPF6KSF2.js?v=23aa2b88:15036
+beginWork @ chunk-LPF6KSF2.js?v=23aa2b88:15962
+beginWork$1 @ chunk-LPF6KSF2.js?v=23aa2b88:19806
+performUnitOfWork @ chunk-LPF6KSF2.js?v=23aa2b88:19251
+workLoopSync @ chunk-LPF6KSF2.js?v=23aa2b88:19190
+renderRootSync @ chunk-LPF6KSF2.js?v=23aa2b88:19169
+performConcurrentWorkOnRoot @ chunk-LPF6KSF2.js?v=23aa2b88:18728
+workLoop @ chunk-LPF6KSF2.js?v=23aa2b88:197
+flushWork @ chunk-LPF6KSF2.js?v=23aa2b88:176
+performWorkUntilDeadline @ chunk-LPF6KSF2.js?v=23aa2b88:384
+posthog-recorder.js?v=1.324.1:1 [vite] server connection lost. Polling for restart...
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+i_ @ ed1e693c96a75807.js:2
+C @ ed1e693c96a75807.js:2
+M @ ed1e693c96a75807.js:2
+chunk-LPF6KSF2.js?v=23aa2b88:521 Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?
+
+Check the render method of `Primitive.button.SlotClone`.
+    at SidebarMenuButton (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:737:3)
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=23aa2b88:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=23aa2b88:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1929:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:146:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:931:13
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at Popper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=23aa2b88:1921:11)
+    at Menu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:100:11)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at DropdownMenu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=23aa2b88:897:5)
+    at div
+    at SidebarFooter (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:489:26)
+    at div
+    at div
+    at div
+    at Sidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:151:3)
+    at AppSidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/AppSidebar.tsx:88:32)
+    at div
+    at div
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at SidebarProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:59:3)
+    at ResponsiveLayout (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/ResponsiveLayout.tsx:586:36)
+    at OnboardingWrapper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/onboarding/OnboardingWrapper.tsx:21:37)
+    at Route (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:264:16)
+    at Switch (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=23aa2b88:320:17)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=23aa2b88:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=23aa2b88:64:5)
+    at PostHogProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/PostHogProvider.tsx:22:35)
+    at QueryClientProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=23aa2b88:2747:3)
+    at App
+printWarning @ chunk-LPF6KSF2.js?v=23aa2b88:521
+error @ chunk-LPF6KSF2.js?v=23aa2b88:505
+validateFunctionComponentInDev @ chunk-LPF6KSF2.js?v=23aa2b88:15061
+mountIndeterminateComponent @ chunk-LPF6KSF2.js?v=23aa2b88:15036
+beginWork @ chunk-LPF6KSF2.js?v=23aa2b88:15962
+beginWork$1 @ chunk-LPF6KSF2.js?v=23aa2b88:19806
+performUnitOfWork @ chunk-LPF6KSF2.js?v=23aa2b88:19251
+workLoopSync @ chunk-LPF6KSF2.js?v=23aa2b88:19190
+renderRootSync @ chunk-LPF6KSF2.js?v=23aa2b88:19169
+performConcurrentWorkOnRoot @ chunk-LPF6KSF2.js?v=23aa2b88:18728
+workLoop @ chunk-LPF6KSF2.js?v=23aa2b88:197
+flushWork @ chunk-LPF6KSF2.js?v=23aa2b88:176
+performWorkUntilDeadline @ chunk-LPF6KSF2.js?v=23aa2b88:384
+07223b0f51219b99.js:2 Uncaught (in promise) Error: Cannot notify while not connected
+    at e.value (07223b0f51219b99.js:2:334725)
+    at e.<anonymous> (07223b0f51219b99.js:2:321402)
+    at Object.next (7599154bd2118454.js:2:14082)
+    at r (7599154bd2118454.js:2:21260)
+    at s (7599154bd2118454.js:2:21457)
+value @ 07223b0f51219b99.js:2
+(anonymous) @ 07223b0f51219b99.js:2
+(anonymous) @ 7599154bd2118454.js:2
+r @ 7599154bd2118454.js:2
+s @ 7599154bd2118454.js:2
+Promise.then
+r @ 7599154bd2118454.js:2
+s @ 7599154bd2118454.js:2
+(anonymous) @ 7599154bd2118454.js:2
+(anonymous) @ 7599154bd2118454.js:2
+(anonymous) @ 07223b0f51219b99.js:2
+(anonymous) @ 07223b0f51219b99.js:2
+(anonymous) @ 7599154bd2118454.js:2
+r @ 7599154bd2118454.js:2
+s @ 7599154bd2118454.js:2
+Promise.then
+r @ 7599154bd2118454.js:2
+s @ 7599154bd2118454.js:2
+(anonymous) @ 7599154bd2118454.js:2
+(anonymous) @ 7599154bd2118454.js:2
+value @ 07223b0f51219b99.js:2
+value @ 07223b0f51219b99.js:2
+(anonymous) @ db09c50e6e999668.js:2
+(anonymous) @ 7599154bd2118454.js:2
+r @ 7599154bd2118454.js:2
+s @ 7599154bd2118454.js:2
+(anonymous) @ 7599154bd2118454.js:2
+(anonymous) @ 7599154bd2118454.js:2
+(anonymous) @ db09c50e6e999668.js:2
+(anonymous) @ db09c50e6e999668.js:2
+(anonymous) @ db09c50e6e999668.js:2
+(anonymous) @ 7599154bd2118454.js:2
+r @ 7599154bd2118454.js:2
+s @ 7599154bd2118454.js:2
+(anonymous) @ 7599154bd2118454.js:2
+(anonymous) @ 7599154bd2118454.js:2
+(anonymous) @ db09c50e6e999668.js:2
+(anonymous) @ db09c50e6e999668.js:2
+(anonymous) @ db09c50e6e999668.js:2
+keydown @ db09c50e6e999668.js:2
+push.ez.key @ 06535f235c6c4406.js:2
+value @ 06535f235c6c4406.js:2
+value @ 06535f235c6c4406.js:2
+a @ 0759ecb6676892da.js:2
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+queryClient.ts:32  GET https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/api/leads/follow-up-needed 404 (Not Found)
+(anonymous) @ queryClient.ts:32
+fetchFn @ @tanstack_react-query.js?v=23aa2b88:812
+run @ @tanstack_react-query.js?v=23aa2b88:477
+start @ @tanstack_react-query.js?v=23aa2b88:518
+fetch @ @tanstack_react-query.js?v=23aa2b88:893
+#executeFetch @ @tanstack_react-query.js?v=23aa2b88:1963
+onSubscribe @ @tanstack_react-query.js?v=23aa2b88:1840
+subscribe @ @tanstack_react-query.js?v=23aa2b88:19
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:2962
+subscribeToStore @ chunk-LPF6KSF2.js?v=23aa2b88:12032
+commitHookEffectListMount @ chunk-LPF6KSF2.js?v=23aa2b88:16963
+commitPassiveMountOnFiber @ chunk-LPF6KSF2.js?v=23aa2b88:18206
+commitPassiveMountEffects_complete @ chunk-LPF6KSF2.js?v=23aa2b88:18179
+commitPassiveMountEffects_begin @ chunk-LPF6KSF2.js?v=23aa2b88:18169
+commitPassiveMountEffects @ chunk-LPF6KSF2.js?v=23aa2b88:18159
+flushPassiveEffectsImpl @ chunk-LPF6KSF2.js?v=23aa2b88:19543
+flushPassiveEffects @ chunk-LPF6KSF2.js?v=23aa2b88:19500
+commitRootImpl @ chunk-LPF6KSF2.js?v=23aa2b88:19469
+commitRoot @ chunk-LPF6KSF2.js?v=23aa2b88:19330
+performSyncWorkOnRoot @ chunk-LPF6KSF2.js?v=23aa2b88:18948
+flushSyncCallbacks @ chunk-LPF6KSF2.js?v=23aa2b88:9166
+(anonymous) @ chunk-LPF6KSF2.js?v=23aa2b88:18677
+queryClient.ts:32  GET https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/api/leads/follow-up-needed 404 (Not Found)
+(anonymous) @ queryClient.ts:32
+fetchFn @ @tanstack_react-query.js?v=23aa2b88:812
+run @ @tanstack_react-query.js?v=23aa2b88:477
+start @ @tanstack_react-query.js?v=23aa2b88:518
+fetch @ @tanstack_react-query.js?v=23aa2b88:893
+#executeFetch @ @tanstack_react-query.js?v=23aa2b88:1963
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:2000
+setInterval
+#updateRefetchInterval @ @tanstack_react-query.js?v=23aa2b88:1998
+#updateTimers @ @tanstack_react-query.js?v=23aa2b88:2006
+onQueryUpdate @ @tanstack_react-query.js?v=23aa2b88:2219
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:965
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:964
+batch @ @tanstack_react-query.js?v=23aa2b88:565
+#dispatch @ @tanstack_react-query.js?v=23aa2b88:963
+onError @ @tanstack_react-query.js?v=23aa2b88:832
+reject @ @tanstack_react-query.js?v=23aa2b88:450
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:490
+Promise.catch
+run @ @tanstack_react-query.js?v=23aa2b88:481
+start @ @tanstack_react-query.js?v=23aa2b88:518
+fetch @ @tanstack_react-query.js?v=23aa2b88:893
+#executeFetch @ @tanstack_react-query.js?v=23aa2b88:1963
+onSubscribe @ @tanstack_react-query.js?v=23aa2b88:1840
+subscribe @ @tanstack_react-query.js?v=23aa2b88:19
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:2962
+subscribeToStore @ chunk-LPF6KSF2.js?v=23aa2b88:12032
+commitHookEffectListMount @ chunk-LPF6KSF2.js?v=23aa2b88:16963
+commitPassiveMountOnFiber @ chunk-LPF6KSF2.js?v=23aa2b88:18206
+commitPassiveMountEffects_complete @ chunk-LPF6KSF2.js?v=23aa2b88:18179
+commitPassiveMountEffects_begin @ chunk-LPF6KSF2.js?v=23aa2b88:18169
+commitPassiveMountEffects @ chunk-LPF6KSF2.js?v=23aa2b88:18159
+flushPassiveEffectsImpl @ chunk-LPF6KSF2.js?v=23aa2b88:19543
+flushPassiveEffects @ chunk-LPF6KSF2.js?v=23aa2b88:19500
+commitRootImpl @ chunk-LPF6KSF2.js?v=23aa2b88:19469
+commitRoot @ chunk-LPF6KSF2.js?v=23aa2b88:19330
+performSyncWorkOnRoot @ chunk-LPF6KSF2.js?v=23aa2b88:18948
+flushSyncCallbacks @ chunk-LPF6KSF2.js?v=23aa2b88:9166
+(anonymous) @ chunk-LPF6KSF2.js?v=23aa2b88:18677
+queryClient.ts:32  GET https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/api/leads/follow-up-needed 404 (Not Found)
+(anonymous) @ queryClient.ts:32
+fetchFn @ @tanstack_react-query.js?v=23aa2b88:812
+run @ @tanstack_react-query.js?v=23aa2b88:477
+start @ @tanstack_react-query.js?v=23aa2b88:518
+fetch @ @tanstack_react-query.js?v=23aa2b88:893
+#executeFetch @ @tanstack_react-query.js?v=23aa2b88:1963
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:2000
+setInterval
+#updateRefetchInterval @ @tanstack_react-query.js?v=23aa2b88:1998
+#updateTimers @ @tanstack_react-query.js?v=23aa2b88:2006
+onQueryUpdate @ @tanstack_react-query.js?v=23aa2b88:2219
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:965
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:964
+batch @ @tanstack_react-query.js?v=23aa2b88:565
+#dispatch @ @tanstack_react-query.js?v=23aa2b88:963
+onError @ @tanstack_react-query.js?v=23aa2b88:832
+reject @ @tanstack_react-query.js?v=23aa2b88:450
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:490
+Promise.catch
+run @ @tanstack_react-query.js?v=23aa2b88:481
+start @ @tanstack_react-query.js?v=23aa2b88:518
+fetch @ @tanstack_react-query.js?v=23aa2b88:893
+#executeFetch @ @tanstack_react-query.js?v=23aa2b88:1963
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:2000
+setInterval
+#updateRefetchInterval @ @tanstack_react-query.js?v=23aa2b88:1998
+#updateTimers @ @tanstack_react-query.js?v=23aa2b88:2006
+onQueryUpdate @ @tanstack_react-query.js?v=23aa2b88:2219
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:965
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:964
+batch @ @tanstack_react-query.js?v=23aa2b88:565
+#dispatch @ @tanstack_react-query.js?v=23aa2b88:963
+onError @ @tanstack_react-query.js?v=23aa2b88:832
+reject @ @tanstack_react-query.js?v=23aa2b88:450
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:490
+Promise.catch
+run @ @tanstack_react-query.js?v=23aa2b88:481
+start @ @tanstack_react-query.js?v=23aa2b88:518
+fetch @ @tanstack_react-query.js?v=23aa2b88:893
+#executeFetch @ @tanstack_react-query.js?v=23aa2b88:1963
+onSubscribe @ @tanstack_react-query.js?v=23aa2b88:1840
+subscribe @ @tanstack_react-query.js?v=23aa2b88:19
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:2962
+subscribeToStore @ chunk-LPF6KSF2.js?v=23aa2b88:12032
+commitHookEffectListMount @ chunk-LPF6KSF2.js?v=23aa2b88:16963
+commitPassiveMountOnFiber @ chunk-LPF6KSF2.js?v=23aa2b88:18206
+commitPassiveMountEffects_complete @ chunk-LPF6KSF2.js?v=23aa2b88:18179
+commitPassiveMountEffects_begin @ chunk-LPF6KSF2.js?v=23aa2b88:18169
+commitPassiveMountEffects @ chunk-LPF6KSF2.js?v=23aa2b88:18159
+flushPassiveEffectsImpl @ chunk-LPF6KSF2.js?v=23aa2b88:19543
+flushPassiveEffects @ chunk-LPF6KSF2.js?v=23aa2b88:19500
+commitRootImpl @ chunk-LPF6KSF2.js?v=23aa2b88:19469
+commitRoot @ chunk-LPF6KSF2.js?v=23aa2b88:19330
+performSyncWorkOnRoot @ chunk-LPF6KSF2.js?v=23aa2b88:18948
+flushSyncCallbacks @ chunk-LPF6KSF2.js?v=23aa2b88:9166
+(anonymous) @ chunk-LPF6KSF2.js?v=23aa2b88:18677
+queryClient.ts:32  GET https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/api/leads/follow-up-needed 404 (Not Found)
+(anonymous) @ queryClient.ts:32
+fetchFn @ @tanstack_react-query.js?v=23aa2b88:812
+run @ @tanstack_react-query.js?v=23aa2b88:477
+start @ @tanstack_react-query.js?v=23aa2b88:518
+fetch @ @tanstack_react-query.js?v=23aa2b88:893
+#executeFetch @ @tanstack_react-query.js?v=23aa2b88:1963
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:2000
+setInterval
+#updateRefetchInterval @ @tanstack_react-query.js?v=23aa2b88:1998
+#updateTimers @ @tanstack_react-query.js?v=23aa2b88:2006
+onQueryUpdate @ @tanstack_react-query.js?v=23aa2b88:2219
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:965
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:964
+batch @ @tanstack_react-query.js?v=23aa2b88:565
+#dispatch @ @tanstack_react-query.js?v=23aa2b88:963
+onError @ @tanstack_react-query.js?v=23aa2b88:832
+reject @ @tanstack_react-query.js?v=23aa2b88:450
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:490
+Promise.catch
+run @ @tanstack_react-query.js?v=23aa2b88:481
+start @ @tanstack_react-query.js?v=23aa2b88:518
+fetch @ @tanstack_react-query.js?v=23aa2b88:893
+#executeFetch @ @tanstack_react-query.js?v=23aa2b88:1963
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:2000
+setInterval
+#updateRefetchInterval @ @tanstack_react-query.js?v=23aa2b88:1998
+#updateTimers @ @tanstack_react-query.js?v=23aa2b88:2006
+onQueryUpdate @ @tanstack_react-query.js?v=23aa2b88:2219
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:965
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:964
+batch @ @tanstack_react-query.js?v=23aa2b88:565
+#dispatch @ @tanstack_react-query.js?v=23aa2b88:963
+onError @ @tanstack_react-query.js?v=23aa2b88:832
+reject @ @tanstack_react-query.js?v=23aa2b88:450
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:490
+Promise.catch
+run @ @tanstack_react-query.js?v=23aa2b88:481
+start @ @tanstack_react-query.js?v=23aa2b88:518
+fetch @ @tanstack_react-query.js?v=23aa2b88:893
+#executeFetch @ @tanstack_react-query.js?v=23aa2b88:1963
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:2000
+queryClient.ts:32  GET https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/api/leads/follow-up-needed 404 (Not Found)
+(anonymous) @ queryClient.ts:32
+fetchFn @ @tanstack_react-query.js?v=23aa2b88:812
+run @ @tanstack_react-query.js?v=23aa2b88:477
+start @ @tanstack_react-query.js?v=23aa2b88:518
+fetch @ @tanstack_react-query.js?v=23aa2b88:893
+#executeFetch @ @tanstack_react-query.js?v=23aa2b88:1963
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:2000
+setInterval
+#updateRefetchInterval @ @tanstack_react-query.js?v=23aa2b88:1998
+#updateTimers @ @tanstack_react-query.js?v=23aa2b88:2006
+onQueryUpdate @ @tanstack_react-query.js?v=23aa2b88:2219
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:965
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:964
+batch @ @tanstack_react-query.js?v=23aa2b88:565
+#dispatch @ @tanstack_react-query.js?v=23aa2b88:963
+onError @ @tanstack_react-query.js?v=23aa2b88:832
+reject @ @tanstack_react-query.js?v=23aa2b88:450
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:490
+Promise.catch
+run @ @tanstack_react-query.js?v=23aa2b88:481
+start @ @tanstack_react-query.js?v=23aa2b88:518
+fetch @ @tanstack_react-query.js?v=23aa2b88:893
+#executeFetch @ @tanstack_react-query.js?v=23aa2b88:1963
+(anonymous) @ @tanstack_react-query.js?v=23aa2b88:2000
+0759ecb6676892da.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 0759ecb6676892da.js:2
+n @ 610ada605a17aca7.js:2
+y @ d17e4e84aa12c9d9.js:2
+E @ d17e4e84aa12c9d9.js:2
+(anonymous) @ 7e53592c20c8bef8.js:2
+r @ 610ada605a17aca7.js:2
+am @ ed1e693c96a75807.js:2
+us @ ed1e693c96a75807.js:2
+o @ ed1e693c96a75807.js:2
+iV @ ed1e693c96a75807.js:2
+iU @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
