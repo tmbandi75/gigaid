@@ -33,6 +33,7 @@ import {
 import { AvailabilityEditor, DEFAULT_AVAILABILITY } from "@/components/settings/AvailabilityEditor";
 import { PaymentMethodsSettings } from "@/components/PaymentMethodsSettings";
 import { StripeConnectSettings } from "@/components/settings/StripeConnectSettings";
+import { EmailSignatureSettings } from "@/components/settings/EmailSignatureSettings";
 import type { Referral, WeeklyAvailability, FeatureFlag } from "@shared/schema";
 import { useFeatureFlag, useUpdateFeatureFlag } from "@/hooks/use-nudges";
 
@@ -236,6 +237,8 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+
+        <EmailSignatureSettings />
 
         <Card className="border-0 shadow-md" data-testid="card-ai-suggestions">
           <CardContent className="p-4">
