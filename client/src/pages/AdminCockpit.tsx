@@ -182,6 +182,11 @@ export default function AdminCockpit() {
     retry: false,
   });
 
+  const { data: funnelData } = useQuery<any>({
+    queryKey: ["/api/admin/cockpit/activation-funnel"],
+    retry: false,
+  });
+
   const isAccessDenied = (summaryError as any)?.message?.includes("403") || 
                          (focusError as any)?.message?.includes("403");
 
@@ -203,6 +208,7 @@ export default function AdminCockpit() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/cockpit/alerts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/cockpit/risk-leakage"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/cockpit/revenue-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/cockpit/activation-funnel"] });
       toast({ title: "Data refreshed" });
     },
     onError: () => {
@@ -374,6 +380,56 @@ export default function AdminCockpit() {
               />
             </div>
           </div>
+        )}
+
+        {funnelData && funnelData.metrics && funnelData.metrics.length > 0 && (
+          <Card className="border-2" style={{ 
+            borderColor: funnelData.summary?.health === 'green' ? '#22c55e' : 
+                         funnelData.summary?.health === 'yellow' ? '#eab308' : '#ef4444' 
+          }}>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5" />
+                  Activation Funnel
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <div className={`h-3 w-3 rounded-full ${healthColors[(funnelData.summary?.health as keyof typeof healthColors) || 'green']}`} />
+                  <span className="text-sm font-medium">{funnelData.totalUsers} users</span>
+                </div>
+              </div>
+              <CardDescription>{funnelData.summary?.message}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {funnelData.metrics.map((metric: any) => (
+                  <div 
+                    key={metric.key} 
+                    className="p-3 rounded-lg border bg-card"
+                    data-testid={`funnel-metric-${metric.key}`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium">{metric.label}</span>
+                      <HealthBadge health={metric.health} />
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xl font-bold">
+                        {metric.displayValue || `${metric.value.toFixed(1)}%`}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        Target: {metric.thresholdLabel}
+                      </span>
+                    </div>
+                    {metric.count !== undefined && metric.total !== undefined && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {metric.count} of {metric.total} users
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         <div className="grid md:grid-cols-2 gap-4">

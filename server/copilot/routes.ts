@@ -334,4 +334,182 @@ router.post("/refresh", async (req, res) => {
   }
 });
 
+// Activation funnel metrics with thresholds
+router.get("/activation-funnel", async (req, res) => {
+  try {
+    const now = new Date();
+    const seventyTwoHoursMs = 72 * 60 * 60 * 1000;
+    
+    // Get all users with their funnel timestamps
+    const allUsers = await db.select().from(users);
+    const totalUsers = allUsers.length;
+    
+    if (totalUsers === 0) {
+      return res.json({
+        totalUsers: 0,
+        metrics: [],
+        summary: { health: "green", message: "No users yet" }
+      });
+    }
+    
+    // Calculate funnel metrics
+    const usersWithBookingLink = allUsers.filter(u => u.bookingLinkCreatedAt).length;
+    const usersWhoShared = allUsers.filter(u => u.bookingLinkSharedAt).length;
+    const usersWithPaidBooking = allUsers.filter(u => u.firstPaidBookingAt).length;
+    const usersWithPayment = allUsers.filter(u => u.firstPaymentReceivedAt).length;
+    const usersPayingWithoutSupport = allUsers.filter(u => u.firstPaymentReceivedAt && !u.requiredSupportForPayment).length;
+    const usersWhoReceivedPayment = allUsers.filter(u => u.firstPaymentReceivedAt).length;
+    
+    // Time to first booking (for users who have completed it)
+    const usersWithFirstBookingTime = allUsers.filter(u => u.createdAt && u.firstPaidBookingAt);
+    let avgTimeToFirstBookingHours = 0;
+    let usersUnder72Hours = 0;
+    
+    if (usersWithFirstBookingTime.length > 0) {
+      const times = usersWithFirstBookingTime.map(u => {
+        const created = new Date(u.createdAt!).getTime();
+        const firstBooking = new Date(u.firstPaidBookingAt!).getTime();
+        return (firstBooking - created) / (1000 * 60 * 60); // hours
+      });
+      avgTimeToFirstBookingHours = times.reduce((a, b) => a + b, 0) / times.length;
+      usersUnder72Hours = times.filter(t => t <= 72).length;
+    }
+    
+    // Time from signup to payment
+    const usersWithPaymentTime = allUsers.filter(u => u.createdAt && u.firstPaymentReceivedAt);
+    let avgTimeToPaymentHours = 0;
+    if (usersWithPaymentTime.length > 0) {
+      const times = usersWithPaymentTime.map(u => {
+        const created = new Date(u.createdAt!).getTime();
+        const payment = new Date(u.firstPaymentReceivedAt!).getTime();
+        return (payment - created) / (1000 * 60 * 60);
+      });
+      avgTimeToPaymentHours = times.reduce((a, b) => a + b, 0) / times.length;
+    }
+    
+    // Calculate percentages
+    const pctCreatingBookingLink = totalUsers > 0 ? (usersWithBookingLink / totalUsers) * 100 : 0;
+    const pctSharingLink = totalUsers > 0 ? (usersWhoShared / totalUsers) * 100 : 0;
+    const pctReceivingPayment = totalUsers > 0 ? (usersWhoReceivedPayment / totalUsers) * 100 : 0;
+    const pctCompletingPaidBooking = totalUsers > 0 ? (usersWithPaidBooking / totalUsers) * 100 : 0;
+    const pctPayingWithoutSupport = usersWithPayment > 0 ? (usersPayingWithoutSupport / usersWithPayment) * 100 : 100;
+    const pctUnder72Hours = usersWithFirstBookingTime.length > 0 
+      ? (usersUnder72Hours / usersWithFirstBookingTime.length) * 100 : 0;
+    
+    // Define thresholds and health states
+    const getHealth = (value: number, threshold: number, higherIsBetter: boolean = true) => {
+      if (higherIsBetter) {
+        if (value >= threshold) return "green";
+        if (value >= threshold * 0.7) return "yellow";
+        return "red";
+      } else {
+        if (value <= threshold) return "green";
+        if (value <= threshold * 1.3) return "yellow";
+        return "red";
+      }
+    };
+    
+    const metrics = [
+      {
+        key: "pct_creating_booking_link",
+        label: "% Creating Booking Link",
+        value: pctCreatingBookingLink,
+        threshold: 60,
+        thresholdLabel: ">60%",
+        health: getHealth(pctCreatingBookingLink, 60),
+        count: usersWithBookingLink,
+        total: totalUsers,
+      },
+      {
+        key: "pct_sharing_link",
+        label: "% Sharing Link",
+        value: pctSharingLink,
+        threshold: 40,
+        thresholdLabel: ">40%",
+        health: getHealth(pctSharingLink, 40),
+        count: usersWhoShared,
+        total: totalUsers,
+      },
+      {
+        key: "pct_receiving_payment",
+        label: "% Receiving Payment",
+        value: pctReceivingPayment,
+        threshold: 10,
+        thresholdLabel: ">10%",
+        health: getHealth(pctReceivingPayment, 10),
+        count: usersWhoReceivedPayment,
+        total: totalUsers,
+      },
+      {
+        key: "time_to_first_booking",
+        label: "Time to First Booking",
+        value: avgTimeToFirstBookingHours,
+        threshold: 72,
+        thresholdLabel: "<72 hrs",
+        health: getHealth(avgTimeToFirstBookingHours, 72, false),
+        displayValue: avgTimeToFirstBookingHours > 0 ? `${Math.round(avgTimeToFirstBookingHours)} hrs` : "N/A",
+        count: usersWithFirstBookingTime.length,
+      },
+      {
+        key: "pct_completing_first_paid_booking",
+        label: "% Completing First Paid Booking",
+        value: pctCompletingPaidBooking,
+        threshold: 30,
+        thresholdLabel: ">30%",
+        health: getHealth(pctCompletingPaidBooking, 30),
+        count: usersWithPaidBooking,
+        total: totalUsers,
+      },
+      {
+        key: "pct_paying_without_support",
+        label: "% Paying Without Support",
+        value: pctPayingWithoutSupport,
+        threshold: 80,
+        thresholdLabel: ">80%",
+        health: getHealth(pctPayingWithoutSupport, 80),
+        count: usersPayingWithoutSupport,
+        total: usersWithPayment || totalUsers,
+      },
+      {
+        key: "time_signup_to_payment",
+        label: "Time: Signup to Payment",
+        value: avgTimeToPaymentHours,
+        threshold: 168, // 7 days
+        thresholdLabel: "<7 days",
+        health: getHealth(avgTimeToPaymentHours, 168, false),
+        displayValue: avgTimeToPaymentHours > 0 ? `${Math.round(avgTimeToPaymentHours / 24)} days` : "N/A",
+        count: usersWithPaymentTime.length,
+      },
+    ];
+    
+    // Overall health
+    const redCount = metrics.filter(m => m.health === "red").length;
+    const yellowCount = metrics.filter(m => m.health === "yellow").length;
+    let overallHealth = "green";
+    let message = "Activation funnel is healthy";
+    
+    if (redCount >= 2) {
+      overallHealth = "red";
+      message = "Critical: Multiple activation metrics below threshold";
+    } else if (redCount === 1 || yellowCount >= 2) {
+      overallHealth = "yellow";
+      message = "Warning: Some activation metrics need attention";
+    }
+    
+    res.json({
+      totalUsers,
+      metrics,
+      summary: {
+        health: overallHealth,
+        message,
+        redCount,
+        yellowCount,
+      }
+    });
+  } catch (error) {
+    console.error("[Cockpit] Activation funnel error:", error);
+    res.status(500).json({ error: "Failed to fetch activation funnel" });
+  }
+});
+
 export default router;

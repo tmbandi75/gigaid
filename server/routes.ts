@@ -3377,7 +3377,9 @@ export async function registerRoutes(
         publicEstimationEnabled,
       } = req.body;
       
-      const user = await storage.updateUser(defaultUserId, {
+      // Check if this is the first time enabling public profile (booking link created)
+      const existingUser = await storage.getUser(defaultUserId);
+      const updates: Record<string, any> = {
         publicProfileEnabled,
         publicProfileSlug,
         notifyBySms,
@@ -3390,11 +3392,46 @@ export async function registerRoutes(
         slotDuration,
         showReviewsOnBooking,
         publicEstimationEnabled,
-      });
+      };
+      
+      // Track first time booking link creation
+      if (publicProfileEnabled && publicProfileSlug && 
+          existingUser && !existingUser.bookingLinkCreatedAt) {
+        updates.bookingLinkCreatedAt = new Date().toISOString();
+        emitCanonicalEvent({
+          eventName: "booking_link_created",
+          userId: defaultUserId,
+          context: { slug: publicProfileSlug },
+          source: "web",
+        });
+      }
+      
+      const user = await storage.updateUser(defaultUserId, updates);
       
       res.json(user);
     } catch (error) {
       res.status(500).json({ error: "Failed to update settings" });
+    }
+  });
+  
+  // Track when user shares their booking link
+  app.post("/api/track/booking-link-shared", async (req, res) => {
+    try {
+      const user = await storage.getUser(defaultUserId);
+      if (user && !user.bookingLinkSharedAt) {
+        await storage.updateUser(defaultUserId, {
+          bookingLinkSharedAt: new Date().toISOString(),
+        });
+        emitCanonicalEvent({
+          eventName: "booking_link_shared",
+          userId: defaultUserId,
+          context: { method: req.body.method || "unknown" },
+          source: "web",
+        });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to track share" });
     }
   });
 

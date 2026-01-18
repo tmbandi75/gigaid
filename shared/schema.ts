@@ -56,6 +56,13 @@ export const users = pgTable("users", {
   emailSignatureText: text("email_signature_text"),
   emailSignatureLogoUrl: text("email_signature_logo_url"),
   emailSignatureIncludeLogo: boolean("email_signature_include_logo").default(true),
+  
+  // Activation funnel tracking
+  bookingLinkCreatedAt: text("booking_link_created_at"), // When user first enabled public profile
+  bookingLinkSharedAt: text("booking_link_shared_at"), // When user first shared their booking link
+  firstPaidBookingAt: text("first_paid_booking_at"), // When user received first paid booking
+  firstPaymentReceivedAt: text("first_payment_received_at"), // When user received first payment
+  requiredSupportForPayment: boolean("required_support_for_payment").default(false), // If user needed help with payments
 });
 
 // Availability type for frontend use
