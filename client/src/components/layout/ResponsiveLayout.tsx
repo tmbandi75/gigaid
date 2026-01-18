@@ -108,7 +108,7 @@ function MobileHeader() {
 
   return (
     <header className="sticky top-0 z-[100] flex h-14 items-center justify-between px-4 bg-card border-b border-card-border md:hidden" data-testid="mobile-header">
-      <span className="font-bold text-lg text-foreground">GigAid</span>
+      <img src="/gigaid-logo.png" alt="GigAid" className="h-8" />
       <div className="flex items-center gap-1">
         <Link href="/reminders">
           <Button variant="ghost" size="icon" className="relative" data-testid="mobile-button-notifications">
