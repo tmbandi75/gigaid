@@ -29,7 +29,7 @@ import {
 import type { Lead, PriceConfirmation, AiNudge } from "@shared/schema";
 import { ReplyComposer } from "@/components/lead/ReplyComposer";
 import { LeadEmailConversation } from "@/components/lead/LeadEmailConversation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNudges, useGenerateNudges, useFeatureFlag } from "@/hooks/use-nudges";
 import { NudgeChips } from "@/components/nudges/NudgeChip";
 import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
@@ -100,6 +100,18 @@ export default function LeadSummary() {
   const handleCreateJobFromNudge = (prefill: any) => {
     navigate(`/jobs/new?leadId=${id}`);
   };
+
+  // Scroll to email section if #email hash is in URL
+  useEffect(() => {
+    if (window.location.hash === '#email' && lead) {
+      setTimeout(() => {
+        const emailSection = document.querySelector('[data-testid="lead-email-section"]');
+        if (emailSection) {
+          emailSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    }
+  }, [lead]);
 
   const convertToJobMutation = useMutation({
     mutationFn: async () => {

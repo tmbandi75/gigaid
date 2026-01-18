@@ -182,12 +182,12 @@ function LeadCard({ lead, nudges, onGenerateFollowUp, onSendText, onNudgeClick }
                   </Button>
                 )}
                 {lead.clientEmail && (
-                  <a href={`mailto:${lead.clientEmail}`} onClick={(e) => e.stopPropagation()}>
+                  <Link href={`/leads/${lead.id}#email`} onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="sm" className="h-8 px-2" data-testid={`button-email-${lead.id}`}>
                       <Mail className="h-3 w-3 mr-1" />
                       Email
                     </Button>
-                  </a>
+                  </Link>
                 )}
               </div>
               <Button

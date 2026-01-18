@@ -163,7 +163,7 @@ function LeadTableRow({ lead }: { lead: Lead }) {
                 </DropdownMenuItem>
               )}
               {lead.clientEmail && (
-                <DropdownMenuItem onClick={() => window.open(`mailto:${lead.clientEmail}`)}>
+                <DropdownMenuItem onClick={() => navigate(`/leads/${lead.id}#email`)}>
                   <Mail className="h-4 w-4 mr-2" />
                   Email
                 </DropdownMenuItem>
