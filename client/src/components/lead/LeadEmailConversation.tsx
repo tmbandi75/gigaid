@@ -47,6 +47,9 @@ function EmailMessage({ email, isExpanded, onToggle }: { email: LeadEmail; isExp
   // Get preview text (first line or first 60 chars)
   const previewText = email.bodyText.split('\n')[0].substring(0, 60) + (email.bodyText.length > 60 ? '...' : '');
   
+  const fromDisplay = isOutbound ? 'You' : (email.fromEmail?.split('@')[0] || 'Client');
+  const toDisplay = isOutbound ? (email.toEmail?.split('@')[0] || 'Client') : 'You';
+  
   return (
     <div 
       className={`border-b border-border last:border-b-0 cursor-pointer hover-elevate transition-colors ${isExpanded ? 'bg-muted/30' : ''}`}
@@ -56,8 +59,12 @@ function EmailMessage({ email, isExpanded, onToggle }: { email: LeadEmail; isExp
       <div className="p-3">
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full shrink-0 ${isOutbound ? 'bg-primary' : 'bg-green-500'}`} />
-          <span className="text-sm font-medium truncate flex-1">
-            {isOutbound ? 'You' : email.fromEmail?.split('@')[0] || 'Client'}
+          <span className="text-sm font-medium truncate">
+            {fromDisplay}
+          </span>
+          <ArrowUpRight className="h-3 w-3 text-muted-foreground shrink-0" />
+          <span className="text-sm text-muted-foreground truncate flex-1">
+            {toDisplay}
           </span>
           <span className="text-xs text-muted-foreground shrink-0">
             {formatDate(email.sentAt || email.receivedAt || email.createdAt)}
@@ -78,6 +85,11 @@ function EmailMessage({ email, isExpanded, onToggle }: { email: LeadEmail; isExp
         
         {isExpanded && (
           <div className="ml-4 mt-3 space-y-2">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>From: {email.fromEmail}</span>
+              <span>|</span>
+              <span>To: {email.toEmail}</span>
+            </div>
             <div className="text-sm font-medium">{email.subject}</div>
             <div className="text-sm text-muted-foreground whitespace-pre-wrap bg-background p-3 rounded-md border">
               {email.bodyText}
