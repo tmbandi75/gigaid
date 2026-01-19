@@ -1,5 +1,7 @@
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
+import confetti from "canvas-confetti";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -104,6 +106,7 @@ function getPaymentMethodLabel(type: string): string {
 
 export default function PublicInvoice() {
   const { token } = useParams<{ token: string }>();
+  const hasShownConfetti = useRef(false);
 
   const { data, isLoading, error } = useQuery<PublicInvoiceData>({
     queryKey: ["/api/public/invoice", token],
@@ -116,6 +119,22 @@ export default function PublicInvoice() {
     },
     enabled: !!token,
   });
+
+  // Show subtle confetti when invoice is paid
+  useEffect(() => {
+    if (data?.invoice?.status === "paid" && !hasShownConfetti.current) {
+      hasShownConfetti.current = true;
+      // Subtle confetti burst from top
+      confetti({
+        particleCount: 60,
+        spread: 55,
+        origin: { y: 0.3 },
+        colors: ['#22c55e', '#16a34a', '#15803d'],
+        gravity: 1.2,
+        scalar: 0.8,
+      });
+    }
+  }, [data?.invoice?.status]);
 
   if (isLoading) {
     return (
@@ -230,11 +249,14 @@ export default function PublicInvoice() {
             </div>
 
             {invoice.paidAt && (
-              <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-4">
+              <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-4 space-y-2">
                 <div className="flex items-center gap-2 text-green-600">
                   <CheckCircle className="h-5 w-5" />
                   <span className="font-medium">Paid on {formatDate(invoice.paidAt)}</span>
                 </div>
+                <p className="text-sm text-green-700 dark:text-green-400 font-medium" data-testid="text-payment-complete">
+                  Nice. That job is officially done.
+                </p>
               </div>
             )}
           </CardContent>
