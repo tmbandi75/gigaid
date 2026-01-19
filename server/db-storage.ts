@@ -1642,6 +1642,41 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  async expireReadyActions(): Promise<{ expired: ReadyAction[], count: number }> {
+    const now = new Date().toISOString();
+    
+    const expiredActions = await db.select()
+      .from(readyActions)
+      .where(and(
+        isNull(readyActions.actedAt),
+        isNull(readyActions.dismissedAt),
+        lt(readyActions.expiresAt, now)
+      ));
+    
+    if (expiredActions.length > 0) {
+      await db.delete(readyActions)
+        .where(and(
+          isNull(readyActions.actedAt),
+          isNull(readyActions.dismissedAt),
+          lt(readyActions.expiresAt, now)
+        ));
+    }
+    
+    return { expired: expiredActions, count: expiredActions.length };
+  }
+
+  async getActiveReadyActionsForUser(userId: string): Promise<ReadyAction[]> {
+    const now = new Date().toISOString();
+    return db.select()
+      .from(readyActions)
+      .where(and(
+        eq(readyActions.userId, userId),
+        isNull(readyActions.actedAt),
+        isNull(readyActions.dismissedAt),
+        gte(readyActions.expiresAt, now)
+      ));
+  }
+
   // ============================================================
   // Lead respond tap tracking
   // ============================================================

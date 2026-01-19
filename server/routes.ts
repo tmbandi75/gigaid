@@ -1207,6 +1207,43 @@ export async function registerRoutes(
         }
       }
       
+      // Track alternative actions: user changed lead status when AI had an active suggestion
+      // Status changes like "lost", "dismissed", "not_interested" indicate user chose different action
+      const alternativeStatuses = ["lost", "dismissed", "not_interested", "cold", "unresponsive"];
+      if (updates.status && alternativeStatuses.includes(updates.status) && existingLead) {
+        try {
+          const activeAction = await storage.getActiveReadyActionForEntity("lead", req.params.id);
+          if (activeAction) {
+            const now = new Date();
+            const hour = now.getHours();
+            const timeOfDay = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
+            
+            await storage.createAiOverride({
+              userId: lead.userId,
+              entityType: "lead",
+              entityId: lead.id,
+              overrideType: "alternative_action",
+              originalAction: activeAction.actionType,
+              originalAmount: activeAction.prefilledAmount ?? null,
+              originalTiming: activeAction.createdAt,
+              userAction: `status_changed_to_${updates.status}`,
+              userAmount: null,
+              delaySeconds: null,
+              confidenceScore: null,
+              intentSignals: null,
+              timeOfDay,
+              jobType: activeAction.prefilledServiceType ?? null,
+              createdAt: now.toISOString(),
+            });
+            
+            // Dismiss the bypassed ready action
+            await storage.dismissReadyAction(activeAction.id);
+          }
+        } catch (err) {
+          console.error("[AiOverride] Failed to track alternative action:", err);
+        }
+      }
+      
       res.json(lead);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1911,6 +1948,42 @@ export async function registerRoutes(
     try {
       const validated = insertInvoiceSchema.parse(req.body);
       const invoice = await storage.createInvoice(validated);
+      
+      // Track if user bypassed an active AI suggestion by creating manually
+      // This is a silent override for the learning feedback loop
+      if (validated.leadId || validated.jobId) {
+        const entityType = validated.leadId ? "lead" : "job";
+        const entityId = validated.leadId || validated.jobId || "";
+        
+        const activeAction = await storage.getActiveReadyActionForEntity(entityType, entityId);
+        if (activeAction) {
+          const now = new Date();
+          const hour = now.getHours();
+          const timeOfDay = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
+          
+          await storage.createAiOverride({
+            userId: validated.userId,
+            entityType,
+            entityId,
+            overrideType: "manual_invoice_bypass",
+            originalAction: activeAction.actionType,
+            originalAmount: activeAction.prefilledAmount ?? null,
+            originalTiming: activeAction.createdAt,
+            userAction: "manual_invoice",
+            userAmount: validated.amount,
+            delaySeconds: null,
+            confidenceScore: null,
+            intentSignals: null,
+            timeOfDay,
+            jobType: activeAction.prefilledServiceType ?? null,
+            createdAt: now.toISOString(),
+          });
+          
+          // Dismiss the bypassed ready action
+          await storage.dismissReadyAction(activeAction.id);
+        }
+      }
+      
       res.status(201).json(invoice);
     } catch (error) {
       if (error instanceof z.ZodError) {

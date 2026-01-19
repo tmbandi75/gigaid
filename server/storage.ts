@@ -300,11 +300,13 @@ export interface IStorage {
   // Ready Actions (pre-filled one-tap actions)
   getReadyActions(userId: string): Promise<ReadyAction[]>;
   getActiveReadyActionForEntity(entityType: string, entityId: string): Promise<ReadyAction | undefined>;
+  getActiveReadyActionsForUser(userId: string): Promise<ReadyAction[]>;
   createReadyAction(action: InsertReadyAction): Promise<ReadyAction>;
   updateReadyAction(id: string, updates: Partial<ReadyAction>): Promise<ReadyAction | undefined>;
   actOnReadyAction(id: string): Promise<ReadyAction | undefined>;
   dismissReadyAction(id: string): Promise<ReadyAction | undefined>;
   markReadyActionFollowUpSent(id: string): Promise<ReadyAction | undefined>;
+  expireReadyActions(): Promise<{ expired: ReadyAction[], count: number }>;
   
   // AI Overrides (silent learning feedback loop)
   createAiOverride(override: InsertAiOverride): Promise<AiOverride>;
@@ -2531,6 +2533,31 @@ export class MemStorage implements IStorage {
       autoFollowUpSent: true, 
       autoFollowUpSentAt: new Date().toISOString() 
     });
+  }
+
+  async expireReadyActions(): Promise<{ expired: ReadyAction[], count: number }> {
+    const now = new Date().toISOString();
+    const expired: ReadyAction[] = [];
+    
+    for (const [id, action] of this.readyActions.entries()) {
+      if (!action.actedAt && !action.dismissedAt && action.expiresAt <= now) {
+        expired.push(action);
+        this.readyActions.delete(id);
+      }
+    }
+    
+    return { expired, count: expired.length };
+  }
+
+  async getActiveReadyActionsForUser(userId: string): Promise<ReadyAction[]> {
+    const now = new Date().toISOString();
+    return Array.from(this.readyActions.values())
+      .filter(a => 
+        a.userId === userId && 
+        !a.actedAt && 
+        !a.dismissedAt && 
+        a.expiresAt > now
+      );
   }
 
   // ============================================================

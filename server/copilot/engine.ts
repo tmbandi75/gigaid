@@ -1,4 +1,5 @@
 import { db } from "../db";
+import { storage } from "../storage";
 import { 
   copilotSignals, 
   copilotRecommendations, 
@@ -325,10 +326,53 @@ export async function runCopilotEvaluation(): Promise<void> {
     if (newlyInactiveUsers.length > 0) {
       console.log(`[CoPilot] Emitted user_inactive_7d for ${newlyInactiveUsers.length} newly inactive users`);
     }
+    
+    // Expire ready actions and log overrides for AI learning
+    await runExpirationTracking();
 
     console.log(`[CoPilot] Evaluation complete. Health: ${evaluation.healthState}, Bottleneck: ${evaluation.primaryBottleneck}`);
   } catch (error) {
     console.error("[CoPilot] Evaluation failed:", error);
+  }
+}
+
+async function runExpirationTracking(): Promise<void> {
+  try {
+    const { expired, count } = await storage.expireReadyActions();
+    
+    if (count > 0) {
+      const now = new Date();
+      const hour = now.getHours();
+      const timeOfDay = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
+      
+      for (const action of expired) {
+        const delaySeconds = Math.floor(
+          (now.getTime() - new Date(action.createdAt).getTime()) / 1000
+        );
+        
+        await storage.createAiOverride({
+          userId: action.userId,
+          entityType: action.entityType,
+          entityId: action.entityId,
+          overrideType: "cta_expired",
+          originalAction: action.actionType,
+          originalAmount: action.prefilledAmount ?? null,
+          originalTiming: action.createdAt,
+          userAction: null,
+          userAmount: null,
+          delaySeconds,
+          confidenceScore: null,
+          intentSignals: null,
+          timeOfDay,
+          jobType: action.prefilledServiceType ?? null,
+          createdAt: now.toISOString(),
+        });
+      }
+      
+      console.log(`[CoPilot] Expired ${count} ready actions, logged as overrides for AI learning`);
+    }
+  } catch (error) {
+    console.error("[CoPilot] Expiration tracking failed:", error);
   }
 }
 
