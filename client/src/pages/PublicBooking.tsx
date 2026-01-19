@@ -335,7 +335,7 @@ export default function PublicBooking() {
               className="inline-block"
               data-testid="link-gigaid-confirmation"
             >
-              <img src="/gigaid-logo.png" alt="GigAid" className="h-10 mx-auto" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
+              <img src="/gigaid-logo.png" alt="GigAid" className="h-32 mx-auto" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
             </a>
             <p className="text-xs text-muted-foreground mt-1">Powered by GigAid</p>
           </div>
