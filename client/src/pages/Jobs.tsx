@@ -23,7 +23,7 @@ import {
   LayoutGrid,
   List
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import type { Job, AiNudge } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -32,6 +32,7 @@ import { NudgeChips } from "@/components/nudges/NudgeChip";
 import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
 import { JobsTableView } from "@/components/jobs/JobsTableView";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { JobResolutionModal } from "@/components/jobs/JobResolutionModal";
 
 function formatTime(time: string): string {
   const [hours, minutes] = time.split(':');
@@ -101,6 +102,8 @@ function JobCard({ job, nudges, onNudgeClick }: { job: Job; nudges: AiNudge[]; o
   const StatusIcon = config.icon;
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
+  const [showResolutionModal, setShowResolutionModal] = useState(false);
   
   const jobNudges = nudges.filter(n => n.entityType === "job" && n.entityId === job.id);
 
@@ -114,19 +117,6 @@ function JobCard({ job, nudges, onNudgeClick }: { job: Job; nudges: AiNudge[]; o
     },
     onError: () => {
       toast({ title: "Failed to start job", variant: "destructive" });
-    },
-  });
-
-  const completeJobMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("PATCH", `/api/jobs/${job.id}`, { status: "completed" });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      toast({ title: "Job completed!", description: "Don't forget to get paid." });
-    },
-    onError: () => {
-      toast({ title: "Failed to complete job", variant: "destructive" });
     },
   });
 
@@ -148,10 +138,20 @@ function JobCard({ job, nudges, onNudgeClick }: { job: Job; nudges: AiNudge[]; o
   const handleCompleteJob = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    completeJobMutation.mutate();
+    setShowResolutionModal(true);
+  };
+  
+  const handleResolved = () => {
+    setShowResolutionModal(false);
+  };
+  
+  const handleOpenInvoiceCreate = () => {
+    setShowResolutionModal(false);
+    navigate(`/invoices/new?jobId=${job.id}`);
   };
   
   return (
+    <>
     <Link href={`/jobs/${job.id}`} data-testid={`link-job-${job.id}`}>
       <Card className="border-0 shadow-sm hover-elevate cursor-pointer overflow-hidden" data-testid={`job-card-${job.id}`}>
         <CardContent className="p-0">
@@ -256,14 +256,9 @@ function JobCard({ job, nudges, onNudgeClick }: { job: Job; nudges: AiNudge[]; o
                         <Button
                           size="sm"
                           onClick={handleCompleteJob}
-                          disabled={completeJobMutation.isPending}
                           data-testid={`button-complete-job-${job.id}`}
                         >
-                          {completeJobMutation.isPending ? (
-                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          ) : (
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                          )}
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
                           Complete
                         </Button>
                       )}
@@ -288,6 +283,14 @@ function JobCard({ job, nudges, onNudgeClick }: { job: Job; nudges: AiNudge[]; o
         </CardContent>
       </Card>
     </Link>
+    
+    <JobResolutionModal
+      open={showResolutionModal}
+      job={job}
+      onResolved={handleResolved}
+      onOpenInvoiceCreate={handleOpenInvoiceCreate}
+    />
+    </>
   );
 }
 
