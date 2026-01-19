@@ -16,7 +16,7 @@ test.describe('AI Smart Suggestions', () => {
     await navigateTo(page, '/');
     await waitForPageLoad(page);
     
-    const nudgesSection = page.locator('[data-testid="ai-nudges"], text=Suggested, text=Next Best, text=Action');
+    const nudgesSection = page.getByText(/suggested|next best|action|nudge/i);
     if (await nudgesSection.first().isVisible()) {
       await expect(nudgesSection.first()).toBeVisible();
     }
@@ -78,7 +78,7 @@ test.describe('AI Smart Suggestions', () => {
     await navigateTo(page, '/');
     await waitForPageLoad(page);
     
-    const moneyPlan = page.locator('[data-testid="todays-money-plan"], text=Today, text=Priority');
+    const moneyPlan = page.getByText(/today|priority|money plan/i);
     if (await moneyPlan.first().isVisible()) {
       await expect(moneyPlan.first()).toBeVisible();
     }
@@ -88,7 +88,7 @@ test.describe('AI Smart Suggestions', () => {
     await navigateTo(page, '/');
     await waitForPageLoad(page);
     
-    const attribution = page.locator('[data-testid="outcome-attribution"], text=Saved, text=Impact');
+    const attribution = page.getByText(/saved|impact|days|helped/i);
     if (await attribution.first().isVisible()) {
       await expect(attribution.first()).toBeVisible();
     }

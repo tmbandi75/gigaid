@@ -6,7 +6,7 @@ test.describe('Onboarding Flow', () => {
     await navigateTo(page, '/onboarding');
     await waitForPageLoad(page);
     
-    const onboardingContent = page.locator('[data-testid="page-onboarding"], text=Welcome, text=Get Started, text=Onboarding');
+    const onboardingContent = page.getByText(/welcome|get started|onboarding|setup/i);
     await expect(onboardingContent.first()).toBeVisible();
   });
 

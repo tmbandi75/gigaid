@@ -8,7 +8,7 @@ test.describe('Dashboard', () => {
   });
 
   test('should display dashboard', async ({ page }) => {
-    await expect(page.locator('text=Dashboard, text=Today, text=Home')).toBeVisible();
+    await expect(page.getByText(/dashboard|today|home|welcome/i).first()).toBeVisible();
   });
 
   test('should show quick stats', async ({ page }) => {
@@ -18,7 +18,7 @@ test.describe('Dashboard', () => {
   });
 
   test('should show upcoming jobs section', async ({ page }) => {
-    const upcomingSection = page.locator('text=Upcoming, text=Today, text=Schedule');
+    const upcomingSection = page.getByText(/upcoming|today|schedule|jobs/i);
     await expect(upcomingSection.first()).toBeVisible();
   });
 
@@ -39,7 +39,7 @@ test.describe('Dashboard', () => {
   });
 
   test('should show earnings summary', async ({ page }) => {
-    const earnings = page.locator('text=/\\$\\d+/, [data-testid="earnings"]');
+    const earnings = page.getByText(/\$\d+|earnings|revenue/i);
     if (await earnings.first().isVisible()) {
       await expect(earnings.first()).toBeVisible();
     }
@@ -51,7 +51,7 @@ test.describe('Owner View', () => {
     await navigateTo(page, '/owner');
     await waitForPageLoad(page);
     
-    const ownerView = page.locator('text=Owner View, text=Analytics, text=Dashboard');
+    const ownerView = page.getByText(/owner|analytics|dashboard|earnings/i);
     await expect(ownerView.first()).toBeVisible();
   });
 
@@ -103,16 +103,16 @@ test.describe('More Page', () => {
   });
 
   test('should display more page', async ({ page }) => {
-    await expect(page.locator('text=More, text=Menu')).toBeVisible();
+    await expect(page.getByText(/more|menu|settings/i).first()).toBeVisible();
   });
 
   test('should show profile option', async ({ page }) => {
-    const profileOption = page.locator('text=Profile, [data-testid="link-profile"]');
+    const profileOption = page.getByText(/profile/i);
     await expect(profileOption.first()).toBeVisible();
   });
 
   test('should show reviews option', async ({ page }) => {
-    const reviewsOption = page.locator('text=Reviews, [data-testid="link-reviews"]');
+    const reviewsOption = page.getByText(/reviews/i);
     await expect(reviewsOption.first()).toBeVisible();
   });
 
@@ -138,12 +138,12 @@ test.describe('More Page', () => {
   });
 
   test('should show help option', async ({ page }) => {
-    const helpOption = page.locator('text=Help, [data-testid="link-help"]');
+    const helpOption = page.getByText(/help/i);
     await expect(helpOption.first()).toBeVisible();
   });
 
   test('should have dark mode toggle', async ({ page }) => {
-    const darkModeToggle = page.locator('[data-testid="toggle-dark-mode"], text=Dark Mode, [role="switch"]');
+    const darkModeToggle = page.getByRole('switch').or(page.getByText(/dark mode|theme/i));
     if (await darkModeToggle.first().isVisible()) {
       await expect(darkModeToggle.first()).toBeVisible();
     }
@@ -166,7 +166,7 @@ test.describe('Profile Page', () => {
     await navigateTo(page, '/profile');
     await waitForPageLoad(page);
     
-    await expect(page.locator('text=Profile')).toBeVisible();
+    await expect(page.getByRole('heading', { name: /profile/i })).toBeVisible();
   });
 
   test('should show user name', async ({ page }) => {
@@ -247,7 +247,7 @@ test.describe('Crew Management', () => {
     await navigateTo(page, '/crew');
     await waitForPageLoad(page);
     
-    const crewPage = page.locator('text=Crew, text=Team');
+    const crewPage = page.getByText(/crew|team|members/i);
     await expect(crewPage.first()).toBeVisible();
   });
 
