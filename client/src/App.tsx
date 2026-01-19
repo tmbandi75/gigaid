@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -7,7 +7,8 @@ import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
 import { VoiceFAB } from "@/components/layout/VoiceFAB";
 import { OnboardingWrapper } from "@/components/onboarding/OnboardingWrapper";
 import { PostHogProvider } from "@/components/PostHogProvider";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import SplashPage from "@/pages/SplashPage";
 
 import TodaysGamePlanPage from "@/pages/TodaysGamePlanPage";
 import Dashboard from "@/pages/Dashboard";
@@ -107,6 +108,32 @@ function ThemeInitializer() {
   return null;
 }
 
+function SplashRedirect() {
+  const [, setLocation] = useLocation();
+  const [checked, setChecked] = useState(false);
+  
+  useEffect(() => {
+    const splashSeen = localStorage.getItem('gigaid_splash_seen');
+    if (!splashSeen) {
+      setLocation('/welcome');
+    }
+    setChecked(true);
+  }, [setLocation]);
+  
+  if (!checked) {
+    return null;
+  }
+  
+  return (
+    <OnboardingWrapper>
+      <ResponsiveLayout>
+        <Router />
+      </ResponsiveLayout>
+      <VoiceFAB />
+    </OnboardingWrapper>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -114,6 +141,7 @@ function App() {
         <TooltipProvider>
           <ThemeInitializer />
           <Switch>
+          <Route path="/welcome" component={SplashPage} />
           <Route path="/book/:slug" component={PublicBooking} />
           <Route path="/booking/:token" component={CustomerBookingDetail} />
           <Route path="/invoice/:token" component={PublicInvoice} />
@@ -124,12 +152,7 @@ function App() {
           <Route path="/review/:token" component={PublicReview} />
           <Route path="/qb/:token" component={QuickBookConfirm} />
           <Route>
-            <OnboardingWrapper>
-              <ResponsiveLayout>
-                <Router />
-              </ResponsiveLayout>
-              <VoiceFAB />
-            </OnboardingWrapper>
+            <SplashRedirect />
           </Route>
           </Switch>
           <Toaster />
