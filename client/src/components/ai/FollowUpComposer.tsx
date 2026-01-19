@@ -87,11 +87,23 @@ export function FollowUpComposer() {
     },
   });
 
+  // Track respond tap for intent detection (only for leads)
+  const trackRespondTap = async () => {
+    if (!selectedClient || selectedClient.type !== "lead") return;
+    const leadId = selectedClient.id.replace("lead-", "");
+    try {
+      await apiRequest("POST", `/api/leads/${leadId}/respond-tap`);
+    } catch (err) {
+      console.debug("[RespondTap] Failed to track:", err);
+    }
+  };
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message);
     setCopied(true);
     toast({ title: "Copied to clipboard!" });
     setTimeout(() => setCopied(false), 2000);
+    trackRespondTap();
   };
 
   const handleSend = async () => {
@@ -108,6 +120,7 @@ export function FollowUpComposer() {
       });
       toast({ title: "Message sent successfully!" });
       setMessage("");
+      trackRespondTap();
     } catch (error) {
       toast({ title: "Failed to send message", variant: "destructive" });
     } finally {

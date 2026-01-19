@@ -6,7 +6,7 @@ import {
   reviews, userPaymentMethods, jobPayments, crewInvites, crewJobPhotos, crewMessages,
   priceConfirmations, aiNudges, aiNudgeEvents, featureFlags, jobDrafts, jobResolutions,
   actionQueueItems, outcomeMetricsDaily, photoAssets, estimationRequests,
-  stallDetections, nextActions, autoExecutionLog,
+  stallDetections, nextActions, autoExecutionLog, intentSignals, readyActions,
   type User, type InsertUser,
   type Job, type InsertJob,
   type Lead, type InsertLead,
@@ -44,6 +44,8 @@ import {
   type StallDetection, type InsertStallDetection,
   type NextAction, type InsertNextAction,
   type AutoExecutionLog, type InsertAutoExecutionLog,
+  type IntentSignal, type InsertIntentSignal,
+  type ReadyAction, type InsertReadyAction,
 } from "@shared/schema";
 import { IStorage } from "./storage";
 import { randomUUID } from "crypto";
@@ -1537,6 +1539,125 @@ export class DatabaseStorage implements IStorage {
       ...log,
     }).returning();
     return newLog;
+  }
+
+  // ============================================================
+  // Intent Signals
+  // ============================================================
+
+  async getIntentSignals(userId: string, entityType?: string, entityId?: string): Promise<IntentSignal[]> {
+    const conditions = [eq(intentSignals.userId, userId)];
+    if (entityType) {
+      conditions.push(eq(intentSignals.entityType, entityType));
+    }
+    if (entityId) {
+      conditions.push(eq(intentSignals.entityId, entityId));
+    }
+    return db.select().from(intentSignals)
+      .where(and(...conditions))
+      .orderBy(desc(intentSignals.createdAt));
+  }
+
+  async getUnprocessedIntentSignals(userId: string): Promise<IntentSignal[]> {
+    return db.select().from(intentSignals)
+      .where(and(
+        eq(intentSignals.userId, userId),
+        isNull(intentSignals.processedAt)
+      ))
+      .orderBy(desc(intentSignals.createdAt));
+  }
+
+  async createIntentSignal(signal: InsertIntentSignal): Promise<IntentSignal> {
+    const [newSignal] = await db.insert(intentSignals).values({
+      ...signal,
+    }).returning();
+    return newSignal;
+  }
+
+  async markIntentSignalProcessed(id: string): Promise<IntentSignal | undefined> {
+    const [updated] = await db.update(intentSignals)
+      .set({ processedAt: new Date().toISOString() })
+      .where(eq(intentSignals.id, id))
+      .returning();
+    return updated;
+  }
+
+  // ============================================================
+  // Ready Actions (pre-filled one-tap actions)
+  // ============================================================
+
+  async getReadyActions(userId: string): Promise<ReadyAction[]> {
+    const now = new Date().toISOString();
+    return db.select().from(readyActions)
+      .where(and(
+        eq(readyActions.userId, userId),
+        isNull(readyActions.actedAt),
+        isNull(readyActions.dismissedAt),
+        gte(readyActions.expiresAt, now)
+      ))
+      .orderBy(desc(readyActions.createdAt));
+  }
+
+  async getActiveReadyActionForEntity(entityType: string, entityId: string): Promise<ReadyAction | undefined> {
+    const now = new Date().toISOString();
+    const [action] = await db.select().from(readyActions)
+      .where(and(
+        eq(readyActions.entityType, entityType),
+        eq(readyActions.entityId, entityId),
+        isNull(readyActions.actedAt),
+        isNull(readyActions.dismissedAt),
+        gte(readyActions.expiresAt, now)
+      ))
+      .limit(1);
+    return action;
+  }
+
+  async createReadyAction(action: InsertReadyAction): Promise<ReadyAction> {
+    const [newAction] = await db.insert(readyActions).values({
+      ...action,
+    }).returning();
+    return newAction;
+  }
+
+  async updateReadyAction(id: string, updates: Partial<ReadyAction>): Promise<ReadyAction | undefined> {
+    const [updated] = await db.update(readyActions)
+      .set(updates)
+      .where(eq(readyActions.id, id))
+      .returning();
+    return updated;
+  }
+
+  async actOnReadyAction(id: string): Promise<ReadyAction | undefined> {
+    return this.updateReadyAction(id, { actedAt: new Date().toISOString() });
+  }
+
+  async dismissReadyAction(id: string): Promise<ReadyAction | undefined> {
+    return this.updateReadyAction(id, { dismissedAt: new Date().toISOString() });
+  }
+
+  async markReadyActionFollowUpSent(id: string): Promise<ReadyAction | undefined> {
+    return this.updateReadyAction(id, { 
+      autoFollowUpSent: true, 
+      autoFollowUpSentAt: new Date().toISOString() 
+    });
+  }
+
+  // ============================================================
+  // Lead respond tap tracking
+  // ============================================================
+
+  async incrementLeadRespondTap(leadId: string): Promise<Lead | undefined> {
+    const lead = await this.getLead(leadId);
+    if (!lead) return undefined;
+    
+    const [updated] = await db.update(leads)
+      .set({ 
+        respondTapCount: (lead.respondTapCount || 0) + 1,
+        lastRespondTapAt: new Date().toISOString(),
+      })
+      .where(eq(leads.id, leadId))
+      .returning();
+    return updated;
   }
 }
 

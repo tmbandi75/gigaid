@@ -33,6 +33,7 @@ import type { Job } from "@shared/schema";
 import { JobLocationMap } from "@/components/JobLocationMap";
 import { GetPaidDialog } from "@/components/job/GetPaidDialog";
 import { NextActionBanner } from "@/components/NextActionBanner";
+import { IntentActionCard } from "@/components/IntentActionCard";
 import { useState } from "react";
 
 const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: React.ElementType }> = {
@@ -278,6 +279,7 @@ export default function JobSummary() {
       </div>
 
       <div className="px-4 -mt-8 relative z-10 space-y-4">
+        <IntentActionCard entityType="job" entityId={id!} />
         <NextActionBanner entityType="job" entityId={id!} />
         
         <Card className="border-0 shadow-lg" data-testid="card-schedule">

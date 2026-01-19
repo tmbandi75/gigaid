@@ -35,6 +35,8 @@ import {
   type StallDetection, type InsertStallDetection,
   type NextAction, type InsertNextAction,
   type AutoExecutionLog, type InsertAutoExecutionLog,
+  type IntentSignal, type InsertIntentSignal,
+  type ReadyAction, type InsertReadyAction,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -287,6 +289,24 @@ export interface IStorage {
   getAutoExecutionLogs(userId: string, entityType?: string, entityId?: string): Promise<AutoExecutionLog[]>;
   getLastAutoExecutionForEntity(entityType: string, entityId: string): Promise<AutoExecutionLog | undefined>;
   createAutoExecutionLog(log: InsertAutoExecutionLog): Promise<AutoExecutionLog>;
+  
+  // Intent Signals
+  getIntentSignals(userId: string, entityType?: string, entityId?: string): Promise<IntentSignal[]>;
+  getUnprocessedIntentSignals(userId: string): Promise<IntentSignal[]>;
+  createIntentSignal(signal: InsertIntentSignal): Promise<IntentSignal>;
+  markIntentSignalProcessed(id: string): Promise<IntentSignal | undefined>;
+  
+  // Ready Actions (pre-filled one-tap actions)
+  getReadyActions(userId: string): Promise<ReadyAction[]>;
+  getActiveReadyActionForEntity(entityType: string, entityId: string): Promise<ReadyAction | undefined>;
+  createReadyAction(action: InsertReadyAction): Promise<ReadyAction>;
+  updateReadyAction(id: string, updates: Partial<ReadyAction>): Promise<ReadyAction | undefined>;
+  actOnReadyAction(id: string): Promise<ReadyAction | undefined>;
+  dismissReadyAction(id: string): Promise<ReadyAction | undefined>;
+  markReadyActionFollowUpSent(id: string): Promise<ReadyAction | undefined>;
+  
+  // Lead respond tap tracking
+  incrementLeadRespondTap(leadId: string): Promise<Lead | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -318,6 +338,8 @@ export class MemStorage implements IStorage {
   private outcomeMetricsDaily: Map<string, OutcomeMetricsDaily>;
   private photoAssets: Map<string, PhotoAsset>;
   private smsMessages: Map<string, SmsMessage>;
+  private intentSignals: Map<string, IntentSignal>;
+  private readyActions: Map<string, ReadyAction>;
 
   constructor() {
     this.users = new Map();
@@ -348,6 +370,8 @@ export class MemStorage implements IStorage {
     this.outcomeMetricsDaily = new Map();
     this.photoAssets = new Map();
     this.smsMessages = new Map();
+    this.intentSignals = new Map();
+    this.readyActions = new Map();
     
     // Seed default feature flags
     this.featureFlags.set("ai_micro_nudges", {
@@ -2380,6 +2404,143 @@ export class MemStorage implements IStorage {
     };
     this.autoExecutionLogs.set(id, newLog);
     return newLog;
+  }
+
+  // ============================================================
+  // Intent Signals
+  // ============================================================
+
+  async getIntentSignals(userId: string, entityType?: string, entityId?: string): Promise<IntentSignal[]> {
+    return Array.from(this.intentSignals.values())
+      .filter(s => 
+        s.userId === userId && 
+        (!entityType || s.entityType === entityType) &&
+        (!entityId || s.entityId === entityId)
+      )
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async getUnprocessedIntentSignals(userId: string): Promise<IntentSignal[]> {
+    return Array.from(this.intentSignals.values())
+      .filter(s => s.userId === userId && !s.processedAt)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async createIntentSignal(signal: InsertIntentSignal): Promise<IntentSignal> {
+    const id = randomUUID();
+    const newSignal: IntentSignal = {
+      ...signal,
+      id,
+      triggerText: signal.triggerText ?? null,
+      confidence: signal.confidence ?? 0.8,
+      processedAt: signal.processedAt ?? null,
+    };
+    this.intentSignals.set(id, newSignal);
+    return newSignal;
+  }
+
+  async markIntentSignalProcessed(id: string): Promise<IntentSignal | undefined> {
+    const signal = this.intentSignals.get(id);
+    if (!signal) return undefined;
+    
+    const updated: IntentSignal = {
+      ...signal,
+      processedAt: new Date().toISOString(),
+    };
+    this.intentSignals.set(id, updated);
+    return updated;
+  }
+
+  // ============================================================
+  // Ready Actions (pre-filled one-tap actions)
+  // ============================================================
+
+  async getReadyActions(userId: string): Promise<ReadyAction[]> {
+    const now = new Date().toISOString();
+    return Array.from(this.readyActions.values())
+      .filter(a => 
+        a.userId === userId && 
+        !a.actedAt && 
+        !a.dismissedAt && 
+        a.expiresAt > now
+      )
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async getActiveReadyActionForEntity(entityType: string, entityId: string): Promise<ReadyAction | undefined> {
+    const now = new Date().toISOString();
+    return Array.from(this.readyActions.values())
+      .find(a => 
+        a.entityType === entityType && 
+        a.entityId === entityId && 
+        !a.actedAt && 
+        !a.dismissedAt && 
+        a.expiresAt > now
+      );
+  }
+
+  async createReadyAction(action: InsertReadyAction): Promise<ReadyAction> {
+    const id = randomUUID();
+    const newAction: ReadyAction = {
+      ...action,
+      id,
+      intentSignalId: action.intentSignalId ?? null,
+      prefilledAmount: action.prefilledAmount ?? null,
+      prefilledClientName: action.prefilledClientName ?? null,
+      prefilledClientEmail: action.prefilledClientEmail ?? null,
+      prefilledClientPhone: action.prefilledClientPhone ?? null,
+      prefilledDueDate: action.prefilledDueDate ?? null,
+      prefilledServiceType: action.prefilledServiceType ?? null,
+      prefilledDescription: action.prefilledDescription ?? null,
+      actedAt: action.actedAt ?? null,
+      dismissedAt: action.dismissedAt ?? null,
+      autoFollowUpSent: action.autoFollowUpSent ?? false,
+      autoFollowUpSentAt: action.autoFollowUpSentAt ?? null,
+      ctaLabel: action.ctaLabel ?? "Send & Get Paid",
+    };
+    this.readyActions.set(id, newAction);
+    return newAction;
+  }
+
+  async updateReadyAction(id: string, updates: Partial<ReadyAction>): Promise<ReadyAction | undefined> {
+    const action = this.readyActions.get(id);
+    if (!action) return undefined;
+    
+    const updated: ReadyAction = { ...action, ...updates };
+    this.readyActions.set(id, updated);
+    return updated;
+  }
+
+  async actOnReadyAction(id: string): Promise<ReadyAction | undefined> {
+    return this.updateReadyAction(id, { actedAt: new Date().toISOString() });
+  }
+
+  async dismissReadyAction(id: string): Promise<ReadyAction | undefined> {
+    return this.updateReadyAction(id, { dismissedAt: new Date().toISOString() });
+  }
+
+  async markReadyActionFollowUpSent(id: string): Promise<ReadyAction | undefined> {
+    return this.updateReadyAction(id, { 
+      autoFollowUpSent: true, 
+      autoFollowUpSentAt: new Date().toISOString() 
+    });
+  }
+
+  // ============================================================
+  // Lead respond tap tracking
+  // ============================================================
+
+  async incrementLeadRespondTap(leadId: string): Promise<Lead | undefined> {
+    const lead = this.leads.get(leadId);
+    if (!lead) return undefined;
+    
+    const updated: Lead = {
+      ...lead,
+      respondTapCount: (lead.respondTapCount || 0) + 1,
+      lastRespondTapAt: new Date().toISOString(),
+    };
+    this.leads.set(leadId, updated);
+    return updated;
   }
 }
 

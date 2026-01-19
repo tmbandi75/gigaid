@@ -69,16 +69,30 @@ export function ReplyComposer({ lead }: ReplyComposerProps) {
     generateReplyMutation.mutate(scenario);
   };
 
+  // Track respond tap for intent detection
+  const trackRespondTap = async () => {
+    try {
+      await apiRequest("POST", `/api/leads/${lead.id}/respond-tap`);
+    } catch (err) {
+      // Silent fail - tracking is non-critical
+      console.debug("[RespondTap] Failed to track:", err);
+    }
+  };
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(editedReply);
     setCopied(true);
     toast({ title: "Message copied!" });
     setTimeout(() => setCopied(false), 2000);
+    // Track respond tap for intent detection
+    trackRespondTap();
   };
 
   const handleSendText = () => {
     if (lead.clientPhone) {
       sendText({ phoneNumber: lead.clientPhone, message: editedReply });
+      // Track respond tap for intent detection
+      trackRespondTap();
     } else {
       toast({ 
         title: "No phone number", 

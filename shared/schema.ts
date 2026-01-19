@@ -270,6 +270,10 @@ export const leads = pgTable("leads", {
   // Source link fields - URL to original post/conversation
   sourceType: text("source_type"), // craigslist, facebook, thumbtack, etc.
   sourceUrl: text("source_url"), // Full URL to original post
+  
+  // Intent detection tracking
+  respondTapCount: integer("respond_tap_count").default(0), // Number of times user tapped "Respond"
+  lastRespondTapAt: text("last_respond_tap_at"), // Last time user tapped "Respond"
 });
 
 export const insertLeadSchema = createInsertSchema(leads).omit({
@@ -1564,5 +1568,89 @@ export const insertAutoExecutionLogSchema = createInsertSchema(autoExecutionLog)
 
 export type InsertAutoExecutionLog = z.infer<typeof insertAutoExecutionLogSchema>;
 export type AutoExecutionLog = typeof autoExecutionLog.$inferSelect;
+
+// ==================== INTENT SIGNALS ====================
+// Behavioral intent detection for "ready to convert" moments
+
+export const intentSignalTypes = [
+  "time_cue",         // Client mentioned time ("tomorrow", "9am", "next week")
+  "price_cue",        // Client mentioned price ("how much", "estimate", "$", "cost")
+  "status_engaged",   // Lead status moved to "engaged"
+  "job_completed",    // Job marked as completed
+  "multiple_responds" // User tapped "Respond" more than once on same lead
+] as const;
+export type IntentSignalType = (typeof intentSignalTypes)[number];
+
+export const intentSignals = pgTable("intent_signals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  entityType: text("entity_type").notNull(), // lead, job
+  entityId: varchar("entity_id").notNull(),
+  signalType: text("signal_type").notNull(), // from intentSignalTypes
+  triggerText: text("trigger_text"), // The text that triggered the signal (e.g., "tomorrow at 9am")
+  confidence: doublePrecision("confidence").default(0.8),
+  detectedAt: text("detected_at").notNull(),
+  processedAt: text("processed_at"), // When we generated an action from this
+  createdAt: text("created_at").notNull(),
+}, (table) => [
+  index("intent_signals_user_idx").on(table.userId),
+  index("intent_signals_entity_idx").on(table.entityType, table.entityId),
+]);
+
+export const insertIntentSignalSchema = createInsertSchema(intentSignals).omit({
+  id: true,
+});
+
+export type InsertIntentSignal = z.infer<typeof insertIntentSignalSchema>;
+export type IntentSignal = typeof intentSignals.$inferSelect;
+
+// ==================== READY-TO-SEND ACTIONS ====================
+// Pre-filled actions that are ready to execute with one tap
+
+export const readyActionTypes = [
+  "send_invoice",      // Pre-filled invoice ready to send
+  "send_booking_link", // Booking link with prefilled details
+  "send_follow_up"     // Follow-up message
+] as const;
+export type ReadyActionType = (typeof readyActionTypes)[number];
+
+export const readyActions = pgTable("ready_actions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  intentSignalId: varchar("intent_signal_id"), // Optional link to triggering intent
+  entityType: text("entity_type").notNull(), // lead, job, invoice
+  entityId: varchar("entity_id").notNull(),
+  actionType: text("action_type").notNull(), // from readyActionTypes
+  headline: text("headline").notNull(), // "This looks ready to turn into money."
+  subtext: text("subtext").notNull(), // "Recommended next step: Send invoice + booking link"
+  ctaLabel: text("cta_label").notNull().default("Send & Get Paid"), // Button text
+  
+  // Pre-filled invoice data
+  prefilledAmount: doublePrecision("prefilled_amount"), // AI-estimated or last-used
+  prefilledClientName: text("prefilled_client_name"),
+  prefilledClientEmail: text("prefilled_client_email"),
+  prefilledClientPhone: text("prefilled_client_phone"),
+  prefilledDueDate: text("prefilled_due_date"), // Auto-set (e.g., 7 days from now)
+  prefilledServiceType: text("prefilled_service_type"),
+  prefilledDescription: text("prefilled_description"),
+  
+  // State
+  expiresAt: text("expires_at").notNull(),
+  actedAt: text("acted_at"),
+  dismissedAt: text("dismissed_at"),
+  autoFollowUpSent: boolean("auto_follow_up_sent").default(false),
+  autoFollowUpSentAt: text("auto_follow_up_sent_at"),
+  createdAt: text("created_at").notNull(),
+}, (table) => [
+  index("ready_actions_user_idx").on(table.userId),
+  index("ready_actions_entity_idx").on(table.entityType, table.entityId),
+]);
+
+export const insertReadyActionSchema = createInsertSchema(readyActions).omit({
+  id: true,
+});
+
+export type InsertReadyAction = z.infer<typeof insertReadyActionSchema>;
+export type ReadyAction = typeof readyActions.$inferSelect;
 
 export * from "./models/chat";

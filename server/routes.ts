@@ -607,6 +607,17 @@ export async function registerRoutes(
           context: { jobId: existingJob.id, serviceType: existingJob.serviceType, price: existingJob.price },
           source: "web",
         });
+        
+        // Intent detection: job completed - create ready action for invoice
+        try {
+          const { detectJobCompleted, generateReadyActionFromSignal } = await import("./intentDetectionEngine");
+          const signal = await detectJobCompleted(existingJob.userId, existingJob.id);
+          if (signal) {
+            await generateReadyActionFromSignal(signal);
+          }
+        } catch (err) {
+          console.error("[IntentDetection] Failed to detect job completed:", err);
+        }
       }
       
       const job = await storage.updateJob(req.params.id, updates);
@@ -1176,11 +1187,26 @@ export async function registerRoutes(
 
   app.patch("/api/leads/:id", async (req, res) => {
     try {
+      const existingLead = await storage.getLead(req.params.id);
       const updates = insertLeadSchema.partial().parse(req.body);
       const lead = await storage.updateLead(req.params.id, updates);
       if (!lead) {
         return res.status(404).json({ error: "Lead not found" });
       }
+      
+      // Intent detection: status changed to "engaged"
+      if (updates.status === "engaged" && existingLead && existingLead.status !== "engaged") {
+        try {
+          const { detectLeadStatusEngaged, generateReadyActionFromSignal } = await import("./intentDetectionEngine");
+          const signal = await detectLeadStatusEngaged(lead.userId, lead.id);
+          if (signal) {
+            await generateReadyActionFromSignal(signal);
+          }
+        } catch (err) {
+          console.error("[IntentDetection] Failed to detect engaged status:", err);
+        }
+      }
+      
       res.json(lead);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -2038,6 +2064,27 @@ export async function registerRoutes(
         confirmedAt: paidAt,
       });
 
+      // Auto-clear: Mark related job as completed and update payment status
+      if (existingInvoice.jobId) {
+        try {
+          const relatedJob = await storage.getJob(existingInvoice.jobId);
+          if (relatedJob) {
+            const updates: Partial<typeof relatedJob> = { paymentStatus: "paid" };
+            
+            // If job is still scheduled or in progress, mark it as completed
+            if (relatedJob.status === "scheduled" || relatedJob.status === "in_progress") {
+              updates.status = "completed";
+              updates.completedAt = paidAt;
+            }
+            
+            await storage.updateJob(existingInvoice.jobId, updates);
+            console.log(`[AutoClear] Job ${existingInvoice.jobId} updated: payment received`);
+          }
+        } catch (err) {
+          console.error("[AutoClear] Failed to update related job:", err);
+        }
+      }
+
       res.json(invoice);
     } catch (error) {
       res.status(500).json({ error: "Failed to mark invoice as paid" });
@@ -2215,6 +2262,28 @@ export async function registerRoutes(
           isRead: false,
         });
         console.log(`[SMS Webhook] Incoming from ${From} routed to worker ${lastOutbound.userId} (matched previous conversation)`);
+        
+        // Intent detection: check message for time/price cues
+        try {
+          const { detectIntentFromInboundMessage, generateReadyActionFromSignal } = await import("./intentDetectionEngine");
+          const entityType = lastOutbound.relatedLeadId ? "lead" : (lastOutbound.relatedJobId ? "job" : null);
+          const entityId = lastOutbound.relatedLeadId || lastOutbound.relatedJobId;
+          
+          if (entityType && entityId) {
+            const signal = await detectIntentFromInboundMessage(
+              lastOutbound.userId,
+              entityType as "lead" | "job",
+              entityId,
+              Body
+            );
+            if (signal) {
+              await generateReadyActionFromSignal(signal);
+              console.log(`[IntentDetection] Created ready action from SMS intent: ${signal.signalType}`);
+            }
+          }
+        } catch (err) {
+          console.error("[IntentDetection] Failed to detect SMS intent:", err);
+        }
       } else {
         // No previous conversation found - try to identify sender from jobs/leads/invoices
         console.log(`[SMS Webhook] No previous conversation found for ${From}, attempting to identify sender...`);
@@ -2239,6 +2308,28 @@ export async function registerRoutes(
           isRead: false,
         });
         console.log(`[SMS Webhook] Incoming from ${From} (${clientInfo?.clientName || 'Unknown'}) stored for default user`);
+        
+        // Intent detection: check message for time/price cues
+        if (clientInfo?.relatedLeadId || clientInfo?.relatedJobId) {
+          try {
+            const { detectIntentFromInboundMessage, generateReadyActionFromSignal } = await import("./intentDetectionEngine");
+            const entityType = clientInfo.relatedLeadId ? "lead" : "job";
+            const entityId = clientInfo.relatedLeadId || clientInfo.relatedJobId!;
+            
+            const signal = await detectIntentFromInboundMessage(
+              defaultUserId,
+              entityType,
+              entityId,
+              Body
+            );
+            if (signal) {
+              await generateReadyActionFromSignal(signal);
+              console.log(`[IntentDetection] Created ready action from SMS intent: ${signal.signalType}`);
+            }
+          } catch (err) {
+            console.error("[IntentDetection] Failed to detect SMS intent:", err);
+          }
+        }
       }
 
       // Respond to Twilio with empty TwiML to acknowledge receipt
@@ -4772,10 +4863,11 @@ Return ONLY the message text, no JSON or formatting.`
       const session = await stripe.checkout.sessions.retrieve(session_id as string);
 
       if (session.payment_status === "paid") {
+        const paidAt = new Date().toISOString();
         await storage.updateInvoice(invoice_id as string, {
           status: "paid",
           paymentMethod: "stripe",
-          paidAt: new Date().toISOString(),
+          paidAt,
         });
 
         const payments = await storage.getJobPaymentsByInvoice(invoice_id as string);
@@ -4784,8 +4876,30 @@ Return ONLY the message text, no JSON or formatting.`
           await storage.updateJobPayment(stripePayment.id, {
             status: "paid",
             stripePaymentIntentId: session.payment_intent as string,
-            paidAt: new Date().toISOString(),
+            paidAt,
           });
+        }
+        
+        // Auto-clear: Mark related job as completed and update payment status
+        const invoice = await storage.getInvoice(invoice_id as string);
+        if (invoice?.jobId) {
+          try {
+            const relatedJob = await storage.getJob(invoice.jobId);
+            if (relatedJob) {
+              const updates: Partial<typeof relatedJob> = { paymentStatus: "paid" };
+              
+              // If job is still scheduled or in progress, mark it as completed
+              if (relatedJob.status === "scheduled" || relatedJob.status === "in_progress") {
+                updates.status = "completed";
+                updates.completedAt = paidAt;
+              }
+              
+              await storage.updateJob(invoice.jobId, updates);
+              console.log(`[AutoClear] Job ${invoice.jobId} updated after Stripe payment`);
+            }
+          } catch (err) {
+            console.error("[AutoClear] Failed to update related job after Stripe payment:", err);
+          }
         }
       }
 
@@ -7370,6 +7484,178 @@ Return ONLY the message text, no JSON or formatting.`
     } catch (error) {
       console.error("Dismiss next action error:", error);
       res.status(500).json({ error: "Failed to dismiss action" });
+    }
+  });
+
+  // ==================== READY ACTIONS (INTENT-BASED) ====================
+  // Pre-filled one-tap actions from behavioral intent detection
+  
+  const { 
+    detectIntentFromInboundMessage,
+    detectLeadStatusEngaged,
+    detectJobCompleted,
+    detectMultipleResponds,
+    generateReadyActionFromSignal
+  } = await import("./intentDetectionEngine");
+  
+  // Get all active ready actions for user
+  app.get("/api/ready-actions", async (req, res) => {
+    try {
+      const userId = "demo-user";
+      const actions = await storage.getReadyActions(userId);
+      res.json(actions);
+    } catch (error) {
+      console.error("Get ready actions error:", error);
+      res.status(500).json({ error: "Failed to get ready actions" });
+    }
+  });
+  
+  // Get ready action for a specific entity
+  app.get("/api/ready-actions/entity/:entityType/:entityId", async (req, res) => {
+    try {
+      const { entityType, entityId } = req.params;
+      const action = await storage.getActiveReadyActionForEntity(entityType, entityId);
+      res.json(action || null);
+    } catch (error) {
+      console.error("Get entity ready action error:", error);
+      res.status(500).json({ error: "Failed to get entity ready action" });
+    }
+  });
+  
+  // Act on ready action (create invoice and send)
+  app.post("/api/ready-actions/:id/act", async (req, res) => {
+    try {
+      const action = await storage.getReadyActions("demo-user")
+        .then(actions => actions.find(a => a.id === req.params.id));
+      
+      if (!action) {
+        return res.status(404).json({ error: "Action not found" });
+      }
+      
+      // Create the invoice from prefilled data
+      const now = new Date().toISOString();
+      const invoice = await storage.createInvoice({
+        userId: "demo-user",
+        clientName: action.prefilledClientName || "Client",
+        clientEmail: action.prefilledClientEmail,
+        clientPhone: action.prefilledClientPhone,
+        amount: action.prefilledAmount || 0,
+        description: action.prefilledDescription || action.prefilledServiceType || "Service",
+        status: "draft",
+        dueDate: action.prefilledDueDate,
+        createdAt: now,
+        jobId: action.entityType === "job" ? action.entityId : null,
+        leadId: action.entityType === "lead" ? action.entityId : null,
+      });
+      
+      // Mark the ready action as acted
+      await storage.actOnReadyAction(action.id);
+      
+      // Try to send the invoice if client has email or phone
+      let sent = false;
+      let sendMessage = "Invoice created as draft";
+      
+      if (action.prefilledClientEmail || action.prefilledClientPhone) {
+        try {
+          const { v4: uuidv4 } = await import("uuid");
+          const publicToken = uuidv4();
+          const invoiceUrl = `${process.env.FRONTEND_URL || "http://localhost:5000"}/pay/${publicToken}`;
+          
+          // Try to send via email first
+          if (action.prefilledClientEmail) {
+            try {
+              const sgMail = (await import("@sendgrid/mail")).default;
+              if (process.env.SENDGRID_API_KEY) {
+                sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+                const user = await storage.getUser("demo-user");
+                await sgMail.send({
+                  to: action.prefilledClientEmail,
+                  from: {
+                    email: process.env.SENDGRID_VERIFIED_SENDER || "noreply@example.com",
+                    name: user?.businessName || user?.name || "GigAid"
+                  },
+                  subject: `Invoice from ${user?.businessName || user?.name || "Your Service Provider"}`,
+                  html: `<p>You have a new invoice for $${((action.prefilledAmount || 0) / 100).toFixed(2)}.</p><p><a href="${invoiceUrl}">View and Pay Invoice</a></p>`,
+                });
+                sent = true;
+                sendMessage = "Invoice sent via email";
+              }
+            } catch (emailErr) {
+              console.error("[ReadyAction] Email send failed:", emailErr);
+            }
+          }
+          
+          // Update invoice with sent status and token
+          if (sent) {
+            await storage.updateInvoice(invoice.id, {
+              status: "sent",
+              sentAt: now,
+              publicToken,
+              emailSentAt: action.prefilledClientEmail ? now : null,
+            });
+          } else {
+            // Still update with token for manual sending later
+            await storage.updateInvoice(invoice.id, { publicToken });
+          }
+        } catch (sendErr) {
+          console.error("[ReadyAction] Failed to send invoice:", sendErr);
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        invoice,
+        sent,
+        message: sendMessage
+      });
+    } catch (error) {
+      console.error("Act on ready action error:", error);
+      res.status(500).json({ error: "Failed to act on ready action" });
+    }
+  });
+  
+  // Dismiss ready action
+  app.post("/api/ready-actions/:id/dismiss", async (req, res) => {
+    try {
+      const updated = await storage.dismissReadyAction(req.params.id);
+      if (!updated) {
+        return res.status(404).json({ error: "Action not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Dismiss ready action error:", error);
+      res.status(500).json({ error: "Failed to dismiss ready action" });
+    }
+  });
+  
+  // Track respond tap on lead (for intent detection)
+  app.post("/api/leads/:id/respond-tap", async (req, res) => {
+    try {
+      const lead = await storage.incrementLeadRespondTap(req.params.id);
+      if (!lead) {
+        return res.status(404).json({ error: "Lead not found" });
+      }
+      
+      // Check for multiple responds intent signal
+      if (lead.respondTapCount && lead.respondTapCount >= 2) {
+        const signal = await detectMultipleResponds(
+          lead.userId,
+          lead.id,
+          lead.respondTapCount
+        );
+        
+        if (signal) {
+          await generateReadyActionFromSignal(signal);
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        respondTapCount: lead.respondTapCount 
+      });
+    } catch (error) {
+      console.error("Track respond tap error:", error);
+      res.status(500).json({ error: "Failed to track respond tap" });
     }
   });
 

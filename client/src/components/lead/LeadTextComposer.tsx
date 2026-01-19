@@ -60,11 +60,21 @@ export function LeadTextComposer({ leadId, clientPhone, clientName, serviceType,
     generateReplyMutation.mutate(scenario);
   };
 
+  // Track respond tap for intent detection
+  const trackRespondTap = async () => {
+    try {
+      await apiRequest("POST", `/api/leads/${leadId}/respond-tap`);
+    } catch (err) {
+      console.debug("[RespondTap] Failed to track:", err);
+    }
+  };
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message);
     setCopied(true);
     toast({ title: "Message copied!" });
     setTimeout(() => setCopied(false), 2000);
+    trackRespondTap();
   };
 
   const handleSendText = () => {
@@ -74,6 +84,7 @@ export function LeadTextComposer({ leadId, clientPhone, clientName, serviceType,
     }
     if (clientPhone) {
       sendText({ phoneNumber: clientPhone, message });
+      trackRespondTap();
     } else {
       toast({ 
         title: "No phone number", 
