@@ -7,7 +7,7 @@ export default function SplashPage() {
 
   const handleGetStarted = () => {
     localStorage.setItem("gigaid_splash_seen", "true");
-    setLocation("/onboarding");
+    setLocation("/");
   };
 
   const handleSignIn = () => {
