@@ -1,4 +1,4 @@
-import { eq, and, desc, asc, lte, gte, or, ne, isNull, sql, notInArray } from "drizzle-orm";
+import { eq, and, desc, asc, lte, gte, or, ne, isNull, sql, notInArray, lt } from "drizzle-orm";
 import { db } from "./db";
 import { 
   users, otpCodes, sessions, jobs, leads, invoices, reminders,
@@ -6,6 +6,7 @@ import {
   reviews, userPaymentMethods, jobPayments, crewInvites, crewJobPhotos, crewMessages,
   priceConfirmations, aiNudges, aiNudgeEvents, featureFlags, jobDrafts, jobResolutions,
   actionQueueItems, outcomeMetricsDaily, photoAssets, estimationRequests,
+  stallDetections, nextActions, autoExecutionLog,
   type User, type InsertUser,
   type Job, type InsertJob,
   type Lead, type InsertLead,
@@ -40,6 +41,9 @@ import {
   smsMessages,
   type PhotoSourceType,
   type EstimationRequest, type InsertEstimationRequest,
+  type StallDetection, type InsertStallDetection,
+  type NextAction, type InsertNextAction,
+  type AutoExecutionLog, type InsertAutoExecutionLog,
 } from "@shared/schema";
 import { IStorage } from "./storage";
 import { randomUUID } from "crypto";
@@ -1370,6 +1374,169 @@ export class DatabaseStorage implements IStorage {
     }
     
     return undefined;
+  }
+
+  // ============================================================
+  // Stall Detections (Next Best Action Engine)
+  // ============================================================
+
+  async getStallDetections(userId: string, entityType?: string): Promise<StallDetection[]> {
+    const conditions = [
+      eq(stallDetections.userId, userId),
+      isNull(stallDetections.resolvedAt)
+    ];
+    if (entityType) {
+      conditions.push(eq(stallDetections.entityType, entityType));
+    }
+    return db.select().from(stallDetections)
+      .where(and(...conditions))
+      .orderBy(desc(stallDetections.detectedAt));
+  }
+
+  async getStallDetection(id: string): Promise<StallDetection | undefined> {
+    const [detection] = await db.select().from(stallDetections)
+      .where(eq(stallDetections.id, id));
+    return detection;
+  }
+
+  async getActiveStallForEntity(entityType: string, entityId: string): Promise<StallDetection | undefined> {
+    const [detection] = await db.select().from(stallDetections)
+      .where(and(
+        eq(stallDetections.entityType, entityType),
+        eq(stallDetections.entityId, entityId),
+        isNull(stallDetections.resolvedAt)
+      ));
+    return detection;
+  }
+
+  async createStallDetection(detection: InsertStallDetection): Promise<StallDetection> {
+    const [newDetection] = await db.insert(stallDetections).values({
+      ...detection,
+    }).returning();
+    return newDetection;
+  }
+
+  async updateStallDetection(id: string, updates: Partial<StallDetection>): Promise<StallDetection | undefined> {
+    const [updated] = await db.update(stallDetections)
+      .set(updates)
+      .where(eq(stallDetections.id, id))
+      .returning();
+    return updated;
+  }
+
+  async resolveStallDetection(id: string): Promise<StallDetection | undefined> {
+    return this.updateStallDetection(id, { resolvedAt: new Date().toISOString() });
+  }
+
+  // ============================================================
+  // Next Actions (Recommendations)
+  // ============================================================
+
+  async getNextActions(userId: string, entityType?: string): Promise<NextAction[]> {
+    const now = new Date().toISOString();
+    const conditions = [
+      eq(nextActions.userId, userId),
+      isNull(nextActions.actedAt),
+      isNull(nextActions.dismissedAt),
+      isNull(nextActions.autoExecutedAt),
+      gte(nextActions.expiresAt, now)
+    ];
+    if (entityType) {
+      conditions.push(eq(nextActions.entityType, entityType));
+    }
+    return db.select().from(nextActions)
+      .where(and(...conditions))
+      .orderBy(desc(nextActions.createdAt));
+  }
+
+  async getNextAction(id: string): Promise<NextAction | undefined> {
+    const [action] = await db.select().from(nextActions)
+      .where(eq(nextActions.id, id));
+    return action;
+  }
+
+  async getActiveNextActionForEntity(entityType: string, entityId: string): Promise<NextAction | undefined> {
+    const now = new Date().toISOString();
+    const [action] = await db.select().from(nextActions)
+      .where(and(
+        eq(nextActions.entityType, entityType),
+        eq(nextActions.entityId, entityId),
+        isNull(nextActions.actedAt),
+        isNull(nextActions.dismissedAt),
+        isNull(nextActions.autoExecutedAt),
+        gte(nextActions.expiresAt, now)
+      ));
+    return action;
+  }
+
+  async createNextAction(action: InsertNextAction): Promise<NextAction> {
+    const [newAction] = await db.insert(nextActions).values({
+      ...action,
+    }).returning();
+    return newAction;
+  }
+
+  async updateNextAction(id: string, updates: Partial<NextAction>): Promise<NextAction | undefined> {
+    const [updated] = await db.update(nextActions)
+      .set(updates)
+      .where(eq(nextActions.id, id))
+      .returning();
+    return updated;
+  }
+
+  async actOnNextAction(id: string): Promise<NextAction | undefined> {
+    return this.updateNextAction(id, { actedAt: new Date().toISOString() });
+  }
+
+  async dismissNextAction(id: string): Promise<NextAction | undefined> {
+    return this.updateNextAction(id, { dismissedAt: new Date().toISOString() });
+  }
+
+  async expireNextActions(): Promise<number> {
+    const now = new Date().toISOString();
+    const result = await db.delete(nextActions)
+      .where(and(
+        isNull(nextActions.actedAt),
+        isNull(nextActions.dismissedAt),
+        isNull(nextActions.autoExecutedAt),
+        lt(nextActions.expiresAt, now)
+      ));
+    return 0; // drizzle doesn't return count easily
+  }
+
+  // ============================================================
+  // Auto Execution Log
+  // ============================================================
+
+  async getAutoExecutionLogs(userId: string, entityType?: string, entityId?: string): Promise<AutoExecutionLog[]> {
+    const conditions = [eq(autoExecutionLog.userId, userId)];
+    if (entityType) {
+      conditions.push(eq(autoExecutionLog.entityType, entityType));
+    }
+    if (entityId) {
+      conditions.push(eq(autoExecutionLog.entityId, entityId));
+    }
+    return db.select().from(autoExecutionLog)
+      .where(and(...conditions))
+      .orderBy(desc(autoExecutionLog.executedAt));
+  }
+
+  async getLastAutoExecutionForEntity(entityType: string, entityId: string): Promise<AutoExecutionLog | undefined> {
+    const [log] = await db.select().from(autoExecutionLog)
+      .where(and(
+        eq(autoExecutionLog.entityType, entityType),
+        eq(autoExecutionLog.entityId, entityId)
+      ))
+      .orderBy(desc(autoExecutionLog.executedAt))
+      .limit(1);
+    return log;
+  }
+
+  async createAutoExecutionLog(log: InsertAutoExecutionLog): Promise<AutoExecutionLog> {
+    const [newLog] = await db.insert(autoExecutionLog).values({
+      ...log,
+    }).returning();
+    return newLog;
   }
 }
 

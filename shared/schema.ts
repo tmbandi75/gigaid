@@ -1466,4 +1466,103 @@ export const insertMessagingSuppressionSchema = createInsertSchema(messagingSupp
 export type InsertMessagingSuppression = z.infer<typeof insertMessagingSuppressionSchema>;
 export type MessagingSuppression = typeof messagingSuppression.$inferSelect;
 
+// ============================================================
+// NEXT BEST ACTION ENGINE - Stall Detection & Recommendations
+// ============================================================
+
+// Stall types for different entity conditions
+export const stallTypes = ["no_response", "overdue", "idle", "draft_aging", "viewed_unpaid"] as const;
+export type StallType = (typeof stallTypes)[number];
+
+// Entity types that can be stalled
+export const stallEntityTypes = ["lead", "job", "invoice"] as const;
+export type StallEntityType = (typeof stallEntityTypes)[number];
+
+// Detected stalls - internal tracking only (not shown to user directly)
+export const stallDetections = pgTable("stall_detections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  entityType: text("entity_type").notNull(), // lead, job, invoice
+  entityId: varchar("entity_id").notNull(),
+  stallType: text("stall_type").notNull(), // no_response, overdue, idle, draft_aging, viewed_unpaid
+  moneyAtRisk: integer("money_at_risk").default(0), // in cents
+  confidence: doublePrecision("confidence").default(0.5), // 0.0 - 1.0
+  detectedAt: text("detected_at").notNull(),
+  resolvedAt: text("resolved_at"), // when stall was resolved
+  createdAt: text("created_at").notNull(),
+}, (table) => [
+  index("stall_detections_user_idx").on(table.userId, table.entityType),
+  index("stall_detections_entity_idx").on(table.entityType, table.entityId),
+]);
+
+export const insertStallDetectionSchema = createInsertSchema(stallDetections).omit({
+  id: true,
+});
+
+export type InsertStallDetection = z.infer<typeof insertStallDetectionSchema>;
+export type StallDetection = typeof stallDetections.$inferSelect;
+
+// Action types that can be recommended
+export const nextActionTypes = [
+  "send_follow_up_text",
+  "send_invoice_reminder", 
+  "suggest_call",
+  "suggest_status_update",
+  "auto_send_gentle_nudge",
+  "no_action"
+] as const;
+export type NextActionType = (typeof nextActionTypes)[number];
+
+// Next actions - one per entity, surfaced to user
+export const nextActions = pgTable("next_actions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  stallDetectionId: varchar("stall_detection_id").notNull(),
+  entityType: text("entity_type").notNull(), // lead, job, invoice
+  entityId: varchar("entity_id").notNull(),
+  recommendedAction: text("recommended_action").notNull(), // from nextActionTypes
+  reason: text("reason").notNull(), // plain English, ≤12 words
+  autoExecutable: boolean("auto_executable").default(false),
+  expiresAt: text("expires_at").notNull(),
+  actedAt: text("acted_at"), // when user took action
+  dismissedAt: text("dismissed_at"), // when user dismissed
+  autoExecutedAt: text("auto_executed_at"), // when system auto-executed
+  createdAt: text("created_at").notNull(),
+}, (table) => [
+  index("next_actions_user_idx").on(table.userId, table.entityType),
+  index("next_actions_entity_idx").on(table.entityType, table.entityId),
+]);
+
+export const insertNextActionSchema = createInsertSchema(nextActions).omit({
+  id: true,
+});
+
+export type InsertNextAction = z.infer<typeof insertNextActionSchema>;
+export type NextAction = typeof nextActions.$inferSelect;
+
+// Auto-execution log - track what was automatically sent
+export const autoExecutionLog = pgTable("auto_execution_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  nextActionId: varchar("next_action_id").notNull(),
+  entityType: text("entity_type").notNull(),
+  entityId: varchar("entity_id").notNull(),
+  actionType: text("action_type").notNull(),
+  messageContent: text("message_content"), // what was sent
+  deliveryChannel: text("delivery_channel"), // sms, email
+  executedAt: text("executed_at").notNull(),
+  success: boolean("success").default(true),
+  errorMessage: text("error_message"),
+}, (table) => [
+  index("auto_execution_log_user_idx").on(table.userId),
+  index("auto_execution_log_entity_idx").on(table.entityType, table.entityId),
+]);
+
+export const insertAutoExecutionLogSchema = createInsertSchema(autoExecutionLog).omit({
+  id: true,
+});
+
+export type InsertAutoExecutionLog = z.infer<typeof insertAutoExecutionLogSchema>;
+export type AutoExecutionLog = typeof autoExecutionLog.$inferSelect;
+
 export * from "./models/chat";

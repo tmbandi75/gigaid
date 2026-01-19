@@ -32,6 +32,9 @@ import {
   type PhotoSourceType,
   type EstimationRequest, type InsertEstimationRequest,
   type SmsMessage, type InsertSmsMessage,
+  type StallDetection, type InsertStallDetection,
+  type NextAction, type InsertNextAction,
+  type AutoExecutionLog, type InsertAutoExecutionLog,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -261,6 +264,29 @@ export interface IStorage {
     relatedJobId: string | null;
     relatedLeadId: string | null;
   } | undefined>;
+
+  // Stall Detections (Next Best Action Engine)
+  getStallDetections(userId: string, entityType?: string): Promise<StallDetection[]>;
+  getStallDetection(id: string): Promise<StallDetection | undefined>;
+  getActiveStallForEntity(entityType: string, entityId: string): Promise<StallDetection | undefined>;
+  createStallDetection(detection: InsertStallDetection): Promise<StallDetection>;
+  updateStallDetection(id: string, updates: Partial<StallDetection>): Promise<StallDetection | undefined>;
+  resolveStallDetection(id: string): Promise<StallDetection | undefined>;
+
+  // Next Actions (Recommendations)
+  getNextActions(userId: string, entityType?: string): Promise<NextAction[]>;
+  getNextAction(id: string): Promise<NextAction | undefined>;
+  getActiveNextActionForEntity(entityType: string, entityId: string): Promise<NextAction | undefined>;
+  createNextAction(action: InsertNextAction): Promise<NextAction>;
+  updateNextAction(id: string, updates: Partial<NextAction>): Promise<NextAction | undefined>;
+  actOnNextAction(id: string): Promise<NextAction | undefined>;
+  dismissNextAction(id: string): Promise<NextAction | undefined>;
+  expireNextActions(): Promise<number>;
+
+  // Auto Execution Log
+  getAutoExecutionLogs(userId: string, entityType?: string, entityId?: string): Promise<AutoExecutionLog[]>;
+  getLastAutoExecutionForEntity(entityType: string, entityId: string): Promise<AutoExecutionLog | undefined>;
+  createAutoExecutionLog(log: InsertAutoExecutionLog): Promise<AutoExecutionLog>;
 }
 
 export class MemStorage implements IStorage {
@@ -2194,6 +2220,166 @@ export class MemStorage implements IStorage {
 
   private normalizePhone(phone: string): string {
     return phone.replace(/\D/g, '');
+  }
+
+  // ============================================================
+  // Stall Detections (Next Best Action Engine)
+  // ============================================================
+
+  private stallDetections: Map<string, StallDetection> = new Map();
+  private nextActions: Map<string, NextAction> = new Map();
+  private autoExecutionLogs: Map<string, AutoExecutionLog> = new Map();
+
+  async getStallDetections(userId: string, entityType?: string): Promise<StallDetection[]> {
+    return Array.from(this.stallDetections.values())
+      .filter(s => s.userId === userId && (!entityType || s.entityType === entityType) && !s.resolvedAt)
+      .sort((a, b) => b.detectedAt.localeCompare(a.detectedAt));
+  }
+
+  async getStallDetection(id: string): Promise<StallDetection | undefined> {
+    return this.stallDetections.get(id);
+  }
+
+  async getActiveStallForEntity(entityType: string, entityId: string): Promise<StallDetection | undefined> {
+    return Array.from(this.stallDetections.values())
+      .find(s => s.entityType === entityType && s.entityId === entityId && !s.resolvedAt);
+  }
+
+  async createStallDetection(detection: InsertStallDetection): Promise<StallDetection> {
+    const id = randomUUID();
+    const newDetection: StallDetection = {
+      ...detection,
+      id,
+      moneyAtRisk: detection.moneyAtRisk ?? 0,
+      confidence: detection.confidence ?? 0.5,
+      resolvedAt: detection.resolvedAt ?? null,
+    };
+    this.stallDetections.set(id, newDetection);
+    return newDetection;
+  }
+
+  async updateStallDetection(id: string, updates: Partial<StallDetection>): Promise<StallDetection | undefined> {
+    const detection = this.stallDetections.get(id);
+    if (!detection) return undefined;
+    const updated = { ...detection, ...updates };
+    this.stallDetections.set(id, updated);
+    return updated;
+  }
+
+  async resolveStallDetection(id: string): Promise<StallDetection | undefined> {
+    return this.updateStallDetection(id, { resolvedAt: new Date().toISOString() });
+  }
+
+  // ============================================================
+  // Next Actions (Recommendations)
+  // ============================================================
+
+  async getNextActions(userId: string, entityType?: string): Promise<NextAction[]> {
+    const now = new Date().toISOString();
+    return Array.from(this.nextActions.values())
+      .filter(a => 
+        a.userId === userId && 
+        (!entityType || a.entityType === entityType) && 
+        !a.actedAt && 
+        !a.dismissedAt &&
+        !a.autoExecutedAt &&
+        a.expiresAt > now
+      )
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async getNextAction(id: string): Promise<NextAction | undefined> {
+    return this.nextActions.get(id);
+  }
+
+  async getActiveNextActionForEntity(entityType: string, entityId: string): Promise<NextAction | undefined> {
+    const now = new Date().toISOString();
+    return Array.from(this.nextActions.values())
+      .find(a => 
+        a.entityType === entityType && 
+        a.entityId === entityId && 
+        !a.actedAt && 
+        !a.dismissedAt &&
+        !a.autoExecutedAt &&
+        a.expiresAt > now
+      );
+  }
+
+  async createNextAction(action: InsertNextAction): Promise<NextAction> {
+    const id = randomUUID();
+    const newAction: NextAction = {
+      ...action,
+      id,
+      autoExecutable: action.autoExecutable ?? false,
+      actedAt: action.actedAt ?? null,
+      dismissedAt: action.dismissedAt ?? null,
+      autoExecutedAt: action.autoExecutedAt ?? null,
+    };
+    this.nextActions.set(id, newAction);
+    return newAction;
+  }
+
+  async updateNextAction(id: string, updates: Partial<NextAction>): Promise<NextAction | undefined> {
+    const action = this.nextActions.get(id);
+    if (!action) return undefined;
+    const updated = { ...action, ...updates };
+    this.nextActions.set(id, updated);
+    return updated;
+  }
+
+  async actOnNextAction(id: string): Promise<NextAction | undefined> {
+    return this.updateNextAction(id, { actedAt: new Date().toISOString() });
+  }
+
+  async dismissNextAction(id: string): Promise<NextAction | undefined> {
+    return this.updateNextAction(id, { dismissedAt: new Date().toISOString() });
+  }
+
+  async expireNextActions(): Promise<number> {
+    const now = new Date().toISOString();
+    let count = 0;
+    for (const [id, action] of this.nextActions.entries()) {
+      if (!action.actedAt && !action.dismissedAt && !action.autoExecutedAt && action.expiresAt <= now) {
+        this.nextActions.delete(id);
+        count++;
+      }
+    }
+    return count;
+  }
+
+  // ============================================================
+  // Auto Execution Log
+  // ============================================================
+
+  async getAutoExecutionLogs(userId: string, entityType?: string, entityId?: string): Promise<AutoExecutionLog[]> {
+    return Array.from(this.autoExecutionLogs.values())
+      .filter(l => 
+        l.userId === userId && 
+        (!entityType || l.entityType === entityType) &&
+        (!entityId || l.entityId === entityId)
+      )
+      .sort((a, b) => b.executedAt.localeCompare(a.executedAt));
+  }
+
+  async getLastAutoExecutionForEntity(entityType: string, entityId: string): Promise<AutoExecutionLog | undefined> {
+    const logs = Array.from(this.autoExecutionLogs.values())
+      .filter(l => l.entityType === entityType && l.entityId === entityId)
+      .sort((a, b) => b.executedAt.localeCompare(a.executedAt));
+    return logs[0];
+  }
+
+  async createAutoExecutionLog(log: InsertAutoExecutionLog): Promise<AutoExecutionLog> {
+    const id = randomUUID();
+    const newLog: AutoExecutionLog = {
+      ...log,
+      id,
+      messageContent: log.messageContent ?? null,
+      deliveryChannel: log.deliveryChannel ?? null,
+      success: log.success ?? true,
+      errorMessage: log.errorMessage ?? null,
+    };
+    this.autoExecutionLogs.set(id, newLog);
+    return newLog;
   }
 }
 
