@@ -1,0 +1,301 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e7]:
+        - link "GigAid Pro Dashboard" [ref=e9] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e10]:
+            - img "GigAid" [ref=e11]
+            - generic [ref=e12]: Pro Dashboard
+        - generic [ref=e13]:
+          - list [ref=e16]:
+            - listitem [ref=e17]:
+              - link "Game Plan" [ref=e18] [cursor=pointer]:
+                - /url: /
+                - img [ref=e19]
+                - generic [ref=e24]: Game Plan
+            - listitem [ref=e25]:
+              - link "Jobs" [ref=e26] [cursor=pointer]:
+                - /url: /jobs
+                - img [ref=e27]
+                - generic [ref=e30]: Jobs
+            - listitem [ref=e31]:
+              - link "New Requests" [ref=e32] [cursor=pointer]:
+                - /url: /leads
+                - img [ref=e33]
+                - generic [ref=e38]: New Requests
+            - listitem [ref=e39]:
+              - link "Get Paid" [ref=e40] [cursor=pointer]:
+                - /url: /invoices
+                - img [ref=e41]
+                - generic [ref=e44]: Get Paid
+          - generic [ref=e45]:
+            - generic [ref=e46]: Tools
+            - list [ref=e48]:
+              - listitem [ref=e49]:
+                - link "QuickBook New" [ref=e50] [cursor=pointer]:
+                  - /url: /quickbook
+                  - img [ref=e51]
+                  - generic [ref=e53]: QuickBook
+                  - generic [ref=e54]: New
+              - listitem [ref=e55]:
+                - link "Voice Notes" [ref=e56] [cursor=pointer]:
+                  - /url: /voice-notes
+                  - img [ref=e57]
+                  - generic [ref=e60]: Voice Notes
+              - listitem [ref=e61]:
+                - link "AI Tools" [ref=e62] [cursor=pointer]:
+                  - /url: /ai-tools
+                  - img [ref=e63]
+                  - generic [ref=e65]: AI Tools
+              - listitem [ref=e66]:
+                - link "Messages" [ref=e67] [cursor=pointer]:
+                  - /url: /messages
+                  - img [ref=e68]
+                  - generic [ref=e70]: Messages
+              - listitem [ref=e71]:
+                - link "Crew" [ref=e72] [cursor=pointer]:
+                  - /url: /crew
+                  - img [ref=e73]
+                  - generic [ref=e78]: Crew
+              - listitem [ref=e79]:
+                - link "Reminders" [ref=e80] [cursor=pointer]:
+                  - /url: /reminders
+                  - img [ref=e81]
+                  - generic [ref=e84]: Reminders
+              - listitem [ref=e85]:
+                - link "Bookings" [ref=e86] [cursor=pointer]:
+                  - /url: /booking-requests
+                  - img [ref=e87]
+                  - generic [ref=e89]: Bookings
+              - listitem [ref=e90]:
+                - link "Quick Capture" [ref=e91] [cursor=pointer]:
+                  - /url: /share
+                  - img [ref=e92]
+                  - generic [ref=e98]: Quick Capture
+          - generic [ref=e99]:
+            - generic [ref=e100]: Business
+            - list [ref=e102]:
+              - listitem [ref=e103]:
+                - link "Owner View Pro" [ref=e104] [cursor=pointer]:
+                  - /url: /owner
+                  - img [ref=e105]
+                  - generic [ref=e107]: Owner View
+                  - generic [ref=e108]: Pro
+              - listitem [ref=e109]:
+                - link "Money Plan" [ref=e110] [cursor=pointer]:
+                  - /url: /money-plan
+                  - img [ref=e111]
+                  - generic [ref=e113]: Money Plan
+              - listitem [ref=e114]:
+                - link "Reviews" [ref=e115] [cursor=pointer]:
+                  - /url: /reviews
+                  - img [ref=e116]
+                  - generic [ref=e118]: Reviews
+              - listitem [ref=e119]:
+                - link "Referrals" [ref=e120] [cursor=pointer]:
+                  - /url: /referrals
+                  - img [ref=e121]
+                  - generic [ref=e125]: Referrals
+        - generic [ref=e126]:
+          - list [ref=e127]:
+            - listitem [ref=e128]:
+              - button "Light Mode" [ref=e129] [cursor=pointer]:
+                - img [ref=e130]
+                - generic [ref=e136]: Light Mode
+          - button "GW Gig Worker Pro Gig Services" [ref=e137] [cursor=pointer]:
+            - generic [ref=e139]: GW
+            - generic [ref=e140]:
+              - generic [ref=e141]: Gig Worker
+              - generic [ref=e142]: Pro Gig Services
+            - img [ref=e143]
+      - main [ref=e145]:
+        - generic [ref=e146]:
+          - generic [ref=e147]:
+            - button "Toggle Sidebar" [ref=e148] [cursor=pointer]:
+              - img
+              - generic [ref=e149]: Toggle Sidebar
+            - navigation "breadcrumb" [ref=e150]:
+              - list [ref=e151]:
+                - listitem [ref=e152]:
+                  - link "Home" [ref=e153] [cursor=pointer]:
+                    - /url: /
+                - listitem [ref=e154]:
+                  - img [ref=e155]
+                - listitem [ref=e157]:
+                  - link "Reviews" [disabled] [ref=e158]
+          - generic [ref=e159]:
+            - generic [ref=e160]:
+              - img [ref=e161]
+              - searchbox "Search jobs, leads, invoices..." [ref=e164]
+              - generic:
+                - img
+                - text: K
+            - button "New" [ref=e165] [cursor=pointer]:
+              - img
+              - generic [ref=e166]: New
+            - link "2" [ref=e167] [cursor=pointer]:
+              - /url: /reminders
+              - button "2" [ref=e168]:
+                - img
+                - generic [ref=e169]: "2"
+            - link [ref=e170] [cursor=pointer]:
+              - /url: /messages
+              - button [ref=e171]:
+                - img
+            - button "GW" [ref=e172] [cursor=pointer]:
+              - generic [ref=e174]: GW
+        - main [ref=e175]:
+          - generic [ref=e176]:
+            - generic [ref=e181]:
+              - button "Back" [ref=e182] [cursor=pointer]:
+                - img
+                - text: Back
+              - generic [ref=e183]:
+                - generic [ref=e184]:
+                  - heading "Reviews" [level=1] [ref=e185]
+                  - paragraph [ref=e186]: See what clients say about you
+                - generic [ref=e187]: 1 awaiting response
+            - generic [ref=e188]:
+              - generic [ref=e191]:
+                - generic [ref=e192]:
+                  - generic [ref=e193]:
+                    - generic [ref=e194]: "4.8"
+                    - img [ref=e195]
+                  - paragraph [ref=e197]: Average rating
+                  - paragraph [ref=e198]: 4 reviews
+                - generic [ref=e199]:
+                  - generic [ref=e200]:
+                    - generic [ref=e201]: "5"
+                    - img [ref=e202]
+                    - generic [ref=e206]: "3"
+                  - generic [ref=e207]:
+                    - generic [ref=e208]: "4"
+                    - img [ref=e209]
+                    - generic [ref=e213]: "1"
+                  - generic [ref=e214]:
+                    - generic [ref=e215]: "3"
+                    - img [ref=e216]
+                    - generic [ref=e219]: "0"
+                  - generic [ref=e220]:
+                    - generic [ref=e221]: "2"
+                    - img [ref=e222]
+                    - generic [ref=e225]: "0"
+                  - generic [ref=e226]:
+                    - generic [ref=e227]: "1"
+                    - img [ref=e228]
+                    - generic [ref=e231]: "0"
+              - generic [ref=e234]:
+                - button "All" [ref=e235] [cursor=pointer]:
+                  - img
+                  - text: All
+                - button "Pending" [ref=e236] [cursor=pointer]:
+                  - img
+                  - text: Pending
+                - button "Responded" [ref=e237] [cursor=pointer]:
+                  - img
+                  - text: Responded
+              - generic [ref=e238]:
+                - generic [ref=e244]:
+                  - generic [ref=e246]: DK
+                  - generic [ref=e247]:
+                    - generic [ref=e249]:
+                      - paragraph [ref=e250]: David Kim
+                      - generic [ref=e251]:
+                        - generic [ref=e252]:
+                          - img [ref=e253]
+                          - img [ref=e255]
+                          - img [ref=e257]
+                          - img [ref=e259]
+                          - img [ref=e261]
+                        - generic [ref=e263]: Jan 11, 2026
+                    - paragraph [ref=e264]: Excellent work on the electrical panel upgrade. Very professional and explained everything clearly. Highly recommend!
+                    - generic [ref=e265]:
+                      - generic [ref=e266]:
+                        - generic [ref=e267]:
+                          - img [ref=e268]
+                          - text: Your Response
+                        - generic [ref=e270]: Jan 14, 2026
+                      - paragraph [ref=e271]: Thank you for your business. I enjoyed working with you!
+                - generic [ref=e277]:
+                  - generic [ref=e279]: LW
+                  - generic [ref=e280]:
+                    - generic [ref=e282]:
+                      - paragraph [ref=e283]: Lisa Wang
+                      - generic [ref=e284]:
+                        - generic [ref=e285]:
+                          - img [ref=e286]
+                          - img [ref=e288]
+                          - img [ref=e290]
+                          - img [ref=e292]
+                          - img [ref=e294]
+                        - generic [ref=e296]: Jan 7, 2026
+                    - paragraph [ref=e297]: The deep cleaning was amazing! My house has never looked better. Will definitely use again.
+                    - generic [ref=e298]:
+                      - generic [ref=e299]:
+                        - generic [ref=e300]:
+                          - img [ref=e301]
+                          - text: Your Response
+                        - generic [ref=e303]: Jan 8, 2026
+                      - paragraph [ref=e304]: Thank you Lisa! It was a pleasure working in your beautiful home.
+                - generic [ref=e310]:
+                  - generic [ref=e312]: RA
+                  - generic [ref=e313]:
+                    - generic [ref=e315]:
+                      - paragraph [ref=e316]: Rachel Adams
+                      - generic [ref=e317]:
+                        - generic [ref=e318]:
+                          - img [ref=e319]
+                          - img [ref=e321]
+                          - img [ref=e323]
+                          - img [ref=e325]
+                          - img [ref=e327]
+                        - generic [ref=e329]: Dec 30, 2025
+                    - paragraph [ref=e330]: Good service overall. Arrived on time and fixed the issue quickly.
+                    - generic [ref=e331]:
+                      - generic [ref=e332]:
+                        - generic [ref=e333]:
+                          - img [ref=e334]
+                          - text: Your Response
+                        - generic [ref=e336]: Jan 14, 2026
+                      - paragraph [ref=e337]: Always a pleasure!
+                - generic [ref=e343]:
+                  - generic [ref=e345]: MT
+                  - generic [ref=e346]:
+                    - generic [ref=e347]:
+                      - generic [ref=e348]:
+                        - paragraph [ref=e349]: Mark Thompson
+                        - generic [ref=e350]:
+                          - generic [ref=e351]:
+                            - img [ref=e352]
+                            - img [ref=e354]
+                            - img [ref=e356]
+                            - img [ref=e358]
+                            - img [ref=e360]
+                          - generic [ref=e362]: Dec 23, 2025
+                      - button "Respond" [ref=e363] [cursor=pointer]:
+                        - img
+                        - text: Respond
+                    - paragraph [ref=e364]: Fast, reliable, and fair pricing. Exactly what you want in a service provider!
+    - button [ref=e365] [cursor=pointer]:
+      - img
+    - region "Notifications (F8)":
+      - list
+  - generic [ref=e367]:
+    - button "Close survey" [ref=e368] [cursor=pointer]:
+      - img "Close survey" [ref=e369]
+    - generic [ref=e371]:
+      - generic [ref=e372]:
+        - generic [ref=e373]: What can we do to improve our product?
+        - textbox "What can we do to improve our product?" [ref=e374]:
+          - /placeholder: Start typing...
+      - generic [ref=e375]:
+        - button "Submit survey" [disabled] [ref=e376]: Submit
+        - link "Survey by" [ref=e377] [cursor=pointer]:
+          - /url: https://posthog.com/surveys
+          - text: Survey by
+          - img [ref=e378]
+```

@@ -1,0 +1,240 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e7]:
+        - link "GigAid Pro Dashboard" [ref=e9] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e10]:
+            - img "GigAid" [ref=e11]
+            - generic [ref=e12]: Pro Dashboard
+        - generic [ref=e13]:
+          - list [ref=e16]:
+            - listitem [ref=e17]:
+              - link "Game Plan" [ref=e18] [cursor=pointer]:
+                - /url: /
+                - img [ref=e19]
+                - generic [ref=e24]: Game Plan
+            - listitem [ref=e25]:
+              - link "Jobs" [ref=e26] [cursor=pointer]:
+                - /url: /jobs
+                - img [ref=e27]
+                - generic [ref=e30]: Jobs
+            - listitem [ref=e31]:
+              - link "New Requests" [ref=e32] [cursor=pointer]:
+                - /url: /leads
+                - img [ref=e33]
+                - generic [ref=e38]: New Requests
+            - listitem [ref=e39]:
+              - link "Get Paid" [ref=e40] [cursor=pointer]:
+                - /url: /invoices
+                - img [ref=e41]
+                - generic [ref=e44]: Get Paid
+          - generic [ref=e45]:
+            - generic [ref=e46]: Tools
+            - list [ref=e48]:
+              - listitem [ref=e49]:
+                - link "QuickBook New" [ref=e50] [cursor=pointer]:
+                  - /url: /quickbook
+                  - img [ref=e51]
+                  - generic [ref=e53]: QuickBook
+                  - generic [ref=e54]: New
+              - listitem [ref=e55]:
+                - link "Voice Notes" [ref=e56] [cursor=pointer]:
+                  - /url: /voice-notes
+                  - img [ref=e57]
+                  - generic [ref=e60]: Voice Notes
+              - listitem [ref=e61]:
+                - link "AI Tools" [ref=e62] [cursor=pointer]:
+                  - /url: /ai-tools
+                  - img [ref=e63]
+                  - generic [ref=e65]: AI Tools
+              - listitem [ref=e66]:
+                - link "Messages" [ref=e67] [cursor=pointer]:
+                  - /url: /messages
+                  - img [ref=e68]
+                  - generic [ref=e70]: Messages
+              - listitem [ref=e71]:
+                - link "Crew" [ref=e72] [cursor=pointer]:
+                  - /url: /crew
+                  - img [ref=e73]
+                  - generic [ref=e78]: Crew
+              - listitem [ref=e79]:
+                - link "Reminders" [ref=e80] [cursor=pointer]:
+                  - /url: /reminders
+                  - img [ref=e81]
+                  - generic [ref=e84]: Reminders
+              - listitem [ref=e85]:
+                - link "Bookings" [ref=e86] [cursor=pointer]:
+                  - /url: /booking-requests
+                  - img [ref=e87]
+                  - generic [ref=e89]: Bookings
+              - listitem [ref=e90]:
+                - link "Quick Capture" [ref=e91] [cursor=pointer]:
+                  - /url: /share
+                  - img [ref=e92]
+                  - generic [ref=e98]: Quick Capture
+          - generic [ref=e99]:
+            - generic [ref=e100]: Business
+            - list [ref=e102]:
+              - listitem [ref=e103]:
+                - link "Owner View Pro" [ref=e104] [cursor=pointer]:
+                  - /url: /owner
+                  - img [ref=e105]
+                  - generic [ref=e107]: Owner View
+                  - generic [ref=e108]: Pro
+              - listitem [ref=e109]:
+                - link "Money Plan" [ref=e110] [cursor=pointer]:
+                  - /url: /money-plan
+                  - img [ref=e111]
+                  - generic [ref=e113]: Money Plan
+              - listitem [ref=e114]:
+                - link "Reviews" [ref=e115] [cursor=pointer]:
+                  - /url: /reviews
+                  - img [ref=e116]
+                  - generic [ref=e118]: Reviews
+              - listitem [ref=e119]:
+                - link "Referrals" [ref=e120] [cursor=pointer]:
+                  - /url: /referrals
+                  - img [ref=e121]
+                  - generic [ref=e125]: Referrals
+        - generic [ref=e126]:
+          - list [ref=e127]:
+            - listitem [ref=e128]:
+              - button "Light Mode" [ref=e129] [cursor=pointer]:
+                - img [ref=e130]
+                - generic [ref=e136]: Light Mode
+          - button "GW Gig Worker Pro Gig Services" [ref=e137] [cursor=pointer]:
+            - generic [ref=e139]: GW
+            - generic [ref=e140]:
+              - generic [ref=e141]: Gig Worker
+              - generic [ref=e142]: Pro Gig Services
+            - img [ref=e143]
+      - main [ref=e145]:
+        - generic [ref=e146]:
+          - generic [ref=e147]:
+            - button "Toggle Sidebar" [ref=e148] [cursor=pointer]:
+              - img
+              - generic [ref=e149]: Toggle Sidebar
+            - navigation "breadcrumb" [ref=e150]:
+              - list [ref=e151]:
+                - listitem [ref=e152]:
+                  - link "Home" [ref=e153] [cursor=pointer]:
+                    - /url: /
+                - listitem [ref=e154]:
+                  - img [ref=e155]
+                - listitem [ref=e157]:
+                  - link "Owner View" [disabled] [ref=e158]
+          - generic [ref=e159]:
+            - generic [ref=e160]:
+              - img [ref=e161]
+              - searchbox "Search jobs, leads, invoices..." [ref=e164]
+              - generic:
+                - img
+                - text: K
+            - button "New" [ref=e165] [cursor=pointer]:
+              - img
+              - generic [ref=e166]: New
+            - link "2" [ref=e167] [cursor=pointer]:
+              - /url: /reminders
+              - button "2" [ref=e168]:
+                - img
+                - generic [ref=e169]: "2"
+            - link [ref=e170] [cursor=pointer]:
+              - /url: /messages
+              - button [ref=e171]:
+                - img
+            - button "GW" [ref=e172] [cursor=pointer]:
+              - generic [ref=e174]: GW
+        - main [ref=e175]:
+          - generic [ref=e177]:
+            - generic [ref=e178]:
+              - generic [ref=e181]:
+                - generic [ref=e182]:
+                  - paragraph [ref=e183]: Weekly Revenue
+                  - paragraph [ref=e184]: $100
+                  - generic [ref=e185]:
+                    - img [ref=e186]
+                    - generic [ref=e189]: "-95%"
+                    - generic [ref=e190]: vs last week
+                - img [ref=e192]
+              - generic [ref=e196]:
+                - generic [ref=e197]:
+                  - paragraph [ref=e198]: Monthly Revenue
+                  - paragraph [ref=e199]: $1,979
+                - img [ref=e201]
+              - generic [ref=e206]:
+                - generic [ref=e207]:
+                  - paragraph [ref=e208]: Jobs Completed
+                  - paragraph [ref=e209]: "2"
+                  - paragraph [ref=e210]: 4 last week
+                - img [ref=e212]
+              - generic [ref=e217]:
+                - generic [ref=e218]:
+                  - paragraph [ref=e219]: New Leads
+                  - paragraph [ref=e220]: "5"
+                  - paragraph [ref=e221]: 6 last week
+                - img [ref=e223]
+            - generic [ref=e230]:
+              - generic [ref=e231]:
+                - img [ref=e233]
+                - generic [ref=e235]:
+                  - heading "Outstanding Invoices" [level=3] [ref=e236]
+                  - paragraph [ref=e237]: 6 invoices awaiting payment
+              - generic [ref=e238]:
+                - paragraph [ref=e239]: $1,175
+                - button "View All" [ref=e240] [cursor=pointer]:
+                  - text: View All
+                  - img
+            - generic [ref=e241]:
+              - generic [ref=e242]:
+                - generic [ref=e244]:
+                  - generic [ref=e245]:
+                    - img [ref=e246]
+                    - text: Upcoming Jobs
+                  - generic [ref=e248]: 0 scheduled
+                - generic [ref=e250]:
+                  - img [ref=e251]
+                  - paragraph [ref=e253]: No upcoming jobs scheduled
+              - generic [ref=e254]:
+                - generic [ref=e256]:
+                  - generic [ref=e257]:
+                    - img [ref=e258]
+                    - text: Recently Completed
+                  - generic [ref=e261]: This week
+                - generic [ref=e263]:
+                  - generic [ref=e264]:
+                    - generic [ref=e265]:
+                      - img [ref=e267]
+                      - generic [ref=e270]:
+                        - paragraph [ref=e271]: Test
+                        - paragraph [ref=e272]: Test • in about 6 hours
+                    - generic [ref=e273]: $100
+                  - generic [ref=e274]:
+                    - generic [ref=e275]:
+                      - img [ref=e277]
+                      - generic [ref=e280]:
+                        - paragraph [ref=e281]: Thierry Mbandi
+                        - paragraph [ref=e282]: Water Heater Service • 3 days ago
+                    - generic [ref=e283]: $0
+    - button [ref=e284] [cursor=pointer]:
+      - img
+    - region "Notifications (F8)":
+      - list
+  - generic [ref=e286]:
+    - button "Close survey" [ref=e287] [cursor=pointer]:
+      - img "Close survey" [ref=e288]
+    - generic [ref=e290]:
+      - generic [ref=e291]:
+        - generic [ref=e292]: What can we do to improve our product?
+        - textbox "What can we do to improve our product?" [ref=e293]:
+          - /placeholder: Start typing...
+      - generic [ref=e294]:
+        - button "Submit survey" [disabled] [ref=e295]: Submit
+        - link "Survey by" [ref=e296] [cursor=pointer]:
+          - /url: https://posthog.com/surveys
+          - text: Survey by
+          - img [ref=e297]
+```

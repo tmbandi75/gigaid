@@ -1,0 +1,321 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e7]:
+        - link "GigAid Pro Dashboard" [ref=e9] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e10]:
+            - img "GigAid" [ref=e11]
+            - generic [ref=e12]: Pro Dashboard
+        - generic [ref=e13]:
+          - list [ref=e16]:
+            - listitem [ref=e17]:
+              - link "Game Plan" [ref=e18] [cursor=pointer]:
+                - /url: /
+                - img [ref=e19]
+                - generic [ref=e24]: Game Plan
+            - listitem [ref=e25]:
+              - link "Jobs" [ref=e26] [cursor=pointer]:
+                - /url: /jobs
+                - img [ref=e27]
+                - generic [ref=e30]: Jobs
+            - listitem [ref=e31]:
+              - link "New Requests" [ref=e32] [cursor=pointer]:
+                - /url: /leads
+                - img [ref=e33]
+                - generic [ref=e38]: New Requests
+            - listitem [ref=e39]:
+              - link "Get Paid" [ref=e40] [cursor=pointer]:
+                - /url: /invoices
+                - img [ref=e41]
+                - generic [ref=e44]: Get Paid
+          - generic [ref=e45]:
+            - generic [ref=e46]: Tools
+            - list [ref=e48]:
+              - listitem [ref=e49]:
+                - link "QuickBook New" [ref=e50] [cursor=pointer]:
+                  - /url: /quickbook
+                  - img [ref=e51]
+                  - generic [ref=e53]: QuickBook
+                  - generic [ref=e54]: New
+              - listitem [ref=e55]:
+                - link "Voice Notes" [ref=e56] [cursor=pointer]:
+                  - /url: /voice-notes
+                  - img [ref=e57]
+                  - generic [ref=e60]: Voice Notes
+              - listitem [ref=e61]:
+                - link "AI Tools" [ref=e62] [cursor=pointer]:
+                  - /url: /ai-tools
+                  - img [ref=e63]
+                  - generic [ref=e65]: AI Tools
+              - listitem [ref=e66]:
+                - link "Messages" [ref=e67] [cursor=pointer]:
+                  - /url: /messages
+                  - img [ref=e68]
+                  - generic [ref=e70]: Messages
+              - listitem [ref=e71]:
+                - link "Crew" [ref=e72] [cursor=pointer]:
+                  - /url: /crew
+                  - img [ref=e73]
+                  - generic [ref=e78]: Crew
+              - listitem [ref=e79]:
+                - link "Reminders" [ref=e80] [cursor=pointer]:
+                  - /url: /reminders
+                  - img [ref=e81]
+                  - generic [ref=e84]: Reminders
+              - listitem [ref=e85]:
+                - link "Bookings" [ref=e86] [cursor=pointer]:
+                  - /url: /booking-requests
+                  - img [ref=e87]
+                  - generic [ref=e89]: Bookings
+              - listitem [ref=e90]:
+                - link "Quick Capture" [ref=e91] [cursor=pointer]:
+                  - /url: /share
+                  - img [ref=e92]
+                  - generic [ref=e98]: Quick Capture
+          - generic [ref=e99]:
+            - generic [ref=e100]: Business
+            - list [ref=e102]:
+              - listitem [ref=e103]:
+                - link "Owner View Pro" [ref=e104] [cursor=pointer]:
+                  - /url: /owner
+                  - img [ref=e105]
+                  - generic [ref=e107]: Owner View
+                  - generic [ref=e108]: Pro
+              - listitem [ref=e109]:
+                - link "Money Plan" [ref=e110] [cursor=pointer]:
+                  - /url: /money-plan
+                  - img [ref=e111]
+                  - generic [ref=e113]: Money Plan
+              - listitem [ref=e114]:
+                - link "Reviews" [ref=e115] [cursor=pointer]:
+                  - /url: /reviews
+                  - img [ref=e116]
+                  - generic [ref=e118]: Reviews
+              - listitem [ref=e119]:
+                - link "Referrals" [ref=e120] [cursor=pointer]:
+                  - /url: /referrals
+                  - img [ref=e121]
+                  - generic [ref=e125]: Referrals
+        - generic [ref=e126]:
+          - list [ref=e127]:
+            - listitem [ref=e128]:
+              - button "Light Mode" [ref=e129] [cursor=pointer]:
+                - img [ref=e130]
+                - generic [ref=e136]: Light Mode
+          - button "GW Gig Worker Pro Gig Services" [ref=e137] [cursor=pointer]:
+            - generic [ref=e139]: GW
+            - generic [ref=e140]:
+              - generic [ref=e141]: Gig Worker
+              - generic [ref=e142]: Pro Gig Services
+            - img [ref=e143]
+      - main [ref=e145]:
+        - generic [ref=e146]:
+          - generic [ref=e147]:
+            - button "Toggle Sidebar" [ref=e148] [cursor=pointer]:
+              - img
+              - generic [ref=e149]: Toggle Sidebar
+            - navigation "breadcrumb" [ref=e150]:
+              - list [ref=e151]:
+                - listitem [ref=e152]:
+                  - link "Home" [ref=e153] [cursor=pointer]:
+                    - /url: /
+          - generic [ref=e154]:
+            - generic [ref=e155]:
+              - img [ref=e156]
+              - searchbox "Search jobs, leads, invoices..." [ref=e159]
+              - generic:
+                - img
+                - text: K
+            - button "New" [ref=e160] [cursor=pointer]:
+              - img
+              - generic [ref=e161]: New
+            - link "2" [ref=e162] [cursor=pointer]:
+              - /url: /reminders
+              - button "2" [ref=e163]:
+                - img
+                - generic [ref=e164]: "2"
+            - link [ref=e165] [cursor=pointer]:
+              - /url: /messages
+              - button [ref=e166]:
+                - img
+            - button "GW" [ref=e167] [cursor=pointer]:
+              - generic [ref=e169]: GW
+        - main [ref=e170]:
+          - generic [ref=e172]:
+            - generic [ref=e173]:
+              - heading "Today's Game Plan" [level=1] [ref=e174]
+              - paragraph [ref=e175]: Do these things to stay on track and get paid
+            - region "Do This First" [ref=e176]:
+              - heading "Do This First" [level=2] [ref=e177]
+              - generic [ref=e181]:
+                - img [ref=e183]
+                - generic [ref=e185]:
+                  - paragraph [ref=e186]: Payment overdue from Lisa Wang
+                  - paragraph [ref=e187]: $350 • 12 days
+                  - button "Send Reminder" [ref=e188] [cursor=pointer]:
+                    - text: Send Reminder
+                    - img
+            - region "Up Next" [ref=e189]:
+              - heading "Up Next" [level=2] [ref=e190]
+              - generic [ref=e191]:
+                - generic [ref=e194] [cursor=pointer]:
+                  - img [ref=e196]
+                  - generic [ref=e198]:
+                    - paragraph [ref=e199]: New request from Jennifer Martinez
+                    - paragraph [ref=e200]: plumbing
+                  - button "Respond" [ref=e201]:
+                    - text: Respond
+                    - img
+                - generic [ref=e204] [cursor=pointer]:
+                  - img [ref=e206]
+                  - generic [ref=e208]:
+                    - paragraph [ref=e209]: New request from Unknown
+                    - paragraph [ref=e210]: handyman
+                  - button "Respond" [ref=e211]:
+                    - text: Respond
+                    - img
+                - generic [ref=e214] [cursor=pointer]:
+                  - img [ref=e216]
+                  - generic [ref=e218]:
+                    - paragraph [ref=e219]: New request from Unknown
+                    - paragraph [ref=e220]: handyman
+                  - button "Respond" [ref=e221]:
+                    - text: Respond
+                    - img
+            - region "Smart Suggestions" [ref=e222]:
+              - heading "Smart Suggestions" [level=2] [ref=e223]:
+                - img [ref=e224]
+                - text: Smart Suggestions
+              - generic [ref=e226]:
+                - generic [ref=e229]:
+                  - img [ref=e231]
+                  - generic [ref=e234]:
+                    - generic [ref=e236]: Job
+                    - paragraph
+                    - paragraph [ref=e237]: Job started? Update status to track progress.
+                    - generic [ref=e238]:
+                      - button "Do It Now" [ref=e239] [cursor=pointer]:
+                        - text: Do It Now
+                        - img
+                      - button [ref=e240] [cursor=pointer]:
+                        - img
+                - generic [ref=e243]:
+                  - img [ref=e245]
+                  - generic [ref=e248]:
+                    - generic [ref=e250]: Job
+                    - paragraph
+                    - paragraph [ref=e251]: Job started? Update status to track progress.
+                    - generic [ref=e252]:
+                      - button "Do It Now" [ref=e253] [cursor=pointer]:
+                        - text: Do It Now
+                        - img
+                      - button [ref=e254] [cursor=pointer]:
+                        - img
+                - generic [ref=e257]:
+                  - img [ref=e259]
+                  - generic [ref=e262]:
+                    - generic [ref=e264]: Job
+                    - paragraph
+                    - paragraph [ref=e265]: Job started? Update status to track progress.
+                    - generic [ref=e266]:
+                      - button "Do It Now" [ref=e267] [cursor=pointer]:
+                        - text: Do It Now
+                        - img
+                      - button [ref=e268] [cursor=pointer]:
+                        - img
+                - generic [ref=e271]:
+                  - img [ref=e273]
+                  - generic [ref=e276]:
+                    - generic [ref=e278]: Job
+                    - paragraph
+                    - paragraph [ref=e279]: Job started? Update status to track progress.
+                    - generic [ref=e280]:
+                      - button "Do It Now" [ref=e281] [cursor=pointer]:
+                        - text: Do It Now
+                        - img
+                      - button [ref=e282] [cursor=pointer]:
+                        - img
+                - generic [ref=e285]:
+                  - img [ref=e287]
+                  - generic [ref=e290]:
+                    - generic [ref=e292]: Job
+                    - paragraph
+                    - paragraph [ref=e293]: Job started? Update status to track progress.
+                    - generic [ref=e294]:
+                      - button "Do It Now" [ref=e295] [cursor=pointer]:
+                        - text: Do It Now
+                        - img
+                      - button [ref=e296] [cursor=pointer]:
+                        - img
+            - region "Today at a Glance" [ref=e297]:
+              - heading "Today at a Glance" [level=2] [ref=e298]
+              - generic [ref=e299]:
+                - generic [ref=e301]:
+                  - img [ref=e303]
+                  - paragraph [ref=e306]: "2"
+                  - paragraph [ref=e307]: Jobs today
+                - generic [ref=e309]:
+                  - img [ref=e311]
+                  - paragraph [ref=e313]: $150
+                  - paragraph [ref=e314]: Collected today
+                - generic [ref=e316]:
+                  - img [ref=e318]
+                  - paragraph [ref=e321]: $1,175
+                  - paragraph [ref=e322]: Money waiting
+                - generic [ref=e324]:
+                  - img [ref=e326]
+                  - paragraph [ref=e328]: "2"
+                  - paragraph [ref=e329]: Messages to send
+            - region "Quick Actions" [ref=e330]:
+              - heading "Quick Actions" [level=2] [ref=e331]
+              - generic [ref=e332]:
+                - generic [ref=e334] [cursor=pointer]:
+                  - img [ref=e336]
+                  - generic [ref=e337]: Add a Job
+                - generic [ref=e339] [cursor=pointer]:
+                  - img [ref=e341]
+                  - generic [ref=e343]: Ask for Payment
+                - generic [ref=e345] [cursor=pointer]:
+                  - img [ref=e347]
+                  - generic [ref=e349]: Message a Client
+                - generic [ref=e351] [cursor=pointer]:
+                  - img [ref=e353]
+                  - generic [ref=e356]: Talk It In
+            - region "Done Recently" [ref=e357]:
+              - heading "Done Recently" [level=2] [ref=e358]
+              - generic [ref=e359]:
+                - generic [ref=e360]:
+                  - img [ref=e362]
+                  - paragraph [ref=e365]: Payment from Customer
+                  - paragraph [ref=e366]: 2h ago
+                - generic [ref=e367]:
+                  - img [ref=e369]
+                  - paragraph [ref=e373]: Finished Water Heater Service - Thierry Mbandi
+                  - paragraph [ref=e374]: 2h ago
+                - generic [ref=e375]:
+                  - img [ref=e377]
+                  - paragraph [ref=e380]: Payment from Sarah Johnson
+                  - paragraph [ref=e381]: 5h ago
+    - button [ref=e382] [cursor=pointer]:
+      - img
+    - region "Notifications (F8)":
+      - list
+  - generic [ref=e384]:
+    - button "Close survey" [ref=e385] [cursor=pointer]:
+      - img "Close survey" [ref=e386]
+    - generic [ref=e388]:
+      - generic [ref=e389]:
+        - generic [ref=e390]: What can we do to improve our product?
+        - textbox "What can we do to improve our product?" [ref=e391]:
+          - /placeholder: Start typing...
+      - generic [ref=e392]:
+        - button "Submit survey" [disabled] [ref=e393]: Submit
+        - link "Survey by" [ref=e394] [cursor=pointer]:
+          - /url: https://posthog.com/surveys
+          - text: Survey by
+          - img [ref=e395]
+```

@@ -1,0 +1,448 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e7]:
+        - link "GigAid Pro Dashboard" [ref=e9] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e10]:
+            - img "GigAid" [ref=e11]
+            - generic [ref=e12]: Pro Dashboard
+        - generic [ref=e13]:
+          - list [ref=e16]:
+            - listitem [ref=e17]:
+              - link "Game Plan" [ref=e18] [cursor=pointer]:
+                - /url: /
+                - img [ref=e19]
+                - generic [ref=e24]: Game Plan
+            - listitem [ref=e25]:
+              - link "Jobs" [ref=e26] [cursor=pointer]:
+                - /url: /jobs
+                - img [ref=e27]
+                - generic [ref=e30]: Jobs
+            - listitem [ref=e31]:
+              - link "New Requests" [ref=e32] [cursor=pointer]:
+                - /url: /leads
+                - img [ref=e33]
+                - generic [ref=e38]: New Requests
+            - listitem [ref=e39]:
+              - link "Get Paid" [ref=e40] [cursor=pointer]:
+                - /url: /invoices
+                - img [ref=e41]
+                - generic [ref=e44]: Get Paid
+          - generic [ref=e45]:
+            - generic [ref=e46]: Tools
+            - list [ref=e48]:
+              - listitem [ref=e49]:
+                - link "QuickBook New" [ref=e50] [cursor=pointer]:
+                  - /url: /quickbook
+                  - img [ref=e51]
+                  - generic [ref=e53]: QuickBook
+                  - generic [ref=e54]: New
+              - listitem [ref=e55]:
+                - link "Voice Notes" [ref=e56] [cursor=pointer]:
+                  - /url: /voice-notes
+                  - img [ref=e57]
+                  - generic [ref=e60]: Voice Notes
+              - listitem [ref=e61]:
+                - link "AI Tools" [ref=e62] [cursor=pointer]:
+                  - /url: /ai-tools
+                  - img [ref=e63]
+                  - generic [ref=e65]: AI Tools
+              - listitem [ref=e66]:
+                - link "Messages" [ref=e67] [cursor=pointer]:
+                  - /url: /messages
+                  - img [ref=e68]
+                  - generic [ref=e70]: Messages
+              - listitem [ref=e71]:
+                - link "Crew" [ref=e72] [cursor=pointer]:
+                  - /url: /crew
+                  - img [ref=e73]
+                  - generic [ref=e78]: Crew
+              - listitem [ref=e79]:
+                - link "Reminders" [ref=e80] [cursor=pointer]:
+                  - /url: /reminders
+                  - img [ref=e81]
+                  - generic [ref=e84]: Reminders
+              - listitem [ref=e85]:
+                - link "Bookings" [ref=e86] [cursor=pointer]:
+                  - /url: /booking-requests
+                  - img [ref=e87]
+                  - generic [ref=e89]: Bookings
+              - listitem [ref=e90]:
+                - link "Quick Capture" [ref=e91] [cursor=pointer]:
+                  - /url: /share
+                  - img [ref=e92]
+                  - generic [ref=e98]: Quick Capture
+          - generic [ref=e99]:
+            - generic [ref=e100]: Business
+            - list [ref=e102]:
+              - listitem [ref=e103]:
+                - link "Owner View Pro" [ref=e104] [cursor=pointer]:
+                  - /url: /owner
+                  - img [ref=e105]
+                  - generic [ref=e107]: Owner View
+                  - generic [ref=e108]: Pro
+              - listitem [ref=e109]:
+                - link "Money Plan" [ref=e110] [cursor=pointer]:
+                  - /url: /money-plan
+                  - img [ref=e111]
+                  - generic [ref=e113]: Money Plan
+              - listitem [ref=e114]:
+                - link "Reviews" [ref=e115] [cursor=pointer]:
+                  - /url: /reviews
+                  - img [ref=e116]
+                  - generic [ref=e118]: Reviews
+              - listitem [ref=e119]:
+                - link "Referrals" [ref=e120] [cursor=pointer]:
+                  - /url: /referrals
+                  - img [ref=e121]
+                  - generic [ref=e125]: Referrals
+        - generic [ref=e126]:
+          - list [ref=e127]:
+            - listitem [ref=e128]:
+              - button "Light Mode" [ref=e129] [cursor=pointer]:
+                - img [ref=e130]
+                - generic [ref=e136]: Light Mode
+          - button "GW Gig Worker Pro Gig Services" [ref=e137] [cursor=pointer]:
+            - generic [ref=e139]: GW
+            - generic [ref=e140]:
+              - generic [ref=e141]: Gig Worker
+              - generic [ref=e142]: Pro Gig Services
+            - img [ref=e143]
+      - main [ref=e145]:
+        - generic [ref=e146]:
+          - generic [ref=e147]:
+            - button "Toggle Sidebar" [ref=e148] [cursor=pointer]:
+              - img
+              - generic [ref=e149]: Toggle Sidebar
+            - navigation "breadcrumb" [ref=e150]:
+              - list [ref=e151]:
+                - listitem [ref=e152]:
+                  - link "Home" [ref=e153] [cursor=pointer]:
+                    - /url: /
+                - listitem [ref=e154]:
+                  - img [ref=e155]
+                - listitem [ref=e157]:
+                  - link "New Requests" [disabled] [ref=e158]
+          - generic [ref=e159]:
+            - generic [ref=e160]:
+              - img [ref=e161]
+              - searchbox "Search jobs, leads, invoices..." [ref=e164]
+              - generic:
+                - img
+                - text: K
+            - button "New" [ref=e165] [cursor=pointer]:
+              - img
+              - generic [ref=e166]: New
+            - link "2" [ref=e167] [cursor=pointer]:
+              - /url: /reminders
+              - button "2" [ref=e168]:
+                - img
+                - generic [ref=e169]: "2"
+            - link [ref=e170] [cursor=pointer]:
+              - /url: /messages
+              - button [ref=e171]:
+                - img
+            - button "GW" [ref=e172] [cursor=pointer]:
+              - generic [ref=e174]: GW
+        - main [ref=e175]:
+          - generic [ref=e176]:
+            - generic [ref=e181]:
+              - generic [ref=e182]:
+                - generic [ref=e183]:
+                  - heading "Leads" [level=1] [ref=e184]
+                  - paragraph [ref=e185]: Track potential clients
+                - link "Add Lead" [ref=e186] [cursor=pointer]:
+                  - /url: /leads/new
+                  - button "Add Lead" [ref=e187]:
+                    - img
+                    - text: Add Lead
+              - generic [ref=e188]:
+                - generic [ref=e189]:
+                  - generic [ref=e190]:
+                    - img [ref=e191]
+                    - generic [ref=e196]: New
+                  - paragraph [ref=e197]: "6"
+                - generic [ref=e198]:
+                  - generic [ref=e199]:
+                    - img [ref=e200]
+                    - generic [ref=e203]: Converted
+                  - paragraph [ref=e204]: "5"
+                - generic [ref=e205]:
+                  - generic [ref=e206]:
+                    - img [ref=e207]
+                    - generic [ref=e209]: Contacted
+                  - paragraph [ref=e210]: "0"
+                - generic [ref=e211]:
+                  - generic [ref=e212]:
+                    - img [ref=e213]
+                    - generic [ref=e215]: Total
+                  - paragraph [ref=e216]: "12"
+            - generic [ref=e217]:
+              - generic [ref=e218]:
+                - generic [ref=e221]:
+                  - button "Active" [ref=e222] [cursor=pointer]
+                  - button "New" [ref=e223] [cursor=pointer]
+                  - button "Contacted" [ref=e224] [cursor=pointer]
+                  - button "Engaged" [ref=e225] [cursor=pointer]
+                  - button "Confirmed" [ref=e226] [cursor=pointer]
+                  - button "Cold" [ref=e227] [cursor=pointer]
+                  - button "Lost" [ref=e228] [cursor=pointer]
+                - generic [ref=e229]:
+                  - button "Table" [ref=e230] [cursor=pointer]:
+                    - img
+                    - text: Table
+                  - button "Cards" [ref=e231] [cursor=pointer]:
+                    - img
+                    - text: Cards
+              - table [ref=e234]:
+                - rowgroup [ref=e235]:
+                  - row "Lead Service Phone Source Added Status Actions" [ref=e236]:
+                    - columnheader "Lead" [ref=e237]
+                    - columnheader "Service" [ref=e238]
+                    - columnheader "Phone" [ref=e239]
+                    - columnheader "Source" [ref=e240]
+                    - columnheader "Added" [ref=e241]
+                    - columnheader "Status" [ref=e242]
+                    - columnheader "Actions" [ref=e243]
+                - rowgroup [ref=e244]:
+                  - row "Thierry Mbandi thierry.mbandi@outlook.com Water Heater Service (412) 339-3054 - 2 days ago Converted" [ref=e245] [cursor=pointer]:
+                    - cell "Thierry Mbandi thierry.mbandi@outlook.com" [ref=e246]:
+                      - generic [ref=e247]:
+                        - generic [ref=e248]: Thierry Mbandi
+                        - generic [ref=e249]: thierry.mbandi@outlook.com
+                    - cell "Water Heater Service" [ref=e250]
+                    - cell "(412) 339-3054" [ref=e251]:
+                      - link "(412) 339-3054" [ref=e252]:
+                        - /url: tel:(412) 339-3054
+                        - img [ref=e253]
+                        - text: (412) 339-3054
+                    - cell "-" [ref=e255]
+                    - cell "2 days ago" [ref=e256]
+                    - cell "Converted" [ref=e257]:
+                      - generic [ref=e258]: Converted
+                    - cell [ref=e259]:
+                      - button [ref=e261]:
+                        - img
+                  - row "Kevin Brown k.brown@email.com plumbing (412) 339-3054 - 5 days ago Converted" [ref=e262] [cursor=pointer]:
+                    - cell "Kevin Brown k.brown@email.com" [ref=e263]:
+                      - generic [ref=e264]:
+                        - generic [ref=e265]: Kevin Brown
+                        - generic [ref=e266]: k.brown@email.com
+                    - cell "plumbing" [ref=e267]
+                    - cell "(412) 339-3054" [ref=e268]:
+                      - link "(412) 339-3054" [ref=e269]:
+                        - /url: tel:(412) 339-3054
+                        - img [ref=e270]
+                        - text: (412) 339-3054
+                    - cell "-" [ref=e272]
+                    - cell "5 days ago" [ref=e273]
+                    - cell "Converted" [ref=e274]:
+                      - generic [ref=e275]: Converted
+                    - cell [ref=e276]:
+                      - button [ref=e278]:
+                        - img
+                  - row "Unknown handyman - instagram 6 days ago Converted" [ref=e279] [cursor=pointer]:
+                    - cell "Unknown" [ref=e280]:
+                      - generic [ref=e282]: Unknown
+                    - cell "handyman" [ref=e283]
+                    - cell "-" [ref=e284]
+                    - cell "instagram" [ref=e285]
+                    - cell "6 days ago" [ref=e286]
+                    - cell "Converted" [ref=e287]:
+                      - generic [ref=e288]: Converted
+                    - cell [ref=e289]:
+                      - button [ref=e291]:
+                        - img
+                  - row "Sarah Mitchell sarah.m@email.com Kitchen Renovation (555) 123-4567 - 6 days ago Converted" [ref=e292] [cursor=pointer]:
+                    - cell "Sarah Mitchell sarah.m@email.com" [ref=e293]:
+                      - generic [ref=e294]:
+                        - generic [ref=e295]: Sarah Mitchell
+                        - generic [ref=e296]: sarah.m@email.com
+                    - cell "Kitchen Renovation" [ref=e297]
+                    - cell "(555) 123-4567" [ref=e298]:
+                      - link "(555) 123-4567" [ref=e299]:
+                        - /url: tel:(555) 123-4567
+                        - img [ref=e300]
+                        - text: (555) 123-4567
+                    - cell "-" [ref=e302]
+                    - cell "6 days ago" [ref=e303]
+                    - cell "Converted" [ref=e304]:
+                      - generic [ref=e305]: Converted
+                    - cell [ref=e306]:
+                      - button [ref=e308]:
+                        - img
+                  - row "Jennifer Martinez j.martinez@email.com plumbing 415-555-2222 - 6 days ago New Contact" [ref=e309] [cursor=pointer]:
+                    - cell "Jennifer Martinez j.martinez@email.com" [ref=e310]:
+                      - generic [ref=e311]:
+                        - generic [ref=e312]: Jennifer Martinez
+                        - generic [ref=e313]: j.martinez@email.com
+                    - cell "plumbing" [ref=e314]
+                    - cell "415-555-2222" [ref=e315]:
+                      - link "415-555-2222" [ref=e316]:
+                        - /url: tel:415-555-2222
+                        - img [ref=e317]
+                        - text: 415-555-2222
+                    - cell "-" [ref=e319]
+                    - cell "6 days ago" [ref=e320]
+                    - cell "New" [ref=e321]:
+                      - generic [ref=e322]: New
+                    - cell "Contact" [ref=e323]:
+                      - generic [ref=e324]:
+                        - button "Contact" [ref=e325]:
+                          - img
+                          - text: Contact
+                        - button [ref=e326]:
+                          - img
+                  - row "Unknown handyman - nextdoor 1 weeks ago New Contact" [ref=e327] [cursor=pointer]:
+                    - cell "Unknown" [ref=e328]:
+                      - generic [ref=e330]: Unknown
+                    - cell "handyman" [ref=e331]
+                    - cell "-" [ref=e332]
+                    - cell "nextdoor" [ref=e333]
+                    - cell "1 weeks ago" [ref=e334]
+                    - cell "New" [ref=e335]:
+                      - generic [ref=e336]: New
+                    - cell "Contact" [ref=e337]:
+                      - generic [ref=e338]:
+                        - button "Contact" [ref=e339]:
+                          - img
+                          - text: Contact
+                        - button [ref=e340]:
+                          - img
+                  - row "Unknown handyman - - 1 weeks ago New Contact" [ref=e341] [cursor=pointer]:
+                    - cell "Unknown" [ref=e342]:
+                      - generic [ref=e344]: Unknown
+                    - cell "handyman" [ref=e345]
+                    - cell "-" [ref=e346]
+                    - cell "-" [ref=e347]
+                    - cell "1 weeks ago" [ref=e348]
+                    - cell "New" [ref=e349]:
+                      - generic [ref=e350]: New
+                    - cell "Contact" [ref=e351]:
+                      - generic [ref=e352]:
+                        - button "Contact" [ref=e353]:
+                          - img
+                          - text: Contact
+                        - button [ref=e354]:
+                          - img
+                  - row "Unknown handyman - - 1 weeks ago New Contact" [ref=e355] [cursor=pointer]:
+                    - cell "Unknown" [ref=e356]:
+                      - generic [ref=e358]: Unknown
+                    - cell "handyman" [ref=e359]
+                    - cell "-" [ref=e360]
+                    - cell "-" [ref=e361]
+                    - cell "1 weeks ago" [ref=e362]
+                    - cell "New" [ref=e363]:
+                      - generic [ref=e364]: New
+                    - cell "Contact" [ref=e365]:
+                      - generic [ref=e366]:
+                        - button "Contact" [ref=e367]:
+                          - img
+                          - text: Contact
+                        - button [ref=e368]:
+                          - img
+                  - row "Test Customer plumbing 555-1234 - 1 weeks ago New Contact" [ref=e369] [cursor=pointer]:
+                    - cell "Test Customer" [ref=e370]:
+                      - generic [ref=e372]: Test Customer
+                    - cell "plumbing" [ref=e373]
+                    - cell "555-1234" [ref=e374]:
+                      - link "555-1234" [ref=e375]:
+                        - /url: tel:555-1234
+                        - img [ref=e376]
+                        - text: 555-1234
+                    - cell "-" [ref=e378]
+                    - cell "1 weeks ago" [ref=e379]
+                    - cell "New" [ref=e380]:
+                      - generic [ref=e381]: New
+                    - cell "Contact" [ref=e382]:
+                      - generic [ref=e383]:
+                        - button "Contact" [ref=e384]:
+                          - img
+                          - text: Contact
+                        - button [ref=e385]:
+                          - img
+                  - row "Thierry Mbandi thierry.mbandi@outlook.com plumbing (412) 339-3054 - 1 weeks ago New Contact" [ref=e386] [cursor=pointer]:
+                    - cell "Thierry Mbandi thierry.mbandi@outlook.com" [ref=e387]:
+                      - generic [ref=e388]:
+                        - generic [ref=e389]: Thierry Mbandi
+                        - generic [ref=e390]: thierry.mbandi@outlook.com
+                    - cell "plumbing" [ref=e391]
+                    - cell "(412) 339-3054" [ref=e392]:
+                      - link "(412) 339-3054" [ref=e393]:
+                        - /url: tel:(412) 339-3054
+                        - img [ref=e394]
+                        - text: (412) 339-3054
+                    - cell "-" [ref=e396]
+                    - cell "1 weeks ago" [ref=e397]
+                    - cell "New" [ref=e398]:
+                      - generic [ref=e399]: New
+                    - cell "Contact" [ref=e400]:
+                      - generic [ref=e401]:
+                        - button "Contact" [ref=e402]:
+                          - img
+                          - text: Contact
+                        - button [ref=e403]:
+                          - img
+                  - row "Thomas Anderson t.anderson@email.com electrical 510-555-3333 - 1 weeks ago Contacted Convert" [ref=e404] [cursor=pointer]:
+                    - cell "Thomas Anderson t.anderson@email.com" [ref=e405]:
+                      - generic [ref=e406]:
+                        - generic [ref=e407]: Thomas Anderson
+                        - generic [ref=e408]: t.anderson@email.com
+                    - cell "electrical" [ref=e409]
+                    - cell "510-555-3333" [ref=e410]:
+                      - link "510-555-3333" [ref=e411]:
+                        - /url: tel:510-555-3333
+                        - img [ref=e412]
+                        - text: 510-555-3333
+                    - cell "-" [ref=e414]
+                    - cell "1 weeks ago" [ref=e415]
+                    - cell "Contacted" [ref=e416]:
+                      - generic [ref=e417]: Contacted
+                    - cell "Convert" [ref=e418]:
+                      - generic [ref=e419]:
+                        - button "Convert" [ref=e420]:
+                          - img
+                          - text: Convert
+                        - button [ref=e421]:
+                          - img
+                  - row "Amanda Foster a.foster@email.com cleaning 415-555-4444 - 2 weeks ago Converted" [ref=e422] [cursor=pointer]:
+                    - cell "Amanda Foster a.foster@email.com" [ref=e423]:
+                      - generic [ref=e424]:
+                        - generic [ref=e425]: Amanda Foster
+                        - generic [ref=e426]: a.foster@email.com
+                    - cell "cleaning" [ref=e427]
+                    - cell "415-555-4444" [ref=e428]:
+                      - link "415-555-4444" [ref=e429]:
+                        - /url: tel:415-555-4444
+                        - img [ref=e430]
+                        - text: 415-555-4444
+                    - cell "-" [ref=e432]
+                    - cell "2 weeks ago" [ref=e433]
+                    - cell "Converted" [ref=e434]:
+                      - generic [ref=e435]: Converted
+                    - cell [ref=e436]:
+                      - button [ref=e438]:
+                        - img
+    - button [ref=e440] [cursor=pointer]:
+      - img
+    - region "Notifications (F8)":
+      - list
+  - generic [ref=e442]:
+    - button "Close survey" [ref=e443] [cursor=pointer]:
+      - img "Close survey" [ref=e444]
+    - generic [ref=e446]:
+      - generic [ref=e447]:
+        - generic [ref=e448]: What can we do to improve our product?
+        - textbox "What can we do to improve our product?" [ref=e449]:
+          - /placeholder: Start typing...
+      - generic [ref=e450]:
+        - button "Submit survey" [disabled] [ref=e451]: Submit
+        - link "Survey by" [ref=e452] [cursor=pointer]:
+          - /url: https://posthog.com/surveys
+          - text: Survey by
+          - img [ref=e453]
+```

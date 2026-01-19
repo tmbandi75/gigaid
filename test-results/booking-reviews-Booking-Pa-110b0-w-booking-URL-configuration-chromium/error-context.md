@@ -1,0 +1,532 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e7]:
+        - link "GigAid Pro Dashboard" [ref=e9] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e10]:
+            - img "GigAid" [ref=e11]
+            - generic [ref=e12]: Pro Dashboard
+        - generic [ref=e13]:
+          - list [ref=e16]:
+            - listitem [ref=e17]:
+              - link "Game Plan" [ref=e18] [cursor=pointer]:
+                - /url: /
+                - img [ref=e19]
+                - generic [ref=e24]: Game Plan
+            - listitem [ref=e25]:
+              - link "Jobs" [ref=e26] [cursor=pointer]:
+                - /url: /jobs
+                - img [ref=e27]
+                - generic [ref=e30]: Jobs
+            - listitem [ref=e31]:
+              - link "New Requests" [ref=e32] [cursor=pointer]:
+                - /url: /leads
+                - img [ref=e33]
+                - generic [ref=e38]: New Requests
+            - listitem [ref=e39]:
+              - link "Get Paid" [ref=e40] [cursor=pointer]:
+                - /url: /invoices
+                - img [ref=e41]
+                - generic [ref=e44]: Get Paid
+          - generic [ref=e45]:
+            - generic [ref=e46]: Tools
+            - list [ref=e48]:
+              - listitem [ref=e49]:
+                - link "QuickBook New" [ref=e50] [cursor=pointer]:
+                  - /url: /quickbook
+                  - img [ref=e51]
+                  - generic [ref=e53]: QuickBook
+                  - generic [ref=e54]: New
+              - listitem [ref=e55]:
+                - link "Voice Notes" [ref=e56] [cursor=pointer]:
+                  - /url: /voice-notes
+                  - img [ref=e57]
+                  - generic [ref=e60]: Voice Notes
+              - listitem [ref=e61]:
+                - link "AI Tools" [ref=e62] [cursor=pointer]:
+                  - /url: /ai-tools
+                  - img [ref=e63]
+                  - generic [ref=e65]: AI Tools
+              - listitem [ref=e66]:
+                - link "Messages" [ref=e67] [cursor=pointer]:
+                  - /url: /messages
+                  - img [ref=e68]
+                  - generic [ref=e70]: Messages
+              - listitem [ref=e71]:
+                - link "Crew" [ref=e72] [cursor=pointer]:
+                  - /url: /crew
+                  - img [ref=e73]
+                  - generic [ref=e78]: Crew
+              - listitem [ref=e79]:
+                - link "Reminders" [ref=e80] [cursor=pointer]:
+                  - /url: /reminders
+                  - img [ref=e81]
+                  - generic [ref=e84]: Reminders
+              - listitem [ref=e85]:
+                - link "Bookings" [ref=e86] [cursor=pointer]:
+                  - /url: /booking-requests
+                  - img [ref=e87]
+                  - generic [ref=e89]: Bookings
+              - listitem [ref=e90]:
+                - link "Quick Capture" [ref=e91] [cursor=pointer]:
+                  - /url: /share
+                  - img [ref=e92]
+                  - generic [ref=e98]: Quick Capture
+          - generic [ref=e99]:
+            - generic [ref=e100]: Business
+            - list [ref=e102]:
+              - listitem [ref=e103]:
+                - link "Owner View Pro" [ref=e104] [cursor=pointer]:
+                  - /url: /owner
+                  - img [ref=e105]
+                  - generic [ref=e107]: Owner View
+                  - generic [ref=e108]: Pro
+              - listitem [ref=e109]:
+                - link "Money Plan" [ref=e110] [cursor=pointer]:
+                  - /url: /money-plan
+                  - img [ref=e111]
+                  - generic [ref=e113]: Money Plan
+              - listitem [ref=e114]:
+                - link "Reviews" [ref=e115] [cursor=pointer]:
+                  - /url: /reviews
+                  - img [ref=e116]
+                  - generic [ref=e118]: Reviews
+              - listitem [ref=e119]:
+                - link "Referrals" [ref=e120] [cursor=pointer]:
+                  - /url: /referrals
+                  - img [ref=e121]
+                  - generic [ref=e125]: Referrals
+        - generic [ref=e126]:
+          - list [ref=e127]:
+            - listitem [ref=e128]:
+              - button "Light Mode" [ref=e129] [cursor=pointer]:
+                - img [ref=e130]
+                - generic [ref=e136]: Light Mode
+          - button "GW Gig Worker Pro Gig Services" [ref=e137] [cursor=pointer]:
+            - generic [ref=e139]: GW
+            - generic [ref=e140]:
+              - generic [ref=e141]: Gig Worker
+              - generic [ref=e142]: Pro Gig Services
+            - img [ref=e143]
+      - main [ref=e145]:
+        - generic [ref=e146]:
+          - generic [ref=e147]:
+            - button "Toggle Sidebar" [ref=e148] [cursor=pointer]:
+              - img
+              - generic [ref=e149]: Toggle Sidebar
+            - navigation "breadcrumb" [ref=e150]:
+              - list [ref=e151]:
+                - listitem [ref=e152]:
+                  - link "Home" [ref=e153] [cursor=pointer]:
+                    - /url: /
+                - listitem [ref=e154]:
+                  - img [ref=e155]
+                - listitem [ref=e157]:
+                  - link "Settings" [disabled] [ref=e158]
+          - generic [ref=e159]:
+            - generic [ref=e160]:
+              - img [ref=e161]
+              - searchbox "Search jobs, leads, invoices..." [ref=e164]
+              - generic:
+                - img
+                - text: K
+            - button "New" [ref=e165] [cursor=pointer]:
+              - img
+              - generic [ref=e166]: New
+            - link "2" [ref=e167] [cursor=pointer]:
+              - /url: /reminders
+              - button "2" [ref=e168]:
+                - img
+                - generic [ref=e169]: "2"
+            - link [ref=e170] [cursor=pointer]:
+              - /url: /messages
+              - button [ref=e171]:
+                - img
+            - button "GW" [ref=e172] [cursor=pointer]:
+              - generic [ref=e174]: GW
+        - main [ref=e175]:
+          - generic [ref=e176]:
+            - generic [ref=e181]:
+              - button "Back" [ref=e182] [cursor=pointer]:
+                - img
+                - text: Back
+              - generic [ref=e183]:
+                - img [ref=e185]
+                - generic [ref=e188]:
+                  - heading "Settings" [level=1] [ref=e189]
+                  - paragraph [ref=e190]: Configure your app preferences
+            - generic [ref=e191]:
+              - generic [ref=e193]:
+                - heading "Notifications" [level=3] [ref=e194]:
+                  - img [ref=e196]
+                  - text: Notifications
+                - generic [ref=e199]:
+                  - generic [ref=e200]:
+                    - generic [ref=e201]:
+                      - paragraph [ref=e202]: SMS Notifications
+                      - paragraph [ref=e203]: Receive updates via text message
+                    - switch [checked] [ref=e204] [cursor=pointer]
+                  - generic [ref=e205]:
+                    - generic [ref=e206]:
+                      - paragraph [ref=e207]: Email Notifications
+                      - paragraph [ref=e208]: Receive updates via email
+                    - switch [checked] [ref=e209] [cursor=pointer]
+              - generic [ref=e211]:
+                - heading "Email Signature" [level=3] [ref=e212]:
+                  - img [ref=e214]
+                  - text: Email Signature
+                - generic [ref=e217]:
+                  - generic [ref=e218]:
+                    - text: Signature Text
+                    - textbox "Signature Text" [ref=e219]:
+                      - /placeholder: Enter your email signature (e.g., your name, phone, tagline)...
+                      - text: Thank you Jason Womack GigPRO services
+                    - paragraph [ref=e220]: This will appear at the end of emails you send to leads.
+                  - generic [ref=e221]:
+                    - text: Logo URL
+                    - textbox "Logo URL" [ref=e222]:
+                      - /placeholder: https://example.com/your-logo.png
+                    - paragraph [ref=e223]: Enter a URL to your business logo image.
+                  - generic [ref=e224]:
+                    - generic [ref=e225]:
+                      - paragraph [ref=e226]: Include Logo in Emails
+                      - paragraph [ref=e227]: Show your logo in email signatures
+                    - switch [checked] [ref=e228] [cursor=pointer]
+                  - button "Save Signature" [disabled]:
+                    - img
+                    - text: Save Signature
+              - generic [ref=e230]:
+                - heading "AI Suggestions" [level=3] [ref=e231]:
+                  - img [ref=e233]
+                  - text: AI Suggestions
+                - generic [ref=e236]:
+                  - generic [ref=e237]:
+                    - paragraph [ref=e238]: Smart Action Nudges
+                    - paragraph [ref=e239]: Get AI-powered suggestions for leads and invoices
+                  - switch [checked] [ref=e240] [cursor=pointer]
+              - generic [ref=e242]:
+                - heading "Public Profile & Booking" [level=3] [ref=e243]:
+                  - img [ref=e245]
+                  - text: Public Profile & Booking
+                - generic [ref=e248]:
+                  - generic [ref=e249]:
+                    - generic [ref=e250]:
+                      - paragraph [ref=e251]: Enable Public Profile
+                      - paragraph [ref=e252]: Let clients find and book you
+                    - switch [checked] [ref=e253] [cursor=pointer]
+                  - generic [ref=e254]:
+                    - text: Your Booking URL
+                    - generic [ref=e255]:
+                      - textbox "your-name" [ref=e256]: gig-worker
+                      - button [ref=e257] [cursor=pointer]:
+                        - img
+                    - paragraph [ref=e258]: http://localhost:5000/book/gig-worker
+                  - generic [ref=e259]:
+                    - text: Your Services
+                    - generic [ref=e260]:
+                      - generic [ref=e261] [cursor=pointer]: Faucet Repair / Replacement ×
+                      - generic [ref=e262] [cursor=pointer]: Drain Cleaning ×
+                      - generic [ref=e263] [cursor=pointer]: Light Fixture Installation ×
+                      - generic [ref=e264] [cursor=pointer]: Standard Home Cleaning ×
+                    - generic [ref=e265]:
+                      - generic [ref=e266] [cursor=pointer]: + plumbing
+                      - generic [ref=e267] [cursor=pointer]: + electrical
+                      - generic [ref=e268] [cursor=pointer]: + cleaning
+                      - generic [ref=e269] [cursor=pointer]: + handyman
+                      - generic [ref=e270] [cursor=pointer]: + landscaping
+                    - generic [ref=e271]:
+                      - textbox "Add custom service..." [ref=e272]
+                      - button [ref=e273] [cursor=pointer]:
+                        - img
+                  - generic [ref=e274]:
+                    - generic [ref=e275]:
+                      - img [ref=e276]
+                      - generic [ref=e279]:
+                        - paragraph [ref=e280]: Show Reviews
+                        - paragraph [ref=e281]: Display ratings on booking page
+                    - switch [checked] [ref=e282] [cursor=pointer]
+                  - generic [ref=e283]:
+                    - generic [ref=e284]:
+                      - img [ref=e285]
+                      - generic [ref=e287]:
+                        - paragraph [ref=e288]: Public Price Estimates
+                        - paragraph [ref=e289]: Allow customers to get AI estimates on booking page
+                    - switch [checked] [ref=e290] [cursor=pointer]
+              - generic [ref=e291]:
+                - generic [ref=e293]:
+                  - generic [ref=e294]:
+                    - generic [ref=e295]:
+                      - img [ref=e296]
+                      - text: Availability
+                    - generic [ref=e298]: Set when clients can book you
+                  - generic [ref=e299]:
+                    - generic [ref=e300]: 37h
+                    - paragraph [ref=e301]: 5 days/week
+                - generic [ref=e302]:
+                  - generic [ref=e303]:
+                    - img [ref=e304]
+                    - generic [ref=e307]: Appointment Duration
+                    - generic [ref=e308]:
+                      - generic [ref=e309] [cursor=pointer]: 30 min
+                      - generic [ref=e310] [cursor=pointer]: 1 hour
+                      - generic [ref=e311] [cursor=pointer]: 1.5 hours
+                      - generic [ref=e312] [cursor=pointer]: 2 hours
+                  - generic [ref=e313]:
+                    - generic [ref=e315]:
+                      - switch [checked] [ref=e316] [cursor=pointer]
+                      - generic [ref=e317]: Monday
+                      - generic [ref=e318]:
+                        - generic [ref=e319]:
+                          - combobox [ref=e320] [cursor=pointer]:
+                            - generic: 9:00 AM
+                            - img [ref=e321]
+                          - generic [ref=e323]: "-"
+                          - combobox [ref=e324] [cursor=pointer]:
+                            - generic: 12:00 PM
+                            - img [ref=e325]
+                          - button [ref=e327] [cursor=pointer]:
+                            - img [ref=e328]
+                        - generic [ref=e331]:
+                          - combobox [ref=e332] [cursor=pointer]:
+                            - generic: 2:00 PM
+                            - img [ref=e333]
+                          - generic [ref=e335]: "-"
+                          - combobox [ref=e336] [cursor=pointer]:
+                            - generic: 5:00 PM
+                            - img [ref=e337]
+                          - button [ref=e339] [cursor=pointer]:
+                            - img [ref=e340]
+                        - button "Add" [ref=e343] [cursor=pointer]:
+                          - img
+                          - text: Add
+                    - generic [ref=e345]:
+                      - switch [checked] [ref=e346] [cursor=pointer]
+                      - generic [ref=e347]: Tuesday
+                      - generic [ref=e348]:
+                        - generic [ref=e349]:
+                          - combobox [ref=e350] [cursor=pointer]:
+                            - generic: 9:00 AM
+                            - img [ref=e351]
+                          - generic [ref=e353]: "-"
+                          - combobox [ref=e354] [cursor=pointer]:
+                            - generic: 5:00 PM
+                            - img [ref=e355]
+                        - button "Add" [ref=e357] [cursor=pointer]:
+                          - img
+                          - text: Add
+                    - generic [ref=e359]:
+                      - switch [checked] [ref=e360] [cursor=pointer]
+                      - generic [ref=e361]: Wednesday
+                      - generic [ref=e362]:
+                        - generic [ref=e363]:
+                          - combobox [ref=e364] [cursor=pointer]:
+                            - generic: 9:00 AM
+                            - img [ref=e365]
+                          - generic [ref=e367]: "-"
+                          - combobox [ref=e368] [cursor=pointer]:
+                            - generic: 5:00 PM
+                            - img [ref=e369]
+                        - button "Add" [ref=e371] [cursor=pointer]:
+                          - img
+                          - text: Add
+                    - generic [ref=e373]:
+                      - switch [checked] [ref=e374] [cursor=pointer]
+                      - generic [ref=e375]: Thursday
+                      - generic [ref=e376]:
+                        - generic [ref=e377]:
+                          - combobox [ref=e378] [cursor=pointer]:
+                            - generic: 9:00 AM
+                            - img [ref=e379]
+                          - generic [ref=e381]: "-"
+                          - combobox [ref=e382] [cursor=pointer]:
+                            - generic: 12:00 PM
+                            - img [ref=e383]
+                          - button [ref=e385] [cursor=pointer]:
+                            - img [ref=e386]
+                        - generic [ref=e389]:
+                          - combobox [ref=e390] [cursor=pointer]:
+                            - generic: 1:00 PM
+                            - img [ref=e391]
+                          - generic [ref=e393]: "-"
+                          - combobox [ref=e394] [cursor=pointer]:
+                            - generic: 6:00 PM
+                            - img [ref=e395]
+                          - button [ref=e397] [cursor=pointer]:
+                            - img [ref=e398]
+                        - button "Add" [ref=e401] [cursor=pointer]:
+                          - img
+                          - text: Add
+                    - generic [ref=e403]:
+                      - switch [checked] [ref=e404] [cursor=pointer]
+                      - generic [ref=e405]: Friday
+                      - generic [ref=e406]:
+                        - generic [ref=e407]:
+                          - combobox [ref=e408] [cursor=pointer]:
+                            - generic: 8:00 AM
+                            - img [ref=e409]
+                          - generic [ref=e411]: "-"
+                          - combobox [ref=e412] [cursor=pointer]:
+                            - generic: 3:00 PM
+                            - img [ref=e413]
+                        - button "Add" [ref=e415] [cursor=pointer]:
+                          - img
+                          - text: Add
+                    - generic [ref=e417]:
+                      - switch [ref=e418] [cursor=pointer]
+                      - generic [ref=e419]: Saturday
+                      - generic [ref=e420]: Unavailable
+                    - generic [ref=e422]:
+                      - switch [ref=e423] [cursor=pointer]
+                      - generic [ref=e424]: Sunday
+                      - generic [ref=e425]: Unavailable
+              - generic [ref=e426]:
+                - generic [ref=e428]:
+                  - img [ref=e430]
+                  - generic [ref=e432]:
+                    - generic [ref=e433]: Payment Methods
+                    - paragraph [ref=e434]: Configure how clients can pay you
+                - generic [ref=e435]:
+                  - generic [ref=e437]:
+                    - generic [ref=e438]:
+                      - img [ref=e440]
+                      - generic [ref=e442]:
+                        - generic [ref=e443]: Zelle
+                        - generic [ref=e444]: Accept payments via Zelle transfer
+                    - generic [ref=e445]:
+                      - button [ref=e446] [cursor=pointer]:
+                        - img
+                      - switch [checked] [ref=e447] [cursor=pointer]
+                  - generic [ref=e449]:
+                    - generic [ref=e450]:
+                      - img [ref=e452]
+                      - generic [ref=e454]:
+                        - generic [ref=e455]: Venmo
+                        - generic [ref=e456]: Accept payments via Venmo
+                    - generic [ref=e457]:
+                      - button [ref=e458] [cursor=pointer]:
+                        - img
+                      - switch [checked] [ref=e459] [cursor=pointer]
+                  - generic [ref=e461]:
+                    - generic [ref=e462]:
+                      - img [ref=e464]
+                      - generic [ref=e466]:
+                        - generic [ref=e467]: Cash App
+                        - generic [ref=e468]: Accept payments via Cash App
+                    - generic [ref=e469]:
+                      - button [ref=e470] [cursor=pointer]:
+                        - img
+                      - switch [checked] [ref=e471] [cursor=pointer]
+                  - generic [ref=e473]:
+                    - generic [ref=e474]:
+                      - img [ref=e476]
+                      - generic [ref=e479]:
+                        - generic [ref=e480]: Cash
+                        - generic [ref=e481]: Accept cash payments in person
+                    - switch [checked] [ref=e483] [cursor=pointer]
+                  - generic [ref=e485]:
+                    - generic [ref=e486]:
+                      - img [ref=e488]
+                      - generic [ref=e491]:
+                        - generic [ref=e492]: Check
+                        - generic [ref=e493]: Accept check payments
+                    - generic [ref=e494]:
+                      - button [ref=e495] [cursor=pointer]:
+                        - img
+                      - switch [checked] [ref=e496] [cursor=pointer]
+                  - generic [ref=e498]:
+                    - generic [ref=e499]:
+                      - img [ref=e501]
+                      - generic [ref=e503]:
+                        - generic [ref=e504]: Card (Stripe)
+                        - generic [ref=e505]: Accept card payments via Stripe
+                    - switch [checked] [ref=e507] [cursor=pointer]
+                  - button "Save Payment Settings" [ref=e508] [cursor=pointer]:
+                    - img
+                    - text: Save Payment Settings
+              - generic [ref=e510]:
+                - generic [ref=e511]:
+                  - generic [ref=e512]:
+                    - img [ref=e513]
+                    - text: Payment Account
+                    - generic [ref=e515]: Pending
+                  - generic [ref=e516]: Connect your Stripe account to receive deposits from customers
+                - generic [ref=e518]:
+                  - generic [ref=e520]:
+                    - img [ref=e521]
+                    - generic [ref=e523]:
+                      - paragraph [ref=e524]: Complete Your Setup
+                      - paragraph [ref=e525]: Your account needs additional information before you can accept payments.
+                  - generic [ref=e526]:
+                    - button "Complete Setup" [ref=e527] [cursor=pointer]
+                    - button "Stripe Dashboard" [disabled]:
+                      - img
+                      - text: Stripe Dashboard
+                  - paragraph [ref=e528]: Complete your Stripe setup to access the dashboard and start accepting payments.
+              - generic [ref=e530]:
+                - heading "Export Data" [level=3] [ref=e531]:
+                  - img [ref=e533]
+                  - text: Export Data
+                - generic [ref=e536]:
+                  - link "Download JSON Complete data export" [ref=e537] [cursor=pointer]:
+                    - /url: /api/export/json
+                    - generic [ref=e538]:
+                      - img [ref=e539]
+                      - generic [ref=e544]:
+                        - paragraph [ref=e545]: Download JSON
+                        - paragraph [ref=e546]: Complete data export
+                      - img [ref=e547]
+                  - link "Download DOT Graph Data relationships (GraphViz)" [ref=e549] [cursor=pointer]:
+                    - /url: /api/export/dot
+                    - generic [ref=e550]:
+                      - img [ref=e551]
+                      - generic [ref=e554]:
+                        - paragraph [ref=e555]: Download DOT Graph
+                        - paragraph [ref=e556]: Data relationships (GraphViz)
+                      - img [ref=e557]
+              - generic [ref=e559]:
+                - generic [ref=e561]:
+                  - img [ref=e563]
+                  - generic [ref=e565]:
+                    - heading "Upgrade to Pro" [level=3] [ref=e566]
+                    - paragraph [ref=e567]: Unlock all premium features
+                - generic [ref=e568]:
+                  - generic [ref=e569]:
+                    - generic [ref=e570]:
+                      - img [ref=e571]
+                      - generic [ref=e573]: Web Dashboard
+                    - generic [ref=e574]:
+                      - img [ref=e575]
+                      - generic [ref=e577]: Calendar Sync
+                    - generic [ref=e578]:
+                      - img [ref=e579]
+                      - generic [ref=e581]: Analytics
+                    - generic [ref=e582]:
+                      - img [ref=e583]
+                      - generic [ref=e585]: Priority Support
+                  - button "Upgrade - $9.99/month" [ref=e586] [cursor=pointer]:
+                    - img
+                    - text: Upgrade - $9.99/month
+              - button "Save Settings" [ref=e587] [cursor=pointer]
+    - button [ref=e588] [cursor=pointer]:
+      - img
+    - region "Notifications (F8)":
+      - list
+  - generic [ref=e590]:
+    - button "Close survey" [ref=e591] [cursor=pointer]:
+      - img "Close survey" [ref=e592]
+    - generic [ref=e594]:
+      - generic [ref=e595]:
+        - generic [ref=e596]: What can we do to improve our product?
+        - textbox "What can we do to improve our product?" [ref=e597]:
+          - /placeholder: Start typing...
+      - generic [ref=e598]:
+        - button "Submit survey" [disabled] [ref=e599]: Submit
+        - link "Survey by" [ref=e600] [cursor=pointer]:
+          - /url: https://posthog.com/surveys
+          - text: Survey by
+          - img [ref=e601]
+```

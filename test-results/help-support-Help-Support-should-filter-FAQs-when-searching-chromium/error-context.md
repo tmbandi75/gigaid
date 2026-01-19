@@ -1,0 +1,262 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e7]:
+        - link "GigAid Pro Dashboard" [ref=e9] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e10]:
+            - img "GigAid" [ref=e11]
+            - generic [ref=e12]: Pro Dashboard
+        - generic [ref=e13]:
+          - list [ref=e16]:
+            - listitem [ref=e17]:
+              - link "Game Plan" [ref=e18] [cursor=pointer]:
+                - /url: /
+                - img [ref=e19]
+                - generic [ref=e24]: Game Plan
+            - listitem [ref=e25]:
+              - link "Jobs" [ref=e26] [cursor=pointer]:
+                - /url: /jobs
+                - img [ref=e27]
+                - generic [ref=e30]: Jobs
+            - listitem [ref=e31]:
+              - link "New Requests" [ref=e32] [cursor=pointer]:
+                - /url: /leads
+                - img [ref=e33]
+                - generic [ref=e38]: New Requests
+            - listitem [ref=e39]:
+              - link "Get Paid" [ref=e40] [cursor=pointer]:
+                - /url: /invoices
+                - img [ref=e41]
+                - generic [ref=e44]: Get Paid
+          - generic [ref=e45]:
+            - generic [ref=e46]: Tools
+            - list [ref=e48]:
+              - listitem [ref=e49]:
+                - link "QuickBook New" [ref=e50] [cursor=pointer]:
+                  - /url: /quickbook
+                  - img [ref=e51]
+                  - generic [ref=e53]: QuickBook
+                  - generic [ref=e54]: New
+              - listitem [ref=e55]:
+                - link "Voice Notes" [ref=e56] [cursor=pointer]:
+                  - /url: /voice-notes
+                  - img [ref=e57]
+                  - generic [ref=e60]: Voice Notes
+              - listitem [ref=e61]:
+                - link "AI Tools" [ref=e62] [cursor=pointer]:
+                  - /url: /ai-tools
+                  - img [ref=e63]
+                  - generic [ref=e65]: AI Tools
+              - listitem [ref=e66]:
+                - link "Messages" [ref=e67] [cursor=pointer]:
+                  - /url: /messages
+                  - img [ref=e68]
+                  - generic [ref=e70]: Messages
+              - listitem [ref=e71]:
+                - link "Crew" [ref=e72] [cursor=pointer]:
+                  - /url: /crew
+                  - img [ref=e73]
+                  - generic [ref=e78]: Crew
+              - listitem [ref=e79]:
+                - link "Reminders" [ref=e80] [cursor=pointer]:
+                  - /url: /reminders
+                  - img [ref=e81]
+                  - generic [ref=e84]: Reminders
+              - listitem [ref=e85]:
+                - link "Bookings" [ref=e86] [cursor=pointer]:
+                  - /url: /booking-requests
+                  - img [ref=e87]
+                  - generic [ref=e89]: Bookings
+              - listitem [ref=e90]:
+                - link "Quick Capture" [ref=e91] [cursor=pointer]:
+                  - /url: /share
+                  - img [ref=e92]
+                  - generic [ref=e98]: Quick Capture
+          - generic [ref=e99]:
+            - generic [ref=e100]: Business
+            - list [ref=e102]:
+              - listitem [ref=e103]:
+                - link "Owner View Pro" [ref=e104] [cursor=pointer]:
+                  - /url: /owner
+                  - img [ref=e105]
+                  - generic [ref=e107]: Owner View
+                  - generic [ref=e108]: Pro
+              - listitem [ref=e109]:
+                - link "Money Plan" [ref=e110] [cursor=pointer]:
+                  - /url: /money-plan
+                  - img [ref=e111]
+                  - generic [ref=e113]: Money Plan
+              - listitem [ref=e114]:
+                - link "Reviews" [ref=e115] [cursor=pointer]:
+                  - /url: /reviews
+                  - img [ref=e116]
+                  - generic [ref=e118]: Reviews
+              - listitem [ref=e119]:
+                - link "Referrals" [ref=e120] [cursor=pointer]:
+                  - /url: /referrals
+                  - img [ref=e121]
+                  - generic [ref=e125]: Referrals
+        - generic [ref=e126]:
+          - list [ref=e127]:
+            - listitem [ref=e128]:
+              - button "Light Mode" [ref=e129] [cursor=pointer]:
+                - img [ref=e130]
+                - generic [ref=e136]: Light Mode
+          - button "GW Gig Worker Pro Gig Services" [ref=e137] [cursor=pointer]:
+            - generic [ref=e139]: GW
+            - generic [ref=e140]:
+              - generic [ref=e141]: Gig Worker
+              - generic [ref=e142]: Pro Gig Services
+            - img [ref=e143]
+      - main [ref=e145]:
+        - generic [ref=e146]:
+          - generic [ref=e147]:
+            - button "Toggle Sidebar" [ref=e148] [cursor=pointer]:
+              - img
+              - generic [ref=e149]: Toggle Sidebar
+            - navigation "breadcrumb" [ref=e150]:
+              - list [ref=e151]:
+                - listitem [ref=e152]:
+                  - link "Home" [ref=e153] [cursor=pointer]:
+                    - /url: /
+                - listitem [ref=e154]:
+                  - img [ref=e155]
+                - listitem [ref=e157]:
+                  - link "Help & Support" [disabled] [ref=e158]
+          - generic [ref=e159]:
+            - generic [ref=e160]:
+              - img [ref=e161]
+              - searchbox "Search jobs, leads, invoices..." [ref=e164]
+              - generic:
+                - img
+                - text: K
+            - button "New" [ref=e165] [cursor=pointer]:
+              - img
+              - generic [ref=e166]: New
+            - link "2" [ref=e167] [cursor=pointer]:
+              - /url: /reminders
+              - button "2" [ref=e168]:
+                - img
+                - generic [ref=e169]: "2"
+            - link [ref=e170] [cursor=pointer]:
+              - /url: /messages
+              - button [ref=e171]:
+                - img
+            - button "GW" [ref=e172] [cursor=pointer]:
+              - generic [ref=e174]: GW
+        - main [ref=e175]:
+          - generic [ref=e176]:
+            - generic [ref=e181]:
+              - button "Back" [ref=e182] [cursor=pointer]:
+                - img
+                - text: Back
+              - generic [ref=e183]:
+                - img [ref=e185]
+                - generic [ref=e187]:
+                  - heading "Help & Support" [level=1] [ref=e188]
+                  - paragraph [ref=e189]: We're here to help you
+            - generic [ref=e190]:
+              - generic [ref=e193]:
+                - img [ref=e194]
+                - textbox "Search for help..." [active] [ref=e197]: invoice
+              - generic [ref=e198]:
+                - generic [ref=e200] [cursor=pointer]:
+                  - img [ref=e202]
+                  - paragraph [ref=e205]: Email Us
+                  - paragraph [ref=e206]: support@gigaid.app
+                - generic [ref=e208] [cursor=pointer]:
+                  - img [ref=e210]
+                  - paragraph [ref=e212]: Call Us
+                  - paragraph [ref=e213]: 1-800-GIG-AID
+              - generic [ref=e215]:
+                - heading "Frequently Asked Questions" [level=2] [ref=e216]:
+                  - img [ref=e217]
+                  - text: Frequently Asked Questions
+                - generic [ref=e220]:
+                  - button "Deposits & Payments 1 questions" [ref=e222] [cursor=pointer]:
+                    - img [ref=e224]
+                    - generic [ref=e226]:
+                      - paragraph [ref=e227]: Deposits & Payments
+                      - paragraph [ref=e228]: 1 questions
+                    - img [ref=e229]
+                  - button "Owner View & Analytics 1 questions" [ref=e232] [cursor=pointer]:
+                    - img [ref=e234]
+                    - generic [ref=e237]:
+                      - paragraph [ref=e238]: Owner View & Analytics
+                      - paragraph [ref=e239]: 1 questions
+                    - img [ref=e240]
+                  - button "AI Smart Suggestions 1 questions" [ref=e243] [cursor=pointer]:
+                    - img [ref=e245]
+                    - generic [ref=e247]:
+                      - paragraph [ref=e248]: AI Smart Suggestions
+                      - paragraph [ref=e249]: 1 questions
+                    - img [ref=e250]
+                  - button "Auto-Follow-Up 4 questions" [ref=e253] [cursor=pointer]:
+                    - img [ref=e255]
+                    - generic [ref=e258]:
+                      - paragraph [ref=e259]: Auto-Follow-Up
+                      - paragraph [ref=e260]: 4 questions
+                    - img [ref=e261]
+              - generic [ref=e264]:
+                - heading "Submit a Support Ticket" [level=2] [ref=e265]:
+                  - img [ref=e266]
+                  - text: Submit a Support Ticket
+                - generic [ref=e268]:
+                  - generic [ref=e269]:
+                    - text: Subject
+                    - textbox "Subject" [ref=e270]:
+                      - /placeholder: What do you need help with?
+                  - generic [ref=e271]:
+                    - generic [ref=e272]:
+                      - text: Category
+                      - combobox [ref=e273] [cursor=pointer]:
+                        - generic: General Question
+                        - img [ref=e274]
+                      - combobox [ref=e276]
+                    - generic [ref=e277]:
+                      - text: Priority
+                      - combobox [ref=e278] [cursor=pointer]:
+                        - generic: Normal
+                        - img [ref=e279]
+                      - combobox [ref=e281]
+                  - generic [ref=e282]:
+                    - text: Message
+                    - textbox "Message" [ref=e283]:
+                      - /placeholder: Describe your issue or question in detail...
+                  - button "Submit Ticket" [ref=e284] [cursor=pointer]:
+                    - img
+                    - text: Submit Ticket
+              - button "My Support Tickets" [ref=e287] [cursor=pointer]:
+                - heading "My Support Tickets" [level=2] [ref=e288]:
+                  - img [ref=e289]
+                  - text: My Support Tickets
+                - img [ref=e291]
+              - generic [ref=e295] [cursor=pointer]:
+                - img [ref=e297]
+                - generic [ref=e299]:
+                  - paragraph [ref=e300]: User Guides & Tutorials
+                  - paragraph [ref=e301]: Step-by-step walkthroughs
+                - img [ref=e302]
+    - button [ref=e304] [cursor=pointer]:
+      - img
+    - region "Notifications (F8)":
+      - list
+  - generic [ref=e306]:
+    - button "Close survey" [ref=e307] [cursor=pointer]:
+      - img "Close survey" [ref=e308]
+    - generic [ref=e310]:
+      - generic [ref=e311]:
+        - generic [ref=e312]: What can we do to improve our product?
+        - textbox "What can we do to improve our product?" [ref=e313]:
+          - /placeholder: Start typing...
+      - generic [ref=e314]:
+        - button "Submit survey" [disabled] [ref=e315]: Submit
+        - link "Survey by" [ref=e316] [cursor=pointer]:
+          - /url: https://posthog.com/surveys
+          - text: Survey by
+          - img [ref=e317]
+```
