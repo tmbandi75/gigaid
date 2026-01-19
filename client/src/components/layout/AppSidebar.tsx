@@ -36,6 +36,7 @@ import {
   Moon,
   Sun,
   MessageSquare,
+  Mic,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
@@ -64,6 +65,7 @@ const mainNavItems = [
 
 const toolsItems = [
   { path: "/quickbook", icon: Zap, label: "QuickBook", badge: "New" },
+  { path: "/voice-notes", icon: Mic, label: "Voice Notes" },
   { path: "/ai-tools", icon: Sparkles, label: "AI Tools" },
   { path: "/messages", icon: MessageSquare, label: "Messages" },
   { path: "/crew", icon: Users, label: "Crew" },

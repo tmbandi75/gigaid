@@ -48,6 +48,7 @@ import Messages from "@/pages/Messages";
 import AdminCockpit from "@/pages/AdminCockpit";
 import AdminUsers from "@/pages/AdminUsers";
 import AdminUserDetail from "@/pages/AdminUserDetail";
+import VoiceNotesPage from "@/pages/VoiceNotesPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -78,6 +79,7 @@ function Router() {
       <Route path="/help" component={HelpSupport} />
       <Route path="/guides" component={UserGuides} />
       <Route path="/ai-tools" component={AITools} />
+      <Route path="/voice-notes" component={VoiceNotesPage} />
       <Route path="/booking-requests" component={BookingRequests} />
       <Route path="/share" component={ShareCapture} />
       <Route path="/quickbook" component={QuickBook} />

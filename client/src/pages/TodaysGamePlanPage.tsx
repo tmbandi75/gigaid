@@ -558,10 +558,19 @@ export default function TodaysGamePlanPage() {
       <Dialog open={showVoiceNotes} onOpenChange={setShowVoiceNotes}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Mic className="h-5 w-5" />
-              Talk It In
-            </DialogTitle>
+            <div className="flex items-center justify-between gap-2">
+              <DialogTitle className="flex items-center gap-2">
+                <Mic className="h-5 w-5" />
+                Talk It In
+              </DialogTitle>
+              <Button 
+                variant="ghost" 
+                onClick={() => { setShowVoiceNotes(false); navigate("/voice-notes"); }}
+                data-testid="link-view-voice-history"
+              >
+                View History
+              </Button>
+            </div>
           </DialogHeader>
           <VoiceNoteSummarizer 
             onNoteSaved={() => setShowVoiceNotes(false)}
