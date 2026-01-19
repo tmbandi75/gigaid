@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import logoImage from "@assets/image_1768850307038.png";
+import logoImage from "@assets/image_1768853315979.png";
 
 export default function SplashPage() {
   const [, setLocation] = useLocation();
