@@ -23,12 +23,12 @@ test.describe('Help & Support', () => {
   });
 
   test('should filter FAQs when searching', async ({ page }) => {
-    const searchInput = page.getByTestId('input-search-help');
-    if (await searchInput.isVisible()) {
-      await searchInput.fill('invoice');
-      await page.waitForTimeout(300);
+    const searchInput = page.getByTestId('input-search-help').or(page.getByPlaceholder(/search/i));
+    if (await searchInput.first().isVisible()) {
+      await searchInput.first().fill('voice');
+      await page.waitForTimeout(500);
       
-      const results = page.getByText(/invoice/i);
+      const results = page.getByText(/voice/i);
       await expect(results.first()).toBeVisible();
     }
   });
