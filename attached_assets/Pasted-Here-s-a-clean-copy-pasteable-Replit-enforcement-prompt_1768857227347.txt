@@ -1,0 +1,174 @@
+Here’s a **clean, copy-pasteable Replit enforcement prompt** designed to be **safe, scoped, and reversible**, with **no layout regressions**.
+
+This assumes:
+
+* React + Vite
+* Tailwind (or CSS variables)
+* The blue area is a reusable header / top container (Jobs screen + others)
+
+---
+
+## ✅ Replit Enforcement Prompt — Soften Top Blue Gradient (Light + Dark)
+
+**Paste this entire prompt into Replit AI**
+
+---
+
+**SYSTEM / DEVELOPER INSTRUCTION**
+
+You are working inside an existing React + Vite application for **GigAid**.
+
+Your task is to **soften the saturated blue background in the top header area** (Jobs screen and any shared header component) by replacing the flat or harsh blue with a **subtle, professional gradient**.
+
+This is a **visual refinement only**:
+
+* ❌ Do NOT change layout, spacing, typography, component structure, or logic
+* ❌ Do NOT modify data, props, or state
+* ❌ Do NOT affect cards, lists, buttons, or navigation
+* ✅ ONLY adjust background styling of the top header container
+
+---
+
+### 🎯 Target Component
+
+Locate the **Jobs screen top header area**, likely one of:
+
+* `JobsHeader.tsx`
+* `Jobs.tsx`
+* `Header.tsx`
+* `PageHeader.tsx`
+* Or a div with classes resembling `bg-blue-*`, `bg-primary`, or inline background styles
+
+If shared, apply the change **only to the top hero/header region**, not the entire page.
+
+---
+
+### 🎨 Design Requirements (Strict)
+
+#### Light Mode Gradient
+
+Replace the existing blue background with:
+
+```css
+linear-gradient(
+  180deg,
+  #1F6FD6 0%,
+  #2A5FCC 45%,
+  #3A4F9F 100%
+)
+```
+
+#### Dark Mode Gradient
+
+If dark mode exists, use:
+
+```css
+linear-gradient(
+  180deg,
+  #0F2A4A 0%,
+  #132E52 100%
+)
+```
+
+---
+
+### 🧱 Implementation Rules
+
+Use **ONE** of the following approaches (prefer first if available):
+
+#### Option A — Tailwind with CSS Variables (Preferred)
+
+1. Define CSS variables in the global theme file:
+
+   * `src/index.css`, `src/globals.css`, or equivalent
+2. Add:
+
+   ```css
+   :root {
+     --header-gradient-light: linear-gradient(
+       180deg,
+       #1F6FD6 0%,
+       #2A5FCC 45%,
+       #3A4F9F 100%
+     );
+   }
+
+   .dark {
+     --header-gradient-dark: linear-gradient(
+       180deg,
+       #0F2A4A 0%,
+       #132E52 100%
+     );
+   }
+   ```
+3. Apply to header container using:
+
+   ```jsx
+   style={{
+     background: isDarkMode
+       ? 'var(--header-gradient-dark)'
+       : 'var(--header-gradient-light)'
+   }}
+   ```
+
+#### Option B — Tailwind Utility Classes
+
+If gradients are already configured:
+
+```jsx
+className="bg-gradient-to-b from-[#1F6FD6] via-[#2A5FCC] to-[#3A4F9F] dark:from-[#0F2A4A] dark:to-[#132E52]"
+```
+
+---
+
+### ✨ Subtle Depth Enhancement (Optional but Allowed)
+
+Add **ONLY** this inset shadow to the header container:
+
+```css
+box-shadow: inset 0 -16px 24px rgba(0, 0, 0, 0.08);
+```
+
+This must not affect spacing or scrolling.
+
+---
+
+### 🚫 Explicit Constraints
+
+* Do NOT rename components
+* Do NOT create new components
+* Do NOT change existing color tokens globally
+* Do NOT alter KPI cards or buttons
+* Do NOT introduce animations
+
+---
+
+### ✅ Validation Checklist
+
+After implementation:
+
+* Jobs header visually feels calmer and less saturated
+* KPI cards remain fully legible
+* No layout shift occurs
+* Light and dark modes render correctly
+* No other screens are affected unintentionally
+
+---
+
+### 📌 Final Step
+
+After making changes:
+
+1. Identify which file was modified
+2. Confirm whether the header is shared across screens
+3. Report any edge cases discovered (none expected)
+
+---
+
+If you want, next I can:
+
+* Lock this into a **design token** so future headers stay consistent
+* Create a **before/after toggle** for A/B testing
+* Apply the same treatment to Requests / Get Paid screens safely
+
+Just say the word.
