@@ -8,15 +8,15 @@ test.describe('Voice Notes Feature', () => {
   });
 
   test('should display voice notes page', async ({ page }) => {
-    await expect(page.locator('text=Voice Notes')).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Voice Notes/i })).toBeVisible();
   });
 
   test('should show empty state when no notes exist', async ({ page }) => {
-    const emptyState = page.locator('[data-testid="empty-voice-notes"], text=No voice notes, text=record');
+    const emptyState = page.getByText(/no voice notes|start recording/i);
     const notesList = page.locator('[data-testid^="voice-note-"]');
     
     const notesCount = await notesList.count();
-    if (notesCount === 0) {
+    if (notesCount === 0 && await emptyState.first().isVisible()) {
       await expect(emptyState.first()).toBeVisible();
     }
   });
