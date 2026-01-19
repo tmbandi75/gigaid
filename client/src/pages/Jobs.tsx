@@ -24,7 +24,7 @@ import {
   List
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Job, AiNudge } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -318,7 +318,18 @@ export default function Jobs() {
   const [filter, setFilter] = useState<string>("all");
   const [selectedNudge, setSelectedNudge] = useState<AiNudge | null>(null);
   const [viewMode, setViewMode] = useState<"cards" | "table">("table");
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const isMobile = useIsMobile();
+  
+  useEffect(() => {
+    const checkDarkMode = () => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    };
+    checkDarkMode();
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
   
   const { data: jobs = [], isLoading } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
@@ -346,7 +357,14 @@ export default function Jobs() {
 
   return (
     <div className="flex flex-col min-h-full bg-background" data-testid="page-jobs">
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-violet-600 text-primary-foreground px-4 md:px-6 lg:px-8 pt-6 pb-8 md:pb-6">
+      <div 
+        className="relative overflow-hidden text-white px-4 md:px-6 lg:px-8 pt-6 pb-8 md:pb-6"
+        style={{ 
+          background: isDarkMode 
+            ? 'linear-gradient(180deg, #0F2A4A 0%, #132E52 100%)'
+            : 'linear-gradient(180deg, #1F6FD6 0%, #2A5FCC 45%, #3A4F9F 100%)',
+          boxShadow: 'inset 0 -16px 24px rgba(0, 0, 0, 0.08)'
+        }}>
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
           <div className="absolute bottom-0 -left-10 w-32 h-32 bg-violet-400/20 rounded-full blur-2xl" />
