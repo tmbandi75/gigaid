@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -23,9 +24,19 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Loader2, Send, CheckCircle } from "lucide-react";
+import { ArrowLeft, Loader2, Send, CheckCircle, Mail, MessageSquare, AlertTriangle } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import type { Invoice } from "@shared/schema";
 
@@ -53,11 +64,19 @@ export default function InvoiceForm() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [showSendDialog, setShowSendDialog] = useState(false);
+  const [sendViaEmail, setSendViaEmail] = useState(true);
+  const [sendViaSms, setSendViaSms] = useState(true);
 
   const { data: existingInvoice, isLoading: isLoadingInvoice } = useQuery<Invoice>({
     queryKey: ["/api/invoices", id],
     enabled: !!isEditing,
   });
+
+  const hasEmail = !!(existingInvoice?.clientEmail);
+  const hasPhone = !!(existingInvoice?.clientPhone);
+  const hasBothChannels = hasEmail && hasPhone;
+  const hasAnyChannel = hasEmail || hasPhone;
 
   const form = useForm<InvoiceFormData>({
     resolver: zodResolver(invoiceFormSchema),
@@ -128,18 +147,52 @@ export default function InvoiceForm() {
   });
 
   const sendMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", `/api/invoices/${id}/send`, {});
+    mutationFn: async ({ sendEmail, sendSms }: { sendEmail: boolean; sendSms: boolean }) => {
+      return apiRequest("POST", `/api/invoices/${id}/send`, { sendEmail, sendSms });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
       queryClient.invalidateQueries({ queryKey: ["/api/invoices", id] });
-      toast({ title: "Invoice sent successfully" });
+      setShowSendDialog(false);
+      const channels = [];
+      if (sendViaEmail && hasEmail) channels.push("email");
+      if (sendViaSms && hasPhone) channels.push("text");
+      toast({ title: `Invoice sent via ${channels.join(" and ")}` });
     },
     onError: () => {
       toast({ title: "Failed to send invoice", variant: "destructive" });
     },
   });
+
+  const handleSendClick = () => {
+    if (!hasAnyChannel) {
+      toast({ 
+        title: "No contact information", 
+        description: "Please add an email address or phone number to send this invoice.",
+        variant: "destructive" 
+      });
+      return;
+    }
+    
+    if (hasBothChannels) {
+      setSendViaEmail(true);
+      setSendViaSms(true);
+      setShowSendDialog(true);
+    } else {
+      const channelName = hasEmail ? "email" : "text message";
+      if (confirm(`Send invoice via ${channelName}?`)) {
+        sendMutation.mutate({ sendEmail: hasEmail, sendSms: hasPhone });
+      }
+    }
+  };
+
+  const handleConfirmSend = () => {
+    if (!sendViaEmail && !sendViaSms) {
+      toast({ title: "Please select at least one delivery method", variant: "destructive" });
+      return;
+    }
+    sendMutation.mutate({ sendEmail: sendViaEmail, sendSms: sendViaSms });
+  };
 
   const markPaidMutation = useMutation({
     mutationFn: async (paymentMethod: string) => {
@@ -348,7 +401,7 @@ export default function InvoiceForm() {
               <Button 
                 variant="outline"
                 className="w-full h-12"
-                onClick={() => sendMutation.mutate()}
+                onClick={handleSendClick}
                 disabled={sendMutation.isPending}
                 data-testid="button-send-invoice"
               >
@@ -395,6 +448,69 @@ export default function InvoiceForm() {
           </div>
         )}
       </div>
+
+      <Dialog open={showSendDialog} onOpenChange={setShowSendDialog}>
+        <DialogContent data-testid="dialog-send-invoice">
+          <DialogHeader>
+            <DialogTitle>Send Invoice</DialogTitle>
+            <DialogDescription>
+              Choose how you want to send this invoice to {existingInvoice?.clientName}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="flex items-center space-x-3">
+              <Checkbox 
+                id="send-email"
+                checked={sendViaEmail}
+                onCheckedChange={(checked) => setSendViaEmail(!!checked)}
+                data-testid="checkbox-send-email"
+              />
+              <Label htmlFor="send-email" className="flex items-center gap-2 cursor-pointer">
+                <Mail className="h-4 w-4" />
+                <div>
+                  <div className="font-medium">Email</div>
+                  <div className="text-xs text-muted-foreground">{existingInvoice?.clientEmail}</div>
+                </div>
+              </Label>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              <Checkbox 
+                id="send-sms"
+                checked={sendViaSms}
+                onCheckedChange={(checked) => setSendViaSms(!!checked)}
+                data-testid="checkbox-send-sms"
+              />
+              <Label htmlFor="send-sms" className="flex items-center gap-2 cursor-pointer">
+                <MessageSquare className="h-4 w-4" />
+                <div>
+                  <div className="font-medium">Text Message</div>
+                  <div className="text-xs text-muted-foreground">{existingInvoice?.clientPhone}</div>
+                </div>
+              </Label>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowSendDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleConfirmSend}
+              disabled={sendMutation.isPending || (!sendViaEmail && !sendViaSms)}
+              data-testid="button-confirm-send"
+            >
+              {sendMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              Send Invoice
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
