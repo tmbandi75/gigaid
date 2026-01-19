@@ -327,17 +327,17 @@ export default function PublicBooking() {
               </Button>
             </CardContent>
           </Card>
-          <div className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1">
-            Powered by{" "}
+          <div className="text-center pt-4">
             <a 
               href="https://gigaid.ai" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="hover:underline"
+              className="inline-block"
               data-testid="link-gigaid-confirmation"
             >
-              <img src="/gigaid-logo.png" alt="GigAid" className="h-4 inline-block" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }} />
+              <img src="/gigaid-logo.png" alt="GigAid" className="h-10 mx-auto" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
             </a>
+            <p className="text-xs text-muted-foreground mt-1">Powered by GigAid</p>
           </div>
         </div>
       </div>
