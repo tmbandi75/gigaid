@@ -296,6 +296,102 @@ const faqs = [
     ],
   },
   {
+    category: "Voice Notes",
+    icon: MessageCircle,
+    color: "from-rose-500 to-pink-500",
+    questions: [
+      {
+        q: "What are Voice Notes?",
+        a: "Voice Notes let you capture ideas, reminders, or client conversations by speaking instead of typing. Access them from the sidebar under Tools, or use the quick-access button.",
+      },
+      {
+        q: "How do I record a Voice Note?",
+        a: "Open Voice Notes from the sidebar or tap the microphone icon. Press and hold the record button, speak your note, then release. The note is saved automatically with a timestamp.",
+      },
+      {
+        q: "Can I link Voice Notes to leads or jobs?",
+        a: "Yes! When recording or editing a Voice Note, you can associate it with a specific lead or job. This helps you keep all related information together.",
+      },
+      {
+        q: "Where can I find my Voice Notes?",
+        a: "Go to Tools > Voice Notes in the sidebar. You'll see all your recordings organized by date. You can play, edit titles, or delete notes from this page.",
+      },
+    ],
+  },
+  {
+    category: "AI Smart Suggestions",
+    icon: Zap,
+    color: "from-cyan-500 to-blue-500",
+    questions: [
+      {
+        q: "What are AI Smart Suggestions?",
+        a: "GigAid analyzes your leads and client behavior to suggest the best next action. When a client shows buying signals (like viewing your quote multiple times), you'll see a suggestion to send an invoice.",
+      },
+      {
+        q: "How does Intent Detection work?",
+        a: "The system tracks client interactions like quote views, link clicks, and response times. When patterns indicate strong interest, GigAid alerts you with a recommended action.",
+      },
+      {
+        q: "What is the Next Best Action feature?",
+        a: "Next Best Action identifies stalled leads or jobs and suggests what to do next. If a lead hasn't responded in days, you might see a suggestion to follow up or try a different approach.",
+      },
+      {
+        q: "Can I dismiss or modify AI suggestions?",
+        a: "Absolutely! Every suggestion can be dismissed, modified, or ignored. GigAid learns from your choices to make better suggestions over time.",
+      },
+      {
+        q: "Does GigAid learn from my corrections?",
+        a: "Yes! When you change an amount, dismiss a suggestion, or take a different action, GigAid silently learns from it to improve future recommendations.",
+      },
+    ],
+  },
+  {
+    category: "Email Communication",
+    icon: Mail,
+    color: "from-indigo-500 to-purple-500",
+    questions: [
+      {
+        q: "How does two-way email work?",
+        a: "GigAid gives you a unique email address for each lead. When clients reply, their messages appear directly in the lead's conversation history. You can respond without leaving the app.",
+      },
+      {
+        q: "How do I set up my email signature?",
+        a: "Go to Settings > Email Signature. Add your name, title, phone, and optionally upload your logo. Your signature is automatically added to outgoing emails.",
+      },
+      {
+        q: "Can I add my logo to emails?",
+        a: "Yes! In Email Signature settings, upload your business logo. It will appear in your email signature, making your communications look professional.",
+      },
+      {
+        q: "What happens when a client replies to my email?",
+        a: "Client replies are automatically linked to the original lead or job. You'll see the message in the conversation history and can reply directly from GigAid.",
+      },
+    ],
+  },
+  {
+    category: "Auto-Follow-Up",
+    icon: Send,
+    color: "from-emerald-500 to-teal-500",
+    questions: [
+      {
+        q: "What is Auto-Follow-Up for invoices?",
+        a: "When you send an invoice, GigAid can automatically send a friendly reminder 4 hours later if the client hasn't paid yet. This helps you get paid faster without manual follow-ups.",
+      },
+      {
+        q: "How many reminders are sent?",
+        a: "Auto-Follow-Up sends one reminder per invoice. It's designed to be helpful without being pushy. You can always send additional manual reminders if needed.",
+      },
+      {
+        q: "Can I disable Auto-Follow-Up?",
+        a: "Auto-Follow-Up is enabled by default for unpaid invoices. You can control this behavior in your invoice settings.",
+      },
+      {
+        q: "What does the follow-up message include?",
+        a: "The reminder includes a friendly note about the unpaid invoice and a direct link for the client to complete payment. It also includes your booking link for future appointments.",
+      },
+    ],
+  },
+  {
     category: "Account & Settings",
     icon: Settings,
     color: "from-slate-500 to-gray-600",
