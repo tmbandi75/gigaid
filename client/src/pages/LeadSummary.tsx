@@ -115,7 +115,8 @@ export default function LeadSummary() {
 
   const convertToJobMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", `/api/leads/${id}/convert`);
+      const response = await apiRequest("POST", `/api/leads/${id}/convert`);
+      return response.json();
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
