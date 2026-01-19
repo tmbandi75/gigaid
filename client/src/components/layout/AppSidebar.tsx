@@ -130,7 +130,7 @@ export function AppSidebar() {
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <Link href="/">
           <div className="flex flex-col cursor-pointer" data-testid="sidebar-header">
-            <img src="/gigaid-logo.png" alt="GigAid" className="h-[120px]" />
+            <img src="/gigaid-logo.png" alt="GigAid" className="h-[120px]" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
             <span className="text-xs text-sidebar-foreground/60 mt-1">Pro Dashboard</span>
           </div>
         </Link>

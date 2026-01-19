@@ -235,7 +235,7 @@ export default function More() {
         </Card>
 
         <div className="text-center py-4">
-          <img src="/gigaid-logo.png" alt="GigAid" className="h-6 mx-auto mb-1" />
+          <img src="/gigaid-logo.png" alt="GigAid" className="h-6 mx-auto mb-1" style={{ filter: 'drop-shadow(0 1px 2px rgba(255,255,255,0.3))' }} />
           <p className="text-xs text-muted-foreground">v1.0.0</p>
         </div>
         
