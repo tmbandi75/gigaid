@@ -1,0 +1,206 @@
+Below is a **copy-paste-ready Replit enforcement prompt** that implements **A) Confidence Calibration** and **B) the Hidden Learning Feedback Loop** exactly as specified — **without weakening restraint, without adding UI noise, and without exposing AI mechanics to users**.
+
+This is written to *layer cleanly on top of* your existing **Next Best Action** automation.
+
+---
+
+## 🔧 REPLIT ENFORCEMENT PROMPT
+
+**Feature Name:** `ConfidenceCalibrationAndLearning_v1`
+
+---
+
+## 🎯 OBJECTIVE
+
+Improve trust and accuracy of AI-assisted monetization by:
+
+1. Allowing **quiet correction** when estimates are wrong
+2. Learning from user overrides **silently and continuously**
+
+This must:
+
+* Preserve CTA dominance
+* Avoid new buttons or menus
+* Avoid explaining AI to the user
+* Avoid interrupting flow
+
+---
+
+# A️⃣ CONFIDENCE CALIBRATION (INLINE, QUIET)
+
+## UI REQUIREMENTS
+
+### CONTEXT
+
+This applies **only** inside the existing **“Send & Get Paid”** card.
+
+---
+
+### INLINE EDIT AFFORDANCE (MANDATORY)
+
+* The **amount field must be editable by tap**
+* It must **not look like a button**
+* It must **not introduce a secondary CTA**
+
+#### Behavior:
+
+* Amount appears as plain text by default
+* On tap → transforms into inline numeric input
+* Cursor auto-focuses
+* On blur or enter → value locks back into text state
+
+#### Visual rules:
+
+* No border animation
+* No color change on CTA
+* No tooltip
+* No helper copy
+
+CTA **“Send & Get Paid”** must remain:
+
+* Visually dominant
+* Unchanged in color, size, or position
+
+---
+
+### HARD CONSTRAINTS
+
+* ❌ No “Edit” label
+* ❌ No pencil icon
+* ❌ No confirmation modal
+* ❌ No additional buttons
+* ❌ No “AI suggested” text
+
+---
+
+### ACCEPTABLE USER EXPERIENCE
+
+> User taps the amount.
+> Changes it.
+> Taps Send.
+> Done.
+
+---
+
+# B️⃣ LEARNING FEEDBACK LOOP (INVISIBLE)
+
+## TRACKING RULES (INTERNAL ONLY)
+
+Whenever the user **modifies** any AI-suggested value or action, log an override event.
+
+### OVERRIDE EVENTS TO TRACK
+
+* Amount changed
+* CTA ignored / dismissed
+* CTA delayed beyond expiration
+* Different action taken than recommended
+* Manual invoice sent instead of suggested flow
+
+---
+
+### REQUIRED EVENT SCHEMA
+
+```json
+{
+  "event_type": "ai_override",
+  "user_id": "uuid",
+  "entity_type": "lead | job | invoice",
+  "entity_id": "uuid",
+  "original_suggestion": {
+    "action": "string",
+    "amount": number,
+    "timing": "timestamp"
+  },
+  "user_override": {
+    "action": "string",
+    "amount": number | null,
+    "delay_seconds": number
+  },
+  "context_signals": {
+    "confidence_score": number,
+    "intent_signals": ["string"],
+    "time_of_day": "string",
+    "job_type": "string"
+  },
+  "timestamp": "ISO-8601"
+}
+```
+
+⚠️ **Do NOT surface this to the user. Ever.**
+
+---
+
+## MODEL FEEDBACK RULES
+
+Use override data to:
+
+1. Adjust **amount estimation ranges**
+2. Adjust **confidence thresholds** for triggering recommendations
+3. Adjust **timing sensitivity** (how quickly to act next time)
+
+### DO NOT:
+
+* Retrain models in real time
+* Change UI behavior immediately
+* Surface learning acknowledgements
+
+This learning must be:
+
+* Asynchronous
+* Aggregated
+* Slow-moving
+* Invisible
+
+---
+
+## 🧘 RESTRAINT SAFEGUARDS (CRITICAL)
+
+* If override rate exceeds threshold → **reduce automation frequency**
+* Never increase nudges based on overrides
+* Overrides signal **uncertainty**, not failure
+
+When in doubt:
+
+> Do less, not more.
+
+---
+
+## 🧠 PRODUCT PHILOSOPHY (NON-NEGOTIABLE)
+
+* Users are **correcting**, not “fixing AI”
+* Silence = confidence
+* One action at a time
+* The system adapts quietly in the background
+
+---
+
+## ✅ ACCEPTANCE CRITERIA
+
+This implementation is correct only if:
+
+* Users can adjust amounts **without thinking**
+* CTA dominance is unchanged
+* No user sees new controls or explanations
+* Override data improves estimates over time
+* No additional notifications are introduced
+
+---
+
+## ❌ EXPLICITLY OUT OF SCOPE
+
+* User-facing confidence scores
+* “Was this helpful?” prompts
+* AI explanation panels
+* Settings or toggles
+* Learning dashboards
+
+---
+
+## 🧩 RESULT
+
+GigAid becomes:
+
+* More accurate
+* More trusted
+* Less visible
+* More indispensable
