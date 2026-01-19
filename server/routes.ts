@@ -7522,7 +7522,7 @@ Return ONLY the message text, no JSON or formatting.`
     }
   });
   
-  // Act on ready action (create invoice and send)
+  // Act on ready action (create invoice and send with booking link)
   app.post("/api/ready-actions/:id/act", async (req, res) => {
     try {
       const action = await storage.getReadyActions("demo-user")
@@ -7532,80 +7532,108 @@ Return ONLY the message text, no JSON or formatting.`
         return res.status(404).json({ error: "Action not found" });
       }
       
-      // Create the invoice from prefilled data
+      const { v4: uuidv4 } = await import("uuid");
       const now = new Date().toISOString();
+      const publicToken = uuidv4();
+      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5000";
+      const invoiceUrl = `${frontendUrl}/pay/${publicToken}`;
+      
+      // Generate booking link for the client
+      const user = await storage.getUser("demo-user");
+      const bookingLink = user?.publicProfileSlug 
+        ? `${frontendUrl}/book/${user.publicProfileSlug}`
+        : null;
+      
+      // Create the invoice from prefilled data with ready action tracking
       const invoice = await storage.createInvoice({
         userId: "demo-user",
         clientName: action.prefilledClientName || "Client",
         clientEmail: action.prefilledClientEmail,
         clientPhone: action.prefilledClientPhone,
         amount: action.prefilledAmount || 0,
-        description: action.prefilledDescription || action.prefilledServiceType || "Service",
+        serviceDescription: action.prefilledDescription || action.prefilledServiceType || "Service",
         status: "draft",
         dueDate: action.prefilledDueDate,
         createdAt: now,
         jobId: action.entityType === "job" ? action.entityId : null,
         leadId: action.entityType === "lead" ? action.entityId : null,
+        sourceReadyActionId: action.id,
+        bookingLink,
+        publicToken,
       });
       
       // Mark the ready action as acted
       await storage.actOnReadyAction(action.id);
       
-      // Try to send the invoice if client has email or phone
+      // Try to send the invoice with booking link
       let sent = false;
       let sendMessage = "Invoice created as draft";
+      const amountFormatted = ((action.prefilledAmount || 0) / 100).toFixed(2);
       
-      if (action.prefilledClientEmail || action.prefilledClientPhone) {
+      // Compose email with both invoice and booking link
+      const emailHtml = `
+        <p>Hi ${action.prefilledClientName || "there"},</p>
+        <p>You have a new invoice for <strong>$${amountFormatted}</strong>.</p>
+        <p><a href="${invoiceUrl}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:white;text-decoration:none;border-radius:6px;">View and Pay Invoice</a></p>
+        ${bookingLink ? `<p style="margin-top:16px;">Ready to lock in a time? <a href="${bookingLink}">Book your appointment</a></p>` : ""}
+        <p style="margin-top:24px;color:#666;">Thanks,<br>${user?.businessName || user?.name || "Your Service Provider"}</p>
+      `;
+      
+      // Try to send via email
+      if (action.prefilledClientEmail) {
         try {
-          const { v4: uuidv4 } = await import("uuid");
-          const publicToken = uuidv4();
-          const invoiceUrl = `${process.env.FRONTEND_URL || "http://localhost:5000"}/pay/${publicToken}`;
-          
-          // Try to send via email first
-          if (action.prefilledClientEmail) {
-            try {
-              const sgMail = (await import("@sendgrid/mail")).default;
-              if (process.env.SENDGRID_API_KEY) {
-                sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-                const user = await storage.getUser("demo-user");
-                await sgMail.send({
-                  to: action.prefilledClientEmail,
-                  from: {
-                    email: process.env.SENDGRID_VERIFIED_SENDER || "noreply@example.com",
-                    name: user?.businessName || user?.name || "GigAid"
-                  },
-                  subject: `Invoice from ${user?.businessName || user?.name || "Your Service Provider"}`,
-                  html: `<p>You have a new invoice for $${((action.prefilledAmount || 0) / 100).toFixed(2)}.</p><p><a href="${invoiceUrl}">View and Pay Invoice</a></p>`,
-                });
-                sent = true;
-                sendMessage = "Invoice sent via email";
-              }
-            } catch (emailErr) {
-              console.error("[ReadyAction] Email send failed:", emailErr);
-            }
-          }
-          
-          // Update invoice with sent status and token
-          if (sent) {
-            await storage.updateInvoice(invoice.id, {
-              status: "sent",
-              sentAt: now,
-              publicToken,
-              emailSentAt: action.prefilledClientEmail ? now : null,
+          const sgMail = (await import("@sendgrid/mail")).default;
+          if (process.env.SENDGRID_API_KEY) {
+            sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+            await sgMail.send({
+              to: action.prefilledClientEmail,
+              from: {
+                email: process.env.SENDGRID_VERIFIED_SENDER || "noreply@example.com",
+                name: user?.businessName || user?.name || "GigAid"
+              },
+              subject: `Invoice from ${user?.businessName || user?.name || "Your Service Provider"}`,
+              html: emailHtml,
             });
-          } else {
-            // Still update with token for manual sending later
-            await storage.updateInvoice(invoice.id, { publicToken });
+            sent = true;
+            sendMessage = "Invoice sent via email";
           }
-        } catch (sendErr) {
-          console.error("[ReadyAction] Failed to send invoice:", sendErr);
+        } catch (emailErr) {
+          console.error("[ReadyAction] Email send failed:", emailErr);
         }
+      }
+      
+      // If email failed, try SMS
+      if (!sent && action.prefilledClientPhone) {
+        try {
+          const smsMessage = bookingLink
+            ? `Invoice for $${amountFormatted}: ${invoiceUrl}\n\nReady to book? ${bookingLink}`
+            : `Invoice for $${amountFormatted}: ${invoiceUrl}`;
+          
+          const success = await sendSMS(action.prefilledClientPhone, smsMessage);
+          if (success) {
+            sent = true;
+            sendMessage = "Invoice sent via SMS";
+          }
+        } catch (smsErr) {
+          console.error("[ReadyAction] SMS send failed:", smsErr);
+        }
+      }
+      
+      // Update invoice with sent status
+      if (sent) {
+        await storage.updateInvoice(invoice.id, {
+          status: "sent",
+          sentAt: now,
+          emailSentAt: action.prefilledClientEmail && sendMessage.includes("email") ? now : null,
+          smsSentAt: action.prefilledClientPhone && sendMessage.includes("SMS") ? now : null,
+        });
       }
       
       res.json({ 
         success: true, 
-        invoice,
+        invoice: { ...invoice, status: sent ? "sent" : "draft" },
         sent,
+        bookingLink,
         message: sendMessage
       });
     } catch (error) {

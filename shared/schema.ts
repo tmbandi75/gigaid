@@ -381,6 +381,7 @@ export const invoices = pgTable("invoices", {
   invoiceNumber: text("invoice_number").notNull(),
   userId: varchar("user_id").notNull(),
   jobId: varchar("job_id"),
+  leadId: varchar("lead_id"),
   clientName: text("client_name").notNull(),
   clientEmail: text("client_email"),
   clientPhone: text("client_phone"),
@@ -398,6 +399,11 @@ export const invoices = pgTable("invoices", {
   publicToken: text("public_token"),
   emailSentAt: text("email_sent_at"),
   smsSentAt: text("sms_sent_at"),
+  // Intent action tracking
+  sourceReadyActionId: varchar("source_ready_action_id"),
+  bookingLink: text("booking_link"),
+  intentFollowUpSent: boolean("intent_follow_up_sent").default(false),
+  intentFollowUpSentAt: text("intent_follow_up_sent_at"),
 });
 
 export const insertInvoiceSchema = createInsertSchema(invoices).omit({

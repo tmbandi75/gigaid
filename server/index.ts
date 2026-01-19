@@ -9,6 +9,7 @@ import { startNoSilentCompletionScheduler } from "./noSilentCompletionEnforcer";
 import { initializeDbEnforcement } from "./dbEnforcement";
 import { startNextBestActionEngine } from "./nextBestActionEngine";
 import { startIntentDetectionEngine } from "./intentDetectionEngine";
+import { startIntentFollowUpScheduler } from "./intentFollowUpScheduler";
 
 const app = express();
 const httpServer = createServer(app);
@@ -111,6 +112,7 @@ app.use((req, res, next) => {
       startNoSilentCompletionScheduler();
       startNextBestActionEngine(15); // Run every 15 minutes
       startIntentDetectionEngine(5); // Run every 5 minutes for intent processing
+      startIntentFollowUpScheduler(); // Check for unpaid invoices and send follow-ups
     },
   );
 })();
