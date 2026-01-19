@@ -20,7 +20,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Minus,
-  UserCog
+  UserCog,
+  TestTube2
 } from "lucide-react";
 import { Link } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -184,6 +185,15 @@ export default function AdminCockpit() {
 
   const { data: funnelData } = useQuery<any>({
     queryKey: ["/api/admin/cockpit/activation-funnel"],
+    retry: false,
+  });
+
+  const { data: testSummary } = useQuery<{
+    reportAvailable: boolean;
+    lastRun: string | null;
+    summary: { total: number; passed: number; failed: number; passRate: string };
+  }>({
+    queryKey: ["/api/admin/test-summary"],
     retry: false,
   });
 
@@ -506,6 +516,58 @@ export default function AdminCockpit() {
             </Card>
           )}
         </div>
+
+        {testSummary && (
+          <Card data-testid="card-test-results">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <TestTube2 className="h-4 w-4" />
+                UAT Test Results
+              </CardTitle>
+              <CardDescription>
+                End-to-end test suite status
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Total Tests</span>
+                <span className="font-medium">{testSummary.summary.total}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Passed</span>
+                <span className="font-medium text-green-600">{testSummary.summary.passed}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Failed</span>
+                <span className="font-medium text-red-600">{testSummary.summary.failed}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Pass Rate</span>
+                <Badge className={Number(testSummary.summary.passRate) >= 95 ? "bg-green-100 text-green-800" : Number(testSummary.summary.passRate) >= 80 ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"}>
+                  {testSummary.summary.passRate}%
+                </Badge>
+              </div>
+              {testSummary.lastRun && (
+                <div className="flex justify-between items-center text-xs text-muted-foreground">
+                  <span>Last Run</span>
+                  <span>{new Date(testSummary.lastRun).toLocaleString()}</span>
+                </div>
+              )}
+              <Separator />
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full"
+                onClick={() => window.open("/api/admin/test-report", "_blank")}
+                disabled={!testSummary.reportAvailable}
+                data-testid="button-view-test-report"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                View Full Report
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

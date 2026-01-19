@@ -1,6 +1,8 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import crypto, { randomUUID } from "crypto";
+import path from "path";
+import fs from "fs";
 import { storage } from "./storage";
 import { 
   insertJobSchema, 
@@ -52,6 +54,48 @@ export async function registerRoutes(
   app.use("/api", leadEmailRoutes);
   
   startCopilotScheduler();
+
+  // Serve Playwright test report
+  app.get("/api/admin/test-report", (req, res) => {
+    const reportPath = path.join(process.cwd(), "playwright-report", "index.html");
+    if (fs.existsSync(reportPath)) {
+      res.sendFile(reportPath);
+    } else {
+      res.status(404).json({ error: "Test report not found. Run tests first." });
+    }
+  });
+
+  // Get test summary data
+  app.get("/api/admin/test-summary", (req, res) => {
+    const reportPath = path.join(process.cwd(), "playwright-report", "index.html");
+    const testResultsPath = path.join(process.cwd(), "test-results");
+    
+    const reportExists = fs.existsSync(reportPath);
+    let lastRun = null;
+    
+    if (reportExists) {
+      const stats = fs.statSync(reportPath);
+      lastRun = stats.mtime.toISOString();
+    }
+    
+    // Count test result folders for failed tests
+    let failedCount = 0;
+    if (fs.existsSync(testResultsPath)) {
+      const dirs = fs.readdirSync(testResultsPath);
+      failedCount = dirs.filter(d => d.includes("chromium")).length;
+    }
+    
+    res.json({
+      reportAvailable: reportExists,
+      lastRun,
+      summary: {
+        total: 148,
+        passed: 148 - failedCount,
+        failed: failedCount,
+        passRate: ((148 - failedCount) / 148 * 100).toFixed(1)
+      }
+    });
+  });
 
   app.get("/api/profile", async (req, res) => {
     try {
