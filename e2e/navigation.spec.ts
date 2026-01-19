@@ -11,25 +11,25 @@ test.describe('Navigation', () => {
   test('should navigate to jobs page', async ({ page }) => {
     await navigateTo(page, '/jobs');
     await waitForPageLoad(page);
-    await expect(page.locator('text=Jobs')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Jobs', exact: true })).toBeVisible();
   });
 
   test('should navigate to leads page', async ({ page }) => {
     await navigateTo(page, '/leads');
     await waitForPageLoad(page);
-    await expect(page.locator('text=Leads')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Leads' })).toBeVisible();
   });
 
   test('should navigate to invoices page', async ({ page }) => {
     await navigateTo(page, '/invoices');
     await waitForPageLoad(page);
-    await expect(page.locator('text=Invoices')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Invoices' })).toBeVisible();
   });
 
   test('should navigate to settings page', async ({ page }) => {
     await navigateTo(page, '/settings');
     await waitForPageLoad(page);
-    await expect(page.locator('text=Settings')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
   });
 
   test('should have working bottom navigation on mobile', async ({ page }) => {

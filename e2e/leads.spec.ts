@@ -8,7 +8,7 @@ test.describe('Lead Management', () => {
   });
 
   test('should display leads list', async ({ page }) => {
-    await expect(page.locator('text=Leads')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Leads' })).toBeVisible();
   });
 
   test('should open create lead dialog', async ({ page }) => {

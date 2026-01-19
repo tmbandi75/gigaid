@@ -8,7 +8,7 @@ test.describe('Job Management', () => {
   });
 
   test('should display jobs list', async ({ page }) => {
-    await expect(page.locator('text=Jobs')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Jobs', exact: true })).toBeVisible();
   });
 
   test('should open create job dialog', async ({ page }) => {

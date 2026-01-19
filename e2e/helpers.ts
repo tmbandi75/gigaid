@@ -3,7 +3,8 @@ import { Page, expect } from '@playwright/test';
 export const BASE_URL = 'http://localhost:5000';
 
 export async function waitForPageLoad(page: Page) {
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
+  await page.waitForTimeout(500);
 }
 
 export async function navigateTo(page: Page, path: string) {

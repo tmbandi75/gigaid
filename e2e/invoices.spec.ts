@@ -8,7 +8,7 @@ test.describe('Invoice Management', () => {
   });
 
   test('should display invoices list', async ({ page }) => {
-    await expect(page.locator('text=Invoices')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Invoices' })).toBeVisible();
   });
 
   test('should open create invoice dialog', async ({ page }) => {

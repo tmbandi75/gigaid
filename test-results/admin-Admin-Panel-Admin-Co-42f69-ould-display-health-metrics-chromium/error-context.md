@@ -1,0 +1,400 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e7]:
+        - link "GigAid Pro Dashboard" [ref=e9] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e10]:
+            - img "GigAid" [ref=e11]
+            - generic [ref=e12]: Pro Dashboard
+        - generic [ref=e13]:
+          - list [ref=e16]:
+            - listitem [ref=e17]:
+              - link "Game Plan" [ref=e18] [cursor=pointer]:
+                - /url: /
+                - img [ref=e19]
+                - generic [ref=e24]: Game Plan
+            - listitem [ref=e25]:
+              - link "Jobs" [ref=e26] [cursor=pointer]:
+                - /url: /jobs
+                - img [ref=e27]
+                - generic [ref=e30]: Jobs
+            - listitem [ref=e31]:
+              - link "New Requests" [ref=e32] [cursor=pointer]:
+                - /url: /leads
+                - img [ref=e33]
+                - generic [ref=e38]: New Requests
+            - listitem [ref=e39]:
+              - link "Get Paid" [ref=e40] [cursor=pointer]:
+                - /url: /invoices
+                - img [ref=e41]
+                - generic [ref=e44]: Get Paid
+          - generic [ref=e45]:
+            - generic [ref=e46]: Tools
+            - list [ref=e48]:
+              - listitem [ref=e49]:
+                - link "QuickBook New" [ref=e50] [cursor=pointer]:
+                  - /url: /quickbook
+                  - img [ref=e51]
+                  - generic [ref=e53]: QuickBook
+                  - generic [ref=e54]: New
+              - listitem [ref=e55]:
+                - link "Voice Notes" [ref=e56] [cursor=pointer]:
+                  - /url: /voice-notes
+                  - img [ref=e57]
+                  - generic [ref=e60]: Voice Notes
+              - listitem [ref=e61]:
+                - link "AI Tools" [ref=e62] [cursor=pointer]:
+                  - /url: /ai-tools
+                  - img [ref=e63]
+                  - generic [ref=e65]: AI Tools
+              - listitem [ref=e66]:
+                - link "Messages" [ref=e67] [cursor=pointer]:
+                  - /url: /messages
+                  - img [ref=e68]
+                  - generic [ref=e70]: Messages
+              - listitem [ref=e71]:
+                - link "Crew" [ref=e72] [cursor=pointer]:
+                  - /url: /crew
+                  - img [ref=e73]
+                  - generic [ref=e78]: Crew
+              - listitem [ref=e79]:
+                - link "Reminders" [ref=e80] [cursor=pointer]:
+                  - /url: /reminders
+                  - img [ref=e81]
+                  - generic [ref=e84]: Reminders
+              - listitem [ref=e85]:
+                - link "Bookings" [ref=e86] [cursor=pointer]:
+                  - /url: /booking-requests
+                  - img [ref=e87]
+                  - generic [ref=e89]: Bookings
+              - listitem [ref=e90]:
+                - link "Quick Capture" [ref=e91] [cursor=pointer]:
+                  - /url: /share
+                  - img [ref=e92]
+                  - generic [ref=e98]: Quick Capture
+          - generic [ref=e99]:
+            - generic [ref=e100]: Business
+            - list [ref=e102]:
+              - listitem [ref=e103]:
+                - link "Owner View Pro" [ref=e104] [cursor=pointer]:
+                  - /url: /owner
+                  - img [ref=e105]
+                  - generic [ref=e107]: Owner View
+                  - generic [ref=e108]: Pro
+              - listitem [ref=e109]:
+                - link "Money Plan" [ref=e110] [cursor=pointer]:
+                  - /url: /money-plan
+                  - img [ref=e111]
+                  - generic [ref=e113]: Money Plan
+              - listitem [ref=e114]:
+                - link "Reviews" [ref=e115] [cursor=pointer]:
+                  - /url: /reviews
+                  - img [ref=e116]
+                  - generic [ref=e118]: Reviews
+              - listitem [ref=e119]:
+                - link "Referrals" [ref=e120] [cursor=pointer]:
+                  - /url: /referrals
+                  - img [ref=e121]
+                  - generic [ref=e125]: Referrals
+        - generic [ref=e126]:
+          - list [ref=e127]:
+            - listitem [ref=e128]:
+              - button "Light Mode" [ref=e129] [cursor=pointer]:
+                - img [ref=e130]
+                - generic [ref=e136]: Light Mode
+          - button "GW Gig Worker Pro Gig Services" [ref=e137] [cursor=pointer]:
+            - generic [ref=e139]: GW
+            - generic [ref=e140]:
+              - generic [ref=e141]: Gig Worker
+              - generic [ref=e142]: Pro Gig Services
+            - img [ref=e143]
+      - main [ref=e145]:
+        - generic [ref=e146]:
+          - generic [ref=e147]:
+            - button "Toggle Sidebar" [ref=e148] [cursor=pointer]:
+              - img
+              - generic [ref=e149]: Toggle Sidebar
+            - navigation "breadcrumb" [ref=e150]:
+              - list [ref=e151]:
+                - listitem [ref=e152]:
+                  - link "Home" [ref=e153] [cursor=pointer]:
+                    - /url: /
+                - listitem [ref=e154]:
+                  - img [ref=e155]
+                - listitem [ref=e157]:
+                  - link "Page" [disabled] [ref=e158]
+          - generic [ref=e159]:
+            - generic [ref=e160]:
+              - img [ref=e161]
+              - searchbox "Search jobs, leads, invoices..." [ref=e164]
+              - generic:
+                - img
+                - text: K
+            - button "New" [ref=e165] [cursor=pointer]:
+              - img
+              - generic [ref=e166]: New
+            - link "2" [ref=e167] [cursor=pointer]:
+              - /url: /reminders
+              - button "2" [ref=e168]:
+                - img
+                - generic [ref=e169]: "2"
+            - link [ref=e170] [cursor=pointer]:
+              - /url: /messages
+              - button [ref=e171]:
+                - img
+            - button "GW" [ref=e172] [cursor=pointer]:
+              - generic [ref=e174]: GW
+        - main [ref=e175]:
+          - generic [ref=e176]:
+            - generic [ref=e179]:
+              - generic [ref=e180]:
+                - heading "Founder Cockpit" [level=1] [ref=e181]:
+                  - img [ref=e182]
+                  - text: Founder Cockpit
+                - paragraph [ref=e184]: Business health at a glance
+              - generic [ref=e185]:
+                - link "User Ops" [ref=e186] [cursor=pointer]:
+                  - /url: /admin/users
+                  - button "User Ops" [ref=e187]:
+                    - img
+                    - text: User Ops
+                - button "Refresh" [ref=e188] [cursor=pointer]:
+                  - img
+                  - text: Refresh
+            - generic [ref=e189]:
+              - generic [ref=e190]:
+                - generic [ref=e192]:
+                  - generic [ref=e193]:
+                    - img [ref=e194]
+                    - text: Focus This Week
+                  - generic [ref=e198]: red health
+                - generic [ref=e200]:
+                  - generic [ref=e201]:
+                    - generic [ref=e202]: "Bottleneck: monetization"
+                    - generic [ref=e203]: "Leak: invoice to payment"
+                    - generic [ref=e204]: "Urgency: 90/100"
+                  - paragraph [ref=e205]: Focus on collecting unpaid invoices
+                  - paragraph [ref=e206]: 6 unpaid invoices represent immediate revenue opportunity. Send reminders and offer payment plans.
+              - generic [ref=e207]:
+                - generic [ref=e209]:
+                  - img [ref=e210]
+                  - text: Active Alerts (2)
+                - generic [ref=e212]:
+                  - generic [ref=e213]:
+                    - generic [ref=e214]:
+                      - generic [ref=e215]: Only 45.5% of invoices are paid
+                      - generic [ref=e216]: "Severity: 80"
+                    - paragraph [ref=e217]: 5 of 11 invoices paid. This is revenue leakage.
+                  - generic [ref=e218]:
+                    - generic [ref=e219]:
+                      - generic [ref=e220]: Activation rate is 0.0%
+                      - generic [ref=e221]: "Severity: 70"
+                    - paragraph [ref=e222]: Only 0 of 1 users were active in the last 7 days. Target is 50%+.
+              - generic [ref=e223]:
+                - heading "Key Metrics" [level=2] [ref=e224]:
+                  - img [ref=e225]
+                  - text: Key Metrics
+                - generic [ref=e228]:
+                  - generic [ref=e230]:
+                    - generic [ref=e231]:
+                      - generic [ref=e232]: Total Users
+                      - generic [ref=e233]:
+                        - img [ref=e234]
+                        - text: Healthy
+                    - generic [ref=e237]:
+                      - generic [ref=e238]: "1"
+                      - img [ref=e239]
+                    - generic [ref=e244]:
+                      - generic [ref=e245]: "WoW: --"
+                      - generic [ref=e246]: "MoM: --"
+                  - generic [ref=e248]:
+                    - generic [ref=e249]:
+                      - generic [ref=e250]: Active (7d)
+                      - generic [ref=e251]:
+                        - img [ref=e252]
+                        - text: Healthy
+                    - generic [ref=e255]:
+                      - generic [ref=e256]: "0"
+                      - img [ref=e257]
+                    - generic [ref=e259]:
+                      - generic [ref=e260]: "WoW: --"
+                      - generic [ref=e261]: "MoM: --"
+                  - generic [ref=e263]:
+                    - generic [ref=e264]:
+                      - generic [ref=e265]: Active (30d)
+                      - generic [ref=e266]:
+                        - img [ref=e267]
+                        - text: Healthy
+                    - generic [ref=e270]:
+                      - generic [ref=e271]: "1"
+                      - img [ref=e272]
+                    - generic [ref=e275]: "WoW: --"
+                  - generic [ref=e277]:
+                    - generic [ref=e278]:
+                      - generic [ref=e279]: Paying Customers
+                      - generic [ref=e280]:
+                        - img [ref=e281]
+                        - text: Healthy
+                    - generic [ref=e284]:
+                      - generic [ref=e285]: "0"
+                      - img [ref=e286]
+                    - generic [ref=e288]:
+                      - generic [ref=e289]: "WoW: --"
+                      - generic [ref=e290]: "MoM: --"
+                  - generic [ref=e292]:
+                    - generic [ref=e293]:
+                      - generic [ref=e294]: MRR
+                      - generic [ref=e295]:
+                        - img [ref=e296]
+                        - text: Healthy
+                    - generic [ref=e299]:
+                      - generic [ref=e300]: $0
+                      - img [ref=e301]
+                    - generic [ref=e303]:
+                      - generic [ref=e304]: "WoW: --"
+                      - generic [ref=e305]: "MoM: --"
+                  - generic [ref=e307]:
+                    - generic [ref=e308]:
+                      - generic [ref=e309]: Net Churn
+                      - generic [ref=e310]:
+                        - img [ref=e311]
+                        - text: Healthy
+                    - generic [ref=e314]:
+                      - generic [ref=e315]: 0.0%
+                      - img [ref=e316]
+                    - generic [ref=e320]: "WoW: --"
+              - generic [ref=e321]:
+                - generic [ref=e322]:
+                  - generic [ref=e323]:
+                    - generic [ref=e324]:
+                      - img [ref=e325]
+                      - text: Activation Funnel
+                    - generic [ref=e331]: 1 users
+                  - generic [ref=e332]: "Critical: Multiple activation metrics below threshold"
+                - generic [ref=e334]:
+                  - generic [ref=e335]:
+                    - generic [ref=e336]:
+                      - generic [ref=e337]: "% Creating Booking Link"
+                      - generic [ref=e338]:
+                        - img [ref=e339]
+                        - text: Critical
+                    - generic [ref=e343]:
+                      - generic [ref=e344]: 0.0%
+                      - generic [ref=e345]: "Target: >60%"
+                    - paragraph [ref=e346]: 0 of 1 users
+                  - generic [ref=e347]:
+                    - generic [ref=e348]:
+                      - generic [ref=e349]: "% Sharing Link"
+                      - generic [ref=e350]:
+                        - img [ref=e351]
+                        - text: Critical
+                    - generic [ref=e355]:
+                      - generic [ref=e356]: 0.0%
+                      - generic [ref=e357]: "Target: >40%"
+                    - paragraph [ref=e358]: 0 of 1 users
+                  - generic [ref=e359]:
+                    - generic [ref=e360]:
+                      - generic [ref=e361]: "% Receiving Payment"
+                      - generic [ref=e362]:
+                        - img [ref=e363]
+                        - text: Critical
+                    - generic [ref=e367]:
+                      - generic [ref=e368]: 0.0%
+                      - generic [ref=e369]: "Target: >10%"
+                    - paragraph [ref=e370]: 0 of 1 users
+                  - generic [ref=e371]:
+                    - generic [ref=e372]:
+                      - generic [ref=e373]: Time to First Booking
+                      - generic [ref=e374]:
+                        - img [ref=e375]
+                        - text: Healthy
+                    - generic [ref=e378]:
+                      - generic [ref=e379]: N/A
+                      - generic [ref=e380]: "Target: <72 hrs"
+                  - generic [ref=e381]:
+                    - generic [ref=e382]:
+                      - generic [ref=e383]: "% Completing First Paid Booking"
+                      - generic [ref=e384]:
+                        - img [ref=e385]
+                        - text: Critical
+                    - generic [ref=e389]:
+                      - generic [ref=e390]: 0.0%
+                      - generic [ref=e391]: "Target: >30%"
+                    - paragraph [ref=e392]: 0 of 1 users
+                  - generic [ref=e393]:
+                    - generic [ref=e394]:
+                      - generic [ref=e395]: "% Paying Without Support"
+                      - generic [ref=e396]:
+                        - img [ref=e397]
+                        - text: Healthy
+                    - generic [ref=e400]:
+                      - generic [ref=e401]: 100.0%
+                      - generic [ref=e402]: "Target: >80%"
+                    - paragraph [ref=e403]: 0 of 1 users
+                  - generic [ref=e404]:
+                    - generic [ref=e405]:
+                      - generic [ref=e406]: "Time: Signup to Payment"
+                      - generic [ref=e407]:
+                        - img [ref=e408]
+                        - text: Healthy
+                    - generic [ref=e411]:
+                      - generic [ref=e412]: N/A
+                      - generic [ref=e413]: "Target: <7 days"
+              - generic [ref=e414]:
+                - generic [ref=e415]:
+                  - generic [ref=e417]:
+                    - img [ref=e418]
+                    - text: Risk & Leakage
+                  - generic [ref=e420]:
+                    - generic [ref=e421]:
+                      - generic [ref=e422]: Lead Conversion
+                      - generic [ref=e423]: 41.7%
+                    - generic [ref=e424]:
+                      - generic [ref=e425]: Invoice Payment Rate
+                      - generic [ref=e426]: 45.5%
+                    - generic [ref=e427]:
+                      - generic [ref=e428]: Paying Users Inactive (7d)
+                      - generic [ref=e429]: "0"
+                    - generic [ref=e430]:
+                      - generic [ref=e431]: Churned (7d / 30d)
+                      - generic [ref=e432]: 0 / 0
+                - generic [ref=e433]:
+                  - generic [ref=e435]:
+                    - img [ref=e436]
+                    - text: Revenue & Payments
+                  - generic [ref=e438]:
+                    - generic [ref=e439]:
+                      - generic [ref=e440]: Invoices
+                      - generic [ref=e441]: 5 / 11 paid
+                    - generic [ref=e442]:
+                      - generic [ref=e443]: Overdue Invoices
+                      - generic [ref=e444]: "0"
+                    - generic [ref=e445]:
+                      - generic [ref=e446]: Failed Payments (24h)
+                      - generic [ref=e447]: "0"
+                    - button "Open Stripe Dashboard" [ref=e448] [cursor=pointer]:
+                      - img
+                      - text: Open Stripe Dashboard
+    - button [ref=e449] [cursor=pointer]:
+      - img
+    - region "Notifications (F8)":
+      - list
+  - generic [ref=e451]:
+    - button "Close survey" [ref=e452] [cursor=pointer]:
+      - img "Close survey" [ref=e453]
+    - generic [ref=e455]:
+      - generic [ref=e456]:
+        - generic [ref=e457]: What can we do to improve our product?
+        - textbox "What can we do to improve our product?" [ref=e458]:
+          - /placeholder: Start typing...
+      - generic [ref=e459]:
+        - button "Submit survey" [disabled] [ref=e460]: Submit
+        - link "Survey by" [ref=e461] [cursor=pointer]:
+          - /url: https://posthog.com/surveys
+          - text: Survey by
+          - img [ref=e462]
+```
