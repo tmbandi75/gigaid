@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { SupportTicketForm } from "@/components/SupportTicketForm";
 import { 
   Shield, 
   Clock, 
@@ -419,15 +420,18 @@ export default function CustomerBookingDetail() {
   if (error || !booking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="max-w-md w-full">
-          <CardContent className="pt-6 text-center">
-            <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Booking Not Found</h2>
-            <p className="text-muted-foreground">
-              This booking link may have expired or is invalid.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="max-w-md w-full">
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+              <h2 className="text-xl font-semibold mb-2">Booking Not Found</h2>
+              <p className="text-muted-foreground">
+                This booking link may have expired or is invalid.
+              </p>
+            </CardContent>
+          </Card>
+          <SupportTicketForm context="Booking details not found" />
+        </div>
       </div>
     );
   }

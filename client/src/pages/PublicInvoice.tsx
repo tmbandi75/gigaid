@@ -5,6 +5,7 @@ import confetti from "canvas-confetti";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { SupportTicketForm } from "@/components/SupportTicketForm";
 import { 
   FileText, 
   CheckCircle, 
@@ -150,15 +151,18 @@ export default function PublicInvoice() {
   if (error || !data) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4">
-        <Card className="max-w-md w-full">
-          <CardContent className="pt-6 text-center">
-            <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h2 className="text-lg font-semibold mb-2">Invoice Not Found</h2>
-            <p className="text-muted-foreground">
-              This invoice link may be invalid or expired. Please contact your service provider.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="max-w-md w-full">
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h2 className="text-lg font-semibold mb-2">Invoice Not Found</h2>
+              <p className="text-muted-foreground">
+                This invoice link may be invalid or expired. Please contact your service provider.
+              </p>
+            </CardContent>
+          </Card>
+          <SupportTicketForm context="Invoice not found" />
+        </div>
       </div>
     );
   }

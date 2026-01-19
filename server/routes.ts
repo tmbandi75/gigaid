@@ -8475,6 +8475,51 @@ Return ONLY the message text, no JSON or formatting.`
     category: z.string().optional(),
   });
 
+  // Public endpoint for creating support tickets (used on error pages)
+  const publicTicketSchema = z.object({
+    subject: z.string().min(1).max(200),
+    description: z.string().min(1).max(10000),
+    requesterEmail: z.string().email("Valid email required"),
+    requesterName: z.string().min(1, "Name is required"),
+    priority: z.enum(["low", "normal", "high", "urgent"]).optional().default("normal"),
+  });
+
+  app.post("/api/support/tickets/public", async (req, res) => {
+    try {
+      const parseResult = publicTicketSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid request", 
+          details: parseResult.error.errors 
+        });
+      }
+      
+      const { subject, description, requesterEmail, requesterName, priority } = parseResult.data;
+
+      const ticket = await createSupportTicket({
+        subject,
+        description,
+        priority: priority || "normal",
+        type: "incident",
+        tags: ["gigaid", "public-error-page", "app-support"],
+        requesterEmail,
+        requesterName,
+      });
+
+      res.json({
+        success: true,
+        ticketId: ticket.ticket.id,
+        message: "Support ticket created successfully",
+      });
+    } catch (error: any) {
+      console.error("Error creating public support ticket:", error);
+      res.status(500).json({ 
+        error: "Failed to create support ticket",
+        details: error.message 
+      });
+    }
+  });
+
   // Create a new support ticket
   app.post("/api/support/tickets", async (req, res) => {
     try {

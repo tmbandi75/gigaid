@@ -20,6 +20,7 @@ import { Confetti } from "@/components/booking/Confetti";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { AddressAutocomplete } from "@/components/booking/AddressAutocomplete";
 import { PhotoUpload } from "@/components/ui/photo-upload";
+import { SupportTicketForm } from "@/components/SupportTicketForm";
 
 interface PublicProfile {
   name: string;
@@ -292,14 +293,17 @@ export default function PublicBooking() {
   if (error || !profile) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
-          <CardContent className="py-12 text-center">
-            <h2 className="text-xl font-semibold mb-2">Profile Not Found</h2>
-            <p className="text-muted-foreground">
-              This booking page doesn't exist or has been disabled.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="max-w-md w-full">
+          <Card>
+            <CardContent className="py-12 text-center">
+              <h2 className="text-xl font-semibold mb-2">Profile Not Found</h2>
+              <p className="text-muted-foreground">
+                This booking page doesn't exist or has been disabled.
+              </p>
+            </CardContent>
+          </Card>
+          <SupportTicketForm context="Booking profile not found" />
+        </div>
       </div>
     );
   }

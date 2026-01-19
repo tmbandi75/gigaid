@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, MapPin, DollarSign, Clock, User, Shield, CheckCircle, Loader2, ArrowRight } from "lucide-react";
+import { SupportTicketForm } from "@/components/SupportTicketForm";
 import type { ParsedJobFields } from "@shared/schema";
 
 interface DraftPublicData {
@@ -91,17 +92,20 @@ export default function QuickBookConfirm() {
   if (error || !draft) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="max-w-md w-full">
-          <CardContent className="pt-6 text-center">
-            <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Clock className="h-8 w-8 text-destructive" />
-            </div>
-            <h2 className="text-xl font-semibold mb-2">Booking Not Found</h2>
-            <p className="text-muted-foreground">
-              This booking link may have expired or is no longer valid.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="max-w-md w-full">
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Clock className="h-8 w-8 text-destructive" />
+              </div>
+              <h2 className="text-xl font-semibold mb-2">Booking Not Found</h2>
+              <p className="text-muted-foreground">
+                This booking link may have expired or is no longer valid.
+              </p>
+            </CardContent>
+          </Card>
+          <SupportTicketForm context="Quick book confirmation not found" />
+        </div>
       </div>
     );
   }

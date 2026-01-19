@@ -4,6 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { SupportTicketForm } from "@/components/SupportTicketForm";
 import { 
   Loader2, 
   DollarSign,
@@ -88,15 +89,18 @@ export default function ConfirmPrice() {
   if (error || !data) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center">
-            <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Not Found</h2>
-            <p className="text-muted-foreground">
-              This price confirmation link is invalid or has expired.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="w-full max-w-md">
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h2 className="text-xl font-semibold mb-2">Not Found</h2>
+              <p className="text-muted-foreground">
+                This price confirmation link is invalid or has expired.
+              </p>
+            </CardContent>
+          </Card>
+          <SupportTicketForm context="Price confirmation not found" />
+        </div>
       </div>
     );
   }
