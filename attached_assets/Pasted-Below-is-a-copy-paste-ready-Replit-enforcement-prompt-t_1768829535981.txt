@@ -1,0 +1,194 @@
+Below is a **copy-paste-ready Replit enforcement prompt** that implements **the single automation broken into steps 1, 2, and 3** exactly as discussed — designed to move GigAid from an **8.x → 9+ product** by creating **one compounding “Next Best Action” loop**.
+
+This prompt assumes:
+
+* You already have leads, jobs, invoices, and messaging events in your JSON/DOT model
+* You are NOT adding new surface area to the UI
+* This automation runs **silently and continuously**
+
+---
+
+## 🔧 REPLIT ENFORCEMENT PROMPT
+
+**Automation Name:** `NextBestActionEngine_v1`
+
+---
+
+### 🎯 OBJECTIVE
+
+Implement a single automation that:
+
+1. Detects **stalled money or intent**
+2. Generates **one clear recommended action**
+3. Executes or nudges **automatically with restraint**
+
+This automation must increase:
+
+* Conversion
+* Speed to payment
+* User trust
+
+Without adding noise.
+
+---
+
+## 1️⃣ STEP 1 — DETECT STALLS (Signal Engine)
+
+### RULES TO IMPLEMENT
+
+Create a background evaluator that runs every **15 minutes** and scans for the following conditions:
+
+#### A. Lead Stalls
+
+* Lead status = `New` OR `Contacted`
+* No outbound action (call/text/email) in **24 hours**
+* OR lead viewed but not responded to in **12 hours**
+
+#### B. Job Stalls
+
+* Job status = `Scheduled`
+* Start time passed by **>2 hours**
+* No status update (`In Progress`, `Completed`)
+
+#### C. Invoice Stalls
+
+* Invoice status = `Draft` AND created > **24 hours ago**
+* OR status = `Sent` AND unpaid after **72 hours**
+* OR status = `Viewed` but unpaid after **24 hours**
+
+---
+
+### REQUIRED OUTPUT (INTERNAL ONLY)
+
+For each stall detected, create a record:
+
+```json
+{
+  "entity_type": "lead | job | invoice",
+  "entity_id": "uuid",
+  "stall_type": "no_response | overdue | idle",
+  "money_at_risk": number,
+  "confidence": 0.0 - 1.0,
+  "detected_at": timestamp
+}
+```
+
+Do **not** notify the user yet.
+
+---
+
+## 2️⃣ STEP 2 — GENERATE ONE “NEXT BEST ACTION”
+
+For each stall record, generate **exactly ONE** recommended action.
+
+### ACTION PRIORITY LOGIC
+
+Use this strict order:
+
+1. **Recover money**
+2. **Advance commitment**
+3. **Reduce uncertainty**
+4. **Do nothing** (explicitly allowed)
+
+---
+
+### ACTION TYPES (LIMITED SET)
+
+Only choose from:
+
+* `Send Follow-Up Text`
+* `Send Invoice Reminder`
+* `Suggest Call`
+* `Suggest Status Update`
+* `Auto-Send Gentle Nudge`
+* `No Action (Wait)`
+
+---
+
+### REQUIRED ACTION OBJECT
+
+```json
+{
+  "entity_type": "lead | job | invoice",
+  "entity_id": "uuid",
+  "recommended_action": "string",
+  "reason": "plain English, ≤12 words",
+  "auto_executable": true | false,
+  "expires_at": timestamp
+}
+```
+
+⚠️ **Hard rule:**
+
+* Never generate more than **one** action per entity
+* Never stack actions
+* Never show multiple choices to the user
+
+---
+
+## 3️⃣ STEP 3 — EXECUTE WITH RESTRAINT
+
+### AUTO-EXECUTION RULES
+
+Auto-execute ONLY if:
+
+* Action = `Auto-Send Gentle Nudge` OR `Invoice Reminder`
+* User has not manually acted in last **6 hours**
+* No more than **1 auto message per entity per 48 hours**
+
+### USER-VISIBLE NUDGE RULES
+
+If not auto-executable:
+
+* Surface **one inline recommendation** only
+* Place it:
+
+  * Dashboard “Today’s Game Plan”
+  * OR top of entity detail screen
+
+### COPY RULE (MANDATORY)
+
+All system-generated copy must:
+
+* Be **short**
+* Be **neutral**
+* Never shame
+* Never urgency-spam
+
+Example:
+
+> “This invoice was viewed yesterday but not paid.
+> Want to send a reminder?”
+
+---
+
+## 🚫 STRICT CONSTRAINTS (DO NOT VIOLATE)
+
+* ❌ No popups
+* ❌ No modals
+* ❌ No multi-step flows
+* ❌ No AI explanations visible to user
+* ❌ No more than **1 recommendation at a time**
+* ❌ No daily summary spam
+
+---
+
+## ✅ SUCCESS CRITERIA (HOW WE KNOW THIS WORKS)
+
+After implementation, the system must be able to show:
+
+* % of stalled invoices recovered
+* Avg time-to-payment reduced
+* Fewer “forgotten” leads
+* Users feeling “the app has my back” without feeling nagged
+
+---
+
+## 🧠 PHILOSOPHY (DO NOT CODE, BUT OBEY)
+
+> GigAid should feel like a **calm, competent assistant**
+> not a CRM
+> not a manager
+> not a robot
+
+If there is doubt → **do less, not more**
