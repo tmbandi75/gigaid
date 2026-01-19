@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { PageSpinner } from "@/components/ui/spinner";
 import {
   FileText,
   DollarSign,
@@ -12,7 +13,6 @@ import {
   Mic,
   Clock,
   ChevronRight,
-  Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -136,7 +136,7 @@ export default function TodaysGamePlanPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-4 lg:p-8 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <PageSpinner message="Loading your game plan..." />
       </div>
     );
   }

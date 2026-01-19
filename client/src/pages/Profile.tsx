@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { PageSpinner } from "@/components/ui/spinner";
 import {
   Form,
   FormControl,
@@ -225,9 +226,7 @@ export default function Profile() {
             <h1 className="text-2xl font-bold">Profile</h1>
           </div>
         </div>
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+        <PageSpinner message="Loading profile..." />
       </div>
     );
   }

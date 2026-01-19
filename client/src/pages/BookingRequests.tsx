@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { PageSpinner } from "@/components/ui/spinner";
 import {
   Dialog,
   DialogContent,
@@ -226,9 +227,7 @@ export default function BookingRequests() {
             <p className="text-emerald-100/80 mt-1">Manage customer bookings</p>
           </div>
         </div>
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+        <PageSpinner message="Loading bookings..." />
       </div>
     );
   }

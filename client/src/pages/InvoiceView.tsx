@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useCelebration } from "@/hooks/use-celebration";
 import { CelebrationOverlay } from "@/components/CelebrationOverlay";
+import { PageSpinner } from "@/components/ui/spinner";
 import {
   Select,
   SelectContent,
@@ -295,9 +296,7 @@ export default function InvoiceView() {
     return (
       <div className="flex flex-col min-h-full bg-background">
         <div className="h-48 bg-gradient-to-br from-blue-500 to-cyan-600 animate-pulse" />
-        <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+        <PageSpinner message="Loading invoice..." />
       </div>
     );
   }
