@@ -7,6 +7,7 @@ import { startAutoReleaseScheduler } from "./depositAutoRelease";
 import { startWeeklySummaryScheduler } from "./weeklyEmailSummary";
 import { startNoSilentCompletionScheduler } from "./noSilentCompletionEnforcer";
 import { initializeDbEnforcement } from "./dbEnforcement";
+import { startNextBestActionEngine } from "./nextBestActionEngine";
 
 const app = express();
 const httpServer = createServer(app);
@@ -107,6 +108,7 @@ app.use((req, res, next) => {
       const baseUrl = process.env.FRONTEND_URL || `http://localhost:${port}`;
       startWeeklySummaryScheduler(baseUrl);
       startNoSilentCompletionScheduler();
+      startNextBestActionEngine(15); // Run every 15 minutes
     },
   );
 })();

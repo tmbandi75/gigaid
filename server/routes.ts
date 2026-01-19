@@ -7314,6 +7314,65 @@ Return ONLY the message text, no JSON or formatting.`
     }
   });
 
+  // ==================== NEXT BEST ACTION ENGINE ====================
+  // Intelligent stall detection and one recommended action per entity
+  
+  const { getNextActionsForUser, actOnAction, dismissAction } = await import("./nextBestActionEngine");
+  
+  // Get all active next actions for user
+  app.get("/api/next-actions", async (req, res) => {
+    try {
+      const userId = "demo-user";
+      const entityType = req.query.entityType as string | undefined;
+      
+      const actions = await storage.getNextActions(userId, entityType);
+      res.json(actions);
+    } catch (error) {
+      console.error("Get next actions error:", error);
+      res.status(500).json({ error: "Failed to get next actions" });
+    }
+  });
+  
+  // Get next action for a specific entity
+  app.get("/api/next-actions/entity/:entityType/:entityId", async (req, res) => {
+    try {
+      const { entityType, entityId } = req.params;
+      const action = await storage.getActiveNextActionForEntity(entityType, entityId);
+      res.json(action || null);
+    } catch (error) {
+      console.error("Get entity next action error:", error);
+      res.status(500).json({ error: "Failed to get entity next action" });
+    }
+  });
+  
+  // Mark action as acted upon
+  app.post("/api/next-actions/:id/act", async (req, res) => {
+    try {
+      const updated = await actOnAction(req.params.id);
+      if (!updated) {
+        return res.status(404).json({ error: "Action not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Act on next action error:", error);
+      res.status(500).json({ error: "Failed to act on action" });
+    }
+  });
+  
+  // Dismiss action
+  app.post("/api/next-actions/:id/dismiss", async (req, res) => {
+    try {
+      const updated = await dismissAction(req.params.id);
+      if (!updated) {
+        return res.status(404).json({ error: "Action not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Dismiss next action error:", error);
+      res.status(500).json({ error: "Failed to dismiss action" });
+    }
+  });
+
   // ==================== OUTCOME ATTRIBUTION ====================
   // GigAid Impact metrics showing "GigAid helped you collect $X faster"
 
