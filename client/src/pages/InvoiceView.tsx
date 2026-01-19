@@ -271,6 +271,26 @@ export default function InvoiceView() {
     }
   };
 
+  const handleSendClick = () => {
+    if (!invoice) return;
+    
+    const hasEmail = !!invoice.clientEmail;
+    const hasPhone = !!invoice.clientPhone;
+    
+    if (!hasEmail && !hasPhone) {
+      toast({
+        title: "No contact information",
+        description: "Please add an email address or phone number to send this invoice.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setSendViaEmail(hasEmail);
+    setSendViaSms(hasPhone);
+    setShowSendDialog(true);
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-full bg-background">
@@ -537,7 +557,7 @@ export default function InvoiceView() {
         <div className="space-y-3 pt-2">
           {invoice.status === "draft" && (
             <Button
-              onClick={() => setShowSendDialog(true)}
+              onClick={handleSendClick}
               className="w-full h-14 text-base font-semibold bg-gradient-to-r from-blue-500 to-cyan-500 shadow-lg shadow-blue-500/20 rounded-xl"
               data-testid="button-send-invoice"
             >
@@ -562,7 +582,7 @@ export default function InvoiceView() {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => setShowSendDialog(true)}
+                onClick={handleSendClick}
                 className="w-full h-12 rounded-xl"
                 data-testid="button-resend"
               >
