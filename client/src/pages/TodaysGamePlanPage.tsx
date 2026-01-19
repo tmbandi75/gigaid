@@ -1,8 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageSpinner } from "@/components/ui/spinner";
+import { apiRequest } from "@/lib/queryClient";
 import {
   FileText,
   DollarSign,
@@ -13,6 +14,9 @@ import {
   Mic,
   Clock,
   ChevronRight,
+  Sparkles,
+  X,
+  Zap,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -47,6 +51,23 @@ interface GamePlanData {
   upNextItems: ActionItem[];
   stats: GamePlanStats;
   recentlyCompleted: RecentItem[];
+}
+
+interface NextAction {
+  id: string;
+  userId: string;
+  entityType: "lead" | "job" | "invoice";
+  entityId: string;
+  stallType: string;
+  action: string;
+  reason: string;
+  priority: number;
+  status: "active" | "acted" | "dismissed" | "expired" | "auto_executed";
+  autoExecutable: boolean;
+  createdAt: string;
+  expiresAt: string;
+  actedAt: string | null;
+  autoExecutedAt: string | null;
 }
 
 function formatCurrency(cents: number): string {
@@ -126,11 +147,45 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
 };
 
+function getEntityLabel(entityType: string): string {
+  switch (entityType) {
+    case "lead": return "Lead";
+    case "job": return "Job";
+    case "invoice": return "Invoice";
+    default: return "Item";
+  }
+}
+
+function getEntityRoute(entityType: string, entityId: string): string {
+  switch (entityType) {
+    case "lead": return `/leads/${entityId}`;
+    case "job": return `/jobs/${entityId}`;
+    case "invoice": return `/invoices/${entityId}`;
+    default: return "/";
+  }
+}
+
 export default function TodaysGamePlanPage() {
   const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery<GamePlanData>({
     queryKey: ["/api/dashboard/game-plan"],
+  });
+
+  const { data: nextActions = [] } = useQuery<NextAction[]>({
+    queryKey: ["/api/next-actions"],
+    refetchInterval: 60000,
+  });
+
+  const actMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("POST", `/api/next-actions/${id}/act`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] }),
+  });
+
+  const dismissMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("POST", `/api/next-actions/${id}/dismiss`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] }),
   });
 
   if (isLoading) {
@@ -278,6 +333,75 @@ export default function TodaysGamePlanPage() {
                           {item.actionLabel}
                           <ChevronRight className="h-3 w-3 ml-1" />
                         </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </motion.section>
+        )}
+
+        {nextActions.length > 0 && (
+          <motion.section variants={itemVariants} aria-labelledby="smart-suggestions">
+            <h2 id="smart-suggestions" className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-purple-500" />
+              Smart Suggestions
+            </h2>
+            <div className="space-y-3">
+              {nextActions.slice(0, 5).map((action) => {
+                const Icon = getIconForType(action.entityType);
+                return (
+                  <Card
+                    key={action.id}
+                    className="border-0 shadow-md bg-gradient-to-r from-purple-500/5 via-transparent to-transparent"
+                    data-testid={`card-suggestion-${action.id}`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                          <Icon className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-400">
+                              {getEntityLabel(action.entityType)}
+                            </span>
+                            {action.autoExecutable && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Zap className="h-3 w-3" />
+                                Auto-send eligible
+                              </span>
+                            )}
+                          </div>
+                          <p className="font-medium text-foreground text-sm">
+                            {action.action}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {action.reason}
+                          </p>
+                          <div className="flex items-center gap-2 mt-3">
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                actMutation.mutate(action.id);
+                                navigate(getEntityRoute(action.entityType, action.entityId));
+                              }}
+                              data-testid={`button-act-${action.id}`}
+                            >
+                              Do It Now
+                              <ChevronRight className="h-3 w-3 ml-1" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => dismissMutation.mutate(action.id)}
+                              data-testid={`button-dismiss-${action.id}`}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
