@@ -7532,6 +7532,8 @@ Return ONLY the message text, no JSON or formatting.`
         return res.status(404).json({ error: "Action not found" });
       }
       
+      const { overrideAmount } = req.body || {};
+      
       const { v4: uuidv4 } = await import("uuid");
       const now = new Date().toISOString();
       const publicToken = uuidv4();
@@ -7544,13 +7546,16 @@ Return ONLY the message text, no JSON or formatting.`
         ? `${frontendUrl}/book/${user.publicProfileSlug}`
         : null;
       
+      // Use override amount if user adjusted it, otherwise use prefilled
+      const finalAmount = overrideAmount ?? action.prefilledAmount ?? 0;
+      
       // Create the invoice from prefilled data with ready action tracking
       const invoice = await storage.createInvoice({
         userId: "demo-user",
         clientName: action.prefilledClientName || "Client",
         clientEmail: action.prefilledClientEmail,
         clientPhone: action.prefilledClientPhone,
-        amount: action.prefilledAmount || 0,
+        amount: finalAmount,
         serviceDescription: action.prefilledDescription || action.prefilledServiceType || "Service",
         status: "draft",
         dueDate: action.prefilledDueDate,
@@ -7653,6 +7658,60 @@ Return ONLY the message text, no JSON or formatting.`
     } catch (error) {
       console.error("Dismiss ready action error:", error);
       res.status(500).json({ error: "Failed to dismiss ready action" });
+    }
+  });
+  
+  // ==================== AI OVERRIDES (SILENT LEARNING) ====================
+  // Tracks user corrections to AI suggestions for continuous model improvement
+  // This is completely invisible to users - no UI surfaces this data
+  
+  app.post("/api/ai-overrides", async (req, res) => {
+    try {
+      const { 
+        entityType, 
+        entityId, 
+        overrideType,
+        originalAction,
+        originalAmount,
+        originalTiming,
+        userAction,
+        userAmount,
+        delaySeconds,
+        confidenceScore,
+        intentSignals,
+        jobType
+      } = req.body;
+      
+      if (!entityType || !entityId || !overrideType) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      const now = new Date();
+      const hour = now.getHours();
+      const timeOfDay = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
+      
+      const override = await storage.createAiOverride({
+        userId: "demo-user",
+        entityType,
+        entityId,
+        overrideType,
+        originalAction: originalAction ?? null,
+        originalAmount: originalAmount ?? null,
+        originalTiming: originalTiming ?? null,
+        userAction: userAction ?? null,
+        userAmount: userAmount ?? null,
+        delaySeconds: delaySeconds ?? null,
+        confidenceScore: confidenceScore ?? null,
+        intentSignals: intentSignals ?? null,
+        timeOfDay,
+        jobType: jobType ?? null,
+        createdAt: now.toISOString(),
+      });
+      
+      res.json({ success: true, id: override.id });
+    } catch (error) {
+      console.error("Create AI override error:", error);
+      res.status(500).json({ error: "Failed to log override" });
     }
   });
   

@@ -1659,4 +1659,53 @@ export const insertReadyActionSchema = createInsertSchema(readyActions).omit({
 export type InsertReadyAction = z.infer<typeof insertReadyActionSchema>;
 export type ReadyAction = typeof readyActions.$inferSelect;
 
+// ==================== AI OVERRIDE TRACKING ====================
+// Tracks when users modify AI-suggested values for continuous learning
+
+export const aiOverrideTypes = [
+  "amount_changed",       // User adjusted the suggested amount
+  "cta_dismissed",        // User dismissed the recommendation
+  "cta_expired",          // Action expired without user interaction
+  "different_action",     // User took a different action than recommended
+  "manual_invoice",       // User created invoice manually instead of using suggestion
+] as const;
+export type AiOverrideType = (typeof aiOverrideTypes)[number];
+
+export const aiOverrides = pgTable("ai_overrides", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  entityType: text("entity_type").notNull(), // lead, job, invoice
+  entityId: varchar("entity_id").notNull(),
+  overrideType: text("override_type").notNull(), // from aiOverrideTypes
+  
+  // Original suggestion
+  originalAction: text("original_action"),
+  originalAmount: doublePrecision("original_amount"),
+  originalTiming: text("original_timing"),
+  
+  // User's override
+  userAction: text("user_action"),
+  userAmount: doublePrecision("user_amount"),
+  delaySeconds: doublePrecision("delay_seconds"),
+  
+  // Context signals for learning
+  confidenceScore: doublePrecision("confidence_score"),
+  intentSignals: text("intent_signals").array(),
+  timeOfDay: text("time_of_day"),
+  jobType: text("job_type"),
+  
+  createdAt: text("created_at").notNull(),
+}, (table) => [
+  index("ai_overrides_user_idx").on(table.userId),
+  index("ai_overrides_entity_idx").on(table.entityType, table.entityId),
+  index("ai_overrides_type_idx").on(table.overrideType),
+]);
+
+export const insertAiOverrideSchema = createInsertSchema(aiOverrides).omit({
+  id: true,
+});
+
+export type InsertAiOverride = z.infer<typeof insertAiOverrideSchema>;
+export type AiOverride = typeof aiOverrides.$inferSelect;
+
 export * from "./models/chat";

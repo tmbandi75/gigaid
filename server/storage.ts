@@ -37,6 +37,7 @@ import {
   type AutoExecutionLog, type InsertAutoExecutionLog,
   type IntentSignal, type InsertIntentSignal,
   type ReadyAction, type InsertReadyAction,
+  type AiOverride, type InsertAiOverride,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -305,6 +306,10 @@ export interface IStorage {
   dismissReadyAction(id: string): Promise<ReadyAction | undefined>;
   markReadyActionFollowUpSent(id: string): Promise<ReadyAction | undefined>;
   
+  // AI Overrides (silent learning feedback loop)
+  createAiOverride(override: InsertAiOverride): Promise<AiOverride>;
+  getAiOverrides(userId: string): Promise<AiOverride[]>;
+  
   // Lead respond tap tracking
   incrementLeadRespondTap(leadId: string): Promise<Lead | undefined>;
 }
@@ -340,6 +345,7 @@ export class MemStorage implements IStorage {
   private smsMessages: Map<string, SmsMessage>;
   private intentSignals: Map<string, IntentSignal>;
   private readyActions: Map<string, ReadyAction>;
+  private aiOverrides: Map<string, AiOverride>;
 
   constructor() {
     this.users = new Map();
@@ -372,6 +378,7 @@ export class MemStorage implements IStorage {
     this.smsMessages = new Map();
     this.intentSignals = new Map();
     this.readyActions = new Map();
+    this.aiOverrides = new Map();
     
     // Seed default feature flags
     this.featureFlags.set("ai_micro_nudges", {
@@ -2524,6 +2531,36 @@ export class MemStorage implements IStorage {
       autoFollowUpSent: true, 
       autoFollowUpSentAt: new Date().toISOString() 
     });
+  }
+
+  // ============================================================
+  // AI Overrides (silent learning feedback loop)
+  // ============================================================
+
+  async createAiOverride(override: InsertAiOverride): Promise<AiOverride> {
+    const id = randomUUID();
+    const newOverride: AiOverride = {
+      ...override,
+      id,
+      originalAction: override.originalAction ?? null,
+      originalAmount: override.originalAmount ?? null,
+      originalTiming: override.originalTiming ?? null,
+      userAction: override.userAction ?? null,
+      userAmount: override.userAmount ?? null,
+      delaySeconds: override.delaySeconds ?? null,
+      confidenceScore: override.confidenceScore ?? null,
+      intentSignals: override.intentSignals ?? null,
+      timeOfDay: override.timeOfDay ?? null,
+      jobType: override.jobType ?? null,
+    };
+    this.aiOverrides.set(id, newOverride);
+    return newOverride;
+  }
+
+  async getAiOverrides(userId: string): Promise<AiOverride[]> {
+    return Array.from(this.aiOverrides.values())
+      .filter(o => o.userId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   // ============================================================

@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,9 +13,165 @@ interface IntentActionCardProps {
   entityId: string;
 }
 
+function logAiOverride(data: {
+  entityType: string;
+  entityId: string;
+  overrideType: string;
+  originalAction?: string;
+  originalAmount?: number;
+  userAmount?: number;
+  confidenceScore?: number;
+}) {
+  fetch("/api/ai-overrides", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  }).catch(() => {});
+}
+
+interface EditableAmountProps {
+  amount: number;
+  onChange: (newAmount: number) => void;
+}
+
+function EditableAmount({ amount, onChange }: EditableAmountProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  
+  const displayAmount = `$${(amount / 100).toFixed(0)}`;
+  
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+  
+  const handleClick = () => {
+    setEditValue(String(Math.round(amount / 100)));
+    setIsEditing(true);
+  };
+  
+  const handleBlur = () => {
+    const numVal = parseInt(editValue, 10);
+    if (!isNaN(numVal) && numVal > 0) {
+      const newAmountCents = numVal * 100;
+      if (newAmountCents !== amount) {
+        onChange(newAmountCents);
+      }
+    }
+    setIsEditing(false);
+  };
+  
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleBlur();
+    } else if (e.key === "Escape") {
+      setIsEditing(false);
+    }
+  };
+  
+  if (isEditing) {
+    return (
+      <div className="flex items-center">
+        <span className="text-lg font-semibold">$</span>
+        <input
+          ref={inputRef}
+          type="number"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          className="w-20 bg-transparent border-none outline-none text-lg font-semibold text-white appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          data-testid="input-editable-amount"
+        />
+      </div>
+    );
+  }
+  
+  return (
+    <span 
+      onClick={handleClick}
+      className="font-semibold text-lg cursor-text"
+      data-testid="text-prefilled-amount"
+    >
+      {displayAmount}
+    </span>
+  );
+}
+
+function EditableAmountLarge({ amount, onChange }: EditableAmountProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  
+  const displayAmount = `$${(amount / 100).toFixed(0)}`;
+  
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+  
+  const handleClick = () => {
+    setEditValue(String(Math.round(amount / 100)));
+    setIsEditing(true);
+  };
+  
+  const handleBlur = () => {
+    const numVal = parseInt(editValue, 10);
+    if (!isNaN(numVal) && numVal > 0) {
+      const newAmountCents = numVal * 100;
+      if (newAmountCents !== amount) {
+        onChange(newAmountCents);
+      }
+    }
+    setIsEditing(false);
+  };
+  
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleBlur();
+    } else if (e.key === "Escape") {
+      setIsEditing(false);
+    }
+  };
+  
+  if (isEditing) {
+    return (
+      <div className="flex items-center">
+        <span className="text-2xl font-bold">$</span>
+        <input
+          ref={inputRef}
+          type="number"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          className="w-24 bg-transparent border-none outline-none text-2xl font-bold text-white appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          data-testid="input-editable-amount-large"
+        />
+      </div>
+    );
+  }
+  
+  return (
+    <p 
+      onClick={handleClick}
+      className="text-2xl font-bold cursor-text"
+      data-testid="text-amount-large"
+    >
+      {displayAmount}
+    </p>
+  );
+}
+
 export function IntentActionCard({ entityType, entityId }: IntentActionCardProps) {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const [overrideAmount, setOverrideAmount] = useState<number | null>(null);
   
   const { data: action, isLoading } = useQuery<ReadyAction | null>({
     queryKey: ["/api/ready-actions/entity", entityType, entityId],
@@ -27,8 +184,10 @@ export function IntentActionCard({ entityType, entityId }: IntentActionCardProps
   });
   
   const actMutation = useMutation({
-    mutationFn: async (actionId: string) => {
-      return apiRequest("POST", `/api/ready-actions/${actionId}/act`);
+    mutationFn: async (params: { actionId: string; overrideAmount?: number }) => {
+      return apiRequest("POST", `/api/ready-actions/${params.actionId}/act`, {
+        overrideAmount: params.overrideAmount,
+      });
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/ready-actions"] });
@@ -63,19 +222,47 @@ export function IntentActionCard({ entityType, entityId }: IntentActionCardProps
     return null;
   }
   
-  const formattedAmount = action.prefilledAmount 
-    ? `$${(action.prefilledAmount / 100).toFixed(0)}` 
-    : null;
+  const currentAmount = overrideAmount ?? action.prefilledAmount ?? 0;
+  
+  const handleAmountChange = (newAmount: number) => {
+    setOverrideAmount(newAmount);
+    logAiOverride({
+      entityType: action.entityType,
+      entityId: action.entityId,
+      overrideType: "amount_changed",
+      originalAction: action.actionType,
+      originalAmount: action.prefilledAmount ?? undefined,
+      userAmount: newAmount,
+    });
+  };
+  
+  const handleDismiss = () => {
+    logAiOverride({
+      entityType: action.entityType,
+      entityId: action.entityId,
+      overrideType: "cta_dismissed",
+      originalAction: action.actionType,
+      originalAmount: action.prefilledAmount ?? undefined,
+    });
+    dismissMutation.mutate(action.id);
+  };
+  
+  const handleAct = () => {
+    actMutation.mutate({ 
+      actionId: action.id, 
+      overrideAmount: overrideAmount ?? undefined 
+    });
+  };
   
   return (
     <Card 
-      className="border-0 shadow-xl overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-600 text-white"
+      className="border-0 shadow-xl overflow-visible bg-gradient-to-br from-emerald-500 to-teal-600 text-white"
       data-testid="card-intent-action"
     >
       <CardContent className="p-0">
         <div className="relative">
           <button
-            onClick={() => dismissMutation.mutate(action.id)}
+            onClick={handleDismiss}
             className="absolute top-3 right-3 p-1 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
             aria-label="Dismiss"
             data-testid="button-dismiss-intent"
@@ -102,12 +289,13 @@ export function IntentActionCard({ entityType, entityId }: IntentActionCardProps
                   </span>
                 </div>
               )}
-              {formattedAmount && (
+              {currentAmount > 0 && (
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-white/70">Amount</span>
-                  <span className="font-semibold text-lg" data-testid="text-prefilled-amount">
-                    {formattedAmount}
-                  </span>
+                  <EditableAmount 
+                    amount={currentAmount} 
+                    onChange={handleAmountChange}
+                  />
                 </div>
               )}
               {action.prefilledServiceType && (
@@ -129,7 +317,7 @@ export function IntentActionCard({ entityType, entityId }: IntentActionCardProps
             </div>
             
             <Button
-              onClick={() => actMutation.mutate(action.id)}
+              onClick={handleAct}
               disabled={actMutation.isPending}
               className="w-full h-12 text-base font-semibold bg-white text-emerald-600 hover:bg-white/90 shadow-lg"
               data-testid="button-send-get-paid"
@@ -169,10 +357,13 @@ export function IntentActionsList() {
 function IntentActionCardStandalone({ action }: { action: ReadyAction }) {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const [overrideAmount, setOverrideAmount] = useState<number | null>(null);
   
   const actMutation = useMutation({
-    mutationFn: async (actionId: string) => {
-      return apiRequest("POST", `/api/ready-actions/${actionId}/act`);
+    mutationFn: async (params: { actionId: string; overrideAmount?: number }) => {
+      return apiRequest("POST", `/api/ready-actions/${params.actionId}/act`, {
+        overrideAmount: params.overrideAmount,
+      });
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/ready-actions"] });
@@ -203,19 +394,47 @@ function IntentActionCardStandalone({ action }: { action: ReadyAction }) {
     },
   });
   
-  const formattedAmount = action.prefilledAmount 
-    ? `$${(action.prefilledAmount / 100).toFixed(0)}` 
-    : null;
+  const currentAmount = overrideAmount ?? action.prefilledAmount ?? 0;
+  
+  const handleAmountChange = (newAmount: number) => {
+    setOverrideAmount(newAmount);
+    logAiOverride({
+      entityType: action.entityType,
+      entityId: action.entityId,
+      overrideType: "amount_changed",
+      originalAction: action.actionType,
+      originalAmount: action.prefilledAmount ?? undefined,
+      userAmount: newAmount,
+    });
+  };
+  
+  const handleDismiss = () => {
+    logAiOverride({
+      entityType: action.entityType,
+      entityId: action.entityId,
+      overrideType: "cta_dismissed",
+      originalAction: action.actionType,
+      originalAmount: action.prefilledAmount ?? undefined,
+    });
+    dismissMutation.mutate(action.id);
+  };
+  
+  const handleAct = () => {
+    actMutation.mutate({ 
+      actionId: action.id, 
+      overrideAmount: overrideAmount ?? undefined 
+    });
+  };
   
   return (
     <Card 
-      className="border-0 shadow-xl overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-600 text-white"
+      className="border-0 shadow-xl overflow-visible bg-gradient-to-br from-emerald-500 to-teal-600 text-white"
       data-testid={`card-intent-action-${action.id}`}
     >
       <CardContent className="p-0">
         <div className="relative">
           <button
-            onClick={() => dismissMutation.mutate(action.id)}
+            onClick={handleDismiss}
             className="absolute top-3 right-3 p-1 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
             aria-label="Dismiss"
             data-testid={`button-dismiss-${action.id}`}
@@ -238,13 +457,16 @@ function IntentActionCardStandalone({ action }: { action: ReadyAction }) {
                 {action.prefilledClientName && (
                   <p className="font-medium truncate">{action.prefilledClientName}</p>
                 )}
-                {formattedAmount && (
-                  <p className="text-2xl font-bold">{formattedAmount}</p>
+                {currentAmount > 0 && (
+                  <EditableAmountLarge 
+                    amount={currentAmount} 
+                    onChange={handleAmountChange}
+                  />
                 )}
               </div>
               
               <Button
-                onClick={() => actMutation.mutate(action.id)}
+                onClick={handleAct}
                 disabled={actMutation.isPending}
                 size="lg"
                 className="flex-shrink-0 font-semibold bg-white text-emerald-600 hover:bg-white/90 shadow-lg"
