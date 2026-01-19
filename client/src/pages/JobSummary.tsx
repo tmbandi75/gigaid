@@ -32,6 +32,7 @@ import {
 import type { Job } from "@shared/schema";
 import { JobLocationMap } from "@/components/JobLocationMap";
 import { GetPaidDialog } from "@/components/job/GetPaidDialog";
+import { NextActionBanner } from "@/components/NextActionBanner";
 import { useState } from "react";
 
 const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: React.ElementType }> = {
@@ -277,6 +278,8 @@ export default function JobSummary() {
       </div>
 
       <div className="px-4 -mt-8 relative z-10 space-y-4">
+        <NextActionBanner entityType="job" entityId={id!} />
+        
         <Card className="border-0 shadow-lg" data-testid="card-schedule">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-3">

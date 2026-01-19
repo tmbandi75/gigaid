@@ -57,6 +57,7 @@ import type { Invoice, AiNudge } from "@shared/schema";
 import { useNudges, useFeatureFlag } from "@/hooks/use-nudges";
 import { NudgeChips } from "@/components/nudges/NudgeChip";
 import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
+import { NextActionBanner } from "@/components/NextActionBanner";
 
 interface JobPayment {
   id: string;
@@ -388,6 +389,8 @@ export default function InvoiceView() {
       </div>
       
       <div className="flex-1 px-4 pt-4 pb-6 space-y-4">
+        <NextActionBanner entityType="invoice" entityId={id!} />
+        
         {featureFlag?.enabled && nudges.length > 0 && (
           <Card className="border-0 shadow-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10" data-testid="card-nudges">
             <CardContent className="p-4">

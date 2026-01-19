@@ -33,6 +33,7 @@ import { useState, useEffect } from "react";
 import { useNudges, useGenerateNudges, useFeatureFlag } from "@/hooks/use-nudges";
 import { NudgeChips } from "@/components/nudges/NudgeChip";
 import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
+import { NextActionBanner } from "@/components/NextActionBanner";
 
 const statusConfig: Record<string, { label: string; color: string; bgColor: string }> = {
   new: { label: "New", color: "text-blue-600", bgColor: "bg-blue-500/10" },
@@ -228,6 +229,8 @@ export default function LeadSummary() {
       </div>
 
       <div className="px-4 -mt-8 relative z-10 space-y-4">
+        <NextActionBanner entityType="lead" entityId={id!} />
+        
         {featureFlag?.enabled && nudges.length > 0 && (
           <Card className="border-0 shadow-lg bg-gradient-to-r from-violet-500/10 to-purple-500/10" data-testid="card-nudges">
             <CardContent className="p-4">
