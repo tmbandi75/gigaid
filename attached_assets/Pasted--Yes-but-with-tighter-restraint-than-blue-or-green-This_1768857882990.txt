@@ -1,0 +1,185 @@
+**Yes — but with tighter restraint than blue or green.**
+This black/dark area is a *profile + control surface*, not a work or growth surface. The goal here is **quiet depth**, not visual presence.
+
+### Short answer
+
+✔️ **Yes, apply the same treatment pattern**
+⚠️ **But make it extremely subtle**
+❌ **Do NOT add contrast, color shifts, or saturation**
+
+Think: *polished system chrome*, not a header.
+
+---
+
+## Why this one is different
+
+This area does **three sensitive things**:
+
+1. Anchors identity (Gig Worker, plan)
+2. Hosts settings entry points
+3. Sits above a long, scroll-heavy menu
+
+A flat black can feel:
+
+* Heavy
+* Abrupt
+* Slightly “Android drawer”-ish
+
+But an aggressive gradient would:
+
+* Feel decorative
+* Pull attention away from tools
+* Break the calm hierarchy you’re building
+
+So the move is: **depth, not drama**.
+
+---
+
+## 🎯 Design intent for the dark header
+
+* Slight vertical depth
+* Almost imperceptible gradient
+* Reads as “system layer”
+* Invisible to casual users, felt by power users
+
+---
+
+# ✅ Replit Enforcement Prompt — Dark Header (More / Profile Screen)
+
+**Copy-paste this entire prompt into Replit AI**
+
+---
+
+**SYSTEM / DEVELOPER INSTRUCTION**
+
+You are working inside an existing React + Vite application for **GigAid**.
+
+Your task is to **refine (not restyle)** the dark/black top header area on the **More / Profile screen** by replacing the flat dark background with a **very subtle dark gradient** that adds depth while remaining visually quiet.
+
+This is a **polish-only change**.
+
+---
+
+### 🚫 Hard Constraints (Critical)
+
+* ❌ Do NOT change layout, spacing, typography, or component structure
+* ❌ Do NOT add color, saturation, glow, or highlights
+* ❌ Do NOT affect any non-header elements
+* ❌ Do NOT introduce animation
+* ✅ ONLY adjust the background styling of the top dark header container
+
+---
+
+### 🎯 Target Area
+
+Locate the **top header section** of the More / Profile screen, likely in:
+
+* `More.tsx`
+* `Profile.tsx`
+* `SettingsHeader.tsx`
+* `PageHeader.tsx` (if shared with conditional styling)
+
+The area currently uses a **flat dark / black / near-black background**.
+
+---
+
+### 🎨 Gradient Specification (Strict & Minimal)
+
+Apply this **very subtle vertical gradient**:
+
+```css
+linear-gradient(
+  180deg,
+  #1F2937 0%,
+  #111827 100%
+)
+```
+
+This is:
+
+* Dark gray → near-black
+* Low contrast
+* Professional and calm
+
+---
+
+### 🧱 Implementation (Preferred Pattern)
+
+#### CSS Variable (Recommended for consistency)
+
+Add to global styles if not already present:
+
+```css
+:root {
+  --header-gradient-dark-neutral: linear-gradient(
+    180deg,
+    #1F2937 0%,
+    #111827 100%
+  );
+}
+```
+
+Apply to the header container:
+
+```jsx
+style={{
+  background: 'var(--header-gradient-dark-neutral)'
+}}
+```
+
+⚠️ Do NOT branch by route unless required — this gradient is neutral and safe.
+
+---
+
+### ✨ Optional Depth Enhancement (Allowed)
+
+Add **only** this inset shadow:
+
+```css
+box-shadow: inset 0 -12px 20px rgba(0, 0, 0, 0.25);
+```
+
+This must not change spacing or scroll behavior.
+
+---
+
+### ✅ Validation Checklist
+
+After implementation:
+
+* Header feels calmer and more “system-like”
+* No attention is pulled away from menu items
+* Profile info remains legible
+* The gradient is barely noticeable (this is intentional)
+* No other screens are affected
+
+---
+
+### 📌 Final Reporting
+
+After completing the task:
+
+1. List file(s) modified
+2. Confirm header scope (page-specific vs shared)
+3. Confirm no visual regressions
+
+---
+
+## System-level takeaway (important)
+
+You’re converging on a **real design system** now:
+
+* **Blue** → execution
+* **Green** → pipeline
+* **Dark neutral** → identity & control
+
+Same *pattern*, different *intensity*.
+
+That’s exactly how high-end tools avoid visual chaos at scale.
+
+If you want next:
+
+* I can consolidate this into a **single `PageHeader` contract**
+* Or define a **route → header theme map** (future-proof for Payments, Analytics, etc.)
+
+Just say how far you want to lock this in.

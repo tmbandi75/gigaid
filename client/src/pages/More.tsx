@@ -102,7 +102,12 @@ export default function More() {
 
   return (
     <div className="flex flex-col min-h-full bg-background" data-testid="page-more">
-      <div className="relative overflow-hidden bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 text-white px-4 pt-6 pb-8">
+      <div 
+        className="relative overflow-hidden text-white px-4 pt-6 pb-8"
+        style={{ 
+          background: 'linear-gradient(180deg, #1F2937 0%, #111827 100%)',
+          boxShadow: 'inset 0 -12px 20px rgba(0, 0, 0, 0.25)'
+        }}>
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
           <div className="absolute bottom-0 -left-10 w-32 h-32 bg-slate-400/10 rounded-full blur-2xl" />
