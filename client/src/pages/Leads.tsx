@@ -37,7 +37,7 @@ import {
   LayoutGrid
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useSendText } from "@/hooks/use-send-text";
 import { apiRequest } from "@/lib/queryClient";
@@ -239,10 +239,21 @@ export default function Leads() {
   const [tone, setTone] = useState<"friendly" | "professional" | "casual">("friendly");
   const [selectedNudge, setSelectedNudge] = useState<AiNudge | null>(null);
   const [viewMode, setViewMode] = useState<"cards" | "table">("table");
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { sendText } = useSendText();
   const isMobile = useIsMobile();
+  
+  useEffect(() => {
+    const checkDarkMode = () => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    };
+    checkDarkMode();
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
   
   const { data: leads = [], isLoading } = useQuery<Lead[]>({
     queryKey: ["/api/leads"],
@@ -303,7 +314,14 @@ export default function Leads() {
 
   return (
     <div className="flex flex-col min-h-full bg-background" data-testid="page-leads">
-      <div className="relative overflow-hidden bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 text-white px-4 pt-6 pb-8">
+      <div 
+        className="relative overflow-hidden text-white px-4 pt-6 pb-8"
+        style={{ 
+          background: isDarkMode 
+            ? 'linear-gradient(180deg, #0E3D2E 0%, #124737 100%)'
+            : 'linear-gradient(180deg, #1FA97A 0%, #1B9B71 45%, #178B67 100%)',
+          boxShadow: 'inset 0 -16px 24px rgba(0, 0, 0, 0.08)'
+        }}>
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
           <div className="absolute bottom-0 -left-10 w-32 h-32 bg-teal-400/20 rounded-full blur-2xl" />
