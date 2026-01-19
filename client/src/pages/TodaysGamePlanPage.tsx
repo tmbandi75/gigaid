@@ -1,9 +1,17 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageSpinner } from "@/components/ui/spinner";
 import { apiRequest } from "@/lib/queryClient";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { VoiceNoteSummarizer } from "@/components/ai/VoiceNoteSummarizer";
 import {
   FileText,
   DollarSign,
@@ -168,6 +176,7 @@ function getEntityRoute(entityType: string, entityId: string): string {
 export default function TodaysGamePlanPage() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
+  const [showVoiceNotes, setShowVoiceNotes] = useState(false);
 
   const { data, isLoading } = useQuery<GamePlanData>({
     queryKey: ["/api/dashboard/game-plan"],
@@ -502,7 +511,7 @@ export default function TodaysGamePlanPage() {
             </Card>
             <Card
               className="border shadow-sm hover-elevate cursor-pointer"
-              onClick={() => navigate("/ai-tools")}
+              onClick={() => setShowVoiceNotes(true)}
               data-testid="button-talk-it-in"
             >
               <CardContent className="p-4 flex flex-col items-center gap-2">
@@ -545,6 +554,20 @@ export default function TodaysGamePlanPage() {
           </motion.section>
         )}
       </motion.div>
+
+      <Dialog open={showVoiceNotes} onOpenChange={setShowVoiceNotes}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mic className="h-5 w-5" />
+              Talk It In
+            </DialogTitle>
+          </DialogHeader>
+          <VoiceNoteSummarizer 
+            onNoteSaved={() => setShowVoiceNotes(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
