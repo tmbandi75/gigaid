@@ -1,0 +1,204 @@
+**Yes — absolutely do the same for the green area.**
+And you’re right to pause and ask, because this is where teams often get inconsistent.
+
+### Short verdict
+
+✔️ **Yes, apply the same “softened gradient” treatment**
+✔️ **But keep the green distinct from blue** (do NOT reuse the blue gradient logic)
+
+What you want is **systemic consistency, not visual sameness**.
+
+---
+
+## Why this is the correct move (UX + product logic)
+
+Right now you have:
+
+* **Jobs → Blue**
+* **Leads → Green**
+
+That’s actually *good*. Color-as-context works here:
+
+* Blue = execution / work
+* Green = growth / pipeline / money-adjacent
+
+But the **current green is too saturated and flat**, which:
+
+* Feels loud for a screen users scan repeatedly
+* Competes with KPI cards
+* Makes the app feel slightly “consumer” instead of “professional tool”
+
+So:
+👉 **Same refinement pattern**
+👉 **Different color family**
+
+---
+
+## 🎯 Design intent for the green header
+
+* Softer
+* Slightly desaturated
+* Calm, confident, “pipeline control”
+* Still clearly *green*
+
+---
+
+# ✅ Replit Enforcement Prompt — Green Header Gradient (Leads Screen)
+
+**Copy-paste this entire prompt into Replit AI**
+
+---
+
+**SYSTEM / DEVELOPER INSTRUCTION**
+
+You are working inside an existing React + Vite application for **GigAid**.
+
+Your task is to **soften the saturated green background** in the **Leads screen top header area** by replacing the flat/harsh green with a **subtle, professional green gradient**, matching the refinement already applied to the blue Jobs header.
+
+This is a **visual-only change**.
+
+---
+
+### 🚫 Hard Constraints (Non-Negotiable)
+
+* ❌ Do NOT change layout, spacing, typography, or component structure
+* ❌ Do NOT modify logic, props, state, or data
+* ❌ Do NOT affect cards, lists, tabs, buttons, or navigation
+* ❌ Do NOT change global green brand usage outside the header
+* ✅ ONLY adjust the **top header background** for the Leads screen
+
+---
+
+### 🎯 Target Area
+
+Locate the **Leads / Requests screen header container**, likely in:
+
+* `Leads.tsx`
+* `Requests.tsx`
+* `LeadsHeader.tsx`
+* `PageHeader.tsx` (if shared with conditional styling)
+* Or a container using `bg-green-*`, `bg-emerald-*`, or inline green styles
+
+If the header component is shared, apply the green gradient **only when the page context is Leads**.
+
+---
+
+### 🎨 Gradient Specifications (Strict)
+
+#### Light Mode — Green Gradient
+
+Replace the existing green background with:
+
+```css
+linear-gradient(
+  180deg,
+  #1FA97A 0%,
+  #1B9B71 45%,
+  #178B67 100%
+)
+```
+
+This keeps the green identity but reduces saturation and glare.
+
+---
+
+#### Dark Mode — Green Gradient
+
+If dark mode exists, use:
+
+```css
+linear-gradient(
+  180deg,
+  #0E3D2E 0%,
+  #124737 100%
+)
+```
+
+---
+
+### 🧱 Implementation Rules
+
+#### Preferred Approach — CSS Variables (Consistent with Blue)
+
+Add or extend global styles (do NOT duplicate if already present):
+
+```css
+:root {
+  --header-gradient-green-light: linear-gradient(
+    180deg,
+    #1FA97A 0%,
+    #1B9B71 45%,
+    #178B67 100%
+  );
+}
+
+.dark {
+  --header-gradient-green-dark: linear-gradient(
+    180deg,
+    #0E3D2E 0%,
+    #124737 100%
+  );
+}
+```
+
+Apply to the Leads header container:
+
+```jsx
+style={{
+  background: isDarkMode
+    ? 'var(--header-gradient-green-dark)'
+    : 'var(--header-gradient-green-light)'
+}}
+```
+
+---
+
+### ✨ Optional (Allowed) Depth Enhancement
+
+Add **only** this inset shadow to the header container:
+
+```css
+box-shadow: inset 0 -16px 24px rgba(0, 0, 0, 0.08);
+```
+
+Do NOT add elevation, blur, or animation.
+
+---
+
+### ✅ Validation Checklist
+
+After implementation:
+
+* Leads header feels calmer and more refined
+* KPI cards remain clearly legible
+* Green still reads as “pipeline / growth”
+* No layout shift or scroll issues
+* Blue (Jobs) and Green (Leads) feel like part of the same system
+
+---
+
+### 📌 Final Reporting
+
+After completing the change:
+
+1. List the file(s) modified
+2. Confirm whether the header component is shared or page-specific
+3. Confirm light + dark mode rendering
+
+---
+
+## Strategic note (important)
+
+You’re accidentally doing something *very right* here:
+
+* **Color = mental mode**
+* **Gradient softness = cognitive load control**
+
+This is how professional tools (Notion, Linear, Superhuman) scale without feeling noisy.
+
+If you want next:
+
+* I can define a **Header Color System** (`--header-blue`, `--header-green`, future `--header-purple` for Payments)
+* Or create a **single PageHeader component** that auto-selects gradient by route
+
+Just tell me how far you want to standardize.
