@@ -180,11 +180,16 @@ export default function TodaysGamePlanPage() {
 
   const { data, isLoading } = useQuery<GamePlanData>({
     queryKey: ["/api/dashboard/game-plan"],
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    staleTime: 0,
   });
 
   const { data: nextActions = [] } = useQuery<NextAction[]>({
     queryKey: ["/api/next-actions"],
     refetchInterval: 60000,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   const actMutation = useMutation({
@@ -270,7 +275,10 @@ export default function TodaysGamePlanPage() {
                         </p>
                         <Button
                           className="mt-4"
-                          onClick={() => navigate(priorityItem.actionRoute)}
+                          onClick={() => {
+                            queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] });
+                            navigate(priorityItem.actionRoute);
+                          }}
                           data-testid="button-priority-action"
                         >
                           {priorityItem.actionLabel}

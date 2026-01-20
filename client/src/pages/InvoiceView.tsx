@@ -187,6 +187,7 @@ export default function InvoiceView() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
       queryClient.invalidateQueries({ queryKey: ["/api/invoices", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] });
       setShowSendDialog(false);
       
       const sentMethods: string[] = [];
@@ -217,6 +218,7 @@ export default function InvoiceView() {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices", id] });
       queryClient.invalidateQueries({ queryKey: [`/api/invoices/${id}/payments`] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] });
       
       await celebrate({
         type: "payment_received",
@@ -238,6 +240,7 @@ export default function InvoiceView() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] });
       toast({ title: "Invoice deleted" });
       navigate("/invoices");
     },
@@ -255,6 +258,7 @@ export default function InvoiceView() {
       queryClient.invalidateQueries({ queryKey: ["/api/invoices", id] });
       queryClient.invalidateQueries({ queryKey: [`/api/invoices/${id}/payments`] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] });
       toast({ title: "Payment reverted - invoice is now pending" });
       setShowRevertDialog(false);
     },

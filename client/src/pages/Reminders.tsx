@@ -57,6 +57,7 @@ export default function Reminders() {
     mutationFn: (data: typeof formData) => apiRequest("POST", "/api/reminders", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/reminders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] });
       setIsDialogOpen(false);
       resetForm();
       toast({ title: "Reminder scheduled successfully" });
@@ -70,6 +71,7 @@ export default function Reminders() {
     mutationFn: (id: string) => apiRequest("DELETE", `/api/reminders/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/reminders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] });
       toast({ title: "Reminder deleted" });
     },
   });
