@@ -1,0 +1,213 @@
+Improve GigAid’s UI/UX by increasing emotional clarity, decision guidance, and AI outcome visibility without removing or restructuring existing features.
+
+This is a UX enhancement pass, not a visual redesign.
+
+🧠 Core Principles (Non-Negotiable)
+
+Reduce thinking, increase reacting
+
+Prioritize urgency and money
+
+AI speaks in outcomes, not features
+
+One dominant action per screen
+
+No breaking changes to existing flows
+
+✅ REQUIRED CHANGES
+1️⃣ Add Universal Priority Signals (HIGH PRIORITY)
+Implement a standardized Priority System across:
+
+Leads
+
+Jobs
+
+Invoices
+
+Messages
+
+Priority Levels:
+
+🔥 High Priority (conversion/payment likely)
+
+⚠️ At Risk (no response, overdue, stalled)
+
+⏰ Time Sensitive (upcoming job / deadline)
+
+💰 Payment Risk (invoice overdue)
+
+Rules:
+
+Priority badges appear as small icon + color chip
+
+Use consistent colors:
+
+Red → Payment / critical
+
+Orange → Time-sensitive
+
+Green → Positive / progressing
+
+Priority is AI-inferred, but overrideable later (do not build override UI yet)
+
+Do NOT show percentages or confidence numbers.
+
+2️⃣ Strengthen “Today’s Game Plan” as the Emotional Core
+Update “Today’s Game Plan” logic:
+
+Always show 1 primary action at the top (“DO THIS FIRST”)
+
+Follow with max 3 secondary actions
+
+Each item must:
+
+Clearly state why it matters
+
+Contain a single CTA (no choice)
+
+Example:
+
+“Payment overdue from Lisa Wang — $350 — 13 days”
+CTA: Send Reminder
+
+If no urgent items exist:
+
+Show a positive reinforcement state:
+
+“You’re on track today. Want to get ahead?”
+
+3️⃣ Rename AI Tools to Outcome-Based Language
+Update labels / subtitles ONLY (do not change routes or logic):
+Current Label	New Label
+AI Assistant	Business Co-Pilot
+Booking Insights	Get More Bookings
+Smart Tags	Know Who’s Serious
+Growth Tips	Grow My Business
+Smart Suggestions	What To Do Next
+
+Subtitles must explicitly state what the user gets, not how it works.
+
+Example:
+
+“AI analytics on your bookings”
+→
+“See what’s working and where you’re losing jobs”
+
+4️⃣ Reduce “Create” Choice Overload
+Implement ONE dominant creation action per screen:
+
+Add a context-aware primary CTA:
+
+Jobs → “Add New Job”
+
+Requests → “Add New Lead”
+
+Plan → “What do you want to do?”
+
+Secondary creation options:
+
+Keep Text to Job
+
+Keep Voice Notes
+
+Keep Quick Capture
+
+But:
+
+Move them under a secondary menu or expandable section
+
+Do NOT remove features
+
+No floating action button yet — use existing layout.
+
+5️⃣ Standardize Status Chips (Consistency Pass)
+Enforce consistency rules:
+
+Max 5 statuses per object type
+
+Status colors must be reused globally
+
+Status language must be verb-based (e.g., “Awaiting Reply”, not “Contacted”)
+
+Do NOT rename backend enums yet — UI-only mapping.
+
+6️⃣ Progressive Disclosure for Advanced Tools
+Hide the following tools until at least ONE is true:
+
+First job completed
+
+First invoice sent
+
+First payment collected
+
+Tools to gate:
+
+Advanced AI insights
+
+Growth analytics
+
+Referral generator
+
+When hidden:
+
+Show locked state with copy:
+
+“Unlocks after your first paid job”
+
+7️⃣ No UI Regression Rules
+
+Do NOT remove any existing feature
+
+Do NOT change navigation structure
+
+Do NOT introduce new required user steps
+
+Do NOT add onboarding modals
+
+Do NOT add settings toggles
+
+All changes must be:
+
+Incremental
+
+Reversible
+
+UI-layer only
+
+🧪 Acceptance Criteria
+
+The update is successful if:
+
+A user can open the app and know what to do next within 3 seconds
+
+No screen shows more than one dominant action
+
+AI features clearly communicate business outcomes
+
+Urgency and money are visually obvious
+
+🚫 Explicitly Out of Scope
+
+Visual redesign
+
+Animation changes
+
+Backend refactors
+
+Pricing changes
+
+Feature removals
+
+✅ Deliverables
+
+Updated UI labels and chips
+
+Priority indicators across lists
+
+Improved “Today’s Game Plan” logic
+
+Reduced creation choice overload
+
+Gated advanced tools with clear unlock messaging
+
+END PROMPT
