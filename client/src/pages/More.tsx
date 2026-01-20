@@ -40,7 +40,7 @@ const menuSections = [
     title: "Tools",
     items: [
       { icon: Share2, label: "Quick Capture", description: "Save leads from any app", href: "/share", badge: "New", gradient: "from-emerald-500 to-teal-500" },
-      { icon: Sparkles, label: "AI Tools", description: "Smart AI features", href: "/ai-tools", gradient: "from-violet-500 to-purple-500" },
+      { icon: Sparkles, label: "Business Co-Pilot", description: "See what works. Get paid faster.", href: "/ai-tools", gradient: "from-violet-500 to-purple-500" },
       { icon: MessageSquare, label: "Messages", description: "Client conversations", href: "/messages", gradient: "from-indigo-500 to-blue-500" },
       { icon: Users, label: "Crew", description: "Manage team members", href: "/crew", gradient: "from-blue-500 to-cyan-500" },
       { icon: Bell, label: "Reminders", description: "SMS & voice alerts", href: "/reminders", gradient: "from-amber-500 to-orange-500" },

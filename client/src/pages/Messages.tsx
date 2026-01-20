@@ -15,6 +15,7 @@ import {
   Check,
   CheckCheck
 } from "lucide-react";
+import { PriorityBadge, inferMessagePriority } from "@/components/priority/PriorityBadge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -93,6 +94,8 @@ function ConversationList({
           ? conv.clientName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
           : "?";
         
+        const priority = inferMessagePriority({ unreadCount: conv.unreadCount, lastMessageAt: conv.lastMessageAt });
+        
         return (
           <button
             key={conv.clientPhone}
@@ -108,9 +111,12 @@ function ConversationList({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2 mb-0.5">
-                  <span className="font-medium text-foreground truncate">
-                    {displayName}
-                  </span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-medium text-foreground truncate">
+                      {displayName}
+                    </span>
+                    {priority && <PriorityBadge priority={priority} compact />}
+                  </div>
                   <span className="text-xs text-muted-foreground flex-shrink-0">
                     {formatTime(conv.lastMessageAt)}
                   </span>

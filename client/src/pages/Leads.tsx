@@ -44,6 +44,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { Lead, AiNudge } from "@shared/schema";
 import FollowUpCheckIn from "@/components/FollowUpCheckIn";
 import { NudgeChips } from "@/components/nudges/NudgeChip";
+import { PriorityBadge, inferLeadPriority } from "@/components/priority/PriorityBadge";
 import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
 import { LeadsTableView } from "@/components/leads/LeadsTableView";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -54,12 +55,12 @@ interface FollowUpMessage {
 }
 
 const statusConfig: Record<string, { color: string; bg: string; label: string }> = {
-  new: { color: "text-emerald-600", bg: "bg-emerald-500/10", label: "New" },
-  response_sent: { color: "text-blue-600", bg: "bg-blue-500/10", label: "Contacted" },
-  engaged: { color: "text-cyan-600", bg: "bg-cyan-500/10", label: "Engaged" },
-  price_confirmed: { color: "text-violet-600", bg: "bg-violet-500/10", label: "Price Confirmed" },
-  cold: { color: "text-gray-600", bg: "bg-gray-500/10", label: "Cold" },
-  lost: { color: "text-red-600", bg: "bg-red-500/10", label: "Lost" },
+  new: { color: "text-emerald-600", bg: "bg-emerald-500/10", label: "Just Added" },
+  response_sent: { color: "text-blue-600", bg: "bg-blue-500/10", label: "Awaiting Reply" },
+  engaged: { color: "text-cyan-600", bg: "bg-cyan-500/10", label: "Talking" },
+  price_confirmed: { color: "text-violet-600", bg: "bg-violet-500/10", label: "Ready to Book" },
+  cold: { color: "text-gray-600", bg: "bg-gray-500/10", label: "Gone Quiet" },
+  lost: { color: "text-red-600", bg: "bg-red-500/10", label: "Not Interested" },
 };
 
 function formatDate(dateStr: string): string {
@@ -90,18 +91,19 @@ function getScoreColor(score: number | null): string {
 
 const filters = [
   { value: "all", label: "Active" },
-  { value: "new", label: "New" },
-  { value: "response_sent", label: "Contacted" },
-  { value: "engaged", label: "Engaged" },
-  { value: "price_confirmed", label: "Confirmed" },
-  { value: "cold", label: "Cold" },
-  { value: "lost", label: "Lost" },
+  { value: "new", label: "Just Added" },
+  { value: "response_sent", label: "Awaiting Reply" },
+  { value: "engaged", label: "Talking" },
+  { value: "price_confirmed", label: "Ready to Book" },
+  { value: "cold", label: "Gone Quiet" },
+  { value: "lost", label: "Not Interested" },
 ];
 
 function LeadCard({ lead, nudges, onGenerateFollowUp, onSendText, onNudgeClick }: { lead: Lead; nudges: AiNudge[]; onGenerateFollowUp: (lead: Lead) => void; onSendText: (phone: string) => void; onNudgeClick: (nudge: AiNudge) => void }) {
   const config = statusConfig[lead.status] || statusConfig.new;
   const initials = lead.clientName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   const leadNudges = nudges.filter(n => n.entityType === "lead" && n.entityId === lead.id && n.status === "active");
+  const priority = inferLeadPriority({ status: lead.status, createdAt: lead.createdAt, score: lead.score });
   
   return (
     <Card className="border-0 shadow-sm hover-elevate overflow-hidden" data-testid={`lead-card-${lead.id}`}>
@@ -118,7 +120,10 @@ function LeadCard({ lead, nudges, onGenerateFollowUp, onSendText, onNudgeClick }
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2 mb-1">
-                    <h3 className="font-semibold text-foreground truncate">{lead.clientName}</h3>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <h3 className="font-semibold text-foreground truncate">{lead.clientName}</h3>
+                      {priority && <PriorityBadge priority={priority} compact />}
+                    </div>
                     <Badge 
                       variant="secondary" 
                       className={`text-[10px] px-2 py-0.5 flex-shrink-0 ${config.bg} ${config.color} border-0`}

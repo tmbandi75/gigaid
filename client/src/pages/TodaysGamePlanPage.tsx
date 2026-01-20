@@ -290,17 +290,27 @@ export default function TodaysGamePlanPage() {
               >
                 <Card className="border-0 shadow-sm bg-emerald-50 dark:bg-emerald-950/30" data-testid="card-all-caught-up">
                   <CardContent className="p-4 lg:p-6">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                    <div className="flex items-start gap-3">
+                      <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
                         <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                       </div>
-                      <div>
+                      <div className="flex-1">
                         <p className="font-semibold text-emerald-700 dark:text-emerald-400">
-                          You're all caught up
+                          You're on track today
                         </p>
-                        <p className="text-sm text-emerald-600/80 dark:text-emerald-500/80">
-                          No urgent actions right now
+                        <p className="text-sm text-emerald-600/80 dark:text-emerald-500/80 mb-3">
+                          No urgent actions right now. Want to get ahead?
                         </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-emerald-300 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-900/50"
+                          onClick={() => navigate("/leads")}
+                          data-testid="button-get-ahead"
+                        >
+                          Follow up on leads
+                          <ChevronRight className="h-3 w-3 ml-1" />
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -316,7 +326,7 @@ export default function TodaysGamePlanPage() {
               Up Next
             </h2>
             <div className="space-y-3">
-              {upNextItems.map((item) => {
+              {upNextItems.slice(0, 3).map((item) => {
                 const Icon = getIconForType(item.type);
                 return (
                   <Card
@@ -355,7 +365,7 @@ export default function TodaysGamePlanPage() {
           <motion.section variants={itemVariants} aria-labelledby="smart-suggestions">
             <h2 id="smart-suggestions" className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-purple-500" />
-              Smart Suggestions
+              What To Do Next
             </h2>
             <div className="space-y-3">
               {nextActions.slice(0, 5).map((action) => {

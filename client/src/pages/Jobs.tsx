@@ -31,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { NudgeChips } from "@/components/nudges/NudgeChip";
 import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
 import { JobsTableView } from "@/components/jobs/JobsTableView";
+import { PriorityBadge, inferJobPriority } from "@/components/priority/PriorityBadge";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { JobResolutionModal } from "@/components/jobs/JobResolutionModal";
 
@@ -84,16 +85,16 @@ const statusConfig: Record<string, { color: string; bg: string; icon: typeof Che
 };
 
 const statusLabels: Record<string, string> = {
-  scheduled: "Scheduled",
-  in_progress: "In Progress",
-  completed: "Completed",
+  scheduled: "Coming Up",
+  in_progress: "Working On",
+  completed: "Done",
   cancelled: "Cancelled",
 };
 
 const filters = [
   { value: "all", label: "All" },
-  { value: "scheduled", label: "Upcoming" },
-  { value: "in_progress", label: "Active" },
+  { value: "scheduled", label: "Coming Up" },
+  { value: "in_progress", label: "Working On" },
   { value: "completed", label: "Done" },
 ];
 
@@ -106,6 +107,7 @@ function JobCard({ job, nudges, onNudgeClick }: { job: Job; nudges: AiNudge[]; o
   const [showResolutionModal, setShowResolutionModal] = useState(false);
   
   const jobNudges = nudges.filter(n => n.entityType === "job" && n.entityId === job.id);
+  const priority = inferJobPriority({ status: job.status, date: job.scheduledDate, time: job.scheduledTime });
 
   const startJobMutation = useMutation({
     mutationFn: async () => {
@@ -164,7 +166,10 @@ function JobCard({ job, nudges, onNudgeClick }: { job: Job; nudges: AiNudge[]; o
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2 mb-1">
-                    <h3 className="font-semibold text-foreground truncate">{job.title}</h3>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <h3 className="font-semibold text-foreground truncate">{job.title}</h3>
+                      {priority && <PriorityBadge priority={priority} compact />}
+                    </div>
                     <Badge 
                       variant="secondary" 
                       className={`text-[10px] px-2 py-0.5 flex-shrink-0 ${config.bg} ${config.color} border-0`}

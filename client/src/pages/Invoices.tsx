@@ -22,6 +22,7 @@ import type { Invoice, AiNudge } from "@shared/schema";
 import { NudgeChips } from "@/components/nudges/NudgeChip";
 import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
 import { InvoicesTableView } from "@/components/invoices/InvoicesTableView";
+import { PriorityBadge, inferInvoicePriority } from "@/components/priority/PriorityBadge";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const statusConfig: Record<string, { 
@@ -37,7 +38,7 @@ const statusConfig: Record<string, {
     bg: "bg-slate-100 dark:bg-slate-800", 
     border: "border-slate-200 dark:border-slate-700",
     icon: Clock, 
-    label: "Draft",
+    label: "Not Sent",
     gradient: "from-slate-400 to-slate-500"
   },
   sent: { 
@@ -60,8 +61,8 @@ const statusConfig: Record<string, {
 
 const filters = [
   { value: "all", label: "All", icon: Receipt },
-  { value: "draft", label: "Drafts", icon: Clock },
-  { value: "sent", label: "Pending", icon: AlertCircle },
+  { value: "draft", label: "Not Sent", icon: Clock },
+  { value: "sent", label: "Awaiting", icon: AlertCircle },
   { value: "paid", label: "Paid", icon: CheckCircle },
 ];
 
@@ -91,6 +92,7 @@ function InvoiceCard({ invoice, nudges, onNudgeClick }: { invoice: Invoice; nudg
   const StatusIcon = config.icon;
   const total = invoice.amount + (invoice.tax || 0) - (invoice.discount || 0);
   const invoiceNudges = nudges.filter(n => n.entityType === "invoice" && n.entityId === invoice.id && n.status === "active");
+  const priority = inferInvoicePriority({ status: invoice.status, createdAt: invoice.createdAt, amount: invoice.amount });
   
   return (
     <Link href={`/invoices/${invoice.id}/view`} data-testid={`link-invoice-${invoice.id}`}>
@@ -115,6 +117,7 @@ function InvoiceCard({ invoice, nudges, onNudgeClick }: { invoice: Invoice; nudg
                       <span className="font-bold text-foreground">
                         #{invoice.invoiceNumber}
                       </span>
+                      {priority && <PriorityBadge priority={priority} compact />}
                       <Badge 
                         variant="secondary" 
                         className={`text-[10px] font-medium px-2 py-0.5 ${config.bg} ${config.color} border ${config.border}`}

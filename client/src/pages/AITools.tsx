@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import type { DashboardSummary } from "@shared/schema";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TextToPlanInput } from "@/components/ai/TextToPlanInput";
@@ -33,6 +35,7 @@ import {
   ChevronRight,
   X,
   Calculator,
+  Lock,
 } from "lucide-react";
 
 interface AIFeature {
@@ -43,10 +46,18 @@ interface AIFeature {
   category: "create" | "automate" | "grow";
   gradient: string;
   component: React.ReactNode;
+  requiresUnlock?: boolean;
 }
 
 export default function AITools() {
   const [activeFeature, setActiveFeature] = useState<string | null>(null);
+
+  const { data: summary } = useQuery<DashboardSummary>({
+    queryKey: ["/api/dashboard/summary"],
+  });
+
+  // Advanced features unlock after first completed job, invoice sent, or payment collected
+  const hasUnlockedAdvanced = (summary?.completedJobs ?? 0) > 0 || (summary?.totalEarnings ?? 0) > 0;
 
   const features: AIFeature[] = [
     {
@@ -123,6 +134,7 @@ export default function AITools() {
       icon: Share2,
       category: "grow",
       gradient: "from-amber-500 to-orange-500",
+      requiresUnlock: true,
       component: (
         <ReferralMessageAI
           link="https://gigaid.app/book/demo"
@@ -133,11 +145,12 @@ export default function AITools() {
     },
     {
       id: "booking-insights",
-      title: "Booking Insights",
-      description: "AI analytics on your bookings and revenue trends",
+      title: "Get More Bookings",
+      description: "See what's working and where you're losing jobs",
       icon: TrendingUp,
       category: "grow",
       gradient: "from-indigo-500 to-blue-600",
+      requiresUnlock: true,
       component: <BookingInsightsDashboard />,
     },
     {
@@ -171,11 +184,12 @@ export default function AITools() {
     },
     {
       id: "client-tags",
-      title: "Smart Tags",
-      description: "Auto-tag clients based on their behavior patterns",
+      title: "Know Who's Serious",
+      description: "Spot ready-to-buy clients vs. tire kickers",
       icon: Tags,
       category: "grow",
       gradient: "from-cyan-500 to-blue-500",
+      requiresUnlock: true,
       component: (
         <ClientTags
           clientHistory={{
@@ -194,11 +208,12 @@ export default function AITools() {
     },
     {
       id: "unlock-nudge",
-      title: "Growth Tips",
-      description: "Personalized suggestions to unlock more features",
+      title: "Grow My Business",
+      description: "Unlock your next revenue milestone",
       icon: Lightbulb,
       category: "grow",
       gradient: "from-green-500 to-emerald-500",
+      requiresUnlock: true,
       component: (
         <UnlockNudge
           completedFeatures={["profile"]}
@@ -245,8 +260,8 @@ export default function AITools() {
               <Sparkles className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">AI Assistant</h1>
-              <p className="text-sm text-muted-foreground">Your smart business companion</p>
+              <h1 className="text-2xl font-bold">Business Co-Pilot</h1>
+              <p className="text-sm text-muted-foreground">See what works. Fix what doesn't. Get paid faster.</p>
             </div>
           </div>
         </div>
@@ -269,29 +284,45 @@ export default function AITools() {
                 </div>
                 
                 <div className="grid grid-cols-1 gap-3">
-                  {categoryFeatures.map((feature) => (
-                    <Card
-                      key={feature.id}
-                      className="group cursor-pointer hover-elevate overflow-visible border-0 shadow-sm"
-                      onClick={() => setActiveFeature(feature.id)}
-                      data-testid={`card-feature-${feature.id}`}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-4">
-                          <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center shadow-md flex-shrink-0`}>
-                            <feature.icon className="h-6 w-6 text-white" />
+                  {categoryFeatures.map((feature) => {
+                    const isLocked = feature.requiresUnlock && !hasUnlockedAdvanced;
+                    return (
+                      <Card
+                        key={feature.id}
+                        className={`group overflow-visible border-0 shadow-sm ${
+                          isLocked 
+                            ? "opacity-60 cursor-not-allowed" 
+                            : "cursor-pointer hover-elevate"
+                        }`}
+                        onClick={() => !isLocked && setActiveFeature(feature.id)}
+                        data-testid={`card-feature-${feature.id}`}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-4">
+                            <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${isLocked ? "from-gray-400 to-gray-500" : feature.gradient} flex items-center justify-center shadow-md flex-shrink-0 relative`}>
+                              <feature.icon className="h-6 w-6 text-white" />
+                              {isLocked && (
+                                <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-muted border-2 border-background flex items-center justify-center" data-testid={`lock-indicator-${feature.id}`}>
+                                  <Lock className="h-3 w-3 text-muted-foreground" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-base mb-0.5">{feature.title}</h3>
+                              <p className="text-sm text-muted-foreground line-clamp-1" data-testid={isLocked ? `text-locked-${feature.id}` : undefined}>
+                                {isLocked ? "Unlocks after your first paid job" : feature.description}
+                              </p>
+                            </div>
+                            {isLocked ? (
+                              <Lock className="h-5 w-5 text-muted-foreground/50 flex-shrink-0" />
+                            ) : (
+                              <ChevronRight className="h-5 w-5 text-muted-foreground/50 flex-shrink-0 group-hover:text-primary transition-colors" />
+                            )}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-base mb-0.5">{feature.title}</h3>
-                            <p className="text-sm text-muted-foreground line-clamp-1">
-                              {feature.description}
-                            </p>
-                          </div>
-                          <ChevronRight className="h-5 w-5 text-muted-foreground/50 flex-shrink-0 group-hover:text-primary transition-colors" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               </div>
             );
