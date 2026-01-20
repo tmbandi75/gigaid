@@ -2541,6 +2541,29 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/leads/:id/sms-messages", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const lead = await storage.getLead(id);
+      if (!lead) {
+        return res.status(404).json({ error: "Lead not found" });
+      }
+      if (!lead.clientPhone) {
+        return res.json([]);
+      }
+      const normalizedPhone = lead.clientPhone.replace(/\D/g, '');
+      const messages = await storage.getSmsMessagesByPhone(defaultUserId, normalizedPhone);
+      const leadMessages = messages.filter(msg => 
+        msg.relatedLeadId === id || 
+        msg.clientPhone.replace(/\D/g, '') === normalizedPhone
+      );
+      res.json(leadMessages);
+    } catch (error) {
+      console.error("Lead SMS messages fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch SMS messages" });
+    }
+  });
+
   // Reminders Endpoints
   app.get("/api/reminders", async (req, res) => {
     try {

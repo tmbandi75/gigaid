@@ -29,6 +29,7 @@ import {
 import type { Lead, PriceConfirmation, AiNudge } from "@shared/schema";
 import { LeadEmailConversation } from "@/components/lead/LeadEmailConversation";
 import { LeadTextComposer } from "@/components/lead/LeadTextComposer";
+import { LeadSmsConversation } from "@/components/lead/LeadSmsConversation";
 import { useState, useEffect } from "react";
 import { useNudges, useGenerateNudges, useFeatureFlag } from "@/hooks/use-nudges";
 import { NudgeChips } from "@/components/nudges/NudgeChip";
@@ -325,6 +326,12 @@ export default function LeadSummary() {
             </CardContent>
           </Card>
         )}
+
+        <LeadSmsConversation
+          leadId={lead.id}
+          clientPhone={lead.clientPhone}
+          clientName={lead.clientName}
+        />
 
         <LeadTextComposer
           leadId={lead.id}
