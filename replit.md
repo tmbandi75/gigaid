@@ -40,6 +40,9 @@ Preferred communication style: Simple, everyday language.
 - **Today's Money Plan**: Global action queue prioritizing leads, jobs, and invoices by revenue impact. Features smart prioritization (urgent/important/normal), snooze functionality, and deduplication. Enable via `today_money_plan` feature flag.
 - **Outcome Attribution**: Conservative impact metrics showing time and money saved through GigAid suggestions. Calculates days saved (0.5 per acted nudge) and cash acceleration. Enable via `outcome_attribution` feature flag.
 - **iOS App Build (Capacitor)**: The web application is packaged as a native iOS app using Capacitor, enabling native features and App Store distribution.
+- **Universal Priority Signals**: AI-inferred priority badges (high, at_risk, time_sensitive, payment_risk) appear on leads, jobs, invoices, and messages to help users focus on what matters most.
+- **Progressive Disclosure**: Advanced AI tools (Get More Bookings, Know Who's Serious, Grow My Business, Referral Generator) are gated until user completes their first job or receives first payment, reducing cognitive overload for new users.
+- **Verb-Based Status Labels**: All status chips and filters use action-oriented language ("Just Added", "Coming Up", "Awaiting Reply", "Not Sent") instead of technical states for better clarity.
 
 ## External Dependencies
 
