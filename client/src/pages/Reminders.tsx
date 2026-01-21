@@ -33,6 +33,14 @@ import type { Reminder } from "@shared/schema";
 
 type FilterStatus = "all" | "pending" | "sent" | "failed";
 
+function formatPhoneNumber(value: string): string {
+  const digits = value.replace(/\D/g, '');
+  if (digits.length === 0) return '';
+  if (digits.length <= 3) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+}
+
 export default function Reminders() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -95,7 +103,7 @@ export default function Reminders() {
     const formattedDate = scheduledDate.toISOString().slice(0, 16);
     setFormData({
       clientName: reminder.clientName,
-      clientPhone: reminder.clientPhone || "",
+      clientPhone: formatPhoneNumber(reminder.clientPhone || ""),
       clientEmail: reminder.clientEmail || "",
       message: reminder.message,
       channel: reminder.channel as "sms" | "voice" | "email",
@@ -431,7 +439,7 @@ export default function Reminders() {
                   <Input
                     id="clientPhone"
                     value={formData.clientPhone}
-                    onChange={(e) => setFormData({ ...formData, clientPhone: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, clientPhone: formatPhoneNumber(e.target.value) })}
                     placeholder="(555) 000-0000"
                     data-testid="input-client-phone"
                   />
