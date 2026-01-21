@@ -55,7 +55,6 @@ import NotFound from "@/pages/not-found";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={TodaysGamePlanPage} />
       <Route path="/dashboard" component={TodaysGamePlanPage} />
       <Route path="/dashboard-overview" component={Dashboard} />
       <Route path="/jobs" component={Jobs} />
@@ -141,6 +140,7 @@ function App() {
         <TooltipProvider>
           <ThemeInitializer />
           <Switch>
+          <Route path="/" component={SplashPage} />
           <Route path="/welcome" component={SplashPage} />
           <Route path="/book/:slug" component={PublicBooking} />
           <Route path="/booking/:token" component={CustomerBookingDetail} />

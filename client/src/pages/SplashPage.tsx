@@ -8,12 +8,12 @@ export default function SplashPage() {
 
   const handleLogIn = () => {
     localStorage.setItem("gigaid_splash_seen", "true");
-    setLocation("/");
+    setLocation("/dashboard");
   };
 
   const handleCreateAccount = () => {
     localStorage.setItem("gigaid_splash_seen", "true");
-    setLocation("/");
+    setLocation("/dashboard");
   };
 
   return (
