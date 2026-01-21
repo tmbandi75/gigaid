@@ -284,6 +284,90 @@ export async function seedDatabase() {
         score: 75,
         createdAt: hoursFromNow(-3),
       },
+      // Additional leads to showcase Heat Labels (Hot/Warm/Cold)
+      {
+        id: "seed-lead-5",
+        userId: DEMO_USER_ID,
+        clientName: "Diana Moore",
+        clientPhone: "415-555-6666",
+        clientEmail: "d.moore@email.com",
+        serviceType: "Drain Cleaning",
+        description: "Slow drain in kitchen sink",
+        status: "contacted",
+        source: "booking_form",
+        score: 45, // Warm lead
+        lastContactedAt: daysAgo(2),
+        createdAt: daysAgo(4),
+      },
+      {
+        id: "seed-lead-6",
+        userId: DEMO_USER_ID,
+        clientName: "Brian Cooper",
+        clientPhone: "510-555-7777",
+        clientEmail: "b.cooper@email.com",
+        serviceType: "Light Fixture Installation",
+        description: "Install ceiling fan in bedroom",
+        status: "cold",
+        source: "social",
+        score: 15, // Cold lead
+        lastContactedAt: daysAgo(14),
+        createdAt: daysAgo(21),
+      },
+      {
+        id: "seed-lead-7",
+        userId: DEMO_USER_ID,
+        clientName: "Stephanie Hall",
+        clientPhone: "415-555-8888",
+        clientEmail: "s.hall@email.com",
+        serviceType: "Deep Cleaning",
+        description: "Post-construction cleanup needed",
+        status: "cold",
+        source: "referral",
+        score: 0, // Cold lead with zero score
+        lastContactedAt: daysAgo(30),
+        createdAt: daysAgo(45),
+      },
+      {
+        id: "seed-lead-8",
+        userId: DEMO_USER_ID,
+        clientName: "Ryan Peterson",
+        clientPhone: "510-555-9999",
+        clientEmail: "r.peterson@email.com",
+        serviceType: "Water Heater Service",
+        description: "Annual water heater maintenance",
+        status: "contacted",
+        source: "manual",
+        score: 60, // Warm lead near boundary
+        lastContactedAt: daysAgo(1),
+        createdAt: daysAgo(3),
+      },
+      {
+        id: "seed-lead-9",
+        userId: DEMO_USER_ID,
+        clientName: "Michelle Clark",
+        clientPhone: "415-555-0001",
+        clientEmail: "m.clark@email.com",
+        serviceType: "Standard Home Cleaning",
+        description: "Weekly cleaning service inquiry",
+        status: "new",
+        source: "booking_form",
+        score: 70, // Hot lead at boundary
+        createdAt: hoursFromNow(-1),
+      },
+      {
+        id: "seed-lead-10",
+        userId: DEMO_USER_ID,
+        clientName: "Christopher Lee",
+        clientPhone: "510-555-0002",
+        clientEmail: "c.lee@email.com",
+        serviceType: "Circuit Breaker Issues",
+        description: "Breaker keeps tripping",
+        status: "cold",
+        source: "social",
+        score: 25, // Cold lead
+        lastContactedAt: daysAgo(10),
+        createdAt: daysAgo(18),
+      },
     ];
 
     for (const lead of leadsData) {
@@ -855,6 +939,7 @@ export async function seedDatabase() {
     console.log("[Seed] Feature flags seeded");
 
     // Seed AI Nudges for Today's Game Plan
+    // Includes multiple nudges of same type to demo deduplication/grouping
     const today = new Date().toISOString().split("T")[0];
     const aiNudgesData = [
       {
@@ -901,6 +986,84 @@ export async function seedDatabase() {
           suggestedMessage: "Hi Kevin! Got your message about the emergency pipe repair. I can help! When would be a good time to take a look?",
         }),
         dedupeKey: `${DEMO_USER_ID}:lead:seed-lead-4:lead_follow_up:${today}`,
+      },
+      // Additional nudges for deduplication demo - multiple "lead_silent_rescue" (went quiet)
+      {
+        id: "seed-nudge-4",
+        userId: DEMO_USER_ID,
+        entityType: "lead",
+        entityId: "seed-lead-6",
+        nudgeType: "lead_silent_rescue",
+        priority: 70,
+        status: "active",
+        createdAt: hoursFromNow(-4),
+        explainText: "Brian went quiet 2 weeks ago — check in.",
+        actionPayload: JSON.stringify({
+          suggestedMessage: "Hi Brian! Just checking in on your ceiling fan installation. Still interested?",
+        }),
+        dedupeKey: `${DEMO_USER_ID}:lead:seed-lead-6:lead_silent_rescue:${today}`,
+      },
+      {
+        id: "seed-nudge-5",
+        userId: DEMO_USER_ID,
+        entityType: "lead",
+        entityId: "seed-lead-7",
+        nudgeType: "lead_silent_rescue",
+        priority: 65,
+        status: "active",
+        createdAt: hoursFromNow(-5),
+        explainText: "Stephanie went quiet a month ago — worth a check-in.",
+        actionPayload: JSON.stringify({
+          suggestedMessage: "Hi Stephanie! Following up on your post-construction cleanup inquiry. Let me know if you still need help!",
+        }),
+        dedupeKey: `${DEMO_USER_ID}:lead:seed-lead-7:lead_silent_rescue:${today}`,
+      },
+      {
+        id: "seed-nudge-6",
+        userId: DEMO_USER_ID,
+        entityType: "lead",
+        entityId: "seed-lead-10",
+        nudgeType: "lead_silent_rescue",
+        priority: 60,
+        status: "active",
+        createdAt: hoursFromNow(-6),
+        explainText: "Christopher went quiet 10 days ago — quick follow-up?",
+        actionPayload: JSON.stringify({
+          suggestedMessage: "Hi Christopher! Checking in on your circuit breaker issue. Let me know if you still need help.",
+        }),
+        dedupeKey: `${DEMO_USER_ID}:lead:seed-lead-10:lead_silent_rescue:${today}`,
+      },
+      // Invoice nudge for creating invoice from completed job
+      {
+        id: "seed-nudge-7",
+        userId: DEMO_USER_ID,
+        entityType: "job",
+        entityId: "seed-job-4",
+        nudgeType: "invoice_create_from_job_done",
+        priority: 82,
+        status: "active",
+        createdAt: hoursFromNow(-2),
+        explainText: "Completed job with David — ready to invoice?",
+        actionPayload: JSON.stringify({
+          action: "create_invoice",
+        }),
+        dedupeKey: `${DEMO_USER_ID}:job:seed-job-4:invoice_create_from_job_done:${today}`,
+      },
+      // Job stuck nudge
+      {
+        id: "seed-nudge-8",
+        userId: DEMO_USER_ID,
+        entityType: "job",
+        entityId: "seed-job-3",
+        nudgeType: "job_stuck",
+        priority: 78,
+        status: "active",
+        createdAt: hoursFromNow(-1),
+        explainText: "Water heater job has been in progress for a while — update status?",
+        actionPayload: JSON.stringify({
+          action: "update_status",
+        }),
+        dedupeKey: `${DEMO_USER_ID}:job:seed-job-3:job_stuck:${today}`,
       },
     ];
 
