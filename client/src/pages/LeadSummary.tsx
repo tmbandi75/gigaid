@@ -25,6 +25,7 @@ import {
   ExternalLink,
   Copy,
   Sparkles,
+  MessageSquare,
 } from "lucide-react";
 import type { Lead, PriceConfirmation, AiNudge } from "@shared/schema";
 import { LeadEmailConversation } from "@/components/lead/LeadEmailConversation";
@@ -284,6 +285,23 @@ export default function LeadSummary() {
           </CardContent>
         </Card>
 
+        {lead.description && (
+          <Card className="border-0 shadow-md bg-primary/5 border-l-4 border-l-primary" data-testid="card-description">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <MessageSquare className="h-4 w-4 text-primary" />
+                <h3 className="font-semibold text-sm">
+                  {lead.source === "booking_form" ? "Client's Request" : "Description"}
+                </h3>
+                {lead.source === "booking_form" && (
+                  <Badge variant="secondary" className="text-xs ml-auto">From booking form</Badge>
+                )}
+              </div>
+              <p className="text-sm" data-testid="text-description">{lead.description}</p>
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="border-0 shadow-md" data-testid="card-service">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-3">
@@ -302,18 +320,6 @@ export default function LeadSummary() {
             </div>
           </CardContent>
         </Card>
-
-        {lead.description && (
-          <Card className="border-0 shadow-md" data-testid="card-description">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <FileText className="h-4 w-4 text-amber-500" />
-                <h3 className="font-semibold text-sm">Description</h3>
-              </div>
-              <p className="text-sm text-muted-foreground" data-testid="text-description">{lead.description}</p>
-            </CardContent>
-          </Card>
-        )}
 
         {lead.notes && (
           <Card className="border-0 shadow-md" data-testid="card-notes">
