@@ -142,16 +142,16 @@ function GamePlanCard({ nudge, onNavigate, onSnooze, isSnoozing }: GamePlanCardP
       <CardContent className="p-0">
         <div className="flex">
           <div className={`w-1 ${config.bg.replace("/10", "")}`} />
-          <div className="flex-1 p-4">
+          <div className="flex-1 p-3">
             <div className="flex items-start gap-3">
-              <div className={`h-10 w-10 rounded-xl ${config.bg} flex items-center justify-center flex-shrink-0`}>
-                <Icon className={`h-5 w-5 ${config.color}`} />
+              <div className={`h-9 w-9 rounded-xl ${config.bg} flex items-center justify-center flex-shrink-0`}>
+                <Icon className={`h-4 w-4 ${config.color}`} />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-foreground text-sm mb-1">
                   {getActionText(nudge)}
                 </p>
-                <p className="text-xs text-muted-foreground mb-3">
+                <p className="text-xs text-muted-foreground mb-2">
                   {nudge.explainText}
                 </p>
                 <div className="flex items-center gap-2">
@@ -245,19 +245,19 @@ export function TodaysGamePlan() {
 
   if (nudges.length === 0) {
     return (
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 mb-4">
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 mb-3">
           <Sparkles className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-semibold">Today's Game Plan</h2>
         </div>
         <Card className="border-0 shadow-sm">
-          <CardContent className="py-8 text-center">
+          <CardContent className="py-6 text-center">
             <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-3">
               <CheckCircle2 className="h-6 w-6 text-emerald-600" />
             </div>
-            <p className="font-medium text-foreground mb-1">All caught up!</p>
+            <p className="font-medium text-foreground mb-1">Quiet day</p>
             <p className="text-sm text-muted-foreground">
-              No urgent actions right now. Keep up the great work.
+              Great time to follow up or send invoices.
             </p>
           </CardContent>
         </Card>
@@ -265,22 +265,106 @@ export function TodaysGamePlan() {
     );
   }
 
+  // Deduplicate nudges - group by nudgeType and show count
+  const groupedNudges = nudges.reduce((acc, nudge) => {
+    const existing = acc.find(g => g.nudgeType === nudge.nudgeType);
+    if (existing) {
+      existing.nudges.push(nudge);
+    } else {
+      acc.push({ nudgeType: nudge.nudgeType, nudges: [nudge] });
+    }
+    return acc;
+  }, [] as { nudgeType: string; nudges: AiNudge[] }[]);
+
   return (
-    <div className="space-y-3" data-testid="todays-game-plan">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="space-y-2" data-testid="todays-game-plan">
+      <div className="flex items-center gap-2 mb-3">
         <Sparkles className="h-5 w-5 text-primary" />
         <h2 className="text-lg font-semibold">Today's Game Plan</h2>
       </div>
       
-      {nudges.map((nudge) => (
-        <GamePlanCard
-          key={nudge.id}
-          nudge={nudge}
-          onNavigate={() => handleNavigate(nudge)}
-          onSnooze={() => snoozeMutation.mutate(nudge.id)}
-          isSnoozing={snoozingId === nudge.id}
-        />
-      ))}
+      {groupedNudges.map((group) => {
+        const firstNudge = group.nudges[0];
+        const count = group.nudges.length;
+        
+        if (count === 1) {
+          return (
+            <GamePlanCard
+              key={firstNudge.id}
+              nudge={firstNudge}
+              onNavigate={() => handleNavigate(firstNudge)}
+              onSnooze={() => snoozeMutation.mutate(firstNudge.id)}
+              isSnoozing={snoozingId === firstNudge.id}
+            />
+          );
+        }
+
+        // Grouped card for multiple items of same type
+        const config = nudgeConfig[group.nudgeType] || {
+          icon: Sparkles,
+          actionLabel: "View",
+          getRoute: () => "/",
+          color: "text-primary",
+          bg: "bg-primary/10",
+        };
+        const Icon = config.icon;
+        const groupLabel = getGroupedLabel(group.nudgeType, count);
+
+        return (
+          <Card key={group.nudgeType} className="border-0 shadow-sm overflow-hidden" data-testid={`gameplan-group-${group.nudgeType}`}>
+            <CardContent className="p-0">
+              <div className="flex">
+                <div className={`w-1 ${config.bg.replace("/10", "")}`} />
+                <div className="flex-1 p-3">
+                  <div className="flex items-start gap-3">
+                    <div className={`h-9 w-9 rounded-xl ${config.bg} flex items-center justify-center flex-shrink-0`}>
+                      <Icon className={`h-4 w-4 ${config.color}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground text-sm mb-2">
+                        {groupLabel}
+                      </p>
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleNavigate(firstNudge)}
+                        data-testid={`button-gameplan-group-${group.nudgeType}`}
+                      >
+                        {config.actionLabel}
+                        <ChevronRight className="h-3 w-3 ml-1" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
+}
+
+function getGroupedLabel(nudgeType: string, count: number): string {
+  switch (nudgeType) {
+    case "lead_follow_up":
+      return `${count} leads need follow-up`;
+    case "lead_convert_to_job":
+      return `${count} leads ready to book`;
+    case "lead_silent_rescue":
+      return `${count} leads went quiet`;
+    case "lead_hot_alert":
+      return `${count} hot leads to respond to`;
+    case "invoice_reminder":
+      return `${count} invoices need reminders`;
+    case "invoice_overdue_escalation":
+      return `${count} invoices overdue`;
+    case "invoice_create_from_job_done":
+      return `${count} jobs need invoicing`;
+    case "invoice_reminder_firm":
+      return `${count} invoices need follow-up`;
+    case "job_stuck":
+      return `${count} jobs need status updates`;
+    default:
+      return `${count} actions needed`;
+  }
 }

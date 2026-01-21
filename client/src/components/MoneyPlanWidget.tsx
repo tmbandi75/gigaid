@@ -143,7 +143,7 @@ export function MoneyPlanWidget() {
             <div className="h-12 w-12 rounded-full bg-muted mx-auto flex items-center justify-center mb-3">
               <CheckCircle2 className="h-6 w-6 text-muted-foreground" />
             </div>
-            <p className="text-sm text-muted-foreground mb-2">All caught up!</p>
+            <p className="text-sm text-muted-foreground mb-2">Quiet day — great time to follow up or send invoices.</p>
             <Button
               variant="outline"
               size="sm"

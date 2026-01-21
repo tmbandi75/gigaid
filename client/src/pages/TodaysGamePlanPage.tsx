@@ -304,10 +304,10 @@ export default function TodaysGamePlanPage() {
                       </div>
                       <div className="flex-1">
                         <p className="font-semibold text-emerald-700 dark:text-emerald-400">
-                          You're on track today
+                          Quiet day
                         </p>
                         <p className="text-sm text-emerald-600/80 dark:text-emerald-500/80 mb-3">
-                          No urgent actions right now. Want to get ahead?
+                          Great time to follow up or send invoices.
                         </p>
                         <Button
                           variant="outline"

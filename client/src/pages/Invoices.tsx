@@ -100,7 +100,7 @@ function InvoiceCard({ invoice, nudges, onNudgeClick }: { invoice: Invoice; nudg
         <CardContent className="p-0">
           <div className="flex">
             <div className={`w-1.5 bg-gradient-to-b ${config.gradient}`} />
-            <div className="flex-1 p-4">
+            <div className="flex-1 p-3">
               <div className="flex items-center gap-4">
                 <div className={`relative h-14 w-14 rounded-2xl ${config.bg} flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105`}>
                   <FileText className={`h-6 w-6 ${config.color}`} />
@@ -402,7 +402,6 @@ export default function Invoices() {
         nudge={selectedNudge}
         open={!!selectedNudge}
         onClose={() => setSelectedNudge(null)}
-        onNavigate={(path) => navigate(path)}
       />
     </div>
   );

@@ -29,12 +29,15 @@ import {
   MessageSquare,
   Users,
   TrendingUp,
-  Star,
   Mail,
   Send,
   ExternalLink,
   List,
-  LayoutGrid
+  LayoutGrid,
+  Flame,
+  Sun,
+  Snowflake,
+  Star
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useState, useEffect } from "react";
@@ -82,11 +85,11 @@ function getDaysSince(dateStr: string): number {
   return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }
 
-function getScoreColor(score: number | null): string {
-  if (!score) return "text-muted-foreground";
-  if (score >= 80) return "text-emerald-600";
-  if (score >= 50) return "text-amber-600";
-  return "text-red-500";
+function getHeatLabel(score: number | null | undefined): { label: string; color: string; icon: string } | null {
+  if (score === null || score === undefined) return null;
+  if (score >= 70) return { label: "Hot", color: "text-red-500", icon: "flame" };
+  if (score >= 40) return { label: "Warm", color: "text-amber-500", icon: "sun" };
+  return { label: "Cold", color: "text-blue-400", icon: "snowflake" };
 }
 
 const filters = [
@@ -110,7 +113,7 @@ function LeadCard({ lead, nudges, onGenerateFollowUp, onSendText, onNudgeClick }
       <CardContent className="p-0">
         <div className="flex">
           <div className={`w-1 ${lead.status === "new" ? "bg-emerald-500" : lead.status === "price_confirmed" ? "bg-violet-500" : "bg-blue-500"}`} />
-          <div className="flex-1 p-4">
+          <div className="flex-1 p-3">
             <Link href={`/leads/${lead.id}`} data-testid={`link-lead-${lead.id}`}>
               <div className="flex items-start gap-3 cursor-pointer">
                 <div className={`h-12 w-12 rounded-full ${config.bg} flex items-center justify-center flex-shrink-0`}>
@@ -139,12 +142,18 @@ function LeadCard({ lead, nudges, onGenerateFollowUp, onSendText, onNudgeClick }
                   )}
                   <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                     <span>{formatDate(lead.createdAt)}</span>
-                    {lead.score && (
-                      <span className={`flex items-center gap-1 font-medium ${getScoreColor(lead.score)}`}>
-                        <Star className="h-3 w-3" />
-                        {lead.score}%
-                      </span>
-                    )}
+                    {(() => {
+                      const heat = lead.score !== null && lead.score !== undefined ? getHeatLabel(lead.score) : null;
+                      if (!heat) return null;
+                      return (
+                        <span className={`flex items-center gap-1 font-medium ${heat.color}`}>
+                          {heat.icon === "flame" && <Flame className="h-3 w-3" />}
+                          {heat.icon === "sun" && <Sun className="h-3 w-3" />}
+                          {heat.icon === "snowflake" && <Snowflake className="h-3 w-3" />}
+                          {heat.label}
+                        </span>
+                      );
+                    })()}
                   </div>
                   {lead.description && (
                     <p className="text-sm text-muted-foreground mt-2 line-clamp-1">{lead.description}</p>
@@ -157,9 +166,9 @@ function LeadCard({ lead, nudges, onGenerateFollowUp, onSendText, onNudgeClick }
               <div className="flex items-center gap-2">
                 {lead.sourceUrl && (
                   <a href={lead.sourceUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                    <Button variant="default" size="sm" className="h-8 px-2 bg-blue-600 hover-elevate" data-testid={`button-source-${lead.id}`}>
+                    <Button variant="ghost" size="sm" className="h-8 px-2" data-testid={`button-source-${lead.id}`}>
                       <ExternalLink className="h-3 w-3 mr-1" />
-                      Open post
+                      Post
                     </Button>
                   </a>
                 )}
@@ -196,7 +205,6 @@ function LeadCard({ lead, nudges, onGenerateFollowUp, onSendText, onNudgeClick }
                 )}
               </div>
               <Button
-                variant="outline"
                 size="sm"
                 className="h-8"
                 onClick={(e) => {
@@ -580,7 +588,6 @@ export default function Leads() {
         nudge={selectedNudge}
         open={!!selectedNudge}
         onClose={() => setSelectedNudge(null)}
-        onNavigate={(path) => navigate(path)}
       />
     </div>
   );

@@ -159,7 +159,7 @@ function JobCard({ job, nudges, onNudgeClick }: { job: Job; nudges: AiNudge[]; o
         <CardContent className="p-0">
           <div className="flex">
             <div className={`w-1 ${job.status === "in_progress" ? "bg-amber-500" : job.status === "completed" ? "bg-emerald-500" : "bg-primary"}`} />
-            <div className="flex-1 p-4">
+            <div className="flex-1 p-3">
               <div className="flex items-start gap-3">
                 <div className={`h-12 w-12 rounded-xl ${config.bg} flex items-center justify-center flex-shrink-0`}>
                   <Briefcase className={`h-5 w-5 ${config.color}`} />
