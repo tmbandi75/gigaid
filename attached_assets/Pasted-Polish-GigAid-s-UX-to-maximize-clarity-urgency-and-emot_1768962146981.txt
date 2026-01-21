@@ -1,0 +1,197 @@
+Polish GigAid’s UX to maximize clarity, urgency, and emotional guidance while keeping:
+
+All existing features
+
+All existing routes
+
+All existing data models
+
+Zero breaking changes
+
+This is a presentation-layer refinement only.
+
+🧠 Guiding Principles (LOCKED)
+
+User should know what to do next in ≤3 seconds
+
+Money and urgency always win visual priority
+
+No new flows, no removals
+
+No backend changes
+
+No AI hype language
+
+1️⃣ Add Explicit Priority Badges (UI-Only)
+Implement small, consistent priority badges across:
+
+Leads
+
+Jobs
+
+Invoices
+
+Today’s Game Plan items
+
+Badge Types (max 1 per item):
+
+🔥 High Priority (hot lead, likely conversion)
+
+⚠️ At Risk (no reply, overdue, stalled)
+
+⏰ Time Sensitive (upcoming job, deadline)
+
+💰 Payment Risk (invoice overdue)
+
+Rules:
+
+Badge = icon + short label
+
+Use existing color system:
+
+Red → Payment / critical
+
+Orange → Time / urgency
+
+Green → positive / progressing
+
+Placement:
+
+Right-aligned on list cards
+
+Below title on primary cards
+
+⚠️ Do NOT show scores, percentages, or probabilities.
+
+2️⃣ Replace Lead Percentages With Heat Labels (UI Mapping Only)
+On Leads screen:
+
+Replace any visible % (e.g. “75%”) with:
+
+🔥 Hot
+
+🟡 Warm
+
+❄️ Cold
+
+Mapping logic (frontend only):
+
+≥70% → Hot
+
+40–69% → Warm
+
+<40% → Cold
+
+Backend values remain unchanged.
+
+3️⃣ Deduplicate “What To Do Next” Suggestions
+Update Today’s Game Plan logic:
+
+Do NOT show duplicate suggestions
+
+If multiple items share the same action:
+
+Group them into a single card
+
+Example:
+
+“2 jobs need status updates”
+
+CTA: Update Now
+
+4️⃣ Strengthen Emotional Copy in Idle States
+
+When metrics show:
+
+0 jobs today
+
+$0 collected today
+
+No urgent actions
+
+Add supportive, action-oriented copy (non-alarmist).
+
+Example:
+
+“Quiet day — great time to follow up or send invoices.”
+
+This is copy-only. No new logic.
+
+5️⃣ Tighten CTA Hierarchy (No Layout Changes)
+
+Ensure:
+
+Each card has one primary CTA
+
+Secondary actions are de-emphasized (icon-only or text link)
+
+No screen presents two competing primary buttons
+
+Do NOT add new buttons.
+
+6️⃣ Minor Visual Consistency Pass
+Enforce consistency:
+
+Status chips:
+
+Same colors across Leads / Jobs / Invoices
+
+Icons:
+
+Same icon meaning everywhere (clock = time, $ = money)
+
+Spacing:
+
+Reduce vertical padding on stacked cards by ~10% for scan speed
+
+Do NOT change typography scale.
+
+7️⃣ Guardrails (DO NOT VIOLATE)
+
+🚫 Do NOT:
+
+Rename routes
+
+Change navigation
+
+Add onboarding steps
+
+Add modals or popups
+
+Introduce settings or toggles
+
+Modify backend schemas or APIs
+
+✅ This pass must be:
+
+Safe to deploy
+
+Reversible
+
+Testable via UI only
+
+🧪 Acceptance Criteria (Must Pass All)
+
+User can identify top priority action in ≤3 seconds
+
+Overdue money is visually unmistakable
+
+No duplicate “What To Do Next” cards appear
+
+Leads communicate “hot vs cold” instantly
+
+App feels calmer, not louder
+
+📦 Expected Output
+
+Priority badges visible across key lists
+
+Heat-based lead labels (Hot / Warm / Cold)
+
+Cleaner Today’s Game Plan
+
+Improved empty / idle state tone
+
+No regressions
+
+END PROMPT
