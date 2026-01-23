@@ -22,9 +22,14 @@ import {
   Calendar,
   Crown,
   MessageSquare,
+  Car,
+  MapPin,
+  Navigation,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { useDriveModeContext } from "@/components/drivemode/DriveModeProvider";
 
 interface UserProfile {
   id: string;
@@ -66,9 +71,36 @@ const menuSections = [
   },
 ];
 
+function GpsStatusIndicator({ status, speed }: { status: string; speed: number | null }) {
+  const getStatusInfo = () => {
+    switch (status) {
+      case 'active':
+        return { color: 'bg-green-500', text: speed !== null ? `${speed} mph` : 'Tracking' };
+      case 'requesting':
+        return { color: 'bg-yellow-500 animate-pulse', text: 'Connecting...' };
+      case 'denied':
+        return { color: 'bg-red-500', text: 'Permission denied' };
+      case 'error':
+        return { color: 'bg-red-500', text: 'GPS error' };
+      default:
+        return { color: 'bg-gray-400', text: 'Inactive' };
+    }
+  };
+
+  const info = getStatusInfo();
+  
+  return (
+    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <div className={`h-2 w-2 rounded-full ${info.color}`} />
+      <span>{info.text}</span>
+    </div>
+  );
+}
+
 export default function More() {
   const [, navigate] = useLocation();
   const [darkMode, setDarkMode] = useState(false);
+  const { enterDriveMode, gpsStatus, currentSpeed } = useDriveModeContext();
 
   const { data: profile } = useQuery<UserProfile>({
     queryKey: ["/api/profile"],
@@ -167,6 +199,40 @@ export default function More() {
                 data-testid="switch-dark-mode"
               />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-md overflow-hidden">
+          <CardContent className="p-0">
+            <div 
+              className="flex items-center justify-between p-4"
+              data-testid="drive-mode-section"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
+                  <Car className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">Drive Mode</p>
+                  <GpsStatusIndicator status={gpsStatus} speed={currentSpeed} />
+                </div>
+              </div>
+              <Button 
+                size="sm" 
+                onClick={enterDriveMode}
+                data-testid="button-enter-drive-mode"
+              >
+                <Navigation className="h-4 w-4 mr-1" />
+                Start
+              </Button>
+            </div>
+            {gpsStatus === 'denied' && (
+              <div className="px-4 pb-4 -mt-2">
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  Please enable location access in your browser settings for automatic detection.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

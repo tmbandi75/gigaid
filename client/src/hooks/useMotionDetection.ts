@@ -2,8 +2,11 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { setMovementState, getMovementState, MovementState } from '@/lib/offlineDb';
 
 const SPEED_THRESHOLD_MPH = 12;
-const SUSTAINED_DURATION_MS = 50000;
+const SUSTAINED_DURATION_MS = 5000; // 5 seconds for testing (was 50 seconds)
 const METERS_PER_SECOND_TO_MPH = 2.237;
+const SPEED_DROP_TOLERANCE = 3; // Allow brief dips below threshold
+
+export type GpsStatus = 'inactive' | 'requesting' | 'active' | 'error' | 'denied';
 
 interface MotionDetectionOptions {
   enabled?: boolean;
@@ -16,10 +19,13 @@ export function useMotionDetection(options: MotionDetectionOptions = {}) {
     movementConfidence: 'low',
     movementStartTime: null,
   });
+  const [gpsStatus, setGpsStatus] = useState<GpsStatus>('inactive');
+  const [currentSpeed, setCurrentSpeed] = useState<number | null>(null);
   
   const watchIdRef = useRef<number | null>(null);
   const speedHistoryRef = useRef<number[]>([]);
   const movementStartRef = useRef<number | null>(null);
+  const belowThresholdCountRef = useRef<number>(0);
 
   const calculateConfidence = useCallback((speeds: number[]): 'low' | 'medium' | 'high' => {
     if (speeds.length < 3) return 'low';
@@ -42,13 +48,16 @@ export function useMotionDetection(options: MotionDetectionOptions = {}) {
   }, []);
 
   const handlePosition = useCallback((position: GeolocationPosition) => {
+    setGpsStatus('active');
     const speedMps = position.coords.speed;
     
     if (speedMps === null || speedMps < 0) {
+      setCurrentSpeed(null);
       return;
     }
 
     const speedMph = speedMps * METERS_PER_SECOND_TO_MPH;
+    setCurrentSpeed(Math.round(speedMph));
     speedHistoryRef.current.push(speedMph);
     
     if (speedHistoryRef.current.length > 20) {
@@ -59,6 +68,8 @@ export function useMotionDetection(options: MotionDetectionOptions = {}) {
     const now = Date.now();
 
     if (isAboveThreshold) {
+      belowThresholdCountRef.current = 0;
+      
       if (!movementStartRef.current) {
         movementStartRef.current = now;
       }
@@ -74,70 +85,82 @@ export function useMotionDetection(options: MotionDetectionOptions = {}) {
         });
       }
     } else {
-      movementStartRef.current = null;
-      speedHistoryRef.current = [];
+      belowThresholdCountRef.current++;
       
-      if (movementState.isMoving) {
-        updateState({
-          isMoving: false,
-          movementConfidence: 'low',
-          movementStartTime: null,
-        });
+      if (belowThresholdCountRef.current >= SPEED_DROP_TOLERANCE) {
+        movementStartRef.current = null;
+        speedHistoryRef.current = [];
+        belowThresholdCountRef.current = 0;
+        
+        if (movementState.isMoving) {
+          updateState({
+            isMoving: false,
+            movementConfidence: 'low',
+            movementStartTime: null,
+          });
+        }
       }
     }
   }, [calculateConfidence, updateState, movementState.isMoving]);
 
+  const handleError = useCallback((error: GeolocationPositionError) => {
+    if (error.code === error.PERMISSION_DENIED) {
+      setGpsStatus('denied');
+    } else {
+      setGpsStatus('error');
+    }
+  }, []);
+
   useEffect(() => {
     if (!enabled || !('geolocation' in navigator)) {
+      setGpsStatus('inactive');
       return;
     }
 
     getMovementState().then(setLocalMovementState);
 
+    const startWatching = () => {
+      if (watchIdRef.current === null) {
+        setGpsStatus('requesting');
+        watchIdRef.current = navigator.geolocation.watchPosition(
+          handlePosition,
+          handleError,
+          {
+            enableHighAccuracy: true,
+            maximumAge: 5000,
+            timeout: 10000,
+          }
+        );
+      }
+    };
+
+    const stopWatching = () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+        setGpsStatus('inactive');
+      }
+    };
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        if (watchIdRef.current === null) {
-          watchIdRef.current = navigator.geolocation.watchPosition(
-            handlePosition,
-            () => {
-              // Silent failure
-            },
-            {
-              enableHighAccuracy: true,
-              maximumAge: 5000,
-              timeout: 10000,
-            }
-          );
-        }
+        startWatching();
       } else {
-        if (watchIdRef.current !== null) {
-          navigator.geolocation.clearWatch(watchIdRef.current);
-          watchIdRef.current = null;
-        }
+        stopWatching();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     if (document.visibilityState === 'visible') {
-      watchIdRef.current = navigator.geolocation.watchPosition(
-        handlePosition,
-        () => {},
-        {
-          enableHighAccuracy: true,
-          maximumAge: 5000,
-          timeout: 10000,
-        }
-      );
+      startWatching();
     }
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-      }
+      stopWatching();
     };
-  }, [enabled, handlePosition]);
+  }, [enabled, handlePosition, handleError]);
 
-  return movementState;
+  return { ...movementState, gpsStatus, currentSpeed };
 }

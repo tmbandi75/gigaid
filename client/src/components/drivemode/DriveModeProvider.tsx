@@ -4,17 +4,22 @@ import { DriveModePrompt } from './DriveModePrompt';
 import { DriveModeView } from './DriveModeView';
 import { OfflineStatusBar } from '@/components/offline/OfflineIndicator';
 import { initializeSync } from '@/lib/offlineSync';
+import { GpsStatus } from '@/hooks/useMotionDetection';
 
 interface DriveModeContextValue {
   isDriveMode: boolean;
   enterDriveMode: () => void;
   exitDriveMode: () => void;
+  gpsStatus: GpsStatus;
+  currentSpeed: number | null;
 }
 
 const DriveModeContext = createContext<DriveModeContextValue>({
   isDriveMode: false,
   enterDriveMode: () => {},
   exitDriveMode: () => {},
+  gpsStatus: 'inactive',
+  currentSpeed: null,
 });
 
 export function useDriveModeContext() {
@@ -33,6 +38,8 @@ export function DriveModeProvider({ children }: DriveModeProviderProps) {
     declineDriveMode,
     enterDriveMode,
     exitDriveMode,
+    gpsStatus,
+    currentSpeed,
   } = useDriveMode();
 
   useEffect(() => {
@@ -40,7 +47,7 @@ export function DriveModeProvider({ children }: DriveModeProviderProps) {
   }, []);
 
   return (
-    <DriveModeContext.Provider value={{ isDriveMode, enterDriveMode, exitDriveMode }}>
+    <DriveModeContext.Provider value={{ isDriveMode, enterDriveMode, exitDriveMode, gpsStatus, currentSpeed }}>
       <OfflineStatusBar />
       
       {isDriveMode ? (

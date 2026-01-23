@@ -4,7 +4,7 @@ import {
   setDriveModePreference, 
   DriveModePreference 
 } from '@/lib/offlineDb';
-import { useMotionDetection } from './useMotionDetection';
+import { useMotionDetection, GpsStatus } from './useMotionDetection';
 
 export function useDriveMode() {
   const [isDriveMode, setIsDriveMode] = useState(false);
@@ -15,7 +15,8 @@ export function useDriveMode() {
     lastPromptedAt: null,
   });
 
-  const movementState = useMotionDetection({ enabled: !isDriveMode });
+  const motionData = useMotionDetection({ enabled: !isDriveMode });
+  const { isMoving, movementConfidence, movementStartTime, gpsStatus, currentSpeed } = motionData;
 
   useEffect(() => {
     getDriveModePreference().then(setPreference);
@@ -23,15 +24,15 @@ export function useDriveMode() {
 
   useEffect(() => {
     const shouldShow = 
-      movementState.isMoving &&
-      (movementState.movementConfidence === 'medium' || movementState.movementConfidence === 'high') &&
+      isMoving &&
+      (movementConfidence === 'medium' || movementConfidence === 'high') &&
       preference.driveModePreference === 'unknown' &&
       !isDriveMode;
 
     if (shouldShow && !showSuggestion) {
       setShowSuggestion(true);
     }
-  }, [movementState, preference.driveModePreference, isDriveMode, showSuggestion]);
+  }, [isMoving, movementConfidence, preference.driveModePreference, isDriveMode, showSuggestion]);
 
   const acceptDriveMode = useCallback(async () => {
     await setDriveModePreference({
@@ -77,7 +78,9 @@ export function useDriveMode() {
     isDriveMode,
     showSuggestion,
     preference,
-    movementState,
+    movementState: { isMoving, movementConfidence, movementStartTime },
+    gpsStatus,
+    currentSpeed,
     acceptDriveMode,
     declineDriveMode,
     enterDriveMode,
