@@ -7,6 +7,7 @@ import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
 import { VoiceFAB } from "@/components/layout/VoiceFAB";
 import { OnboardingWrapper } from "@/components/onboarding/OnboardingWrapper";
 import { PostHogProvider } from "@/components/PostHogProvider";
+import { DriveModeProvider } from "@/components/drivemode/DriveModeProvider";
 import { useEffect, useState } from "react";
 import SplashPage from "@/pages/SplashPage";
 
@@ -124,12 +125,14 @@ function SplashRedirect() {
   }
   
   return (
-    <OnboardingWrapper>
-      <ResponsiveLayout>
-        <Router />
-      </ResponsiveLayout>
-      <VoiceFAB />
-    </OnboardingWrapper>
+    <DriveModeProvider>
+      <OnboardingWrapper>
+        <ResponsiveLayout>
+          <Router />
+        </ResponsiveLayout>
+        <VoiceFAB />
+      </OnboardingWrapper>
+    </DriveModeProvider>
   );
 }
 
