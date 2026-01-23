@@ -34,6 +34,7 @@ import { JobsTableView } from "@/components/jobs/JobsTableView";
 import { PriorityBadge, inferJobPriority } from "@/components/priority/PriorityBadge";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { JobResolutionModal } from "@/components/jobs/JobResolutionModal";
+import { JobsCalendar } from "@/components/calendar/JobsCalendar";
 
 function formatTime(time: string): string {
   const [hours, minutes] = time.split(':');
@@ -322,7 +323,7 @@ function EmptyState() {
 export default function Jobs() {
   const [filter, setFilter] = useState<string>("all");
   const [selectedNudge, setSelectedNudge] = useState<AiNudge | null>(null);
-  const [viewMode, setViewMode] = useState<"cards" | "table">("table");
+  const [viewMode, setViewMode] = useState<"cards" | "table" | "calendar">("table");
   const [isDarkMode, setIsDarkMode] = useState(false);
   const isMobile = useIsMobile();
   
@@ -359,6 +360,7 @@ export default function Jobs() {
   const activeCount = jobs.filter(j => j.status === "scheduled" || j.status === "in_progress").length;
 
   const showTableView = !isMobile && viewMode === "table";
+  const showCalendarView = viewMode === "calendar";
 
   return (
     <div className="flex flex-col min-h-full bg-background" data-testid="page-jobs">
@@ -448,30 +450,54 @@ export default function Jobs() {
             </CardContent>
           </Card>
 
-          {!isMobile && (
-            <div className="hidden md:flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
-              <Button
-                variant={viewMode === "table" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("table")}
-                className="h-9"
-                data-testid="view-mode-table"
-              >
-                <List className="h-4 w-4 mr-2" />
-                Table
-              </Button>
+          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
+            <Button
+              variant={viewMode === "calendar" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("calendar")}
+              className="h-9"
+              data-testid="view-mode-calendar"
+            >
+              <Calendar className="h-4 w-4 mr-1 md:mr-2" />
+              <span className="hidden md:inline">Calendar</span>
+            </Button>
+            {!isMobile && (
+              <>
+                <Button
+                  variant={viewMode === "table" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("table")}
+                  className="h-9"
+                  data-testid="view-mode-table"
+                >
+                  <List className="h-4 w-4 mr-2" />
+                  Table
+                </Button>
+                <Button
+                  variant={viewMode === "cards" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("cards")}
+                  className="h-9"
+                  data-testid="view-mode-cards"
+                >
+                  <LayoutGrid className="h-4 w-4 mr-2" />
+                  Cards
+                </Button>
+              </>
+            )}
+            {isMobile && viewMode !== "calendar" && (
               <Button
                 variant={viewMode === "cards" ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setViewMode("cards")}
                 className="h-9"
-                data-testid="view-mode-cards"
+                data-testid="view-mode-cards-mobile"
               >
-                <LayoutGrid className="h-4 w-4 mr-2" />
-                Cards
+                <LayoutGrid className="h-4 w-4 mr-1" />
+                <span className="hidden md:inline">Cards</span>
               </Button>
-            </div>
-          )}
+            )}
+          </div>
 
           <Link href="/jobs/new" className="md:hidden">
             <Button className="w-full h-12 bg-gradient-to-r from-primary to-violet-600 shadow-lg" data-testid="button-add-job">
@@ -502,6 +528,8 @@ export default function Jobs() {
               ))}
             </div>
           )
+        ) : showCalendarView ? (
+          <JobsCalendar jobs={filteredJobs} />
         ) : filteredJobs.length === 0 ? (
           <EmptyState />
         ) : showTableView ? (
