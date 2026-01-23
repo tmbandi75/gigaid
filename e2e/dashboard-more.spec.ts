@@ -3,12 +3,12 @@ import { navigateTo, waitForPageLoad } from './helpers';
 
 test.describe('Dashboard', () => {
   test.beforeEach(async ({ page }) => {
-    await navigateTo(page, '/');
+    await navigateTo(page, '/dashboard');
     await waitForPageLoad(page);
   });
 
   test('should display dashboard', async ({ page }) => {
-    await expect(page.getByText(/dashboard|today|home|welcome/i).first()).toBeVisible();
+    await expect(page.getByText(/today|game plan|home|dashboard/i).first()).toBeVisible();
   });
 
   test('should show quick stats', async ({ page }) => {

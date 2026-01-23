@@ -7,7 +7,17 @@ export async function waitForPageLoad(page: Page) {
   await page.waitForTimeout(500);
 }
 
+export async function bypassSplashScreen(page: Page) {
+  await page.addInitScript(() => {
+    localStorage.setItem('gigaid_splash_seen', 'true');
+    localStorage.setItem('gig-aid-welcome-seen', 'true');
+    localStorage.setItem('gig-aid-onboarding-complete', 'true');
+    localStorage.setItem('gig-aid-last-active', Date.now().toString());
+  });
+}
+
 export async function navigateTo(page: Page, path: string) {
+  await bypassSplashScreen(page);
   await page.goto(path);
   await waitForPageLoad(page);
 }
