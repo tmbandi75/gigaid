@@ -131,6 +131,25 @@ export async function triggerSync(): Promise<{ synced: number; failed: number }>
   return { synced, failed };
 }
 
+export async function requestBackgroundSync(): Promise<boolean> {
+  if (!('serviceWorker' in navigator)) {
+    return false;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    if ('sync' in registration) {
+      await (registration as ServiceWorkerRegistration & { 
+        sync: { register: (tag: string) => Promise<void> } 
+      }).sync.register('gigaid-sync');
+      return true;
+    }
+  } catch {
+    // Background sync not supported or failed
+  }
+  return false;
+}
+
 export function initializeSync(): void {
   triggerSync();
 
@@ -138,6 +157,10 @@ export function initializeSync(): void {
     if (document.visibilityState === 'visible') {
       triggerSync();
     }
+  });
+
+  window.addEventListener('sw-sync-triggered', () => {
+    triggerSync();
   });
 
   setInterval(() => {

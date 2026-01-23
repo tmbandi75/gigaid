@@ -90,6 +90,21 @@ export function generateId(): string {
   return crypto.randomUUID();
 }
 
+async function scheduleBackgroundSync(): Promise<void> {
+  if (!('serviceWorker' in navigator)) return;
+  
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    if ('sync' in registration) {
+      await (registration as ServiceWorkerRegistration & {
+        sync: { register: (tag: string) => Promise<void> }
+      }).sync.register('gigaid-sync');
+    }
+  } catch {
+    // Background sync not supported
+  }
+}
+
 export async function addOfflineAction(
   action: Omit<OfflineAction, 'id' | 'createdAt' | 'synced'>,
   explicitId?: string
@@ -102,6 +117,9 @@ export async function addOfflineAction(
     synced: false,
   };
   await db.put('offline_actions', fullAction);
+  
+  scheduleBackgroundSync();
+  
   return fullAction;
 }
 
