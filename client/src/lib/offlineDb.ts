@@ -39,7 +39,6 @@ interface GigAidOfflineDB extends DBSchema {
     key: string;
     value: OfflineAction;
     indexes: {
-      'by-synced': boolean;
       'by-created': number;
     };
   };
@@ -47,7 +46,6 @@ interface GigAidOfflineDB extends DBSchema {
     key: string;
     value: OfflineAsset;
     indexes: {
-      'by-uploaded': boolean;
       'by-action': string;
     };
   };
@@ -71,13 +69,11 @@ export async function getOfflineDb(): Promise<IDBPDatabase<GigAidOfflineDB>> {
     upgrade(db) {
       if (!db.objectStoreNames.contains('offline_actions')) {
         const actionsStore = db.createObjectStore('offline_actions', { keyPath: 'id' });
-        actionsStore.createIndex('by-synced', 'synced');
         actionsStore.createIndex('by-created', 'createdAt');
       }
 
       if (!db.objectStoreNames.contains('offline_assets')) {
         const assetsStore = db.createObjectStore('offline_assets', { keyPath: 'id' });
-        assetsStore.createIndex('by-uploaded', 'uploaded');
         assetsStore.createIndex('by-action', 'linkedActionId');
       }
 
@@ -125,13 +121,16 @@ export async function addOfflineAsset(
 
 export async function getUnsyncedActions(): Promise<OfflineAction[]> {
   const db = await getOfflineDb();
-  const allActions = await db.getAllFromIndex('offline_actions', 'by-synced', false);
-  return allActions.sort((a, b) => a.createdAt - b.createdAt);
+  const allActions = await db.getAll('offline_actions');
+  return allActions
+    .filter(action => !action.synced)
+    .sort((a, b) => a.createdAt - b.createdAt);
 }
 
 export async function getUnuploadedAssets(): Promise<OfflineAsset[]> {
   const db = await getOfflineDb();
-  return db.getAllFromIndex('offline_assets', 'by-uploaded', false);
+  const allAssets = await db.getAll('offline_assets');
+  return allAssets.filter(asset => !asset.uploaded);
 }
 
 export async function markActionSynced(actionId: string): Promise<void> {
@@ -204,7 +203,9 @@ export async function getPendingAssetCount(): Promise<number> {
 export async function clearSyncedData(): Promise<void> {
   const db = await getOfflineDb();
   
-  const syncedActions = await db.getAllFromIndex('offline_actions', 'by-synced', true);
+  const allActions = await db.getAll('offline_actions');
+  const syncedActions = allActions.filter(action => action.synced);
+  
   for (const action of syncedActions) {
     const assets = await getAssetsByAction(action.id);
     const allUploaded = assets.every(a => a.uploaded);
