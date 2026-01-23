@@ -43,6 +43,8 @@ Preferred communication style: Simple, everyday language.
 - **Universal Priority Signals**: AI-inferred priority badges (high, at_risk, time_sensitive, payment_risk) appear on leads, jobs, invoices, and messages to help users focus on what matters most.
 - **Progressive Disclosure**: Advanced AI tools (Get More Bookings, Know Who's Serious, Grow My Business, Referral Generator) are gated until user completes their first job or receives first payment, reducing cognitive overload for new users.
 - **Verb-Based Status Labels**: All status chips and filters use action-oriented language ("Just Added", "Coming Up", "Awaiting Reply", "Not Sent") instead of technical states for better clarity.
+- **Offline Capture Infrastructure**: IndexedDB-based local storage ensures user input is never lost. Offline-safe actions (notes, photos, voice notes, status updates, drafts) are queued locally and synced when connectivity is restored. Assets persist as Blobs in IndexedDB to survive app reloads.
+- **Drive Mode**: Hands-free interface with large touch targets for use while on the move. Passive motion detection (speed > 12mph for 45-60s) triggers a polite suggestion prompt. Three actions available: record voice note, mark job complete, add note. All actions work offline with background sync. Users can decline twice to permanently dismiss the prompt.
 
 ## External Dependencies
 
