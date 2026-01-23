@@ -1,0 +1,240 @@
+Replit Enforcement Prompt — GigAid
+Phase 1 Guaranteed-Intent Booking + Rare AI Interventions
+🔒 SYSTEM ROLE
+
+You are implementing GigAid’s booking protection and intervention system.
+
+Your primary objective is reducing no-shows, ghosting, and wasted time for solo service providers without increasing cognitive load.
+
+If a design choice adds configuration, dashboards, scores, or frequent messages — reject it.
+
+🧠 CORE PRODUCT PRINCIPLES (NON-NEGOTIABLE)
+
+GigAid decides by default
+
+Users should not manage rules
+
+AI may change behavior but must not add decisions
+
+Silence is the default
+
+If users notice the AI often, the system is broken
+
+=========================
+PHASE 1 — GUARANTEED-INTENT BOOKING (MVP)
+=========================
+🎯 Goal
+
+Automatically enforce deposits and commitment rules to drastically reduce no-shows with near-zero setup.
+
+✅ Phase 1 Behavior (Rules-Based, No ML)
+Booking Risk Conditions (Hardcoded v1)
+
+A booking is considered higher risk if ANY are true:
+
+Client is first-time
+
+Booking is within 24 hours
+
+Booking price ≥ configurable default (e.g. $100)
+
+Client has ≥1 prior cancellation or no-show
+
+Enforcement Actions
+
+If booking is higher risk:
+
+Require deposit (default % set by system)
+
+Lock booking time upon payment
+
+Display cancellation policy before confirmation
+
+Mark booking internally as protected = true
+
+If not higher risk:
+
+Allow booking without deposit
+
+Still mark as protected = false
+
+Worker UX (Critical Constraint)
+
+One toggle only:
+“Protect me from no-shows” → ON by default
+
+No per-booking controls
+
+No explanations of rules
+
+No deposit configuration in Phase 1
+
+Client UX
+
+Clear copy:
+
+“This time is reserved once payment is confirmed.”
+
+One intentional friction point (choose ONE):
+
+Phone verification OR
+
+Explicit acknowledgment checkbox
+
+Data Stored (Minimal)
+
+Only store:
+
+client_id
+
+is_first_time_client (boolean)
+
+booking_lead_time
+
+booking_price
+
+deposit_applied (boolean)
+
+cancellation_count
+
+No scores. No confidence levels.
+
+=========================
+PHASE 2 (LIMITED) — MOMENT-OF-TRUTH INTERVENTIONS
+=========================
+🎯 Purpose
+
+AI may speak rarely when silence would likely cost the worker time or money.
+
+AI is not allowed to educate, coach, or narrate its thinking.
+
+🚨 Hard Limits (ENFORCE STRICTLY)
+
+Max 1 AI intervention per user per calendar day
+
+Only trigger when statistically meaningful
+
+No numbers, percentages, or confidence scores
+
+Plain language only
+
+If no strong signal → say nothing
+
+✅ Allowed Intervention Categories (ONLY THESE 3)
+1️⃣ Booking Risk Adjustment (Silent by Default)
+
+AI may silently adjust:
+
+Deposit amount
+
+Prepay vs deposit
+
+Booking mode (instant vs request)
+
+User is not notified unless intervention is critical.
+
+2️⃣ Explicit Intervention — Risk Protection
+
+Trigger only if:
+
+Client has repeated cancel behavior
+
+Pattern is consistent (not single event)
+
+Example copy (exact tone):
+
+“This client often cancels. A deposit is now required.”
+
+Rules:
+
+One sentence
+
+No blame
+
+No explanation
+
+3️⃣ Explicit Intervention — Revenue or Conversion Risk
+
+Trigger only if:
+
+Delay or pricing is likely to cost income
+
+Allowed examples:
+
+“This lead converts best if replied to soon.”
+
+“You may be underpricing this service in this area.”
+
+Rules:
+
+No urgency emojis
+
+No numbers
+
+No follow-up messages
+
+❌ Explicitly Disallowed
+
+Dashboards
+
+Risk scores
+
+“Why this happened” explanations
+
+AI configuration panels
+
+Frequent nudges
+
+Any language that sounds like analytics or metrics
+
+If an intervention feels like advice instead of protection — remove it.
+
+🧪 Intervention Gate Logic (Pseudo)
+
+Trigger ONLY if ALL are true:
+
+Pattern observed ≥ defined threshold
+
+Impact is material (time or money loss likely)
+
+User has not received an AI message today
+
+Message can be said in one sentence
+
+Otherwise → do nothing.
+
+🧠 Internal Mantra (Do Not Surface)
+
+“If it’s on the GigAid calendar, it should be worth the worker’s time.”
+
+✅ Success Criteria
+
+Reduced no-shows
+
+Fewer unpaid jobs
+
+Workers trust bookings without thinking
+
+AI messages feel rare, calm, and helpful
+
+If users ever say:
+
+“I keep getting AI messages”
+
+You failed.
+
+🚫 Implementation Warning
+
+Do NOT:
+
+Ask the user questions
+
+Add configuration
+
+Expose AI reasoning
+
+Surface partial signals
+
+Default to silence.
+
+END PROMPT
