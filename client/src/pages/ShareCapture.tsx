@@ -181,6 +181,8 @@ export default function ShareCapture() {
         source: data.source || "manual",
         sourceUrl: data.sourceUrl || "",
         location: data.extractedDetails?.location || "",
+        locationLat: undefined,
+        locationLng: undefined,
       });
       setSelectedReply(data.suggestedReply || "");
       setStep("review");
