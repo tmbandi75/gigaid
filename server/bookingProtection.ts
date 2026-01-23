@@ -248,6 +248,16 @@ export async function checkForIntervention(
     };
   }
 
+  // Underpricing intervention - only trigger if price is significantly below suggested
+  if (context.suggestedPrice && context.actualPrice && 
+      context.actualPrice < context.suggestedPrice * 0.7) {
+    return {
+      shouldIntervene: true,
+      message: "You may be underpricing this service in this area.",
+      interventionType: "revenue_risk",
+    };
+  }
+
   return { shouldIntervene: false };
 }
 
