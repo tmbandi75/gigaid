@@ -1,0 +1,322 @@
+Absolutely. Below is a **copy-paste-ready FULL REPLIT IMPLEMENTATION PROMPT** you can drop directly into Replit (or Bolt-in-Replit).
+This is written as an **enforcement + build prompt** so the agent does not over-scope, break prod, or invent features.
+
+---
+
+## 🔐 REPLIT FULL IMPLEMENTATION PROMPT
+
+**Feature:** Offline Capture + Drive Mode with Auto-Suggest
+**Product:** Gig Aid
+**Phase:** 1 + 2 (as defined below)
+
+---
+
+### 🔴 SYSTEM / ENFORCEMENT INSTRUCTIONS (READ FIRST)
+
+You are implementing **ONLY** the features explicitly described below.
+
+DO NOT:
+
+* Add offline payments
+* Add offline booking
+* Add offline calendar edits
+* Add offline client messaging
+* Auto-switch into Drive Mode without user confirmation
+* Add background tracking or persistent GPS logging
+* Introduce destructive offline actions (delete/overwrite)
+
+All offline actions MUST be:
+
+* Append-only
+* Idempotent
+* Queued locally
+* Executed only after connectivity is restored
+
+The app must remain **production-safe**, **App Store compliant**, and **UX-calm**.
+
+---
+
+## 🟦 PHASE 1 — OFFLINE CAPTURE INFRASTRUCTURE (MVP)
+
+### 🎯 Objective
+
+Ensure that **nothing a solo worker captures is ever lost**, even with no data service.
+
+---
+
+### 1️⃣ Local Offline Storage (Required)
+
+Implement **IndexedDB** for local persistence.
+
+#### Create local stores:
+
+* `offline_actions`
+* `offline_assets`
+
+##### `offline_actions` schema
+
+```json
+{
+  "id": "uuid",
+  "type": "ADD_NOTE | UPDATE_STATUS | CREATE_DRAFT | VOICE_NOTE",
+  "entity_type": "job | client",
+  "entity_id": "uuid",
+  "payload": {},
+  "created_at": "timestamp",
+  "synced": false
+}
+```
+
+##### `offline_assets` schema
+
+```json
+{
+  "id": "uuid",
+  "asset_type": "photo | audio",
+  "local_uri": "blob://",
+  "linked_action_id": "uuid",
+  "uploaded": false
+}
+```
+
+⚠️ These records must NEVER be deleted locally until successfully synced.
+
+---
+
+### 2️⃣ Offline-Safe Actions (Phase 1 only)
+
+Allow the following actions to function fully offline:
+
+* Add job notes
+* Capture photos
+* Record voice notes
+* Update job status
+* Save draft messages (NOT sent)
+
+Each action must:
+
+* Save instantly to IndexedDB
+* Show subtle copy:
+  **“Saved — will sync when online”**
+* Never block the user
+* Never show error modals
+
+---
+
+### 3️⃣ Background Sync Engine
+
+Implement a background sync that runs when:
+
+* App launches
+* App resumes
+* Network connectivity is restored
+* User manually refreshes
+
+#### Sync order (mandatory):
+
+1. Upload assets (photos/audio)
+2. Execute queued actions (oldest first)
+3. Mark `synced = true`
+
+Failures must:
+
+* Fail silently
+* Retry later
+* Never prompt the user
+
+Conflict resolution:
+
+* Last-write-wins
+* No user intervention
+
+---
+
+## 🟦 PHASE 1 — MOTION DETECTION (PASSIVE)
+
+### 🎯 Objective
+
+Detect likely “in-vehicle movement” **without user disruption**.
+
+---
+
+### 4️⃣ Motion Detection Logic
+
+Infer movement when:
+
+* Speed > **12 mph**
+* Sustained for **45–60 seconds**
+* App is **foregrounded**
+
+Do NOT:
+
+* Track in background
+* Persist raw GPS history
+* Claim “driving detection”
+
+Store only derived state:
+
+```json
+{
+  "is_moving": true,
+  "movement_confidence": "low | medium | high",
+  "movement_start_time": "timestamp"
+}
+```
+
+Boost confidence if:
+
+* Bluetooth car connection exists (optional)
+
+⚠️ Phase 1 MUST NOT show any UI or prompt.
+
+---
+
+### 5️⃣ Preference Model (Phase 1 – Silent Setup)
+
+Persist locally (and optionally sync later):
+
+```json
+{
+  "drive_mode_preference": "unknown | accepted | declined",
+  "drive_mode_decline_count": 0,
+  "last_prompted_at": "timestamp"
+}
+```
+
+Do NOT act on this in Phase 1.
+
+---
+
+## 🟩 PHASE 2 — DRIVE MODE + AUTO-SUGGEST
+
+### 🎯 Objective
+
+Politely offer Drive Mode **once**, respect the user forever.
+
+---
+
+### 6️⃣ Drive Mode Suggestion Logic
+
+Show suggestion ONLY IF ALL are true:
+
+* `is_moving === true`
+* `movement_confidence >= medium`
+* `drive_mode_preference === "unknown"`
+* App is foregrounded
+* User is not already in Drive Mode
+
+---
+
+### 7️⃣ Drive Mode Prompt (UI COPY IS FIXED)
+
+Display a **bottom sheet** (non-blocking):
+
+> **“Looks like you’re on the move. Switch to Drive Mode?”**
+
+Buttons:
+
+* **Switch**
+* **Not now**
+
+NO additional text. NO safety lectures.
+
+---
+
+### 8️⃣ Prompt Outcomes
+
+#### If user taps **Switch**
+
+```json
+{
+  "drive_mode_preference": "accepted"
+}
+```
+
+* Enter Drive Mode immediately
+
+#### If user taps **Not now**
+
+```json
+{
+  "drive_mode_decline_count": +1
+}
+```
+
+Rules:
+
+* If declined twice → permanently set:
+
+```json
+{
+  "drive_mode_preference": "declined"
+}
+```
+
+* Never prompt again
+
+---
+
+## 🟩 PHASE 2 — DRIVE MODE EXPERIENCE
+
+### 9️⃣ Drive Mode UI Rules
+
+* Force dark mode
+* Max **3 actions**
+* Large tap targets
+* No scrolling
+* Voice-first
+
+### Allowed actions:
+
+* 🎙 Record voice note
+* ✅ Mark job complete
+* 📝 Add note
+
+All actions:
+
+* Work offline
+* Create queued actions
+* Sync later via Phase 1 engine
+
+---
+
+### 🔟 Drive Mode Exit (v1)
+
+* User exits manually
+* No auto-exit logic in this phase
+
+---
+
+## 🚨 HARD CONSTRAINTS (DO NOT VIOLATE)
+
+❌ No auto-switching into Drive Mode
+❌ No offline payments
+❌ No offline booking
+❌ No offline client messaging
+❌ No destructive offline actions
+❌ No background tracking claims
+
+---
+
+## ✅ SUCCESS CRITERIA
+
+* App never loses user input
+* Offline actions feel intentional, not broken
+* Drive Mode suggestion feels helpful, not creepy
+* User is never nagged
+* Feature is production-safe
+
+---
+
+### END OF PROMPT
+
+---
+
+If you want, next I can:
+
+* Split this into **multiple Replit tasks**
+* Add **pseudo-code for motion detection**
+* Generate **Supabase sync endpoints**
+* Write **QA / edge-case test scenarios**
+
+Just say the word.
