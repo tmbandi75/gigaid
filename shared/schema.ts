@@ -52,6 +52,11 @@ export const users = pgTable("users", {
   // Public estimation setting for providers
   publicEstimationEnabled: boolean("public_estimation_enabled").default(true),
   
+  // Booking Protection (Guaranteed-Intent Booking) - Phase 1
+  noShowProtectionEnabled: boolean("no_show_protection_enabled").default(true), // ON by default
+  noShowProtectionDepositPercent: integer("no_show_protection_deposit_percent").default(25), // Default 25%
+  noShowProtectionPriceThreshold: integer("no_show_protection_price_threshold").default(10000), // $100 in cents
+  
   // Email signature settings
   emailSignatureText: text("email_signature_text"),
   emailSignatureLogoUrl: text("email_signature_logo_url"),
@@ -638,6 +643,10 @@ export const bookingRequests = pgTable("booking_requests", {
   remainderPaymentMethod: text("remainder_payment_method"), // zelle, venmo, cashapp, cash, check, stripe
   remainderPaidAt: text("remainder_paid_at"),
   remainderNotes: text("remainder_notes"),
+  
+  // Policy acknowledgment for booking protection
+  policyAcknowledged: boolean("policy_acknowledged").default(false),
+  policyAcknowledgedAt: text("policy_acknowledged_at"),
 });
 
 // Remainder payment status enum
@@ -1707,5 +1716,110 @@ export const insertAiOverrideSchema = createInsertSchema(aiOverrides).omit({
 
 export type InsertAiOverride = z.infer<typeof insertAiOverrideSchema>;
 export type AiOverride = typeof aiOverrides.$inferSelect;
+
+// ==================== BOOKING PROTECTION (Guaranteed-Intent Booking) ====================
+// Phase 1: Rules-based booking protection to reduce no-shows
+
+// Client tracking for risk assessment
+export const clients = pgTable("clients", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(), // The provider who has this client
+  clientName: text("client_name").notNull(),
+  clientPhone: text("client_phone"),
+  clientEmail: text("client_email"),
+  isFirstTime: boolean("is_first_time").default(true),
+  cancellationCount: integer("cancellation_count").default(0),
+  noShowCount: integer("no_show_count").default(0),
+  totalBookings: integer("total_bookings").default(0),
+  lastBookingAt: text("last_booking_at"),
+  createdAt: text("created_at").notNull(),
+}, (table) => [
+  index("clients_user_idx").on(table.userId),
+  index("clients_phone_idx").on(table.clientPhone),
+  index("clients_email_idx").on(table.clientEmail),
+]);
+
+export const insertClientSchema = createInsertSchema(clients).omit({
+  id: true,
+});
+
+export type InsertClient = z.infer<typeof insertClientSchema>;
+export type Client = typeof clients.$inferSelect;
+
+// Booking protection records - tracks deposits and protection status per booking
+export const bookingProtections = pgTable("booking_protections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").notNull().unique(),
+  userId: varchar("user_id").notNull(),
+  clientId: varchar("client_id"),
+  
+  // Risk assessment data (stored for transparency, not shown to user)
+  isFirstTimeClient: boolean("is_first_time_client").default(false),
+  bookingLeadTimeHours: integer("booking_lead_time_hours"),
+  bookingPrice: integer("booking_price"), // in cents
+  clientCancellationCount: integer("client_cancellation_count").default(0),
+  
+  // Protection status
+  isProtected: boolean("is_protected").default(false),
+  depositRequired: boolean("deposit_required").default(false),
+  depositAmountCents: integer("deposit_amount_cents"),
+  depositPaidAt: text("deposit_paid_at"),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  
+  // Client acknowledgment
+  cancellationPolicyAcknowledgedAt: text("cancellation_policy_acknowledged_at"),
+  phoneVerifiedAt: text("phone_verified_at"),
+  
+  createdAt: text("created_at").notNull(),
+}, (table) => [
+  index("booking_protections_job_idx").on(table.jobId),
+  index("booking_protections_user_idx").on(table.userId),
+]);
+
+export const insertBookingProtectionSchema = createInsertSchema(bookingProtections).omit({
+  id: true,
+});
+
+export type InsertBookingProtection = z.infer<typeof insertBookingProtectionSchema>;
+export type BookingProtection = typeof bookingProtections.$inferSelect;
+
+// AI Interventions - tracks the rare moments when AI speaks to user
+export const interventionTypes = [
+  "booking_risk_adjustment",  // Silent deposit/prepay adjustment
+  "risk_protection",          // "This client often cancels. A deposit is now required."
+  "revenue_risk",            // "This lead converts best if replied to soon."
+] as const;
+export type InterventionType = (typeof interventionTypes)[number];
+
+export const aiInterventions = pgTable("ai_interventions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  interventionType: text("intervention_type").notNull(), // from interventionTypes
+  entityType: text("entity_type"), // job, lead, invoice
+  entityId: varchar("entity_id"),
+  
+  // The one-sentence message (null for silent adjustments)
+  message: text("message"),
+  
+  // Whether user saw it (for silent ones, always false)
+  isSilent: boolean("is_silent").default(false),
+  displayedAt: text("displayed_at"),
+  dismissedAt: text("dismissed_at"),
+  
+  // Action taken (if any)
+  actionTaken: text("action_taken"),
+  
+  createdAt: text("created_at").notNull(),
+}, (table) => [
+  index("ai_interventions_user_idx").on(table.userId),
+  index("ai_interventions_date_idx").on(table.createdAt),
+]);
+
+export const insertAiInterventionSchema = createInsertSchema(aiInterventions).omit({
+  id: true,
+});
+
+export type InsertAiIntervention = z.infer<typeof insertAiInterventionSchema>;
+export type AiIntervention = typeof aiInterventions.$inferSelect;
 
 export * from "./models/chat";

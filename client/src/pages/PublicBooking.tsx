@@ -100,6 +100,7 @@ export default function PublicBooking() {
   const [zipConfirmed, setZipConfirmed] = useState(false);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const [bookingHistory, setBookingHistory] = useState<BookingHistoryItem[]>([]);
+  const [policyAcknowledged, setPolicyAcknowledged] = useState(false);
 
   const getBookingHistoryKey = () => {
     const phone = formData.clientPhone.replace(/\D/g, "");
@@ -211,6 +212,18 @@ export default function PublicBooking() {
       toast({ title: "Please fill in all required fields and select a time", variant: "destructive" });
       return;
     }
+    
+    // Check for policy acknowledgment when deposits are required
+    const depositRequired = profile?.depositEnabled && profile?.depositValue && profile.depositValue > 0;
+    if (depositRequired && !policyAcknowledged) {
+      toast({ 
+        title: "Policy acknowledgment required", 
+        description: "Please agree to the cancellation and reschedule policy to confirm your booking.",
+        variant: "destructive" 
+      });
+      return;
+    }
+    
     submitMutation.mutate({
       clientName: `${formData.clientFirstName} ${formData.clientLastName}`.trim(),
       clientPhone: formData.clientPhone,
@@ -221,6 +234,7 @@ export default function PublicBooking() {
       preferredDate: selectedDateStr!,
       preferredTime: selectedTime,
       photos: bookingPhotos.length > 0 ? bookingPhotos : undefined,
+      policyAcknowledged: depositRequired ? policyAcknowledged : undefined,
     });
   };
 
@@ -793,7 +807,7 @@ export default function PublicBooking() {
                   </div>
                 )}
 
-                {/* Deposit Information */}
+                {/* Deposit Information and Cancellation Policy */}
                 {profile.depositEnabled && profile.depositValue && profile.depositValue > 0 && (
                   <div className="space-y-3" data-testid="section-deposit-info">
                     {/* Deposit Amount */}
@@ -836,13 +850,45 @@ export default function PublicBooking() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Booking Confirmation Notice */}
+                    <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                      <div className="flex items-start gap-3">
+                        <Calendar className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="font-medium text-sm text-amber-700 dark:text-amber-400">This time is reserved once payment is confirmed</p>
+                          <p className="text-xs text-amber-600/80 dark:text-amber-500/80 mt-1">
+                            Your appointment slot will be locked in and held for you as soon as the deposit is paid.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Policy Acknowledgment Checkbox */}
+                    <label className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 border cursor-pointer hover-elevate" data-testid="label-policy-acknowledgment">
+                      <input
+                        type="checkbox"
+                        checked={policyAcknowledged}
+                        onChange={(e) => setPolicyAcknowledged(e.target.checked)}
+                        className="mt-1 h-4 w-4 rounded border-gray-300"
+                        data-testid="checkbox-policy-acknowledgment"
+                      />
+                      <span className="text-sm text-muted-foreground">
+                        I understand and agree to the cancellation and reschedule policy. Cancellations or no-shows may result in forfeiture of the deposit.
+                      </span>
+                    </label>
                   </div>
                 )}
 
                 <Button 
                   type="submit" 
                   className="w-full" 
-                  disabled={submitMutation.isPending || !selectedDate || !selectedTime}
+                  disabled={
+                    submitMutation.isPending || 
+                    !selectedDate || 
+                    !selectedTime ||
+                    (profile.depositEnabled && profile.depositValue && profile.depositValue > 0 && !policyAcknowledged)
+                  }
                   data-testid="button-submit-booking"
                 >
                   {submitMutation.isPending ? (
@@ -850,7 +896,9 @@ export default function PublicBooking() {
                   ) : (
                     <Calendar className="h-4 w-4 mr-2" />
                   )}
-                  Request Booking
+                  {profile.depositEnabled && profile.depositValue && profile.depositValue > 0 
+                    ? "Confirm Booking" 
+                    : "Request Booking"}
                 </Button>
               </form>
             </CardContent>

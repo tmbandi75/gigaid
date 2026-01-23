@@ -29,6 +29,7 @@ import {
   Sparkles,
   ChevronRight,
   DollarSign,
+  Shield,
 } from "lucide-react";
 import { AvailabilityEditor, DEFAULT_AVAILABILITY } from "@/components/settings/AvailabilityEditor";
 import { PaymentMethodsSettings } from "@/components/PaymentMethodsSettings";
@@ -86,6 +87,7 @@ export default function Settings() {
     slotDuration: 60,
     showReviewsOnBooking: true,
     publicEstimationEnabled: true,
+    noShowProtectionEnabled: true,
   });
   const [customServiceInput, setCustomServiceInput] = useState("");
 
@@ -111,6 +113,7 @@ export default function Settings() {
         slotDuration: profile.slotDuration || 60,
         showReviewsOnBooking: profile.showReviewsOnBooking !== false,
         publicEstimationEnabled: profile.publicEstimationEnabled !== false,
+        noShowProtectionEnabled: profile.noShowProtectionEnabled !== false,
       });
     }
   }, [profile]);
@@ -137,6 +140,7 @@ export default function Settings() {
       slotDuration: settings.slotDuration,
       showReviewsOnBooking: settings.showReviewsOnBooking,
       publicEstimationEnabled: settings.publicEstimationEnabled,
+      noShowProtectionEnabled: settings.noShowProtectionEnabled,
     };
     updateMutation.mutate(dataToSave);
   };
@@ -261,6 +265,30 @@ export default function Settings() {
                   }}
                   disabled={updateFeatureFlag.isPending}
                   data-testid="switch-ai-nudges"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-md" data-testid="card-booking-protection">
+          <CardContent className="p-4">
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+                <Shield className="h-4 w-4 text-white" />
+              </div>
+              Booking Protection
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm">Protect me from no-shows</p>
+                  <p className="text-xs text-muted-foreground">Automatically require deposits for higher-risk bookings</p>
+                </div>
+                <Switch
+                  checked={settings.noShowProtectionEnabled}
+                  onCheckedChange={(checked) => setSettings({ ...settings, noShowProtectionEnabled: checked })}
+                  data-testid="switch-no-show-protection"
                 />
               </div>
             </div>

@@ -40,6 +40,17 @@ import adminUsersRoutes from "./admin/usersRoutes";
 import leadEmailRoutes from "./leadEmailRoutes";
 import { startCopilotScheduler } from "./copilot/engine";
 import { emitCanonicalEvent } from "./copilot/canonicalEvents";
+import { 
+  findOrCreateClient, 
+  assessBookingRisk, 
+  createBookingProtection,
+  recordClientCancellation,
+  markClientAsReturning,
+  checkForIntervention,
+  recordIntervention,
+  getBookingProtection,
+  canShowInterventionToday,
+} from "./bookingProtection";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -150,6 +161,7 @@ export async function registerRoutes(
         notifyByEmail: user.notifyByEmail,
         showReviewsOnBooking: user.showReviewsOnBooking,
         publicEstimationEnabled: user.publicEstimationEnabled,
+        noShowProtectionEnabled: user.noShowProtectionEnabled,
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch profile" });
@@ -3322,6 +3334,18 @@ export async function registerRoutes(
         userId: user.id,
       });
       
+      // Server-side validation for policy acknowledgment when deposits are required
+      const depositEnabled = user.depositEnabled === true;
+      const depositValue = user.depositValue || 0;
+      if (depositEnabled && depositValue > 0) {
+        if (!req.body.policyAcknowledged) {
+          return res.status(400).json({ 
+            error: "Policy acknowledgment required",
+            message: "You must agree to the cancellation and reschedule policy to confirm your booking."
+          });
+        }
+      }
+      
       // Geocode the customer's address to get lat/lng
       let geocodedData: { customerLat?: number; customerLng?: number } = {};
       if (validated.location) {
@@ -3337,7 +3361,64 @@ export async function registerRoutes(
       const request = await storage.createBookingRequest({
         ...validated,
         ...geocodedData,
+        policyAcknowledged: !!req.body.policyAcknowledged,
+        policyAcknowledgedAt: req.body.policyAcknowledged ? new Date().toISOString() : null,
       });
+
+      // Booking Protection: Assess risk and determine if deposit is required
+      let bookingProtectionInfo = null;
+      if (user.noShowProtectionEnabled !== false) {
+        try {
+          const client = await findOrCreateClient(
+            user.id,
+            validated.clientName,
+            validated.clientPhone,
+            validated.clientEmail
+          );
+          
+          const estimatedPrice = (validated as any).estimatedPrice ? (validated as any).estimatedPrice * 100 : null;
+          const now = new Date();
+          const bookingDate = validated.preferredDate 
+            ? new Date(`${validated.preferredDate}T${validated.preferredTime || '09:00'}`)
+            : new Date(now.getTime() + 48 * 60 * 60 * 1000);
+          const leadTimeHours = Math.max(0, (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60));
+          
+          const riskAssessment = await assessBookingRisk(
+            user.id,
+            estimatedPrice,
+            validated.preferredDate || new Date().toISOString().split('T')[0],
+            validated.preferredTime || '09:00',
+            client.id
+          );
+          
+          const depositAmountCents = estimatedPrice 
+            ? Math.round(estimatedPrice * (riskAssessment.suggestedDepositPercent / 100))
+            : null;
+            
+          bookingProtectionInfo = {
+            isProtected: riskAssessment.isHigherRisk,
+            depositRequired: riskAssessment.isHigherRisk,
+            depositPercent: riskAssessment.suggestedDepositPercent,
+            depositAmountCents,
+            clientId: client.id,
+            riskFactors: {
+              isFirstTimeClient: riskAssessment.isFirstTimeClient,
+              isShortLeadTime: riskAssessment.isShortLeadTime,
+              isHighPrice: riskAssessment.isHighPrice,
+              hasPriorCancellation: riskAssessment.hasPriorCancellation,
+            }
+          };
+          
+          // Update booking request with deposit info if protection is required
+          if (riskAssessment.isHigherRisk && depositAmountCents) {
+            await storage.updateBookingRequest(request.id, {
+              depositAmountCents,
+            });
+          }
+        } catch (protectionError) {
+          console.error("Failed to assess booking protection:", protectionError);
+        }
+      }
 
       // Store photo assets if any photos were uploaded
       const { photos } = req.body;
@@ -3426,7 +3507,10 @@ export async function registerRoutes(
         });
       }
 
-      res.status(201).json(request);
+      res.status(201).json({
+        ...request,
+        protection: bookingProtectionInfo,
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
@@ -3629,6 +3713,7 @@ export async function registerRoutes(
         slotDuration,
         showReviewsOnBooking,
         publicEstimationEnabled,
+        noShowProtectionEnabled,
       } = req.body;
       
       // Check if this is the first time enabling public profile (booking link created)
@@ -3646,6 +3731,7 @@ export async function registerRoutes(
         slotDuration,
         showReviewsOnBooking,
         publicEstimationEnabled,
+        noShowProtectionEnabled,
       };
       
       // Track first time booking link creation
@@ -7333,6 +7419,52 @@ Return ONLY the message text, no JSON or formatting.`
     } catch (error) {
       console.error("Complete nudge error:", error);
       res.status(500).json({ error: "Failed to complete nudge" });
+    }
+  });
+
+  // AI Interventions - Phase 2: Rare, moment-of-truth interventions
+  // Max 1 intervention per user per calendar day
+  app.get("/api/ai/intervention", async (req, res) => {
+    try {
+      const { entity_type, entity_id } = req.query;
+      
+      // Check if we can show an intervention today
+      const canShow = await canShowInterventionToday(defaultUserId);
+      if (!canShow) {
+        return res.json({ intervention: null });
+      }
+      
+      // Check for specific intervention conditions
+      const intervention = await checkForIntervention(
+        defaultUserId,
+        entity_type as string || "",
+        entity_id as string || "",
+        {}
+      );
+      
+      if (intervention.shouldIntervene && intervention.message) {
+        // Record the intervention (shown to user)
+        await recordIntervention(
+          defaultUserId,
+          intervention.interventionType || "revenue_risk",
+          entity_type as string || null,
+          entity_id as string || null,
+          intervention.message,
+          false // not silent
+        );
+        
+        return res.json({
+          intervention: {
+            message: intervention.message,
+            type: intervention.interventionType,
+          }
+        });
+      }
+      
+      res.json({ intervention: null });
+    } catch (error) {
+      console.error("Intervention check error:", error);
+      res.status(500).json({ error: "Failed to check interventions" });
     }
   });
 
