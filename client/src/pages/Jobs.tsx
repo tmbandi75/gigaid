@@ -458,43 +458,29 @@ export default function Jobs() {
               className="h-9"
               data-testid="view-mode-calendar"
             >
-              <Calendar className="h-4 w-4 mr-1 md:mr-2" />
-              <span className="hidden md:inline">Calendar</span>
+              <Calendar className="h-4 w-4 mr-1" />
+              Calendar
+            </Button>
+            <Button
+              variant={viewMode === "cards" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("cards")}
+              className="h-9"
+              data-testid="view-mode-cards"
+            >
+              <LayoutGrid className="h-4 w-4 mr-1" />
+              Cards
             </Button>
             {!isMobile && (
-              <>
-                <Button
-                  variant={viewMode === "table" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("table")}
-                  className="h-9"
-                  data-testid="view-mode-table"
-                >
-                  <List className="h-4 w-4 mr-2" />
-                  Table
-                </Button>
-                <Button
-                  variant={viewMode === "cards" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("cards")}
-                  className="h-9"
-                  data-testid="view-mode-cards"
-                >
-                  <LayoutGrid className="h-4 w-4 mr-2" />
-                  Cards
-                </Button>
-              </>
-            )}
-            {isMobile && viewMode !== "calendar" && (
               <Button
-                variant={viewMode === "cards" ? "default" : "ghost"}
+                variant={viewMode === "table" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setViewMode("cards")}
+                onClick={() => setViewMode("table")}
                 className="h-9"
-                data-testid="view-mode-cards-mobile"
+                data-testid="view-mode-table"
               >
-                <LayoutGrid className="h-4 w-4 mr-1" />
-                <span className="hidden md:inline">Cards</span>
+                <List className="h-4 w-4 mr-1" />
+                Table
               </Button>
             )}
           </div>
