@@ -4630,7 +4630,11 @@ Final price confirmed onsite.`;
   // Onboarding endpoints
   app.get("/api/onboarding", isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).userId);
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      const user = await storage.getUser(userId);
       res.json({
         completed: user?.onboardingCompleted || false,
         step: user?.onboardingStep || 0,
@@ -4642,11 +4646,15 @@ Final price confirmed onsite.`;
 
   app.patch("/api/onboarding", isAuthenticated, async (req, res) => {
     try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
       const { step, completed } = req.body;
-      const previousUser = await storage.getUser((req as any).userId);
+      const previousUser = await storage.getUser(userId);
       const previousStep = previousUser?.onboardingStep || 0;
       
-      const user = await storage.updateUser((req as any).userId, {
+      const user = await storage.updateUser(userId, {
         onboardingStep: step,
         onboardingCompleted: completed,
       });
@@ -4654,7 +4662,7 @@ Final price confirmed onsite.`;
       if (step !== undefined && step > previousStep) {
         emitCanonicalEvent({
           eventName: "onboarding_step_completed",
-          userId: (req as any).userId,
+          userId: userId,
           context: { step, previousStep, completed },
           source: "web",
         });
@@ -4671,12 +4679,16 @@ Final price confirmed onsite.`;
 
   app.post("/api/onboarding/send-booking-link", isAuthenticated, async (req, res) => {
     try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
       const { phoneNumber } = req.body;
       if (!phoneNumber) {
         return res.status(400).json({ error: "Phone number is required" });
       }
 
-      const user = await storage.getUser((req as any).userId);
+      const user = await storage.getUser(userId);
       if (!user?.publicProfileSlug) {
         return res.status(400).json({ error: "Booking link not set up yet" });
       }
@@ -4689,7 +4701,7 @@ Final price confirmed onsite.`;
       
       emitCanonicalEvent({
         eventName: "booking_link_shared",
-        userId: (req as any).userId,
+        userId: userId,
         context: { bookingUrl, phoneNumber: phoneNumber.slice(-4) },
         source: "web",
       });
