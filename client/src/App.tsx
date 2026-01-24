@@ -46,6 +46,7 @@ import PublicReview from "@/pages/PublicReview";
 import QuickBook from "@/pages/QuickBook";
 import QuickBookConfirm from "@/pages/QuickBookConfirm";
 import MoneyPlanPage from "@/pages/MoneyPlanPage";
+import ProPlusContext from "@/pages/ProPlusContext";
 import Messages from "@/pages/Messages";
 import AdminCockpit from "@/pages/AdminCockpit";
 import AdminUsers from "@/pages/AdminUsers";
@@ -85,6 +86,7 @@ function Router() {
       <Route path="/share" component={ShareCapture} />
       <Route path="/quickbook" component={QuickBook} />
       <Route path="/money-plan" component={MoneyPlanPage} />
+      <Route path="/pro-plus-context" component={ProPlusContext} />
       <Route path="/messages" component={Messages} />
       <Route path="/owner" component={OwnerView} />
       <Route path="/admin/cockpit" component={AdminCockpit} />

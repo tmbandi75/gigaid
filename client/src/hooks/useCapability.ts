@@ -50,6 +50,7 @@ export function useCapability() {
   };
   
   return {
+    user,
     checkCapability,
     checkIsDeveloper,
     getUserPlan,

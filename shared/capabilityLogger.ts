@@ -62,3 +62,51 @@ export function getCapabilityStats(): Record<Capability, { attempts: number; gra
   
   return stats as Record<Capability, { attempts: number; grants: number; denials: number }>;
 }
+
+interface PricingInterestEvent {
+  source: "soft_intercept" | "manual_navigation";
+  capability: string;
+  plan: string;
+  is_dev: boolean;
+  context?: Record<string, unknown>;
+  timestamp: string;
+}
+
+const pricingInterestLogs: PricingInterestEvent[] = [];
+
+export function logPricingInterest({
+  user,
+  source,
+  capability,
+  context = {}
+}: {
+  user?: { email?: string | null; plan?: string | null };
+  source: "soft_intercept" | "manual_navigation";
+  capability: string;
+  context?: Record<string, unknown>;
+}): void {
+  const event: PricingInterestEvent = {
+    source,
+    capability,
+    plan: user?.plan ?? "free",
+    is_dev: isDeveloper(user),
+    context,
+    timestamp: new Date().toISOString()
+  };
+  
+  pricingInterestLogs.push(event);
+  
+  if (pricingInterestLogs.length > 1000) {
+    pricingInterestLogs.shift();
+  }
+  
+  console.log("[pricing_interest]", event);
+}
+
+export function getPricingInterestLogs(): PricingInterestEvent[] {
+  return [...pricingInterestLogs];
+}
+
+export function getPricingInterestCount(): number {
+  return pricingInterestLogs.length;
+}

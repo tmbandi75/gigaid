@@ -52,6 +52,7 @@ import {
 } from "./bookingProtection";
 import { logCapabilityAttempt } from "@shared/capabilityLogger";
 import { hasCapability } from "@shared/entitlements";
+import { isHardGated } from "@shared/gatingConfig";
 import {
   getBookingProtection,
   canShowInterventionToday,
@@ -3515,6 +3516,11 @@ export async function registerRoutes(
                 estimated_price_cents: estimatedPrice
               }
             });
+            
+            // Placeholder for future hard gating - DO NOT ENABLE YET
+            if (isHardGated("deposit_enforcement") && !hasDepositEnforcement) {
+              console.warn("[Hard Gate Placeholder] Deposit enforcement would be blocked here for non-Pro+ users");
+            }
           }
           
           const depositAmountCents = estimatedPrice 

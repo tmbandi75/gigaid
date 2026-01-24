@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { PageSpinner } from "@/components/ui/spinner";
 import { SoftIntercept } from "@/components/ui/soft-intercept";
 import { useCapability } from "@/hooks/useCapability";
+import { logPricingInterest } from "@shared/capabilityLogger";
 import {
   Dialog,
   DialogContent,
@@ -122,7 +123,7 @@ export default function BookingRequests() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
   const [remainderNotes, setRemainderNotes] = useState("");
   
-  const { checkCapability, checkIsDeveloper } = useCapability();
+  const { user, checkCapability, checkIsDeveloper } = useCapability();
   const hasRiskProtection = checkCapability("booking_risk_protection");
   const isDev = checkIsDeveloper();
   const [dismissedIntercept, setDismissedIntercept] = useState<Set<number>>(new Set());
@@ -407,15 +408,13 @@ export default function BookingRequests() {
                   primaryActionLabel="Protect this job with Pro+"
                   secondaryActionLabel="Continue without protection"
                   onPrimary={() => {
-                    console.log("[capability_attempted]", {
+                    logPricingInterest({
+                      user: user ? { email: user.email, plan: user.plan } : undefined,
+                      source: "soft_intercept",
                       capability: "booking_risk_protection",
-                      context: {
-                        booking_id: selectedBooking.id,
-                        source: "soft_intercept"
-                      },
-                      timestamp: new Date().toISOString()
+                      context: { booking_id: selectedBooking.id }
                     });
-                    navigate("/settings/plans");
+                    navigate("/pro-plus-context");
                   }}
                   onSecondary={() => {
                     console.log("[capability_attempted]", {
