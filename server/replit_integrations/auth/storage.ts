@@ -1,6 +1,6 @@
-import { users, type User, type InsertUser } from "@shared/schema";
+import { users, jobs, leads, invoices, aiNudges, nextActions, type User, type InsertUser } from "@shared/schema";
 import { db } from "../../db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 // Auth user data from OIDC claims
 interface AuthUserData {
@@ -63,7 +63,68 @@ class AuthStorage implements IAuthStorage {
         lastActiveAt: new Date().toISOString(),
       })
       .returning();
+    
+    // Transfer demo data to the new user if demo-user exists
+    await this.transferDemoData(userData.id);
+    
     return user;
+  }
+  
+  // Transfer demo data from demo-user to a new user
+  private async transferDemoData(newUserId: string): Promise<void> {
+    try {
+      // Check if demo-user exists
+      const [demoUser] = await db.select().from(users).where(eq(users.id, 'demo-user'));
+      if (!demoUser) {
+        console.log('[Auth] No demo-user found, skipping demo data transfer');
+        return;
+      }
+      
+      // Transfer jobs
+      await db.update(jobs).set({ userId: newUserId }).where(eq(jobs.userId, 'demo-user'));
+      console.log('[Auth] Transferred jobs to new user');
+      
+      // Transfer leads
+      await db.update(leads).set({ userId: newUserId }).where(eq(leads.userId, 'demo-user'));
+      console.log('[Auth] Transferred leads to new user');
+      
+      // Transfer invoices
+      await db.update(invoices).set({ userId: newUserId }).where(eq(invoices.userId, 'demo-user'));
+      console.log('[Auth] Transferred invoices to new user');
+      
+      // Transfer AI nudges
+      await db.update(aiNudges).set({ userId: newUserId }).where(eq(aiNudges.userId, 'demo-user'));
+      console.log('[Auth] Transferred AI nudges to new user');
+      
+      // Transfer next best actions
+      await db.update(nextActions).set({ userId: newUserId }).where(eq(nextActions.userId, 'demo-user'));
+      console.log('[Auth] Transferred next best actions to new user');
+      
+      // Update any other tables with user_id referencing demo-user
+      // Using raw SQL for tables that may not be imported
+      await db.execute(sql`UPDATE crew_members SET user_id = ${newUserId} WHERE user_id = 'demo-user'`);
+      await db.execute(sql`UPDATE onboarding SET user_id = ${newUserId} WHERE user_id = 'demo-user'`);
+      await db.execute(sql`UPDATE reminders SET user_id = ${newUserId} WHERE user_id = 'demo-user'`);
+      await db.execute(sql`UPDATE sms_messages SET user_id = ${newUserId} WHERE user_id = 'demo-user'`);
+      await db.execute(sql`UPDATE referrals SET referrer_user_id = ${newUserId} WHERE referrer_user_id = 'demo-user'`);
+      await db.execute(sql`UPDATE user_service_types SET user_id = ${newUserId} WHERE user_id = 'demo-user'`);
+      await db.execute(sql`UPDATE user_availability SET user_id = ${newUserId} WHERE user_id = 'demo-user'`);
+      await db.execute(sql`UPDATE location_trackings SET user_id = ${newUserId} WHERE user_id = 'demo-user'`);
+      await db.execute(sql`UPDATE provider_photos SET user_id = ${newUserId} WHERE user_id = 'demo-user'`);
+      await db.execute(sql`UPDATE stall_detection SET user_id = ${newUserId} WHERE user_id = 'demo-user'`);
+      await db.execute(sql`UPDATE outcome_attributions SET user_id = ${newUserId} WHERE user_id = 'demo-user'`);
+      await db.execute(sql`UPDATE intent_signals SET user_id = ${newUserId} WHERE user_id = 'demo-user'`);
+      await db.execute(sql`UPDATE voice_notes SET user_id = ${newUserId} WHERE user_id = 'demo-user'`);
+      
+      console.log('[Auth] Demo data transfer complete for user:', newUserId);
+      
+      // Delete the demo-user after transfer
+      await db.delete(users).where(eq(users.id, 'demo-user'));
+      console.log('[Auth] Deleted demo-user account');
+    } catch (error) {
+      console.error('[Auth] Error transferring demo data:', error);
+      // Don't throw - user creation should still succeed even if demo data transfer fails
+    }
   }
 }
 
