@@ -104,10 +104,6 @@ export default function More() {
   const [darkMode, setDarkMode] = useState(false);
   const { enterDriveMode, gpsStatus, currentSpeed } = useDriveModeContext();
 
-  const handleLogout = () => {
-    window.location.href = "/api/logout";
-  };
-
   const { data: profile } = useQuery<UserProfile>({
     queryKey: ["/api/profile"],
   });
@@ -289,10 +285,10 @@ export default function More() {
 
         <Card className="border-0 shadow-md border-destructive/10 overflow-hidden">
           <CardContent className="p-0">
-            <div 
+            <a 
+              href="/api/logout"
               className="flex items-center justify-between p-4 hover-elevate cursor-pointer"
               data-testid="menu-logout"
-              onClick={handleLogout}
             >
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-destructive/10 flex items-center justify-center">
@@ -303,7 +299,7 @@ export default function More() {
                   <p className="text-xs text-muted-foreground">Sign out of your account</p>
                 </div>
               </div>
-            </div>
+            </a>
           </CardContent>
         </Card>
 
