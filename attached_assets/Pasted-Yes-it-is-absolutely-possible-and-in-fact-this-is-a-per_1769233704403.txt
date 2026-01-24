@@ -1,0 +1,247 @@
+Yes — **it is absolutely possible**, and in fact this is a *perfect* moment to do it because your plan definitions are now stable.
+
+Below is a **single, copy-paste Replit prompt** that implements **enforcement exactly aligned with the plan feature breakdown you shared**, without breaking your monetization philosophy.
+
+This prompt:
+
+* Enforces **capacity & cost limits** (hard)
+* Soft-gates **intelligence & protection**
+* Preserves **website-initiated Pro/Pro+ signups**
+* Uses your **existing plan + capability system**
+* Does **not** add Stripe flows or new pricing UI
+* Is safe for demo *and* production evolution
+
+---
+
+# 🔧 REPLIT PROMPT — Plan Enforcement Based on Feature Matrix
+
+## Objective
+
+Implement plan enforcement for **Free, Pro, Pro+, Business** using the agreed feature definitions, while respecting these rules:
+
+✅ Hard-enforce capacity & cost
+⚠️ Soft-gate intelligence & protection
+❌ Never block job completion or payments
+❌ Do NOT add Stripe or checkout
+❌ Do NOT change pricing or plans
+✅ Website Pro / Pro+ users must work immediately
+
+---
+
+## 1️⃣ Define Plan Limits & Cost Gates
+
+### Create file:
+
+`/src/lib/planLimits.ts`
+
+```ts
+import { Plan } from "@/lib/plans";
+
+export const PLAN_LIMITS = {
+  [Plan.FREE]: {
+    maxJobs: 10,
+    outboundSms: false,
+    autoFollowups: false,
+    offlinePhotos: false,
+    analytics: false
+  },
+
+  [Plan.PRO]: {
+    maxJobs: Infinity,
+    outboundSms: true,
+    autoFollowups: true,
+    offlinePhotos: false,
+    analytics: true
+  },
+
+  [Plan.PRO_PLUS]: {
+    maxJobs: Infinity,
+    outboundSms: true,
+    autoFollowups: true,
+    offlinePhotos: true,
+    analytics: true
+  },
+
+  [Plan.BUSINESS]: {
+    maxJobs: Infinity,
+    outboundSms: true,
+    autoFollowups: true,
+    offlinePhotos: true,
+    analytics: true
+  }
+} as const;
+```
+
+---
+
+## 2️⃣ Enforce Job Limit (Free → Pro Capacity Gate)
+
+### Create helper:
+
+`/src/lib/canCreateJob.ts`
+
+```ts
+import { PLAN_LIMITS } from "./planLimits";
+import { Plan } from "./plans";
+
+export function canCreateJob({
+  plan,
+  currentJobCount
+}: {
+  plan: Plan;
+  currentJobCount: number;
+}) {
+  const limit = PLAN_LIMITS[plan].maxJobs;
+  return currentJobCount < limit;
+}
+```
+
+### Use in job creation flow:
+
+```ts
+if (!canCreateJob({ plan: user.plan, currentJobCount })) {
+  showBlockingMessage({
+    title: "Job limit reached",
+    message:
+      "Free includes up to 10 jobs. Upgrade to Pro for unlimited jobs."
+  });
+  return;
+}
+```
+
+⚠️ Must only block **new job creation**
+❌ Do NOT block viewing, editing, completing jobs
+
+---
+
+## 3️⃣ Enforce Outbound SMS (Cost Gate)
+
+### In Twilio send logic:
+
+```ts
+import { PLAN_LIMITS } from "@/lib/planLimits";
+
+if (!PLAN_LIMITS[user.plan].outboundSms) {
+  showInfoHint(
+    "Outbound SMS is available on Pro and Pro+."
+  );
+  return;
+}
+```
+
+✔ Read-only SMS history still allowed
+✔ Sending is blocked
+
+---
+
+## 4️⃣ Enforce Auto Follow-Ups (Convenience Gate)
+
+### Where follow-up automation is configured:
+
+```ts
+if (!PLAN_LIMITS[user.plan].autoFollowups) {
+  showInfoHint(
+    "Auto follow-ups are available on Pro to help you stay on top of clients."
+  );
+  return;
+}
+```
+
+✔ Manual follow-ups still work
+
+---
+
+## 5️⃣ Enforce Offline Photo Uploads (Cost + Infra Gate)
+
+### In offline photo capture logic:
+
+```ts
+if (!PLAN_LIMITS[user.plan].offlinePhotos) {
+  showInfoHint(
+    "Offline photo uploads are available on Pro+."
+  );
+  return;
+}
+```
+
+✔ Offline notes & status still allowed
+
+---
+
+## 6️⃣ Soft-Gate Intelligence & Protection (DO NOT BLOCK)
+
+### Booking risk signals (read-only for Free / Pro)
+
+```ts
+if (!hasCapability(user, "booking_risk_protection")) {
+  renderRiskBadge({ mode: "read_only" });
+}
+```
+
+---
+
+### Today’s Money Plan (Soft-Gate)
+
+```ts
+if (!hasCapability(user, "todays_money_plan")) {
+  renderMoneyPlanPreview();
+  showInfoHint(
+    "Today’s Money Plan is available on Pro+."
+  );
+  return;
+}
+```
+
+⚠️ Never block visibility
+⚠️ Only block automation
+
+---
+
+## 7️⃣ Guardrails (MANDATORY)
+
+* ❌ Do NOT block job completion
+* ❌ Do NOT block receiving payments
+* ❌ Do NOT retroactively hide data
+* ❌ Do NOT hard-gate AI insights
+* ❌ Do NOT add Stripe logic
+* ✅ Only enforce limits listed above
+
+---
+
+## 8️⃣ Validation Checklist
+
+* [ ] Free users blocked at job #11 only
+* [ ] Website Pro users never see job limit
+* [ ] Pro users can send SMS & auto follow-ups
+* [ ] Pro+ users unlock deposits & money protection
+* [ ] No enforcement affects completed jobs
+* [ ] No global upgrade prompts appear
+
+---
+
+## END OF REPLIT PROMPT
+
+---
+
+## 🧠 WHY THIS WORKS
+
+You’ve now implemented **three clean enforcement layers**:
+
+1. **Capacity** → Pro
+2. **Convenience** → Pro
+3. **Protection** → Pro+ (only at risk moment)
+
+Each layer maps to a *different emotional state*.
+
+That’s why this scales without backlash.
+
+---
+
+If you want next, I can:
+
+* Turn this into a **capability enforcement table**
+* Write **exact UX copy** for each limit
+* Help you decide if **10 jobs is optimal**
+* Simulate the **Free → Pro → Pro+ ladder over time**
+
+Just tell me where you want to go next.
