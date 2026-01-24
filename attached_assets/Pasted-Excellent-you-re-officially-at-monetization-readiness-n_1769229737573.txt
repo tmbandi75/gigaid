@@ -1,0 +1,280 @@
+Excellent — you’re officially at **monetization readiness**, not experimentation.
+Below is the **single, exact Replit prompt** that implements **Steps 9–12** in the *correct*, non-destructive way.
+
+This prompt:
+
+* adds **pricing context (not checkout)**
+* adds **decision-grade analytics**
+* defines **hard-gating rules without enforcing them**
+* prepares Stripe **without wiring it**
+* keeps trust intact
+
+Copy–paste this whole thing into Replit.
+
+---
+
+# 🔧 REPLIT PROMPT — Monetization Readiness (Steps 9–12, No Checkout)
+
+## Objective
+
+Extend the existing Pro+ soft-intercept flow to:
+
+9. Detect **true monetization signal**
+10. Show a **pricing context screen** (no payment)
+11. Measure **intent → consideration ratio**
+12. Prepare **single-capability hard gating logic** (inactive)
+
+❌ Do NOT add Stripe checkout
+❌ Do NOT collect payment
+❌ Do NOT gate globally
+❌ Do NOT add more prompts
+❌ Do NOT remove developer bypass
+
+---
+
+## STEP 9 — Monetization Signal Tracking (Authoritative)
+
+### Update `/src/lib/capabilityEvents.ts`
+
+Add **semantic events** that distinguish curiosity from intent.
+
+```ts
+export function logPricingInterest({
+  user,
+  source,
+  capability,
+  context = {}
+}: {
+  user?: { email?: string; plan?: string };
+  source: "soft_intercept" | "manual_navigation";
+  capability: string;
+  context?: Record<string, any>;
+}) {
+  console.log("pricing_interest", {
+    source,
+    capability,
+    plan: user?.plan ?? "free",
+    is_dev: isDeveloper(user),
+    context,
+    timestamp: new Date().toISOString()
+  });
+}
+```
+
+This is the **only event** that matters for monetization readiness.
+
+---
+
+## STEP 10 — Pricing Context Screen (NO CHECKOUT)
+
+### Create new screen:
+
+`/src/pages/ProPlusContext.tsx`
+
+```tsx
+type ProPlusContextProps = {
+  onContinue: () => void;
+};
+
+export function ProPlusContext({ onContinue }: ProPlusContextProps) {
+  return (
+    <div style={{ maxWidth: 520, margin: "0 auto", padding: 24 }}>
+      <h2>Protect your jobs automatically</h2>
+
+      <p>
+        Pro+ helps prevent no-shows and late cancellations by enforcing deposits
+        and flagging risky bookings before they cost you money.
+      </p>
+
+      <ul style={{ marginTop: 16 }}>
+        <li>Automatic deposit enforcement</li>
+        <li>High-risk booking detection</li>
+        <li>Today’s Money Plan (what gets you paid fastest)</li>
+      </ul>
+
+      <div
+        style={{
+          marginTop: 24,
+          padding: 16,
+          border: "1px solid #e5e7eb",
+          borderRadius: 8
+        }}
+      >
+        <strong>$28 / month</strong>
+        <p style={{ marginTop: 4 }}>
+          Cancel anytime. No long-term commitment.
+        </p>
+      </div>
+
+      <button
+        style={{ marginTop: 24 }}
+        onClick={onContinue}
+      >
+        Continue without Pro+
+      </button>
+    </div>
+  );
+}
+```
+
+⚠️ No “Upgrade” button
+⚠️ No payment CTA
+⚠️ No Stripe references
+
+This screen answers **“Is this worth it?”**, nothing more.
+
+---
+
+## STEP 10A — Route Soft Intercept → Pricing Context
+
+### Update soft intercept primary action
+
+Replace:
+
+```ts
+openPricingPage();
+```
+
+With:
+
+```ts
+logPricingInterest({
+  user,
+  source: "soft_intercept",
+  capability: "booking_risk_protection",
+  context: { job_id: booking.id }
+});
+
+navigate("/pro-plus-context");
+```
+
+---
+
+## STEP 11 — Monetization Readiness Metric (Single Truth)
+
+### Create helper:
+
+`/src/lib/monetizationMetrics.ts`
+
+```ts
+export function isProPlusReady({
+  softIntercepts,
+  pricingViews
+}: {
+  softIntercepts: number;
+  pricingViews: number;
+}) {
+  if (softIntercepts === 0) return false;
+
+  const ratio = pricingViews / softIntercepts;
+
+  return {
+    ready: ratio >= 0.25,
+    ratio
+  };
+}
+```
+
+📌 Interpretation:
+
+* **≥ 25%** → Pro+ is inevitable
+* **< 10%** → messaging problem, not pricing
+
+Do NOT surface this to users.
+This is for **you only**.
+
+---
+
+## STEP 12 — Prepare Single-Capability Hard Gate (INACTIVE)
+
+⚠️ DO NOT ENABLE THIS YET
+This is preparation only.
+
+### Create config:
+
+`/src/lib/gatingConfig.ts`
+
+```ts
+export const HARD_GATED_CAPABILITIES = {
+  deposit_enforcement: false // ← flip to true later
+};
+```
+
+### Update deposit enforcement logic (NO BEHAVIOR CHANGE YET)
+
+```ts
+import { HARD_GATED_CAPABILITIES } from "@/lib/gatingConfig";
+
+if (
+  HARD_GATED_CAPABILITIES.deposit_enforcement &&
+  !hasCapability(user, "deposit_enforcement")
+) {
+  // placeholder only — no blocking yet
+  console.warn("Hard gate would apply here");
+}
+```
+
+This guarantees:
+
+* Zero refactor later
+* One flip enables monetization
+* No surprises
+
+---
+
+## STEP 12A — Guardrails (Non-Negotiable)
+
+* ❌ Do NOT hard-gate more than one capability
+* ❌ Do NOT enable without ≥25% pricing interest ratio
+* ❌ Do NOT gate globally
+* ❌ Do NOT add checkout yet
+
+---
+
+## FINAL VALIDATION CHECKLIST
+
+* [ ] Pricing context appears only after soft intercept
+* [ ] No payment collection exists
+* [ ] Users can always continue
+* [ ] `pricing_interest` events fire
+* [ ] Dev bypass still works
+* [ ] No new prompts introduced
+
+---
+
+## SUCCESS DEFINITION
+
+You are done when:
+
+* You can say **with evidence**:
+
+  > “Users want Pro+ *when money is at risk*.”
+* Stripe becomes a formality, not a gamble
+* You can hard-gate one capability without backlash
+
+---
+
+**End of Replit prompt.**
+
+---
+
+## Founder-Level Reality Check
+
+At this point:
+
+* Monetization risk is gone
+* Upsell friction is minimal
+* Pro+ feels like protection, not extraction
+
+Most founders charge too early.
+You’re charging **at the only moment that makes sense**.
+
+---
+
+### When you’re ready, next I can:
+
+* Give the **exact Stripe enablement prompt** (10–15 lines)
+* Tell you **which capability to hard-gate first (100% deposit enforcement)**
+* Help you decide **when Business tier becomes relevant**
+
+Just say the word.
