@@ -1,0 +1,225 @@
+Perfect — this is the **right moment** to add the soft intercept, and we’ll do it in a way that:
+
+* feels protective, not salesy
+* only appears at a **money-risk moment**
+* still allows the user to proceed
+* does **not** introduce Stripe, checkout, or hard gating
+* preserves developer full access
+
+Below is the **exact, copy-paste Replit prompt**. This assumes everything you described is already live.
+
+---
+
+# 🔧 REPLIT PROMPT — Add Pro+ Soft Intercept (High-Risk Booking Only)
+
+## Objective
+
+Introduce **one soft intercept** for **Pro+** that appears **only** when:
+
+* A booking is flagged as **high-risk**
+* The user **does not** have the `booking_risk_protection` capability
+
+This intercept must:
+
+* Pause the user briefly
+* Explain the risk clearly
+* Offer Pro+ as protection
+* Allow the user to continue without upgrading
+
+❌ Do NOT add Stripe
+❌ Do NOT add checkout
+❌ Do NOT block booking
+❌ Do NOT add global upgrade prompts
+✅ Developer must retain full access
+
+---
+
+## Scope (DO NOT EXPAND)
+
+This soft intercept applies **only** to:
+
+* `booking_risk_protection`
+* High-risk booking flow
+* One screen only (booking confirmation / booking details)
+
+---
+
+## 1️⃣ Create Soft Intercept Component
+
+### Create file:
+
+`/src/components/SoftIntercept.tsx`
+
+```tsx
+type SoftInterceptProps = {
+  title: string;
+  description: string;
+  primaryActionLabel: string;
+  secondaryActionLabel: string;
+  onPrimary: () => void;
+  onSecondary: () => void;
+};
+
+export function SoftIntercept({
+  title,
+  description,
+  primaryActionLabel,
+  secondaryActionLabel,
+  onPrimary,
+  onSecondary
+}: SoftInterceptProps) {
+  return (
+    <div
+      style={{
+        border: "1px solid #e5e7eb",
+        borderRadius: 8,
+        padding: 16,
+        background: "#fff7ed",
+        marginTop: 16
+      }}
+    >
+      <strong>{title}</strong>
+      <p style={{ marginTop: 8 }}>{description}</p>
+
+      <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+        <button onClick={onPrimary}>
+          {primaryActionLabel}
+        </button>
+
+        <button
+          onClick={onSecondary}
+          style={{ background: "transparent" }}
+        >
+          {secondaryActionLabel}
+        </button>
+      </div>
+    </div>
+  );
+}
+```
+
+⚠️ Keep styling simple and neutral
+⚠️ This must not feel like a modal or alert
+
+---
+
+## 2️⃣ Trigger Soft Intercept on High-Risk Booking
+
+### In the booking confirmation / booking details logic
+
+Locate the section where:
+
+* Booking is flagged as high-risk
+* Deposit enforcement or risk protection would normally apply
+
+Add the following logic:
+
+```ts
+import { hasCapability } from "@/lib/hasCapability";
+import { logCapabilityAttempt } from "@/lib/capabilityEvents";
+import { SoftIntercept } from "@/components/SoftIntercept";
+
+const shouldShowSoftIntercept =
+  booking.isHighRisk &&
+  !hasCapability(user, "booking_risk_protection");
+```
+
+---
+
+## 3️⃣ Render Soft Intercept (Conditional)
+
+Insert this **inline**, directly below the risk indicator:
+
+```tsx
+{shouldShowSoftIntercept && (
+  <SoftIntercept
+    title="This booking looks riskier than usual"
+    description="Pro+ can automatically enforce a deposit and protect you from no-shows and late cancellations."
+    primaryActionLabel="Protect this job with Pro+"
+    secondaryActionLabel="Continue without protection"
+    onPrimary={() => {
+      logCapabilityAttempt({
+        user,
+        capability: "booking_risk_protection",
+        context: {
+          job_id: booking.id,
+          source: "soft_intercept"
+        }
+      });
+
+      openPricingPage(); // no checkout, no modal
+    }}
+    onSecondary={() => {
+      logCapabilityAttempt({
+        user,
+        capability: "booking_risk_protection",
+        context: {
+          job_id: booking.id,
+          action: "dismissed_soft_intercept"
+        }
+      });
+    }}
+  />
+)}
+```
+
+---
+
+## 4️⃣ Guardrails (Must Enforce)
+
+* ❌ No modal overlay
+* ❌ No pricing grid inline
+* ❌ No checkout flow
+* ❌ No blocking user progress
+* ❌ No repeated prompts elsewhere
+* ✅ One soft intercept only
+* ✅ Inline placement only
+* ✅ Contextual to money risk
+
+---
+
+## 5️⃣ Developer Bypass Validation
+
+Confirm:
+
+* Developer account **never sees** the intercept
+* `hasCapability()` returns true for developer
+* No logging spam for dev users
+
+---
+
+## 6️⃣ Success Criteria
+
+This change is successful if:
+
+* Users can proceed without upgrading
+* Users understand *why* Pro+ exists
+* You see `capability_attempted` events with `source: soft_intercept`
+* No support complaints
+* No perceived “upsell spam”
+
+---
+
+## End of Replit prompt.
+
+---
+
+## What This Unlocks Next (Important)
+
+Once this is live, you can **finally answer**:
+
+> “Do users want Pro+ *at the moment money is at risk*?”
+
+If yes → Stripe is justified
+If no → messaging needs refinement, not pricing
+
+---
+
+### If you want next, I can:
+
+* Add **pricing context screen** (still no Stripe)
+* Define **exact metrics** that green-light checkout
+* Write the **Stripe integration prompt** with zero refactor
+* Help you choose **when to hard-gate deposits**
+
+This is textbook SaaS monetization done right.
