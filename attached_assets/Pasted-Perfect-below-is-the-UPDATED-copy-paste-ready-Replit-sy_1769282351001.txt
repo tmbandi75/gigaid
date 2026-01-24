@@ -1,0 +1,375 @@
+Perfect — below is the **UPDATED, copy-paste-ready Replit system prompt**, incorporating **all new categories**, **tightened guards**, and **risk-sensitive constraints**, while keeping **Phase 1 + Phase 2 working together safely**.
+
+This **fully replaces** the earlier prompt. You can paste this directly into Replit / Bolt.
+
+---
+
+# 🧠 REPLIT SYSTEM PROMPT
+
+## Feature: Event-Driven Client Notifications (Phase 1 + Phase 2 — Guarded)
+
+---
+
+## CONTEXT
+
+You are implementing a **safe, event-driven client notification system** for a gig-worker app (GigAid).
+
+This system allows gig workers to notify **existing clients only** when a **real-world event** materially changes relevance (weather, season, risk, availability, or client history).
+
+This system is **not** a marketing tool.
+Mass messaging, promotions, discounts, or arbitrary announcements are **explicitly prohibited**.
+
+---
+
+## CORE PRINCIPLES (NON-NEGOTIABLE)
+
+1. Every notification **must be tied to a validated event**
+2. Every message **must include a booking link**
+3. Messages are **rare, time-bound, and informational**
+4. AI may **suggest** campaigns but may **never send autonomously**
+5. If an event cannot be justified → **block the send**
+6. High-risk services have **stricter rules**
+
+---
+
+## EVENT PRIMITIVES (FIXED ENUM — DO NOT EXTEND)
+
+```
+ENVIRONMENTAL
+SEASONAL
+AVAILABILITY
+RISK
+RELATIONSHIP
+```
+
+No other event types are permitted.
+
+---
+
+## CATEGORY → EVENT MAPPING (HARD-CODED, IMMUTABLE)
+
+Implement the following mapping exactly.
+If a user selects an event type not listed → **block the action**.
+
+```
+Snow Removal:
+  ENVIRONMENTAL
+  RISK
+  AVAILABILITY
+
+Lawn & Landscaping:
+  SEASONAL
+  ENVIRONMENTAL
+  RELATIONSHIP
+
+Cleaning:
+  SEASONAL
+  AVAILABILITY
+  RELATIONSHIP
+
+Handyman / Repairs:
+  RISK
+  ENVIRONMENTAL
+  RELATIONSHIP
+
+Moving / Hauling:
+  SEASONAL
+  AVAILABILITY
+  RELATIONSHIP
+
+Power Washing:
+  SEASONAL
+  ENVIRONMENTAL
+  RELATIONSHIP
+
+Plumbing:
+  RISK
+  ENVIRONMENTAL
+  RELATIONSHIP
+
+Electrical:
+  RISK
+  ENVIRONMENTAL
+  RELATIONSHIP
+  (Require service.licensed === true)
+
+HVAC:
+  ENVIRONMENTAL
+  SEASONAL
+  RISK
+  RELATIONSHIP
+
+Roofing:
+  ENVIRONMENTAL
+  RISK
+  RELATIONSHIP
+
+Painting:
+  SEASONAL
+  AVAILABILITY
+  RELATIONSHIP
+
+Pool / Spa Service:
+  SEASONAL
+  ENVIRONMENTAL
+  RELATIONSHIP
+
+Pest Control:
+  SEASONAL
+  ENVIRONMENTAL
+  RISK
+  RELATIONSHIP
+
+Appliance Repair:
+  RISK
+  AVAILABILITY
+  RELATIONSHIP
+
+Window Cleaning:
+  SEASONAL
+  AVAILABILITY
+  RELATIONSHIP
+
+Carpet / Flooring:
+  SEASONAL
+  AVAILABILITY
+  RELATIONSHIP
+
+Locksmith:
+  RISK
+  RELATIONSHIP
+
+Auto Detailing:
+  SEASONAL
+  ENVIRONMENTAL
+  AVAILABILITY
+  RELATIONSHIP
+
+Other:
+  RELATIONSHIP only
+  (No AI suggestions allowed)
+```
+
+---
+
+## PHASE 1 — USER-INITIATED EVENT NOTIFICATIONS
+
+### ENTRY POINT
+
+Button: **“Notify Clients”**
+
+---
+
+### REQUIRED USER INPUTS (ALL MANDATORY)
+
+A notification **cannot be sent** unless all are provided:
+
+* `service_id`
+* `category`
+* `event_type` (filtered by category)
+* `event_reason` (max 120 characters)
+* `audience_filter` (past clients only)
+* `booking_link`
+* `channel` (SMS or Email)
+
+---
+
+### MESSAGE CONSTRAINTS (STRICT)
+
+**SMS**
+
+* Max 320 characters
+* Plain text only
+* Max 1 emoji
+* Must include: `Reply STOP to opt out`
+
+**Email**
+
+* Plain text or minimal HTML
+* No images
+* No marketing language
+
+---
+
+### DISALLOWED CONTENT (BLOCK SEND)
+
+* Discounts or pricing promotions
+* Percent-off language
+* “Limited time offer”
+* “New service announcement” without event
+* Fear-based language unless `event_type === RISK`
+* Repeated nudging
+
+---
+
+### RATE LIMITS (HARD ENFORCEMENT)
+
+* Max **1 notification per service per 7 days**
+* Max **2 notifications per account per week**
+* No sends during quiet hours (server-time enforced)
+
+---
+
+## PHASE 2 — AI-SUGGESTED EVENT NOTIFICATIONS (ADVISORY ONLY)
+
+### AI ROLE
+
+AI is **advisory only**.
+
+AI may:
+
+* Detect seasonal or environmental signals
+* Detect client inactivity or risk windows
+* Suggest **at most one** notification
+
+AI may **never**:
+
+* Send messages
+* Bypass validation
+* Repeat a dismissed suggestion
+* Suggest notifications for “Other” category
+
+---
+
+### AI SUGGESTION CONDITIONS (ALL REQUIRED)
+
+AI may surface a suggestion only if:
+
+1. A valid external or temporal signal exists
+2. The service category allows the detected event
+3. There are eligible past clients
+4. No notification was sent for this service in last 7 days
+5. Suggestion has not already been dismissed
+
+If any check fails → **no suggestion**
+
+---
+
+### AI SUGGESTION UI COPY (FIXED STYLE)
+
+> “An event affecting your clients was detected.
+> Would you like to notify them?”
+
+Include:
+
+* Event detected
+* Service name
+* Rounded estimate of eligible clients
+* CTA: **Review Draft**
+
+No urgency language.
+No metrics.
+No pressure.
+
+---
+
+## DATA MODEL (MINIMUM REQUIRED)
+
+```
+services(
+  id,
+  user_id,
+  category,
+  licensed boolean
+)
+
+clients(
+  id,
+  user_id,
+  last_service_date,
+  phone,
+  email,
+  opted_out
+)
+
+notifications(
+  id,
+  user_id,
+  service_id,
+  event_type,
+  event_reason,
+  channel,
+  sent_at
+)
+
+notification_suggestions(
+  id,
+  user_id,
+  service_id,
+  event_type,
+  detected_signal,
+  dismissed_at
+)
+```
+
+---
+
+## VALIDATION ORDER (MUST FOLLOW EXACTLY)
+
+On send attempt:
+
+1. Validate category → event compatibility
+2. Validate licensing (if required)
+3. Validate rate limits
+4. Validate audience eligibility
+5. Validate message constraints
+6. Validate booking link
+7. Dispatch messages
+8. Persist notification log
+
+If **any step fails** → do not partially send
+
+---
+
+## UX COPY RULES
+
+* Never say “campaign”
+* Never say “promotion”
+* Always say **“notify clients”**
+* Always explain *why* an action is blocked
+
+Example block message:
+
+> “This service can only notify clients when a relevant event occurs.”
+
+---
+
+## FAIL-SAFE RULE
+
+If the system is uncertain about relevance or safety:
+
+> **Do not send. Block or require revision.**
+
+---
+
+## SUCCESS DEFINITION
+
+This feature succeeds if:
+
+* Notifications feel expected and helpful
+* Users associate GigAid with income-saving moments
+* No user can blast clients arbitrarily
+* AI remains quiet, rare, and trusted
+
+---
+
+### END OF PROMPT
+
+---
+
+### What this gives you (important)
+
+* ✅ Full category coverage without opening spam vectors
+* ✅ Safety-graded rules by service risk
+* ✅ AI power without AI autonomy
+* ✅ Clean path to adding weather later
+* ✅ Zero “mass messaging” creep
+
+If you want next, I can:
+
+* Convert this into a **JSON rules engine**
+* Add a **seasonal detection calendar** per category
+* Design **copy templates per service**
+* Or create a **prod-readiness checklist** before you turn weather on
+
+This is now **production-grade guardrailed logic**, not a prototype.
