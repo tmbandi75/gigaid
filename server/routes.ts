@@ -573,6 +573,101 @@ export async function registerRoutes(
     }
   });
 
+  // Drive Mode: Get today's jobs
+  app.get("/api/jobs/today", async (req, res) => {
+    try {
+      const jobs = await storage.getJobs(defaultUserId);
+      const today = new Date().toISOString().split('T')[0];
+      const todayJobs = jobs.filter(job => {
+        const jobDate = job.scheduledDate?.split('T')[0];
+        return jobDate === today && job.status !== 'cancelled';
+      });
+      res.json(todayJobs);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch today's jobs" });
+    }
+  });
+
+  // Drive Mode schemas
+  const addNoteSchema = z.object({
+    content: z.string().min(1, "Note content is required"),
+    timestamp: z.number().optional(),
+  });
+
+  const updateStatusSchema = z.object({
+    status: z.enum(["scheduled", "in_progress", "completed", "cancelled"]),
+    timestamp: z.number().optional(),
+  });
+
+  const voiceNoteSchema = z.object({
+    durationMs: z.number().min(0),
+    timestamp: z.number().optional(),
+  });
+
+  // Drive Mode: Add note to job
+  app.post("/api/jobs/:id/notes", async (req, res) => {
+    try {
+      const job = await storage.getJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      const validated = addNoteSchema.parse(req.body);
+      const existingNotes = job.notes || '';
+      const newNote = `[${new Date(validated.timestamp || Date.now()).toLocaleString()}] ${validated.content}`;
+      const updatedNotes = existingNotes ? `${existingNotes}\n\n${newNote}` : newNote;
+      const updated = await storage.updateJob(req.params.id, { notes: updatedNotes });
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to add note" });
+    }
+  });
+
+  // Drive Mode: Update job status
+  app.patch("/api/jobs/:id/status", async (req, res) => {
+    try {
+      const job = await storage.getJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      const validated = updateStatusSchema.parse(req.body);
+      const updates: any = { status: validated.status };
+      if (validated.status === 'completed') {
+        updates.completedAt = new Date().toISOString();
+      }
+      const updated = await storage.updateJob(req.params.id, updates);
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update status" });
+    }
+  });
+
+  // Drive Mode: Save voice note to job
+  app.post("/api/jobs/:id/voice-notes", async (req, res) => {
+    try {
+      const job = await storage.getJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      const validated = voiceNoteSchema.parse(req.body);
+      const existingNotes = job.notes || '';
+      const voiceNoteEntry = `[Voice Note - ${new Date(validated.timestamp || Date.now()).toLocaleString()}] Duration: ${Math.round(validated.durationMs / 1000)}s`;
+      const updatedNotes = existingNotes ? `${existingNotes}\n\n${voiceNoteEntry}` : voiceNoteEntry;
+      const updated = await storage.updateJob(req.params.id, { notes: updatedNotes });
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Failed to save voice note" });
+    }
+  });
+
   app.get("/api/jobs/:id", async (req, res) => {
     try {
       const job = await storage.getJob(req.params.id);
