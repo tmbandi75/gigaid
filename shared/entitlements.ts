@@ -1,7 +1,7 @@
 import { Plan, Capability, PLAN_CAPABILITIES } from "./plans";
 
 const DEV_EMAILS = [
-  "tmbandi@gmail.com"
+  "thierry.mbandi@outlook.com"
 ];
 
 export function isDeveloper(user?: { email?: string | null }) {
