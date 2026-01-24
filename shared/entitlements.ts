@@ -47,3 +47,34 @@ export function getAllCapabilities(): Capability[] {
     (cap, index, arr) => arr.indexOf(cap) === index
   );
 }
+
+// Money Protection Ready - requires service type, default price, and deposit policy
+export function isMoneyProtectionReady(user?: {
+  defaultServiceType?: string | null;
+  defaultPrice?: number | null;
+  depositPolicySet?: boolean | null;
+  onboardingState?: string | null;
+}): boolean {
+  if (!user) return false;
+  
+  // User must have completed or skipped onboarding AND set the required fields
+  const hasServiceType = !!user.defaultServiceType;
+  const hasDefaultPrice = typeof user.defaultPrice === 'number' && user.defaultPrice > 0;
+  const hasDepositPolicy = !!user.depositPolicySet;
+  
+  return hasServiceType && hasDefaultPrice && hasDepositPolicy;
+}
+
+// Check if user is in Explore Mode (skipped onboarding, limited functionality)
+export function isInExploreMode(user?: {
+  onboardingState?: string | null;
+}): boolean {
+  return user?.onboardingState === "skipped_explore";
+}
+
+// Check if onboarding is fully complete
+export function isOnboardingComplete(user?: {
+  onboardingState?: string | null;
+}): boolean {
+  return user?.onboardingState === "completed";
+}

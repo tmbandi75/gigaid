@@ -4661,9 +4661,23 @@ Final price confirmed onsite.`;
         return res.status(401).json({ error: "Authentication required" });
       }
       const user = await storage.getUser(userId);
+      
+      // Compute money protection ready status
+      const moneyProtectionReady = !!(
+        user?.defaultServiceType &&
+        typeof user?.defaultPrice === 'number' && user.defaultPrice > 0 &&
+        user?.depositPolicySet
+      );
+      
       res.json({
         completed: user?.onboardingCompleted || false,
         step: user?.onboardingStep || 0,
+        state: user?.onboardingState || "not_started",
+        moneyProtectionReady,
+        defaultServiceType: user?.defaultServiceType || null,
+        defaultPrice: user?.defaultPrice || null,
+        depositPolicySet: user?.depositPolicySet || false,
+        aiExpectationShown: user?.aiExpectationShown || false,
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch onboarding status" });
@@ -4676,27 +4690,59 @@ Final price confirmed onsite.`;
       if (!userId) {
         return res.status(401).json({ error: "Authentication required" });
       }
-      const { step, completed } = req.body;
+      const { step, completed, state } = req.body;
       const previousUser = await storage.getUser(userId);
       const previousStep = previousUser?.onboardingStep || 0;
       
-      const user = await storage.updateUser(userId, {
-        onboardingStep: step,
-        onboardingCompleted: completed,
-      });
+      const updateData: Record<string, any> = {};
+      if (step !== undefined) updateData.onboardingStep = step;
+      if (completed !== undefined) updateData.onboardingCompleted = completed;
+      if (state !== undefined) updateData.onboardingState = state;
+      
+      const user = await storage.updateUser(userId, updateData);
       
       if (step !== undefined && step > previousStep) {
         emitCanonicalEvent({
           eventName: "onboarding_step_completed",
           userId: userId,
-          context: { step, previousStep, completed },
+          context: { step, previousStep, completed, state },
           source: "web",
         });
       }
       
+      // Emit event when onboarding is completed or skipped
+      if (state === "completed" || state === "skipped_explore") {
+        emitCanonicalEvent({
+          eventName: state === "completed" ? "onboarding_completed" : "onboarding_skipped",
+          userId: userId,
+          context: { 
+            state,
+            moneyProtectionReady: !!(
+              user?.defaultServiceType &&
+              typeof user?.defaultPrice === 'number' && user.defaultPrice > 0 &&
+              user?.depositPolicySet
+            )
+          },
+          source: "web",
+        });
+      }
+      
+      // Compute money protection ready status
+      const moneyProtectionReady = !!(
+        user?.defaultServiceType &&
+        typeof user?.defaultPrice === 'number' && user.defaultPrice > 0 &&
+        user?.depositPolicySet
+      );
+      
       res.json({
         completed: user?.onboardingCompleted || false,
         step: user?.onboardingStep || 0,
+        state: user?.onboardingState || "not_started",
+        moneyProtectionReady,
+        defaultServiceType: user?.defaultServiceType || null,
+        defaultPrice: user?.defaultPrice || null,
+        depositPolicySet: user?.depositPolicySet || false,
+        aiExpectationShown: user?.aiExpectationShown || false,
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to update onboarding" });
