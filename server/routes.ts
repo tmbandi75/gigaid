@@ -595,7 +595,11 @@ export async function registerRoutes(
 
   app.get("/api/jobs", isAuthenticated, async (req, res) => {
     try {
-      const jobs = await storage.getJobs((req as any).userId);
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      const jobs = await storage.getJobs(userId);
       res.json(jobs);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch jobs" });
@@ -1411,7 +1415,11 @@ export async function registerRoutes(
 
   app.get("/api/leads", isAuthenticated, async (req, res) => {
     try {
-      const leads = await storage.getLeads((req as any).userId);
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      const leads = await storage.getLeads(userId);
       res.json(leads);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch leads" });
