@@ -1737,6 +1737,7 @@ export const clients = pgTable("clients", {
   noShowCount: integer("no_show_count").default(0),
   totalBookings: integer("total_bookings").default(0),
   lastBookingAt: text("last_booking_at"),
+  optedOutOfNotifications: boolean("opted_out_of_notifications").default(false),
   createdAt: text("created_at").notNull(),
 }, (table) => [
   index("clients_user_idx").on(table.userId),
@@ -1826,6 +1827,114 @@ export const insertAiInterventionSchema = createInsertSchema(aiInterventions).om
 
 export type InsertAiIntervention = z.infer<typeof insertAiInterventionSchema>;
 export type AiIntervention = typeof aiInterventions.$inferSelect;
+
+// ==================== EVENT-DRIVEN CLIENT NOTIFICATIONS ====================
+// Safe, event-driven notification system for re-engaging past clients
+
+// Event types - FIXED ENUM, do not extend without code change
+export const notificationEventTypes = [
+  "environmental", // weather-related (snow, rain, etc.)
+  "seasonal",      // time of year (spring cleaning, fall prep)
+  "availability",  // provider has openings
+  "risk",          // safety/maintenance risks (frozen pipes, etc.)
+  "relationship",  // time since last service
+] as const;
+export type NotificationEventType = (typeof notificationEventTypes)[number];
+
+// Service categories with allowed event types - HARD RULES
+export const serviceCategories = [
+  "snow_removal",
+  "lawn_landscaping",
+  "cleaning",
+  "handyman_repairs",
+  "moving_hauling",
+  "power_washing",
+  "other",
+] as const;
+export type ServiceCategory = (typeof serviceCategories)[number];
+
+// Category to event type mapping (immutable)
+export const categoryEventMapping: Record<ServiceCategory, NotificationEventType[]> = {
+  snow_removal: ["environmental", "risk", "availability"],
+  lawn_landscaping: ["seasonal", "environmental", "relationship"],
+  cleaning: ["seasonal", "availability", "relationship"],
+  handyman_repairs: ["risk", "environmental", "relationship"],
+  moving_hauling: ["seasonal", "availability", "relationship"],
+  power_washing: ["seasonal", "environmental", "relationship"],
+  other: ["seasonal", "availability", "relationship"],
+};
+
+// Provider services table - tracks services offered with categories
+export const providerServices = pgTable("provider_services", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  name: text("name").notNull(),
+  category: text("category").notNull(), // from serviceCategories
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  createdAt: text("created_at").notNull(),
+}, (table) => [
+  index("provider_services_user_idx").on(table.userId),
+  index("provider_services_category_idx").on(table.category),
+]);
+
+export const insertProviderServiceSchema = createInsertSchema(providerServices).omit({
+  id: true,
+});
+
+export type InsertProviderService = z.infer<typeof insertProviderServiceSchema>;
+export type ProviderService = typeof providerServices.$inferSelect;
+
+// Client notification campaigns - tracks sent campaigns
+export const clientNotificationCampaigns = pgTable("client_notification_campaigns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  serviceId: varchar("service_id").notNull(),
+  eventType: text("event_type").notNull(), // from notificationEventTypes
+  eventReason: text("event_reason").notNull(), // max 120 chars, why this event is relevant
+  channel: text("channel").notNull(), // "sms" or "email"
+  bookingLink: text("booking_link").notNull(),
+  messageContent: text("message_content").notNull(),
+  recipientCount: integer("recipient_count").default(0),
+  sentAt: text("sent_at").notNull(),
+  createdAt: text("created_at").notNull(),
+}, (table) => [
+  index("campaigns_user_idx").on(table.userId),
+  index("campaigns_service_idx").on(table.serviceId),
+  index("campaigns_sent_idx").on(table.sentAt),
+]);
+
+export const insertCampaignSchema = createInsertSchema(clientNotificationCampaigns).omit({
+  id: true,
+});
+
+export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
+export type ClientNotificationCampaign = typeof clientNotificationCampaigns.$inferSelect;
+
+// Campaign suggestions - AI-suggested campaigns (advisory only)
+export const campaignSuggestions = pgTable("campaign_suggestions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  serviceId: varchar("service_id").notNull(),
+  eventType: text("event_type").notNull(), // from notificationEventTypes
+  detectedSignal: text("detected_signal").notNull(), // what triggered the suggestion
+  suggestedMessage: text("suggested_message"),
+  estimatedEligibleClients: integer("estimated_eligible_clients").default(0),
+  status: text("status").default("pending"), // pending, dismissed, converted
+  dismissedAt: text("dismissed_at"),
+  convertedToCampaignId: varchar("converted_to_campaign_id"),
+  createdAt: text("created_at").notNull(),
+}, (table) => [
+  index("campaign_suggestions_user_idx").on(table.userId),
+  index("campaign_suggestions_status_idx").on(table.status),
+]);
+
+export const insertCampaignSuggestionSchema = createInsertSchema(campaignSuggestions).omit({
+  id: true,
+});
+
+export type InsertCampaignSuggestion = z.infer<typeof insertCampaignSuggestionSchema>;
+export type CampaignSuggestion = typeof campaignSuggestions.$inferSelect;
 
 export * from "./models/chat";
 export * from "./models/auth";

@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { VoiceNoteSummarizer } from "@/components/ai/VoiceNoteSummarizer";
+import { CampaignSuggestionBanner } from "@/components/CampaignSuggestionBanner";
 import {
   FileText,
   DollarSign,
@@ -233,6 +234,8 @@ export default function TodaysGamePlanPage() {
             Do these things to stay on track and get paid
           </p>
         </motion.div>
+
+        <CampaignSuggestionBanner />
 
         <motion.section variants={itemVariants} aria-labelledby="do-this-first">
           <h2 id="do-this-first" className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">

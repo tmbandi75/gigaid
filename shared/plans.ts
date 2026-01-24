@@ -17,7 +17,8 @@ export type Capability =
   | "priority_alerts"
   | "crew_management"
   | "analytics"
-  | "admin_controls";
+  | "admin_controls"
+  | "ai_campaign_suggestions";
 
 export const PLAN_CAPABILITIES: Record<Plan, Capability[]> = {
   [Plan.FREE]: [
@@ -40,7 +41,8 @@ export const PLAN_CAPABILITIES: Record<Plan, Capability[]> = {
     "deposit_enforcement",
     "todays_money_plan",
     "offline_assets",
-    "priority_alerts"
+    "priority_alerts",
+    "ai_campaign_suggestions"
   ],
 
   [Plan.BUSINESS]: [
@@ -55,7 +57,8 @@ export const PLAN_CAPABILITIES: Record<Plan, Capability[]> = {
     "priority_alerts",
     "crew_management",
     "analytics",
-    "admin_controls"
+    "admin_controls",
+    "ai_campaign_suggestions"
   ]
 };
 

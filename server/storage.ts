@@ -38,6 +38,10 @@ import {
   type IntentSignal, type InsertIntentSignal,
   type ReadyAction, type InsertReadyAction,
   type AiOverride, type InsertAiOverride,
+  type Client,
+  type ProviderService, type InsertProviderService,
+  type ClientNotificationCampaign, type InsertCampaign,
+  type CampaignSuggestion, type InsertCampaignSuggestion,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -314,6 +318,28 @@ export interface IStorage {
   
   // Lead respond tap tracking
   incrementLeadRespondTap(leadId: string): Promise<Lead | undefined>;
+  
+  // Provider Services (for notification campaigns)
+  getProviderServices(userId: string): Promise<ProviderService[]>;
+  getProviderServiceById(id: string): Promise<ProviderService | undefined>;
+  createProviderService(service: InsertProviderService): Promise<ProviderService>;
+  updateProviderService(id: string, updates: Partial<ProviderService>): Promise<ProviderService | undefined>;
+  deleteProviderService(id: string): Promise<boolean>;
+  
+  // Client Notification Campaigns
+  getCampaigns(userId: string): Promise<ClientNotificationCampaign[]>;
+  getCampaignCountInLastWeek(userId: string, serviceId?: string): Promise<number>;
+  createCampaign(campaign: InsertCampaign): Promise<ClientNotificationCampaign>;
+  
+  // Campaign Suggestions (AI-generated)
+  getCampaignSuggestions(userId: string): Promise<CampaignSuggestion[]>;
+  createCampaignSuggestion(suggestion: InsertCampaignSuggestion): Promise<CampaignSuggestion>;
+  dismissCampaignSuggestion(id: string, userId: string): Promise<CampaignSuggestion | undefined>;
+  convertCampaignSuggestion(id: string, campaignId: string): Promise<CampaignSuggestion | undefined>;
+  
+  // Client notification eligibility
+  getEligibleClientsForNotification(userId: string, channel: string): Promise<Client[]>;
+  optOutClient(phone?: string, email?: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -2605,6 +2631,155 @@ export class MemStorage implements IStorage {
     };
     this.leads.set(leadId, updated);
     return updated;
+  }
+
+  // ============================================================
+  // Provider Services (for notification campaigns)
+  // ============================================================
+
+  private providerServices: Map<string, ProviderService> = new Map();
+  private campaigns: Map<string, ClientNotificationCampaign> = new Map();
+  private campaignSuggestions: Map<string, CampaignSuggestion> = new Map();
+  private clients: Map<string, Client> = new Map();
+
+  async getProviderServices(userId: string): Promise<ProviderService[]> {
+    return Array.from(this.providerServices.values())
+      .filter(s => s.userId === userId && s.isActive)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getProviderServiceById(id: string): Promise<ProviderService | undefined> {
+    return this.providerServices.get(id);
+  }
+
+  async createProviderService(service: InsertProviderService): Promise<ProviderService> {
+    const id = randomUUID();
+    const newService: ProviderService = {
+      ...service,
+      id,
+      description: service.description ?? null,
+      isActive: service.isActive ?? true,
+    };
+    this.providerServices.set(id, newService);
+    return newService;
+  }
+
+  async updateProviderService(id: string, updates: Partial<ProviderService>): Promise<ProviderService | undefined> {
+    const service = this.providerServices.get(id);
+    if (!service) return undefined;
+    const updated = { ...service, ...updates };
+    this.providerServices.set(id, updated);
+    return updated;
+  }
+
+  async deleteProviderService(id: string): Promise<boolean> {
+    return this.providerServices.delete(id);
+  }
+
+  // ============================================================
+  // Client Notification Campaigns
+  // ============================================================
+
+  async getCampaigns(userId: string): Promise<ClientNotificationCampaign[]> {
+    return Array.from(this.campaigns.values())
+      .filter(c => c.userId === userId)
+      .sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
+  }
+
+  async getCampaignCountInLastWeek(userId: string, serviceId?: string): Promise<number> {
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    
+    return Array.from(this.campaigns.values())
+      .filter(c => 
+        c.userId === userId &&
+        (!serviceId || c.serviceId === serviceId) &&
+        new Date(c.sentAt) > oneWeekAgo
+      ).length;
+  }
+
+  async createCampaign(campaign: InsertCampaign): Promise<ClientNotificationCampaign> {
+    const id = randomUUID();
+    const newCampaign: ClientNotificationCampaign = {
+      ...campaign,
+      id,
+      recipientCount: campaign.recipientCount ?? 0,
+    };
+    this.campaigns.set(id, newCampaign);
+    return newCampaign;
+  }
+
+  // ============================================================
+  // Campaign Suggestions (AI-generated)
+  // ============================================================
+
+  async getCampaignSuggestions(userId: string): Promise<CampaignSuggestion[]> {
+    return Array.from(this.campaignSuggestions.values())
+      .filter(s => s.userId === userId && s.status === "pending")
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async createCampaignSuggestion(suggestion: InsertCampaignSuggestion): Promise<CampaignSuggestion> {
+    const id = randomUUID();
+    const newSuggestion: CampaignSuggestion = {
+      ...suggestion,
+      id,
+      suggestedMessage: suggestion.suggestedMessage ?? null,
+      estimatedEligibleClients: suggestion.estimatedEligibleClients ?? 0,
+      status: suggestion.status ?? "pending",
+      dismissedAt: suggestion.dismissedAt ?? null,
+      convertedToCampaignId: suggestion.convertedToCampaignId ?? null,
+    };
+    this.campaignSuggestions.set(id, newSuggestion);
+    return newSuggestion;
+  }
+
+  async dismissCampaignSuggestion(id: string, userId: string): Promise<CampaignSuggestion | undefined> {
+    const suggestion = this.campaignSuggestions.get(id);
+    if (!suggestion || suggestion.userId !== userId) return undefined;
+    const updated = {
+      ...suggestion,
+      status: "dismissed" as const,
+      dismissedAt: new Date().toISOString(),
+    };
+    this.campaignSuggestions.set(id, updated);
+    return updated;
+  }
+
+  async convertCampaignSuggestion(id: string, campaignId: string): Promise<CampaignSuggestion | undefined> {
+    const suggestion = this.campaignSuggestions.get(id);
+    if (!suggestion) return undefined;
+    const updated = {
+      ...suggestion,
+      status: "converted" as const,
+      convertedToCampaignId: campaignId,
+    };
+    this.campaignSuggestions.set(id, updated);
+    return updated;
+  }
+
+  // ============================================================
+  // Client notification eligibility
+  // ============================================================
+
+  async getEligibleClientsForNotification(userId: string, channel: string): Promise<Client[]> {
+    return Array.from(this.clients.values())
+      .filter(c => 
+        c.userId === userId &&
+        !c.optedOutOfNotifications &&
+        ((channel === "sms" && c.clientPhone) || (channel === "email" && c.clientEmail))
+      );
+  }
+
+  async optOutClient(phone?: string, email?: string): Promise<boolean> {
+    let found = false;
+    for (const [id, client] of this.clients) {
+      if ((phone && client.clientPhone === phone) || (email && client.clientEmail === email)) {
+        this.clients.set(id, { ...client, optedOutOfNotifications: true });
+        found = true;
+      }
+    }
+    return found;
   }
 }
 

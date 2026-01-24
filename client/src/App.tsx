@@ -48,6 +48,7 @@ import ShareCapture from "@/pages/ShareCapture";
 import PublicReview from "@/pages/PublicReview";
 import QuickBook from "@/pages/QuickBook";
 import QuickBookConfirm from "@/pages/QuickBookConfirm";
+import NotifyClientsPage from "@/pages/NotifyClientsPage";
 import MoneyPlanPage from "@/pages/MoneyPlanPage";
 import ProPlusContext from "@/pages/ProPlusContext";
 import Messages from "@/pages/Messages";
@@ -91,6 +92,7 @@ function Router() {
       <Route path="/money-plan" component={MoneyPlanPage} />
       <Route path="/pro-plus-context" component={ProPlusContext} />
       <Route path="/messages" component={Messages} />
+      <Route path="/notify-clients" component={NotifyClientsPage} />
       <Route path="/owner" component={OwnerView} />
       <Route path="/admin/cockpit" component={AdminCockpit} />
       <Route path="/admin/users" component={AdminUsers} />

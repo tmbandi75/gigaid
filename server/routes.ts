@@ -40,6 +40,7 @@ import cockpitRoutes from "./copilot/routes";
 import adminUsersRoutes from "./admin/usersRoutes";
 import leadEmailRoutes from "./leadEmailRoutes";
 import { startCopilotScheduler } from "./copilot/engine";
+import { startCampaignSuggestionScheduler } from "./campaignSuggestionEngine";
 import { emitCanonicalEvent } from "./copilot/canonicalEvents";
 import { 
   findOrCreateClient, 
@@ -76,6 +77,7 @@ export async function registerRoutes(
   app.use("/api", leadEmailRoutes);
   
   startCopilotScheduler();
+  startCampaignSuggestionScheduler();
   
   // Helper function to get authenticated user ID from request
   function getAuthenticatedUserId(req: Request): string | null {
@@ -9431,6 +9433,280 @@ Return ONLY the message text, no JSON or formatting.`
         error: "Failed to add comment",
         details: error.message 
       });
+    }
+  });
+
+  // ==================== CLIENT NOTIFICATION CAMPAIGNS ====================
+  
+  // Get provider services (with categories)
+  app.get("/api/provider-services", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const services = await storage.getProviderServices(userId);
+      res.json(services);
+    } catch (error: any) {
+      console.error("Error fetching provider services:", error);
+      res.status(500).json({ error: "Failed to fetch services" });
+    }
+  });
+
+  // Create a provider service
+  app.post("/api/provider-services", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { name, category, description } = req.body;
+      
+      const service = await storage.createProviderService({
+        userId,
+        name,
+        category,
+        description,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+      });
+      
+      res.json(service);
+    } catch (error: any) {
+      console.error("Error creating provider service:", error);
+      res.status(500).json({ error: "Failed to create service" });
+    }
+  });
+
+  // Get eligible clients for notification (past clients who haven't opted out)
+  app.get("/api/notification-campaigns/eligible-clients", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const channel = (req.query.channel as string) || "sms";
+      
+      const eligibleClients = await storage.getEligibleClientsForNotification(userId, channel);
+      res.json({
+        count: eligibleClients.length,
+        clients: eligibleClients,
+      });
+    } catch (error: any) {
+      console.error("Error fetching eligible clients:", error);
+      res.status(500).json({ error: "Failed to fetch eligible clients" });
+    }
+  });
+
+  // Validate a campaign (without sending)
+  app.post("/api/notification-campaigns/validate", requireAuth, async (req, res) => {
+    const { 
+      validateFullCampaign,
+      generateDefaultMessage,
+      formatCategory,
+      formatEventType,
+    } = await import("./notificationCampaignValidator");
+    
+    try {
+      const userId = (req as any).userId;
+      const { serviceId, eventType, eventReason, channel, bookingLink, messageContent } = req.body;
+      
+      const service = await storage.getProviderServiceById(serviceId);
+      if (!service || service.userId !== userId) {
+        return res.status(404).json({ error: "Service not found" });
+      }
+      
+      const eligibleClients = await storage.getEligibleClientsForNotification(userId, channel);
+      
+      const getCampaignsInLastWeek = async (uid: string, sid?: string) => {
+        return storage.getCampaignCountInLastWeek(uid, sid);
+      };
+      
+      const validation = await validateFullCampaign(
+        {
+          userId,
+          serviceId,
+          serviceCategory: service.category as any,
+          eventType,
+          eventReason,
+          channel,
+          bookingLink,
+          messageContent: messageContent || generateDefaultMessage(eventType, eventReason, bookingLink, channel),
+        },
+        getCampaignsInLastWeek,
+        eligibleClients.length
+      );
+      
+      res.json({
+        valid: validation.valid,
+        errors: validation.errors,
+        warnings: validation.warnings,
+        eligibleClientCount: eligibleClients.length,
+        suggestedMessage: generateDefaultMessage(eventType, eventReason, bookingLink, channel),
+      });
+    } catch (error: any) {
+      console.error("Error validating campaign:", error);
+      res.status(500).json({ error: "Failed to validate campaign" });
+    }
+  });
+
+  // Send a notification campaign
+  app.post("/api/notification-campaigns", requireAuth, async (req, res) => {
+    const { 
+      validateFullCampaign,
+      generateDefaultMessage,
+      validateQuietHours,
+    } = await import("./notificationCampaignValidator");
+    
+    try {
+      const userId = (req as any).userId;
+      const { serviceId, eventType, eventReason, channel, bookingLink, messageContent } = req.body;
+      
+      const service = await storage.getProviderServiceById(serviceId);
+      if (!service || service.userId !== userId) {
+        return res.status(404).json({ error: "Service not found" });
+      }
+      
+      const eligibleClients = await storage.getEligibleClientsForNotification(userId, channel);
+      
+      const getCampaignsInLastWeek = async (uid: string, sid?: string) => {
+        return storage.getCampaignCountInLastWeek(uid, sid);
+      };
+      
+      const finalMessage = messageContent || generateDefaultMessage(eventType, eventReason, bookingLink, channel);
+      
+      const validation = await validateFullCampaign(
+        {
+          userId,
+          serviceId,
+          serviceCategory: service.category as any,
+          eventType,
+          eventReason,
+          channel,
+          bookingLink,
+          messageContent: finalMessage,
+        },
+        getCampaignsInLastWeek,
+        eligibleClients.length
+      );
+      
+      if (!validation.valid) {
+        return res.status(400).json({
+          error: "Campaign validation failed",
+          errors: validation.errors,
+        });
+      }
+      
+      const currentHour = new Date().getHours();
+      const quietHoursCheck = validateQuietHours(currentHour);
+      if (!quietHoursCheck.valid) {
+        return res.status(400).json({
+          error: "Cannot send during quiet hours",
+          errors: quietHoursCheck.errors,
+        });
+      }
+      
+      const now = new Date().toISOString();
+      const campaign = await storage.createCampaign({
+        userId,
+        serviceId,
+        eventType,
+        eventReason,
+        channel,
+        bookingLink,
+        messageContent: finalMessage,
+        recipientCount: eligibleClients.length,
+        sentAt: now,
+        createdAt: now,
+      });
+      
+      let successCount = 0;
+      let failCount = 0;
+      
+      for (const client of eligibleClients) {
+        try {
+          if (channel === "sms" && client.clientPhone) {
+            await sendSMS(client.clientPhone, finalMessage);
+            successCount++;
+          } else if (channel === "email" && client.clientEmail) {
+            await sendEmail({
+              to: client.clientEmail,
+              subject: `Update from your service provider`,
+              text: finalMessage,
+              html: `<p>${finalMessage.replace(/\n/g, '<br>')}</p>`
+            });
+            successCount++;
+          }
+        } catch (sendError) {
+          console.error(`Failed to send to client ${client.id}:`, sendError);
+          failCount++;
+        }
+      }
+      
+      res.json({
+        success: true,
+        campaign,
+        sent: successCount,
+        failed: failCount,
+        total: eligibleClients.length,
+      });
+    } catch (error: any) {
+      console.error("Error sending campaign:", error);
+      res.status(500).json({ error: "Failed to send campaign" });
+    }
+  });
+
+  // Get campaign history
+  app.get("/api/notification-campaigns", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const campaigns = await storage.getCampaigns(userId);
+      res.json(campaigns);
+    } catch (error: any) {
+      console.error("Error fetching campaigns:", error);
+      res.status(500).json({ error: "Failed to fetch campaigns" });
+    }
+  });
+
+  // Get campaign suggestions (AI-generated, Phase 2)
+  // Requires ai_campaign_suggestions capability (Pro+ or Business)
+  app.get("/api/notification-campaigns/suggestions", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const user = await storage.getUser(userId);
+      
+      // Check plan gating - ai_campaign_suggestions requires Pro+ or Business
+      if (user && !hasCapability(user, "ai_campaign_suggestions") && !isDeveloper(user)) {
+        return res.json([]); // Return empty array for users without capability
+      }
+      
+      const suggestions = await storage.getCampaignSuggestions(userId);
+      res.json(suggestions);
+    } catch (error: any) {
+      console.error("Error fetching suggestions:", error);
+      res.status(500).json({ error: "Failed to fetch suggestions" });
+    }
+  });
+
+  // Dismiss a campaign suggestion
+  app.post("/api/notification-campaigns/suggestions/:suggestionId/dismiss", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { suggestionId } = req.params;
+      
+      await storage.dismissCampaignSuggestion(suggestionId, userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error dismissing suggestion:", error);
+      res.status(500).json({ error: "Failed to dismiss suggestion" });
+    }
+  });
+
+  // Handle opt-out (for clients receiving notifications)
+  app.post("/api/notification-opt-out", async (req, res) => {
+    try {
+      const { phone, email } = req.body;
+      
+      if (!phone && !email) {
+        return res.status(400).json({ error: "Phone or email required" });
+      }
+      
+      await storage.optOutClient(phone, email);
+      res.json({ success: true, message: "You have been opted out of notifications" });
+    } catch (error: any) {
+      console.error("Error processing opt-out:", error);
+      res.status(500).json({ error: "Failed to process opt-out" });
     }
   });
 

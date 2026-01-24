@@ -7,6 +7,7 @@ import {
   priceConfirmations, aiNudges, aiNudgeEvents, featureFlags, jobDrafts, jobResolutions,
   actionQueueItems, outcomeMetricsDaily, photoAssets, estimationRequests,
   stallDetections, nextActions, autoExecutionLog, intentSignals, readyActions,
+  clients, providerServices, clientNotificationCampaigns, campaignSuggestions,
   type User, type InsertUser,
   type Job, type InsertJob,
   type Lead, type InsertLead,
@@ -46,6 +47,10 @@ import {
   type AutoExecutionLog, type InsertAutoExecutionLog,
   type IntentSignal, type InsertIntentSignal,
   type ReadyAction, type InsertReadyAction,
+  type Client,
+  type ProviderService, type InsertProviderService,
+  type ClientNotificationCampaign, type InsertCampaign,
+  type CampaignSuggestion, type InsertCampaignSuggestion,
 } from "@shared/schema";
 import { IStorage } from "./storage";
 import { randomUUID } from "crypto";
@@ -1693,6 +1698,181 @@ export class DatabaseStorage implements IStorage {
       .where(eq(leads.id, leadId))
       .returning();
     return updated;
+  }
+
+  // ============================================================
+  // Provider Services (for notification campaigns)
+  // ============================================================
+
+  async getProviderServices(userId: string): Promise<ProviderService[]> {
+    return db.select()
+      .from(providerServices)
+      .where(and(
+        eq(providerServices.userId, userId),
+        eq(providerServices.isActive, true)
+      ))
+      .orderBy(desc(providerServices.createdAt));
+  }
+
+  async getProviderServiceById(id: string): Promise<ProviderService | undefined> {
+    const [service] = await db.select()
+      .from(providerServices)
+      .where(eq(providerServices.id, id))
+      .limit(1);
+    return service;
+  }
+
+  async createProviderService(service: InsertProviderService): Promise<ProviderService> {
+    const [created] = await db.insert(providerServices)
+      .values(service)
+      .returning();
+    return created;
+  }
+
+  async updateProviderService(id: string, updates: Partial<ProviderService>): Promise<ProviderService | undefined> {
+    const [updated] = await db.update(providerServices)
+      .set(updates)
+      .where(eq(providerServices.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteProviderService(id: string): Promise<boolean> {
+    const result = await db.update(providerServices)
+      .set({ isActive: false })
+      .where(eq(providerServices.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  // ============================================================
+  // Client Notification Campaigns
+  // ============================================================
+
+  async getCampaigns(userId: string): Promise<ClientNotificationCampaign[]> {
+    return db.select()
+      .from(clientNotificationCampaigns)
+      .where(eq(clientNotificationCampaigns.userId, userId))
+      .orderBy(desc(clientNotificationCampaigns.sentAt));
+  }
+
+  async getCampaignCountInLastWeek(userId: string, serviceId?: string): Promise<number> {
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    
+    const conditions = [
+      eq(clientNotificationCampaigns.userId, userId),
+      gte(clientNotificationCampaigns.sentAt, oneWeekAgo.toISOString())
+    ];
+    
+    if (serviceId) {
+      conditions.push(eq(clientNotificationCampaigns.serviceId, serviceId));
+    }
+    
+    const result = await db.select({ count: sql<number>`count(*)` })
+      .from(clientNotificationCampaigns)
+      .where(and(...conditions));
+    
+    return Number(result[0]?.count || 0);
+  }
+
+  async createCampaign(campaign: InsertCampaign): Promise<ClientNotificationCampaign> {
+    const [created] = await db.insert(clientNotificationCampaigns)
+      .values(campaign)
+      .returning();
+    return created;
+  }
+
+  // ============================================================
+  // Campaign Suggestions (AI-generated)
+  // ============================================================
+
+  async getCampaignSuggestions(userId: string): Promise<CampaignSuggestion[]> {
+    return db.select()
+      .from(campaignSuggestions)
+      .where(and(
+        eq(campaignSuggestions.userId, userId),
+        eq(campaignSuggestions.status, "pending")
+      ))
+      .orderBy(desc(campaignSuggestions.createdAt));
+  }
+
+  async createCampaignSuggestion(suggestion: InsertCampaignSuggestion): Promise<CampaignSuggestion> {
+    const [created] = await db.insert(campaignSuggestions)
+      .values(suggestion)
+      .returning();
+    return created;
+  }
+
+  async dismissCampaignSuggestion(id: string, userId: string): Promise<CampaignSuggestion | undefined> {
+    const [updated] = await db.update(campaignSuggestions)
+      .set({
+        status: "dismissed",
+        dismissedAt: new Date().toISOString(),
+      })
+      .where(and(
+        eq(campaignSuggestions.id, id),
+        eq(campaignSuggestions.userId, userId)
+      ))
+      .returning();
+    return updated;
+  }
+
+  async convertCampaignSuggestion(id: string, campaignId: string): Promise<CampaignSuggestion | undefined> {
+    const [updated] = await db.update(campaignSuggestions)
+      .set({
+        status: "converted",
+        convertedToCampaignId: campaignId,
+      })
+      .where(eq(campaignSuggestions.id, id))
+      .returning();
+    return updated;
+  }
+
+  // ============================================================
+  // Client notification eligibility
+  // ============================================================
+
+  async getEligibleClientsForNotification(userId: string, channel: string): Promise<Client[]> {
+    const baseConditions = [
+      eq(clients.userId, userId),
+      eq(clients.optedOutOfNotifications, false)
+    ];
+    
+    if (channel === "sms") {
+      return db.select()
+        .from(clients)
+        .where(and(
+          ...baseConditions,
+          sql`${clients.clientPhone} IS NOT NULL AND ${clients.clientPhone} != ''`
+        ));
+    } else {
+      return db.select()
+        .from(clients)
+        .where(and(
+          ...baseConditions,
+          sql`${clients.clientEmail} IS NOT NULL AND ${clients.clientEmail} != ''`
+        ));
+    }
+  }
+
+  async optOutClient(phone?: string, email?: string): Promise<boolean> {
+    const conditions = [];
+    if (phone) {
+      conditions.push(eq(clients.clientPhone, phone));
+    }
+    if (email) {
+      conditions.push(eq(clients.clientEmail, email));
+    }
+    
+    if (conditions.length === 0) return false;
+    
+    const result = await db.update(clients)
+      .set({ optedOutOfNotifications: true })
+      .where(or(...conditions))
+      .returning();
+    
+    return result.length > 0;
   }
 }
 
