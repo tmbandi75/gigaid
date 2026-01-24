@@ -18,8 +18,14 @@ export function getUserCapabilities(user?: {
     );
   }
 
-  const plan = (user?.plan as Plan) ?? Plan.FREE;
-  const capabilities = PLAN_CAPABILITIES[plan];
+  // Dev-only plan override for testing (disabled in production)
+  const overridePlan =
+    typeof process !== 'undefined' && process.env?.NODE_ENV !== "production"
+      ? (process.env?.DEV_PLAN_OVERRIDE as Plan | undefined)
+      : undefined;
+
+  const effectivePlan = overridePlan ?? (user?.plan as Plan) ?? Plan.FREE;
+  const capabilities = PLAN_CAPABILITIES[effectivePlan];
   
   if (!capabilities) {
     return new Set(PLAN_CAPABILITIES[Plan.FREE]);

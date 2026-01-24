@@ -1,10 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InlineInfoCard } from "@/components/ui/inline-info-card";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
+import { useCapability } from "@/hooks/useCapability";
 import {
   DollarSign,
   ChevronLeft,
@@ -66,6 +69,7 @@ function getPriorityBadge(priority: number) {
 export default function MoneyPlanPage() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
+  const { checkCapability, checkIsDeveloper, getUserPlan } = useCapability();
 
   const { data: flag } = useQuery<FeatureFlag>({
     queryKey: ["/api/feature-flags", "today_money_plan"],
@@ -75,6 +79,22 @@ export default function MoneyPlanPage() {
     queryKey: ["/api/action-queue"],
     enabled: flag?.enabled === true,
   });
+
+  // Log capability attempt for analytics (soft gating - never blocks)
+  const hasMoneyPlanCapability = checkCapability("todays_money_plan");
+  const showCapabilityHint = !hasMoneyPlanCapability && !checkIsDeveloper();
+  
+  useEffect(() => {
+    if (flag?.enabled && !hasMoneyPlanCapability) {
+      console.log("[capability_attempted]", {
+        capability: "todays_money_plan",
+        plan: getUserPlan(),
+        is_dev: checkIsDeveloper(),
+        context: { unpaid_invoices: items?.filter(i => i.sourceType === "invoice").length || 0 },
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [flag?.enabled, hasMoneyPlanCapability, items]);
 
   const generateMutation = useMutation({
     mutationFn: async () => {
@@ -191,6 +211,15 @@ export default function MoneyPlanPage() {
       </div>
 
       <div className="flex-1 p-4 space-y-4">
+        {showCapabilityHint && (
+          <InlineInfoCard
+            title="Today's Money Plan is available on Pro+"
+            description="Shows what gets you paid fastest and helps you prioritize your day for maximum revenue."
+            actionLabel="Learn about Pro+"
+            onAction={() => navigate("/settings")}
+          />
+        )}
+
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3, 4].map((i) => (

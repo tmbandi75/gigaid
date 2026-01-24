@@ -48,6 +48,11 @@ import {
   markClientAsReturning,
   checkForIntervention,
   recordIntervention,
+  // Capability logging for analytics
+} from "./bookingProtection";
+import { logCapabilityAttempt } from "@shared/capabilityLogger";
+import { hasCapability } from "@shared/entitlements";
+import {
   getBookingProtection,
   canShowInterventionToday,
 } from "./bookingProtection";
@@ -3485,6 +3490,32 @@ export async function registerRoutes(
             validated.preferredTime || '09:00',
             client.id
           );
+          
+          // Log capability attempts for analytics (soft gating - never blocks)
+          if (riskAssessment.isHigherRisk) {
+            const hasRiskProtection = hasCapability(user, "booking_risk_protection");
+            logCapabilityAttempt({
+              user: { email: user.email, plan: user.plan },
+              capability: "booking_risk_protection",
+              granted: hasRiskProtection,
+              context: {
+                booking_request_id: request.id,
+                risk_reason: riskAssessment.isFirstTimeClient ? "new_client" : 
+                             riskAssessment.isShortLeadTime ? "last_minute" : "high_price"
+              }
+            });
+            
+            const hasDepositEnforcement = hasCapability(user, "deposit_enforcement");
+            logCapabilityAttempt({
+              user: { email: user.email, plan: user.plan },
+              capability: "deposit_enforcement",
+              granted: hasDepositEnforcement,
+              context: {
+                booking_request_id: request.id,
+                estimated_price_cents: estimatedPrice
+              }
+            });
+          }
           
           const depositAmountCents = estimatedPrice 
             ? Math.round(estimatedPrice * (riskAssessment.suggestedDepositPercent / 100))

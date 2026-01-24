@@ -7,21 +7,29 @@ interface CapabilityLogEvent {
   is_dev: boolean;
   timestamp: string;
   granted: boolean;
+  context?: Record<string, unknown>;
 }
 
 const capabilityLogs: CapabilityLogEvent[] = [];
 
-export function logCapabilityAttempt(
-  user: { email?: string; plan?: string } | undefined,
-  capability: Capability,
-  granted: boolean
-): void {
+export function logCapabilityAttempt({
+  user,
+  capability,
+  granted = false,
+  context = {}
+}: {
+  user?: { email?: string | null; plan?: string | null };
+  capability: Capability;
+  granted?: boolean;
+  context?: Record<string, unknown>;
+}): void {
   const event: CapabilityLogEvent = {
     capability,
     plan: user?.plan ?? "free",
     is_dev: isDeveloper(user),
     timestamp: new Date().toISOString(),
-    granted
+    granted,
+    context
   };
   
   capabilityLogs.push(event);
@@ -30,9 +38,7 @@ export function logCapabilityAttempt(
     capabilityLogs.shift();
   }
   
-  if (process.env.NODE_ENV === "development") {
-    console.log("[Capability]", event);
-  }
+  console.log("[capability_attempted]", event);
 }
 
 export function getCapabilityLogs(): CapabilityLogEvent[] {
