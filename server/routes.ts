@@ -5093,6 +5093,9 @@ Return ONLY the message text, no JSON or formatting.`
 
       const stripe = await getUncachableStripeClient();
       const baseUrl = process.env.FRONTEND_URL || `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
+      
+      // Get user for checkout metadata
+      const user = await storage.getUser(defaultUserId);
 
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
@@ -5115,6 +5118,13 @@ Return ONLY the message text, no JSON or formatting.`
         cancel_url: `${baseUrl}${returnTo || "/"}?subscription=cancelled`,
         metadata: {
           plan: "pro_plus",
+          user_id: user?.id || defaultUserId,
+        },
+        subscription_data: {
+          metadata: {
+            user_id: user?.id || defaultUserId,
+            plan: "pro_plus",
+          },
         },
       });
 
@@ -6799,17 +6809,36 @@ Return ONLY the message text, no JSON or formatting.`
           const subscription = event.data.object as any;
           const customerId = subscription.customer;
           const userId = subscription.metadata?.user_id || defaultUserId;
+          const planFromMetadata = subscription.metadata?.plan || "pro_plus";
           
           const user = await storage.getUser(userId);
-          if (user && !user.isPro) {
-            await storage.updateUser(userId, { isPro: true });
+          
+          // Idempotent plan upgrade - only update if not already on the target plan
+          if (user && user.plan !== planFromMetadata) {
+            await storage.updateUser(userId, { 
+              plan: planFromMetadata,
+              isPro: true,
+              stripeSubscriptionId: subscription.id,
+              stripeCustomerId: customerId,
+            });
             
             emitCanonicalEvent({
               eventName: "user_became_paying",
               userId,
-              context: { subscriptionId: subscription.id, customerId },
+              context: { 
+                subscriptionId: subscription.id, 
+                customerId,
+                oldPlan: user.plan,
+                newPlan: planFromMetadata,
+              },
               source: "system",
             });
+            
+            console.log(`[Webhook] User ${userId} upgraded to ${planFromMetadata}`);
+          } else if (!user) {
+            console.warn(`[Webhook] No user found for subscription ${subscription.id}`);
+          } else {
+            console.log(`[Webhook] User ${userId} already on ${planFromMetadata} - skipping`);
           }
           
           emitCanonicalEvent({
@@ -6820,6 +6849,7 @@ Return ONLY the message text, no JSON or formatting.`
               customerId,
               planId: subscription.items?.data?.[0]?.price?.id,
               amount: subscription.items?.data?.[0]?.price?.unit_amount,
+              plan: planFromMetadata,
             },
             source: "system",
           });
@@ -6832,7 +6862,14 @@ Return ONLY the message text, no JSON or formatting.`
           const subscription = event.data.object as any;
           const userId = subscription.metadata?.user_id || defaultUserId;
           
-          await storage.updateUser(userId, { isPro: false });
+          // Downgrade user to free plan
+          await storage.updateUser(userId, { 
+            plan: "free",
+            isPro: false,
+            stripeSubscriptionId: null,
+          });
+          
+          console.log(`[Webhook] User ${userId} downgraded to free plan`);
           
           emitCanonicalEvent({
             eventName: "subscription_canceled",

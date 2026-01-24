@@ -71,6 +71,8 @@ export const users = pgTable("users", {
   
   // Plan and entitlements
   plan: text("plan").default("free"), // free, pro, pro_plus, business
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
 });
 
 // Availability type for frontend use
