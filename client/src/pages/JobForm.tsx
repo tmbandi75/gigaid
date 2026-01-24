@@ -385,6 +385,20 @@ export default function JobForm() {
     queryKey: ["/api/jobs", id],
     enabled: !!isEditing,
   });
+  
+  // Job usage for progressive warnings (only for new job creation)
+  interface JobUsageInfo {
+    currentCount: number;
+    limit: number;
+    plan: string;
+    canCreate: boolean;
+    warningLevel: "warning" | "critical" | "blocked" | null;
+  }
+  
+  const { data: jobUsage } = useQuery<JobUsageInfo>({
+    queryKey: ["/api/jobs/usage"],
+    enabled: !isEditing,
+  });
 
   // Revenue Protection: Check if resolution is required before completing
   const { data: resolutionCheck, isLoading: isLoadingResolutionCheck } = useQuery<{
@@ -844,6 +858,46 @@ export default function JobForm() {
       <div className="flex-1 px-4 py-6 -mt-2 lg:px-8 lg:max-w-5xl lg:mx-auto lg:w-full">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            {/* Progressive job limit warnings for Free plan */}
+            {!isEditing && jobUsage && jobUsage.warningLevel && (
+              <Card 
+                className={`border-0 shadow-sm overflow-hidden ${
+                  jobUsage.warningLevel === "blocked" 
+                    ? "bg-destructive/10 border-destructive/20" 
+                    : jobUsage.warningLevel === "critical"
+                    ? "bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800"
+                    : "bg-muted/50"
+                }`}
+                data-testid="job-limit-warning"
+              >
+                <CardContent className="py-3 px-4">
+                  <div className="flex items-center gap-2">
+                    <HelpCircle className={`h-4 w-4 shrink-0 ${
+                      jobUsage.warningLevel === "blocked" 
+                        ? "text-destructive" 
+                        : jobUsage.warningLevel === "critical"
+                        ? "text-orange-600 dark:text-orange-400"
+                        : "text-muted-foreground"
+                    }`} />
+                    <p className={`text-sm ${
+                      jobUsage.warningLevel === "blocked" 
+                        ? "text-destructive font-medium" 
+                        : jobUsage.warningLevel === "critical"
+                        ? "text-orange-700 dark:text-orange-300"
+                        : "text-muted-foreground"
+                    }`}>
+                      {jobUsage.warningLevel === "blocked" 
+                        ? `You've reached your limit of ${jobUsage.limit} jobs. Upgrade to Pro for unlimited jobs.`
+                        : jobUsage.warningLevel === "critical"
+                        ? `You have ${jobUsage.limit - jobUsage.currentCount} job${jobUsage.limit - jobUsage.currentCount === 1 ? "" : "s"} remaining on your Free plan.`
+                        : `${jobUsage.currentCount} of ${jobUsage.limit} jobs used on your Free plan.`
+                      }
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
             <Card className="border-0 shadow-md overflow-hidden">
               <div className="h-1 bg-gradient-to-r from-primary to-violet-500" />
               <CardContent className="pt-5 space-y-4">
@@ -1407,7 +1461,7 @@ export default function JobForm() {
             <Button 
               type="submit" 
               className="w-full h-14 text-base font-semibold bg-gradient-to-r from-primary to-violet-600 hover:from-primary/90 hover:to-violet-600/90 shadow-lg" 
-              disabled={isPending}
+              disabled={isPending || (!isEditing && jobUsage?.warningLevel === "blocked")}
               data-testid="button-submit"
             >
               {isPending ? (

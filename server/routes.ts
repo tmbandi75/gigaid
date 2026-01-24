@@ -581,6 +581,30 @@ export async function registerRoutes(
     }
   });
 
+  // Get job usage info for progressive warnings
+  app.get("/api/jobs/usage", async (req, res) => {
+    try {
+      const user = await storage.getUser(defaultUserId);
+      const userPlan = (user?.plan as Plan) || Plan.FREE;
+      const jobs = await storage.getJobs(defaultUserId);
+      const totalJobCount = jobs.length;
+      const limit = PLAN_LIMITS[userPlan].maxJobs;
+      
+      res.json({
+        currentCount: totalJobCount,
+        limit: limit,
+        plan: userPlan,
+        canCreate: isDeveloper(user) || totalJobCount < limit,
+        warningLevel: limit === Infinity ? null : 
+          totalJobCount >= limit ? "blocked" :
+          totalJobCount >= limit - 1 ? "critical" :
+          totalJobCount >= limit - 3 ? "warning" : null
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch job usage" });
+    }
+  });
+
   // Drive Mode: Get today's jobs
   app.get("/api/jobs/today", async (req, res) => {
     try {
@@ -702,17 +726,15 @@ export async function registerRoutes(
       // Developer bypass
       if (!isDeveloper(user)) {
         const existingJobs = await storage.getJobs(validated.userId);
-        // Only count active jobs (not completed or cancelled) towards the limit
-        const activeJobCount = existingJobs.filter(j => 
-          j.status !== "cancelled" && j.status !== "completed"
-        ).length;
+        // Count all jobs ever created (simplest and most predictable)
+        const totalJobCount = existingJobs.length;
         
-        if (!canCreateJob({ plan: userPlan, currentJobCount: activeJobCount })) {
+        if (!canCreateJob({ plan: userPlan, currentJobCount: totalJobCount })) {
           return res.status(403).json({
             error: "Job limit reached",
             code: "JOB_LIMIT_EXCEEDED",
             message: "Free plan includes up to 10 jobs. Upgrade to Pro for unlimited jobs.",
-            currentCount: activeJobCount,
+            currentCount: totalJobCount,
             limit: PLAN_LIMITS[userPlan].maxJobs,
             plan: userPlan
           });
