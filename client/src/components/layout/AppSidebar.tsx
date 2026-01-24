@@ -37,6 +37,7 @@ import {
   Sun,
   MessageSquare,
   Mic,
+  Send,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
@@ -68,6 +69,7 @@ const toolsItems = [
   { path: "/voice-notes", icon: Mic, label: "Voice Notes" },
   { path: "/ai-tools", icon: Sparkles, label: "AI Tools" },
   { path: "/messages", icon: MessageSquare, label: "Messages" },
+  { path: "/notify-clients", icon: Send, label: "Notify Clients" },
   { path: "/crew", icon: Users, label: "Crew" },
   { path: "/reminders", icon: Bell, label: "Reminders" },
   { path: "/booking-requests", icon: Calendar, label: "Bookings" },
