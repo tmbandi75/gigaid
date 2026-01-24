@@ -25,7 +25,7 @@ export function getSession() {
     conString: process.env.DATABASE_URL,
     createTableIfMissing: false,
     ttl: sessionTtl,
-    tableName: "sessions",
+    tableName: "session",
   });
   return session({
     secret: process.env.SESSION_SECRET!,
