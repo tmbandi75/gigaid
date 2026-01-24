@@ -1,5 +1,5 @@
 export const HARD_GATED_CAPABILITIES: Record<string, boolean> = {
-  deposit_enforcement: false
+  deposit_enforcement: true
 };
 
 export type HardGatedCapability = keyof typeof HARD_GATED_CAPABILITIES;
