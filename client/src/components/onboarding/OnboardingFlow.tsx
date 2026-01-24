@@ -1,14 +1,22 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import confetti from "canvas-confetti";
 import {
   Wrench,
@@ -39,11 +47,15 @@ import {
   ClipboardCheck,
   Snowflake,
   MoreHorizontal,
-  ChevronLeft,
   ChevronRight,
   Loader2,
   CheckCircle2,
-  Smartphone,
+  Copy,
+  Share2,
+  CreditCard,
+  Sparkle,
+  ArrowRight,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { serviceCategories, type ServiceIconName } from "@shared/service-categories";
@@ -87,19 +99,8 @@ const getIconForCategory = (iconName: ServiceIconName): LucideIcon => {
   return iconMap[iconName] || MoreHorizontal;
 };
 
-const getJobTitleSuggestion = (categoryId: string): string => {
-  const category = serviceCategories.find(c => c.id === categoryId);
-  if (category && category.services.length > 0) {
-    return category.services[0];
-  }
-  return "Service Call";
-};
-
-const celebrationMessages = [
-  "You're officially set up. Let's keep the momentum going.",
-  "That's how easy it is. We'll help you stay on track.",
-  "You're ready. We'll tell you what to do next.",
-];
+// Steps: 1=Welcome, 2=Identity, 3=Pricing, 4=Deposit, 5=BookingLink, 6=Payments, 7=AICard, 8=Complete
+const TOTAL_STEPS = 8;
 
 export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [, navigate] = useLocation();
@@ -107,144 +108,231 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const queryClient = useQueryClient();
   
   const [step, setStep] = useState(1);
-  const [selectedService, setSelectedService] = useState<string | null>(null);
-  const [jobData, setJobData] = useState({
-    title: "",
-    scheduledDate: new Date().toISOString().split("T")[0],
-    scheduledTime: "",
-    price: "",
-    clientName: "",
-    clientPhone: "",
+  const [showSkipModal, setShowSkipModal] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  
+  // Form data
+  const [identity, setIdentity] = useState({
+    firstName: "",
+    businessName: "",
+    serviceType: "",
   });
-  const [createdJobId, setCreatedJobId] = useState<string | null>(null);
-  const [invoiceData, setInvoiceData] = useState({
-    amount: "",
-    message: "",
+  
+  const [pricing, setPricing] = useState({
+    serviceName: "",
+    typicalPrice: "",
+    duration: "60",
+  });
+  
+  const [deposit, setDeposit] = useState({
+    enabled: true,
+    percentage: 30,
   });
 
-  const completeOnboardingMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("PATCH", "/api/onboarding", { completed: true });
-    },
+  // Get user data
+  const { data: user } = useQuery({
+    queryKey: ["/api/auth/user"],
   });
 
+  // Pre-fill from user data
   useEffect(() => {
-    if (step === 3 && (!createdJobId || !invoiceData.message)) {
-      setStep(2);
+    if (user) {
+      setIdentity(prev => ({
+        ...prev,
+        firstName: (user as any).firstName || (user as any).name?.split(" ")[0] || "",
+        businessName: (user as any).businessName || "",
+      }));
     }
-  }, [step, createdJobId, invoiceData.message]);
+  }, [user]);
 
-  const createJobMutation = useMutation({
-    mutationFn: async (data: typeof jobData) => {
-      const res = await apiRequest("POST", "/api/jobs", {
-        title: data.title,
-        scheduledDate: data.scheduledDate,
-        scheduledTime: data.scheduledTime || "09:00",
-        price: data.price ? Math.round(parseFloat(data.price) * 100) : null,
-        clientName: data.clientName || "New Client",
-        clientPhone: data.clientPhone || null,
-        serviceType: selectedService,
-        status: "scheduled",
-      });
-      return res.json();
-    },
-    onSuccess: (job) => {
-      setCreatedJobId(job.id);
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      const price = jobData.price ? parseFloat(jobData.price) : 0;
-      setInvoiceData({
-        amount: price > 0 ? jobData.price : "",
-        message: `Hi! Thanks for choosing us. Here's your invoice for ${jobData.title}. You can pay securely online.`,
-      });
-      setStep(3);
-    },
-    onError: () => {
-      toast({ title: "Failed to create job", variant: "destructive" });
+  const updateOnboardingMutation = useMutation({
+    mutationFn: async (data: { step?: number; state?: string; completed?: boolean }) => {
+      return apiRequest("PATCH", "/api/onboarding", data);
     },
   });
 
-  const createInvoiceMutation = useMutation({
-    mutationFn: async () => {
-      if (!createdJobId) {
-        throw new Error("No job created");
-      }
-      const res = await apiRequest("POST", "/api/invoices", {
-        invoiceNumber: `INV-${Date.now()}`,
-        jobId: createdJobId,
-        clientName: jobData.clientName || "New Client",
-        clientPhone: jobData.clientPhone || null,
-        serviceDescription: jobData.title,
-        amount: Math.round(parseFloat(invoiceData.amount) * 100),
-        notes: invoiceData.message,
-        status: "draft",
-      });
-      return res.json();
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: Record<string, any>) => {
+      return apiRequest("PATCH", "/api/profile", data);
     },
-    onSuccess: async (invoice) => {
-      await apiRequest("POST", `/api/invoices/${invoice.id}/send`);
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-      toast({ title: "Payment request sent!" });
-      completeOnboarding();
-    },
-    onError: () => {
-      toast({ title: "Failed to send payment request", variant: "destructive" });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
   });
 
-  const completeOnboarding = async () => {
-    await completeOnboardingMutation.mutateAsync();
+  const handleSkipClick = () => {
+    setShowSkipModal(true);
+  };
+
+  const handleConfirmSkip = async () => {
+    await updateOnboardingMutation.mutateAsync({ 
+      state: "skipped_explore",
+      completed: true 
+    });
     queryClient.invalidateQueries({ queryKey: ["/api/onboarding"] });
-    setStep(4);
-    
-    setTimeout(() => {
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b"],
-      });
-    }, 300);
+    setShowSkipModal(false);
+    onComplete();
+    navigate("/");
   };
 
-  const handleServiceSelect = (serviceId: string) => {
-    setSelectedService(serviceId);
-    setJobData((prev) => ({
-      ...prev,
-      title: getJobTitleSuggestion(serviceId),
-    }));
-  };
-
-  const handleContinueToStep2 = () => {
-    if (!selectedService) {
-      toast({ title: "Please select a service type" });
-      return;
-    }
+  const handleContinueSetup = () => {
+    setShowSkipModal(false);
     setStep(2);
   };
 
-  const handleAddJob = () => {
-    if (!jobData.title.trim()) {
-      toast({ title: "Please enter a job title" });
-      return;
-    }
-    createJobMutation.mutate(jobData);
+  const handleStartSetup = () => {
+    updateOnboardingMutation.mutate({ state: "in_progress", step: 2 });
+    setStep(2);
   };
 
-  const handleSendPaymentRequest = () => {
-    if (!createdJobId) {
-      toast({ title: "Please create a job first", variant: "destructive" });
-      setStep(2);
+  const handleIdentitySubmit = async () => {
+    if (!identity.firstName.trim() || !identity.serviceType) {
+      toast({ title: "Please fill in required fields" });
       return;
     }
-    if (!invoiceData.amount || parseFloat(invoiceData.amount) <= 0) {
-      toast({ title: "Please enter an amount" });
-      return;
+    
+    await updateProfileMutation.mutateAsync({
+      firstName: identity.firstName,
+      businessName: identity.businessName || null,
+      defaultServiceType: identity.serviceType,
+    });
+    
+    // Pre-fill pricing based on service
+    const category = serviceCategories.find(c => c.id === identity.serviceType);
+    if (category) {
+      setPricing(prev => ({
+        ...prev,
+        serviceName: category.services[0] || category.name,
+      }));
     }
-    createInvoiceMutation.mutate();
+    
+    updateOnboardingMutation.mutate({ step: 3 });
+    setStep(3);
   };
 
-  const handleSkipPayment = () => {
-    completeOnboarding();
+  const handlePricingSubmit = async () => {
+    if (!pricing.typicalPrice) {
+      toast({ title: "Please enter your typical price" });
+      return;
+    }
+    
+    const priceInCents = Math.round(parseFloat(pricing.typicalPrice) * 100);
+    await updateProfileMutation.mutateAsync({
+      defaultPrice: priceInCents,
+      slotDuration: parseInt(pricing.duration) || 60,
+    });
+    
+    updateOnboardingMutation.mutate({ step: 4 });
+    setStep(4);
+  };
+
+  const handleDepositSubmit = async () => {
+    await updateProfileMutation.mutateAsync({
+      depositEnabled: deposit.enabled,
+      depositValue: deposit.percentage,
+      depositPolicySet: true,
+    });
+    
+    updateOnboardingMutation.mutate({ step: 5 });
+    setStep(5);
+  };
+
+  const handleCopyLink = async () => {
+    const slug = (user as any)?.publicProfileSlug || (user as any)?.id;
+    const link = `${window.location.origin}/book/${slug}`;
+    await navigator.clipboard.writeText(link);
+    setLinkCopied(true);
+    toast({ title: "Link copied!" });
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
+
+  const handleShareLink = async () => {
+    const slug = (user as any)?.publicProfileSlug || (user as any)?.id;
+    const link = `${window.location.origin}/book/${slug}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Book with me",
+          text: "Schedule a service with me",
+          url: link,
+        });
+      } catch (e) {
+        handleCopyLink();
+      }
+    } else {
+      handleCopyLink();
+    }
+  };
+
+  const handleBookingLinkContinue = () => {
+    updateOnboardingMutation.mutate({ step: 6 });
+    setStep(6);
+  };
+
+  const handlePaymentsSkip = () => {
+    updateOnboardingMutation.mutate({ step: 7 });
+    setStep(7);
+  };
+
+  const handlePaymentsConnect = () => {
+    // Would open Stripe Connect flow
+    toast({ title: "Payment setup coming soon" });
+    handlePaymentsSkip();
+  };
+
+  const handleAICardDismiss = async () => {
+    await updateProfileMutation.mutateAsync({
+      aiExpectationShown: true,
+    });
+    
+    await updateOnboardingMutation.mutateAsync({ 
+      state: "completed",
+      completed: true,
+      step: 8 
+    });
+    
+    queryClient.invalidateQueries({ queryKey: ["/api/onboarding"] });
+    setStep(8);
+    
+    // Celebration confetti
+    setTimeout(() => {
+      const duration = 3000;
+      const end = Date.now() + duration;
+      
+      const frame = () => {
+        confetti({
+          particleCount: 3,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+          colors: ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ec4899"],
+        });
+        confetti({
+          particleCount: 3,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+          colors: ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ec4899"],
+        });
+        
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      };
+      
+      frame();
+      
+      // Big burst
+      setTimeout(() => {
+        confetti({
+          particleCount: 150,
+          spread: 100,
+          origin: { y: 0.6 },
+          colors: ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ec4899"],
+        });
+      }, 500);
+    }, 200);
   };
 
   const handleGoToDashboard = () => {
@@ -252,332 +340,492 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     navigate("/");
   };
 
-  const celebrationMessage = celebrationMessages[Math.floor(Math.random() * celebrationMessages.length)];
+  const progressPercent = step === 1 ? 0 : ((step - 1) / (TOTAL_STEPS - 1)) * 100;
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col" data-testid="onboarding-flow">
+    <div className="fixed inset-0 z-50 bg-gradient-to-br from-background via-background to-primary/5 flex flex-col" data-testid="onboarding-flow">
+      {/* Skip Modal */}
+      <Dialog open={showSkipModal} onOpenChange={setShowSkipModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Skipping setup limits protection</DialogTitle>
+            <DialogDescription className="text-base pt-2">
+              You can explore GigAid, but deposits and AI protection won't work until setup is complete.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 pt-4">
+            <Button size="lg" onClick={handleContinueSetup} data-testid="button-continue-setup">
+              Continue setup
+            </Button>
+            <Button variant="ghost" onClick={handleConfirmSkip} data-testid="button-enter-dashboard">
+              Enter dashboard
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Progress bar */}
+      {step > 1 && step < 8 && (
+        <div className="absolute top-0 left-0 right-0 h-1 bg-muted">
+          <div 
+            className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-500 ease-out"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-lg mx-auto px-4 py-8">
-          {step < 4 && (
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-muted-foreground">Step {step} of 4</span>
-                {step > 1 && step < 3 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setStep(step - 1)}
-                    data-testid="button-back"
-                  >
-                    <ChevronLeft className="h-4 w-4 mr-1" />
-                    Back
-                  </Button>
-                )}
-              </div>
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary transition-all duration-300"
-                  style={{ width: `${(step / 4) * 100}%` }}
-                />
-              </div>
-            </div>
-          )}
-
+        <div className="max-w-lg mx-auto px-6 py-12 min-h-full flex flex-col">
+          
+          {/* Step 1: Welcome */}
           {step === 1 && (
-            <div className="space-y-6" data-testid="step-service-type">
-              <div className="text-center">
-                <h1 className="text-2xl font-bold text-foreground mb-2">
-                  Let's get you ready to get paid
-                </h1>
-                <p className="text-muted-foreground">
-                  What kind of work do you usually do?
-                </p>
-              </div>
-
-              <ScrollArea className="h-[400px] pr-4">
-                <div className="grid grid-cols-2 gap-3">
-                  {serviceCategories.map((category) => {
-                    const Icon = getIconForCategory(category.icon);
-                    const isSelected = selectedService === category.id;
-                    return (
-                      <Card
-                        key={category.id}
-                        className={`cursor-pointer transition-all ${
-                          isSelected
-                            ? "border-primary bg-primary/5 ring-2 ring-primary"
-                            : "hover-elevate"
-                        }`}
-                        onClick={() => handleServiceSelect(category.id)}
-                        data-testid={`service-${category.id}`}
-                      >
-                        <CardContent className="p-3 flex flex-col items-center gap-1.5">
-                          <div
-                            className={`h-10 w-10 rounded-xl flex items-center justify-center ${
-                              isSelected ? "bg-primary/10" : "bg-muted"
-                            }`}
-                          >
-                            <Icon
-                              className={`h-5 w-5 ${
-                                isSelected ? "text-primary" : "text-muted-foreground"
-                              }`}
-                            />
-                          </div>
-                          <span
-                            className={`font-medium text-xs text-center leading-tight ${
-                              isSelected ? "text-primary" : "text-foreground"
-                            }`}
-                          >
-                            {category.name}
-                          </span>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+            <div className="flex-1 flex flex-col justify-center animate-in fade-in slide-in-from-bottom-4 duration-500" data-testid="step-welcome">
+              <div className="space-y-8 text-center">
+                <div className="space-y-2">
+                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 mb-4">
+                    <Shield className="w-10 h-10 text-primary" />
+                  </div>
+                  <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+                    Get paid before the job starts
+                  </h1>
+                  <p className="text-lg text-muted-foreground max-w-sm mx-auto">
+                    GigAid protects your time with deposits and smart booking.
+                  </p>
                 </div>
-              </ScrollArea>
-
-              <Button
-                size="lg"
-                className="w-full"
-                onClick={handleContinueToStep2}
-                disabled={!selectedService}
-                data-testid="button-continue"
-              >
-                Continue
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
+                
+                <div className="space-y-3 pt-4">
+                  <Button 
+                    size="lg" 
+                    className="w-full h-14 text-lg rounded-2xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
+                    onClick={handleStartSetup}
+                    data-testid="button-start-setup"
+                  >
+                    Set up my first booking
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full text-muted-foreground hover:text-foreground"
+                    onClick={handleSkipClick}
+                    data-testid="button-skip"
+                  >
+                    Skip for now
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
 
+          {/* Step 2: Identity */}
           {step === 2 && (
-            <div className="space-y-6" data-testid="step-add-job">
-              <div className="text-center">
-                <h1 className="text-2xl font-bold text-foreground mb-2">
-                  Let's add a job
-                </h1>
-                <p className="text-muted-foreground">
-                  This can be a past job or one coming up — we'll help.
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="title">Job Title</Label>
-                  <Input
-                    id="title"
-                    value={jobData.title}
-                    onChange={(e) => setJobData({ ...jobData, title: e.target.value })}
-                    placeholder="e.g., Fix leaky faucet"
-                    data-testid="input-job-title"
-                  />
+            <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500" data-testid="step-identity">
+              <div className="flex-1 space-y-8">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-primary">Step 1 of 6</p>
+                  <h1 className="text-3xl font-bold tracking-tight">Tell us about yourself</h1>
+                  <p className="text-muted-foreground">Just the basics to get started.</p>
                 </div>
-
-                <div>
-                  <Label htmlFor="clientName">Client Name</Label>
-                  <Input
-                    id="clientName"
-                    value={jobData.clientName}
-                    onChange={(e) => setJobData({ ...jobData, clientName: e.target.value })}
-                    placeholder="e.g., John Smith"
-                    data-testid="input-client-name"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="clientPhone">Client Phone (optional)</Label>
-                  <Input
-                    id="clientPhone"
-                    value={jobData.clientPhone}
-                    onChange={(e) => setJobData({ ...jobData, clientPhone: e.target.value })}
-                    placeholder="e.g., (555) 123-4567"
-                    data-testid="input-client-phone"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="date">Date</Label>
+                
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName" className="text-base">First name *</Label>
                     <Input
-                      id="date"
-                      type="date"
-                      value={jobData.scheduledDate}
-                      onChange={(e) => setJobData({ ...jobData, scheduledDate: e.target.value })}
-                      data-testid="input-job-date"
+                      id="firstName"
+                      value={identity.firstName}
+                      onChange={(e) => setIdentity({ ...identity, firstName: e.target.value })}
+                      placeholder="Your first name"
+                      className="h-12 text-lg rounded-xl"
+                      data-testid="input-first-name"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="time">Time (optional)</Label>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="businessName" className="text-base">Business name (optional)</Label>
                     <Input
-                      id="time"
-                      type="time"
-                      value={jobData.scheduledTime}
-                      onChange={(e) => setJobData({ ...jobData, scheduledTime: e.target.value })}
-                      data-testid="input-job-time"
+                      id="businessName"
+                      value={identity.businessName}
+                      onChange={(e) => setIdentity({ ...identity, businessName: e.target.value })}
+                      placeholder="Your business name"
+                      className="h-12 text-lg rounded-xl"
+                      data-testid="input-business-name"
                     />
                   </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="price">Price (optional)</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                      $
-                    </span>
-                    <Input
-                      id="price"
-                      type="number"
-                      className="pl-7"
-                      value={jobData.price}
-                      onChange={(e) => setJobData({ ...jobData, price: e.target.value })}
-                      placeholder="0.00"
-                      data-testid="input-job-price"
-                    />
+                  
+                  <div className="space-y-3">
+                    <Label className="text-base">What kind of work do you do? *</Label>
+                    <ScrollArea className="h-[280px]">
+                      <div className="grid grid-cols-3 gap-2 pr-4">
+                        {serviceCategories.map((category) => {
+                          const Icon = getIconForCategory(category.icon);
+                          const isSelected = identity.serviceType === category.id;
+                          return (
+                            <Card
+                              key={category.id}
+                              className={`cursor-pointer transition-all duration-200 ${
+                                isSelected
+                                  ? "border-primary bg-primary/5 ring-2 ring-primary shadow-lg"
+                                  : "hover:border-primary/50 hover:bg-muted/50"
+                              }`}
+                              onClick={() => setIdentity({ ...identity, serviceType: category.id })}
+                              data-testid={`service-${category.id}`}
+                            >
+                              <CardContent className="p-3 flex flex-col items-center gap-2">
+                                <div className={`h-10 w-10 rounded-xl flex items-center justify-center transition-colors ${
+                                  isSelected ? "bg-primary/10" : "bg-muted"
+                                }`}>
+                                  <Icon className={`h-5 w-5 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                                </div>
+                                <span className={`font-medium text-xs text-center leading-tight ${
+                                  isSelected ? "text-primary" : "text-foreground"
+                                }`}>
+                                  {category.name}
+                                </span>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </ScrollArea>
                   </div>
                 </div>
               </div>
-
-              <Button
-                size="lg"
-                className="w-full"
-                onClick={handleAddJob}
-                disabled={createJobMutation.isPending}
-                data-testid="button-add-job"
-              >
-                {createJobMutation.isPending ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <>
-                    Add Job
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
-
-          {step === 3 && (!createdJobId || !invoiceData.message) && (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          )}
-
-          {step === 3 && createdJobId && invoiceData.message && (
-            <div className="space-y-6" data-testid="step-payment-request">
-              <div className="text-center">
-                <h1 className="text-2xl font-bold text-foreground mb-2">
-                  Want to get paid for this job?
-                </h1>
-                <p className="text-muted-foreground">
-                  We'll send a simple payment request to your client.
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="amount">Amount</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                      $
-                    </span>
-                    <Input
-                      id="amount"
-                      type="number"
-                      className="pl-7"
-                      value={invoiceData.amount}
-                      onChange={(e) => setInvoiceData({ ...invoiceData, amount: e.target.value })}
-                      placeholder="0.00"
-                      data-testid="input-invoice-amount"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="message">Message (editable)</Label>
-                  <Textarea
-                    id="message"
-                    value={invoiceData.message}
-                    onChange={(e) => setInvoiceData({ ...invoiceData, message: e.target.value })}
-                    rows={3}
-                    data-testid="input-invoice-message"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <Button
-                  size="lg"
-                  className="w-full"
-                  onClick={handleSendPaymentRequest}
-                  disabled={createInvoiceMutation.isPending}
-                  data-testid="button-send-payment"
+              
+              <div className="pt-6">
+                <Button 
+                  size="lg" 
+                  className="w-full h-14 text-lg rounded-2xl"
+                  onClick={handleIdentitySubmit}
+                  disabled={!identity.firstName.trim() || !identity.serviceType || updateProfileMutation.isPending}
+                  data-testid="button-identity-continue"
                 >
-                  {createInvoiceMutation.isPending ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                  {updateProfileMutation.isPending ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
-                    "Send Payment Request"
+                    <>Continue<ChevronRight className="w-5 h-5 ml-1" /></>
                   )}
                 </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full"
-                  onClick={handleSkipPayment}
-                  data-testid="button-skip-payment"
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Pricing */}
+          {step === 3 && (
+            <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500" data-testid="step-pricing">
+              <div className="flex-1 space-y-8">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-primary">Step 2 of 6</p>
+                  <h1 className="text-3xl font-bold tracking-tight">What do you usually charge?</h1>
+                  <p className="text-muted-foreground">This helps with estimates and invoices.</p>
+                </div>
+                
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="serviceName" className="text-base">Default service name</Label>
+                    <Input
+                      id="serviceName"
+                      value={pricing.serviceName}
+                      onChange={(e) => setPricing({ ...pricing, serviceName: e.target.value })}
+                      placeholder="e.g., Standard Service Call"
+                      className="h-12 text-lg rounded-xl"
+                      data-testid="input-service-name"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="typicalPrice" className="text-base">Typical price *</Label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl text-muted-foreground">$</span>
+                      <Input
+                        id="typicalPrice"
+                        type="number"
+                        value={pricing.typicalPrice}
+                        onChange={(e) => setPricing({ ...pricing, typicalPrice: e.target.value })}
+                        placeholder="0"
+                        className="h-14 text-2xl font-semibold pl-10 rounded-xl"
+                        data-testid="input-typical-price"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="duration" className="text-base">Typical duration (optional)</Label>
+                    <div className="flex gap-2">
+                      {["30", "60", "90", "120"].map((mins) => (
+                        <Button
+                          key={mins}
+                          variant={pricing.duration === mins ? "default" : "outline"}
+                          className="flex-1 h-12 rounded-xl"
+                          onClick={() => setPricing({ ...pricing, duration: mins })}
+                          data-testid={`button-duration-${mins}`}
+                        >
+                          {parseInt(mins) < 60 ? `${mins}m` : `${parseInt(mins) / 60}h`}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="pt-6">
+                <Button 
+                  size="lg" 
+                  className="w-full h-14 text-lg rounded-2xl"
+                  onClick={handlePricingSubmit}
+                  disabled={!pricing.typicalPrice || updateProfileMutation.isPending}
+                  data-testid="button-pricing-continue"
                 >
-                  I'll do this later
+                  {updateProfileMutation.isPending ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>Continue<ChevronRight className="w-5 h-5 ml-1" /></>
+                  )}
                 </Button>
               </div>
             </div>
           )}
 
+          {/* Step 4: Deposit */}
           {step === 4 && (
-            <div className="space-y-8 text-center pt-8" data-testid="step-celebration">
-              <div className="space-y-4">
-                <div className="h-20 w-20 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto">
-                  <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+            <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500" data-testid="step-deposit">
+              <div className="flex-1 space-y-8">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-primary">Step 3 of 6</p>
+                  <h1 className="text-3xl font-bold tracking-tight">Protect your time</h1>
+                  <p className="text-muted-foreground">Deposits reduce no-shows and last-minute cancellations.</p>
                 </div>
-                <h1 className="text-3xl font-bold text-foreground">Nice work!</h1>
-                <p className="text-muted-foreground text-lg max-w-sm mx-auto">
-                  {celebrationMessage}
+                
+                <Card className="border-2">
+                  <CardContent className="p-6 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="font-semibold text-lg">Require deposit on booking</p>
+                        <p className="text-sm text-muted-foreground">Clients pay upfront to confirm</p>
+                      </div>
+                      <Switch
+                        checked={deposit.enabled}
+                        onCheckedChange={(checked) => setDeposit({ ...deposit, enabled: checked })}
+                        data-testid="switch-deposit"
+                      />
+                    </div>
+                    
+                    {deposit.enabled && (
+                      <div className="space-y-4 pt-4 border-t animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Deposit amount</span>
+                          <span className="text-2xl font-bold text-primary">{deposit.percentage}%</span>
+                        </div>
+                        <Slider
+                          value={[deposit.percentage]}
+                          onValueChange={([value]) => setDeposit({ ...deposit, percentage: value })}
+                          min={20}
+                          max={50}
+                          step={5}
+                          className="py-4"
+                          data-testid="slider-deposit"
+                        />
+                        <div className="flex justify-between text-sm text-muted-foreground">
+                          <span>20%</span>
+                          <span>50%</span>
+                        </div>
+                        {pricing.typicalPrice && (
+                          <p className="text-center text-sm text-muted-foreground pt-2">
+                            On a ${pricing.typicalPrice} job, you'd collect{" "}
+                            <span className="font-semibold text-foreground">
+                              ${(parseFloat(pricing.typicalPrice) * deposit.percentage / 100).toFixed(0)}
+                            </span>{" "}
+                            upfront
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+                
+                <p className="text-sm text-muted-foreground text-center">
+                  You can change this anytime in settings.
                 </p>
               </div>
+              
+              <div className="pt-6">
+                <Button 
+                  size="lg" 
+                  className="w-full h-14 text-lg rounded-2xl"
+                  onClick={handleDepositSubmit}
+                  disabled={updateProfileMutation.isPending}
+                  data-testid="button-deposit-continue"
+                >
+                  {updateProfileMutation.isPending ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>Continue<ChevronRight className="w-5 h-5 ml-1" /></>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
 
-              <div className="space-y-4 bg-muted/30 rounded-xl p-6">
-                <div className="flex items-center gap-3 justify-center">
-                  <Smartphone className="h-6 w-6 text-primary" />
-                  <span className="font-semibold text-foreground">Get the GigAid App</span>
+          {/* Step 5: Booking Link */}
+          {step === 5 && (
+            <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500" data-testid="step-booking-link">
+              <div className="flex-1 space-y-8">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-primary">Step 4 of 6</p>
+                  <h1 className="text-3xl font-bold tracking-tight">Your booking link is ready</h1>
+                  <p className="text-muted-foreground">Share it with clients so they can book you directly.</p>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={() => window.open("https://apps.apple.com", "_blank")}
-                    data-testid="button-app-store"
-                  >
-                    App Store
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={() => window.open("https://play.google.com", "_blank")}
-                    data-testid="button-play-store"
-                  >
-                    Google Play
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Install the app so you don't miss jobs, payments, or reminders.
+                
+                <Card className="border-2 border-primary/20 bg-primary/5">
+                  <CardContent className="p-6 space-y-4">
+                    <div className="flex items-center gap-3 p-4 bg-background rounded-xl border">
+                      <div className="flex-1 truncate font-mono text-sm">
+                        {window.location.origin}/book/{(user as any)?.publicProfileSlug || (user as any)?.id || "..."}
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button 
+                        variant="outline" 
+                        size="lg"
+                        className="h-12 rounded-xl"
+                        onClick={handleCopyLink}
+                        data-testid="button-copy-link"
+                      >
+                        {linkCopied ? <CheckCircle2 className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+                        {linkCopied ? "Copied" : "Copy"}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="lg"
+                        className="h-12 rounded-xl"
+                        onClick={handleShareLink}
+                        data-testid="button-share-link"
+                      >
+                        <Share2 className="w-4 h-4 mr-2" />
+                        Share
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <p className="text-sm text-muted-foreground text-center">
+                  You don't have to share it now. You can find it anytime in your profile.
                 </p>
               </div>
+              
+              <div className="pt-6">
+                <Button 
+                  size="lg" 
+                  className="w-full h-14 text-lg rounded-2xl"
+                  onClick={handleBookingLinkContinue}
+                  data-testid="button-booking-continue"
+                >
+                  Continue
+                  <ChevronRight className="w-5 h-5 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
 
-              <Button
-                size="lg"
-                className="w-full"
-                onClick={handleGoToDashboard}
-                data-testid="button-go-dashboard"
-              >
-                Go to Dashboard
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
+          {/* Step 6: Payments */}
+          {step === 6 && (
+            <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500" data-testid="step-payments">
+              <div className="flex-1 space-y-8">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-primary">Step 5 of 6</p>
+                  <h1 className="text-3xl font-bold tracking-tight">Get paid automatically</h1>
+                  <p className="text-muted-foreground">Connect payments so deposits go straight to your bank.</p>
+                </div>
+                
+                <Card className="border-2">
+                  <CardContent className="p-6 flex flex-col items-center text-center space-y-4">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500/20 to-blue-500/20 flex items-center justify-center">
+                      <CreditCard className="w-8 h-8 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-lg">Stripe Connect</p>
+                      <p className="text-sm text-muted-foreground">Secure payments powered by Stripe</p>
+                    </div>
+                    <Button 
+                      size="lg" 
+                      className="w-full h-12 rounded-xl"
+                      onClick={handlePaymentsConnect}
+                      data-testid="button-connect-payments"
+                    >
+                      Connect payments
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              <div className="pt-6">
+                <Button 
+                  variant="ghost" 
+                  className="w-full h-14 text-lg"
+                  onClick={handlePaymentsSkip}
+                  data-testid="button-skip-payments"
+                >
+                  Skip for now
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 7: AI Card */}
+          {step === 7 && (
+            <div className="flex-1 flex flex-col justify-center animate-in fade-in slide-in-from-right-4 duration-500" data-testid="step-ai-card">
+              <Card className="border-2 border-primary/20 overflow-hidden">
+                <div className="h-2 bg-gradient-to-r from-primary via-violet-500 to-blue-500" />
+                <CardContent className="p-8 space-y-6 text-center">
+                  <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/20 to-violet-500/20 flex items-center justify-center mx-auto">
+                    <Sparkle className="w-10 h-10 text-primary" />
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <h2 className="text-2xl font-bold">GigAid only speaks up when money is at risk</h2>
+                    <p className="text-muted-foreground text-lg">
+                      You'll get at most one suggestion per day — and only when it matters.
+                    </p>
+                  </div>
+                  
+                  <Button 
+                    size="lg" 
+                    className="w-full h-14 text-lg rounded-2xl"
+                    onClick={handleAICardDismiss}
+                    data-testid="button-got-it"
+                  >
+                    Got it
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Step 8: Complete */}
+          {step === 8 && (
+            <div className="flex-1 flex flex-col justify-center animate-in fade-in zoom-in-95 duration-500" data-testid="step-complete">
+              <div className="space-y-8 text-center">
+                <div className="space-y-4">
+                  <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-emerald-500/20 to-emerald-500/5">
+                    <CheckCircle2 className="w-12 h-12 text-emerald-500" />
+                  </div>
+                  <h1 className="text-4xl font-bold tracking-tight">You're all set!</h1>
+                  <p className="text-lg text-muted-foreground max-w-sm mx-auto">
+                    GigAid is ready to help you get paid faster and protect your time.
+                  </p>
+                </div>
+                
+                <div className="space-y-4 pt-4">
+                  <Button 
+                    size="lg" 
+                    className="w-full h-14 text-lg rounded-2xl shadow-lg shadow-primary/20"
+                    onClick={handleGoToDashboard}
+                    data-testid="button-go-dashboard"
+                  >
+                    Go to Dashboard
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </div>

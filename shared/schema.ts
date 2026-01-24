@@ -3,6 +3,15 @@ import { pgTable, text, varchar, integer, timestamp, boolean, doublePrecision, i
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Onboarding state enum
+export const onboardingStates = [
+  "not_started",
+  "in_progress", 
+  "skipped_explore",
+  "completed"
+] as const;
+export type OnboardingState = typeof onboardingStates[number];
+
 // User table with enhanced fields for auth, onboarding, and premium
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -23,6 +32,15 @@ export const users = pgTable("users", {
   slotDuration: integer("slot_duration").default(60), // in minutes
   onboardingCompleted: boolean("onboarding_completed").default(false),
   onboardingStep: integer("onboarding_step").default(0),
+  onboardingState: text("onboarding_state").default("not_started"), // not_started, in_progress, skipped_explore, completed
+  
+  // Money protection fields (required for full functionality)
+  defaultServiceType: text("default_service_type"), // Primary service type
+  defaultPrice: integer("default_price"), // Default price in cents
+  depositPolicySet: boolean("deposit_policy_set").default(false), // Whether user explicitly set deposit policy
+  
+  // AI onboarding shown flag
+  aiExpectationShown: boolean("ai_expectation_shown").default(false),
   isPro: boolean("is_pro").default(false),
   proExpiresAt: text("pro_expires_at"),
   notifyBySms: boolean("notify_by_sms").default(true),
