@@ -1841,7 +1841,7 @@ export const notificationEventTypes = [
 ] as const;
 export type NotificationEventType = (typeof notificationEventTypes)[number];
 
-// Service categories with allowed event types - HARD RULES
+// Service categories with allowed event types - HARD RULES (18 categories)
 export const serviceCategories = [
   "snow_removal",
   "lawn_landscaping",
@@ -1849,11 +1849,26 @@ export const serviceCategories = [
   "handyman_repairs",
   "moving_hauling",
   "power_washing",
+  "plumbing",
+  "electrical",
+  "hvac",
+  "roofing",
+  "painting",
+  "pool_spa_service",
+  "pest_control",
+  "appliance_repair",
+  "window_cleaning",
+  "carpet_flooring",
+  "locksmith",
+  "auto_detailing",
   "other",
 ] as const;
 export type ServiceCategory = (typeof serviceCategories)[number];
 
-// Category to event type mapping (immutable)
+// Categories that require licensing verification
+export const licensedRequiredCategories: ServiceCategory[] = ["electrical"];
+
+// Category to event type mapping (immutable, per specification)
 export const categoryEventMapping: Record<ServiceCategory, NotificationEventType[]> = {
   snow_removal: ["environmental", "risk", "availability"],
   lawn_landscaping: ["seasonal", "environmental", "relationship"],
@@ -1861,8 +1876,23 @@ export const categoryEventMapping: Record<ServiceCategory, NotificationEventType
   handyman_repairs: ["risk", "environmental", "relationship"],
   moving_hauling: ["seasonal", "availability", "relationship"],
   power_washing: ["seasonal", "environmental", "relationship"],
-  other: ["seasonal", "availability", "relationship"],
+  plumbing: ["risk", "environmental", "relationship"],
+  electrical: ["risk", "environmental", "relationship"], // Requires licensed === true
+  hvac: ["environmental", "seasonal", "risk", "relationship"],
+  roofing: ["environmental", "risk", "relationship"],
+  painting: ["seasonal", "availability", "relationship"],
+  pool_spa_service: ["seasonal", "environmental", "relationship"],
+  pest_control: ["seasonal", "environmental", "risk", "relationship"],
+  appliance_repair: ["risk", "availability", "relationship"],
+  window_cleaning: ["seasonal", "availability", "relationship"],
+  carpet_flooring: ["seasonal", "availability", "relationship"],
+  locksmith: ["risk", "relationship"],
+  auto_detailing: ["seasonal", "environmental", "availability", "relationship"],
+  other: ["relationship"], // RELATIONSHIP only, no AI suggestions allowed
 };
+
+// Categories where AI suggestions are NOT allowed
+export const noAiSuggestionCategories: ServiceCategory[] = ["other"];
 
 // Provider services table - tracks services offered with categories
 export const providerServices = pgTable("provider_services", {
@@ -1871,6 +1901,7 @@ export const providerServices = pgTable("provider_services", {
   name: text("name").notNull(),
   category: text("category").notNull(), // from serviceCategories
   description: text("description"),
+  licensed: boolean("licensed").default(false), // Required true for electrical category
   isActive: boolean("is_active").default(true),
   createdAt: text("created_at").notNull(),
 }, (table) => [

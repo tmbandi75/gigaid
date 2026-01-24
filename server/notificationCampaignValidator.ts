@@ -3,7 +3,8 @@ import {
   NotificationEventType, 
   categoryEventMapping,
   notificationEventTypes,
-  serviceCategories 
+  serviceCategories,
+  licensedRequiredCategories,
 } from "@shared/schema";
 
 export interface CampaignValidationRequest {
@@ -15,6 +16,7 @@ export interface CampaignValidationRequest {
   channel: "sms" | "email";
   bookingLink: string;
   messageContent: string;
+  serviceLicensed?: boolean; // Required for electrical category
 }
 
 export interface ValidationResult {
@@ -73,6 +75,24 @@ export function validateCategoryEventCompatibility(
         `This service can only notify clients when a relevant event occurs. ` +
         `"${formatEventType(eventType)}" is not valid for ${formatCategory(category)}. ` +
         `Allowed events: ${allowedEvents.map(formatEventType).join(", ")}.`
+      ],
+      warnings: [],
+    };
+  }
+  
+  return { valid: true, errors: [], warnings: [] };
+}
+
+export function validateLicensing(
+  category: ServiceCategory,
+  isLicensed: boolean | undefined
+): ValidationResult {
+  if (licensedRequiredCategories.includes(category) && !isLicensed) {
+    return {
+      valid: false,
+      errors: [
+        `${formatCategory(category)} services require verification of licensing before sending notifications. ` +
+        `Please update your service to indicate you are licensed.`
       ],
       warnings: [],
     };
@@ -249,6 +269,18 @@ export async function validateFullCampaign(
     return { valid: false, errors: allErrors, warnings: allWarnings };
   }
   
+  // Validate licensing requirement (for electrical category)
+  const licensingCheck = validateLicensing(
+    request.serviceCategory,
+    request.serviceLicensed
+  );
+  allErrors.push(...licensingCheck.errors);
+  allWarnings.push(...licensingCheck.warnings);
+  
+  if (!licensingCheck.valid) {
+    return { valid: false, errors: allErrors, warnings: allWarnings };
+  }
+  
   const eventReasonCheck = validateEventReason(request.eventReason);
   allErrors.push(...eventReasonCheck.errors);
   allWarnings.push(...eventReasonCheck.warnings);
@@ -343,6 +375,18 @@ function formatCategory(category: ServiceCategory): string {
     handyman_repairs: "Handyman & Repairs",
     moving_hauling: "Moving & Hauling",
     power_washing: "Power Washing",
+    plumbing: "Plumbing",
+    electrical: "Electrical",
+    hvac: "HVAC",
+    roofing: "Roofing",
+    painting: "Painting",
+    pool_spa_service: "Pool & Spa Service",
+    pest_control: "Pest Control",
+    appliance_repair: "Appliance Repair",
+    window_cleaning: "Window Cleaning",
+    carpet_flooring: "Carpet & Flooring",
+    locksmith: "Locksmith",
+    auto_detailing: "Auto Detailing",
     other: "Other Services",
   };
   return labels[category] || category;

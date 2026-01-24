@@ -9523,6 +9523,7 @@ Return ONLY the message text, no JSON or formatting.`
           channel,
           bookingLink,
           messageContent: messageContent || generateDefaultMessage(eventType, eventReason, bookingLink, channel),
+          serviceLicensed: service.licensed ?? false,
         },
         getCampaignsInLastWeek,
         eligibleClients.length
@@ -9576,6 +9577,7 @@ Return ONLY the message text, no JSON or formatting.`
           channel,
           bookingLink,
           messageContent: finalMessage,
+          serviceLicensed: service.licensed ?? false,
         },
         getCampaignsInLastWeek,
         eligibleClients.length

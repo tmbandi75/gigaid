@@ -3,6 +3,7 @@ import {
   ServiceCategory, 
   NotificationEventType, 
   categoryEventMapping,
+  noAiSuggestionCategories,
 } from "@shared/schema";
 import { hasCapability, isDeveloper } from "@shared/entitlements";
 import { generateDefaultMessage } from "./notificationCampaignValidator";
@@ -28,18 +29,18 @@ const SEASON_DATES: Record<string, { month: number; day: number }> = {
 };
 
 const CATEGORY_SEASONAL_RELEVANCE: Record<string, ServiceCategory[]> = {
-  spring_start: ["lawn_landscaping", "power_washing", "cleaning"],
-  fall_start: ["lawn_landscaping", "cleaning", "handyman_repairs"],
-  winter_prep: ["snow_removal", "handyman_repairs"],
-  summer_prep: ["power_washing", "lawn_landscaping", "cleaning"],
+  spring_start: ["lawn_landscaping", "power_washing", "cleaning", "painting", "window_cleaning", "pest_control", "pool_spa_service"],
+  fall_start: ["lawn_landscaping", "cleaning", "handyman_repairs", "hvac", "roofing", "carpet_flooring"],
+  winter_prep: ["snow_removal", "handyman_repairs", "hvac", "plumbing", "roofing"],
+  summer_prep: ["power_washing", "lawn_landscaping", "cleaning", "pool_spa_service", "auto_detailing", "pest_control"],
 };
 
 const CATEGORY_WEATHER_RELEVANCE: Record<string, ServiceCategory[]> = {
   snow: ["snow_removal"],
-  rain: ["power_washing", "handyman_repairs"],
-  storm: ["handyman_repairs"],
-  heat: ["power_washing"],
-  freeze: ["handyman_repairs", "snow_removal"],
+  rain: ["power_washing", "handyman_repairs", "roofing", "plumbing"],
+  storm: ["handyman_repairs", "roofing", "electrical"],
+  heat: ["power_washing", "hvac", "pool_spa_service"],
+  freeze: ["handyman_repairs", "snow_removal", "plumbing", "hvac"],
 };
 
 async function detectWeatherSignal(): Promise<WeatherData | null> {
@@ -172,6 +173,11 @@ export async function runSuggestionDetection(): Promise<void> {
       
       for (const service of services) {
         const category = service.category as ServiceCategory;
+        
+        // Skip categories where AI suggestions are not allowed (e.g., 'other')
+        if (noAiSuggestionCategories.includes(category)) {
+          continue;
+        }
         
         let bookingLink = "";
         if (user.publicProfileEnabled && user.publicProfileSlug) {

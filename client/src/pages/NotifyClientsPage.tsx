@@ -41,6 +41,18 @@ const CATEGORY_LABELS: Record<ServiceCategory, string> = {
   handyman_repairs: "Handyman & Repairs",
   moving_hauling: "Moving & Hauling",
   power_washing: "Power Washing",
+  plumbing: "Plumbing",
+  electrical: "Electrical",
+  hvac: "HVAC",
+  roofing: "Roofing",
+  painting: "Painting",
+  pool_spa_service: "Pool & Spa Service",
+  pest_control: "Pest Control",
+  appliance_repair: "Appliance Repair",
+  window_cleaning: "Window Cleaning",
+  carpet_flooring: "Carpet & Flooring",
+  locksmith: "Locksmith",
+  auto_detailing: "Auto Detailing",
   other: "Other Services",
 };
 
