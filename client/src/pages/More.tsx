@@ -1,6 +1,5 @@
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -104,7 +103,10 @@ export default function More() {
   const [, navigate] = useLocation();
   const [darkMode, setDarkMode] = useState(false);
   const { enterDriveMode, gpsStatus, currentSpeed } = useDriveModeContext();
-  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    window.location.href = "/api/logout";
+  };
 
   const { data: profile } = useQuery<UserProfile>({
     queryKey: ["/api/profile"],
@@ -290,7 +292,7 @@ export default function More() {
             <div 
               className="flex items-center justify-between p-4 hover-elevate cursor-pointer"
               data-testid="menu-logout"
-              onClick={() => logout()}
+              onClick={handleLogout}
             >
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-destructive/10 flex items-center justify-center">
