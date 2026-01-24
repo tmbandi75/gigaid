@@ -45,6 +45,7 @@ Preferred communication style: Simple, everyday language.
 - **Verb-Based Status Labels**: All status chips and filters use action-oriented language ("Just Added", "Coming Up", "Awaiting Reply", "Not Sent") instead of technical states for better clarity.
 - **Offline Capture Infrastructure**: IndexedDB-based local storage ensures user input is never lost. Offline-safe actions (notes, photos, voice notes, status updates, drafts) are queued locally and synced when connectivity is restored. Assets persist as Blobs in IndexedDB to survive app reloads.
 - **Drive Mode**: Hands-free interface with large touch targets for use while on the move. Passive motion detection (speed > 12mph for 45-60s) triggers a polite suggestion prompt. Three actions available: record voice note, mark job complete, add note. All actions work offline with background sync. Users can decline twice to permanently dismiss the prompt.
+- **Event-Driven Client Notifications**: Enables providers to send targeted SMS/email notifications to past clients based on event triggers (weather, seasonal, availability, safety). Features category-to-event mapping, rate limiting (1/service/week, 2/account/week), message constraints (320 char SMS, mandatory opt-out), and quiet hours enforcement. Phase 2 includes AI-powered suggestion detection that monitors external signals and creates advisory-only suggestions (never auto-sends). Requires `ai_campaign_suggestions` capability (Pro+ or Business plans). Routes: `/notify-clients` for campaign wizard.
 
 ## External Dependencies
 
