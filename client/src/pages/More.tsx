@@ -308,7 +308,8 @@ export default function More() {
           <p className="text-xs text-muted-foreground">v1.0.0</p>
         </div>
         
-        <div className="h-4" />
+        {/* Extra padding to clear the fixed bottom navigation bar */}
+        <div className="h-20" />
       </div>
     </div>
   );
