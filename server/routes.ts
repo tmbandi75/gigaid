@@ -3521,7 +3521,14 @@ export async function registerRoutes(
       });
       
       // Server-side validation for policy acknowledgment when deposits are required
-      const depositEnabled = user.depositEnabled === true;
+      // Guardrail: Only require deposits if user has completed money protection setup
+      const moneyProtectionReady = !!(
+        user.defaultServiceType &&
+        typeof user.defaultPrice === 'number' && user.defaultPrice > 0 &&
+        user.depositPolicySet
+      );
+      
+      const depositEnabled = user.depositEnabled === true && moneyProtectionReady;
       const depositValue = user.depositValue || 0;
       if (depositEnabled && depositValue > 0) {
         if (!req.body.policyAcknowledged) {
@@ -3552,8 +3559,9 @@ export async function registerRoutes(
       });
 
       // Booking Protection: Assess risk and determine if deposit is required
+      // Guardrail: Only enable booking protection if money protection is fully set up
       let bookingProtectionInfo = null;
-      if (user.noShowProtectionEnabled !== false) {
+      if (user.noShowProtectionEnabled !== false && moneyProtectionReady) {
         try {
           const client = await findOrCreateClient(
             user.id,

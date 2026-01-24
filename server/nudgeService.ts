@@ -10,6 +10,24 @@ export class NudgeService {
   async generateNudgesForUser(userId: string): Promise<AiNudge[]> {
     const generatedNudges: AiNudge[] = [];
 
+    // Check if user has money protection ready before generating nudges
+    const user = await this.storage.getUser(userId);
+    if (!user) return [];
+    
+    // Money protection requires: service type + default price + deposit policy set
+    const moneyProtectionReady = !!(
+      user.defaultServiceType &&
+      typeof user.defaultPrice === 'number' && user.defaultPrice > 0 &&
+      user.depositPolicySet
+    );
+    
+    // If onboarding is skipped (explore mode), only generate basic nudges
+    // If money protection not ready, skip AI nudges entirely
+    if (!moneyProtectionReady && user.onboardingState !== "completed") {
+      // Return empty - user needs to complete onboarding first
+      return [];
+    }
+
     const [leads, jobs, invoices] = await Promise.all([
       this.storage.getLeads(userId),
       this.storage.getJobs(userId),
