@@ -1,5 +1,8 @@
 import { storage } from "./storage";
 import { sendSMS } from "./twilio";
+import { canUseAutoFollowups } from "@shared/planLimits";
+import { Plan } from "@shared/plans";
+import { isDeveloper } from "@shared/entitlements";
 
 const FOLLOW_UP_DELAY_HOURS = 4;
 const CHECK_INTERVAL_MS = 5 * 60 * 1000; // Check every 5 minutes
@@ -20,7 +23,19 @@ export function startIntentFollowUpScheduler() {
 }
 
 async function checkAndSendFollowUps() {
-  const invoices = await storage.getInvoices("demo-user");
+  const userId = "demo-user";
+  
+  // Check if user can use auto follow-ups (plan gate)
+  const user = await storage.getUser(userId);
+  const userPlan = (user?.plan as Plan) || Plan.FREE;
+  
+  // Skip auto follow-ups for free users (unless developer)
+  if (!isDeveloper(user) && !canUseAutoFollowups(userPlan)) {
+    // Silently skip - auto followups not available on free plan
+    return;
+  }
+  
+  const invoices = await storage.getInvoices(userId);
   const now = new Date();
   const cutoffTime = new Date(now.getTime() - FOLLOW_UP_DELAY_HOURS * 60 * 60 * 1000);
   

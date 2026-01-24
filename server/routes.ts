@@ -51,8 +51,10 @@ import {
   // Capability logging for analytics
 } from "./bookingProtection";
 import { logCapabilityAttempt } from "@shared/capabilityLogger";
-import { hasCapability } from "@shared/entitlements";
+import { hasCapability, isDeveloper } from "@shared/entitlements";
 import { isHardGated } from "@shared/gatingConfig";
+import { canCreateJob, canSendSms, canUseAutoFollowups, PLAN_LIMITS } from "@shared/planLimits";
+import { Plan } from "@shared/plans";
 import {
   getBookingProtection,
   canShowInterventionToday,
@@ -693,6 +695,30 @@ export async function registerRoutes(
       
       const validated = insertJobSchema.parse(jobData);
       
+      // Check job limit for free users
+      const user = await storage.getUser(validated.userId);
+      const userPlan = (user?.plan as Plan) || Plan.FREE;
+      
+      // Developer bypass
+      if (!isDeveloper(user)) {
+        const existingJobs = await storage.getJobs(validated.userId);
+        // Only count active jobs (not completed or cancelled) towards the limit
+        const activeJobCount = existingJobs.filter(j => 
+          j.status !== "cancelled" && j.status !== "completed"
+        ).length;
+        
+        if (!canCreateJob({ plan: userPlan, currentJobCount: activeJobCount })) {
+          return res.status(403).json({
+            error: "Job limit reached",
+            code: "JOB_LIMIT_EXCEEDED",
+            message: "Free plan includes up to 10 jobs. Upgrade to Pro for unlimited jobs.",
+            currentCount: activeJobCount,
+            limit: PLAN_LIMITS[userPlan].maxJobs,
+            plan: userPlan
+          });
+        }
+      }
+      
       // Server-side geocoding fallback: if location provided but no coordinates, geocode it
       let jobWithCoords = { ...validated };
       if (validated.location && (!validated.customerLat || !validated.customerLng)) {
@@ -1256,7 +1282,23 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Job not found" });
       }
 
-      const { photos } = req.body;
+      const { photos, isOfflineSync } = req.body;
+      
+      // Check if user can use offline photo uploads (Pro+ only for offline-synced photos)
+      if (isOfflineSync) {
+        const user = await storage.getUser(job.userId);
+        const userPlan = (user?.plan as Plan) || Plan.FREE;
+        
+        // Developer bypass
+        if (!isDeveloper(user) && !PLAN_LIMITS[userPlan].offlinePhotos) {
+          return res.status(403).json({
+            error: "Offline photo uploads not available",
+            code: "OFFLINE_PHOTOS_NOT_AVAILABLE",
+            message: "Offline photo uploads are available on Pro+.",
+            plan: userPlan
+          });
+        }
+      }
       if (!photos || !Array.isArray(photos)) {
         return res.status(400).json({ error: "photos array is required" });
       }
@@ -2466,6 +2508,21 @@ export async function registerRoutes(
       if (!to || !message) {
         return res.status(400).json({ error: "Phone number and message are required" });
       }
+      
+      // Check if user can send outbound SMS
+      const user = await storage.getUser(defaultUserId);
+      const userPlan = (user?.plan as Plan) || Plan.FREE;
+      
+      // Developer bypass
+      if (!isDeveloper(user) && !canSendSms(userPlan)) {
+        return res.status(403).json({
+          error: "Outbound SMS not available",
+          code: "SMS_NOT_AVAILABLE",
+          message: "Outbound SMS is available on Pro and higher plans.",
+          plan: userPlan
+        });
+      }
+      
       const success = await sendSMS(to, message);
       if (success) {
         // Log the outgoing message to the database
