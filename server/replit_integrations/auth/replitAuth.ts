@@ -35,6 +35,7 @@ export function getSession() {
     cookie: {
       httpOnly: true,
       secure: true,
+      sameSite: "none",
       maxAge: sessionTtl,
     },
   });
@@ -103,11 +104,23 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
-    ensureStrategy(req.hostname);
-    passport.authenticate(`replitauth:${req.hostname}`, {
-      prompt: "login consent",
-      scope: ["openid", "email", "profile", "offline_access"],
-    })(req, res, next);
+    console.log("[Auth] /api/login requested, hostname:", req.hostname);
+    try {
+      ensureStrategy(req.hostname);
+      console.log("[Auth] Strategy ensured for:", req.hostname);
+      passport.authenticate(`replitauth:${req.hostname}`, {
+        prompt: "login consent",
+        scope: ["openid", "email", "profile", "offline_access"],
+      })(req, res, (err: any) => {
+        if (err) {
+          console.error("[Auth] Passport authenticate error:", err);
+        }
+        next(err);
+      });
+    } catch (error) {
+      console.error("[Auth] Error in /api/login:", error);
+      next(error);
+    }
   });
 
   app.get("/api/callback", (req, res, next) => {
