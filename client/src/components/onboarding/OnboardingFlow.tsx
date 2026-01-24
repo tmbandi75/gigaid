@@ -137,7 +137,6 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const createJobMutation = useMutation({
     mutationFn: async (data: typeof jobData) => {
       const res = await apiRequest("POST", "/api/jobs", {
-        userId: "demo-user",
         title: data.title,
         scheduledDate: data.scheduledDate,
         scheduledTime: data.scheduledTime || "09:00",
@@ -170,7 +169,6 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         throw new Error("No job created");
       }
       const res = await apiRequest("POST", "/api/invoices", {
-        userId: "demo-user",
         invoiceNumber: `INV-${Date.now()}`,
         jobId: createdJobId,
         clientName: jobData.clientName || "New Client",

@@ -735,13 +735,20 @@ export async function registerRoutes(
 
   app.post("/api/jobs", isAuthenticated, async (req, res) => {
     try {
-      // Extract leadId from body (not part of job schema)
-      const { leadId, ...jobData } = req.body;
+      // Get authenticated user ID
+      const authUserId = getAuthenticatedUserId(req);
+      if (!authUserId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
       
-      const validated = insertJobSchema.parse(jobData);
+      // Extract leadId from body (not part of job schema)
+      const { leadId, userId: _userId, ...jobData } = req.body;
+      
+      // Always use authenticated user ID
+      const validated = insertJobSchema.parse({ ...jobData, userId: authUserId });
       
       // Check job limit for free users
-      const user = await storage.getUser(validated.userId);
+      const user = await storage.getUser(authUserId);
       const userPlan = (user?.plan as Plan) || Plan.FREE;
       
       // Developer bypass
@@ -2210,7 +2217,15 @@ export async function registerRoutes(
 
   app.post("/api/invoices", isAuthenticated, async (req, res) => {
     try {
-      const validated = insertInvoiceSchema.parse(req.body);
+      // Get authenticated user ID
+      const authUserId = getAuthenticatedUserId(req);
+      if (!authUserId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      // Remove any userId from body and use authenticated user
+      const { userId: _userId, ...invoiceData } = req.body;
+      const validated = insertInvoiceSchema.parse({ ...invoiceData, userId: authUserId });
       const invoice = await storage.createInvoice(validated);
       
       // Track if user bypassed an active AI suggestion by creating manually
@@ -2226,7 +2241,7 @@ export async function registerRoutes(
           const timeOfDay = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
           
           await storage.createAiOverride({
-            userId: validated.userId,
+            userId: authUserId,
             entityType,
             entityId,
             overrideType: "manual_invoice_bypass",
