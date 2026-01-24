@@ -199,7 +199,13 @@ export async function registerRoutes(
 
   app.patch("/api/profile", isAuthenticated, async (req, res) => {
     try {
-      const { name, email, phone, photo, businessName, bio, serviceArea } = req.body;
+      const { 
+        name, email, phone, photo, businessName, bio, serviceArea,
+        firstName, lastName,
+        // Onboarding/money protection fields
+        defaultServiceType, defaultPrice, depositPolicySet, aiExpectationShown,
+        depositEnabled, depositValue, slotDuration
+      } = req.body;
       let user = await storage.getUser((req as any).userId);
       
       if (!user) {
@@ -219,12 +225,23 @@ export async function registerRoutes(
       // Only update fields that are explicitly provided (not undefined)
       const updates: Record<string, any> = {};
       if (name !== undefined) updates.name = name;
+      if (firstName !== undefined) updates.firstName = firstName;
+      if (lastName !== undefined) updates.lastName = lastName;
       if (email !== undefined) updates.email = email;
       if (phone !== undefined) updates.phone = phone;
       if (photo !== undefined) updates.photo = photo;
       if (businessName !== undefined) updates.businessName = businessName;
       if (bio !== undefined) updates.bio = bio;
       if (serviceArea !== undefined) updates.serviceArea = serviceArea;
+      
+      // Onboarding/money protection fields
+      if (defaultServiceType !== undefined) updates.defaultServiceType = defaultServiceType;
+      if (defaultPrice !== undefined) updates.defaultPrice = defaultPrice;
+      if (depositPolicySet !== undefined) updates.depositPolicySet = depositPolicySet;
+      if (aiExpectationShown !== undefined) updates.aiExpectationShown = aiExpectationShown;
+      if (depositEnabled !== undefined) updates.depositEnabled = depositEnabled;
+      if (depositValue !== undefined) updates.depositValue = depositValue;
+      if (slotDuration !== undefined) updates.slotDuration = slotDuration;
       
       const updatedUser = await storage.updateUser((req as any).userId, updates);
       

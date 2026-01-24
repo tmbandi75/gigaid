@@ -110,6 +110,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [step, setStep] = useState(1);
   const [showSkipModal, setShowSkipModal] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [initialized, setInitialized] = useState(false);
   
   // Form data
   const [identity, setIdentity] = useState({
@@ -133,6 +134,47 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const { data: user } = useQuery({
     queryKey: ["/api/auth/user"],
   });
+
+  // Get onboarding status from server
+  const { data: onboardingStatus } = useQuery<{
+    completed: boolean;
+    step: number;
+    state: string;
+    moneyProtectionReady: boolean;
+    defaultServiceType: string | null;
+    defaultPrice: number | null;
+    depositPolicySet: boolean;
+    aiExpectationShown: boolean;
+  }>({
+    queryKey: ["/api/onboarding"],
+  });
+
+  // Initialize step from server state (resume capability)
+  useEffect(() => {
+    if (!initialized && onboardingStatus && user) {
+      setInitialized(true);
+      
+      // If onboarding is completed or skipped, go to dashboard
+      if (onboardingStatus.state === "completed" || onboardingStatus.state === "skipped_explore") {
+        onComplete();
+        navigate("/");
+        return;
+      }
+      
+      // Resume from last saved step if in progress
+      if (onboardingStatus.state === "in_progress" && onboardingStatus.step > 1) {
+        setStep(onboardingStatus.step);
+      }
+      
+      // Pre-fill form data from saved state
+      if (onboardingStatus.defaultServiceType) {
+        setIdentity(prev => ({ ...prev, serviceType: onboardingStatus.defaultServiceType || "" }));
+      }
+      if (onboardingStatus.defaultPrice) {
+        setPricing(prev => ({ ...prev, typicalPrice: (onboardingStatus.defaultPrice! / 100).toString() }));
+      }
+    }
+  }, [initialized, onboardingStatus, user, onComplete, navigate]);
 
   // Pre-fill from user data
   useEffect(() => {

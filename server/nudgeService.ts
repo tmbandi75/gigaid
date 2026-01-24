@@ -21,10 +21,10 @@ export class NudgeService {
       user.depositPolicySet
     );
     
-    // If onboarding is skipped (explore mode), only generate basic nudges
-    // If money protection not ready, skip AI nudges entirely
-    if (!moneyProtectionReady && user.onboardingState !== "completed") {
-      // Return empty - user needs to complete onboarding first
+    // Guardrail: Skip AI nudges if money protection not ready
+    // Users must complete onboarding setup before AI recommendations work
+    if (!moneyProtectionReady) {
+      // Return empty - user needs to complete money protection setup first
       return [];
     }
 
