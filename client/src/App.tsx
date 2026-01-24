@@ -110,6 +110,26 @@ function ThemeInitializer() {
   return null;
 }
 
+function SubscriptionHandler() {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const subscriptionStatus = params.get('subscription');
+    
+    if (subscriptionStatus === 'success') {
+      queryClient.invalidateQueries({ queryKey: ['/api/profile'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('subscription');
+      window.history.replaceState({}, '', newUrl.toString());
+      
+      console.log('[Subscription] Payment successful - profile cache invalidated');
+    }
+  }, []);
+  
+  return null;
+}
+
 function SplashRedirect() {
   const [, setLocation] = useLocation();
   const [checked, setChecked] = useState(false);
@@ -144,6 +164,7 @@ function App() {
       <PostHogProvider>
         <TooltipProvider>
           <ThemeInitializer />
+          <SubscriptionHandler />
           <Switch>
           <Route path="/" component={SplashPage} />
           <Route path="/welcome" component={SplashPage} />
