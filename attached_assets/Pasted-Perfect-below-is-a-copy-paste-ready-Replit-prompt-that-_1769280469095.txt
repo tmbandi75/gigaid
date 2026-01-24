@@ -1,0 +1,313 @@
+Perfect — below is a **copy-paste-ready Replit prompt** that implements **Phase 1 + Phase 2 together safely**, with **hard guardrails**, **no spam risk**, and **future-proof AI hooks**.
+
+This is written as an **instructional system prompt** for Replit (or Bolt inside Replit) so it constrains behavior, schema, UI, and AI logic correctly.
+
+---
+
+# 🧠 REPLIT SYSTEM PROMPT
+
+## Feature: Event-Driven Client Notifications (Phase 1 + Phase 2)
+
+---
+
+## CONTEXT
+
+You are implementing a **safe, event-driven client notification system** for a gig-worker app (GigAid).
+
+This system allows gig workers to notify existing clients **only when a real-world event occurs** that materially changes customer relevance (e.g., weather, season, availability, risk).
+
+This is **not** a marketing or mass-messaging feature.
+
+Spam, free-form blasting, daily promotions, and arbitrary campaigns are **explicitly prohibited**.
+
+---
+
+## CORE PRINCIPLES (NON-NEGOTIABLE)
+
+1. **Every notification must be tied to a validated event**
+2. **Every message must include a booking link**
+3. **Messages are rare, time-bound, and opt-out compliant**
+4. **AI may suggest campaigns but can never send autonomously**
+5. **If an event cannot be justified, the send must be blocked**
+
+---
+
+## EVENT PRIMITIVES (FIXED ENUM — DO NOT EXTEND WITHOUT CODE CHANGE)
+
+Define the following allowed event types:
+
+```
+ENVIRONMENTAL
+SEASONAL
+AVAILABILITY
+RISK
+RELATIONSHIP
+```
+
+No other event types are allowed.
+
+---
+
+## CATEGORY → EVENT MAPPING (HARD RULES)
+
+Each service category may only use specific event types.
+
+Implement the following mapping as immutable configuration:
+
+```
+Snow Removal:
+  ENVIRONMENTAL
+  RISK
+  AVAILABILITY
+
+Lawn / Landscaping:
+  SEASONAL
+  ENVIRONMENTAL
+  RELATIONSHIP
+
+Cleaning (Home / Office):
+  SEASONAL
+  AVAILABILITY
+  RELATIONSHIP
+
+Handyman / Repairs:
+  RISK
+  ENVIRONMENTAL
+  RELATIONSHIP
+
+Moving / Hauling:
+  SEASONAL
+  AVAILABILITY
+  RELATIONSHIP
+
+Power Washing / Exterior:
+  SEASONAL
+  ENVIRONMENTAL
+  RELATIONSHIP
+```
+
+If a user selects an event type not allowed for the category, the system **must block the send** and display a reason.
+
+---
+
+## PHASE 1 — USER-INITIATED EVENT CAMPAIGNS
+
+### UI FLOW
+
+1. Entry point: **“Notify Clients”**
+2. User must select:
+
+   * Service category
+   * Event type (filtered by category)
+   * Audience filter
+   * Booking link
+3. GigAid pre-writes the message
+4. User may edit text **within limits**
+5. User sends → system validates → messages are dispatched
+
+---
+
+### REQUIRED FIELDS (ALL MANDATORY)
+
+A campaign **cannot be sent** unless all are present:
+
+* `event_type` (from enum)
+* `event_reason` (short free text, max 120 chars)
+* `service_id`
+* `audience_filter` (past clients only)
+* `booking_link`
+* `channel` (SMS or Email)
+
+---
+
+### MESSAGE CONSTRAINTS (ENFORCE STRICTLY)
+
+**SMS**
+
+* Max 320 characters
+* Plain text only
+* Must include opt-out language: `Reply STOP to opt out`
+* No emojis beyond 1 allowed
+
+**Email**
+
+* Plain text or minimal HTML
+* No images
+* No promotional language
+
+---
+
+### RATE LIMITING (HARD LIMITS)
+
+* Max **1 campaign per service per 7 days**
+* Max **2 total campaigns per account per week**
+* No sends between 9pm–8am recipient local time
+
+---
+
+### DISALLOWED CONTENT (BLOCK SEND)
+
+* Discounts
+* Percent-off language
+* “Limited time offer”
+* “New service announcement” without event
+* Marketing phrases (e.g. “Don’t miss out”, “Special deal”)
+
+---
+
+## PHASE 2 — AI-SUGGESTED EVENT CAMPAIGNS (ADVISORY ONLY)
+
+### AI ROLE
+
+AI is **advisory**, not autonomous.
+
+AI may:
+
+* Detect external signals (weather, season, inactivity)
+* Check category → event compatibility
+* Suggest **one** campaign
+
+AI may **never**:
+
+* Send messages
+* Auto-trigger campaigns
+* Repeat suggestions for the same event
+
+---
+
+### AI SUGGESTION RULES
+
+AI can suggest a campaign only if **ALL** are true:
+
+1. External signal detected (e.g. snow forecast, seasonal date)
+2. User has a compatible service enabled
+3. There are eligible past clients
+4. No campaign sent for this service in last 7 days
+
+If any condition fails → **no suggestion**
+
+---
+
+### AI SUGGESTION FORMAT (FIXED)
+
+AI suggestions must appear as:
+
+> “An event affecting your clients was detected.
+> Would you like to notify them?”
+
+Include:
+
+* Event detected
+* Affected service
+* Estimated eligible clients (rounded)
+* CTA: **Review Draft**
+
+No urgency language. No metrics shown.
+
+---
+
+### AI MESSAGE GENERATION
+
+AI must:
+
+* Use the same message constraints as Phase 1
+* Always include booking link
+* Use neutral, informational tone
+
+Example SMS:
+
+> “Snow is forecasted tomorrow. I’m offering snow removal for existing clients. Book here if needed: [link]
+> Reply STOP to opt out.”
+
+---
+
+## DATA MODEL (MINIMUM REQUIRED)
+
+Implement the following tables or equivalents:
+
+```
+services(id, category, user_id)
+
+clients(id, user_id, last_service_date, phone, email, opted_out)
+
+campaigns(
+  id,
+  user_id,
+  service_id,
+  event_type,
+  event_reason,
+  channel,
+  sent_at
+)
+
+campaign_suggestions(
+  id,
+  user_id,
+  service_id,
+  event_type,
+  detected_signal,
+  dismissed_at
+)
+```
+
+---
+
+## VALIDATION ORDER (CRITICAL)
+
+On send attempt:
+
+1. Validate category → event compatibility
+2. Validate rate limits
+3. Validate audience eligibility
+4. Validate message constraints
+5. Validate booking link
+6. Send messages
+7. Log campaign
+
+If **any** validation fails → do not partially send
+
+---
+
+## UX COPY GUIDELINES
+
+* Never say “promotion”
+* Never say “campaign”
+* Always say **“notify clients”**
+* Always explain *why* a send is blocked
+
+Example block message:
+
+> “This service can only notify clients when a relevant event occurs.”
+
+---
+
+## SUCCESS CRITERIA
+
+This feature is successful if:
+
+* Users associate GigAid with income moments
+* Messages feel expected, not spammy
+* No user can blast clients arbitrarily
+* AI feels quiet, helpful, and rare
+
+---
+
+## FINAL RULE
+
+If the system is unsure whether a message is appropriate:
+
+> **Do not send. Ask the user to revise or block the action.**
+
+---
+
+### END OF PROMPT
+
+---
+
+If you want next, I can:
+
+* Convert this into a **JSON rules engine**
+* Produce the **exact UI copy & micro-interactions**
+* Or help you decide **which plan gates Phase 2 AI suggestions**
+
+This prompt is strong enough to scale without you babysitting it later.
