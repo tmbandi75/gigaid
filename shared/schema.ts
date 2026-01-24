@@ -68,6 +68,9 @@ export const users = pgTable("users", {
   firstPaidBookingAt: text("first_paid_booking_at"), // When user received first paid booking
   firstPaymentReceivedAt: text("first_payment_received_at"), // When user received first payment
   requiredSupportForPayment: boolean("required_support_for_payment").default(false), // If user needed help with payments
+  
+  // Plan and entitlements
+  plan: text("plan").default("free"), // free, pro, pro_plus, business
 });
 
 // Availability type for frontend use
