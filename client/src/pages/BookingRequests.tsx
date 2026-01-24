@@ -9,8 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { PageSpinner } from "@/components/ui/spinner";
 import { SoftIntercept } from "@/components/ui/soft-intercept";
+import { BlockingIntercept } from "@/components/ui/blocking-intercept";
 import { useCapability } from "@/hooks/useCapability";
 import { logPricingInterest } from "@shared/capabilityLogger";
+import { isHardGated } from "@shared/gatingConfig";
+import { STRIPE_ENABLED } from "@shared/stripeConfig";
+import { startStripeCheckout } from "@/lib/stripeCheckout";
 import {
   Dialog,
   DialogContent,
@@ -125,8 +129,16 @@ export default function BookingRequests() {
   
   const { user, checkCapability, checkIsDeveloper } = useCapability();
   const hasRiskProtection = checkCapability("booking_risk_protection");
+  const hasDepositEnforcement = checkCapability("deposit_enforcement");
   const isDev = checkIsDeveloper();
   const [dismissedIntercept, setDismissedIntercept] = useState<Set<number>>(new Set());
+  const [showBlockingIntercept, setShowBlockingIntercept] = useState(false);
+  const [blockingBookingId, setBlockingBookingId] = useState<number | null>(null);
+  
+  const continueWithoutDeposit = () => {
+    setShowBlockingIntercept(false);
+    setBlockingBookingId(null);
+  };
 
   const { data: bookings, isLoading } = useQuery<BookingRequest[]>({
     queryKey: ["/api/booking-requests"],
@@ -401,38 +413,88 @@ export default function BookingRequests() {
               </DialogHeader>
 
               {selectedBooking.depositAmountCents && selectedBooking.depositAmountCents > 0 && 
-               !hasRiskProtection && !isDev && !dismissedIntercept.has(selectedBooking.id) && (
-                <SoftIntercept
-                  title="This booking looks riskier than usual"
-                  description="Pro+ can automatically enforce a deposit and protect you from no-shows and late cancellations."
-                  primaryActionLabel="Protect this job with Pro+"
-                  secondaryActionLabel="Continue without protection"
-                  onPrimary={() => {
-                    logPricingInterest({
-                      user: user ? { email: user.email, plan: user.plan } : undefined,
-                      source: "soft_intercept",
-                      capability: "booking_risk_protection",
-                      context: { booking_id: selectedBooking.id }
-                    });
-                    navigate("/pro-plus-context");
-                  }}
-                  onSecondary={() => {
-                    console.log("[capability_attempted]", {
-                      capability: "booking_risk_protection",
-                      context: {
-                        booking_id: selectedBooking.id,
-                        action: "dismissed_soft_intercept"
-                      },
-                      timestamp: new Date().toISOString()
-                    });
-                    setDismissedIntercept(prev => {
-                      const newSet = new Set(prev);
-                      newSet.add(selectedBooking.id);
-                      return newSet;
-                    });
-                  }}
-                  data-testid="card-risk-protection-intercept"
-                />
+               !isDev && !dismissedIntercept.has(selectedBooking.id) && (
+                <>
+                  {isHardGated("deposit_enforcement") && STRIPE_ENABLED && !hasDepositEnforcement ? (
+                    <Card className="p-4 border-primary/50 bg-primary/5" data-testid="card-deposit-enforcement-gate">
+                      <div className="flex items-start gap-3">
+                        <div className="shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <CreditCard className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="flex-1 space-y-2">
+                          <h4 className="font-medium">Protect this job with a deposit</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Deposits prevent no-shows and late cancellations. Available on Pro+ for $28/month.
+                          </p>
+                          <div className="flex gap-2 pt-2">
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                logPricingInterest({
+                                  user: user ? { email: user.email, plan: user.plan } : undefined,
+                                  source: "soft_intercept",
+                                  capability: "deposit_enforcement",
+                                  context: { booking_id: selectedBooking.id }
+                                });
+                                setBlockingBookingId(selectedBooking.id);
+                                setShowBlockingIntercept(true);
+                              }}
+                              data-testid="button-upgrade-deposit"
+                            >
+                              Upgrade to Pro+
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setDismissedIntercept(prev => {
+                                  const newSet = new Set(prev);
+                                  newSet.add(selectedBooking.id);
+                                  return newSet;
+                                });
+                              }}
+                              data-testid="button-dismiss-deposit-gate"
+                            >
+                              Continue without protection
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ) : !hasRiskProtection ? (
+                    <SoftIntercept
+                      title="This booking looks riskier than usual"
+                      description="Pro+ can automatically enforce a deposit and protect you from no-shows and late cancellations."
+                      primaryActionLabel="Protect this job with Pro+"
+                      secondaryActionLabel="Continue without protection"
+                      onPrimary={() => {
+                        logPricingInterest({
+                          user: user ? { email: user.email, plan: user.plan } : undefined,
+                          source: "soft_intercept",
+                          capability: "booking_risk_protection",
+                          context: { booking_id: selectedBooking.id }
+                        });
+                        navigate("/pro-plus-context");
+                      }}
+                      onSecondary={() => {
+                        console.log("[capability_attempted]", {
+                          capability: "booking_risk_protection",
+                          context: {
+                            booking_id: selectedBooking.id,
+                            action: "dismissed_soft_intercept"
+                          },
+                          timestamp: new Date().toISOString()
+                        });
+                        setDismissedIntercept(prev => {
+                          const newSet = new Set(prev);
+                          newSet.add(selectedBooking.id);
+                          return newSet;
+                        });
+                      }}
+                      data-testid="card-risk-protection-intercept"
+                    />
+                  ) : null}
+                </>
               )}
 
               <div className="space-y-4">
@@ -723,6 +785,21 @@ export default function BookingRequests() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BlockingIntercept
+        open={showBlockingIntercept}
+        onOpenChange={setShowBlockingIntercept}
+        title="Protect this job with a deposit"
+        description="Deposits prevent no-shows and late cancellations. Available on Pro+."
+        price="$28 / month"
+        onConfirm={() => {
+          startStripeCheckout({
+            plan: "pro_plus",
+            returnTo: "/booking-requests"
+          });
+        }}
+        onCancel={continueWithoutDeposit}
+      />
     </div>
   );
 }

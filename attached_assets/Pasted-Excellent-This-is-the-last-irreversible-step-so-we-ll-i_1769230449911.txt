@@ -1,0 +1,238 @@
+Excellent. This is the **last irreversible step**, so we’ll implement **Steps 13–16** in a way that is:
+
+* **data-gated**
+* **single-capability**
+* **reversible**
+* **trust-preserving**
+* **production-safe**
+
+Below is the **exact Replit prompt** to copy–paste.
+Nothing speculative. No fluff. No accidental overreach.
+
+---
+
+# 🔧 REPLIT PROMPT — Enable Monetization (Steps 13–16)
+
+## Objective
+
+Implement **evidence-based monetization enablement** for Pro+ by:
+
+13. Computing the monetization readiness ratio
+14. Enabling Stripe **only when threshold is met**
+15. Hard-gating **one capability only** (`deposit_enforcement`)
+16. Ensuring correct UX, rollback safety, and guardrails
+
+❌ Do NOT add global gating
+❌ Do NOT gate more than one capability
+❌ Do NOT modify pricing or plans
+❌ Do NOT affect developer bypass
+
+---
+
+## STEP 13 — Compute Monetization Readiness (Authoritative)
+
+### Create:
+
+`/src/lib/monetizationDecision.ts`
+
+```ts
+export type MonetizationDecision = {
+  ready: boolean;
+  ratio: number;
+};
+
+export function evaluateProPlusReadiness({
+  softIntercepts,
+  pricingInterest
+}: {
+  softIntercepts: number;
+  pricingInterest: number;
+}): MonetizationDecision {
+  if (softIntercepts === 0) {
+    return { ready: false, ratio: 0 };
+  }
+
+  const ratio = pricingInterest / softIntercepts;
+
+  return {
+    ready: ratio >= 0.25,
+    ratio
+  };
+}
+```
+
+### ⚠️ Rule (Non-Negotiable)
+
+* Stripe **must not** be enabled unless `ready === true`
+* This function is the **single source of truth**
+
+---
+
+## STEP 14 — Stripe Enablement Flag (Off by Default)
+
+### Create:
+
+`/src/lib/stripeConfig.ts`
+
+```ts
+export const STRIPE_ENABLED = false;
+```
+
+⚠️ This flag must be manually flipped **only after** Step 13 returns `ready: true`.
+
+No auto-enable logic.
+No hidden switches.
+
+---
+
+## STEP 15 — Hard-Gate ONE Capability (deposit_enforcement only)
+
+### Update:
+
+`/src/lib/gatingConfig.ts`
+
+```ts
+export const HARD_GATED_CAPABILITIES = {
+  deposit_enforcement: true // ← ENABLED NOW
+};
+```
+
+⚠️ Confirm:
+
+* No other capability is gated
+* Developer bypass still applies
+
+---
+
+## STEP 15A — Replace Soft Intercept with Blocking Gate (Single Moment)
+
+### Update deposit enforcement flow
+
+Locate the existing deposit enforcement attempt logic and replace the placeholder warning with:
+
+```ts
+import { STRIPE_ENABLED } from "@/lib/stripeConfig";
+import { HARD_GATED_CAPABILITIES } from "@/lib/gatingConfig";
+
+if (
+  HARD_GATED_CAPABILITIES.deposit_enforcement &&
+  !hasCapability(user, "deposit_enforcement")
+) {
+  if (!STRIPE_ENABLED) {
+    console.warn("Stripe disabled — blocking prevented");
+    return;
+  }
+
+  showBlockingIntercept({
+    title: "Protect this job with a deposit",
+    description:
+      "Deposits prevent no-shows and late cancellations. Available on Pro+.",
+    price: "$28 / month",
+    onConfirm: () => {
+      startStripeCheckout({
+        plan: "pro_plus",
+        returnTo: `/booking/${booking.id}`
+      });
+    },
+    onCancel: () => {
+      continueWithoutDeposit();
+    }
+  });
+
+  return;
+}
+```
+
+### UX Rules
+
+* ❌ No dashboard lock
+* ❌ No navigation block
+* ❌ No forced upgrade
+* ✅ One blocking decision
+* ✅ Immediate return after checkout
+
+---
+
+## STEP 16 — Guardrails & Rollback Safety
+
+### Rollback Checklist
+
+To instantly undo monetization:
+
+```ts
+// /src/lib/stripeConfig.ts
+export const STRIPE_ENABLED = false;
+
+// /src/lib/gatingConfig.ts
+deposit_enforcement: false
+```
+
+No code removal required.
+No redeploy logic changes.
+
+---
+
+## FINAL VALIDATION CHECKLIST (MANDATORY)
+
+* [ ] Stripe only triggers at deposit enforcement moment
+* [ ] Only `deposit_enforcement` is gated
+* [ ] Developer account bypass still works
+* [ ] Pricing context appears before checkout
+* [ ] Checkout returns user to protected job
+* [ ] No global upgrade prompts exist
+* [ ] Stripe flag can disable monetization instantly
+
+---
+
+## SUCCESS STATE (THIS IS THE GOAL)
+
+You can now say, truthfully:
+
+> “We only charge users **when money is at risk**, and only after they ask for protection.”
+
+That sentence is what separates:
+
+* **trusted tools** from
+* **extractive SaaS**
+
+---
+
+## 🚨 IMPORTANT: WHAT NOT TO DO NEXT
+
+Even now, do **NOT**:
+
+* Add more hard gates
+* Gate Today’s Money Plan
+* Gate analytics
+* Gate AI nudges
+* Gate offline features
+
+Those are **leverage**, not enforcement.
+
+---
+
+## END OF REPLIT PROMPT
+
+---
+
+### Founder-Level Reality Check
+
+At this point:
+
+* Monetization is *earned*
+* Upsell resistance is minimal
+* Stripe is no longer risky
+* Pro+ is no longer abstract
+
+This is the cleanest monetization path you can take.
+
+---
+
+If you want next, I can:
+
+* Add **Business tier logic** (teams only)
+* Design **annual pricing without confusion**
+* Help you decide **when to raise Pro+ price**
+* Instrument **post-upgrade retention signals**
+
+You’ve executed this at a very high level.

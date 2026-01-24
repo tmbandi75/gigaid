@@ -3517,9 +3517,14 @@ export async function registerRoutes(
               }
             });
             
-            // Placeholder for future hard gating - DO NOT ENABLE YET
+            // Hard gating check - returns info to client for blocking intercept
             if (isHardGated("deposit_enforcement") && !hasDepositEnforcement) {
-              console.warn("[Hard Gate Placeholder] Deposit enforcement would be blocked here for non-Pro+ users");
+              const { STRIPE_ENABLED } = await import("@shared/stripeConfig");
+              if (!STRIPE_ENABLED) {
+                console.warn("[Hard Gate] Stripe disabled - blocking prevented, continuing without deposit enforcement");
+              } else {
+                console.log("[Hard Gate] User requires upgrade for deposit enforcement - client will show blocking intercept");
+              }
             }
           }
           
@@ -5066,6 +5071,57 @@ Return ONLY the message text, no JSON or formatting.`
     } catch (error) {
       console.error("Error getting Stripe key:", error);
       res.status(500).json({ error: "Stripe not configured" });
+    }
+  });
+
+  // Create Pro+ subscription checkout session
+  app.post("/api/subscription/checkout", async (req, res) => {
+    try {
+      const { plan, returnTo } = req.body;
+      
+      if (plan !== "pro_plus") {
+        return res.status(400).json({ error: "Invalid plan" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const { STRIPE_ENABLED } = await import("@shared/stripeConfig");
+      
+      if (!STRIPE_ENABLED) {
+        console.warn("[Stripe] Subscription checkout blocked - STRIPE_ENABLED is false");
+        return res.status(503).json({ error: "Payments temporarily unavailable" });
+      }
+
+      const stripe = await getUncachableStripeClient();
+      const baseUrl = process.env.FRONTEND_URL || `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price_data: {
+              currency: "usd",
+              product_data: {
+                name: "GigAid Pro+",
+                description: "Deposit enforcement, booking protection, Today's Money Plan",
+              },
+              unit_amount: 2800,
+              recurring: { interval: "month" },
+            },
+            quantity: 1,
+          },
+        ],
+        mode: "subscription",
+        success_url: `${baseUrl}${returnTo || "/"}?subscription=success`,
+        cancel_url: `${baseUrl}${returnTo || "/"}?subscription=cancelled`,
+        metadata: {
+          plan: "pro_plus",
+        },
+      });
+
+      res.json({ url: session.url });
+    } catch (error) {
+      console.error("Subscription checkout error:", error);
+      res.status(500).json({ error: "Failed to create checkout session" });
     }
   });
 
