@@ -85,11 +85,12 @@ export default function MoneyPlanPage() {
   const showCapabilityHint = !hasMoneyPlanCapability && !checkIsDeveloper();
   
   useEffect(() => {
-    if (flag?.enabled && !hasMoneyPlanCapability) {
+    if (flag?.enabled) {
       console.log("[capability_attempted]", {
         capability: "todays_money_plan",
         plan: getUserPlan(),
         is_dev: checkIsDeveloper(),
+        granted: hasMoneyPlanCapability,
         context: { unpaid_invoices: items?.filter(i => i.sourceType === "invoice").length || 0 },
         timestamp: new Date().toISOString()
       });

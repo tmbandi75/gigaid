@@ -8,6 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { PageSpinner } from "@/components/ui/spinner";
+import { InlineInfoCard } from "@/components/ui/inline-info-card";
+import { useCapability } from "@/hooks/useCapability";
 import {
   Dialog,
   DialogContent,
@@ -119,6 +121,9 @@ export default function BookingRequests() {
   const [showRemainderPaymentDialog, setShowRemainderPaymentDialog] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
   const [remainderNotes, setRemainderNotes] = useState("");
+  
+  const { checkCapability } = useCapability();
+  const hasRiskProtection = checkCapability("booking_risk_protection");
 
   const { data: bookings, isLoading } = useQuery<BookingRequest[]>({
     queryKey: ["/api/booking-requests"],
@@ -391,6 +396,16 @@ export default function BookingRequests() {
                   </div>
                 </DialogTitle>
               </DialogHeader>
+
+              {selectedBooking.depositAmountCents && selectedBooking.depositAmountCents > 0 && !hasRiskProtection && (
+                <InlineInfoCard
+                  title="This booking looks riskier than usual"
+                  description="Pro+ automatically enforces deposits and protects you from no-shows."
+                  actionLabel="Learn about Pro+"
+                  onAction={() => navigate("/settings/plans")}
+                  data-testid="card-risk-protection-nudge"
+                />
+              )}
 
               <div className="space-y-4">
                 <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
