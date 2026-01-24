@@ -1,0 +1,253 @@
+Objective
+
+Implement a multi-step onboarding flow for GigAid that:
+
+Allows users to skip onboarding
+
+Preserves a hard functional floor required for money protection
+
+Introduces an Explore Mode when onboarding is skipped
+
+Activates AI, deposits, and booking links only after required context is set
+
+Avoids nags, banners, or forced replays
+
+Onboarding must optimize for time-to-first-money, not feature exposure.
+
+Core Concepts (Must Be Implemented)
+1. Onboarding Completion States
+
+Introduce an onboarding_state enum on the user profile:
+
+type OnboardingState =
+  | "not_started"
+  | "in_progress"
+  | "skipped_explore"
+  | "completed";
+
+
+Add a derived boolean:
+
+money_protection_ready = (
+  service_type &&
+  default_price &&
+  deposit_policy !== null
+)
+
+Step-by-Step Onboarding Flow
+STEP 1 — Welcome Screen
+
+Screen
+
+Headline: “Get paid before the job starts”
+
+Subtext: “GigAid protects your time with deposits and smart booking.”
+
+Actions
+
+Primary: Set up my first booking
+
+Secondary (text button): Skip for now
+
+STEP 2 — Skip Confirmation (One-Time Modal)
+
+Trigger only if user taps Skip for now.
+
+Modal Copy
+
+Skipping setup limits protection
+You can explore GigAid, but deposits and AI protection won’t work until setup is complete.
+
+Buttons
+
+Primary: Continue setup
+
+Secondary: Enter dashboard
+
+If user proceeds → set:
+
+onboarding_state = "skipped_explore"
+
+STEP 3 — Identity Lite (Required if Continuing)
+
+Fields
+
+First name (required)
+
+Business name (optional)
+
+Service type (required, free text or dropdown)
+
+Save immediately. No validation loops.
+
+STEP 4 — Pricing Anchor (Required)
+
+Prompt
+
+What do you usually charge?
+
+Fields
+
+Default service name
+
+Typical price (number only)
+
+Duration (optional)
+
+This value feeds:
+
+AI nudges
+
+Invoice defaults
+
+Deposit calculations
+
+STEP 5 — Deposit Default (Required Hard Floor)
+
+UI
+
+Toggle: Require deposit on booking (default: ON)
+
+Slider: 20%–50%
+
+Inline helper text:
+“Deposits reduce cancellations and protect your time.”
+
+User may explicitly choose:
+
+Deposit ON
+
+Deposit OFF (must be explicit)
+
+Save as:
+
+deposit_policy = {
+  enabled: boolean,
+  percentage: number | null
+}
+
+STEP 6 — Booking Link Creation (Activation Moment)
+
+Only available if money_protection_ready === true.
+
+Screen
+
+Your booking link is ready
+
+Show:
+
+URL
+
+Copy button
+
+Share via SMS / WhatsApp
+
+Do NOT force sharing.
+
+STEP 7 — Payments Connection (Optional)
+
+Screen
+
+Get paid automatically (recommended)
+
+Buttons:
+
+Connect payments
+
+Skip for now
+
+Never block progress here.
+
+STEP 8 — AI Expectation Card (One-Time)
+
+Only show once.
+
+Copy
+
+GigAid only speaks up when money is at risk.
+You’ll get at most one suggestion per day — and only when it matters.
+
+Button:
+
+Got it
+
+STEP 9 — Completion
+
+If all required steps completed:
+
+onboarding_state = "completed"
+
+
+Redirect to dashboard.
+
+Explore Mode (Critical Behavior)
+
+If onboarding_state === "skipped_explore":
+
+Dashboard Rules
+
+Dashboard loads fully
+
+No blocking banners
+
+No AI nudges
+
+No deposits enforced
+
+Today’s Money Plan is read-only
+
+Inline Gating (Contextual, Not Forced)
+
+Examples:
+
+If user tries to share booking link
+
+Finish setup to enable deposits and booking links
+Button: Quick setup (30 sec)
+
+If user tries to enable deposits
+
+Set a default price to protect this job
+
+Each prompt should deep-link directly to the missing step.
+
+AI & Feature Guardrails
+
+AI nudges only fire if:
+
+money_protection_ready === true
+
+
+Today’s Money Plan:
+
+Read-only if Explore Mode
+
+Fully active if completed
+
+Never show repeated nags
+
+Never auto-enable deposits
+
+Non-Goals (Explicitly Do NOT Build)
+
+❌ No onboarding checklist
+❌ No persistent “Finish setup” banner
+❌ No forced redirects back to onboarding
+❌ No feature tours
+❌ No settings-heavy screens
+
+Success Criteria
+
+User can reach dashboard in <10 seconds
+
+Money protection cannot silently misfire
+
+AI never speaks without context
+
+Setup completes naturally through usage
+
+Final Instruction
+
+Implement this flow using existing GigAid components and feature flags.
+Preserve calm, neutral language.
+Optimize for trust and momentum, not completion metrics.
