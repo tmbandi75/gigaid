@@ -14,7 +14,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   AlertCircle,
-  Flame
+  Flame,
+  Lock
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -190,11 +191,28 @@ function GamePlanCard({ nudge, onNavigate, onSnooze, isSnoozing }: GamePlanCardP
   );
 }
 
+interface OnboardingStatus {
+  completed: boolean;
+  step: number;
+  state: string;
+  moneyProtectionReady: boolean;
+}
+
 export function TodaysGamePlan() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [snoozingId, setSnoozingId] = useState<string | null>(null);
+
+  // Check onboarding status for Explore Mode
+  const { data: onboardingStatus, isLoading: isOnboardingLoading } = useQuery<OnboardingStatus>({
+    queryKey: ["/api/onboarding"],
+  });
+
+  // Only apply gating once onboarding status is known - default to ready during loading
+  const isExploreMode = onboardingStatus?.state === "skipped_explore";
+  const isMoneyProtectionReady = onboardingStatus ? onboardingStatus.moneyProtectionReady : true;
+  const needsSetup = !isOnboardingLoading && (isExploreMode || !isMoneyProtectionReady);
 
   const { data: nudges = [], isLoading } = useQuery<AiNudge[]>({
     queryKey: ["/api/ai/nudges", "daily"],
@@ -204,6 +222,7 @@ export function TodaysGamePlan() {
       return res.json();
     },
     staleTime: 30000,
+    enabled: !needsSetup,
   });
 
   const snoozeMutation = useMutation({
@@ -228,6 +247,41 @@ export function TodaysGamePlan() {
       navigate(config.getRoute(nudge));
     }
   };
+
+  // Show Explore Mode read-only state when money protection not ready (only after status is loaded)
+  if (needsSetup) {
+    return (
+      <div className="space-y-2" data-testid="todays-game-plan-explore">
+        <div className="flex items-center gap-2 mb-3">
+          <Sparkles className="h-5 w-5 text-muted-foreground" />
+          <h2 className="text-lg font-semibold text-muted-foreground">Today's Game Plan</h2>
+        </div>
+        <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
+          <CardContent className="py-6">
+            <div className="flex items-start gap-4">
+              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <Lock className="h-6 w-6 text-primary" />
+              </div>
+              <div className="space-y-2">
+                <p className="font-medium text-foreground">Complete setup to unlock AI suggestions</p>
+                <p className="text-sm text-muted-foreground">
+                  GigAid needs your pricing and deposit preferences to provide personalized recommendations.
+                </p>
+                <Button
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => navigate("/onboarding")}
+                  data-testid="button-complete-setup-gameplan"
+                >
+                  Quick setup (30 sec)
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

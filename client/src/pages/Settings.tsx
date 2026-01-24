@@ -30,6 +30,7 @@ import {
   ChevronRight,
   DollarSign,
   Shield,
+  Lock,
 } from "lucide-react";
 import { AvailabilityEditor, DEFAULT_AVAILABILITY } from "@/components/settings/AvailabilityEditor";
 import { PaymentMethodsSettings } from "@/components/PaymentMethodsSettings";
@@ -50,6 +51,16 @@ interface PaymentMethod {
   isEnabled: boolean;
 }
 
+interface OnboardingStatus {
+  completed: boolean;
+  step: number;
+  state: string;
+  moneyProtectionReady: boolean;
+  defaultServiceType: string | null;
+  defaultPrice: number | null;
+  depositPolicySet: boolean;
+}
+
 export default function Settings() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -62,6 +73,16 @@ export default function Settings() {
   const { data: profile } = useQuery<any>({
     queryKey: ["/api/profile"],
   });
+
+  // Check onboarding status for Explore Mode gating
+  const { data: onboardingStatus, isLoading: isOnboardingLoading } = useQuery<OnboardingStatus>({
+    queryKey: ["/api/onboarding"],
+  });
+
+  // Only apply gating once onboarding status is known - don't gate during loading
+  const isExploreMode = onboardingStatus?.state === "skipped_explore";
+  const isMoneyProtectionReady = onboardingStatus ? onboardingStatus.moneyProtectionReady : true;
+  const needsSetup = !isOnboardingLoading && (isExploreMode || !isMoneyProtectionReady);
 
   const { data: paymentMethods } = useQuery<PaymentMethod[]>({
     queryKey: ["/api/payment-methods"],
@@ -279,19 +300,43 @@ export default function Settings() {
               </div>
               Booking Protection
             </h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-sm">Protect me from no-shows</p>
-                  <p className="text-xs text-muted-foreground">Automatically require deposits for higher-risk bookings</p>
+            {needsSetup ? (
+              <div className="p-4 rounded-xl border-dashed border-2 border-primary/30 bg-primary/5">
+                <div className="flex items-start gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <Lock className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="font-medium text-foreground">Set a default price to enable booking protection</p>
+                    <p className="text-sm text-muted-foreground">
+                      Complete your pricing setup to automatically protect against no-shows.
+                    </p>
+                    <Button
+                      size="sm"
+                      className="mt-2"
+                      onClick={() => navigate("/onboarding?step=4")}
+                      data-testid="button-setup-deposit"
+                    >
+                      Quick setup (30 sec)
+                    </Button>
+                  </div>
                 </div>
-                <Switch
-                  checked={settings.noShowProtectionEnabled}
-                  onCheckedChange={(checked) => setSettings({ ...settings, noShowProtectionEnabled: checked })}
-                  data-testid="switch-no-show-protection"
-                />
               </div>
-            </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-sm">Protect me from no-shows</p>
+                    <p className="text-xs text-muted-foreground">Automatically require deposits for higher-risk bookings</p>
+                  </div>
+                  <Switch
+                    checked={settings.noShowProtectionEnabled}
+                    onCheckedChange={(checked) => setSettings({ ...settings, noShowProtectionEnabled: checked })}
+                    data-testid="switch-no-show-protection"
+                  />
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -316,7 +361,35 @@ export default function Settings() {
                 />
               </div>
 
-              {settings.publicProfileEnabled && (
+              {settings.publicProfileEnabled && needsSetup && (
+                <>
+                  <Separator />
+                  <div className="p-4 rounded-xl border-dashed border-2 border-amber-500/30 bg-amber-500/5">
+                    <div className="flex items-start gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                        <Lock className="h-5 w-5 text-amber-600" />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="font-medium text-foreground">Finish setup to enable deposits and booking links</p>
+                        <p className="text-sm text-muted-foreground">
+                          Your profile is visible, but deposits won't be collected until you complete setup.
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="mt-2"
+                          onClick={() => navigate("/onboarding")}
+                          data-testid="button-setup-booking"
+                        >
+                          Quick setup (30 sec)
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {settings.publicProfileEnabled && !needsSetup && (
                 <>
                   <Separator />
                   <div className="space-y-2">
