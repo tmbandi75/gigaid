@@ -1,0 +1,276 @@
+Perfect. Below is the **single, end-to-end Replit prompt** that implements **Steps 1–4 exactly**, with **no Stripe, no paywalls, no UI breakage**, and with **developer full access preserved**.
+
+This is written to be **copy-paste safe** for Replit and to guide the model deterministically.
+
+---
+
+# 🔧 REPLIT PROMPT — Capability Wiring + Shadow Gating + Logging (No Monetization)
+
+## Objective
+
+Extend the existing **plans + capabilities infrastructure** to:
+
+1. Wire **3 Pro+ capabilities** into real product flows (soft-gated)
+2. Instrument **capability_attempted** events
+3. Add a **dev-only plan override** for testing
+4. Add **one informational inline nudge** (not an upgrade modal)
+
+❌ Do NOT add Stripe
+❌ Do NOT add pricing modals
+❌ Do NOT block users
+❌ Do NOT change layout or navigation
+✅ Developer must retain full access at all times
+
+---
+
+## Capabilities in Scope (ONLY THESE)
+
+Wire **only** the following Pro+ capabilities:
+
+* `booking_risk_protection`
+* `deposit_enforcement`
+* `todays_money_plan`
+
+Do **not** wire any others yet.
+
+---
+
+## 1️⃣ Add Dev-Only Plan Override (Safe Testing)
+
+### Update `/src/lib/entitlements.ts`
+
+Add support for a **development override** using an env var.
+
+```ts
+import { Plan, Capability, PLAN_CAPABILITIES } from "./plans";
+
+const DEV_EMAILS = [
+  "your@email.com"
+];
+
+export function isDeveloper(user?: { email?: string }) {
+  return !!user?.email && DEV_EMAILS.includes(user.email);
+}
+
+export function getUserCapabilities(user?: {
+  email?: string;
+  plan?: Plan;
+}) {
+  // 🔑 Developer bypass (always full access)
+  if (isDeveloper(user)) {
+    return new Set(Object.values(PLAN_CAPABILITIES).flat());
+  }
+
+  // 🧪 Dev-only plan override
+  const overridePlan =
+    process.env.NODE_ENV !== "production"
+      ? (process.env.DEV_PLAN_OVERRIDE as Plan | undefined)
+      : undefined;
+
+  const effectivePlan = overridePlan ?? user?.plan ?? Plan.FREE;
+
+  return new Set(PLAN_CAPABILITIES[effectivePlan]);
+}
+```
+
+⚠️ Guardrail
+
+* `DEV_PLAN_OVERRIDE` must have **no effect in production**
+
+---
+
+## 2️⃣ Instrument Capability Attempt Events
+
+### Create `/src/lib/capabilityEvents.ts`
+
+```ts
+import { Capability } from "./plans";
+import { isDeveloper } from "./entitlements";
+
+export function logCapabilityAttempt({
+  user,
+  capability,
+  context = {}
+}: {
+  user?: { email?: string; plan?: string };
+  capability: Capability;
+  context?: Record<string, any>;
+}) {
+  // Replace with your analytics provider later
+  console.log("capability_attempted", {
+    capability,
+    plan: user?.plan ?? "free",
+    is_dev: isDeveloper(user),
+    context,
+    timestamp: new Date().toISOString()
+  });
+}
+```
+
+No external services. Console logging only for now.
+
+---
+
+## 3️⃣ Wire Capability Checks into Real Features (Soft Gating)
+
+### A) Deposit Enforcement (Booking Flow)
+
+Wherever deposit enforcement is toggled or evaluated:
+
+```ts
+import { hasCapability } from "@/lib/hasCapability";
+import { logCapabilityAttempt } from "@/lib/capabilityEvents";
+
+if (!hasCapability(user, "deposit_enforcement")) {
+  logCapabilityAttempt({
+    user,
+    capability: "deposit_enforcement",
+    context: { job_id }
+  });
+
+  showInfoHint(
+    "Deposits are enforced automatically on Pro+ to protect against no-shows."
+  );
+}
+```
+
+❌ Do not block booking
+❌ Do not disable UI
+
+---
+
+### B) Booking Risk Protection (Risk Detection)
+
+When a booking is flagged as high-risk:
+
+```ts
+if (!hasCapability(user, "booking_risk_protection")) {
+  logCapabilityAttempt({
+    user,
+    capability: "booking_risk_protection",
+    context: {
+      job_id,
+      risk_reason: "new_client_or_last_minute"
+    }
+  });
+}
+```
+
+Still show the risk signal — just don’t auto-protect.
+
+---
+
+### C) Today’s Money Plan (Dashboard / Priority View)
+
+When user opens or views the Today’s Money section:
+
+```ts
+if (!hasCapability(user, "todays_money_plan")) {
+  logCapabilityAttempt({
+    user,
+    capability: "todays_money_plan",
+    context: {
+      unpaid_invoices: unpaidInvoicesCount
+    }
+  });
+
+  showInfoHint(
+    "Today’s Money Plan is available on Pro+ and shows what gets you paid fastest."
+  );
+}
+```
+
+---
+
+## 4️⃣ Add ONE Informational Inline Nudge (No Modal)
+
+### Location
+
+Booking details screen **only when a booking is flagged as high-risk**
+
+### Behavior
+
+* Inline card
+* No overlay
+* No blocking
+* No pricing shown
+
+### Copy (exact)
+
+```tsx
+<InlineInfoCard>
+  <strong>This booking looks riskier than usual</strong>
+  <p>
+    Pro+ automatically enforces deposits and protects you from no-shows.
+  </p>
+  <TextButton onClick={openPricingPage}>
+    Learn about Pro+
+  </TextButton>
+</InlineInfoCard>
+```
+
+❌ No “Upgrade now”
+❌ No checkout
+❌ No urgency language
+
+---
+
+## 5️⃣ Guardrails (Must Enforce)
+
+* ❌ Do NOT add Stripe
+* ❌ Do NOT add pricing modals
+* ❌ Do NOT block any action
+* ❌ Do NOT hide features by plan
+* ✅ Capability-based checks only
+* ✅ Developer always has full access
+* ✅ Console logging only
+
+---
+
+## 6️⃣ Validation Checklist (Required)
+
+* [ ] App behavior unchanged for Free users
+* [ ] Developer can access all features
+* [ ] Capability attempts are logged
+* [ ] No hard paywalls exist
+* [ ] Only 3 Pro+ capabilities wired
+* [ ] Only ONE inline nudge exists
+
+---
+
+## Success Criteria
+
+After this change:
+
+* The app **understands value boundaries**
+* You can see **where users want Pro+**
+* No one feels upsold
+* Monetization can be added later with zero refactor
+
+---
+
+**End of Replit prompt.**
+
+---
+
+### Founder Reality Check (Important)
+
+If you stopped **right here** and shipped this:
+
+* You’ve already increased future conversion
+* You’ve preserved trust
+* You’ve avoided the #1 SaaS monetization mistake (premature paywalls)
+
+When you’re ready, the *next* logical step is:
+
+> Turning **one logged capability attempt** into **one contextual upgrade prompt**
+
+Nothing more.
+
+If you want, next I can:
+
+* Map logs → prompt logic
+* Add Stripe later with zero code churn
+* Help you choose **the single highest-ROI Pro+ trigger**
+
+You’re executing this at a very high level.

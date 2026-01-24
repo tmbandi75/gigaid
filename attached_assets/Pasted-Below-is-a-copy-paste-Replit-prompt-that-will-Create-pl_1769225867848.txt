@@ -1,0 +1,116 @@
+Below is a **copy-paste Replit prompt** that will: * Create **plans + capabilities** * Add **entitlement resolution** * Add a **developer bypass** so *you* always have full access * Avoid Stripe / billing / UI changes * Keep everything **safe, reversible, and production-ready** This is exactly how experienced SaaS teams do it pre-monetization. --- # 🔧 REPLIT PROMPT — Create Plans with Developer Full Access ## Objective Implement internal **plan + capability infrastructure** for GigAid **without enforcing billing** and **without restricting the developer**. Plans to support: * FREE * PRO * PRO_PLUS * BUSINESS The developer must always have **full access**, regardless of plan. --- ## 1️⃣ Define Canonical Plan & Capability Model ### Create a new file: /src/lib/plans.ts
+ts
+export enum Plan {
+  FREE = "free",
+  PRO = "pro",
+  PRO_PLUS = "pro_plus",
+  BUSINESS = "business"
+}
+
+export type Capability =
+  | "unlimited_jobs"
+  | "auto_followups"
+  | "two_way_sms"
+  | "invoicing"
+  | "booking_risk_protection"
+  | "deposit_enforcement"
+  | "todays_money_plan"
+  | "offline_assets"
+  | "priority_alerts"
+  | "crew_management"
+  | "analytics"
+  | "admin_controls";
+
+export const PLAN_CAPABILITIES: Record<Plan, Capability[]> = {
+  [Plan.FREE]: [
+    "invoicing"
+  ],
+
+  [Plan.PRO]: [
+    "unlimited_jobs",
+    "auto_followups",
+    "two_way_sms",
+    "invoicing"
+  ],
+
+  [Plan.PRO_PLUS]: [
+    "unlimited_jobs",
+    "auto_followups",
+    "two_way_sms",
+    "invoicing",
+    "booking_risk_protection",
+    "deposit_enforcement",
+    "todays_money_plan",
+    "offline_assets",
+    "priority_alerts"
+  ],
+
+  [Plan.BUSINESS]: [
+    "unlimited_jobs",
+    "auto_followups",
+    "two_way_sms",
+    "invoicing",
+    "booking_risk_protection",
+    "deposit_enforcement",
+    "todays_money_plan",
+    "offline_assets",
+    "priority_alerts",
+    "crew_management",
+    "analytics",
+    "admin_controls"
+  ]
+};
+--- ## 2️⃣ Add User Plan Field (Non-Breaking) If using Supabase / DB: * Add nullable column:
+sql
+plan TEXT DEFAULT 'free'
+Do **not** enforce constraints yet. --- ## 3️⃣ Developer Bypass (Critical) ### Create: /src/lib/entitlements.ts
+ts
+import { Plan, Capability, PLAN_CAPABILITIES } from "./plans";
+
+const DEV_EMAILS = [
+  "your@email.com"
+];
+
+export function isDeveloper(user?: { email?: string }) {
+  return !!user?.email && DEV_EMAILS.includes(user.email);
+}
+
+export function getUserCapabilities(user?: {
+  email?: string;
+  plan?: Plan;
+}): Set<Capability> {
+
+  // 🔑 Developer always has full access
+  if (isDeveloper(user)) {
+    return new Set(
+      Object.values(PLAN_CAPABILITIES).flat()
+    );
+  }
+
+  const plan = user?.plan ?? Plan.FREE;
+  return new Set(PLAN_CAPABILITIES[plan]);
+}
+> ✅ You will **never** see upgrade prompts > ✅ You can test everything > ✅ No fake subscriptions needed --- ## 4️⃣ Capability Check Helper ### Create: /src/lib/hasCapability.ts
+ts
+import { Capability } from "./plans";
+import { getUserCapabilities } from "./entitlements";
+
+export function hasCapability(
+  user: any,
+  capability: Capability
+): boolean {
+  return getUserCapabilities(user).has(capability);
+}
+--- ## 5️⃣ Use Capability Checks (Soft Gating Only) Example usage (do **not** block navigation):
+ts
+if (!hasCapability(user, "booking_risk_protection")) {
+  showUpgradeHint("Pro+ protects you from no-shows.");
+}
+❌ Do NOT throw errors ❌ Do NOT block core flows ✅ Just hint or explain --- ## 6️⃣ Instrument Capability Attempts (Future-Proof) Add lightweight logging:
+ts
+logEvent("capability_attempted", {
+  capability: "deposit_enforcement",
+  plan: user.plan ?? "free",
+  is_dev: isDeveloper(user)
+});
+This will later power **perfect upgrade prompts**. --- ## 7️⃣ Guardrails (Must Follow) * ❌ No Stripe integration * ❌ No pricing modals * ❌ No forced upgrades * ❌ No plan-based UI hiding * ✅ Capability-based checks only * ✅ Developer always bypasses restrictions --- ## 8️⃣ Final Validation Checklist * [ ] App runs unchanged for existing users * [ ] Developer account has full access * [ ] Free users see soft hints only * [ ] No hard paywalls exist * [ ] Capability attempts are logged ---
