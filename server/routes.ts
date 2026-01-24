@@ -6885,6 +6885,115 @@ Return ONLY the message text, no JSON or formatting.`
           console.log(`Subscription canceled for user ${userId}`);
           break;
         }
+
+        case "customer.subscription.updated": {
+          const subscription = event.data.object as any;
+          const userId = subscription.metadata?.user_id;
+          const newPlan = subscription.metadata?.plan || "pro_plus";
+          const status = subscription.status;
+          
+          // Skip if no user_id in metadata (not our subscription)
+          if (!userId) {
+            console.log(`[Webhook] Skipping subscription.updated - no user_id in metadata`);
+            break;
+          }
+          
+          const user = await storage.getUser(userId);
+          if (!user) {
+            console.warn(`[Webhook] User ${userId} not found for subscription.updated`);
+            break;
+          }
+          
+          // Verify this subscription belongs to this user
+          if (user.stripeSubscriptionId && user.stripeSubscriptionId !== subscription.id) {
+            console.warn(`[Webhook] Subscription mismatch for user ${userId}: expected ${user.stripeSubscriptionId}, got ${subscription.id}`);
+            break;
+          }
+          
+          let stateChanged = false;
+          
+          // Handle plan changes or status changes
+          if (status === "active" && user.plan !== newPlan) {
+            await storage.updateUser(userId, {
+              plan: newPlan,
+              isPro: true,
+            });
+            stateChanged = true;
+            console.log(`[Webhook] User ${userId} plan updated to ${newPlan}`);
+          } else if (status === "past_due" || status === "unpaid") {
+            // Keep plan active during grace period, but log warning
+            console.warn(`[Webhook] User ${userId} subscription is ${status} - entering grace period`);
+            stateChanged = true;
+            
+            emitCanonicalEvent({
+              eventName: "subscription_payment_issue",
+              userId,
+              context: { 
+                subscriptionId: subscription.id,
+                status,
+              },
+              source: "system",
+            });
+          }
+          
+          // Only emit update event if state actually changed
+          if (stateChanged) {
+            emitCanonicalEvent({
+              eventName: "subscription_updated",
+              userId,
+              context: { 
+                subscriptionId: subscription.id,
+                status,
+                newPlan,
+              },
+              source: "system",
+            });
+          }
+          break;
+        }
+
+        case "invoice.payment_failed": {
+          const invoice = event.data.object as any;
+          const subscriptionId = invoice.subscription;
+          const customerId = invoice.customer;
+          const attemptCount = invoice.attempt_count || 1;
+          
+          // Try to find user by looking up subscription lines metadata
+          // For subscription invoices, the subscription_details will have metadata
+          const userId = invoice.subscription_details?.metadata?.user_id;
+          
+          if (!userId) {
+            // Log for debugging but don't emit event for unknown users
+            console.warn(`[Webhook] Payment failed for subscription ${subscriptionId} - no user_id found`);
+            break;
+          }
+          
+          const user = await storage.getUser(userId);
+          if (!user) {
+            console.warn(`[Webhook] User ${userId} not found for invoice.payment_failed`);
+            break;
+          }
+          
+          console.warn(`[Webhook] Payment failed for user ${userId}, subscription ${subscriptionId}, attempt ${attemptCount}`);
+          
+          emitCanonicalEvent({
+            eventName: "invoice_payment_failed",
+            userId,
+            context: { 
+              subscriptionId,
+              customerId,
+              attemptCount,
+              invoiceId: invoice.id,
+              amountDue: invoice.amount_due,
+              nextPaymentAttempt: invoice.next_payment_attempt,
+            },
+            source: "system",
+          });
+          
+          // Only log for support - don't downgrade until subscription.deleted fires
+          console.log(`[Webhook] Invoice payment failed - Stripe will retry automatically`);
+          break;
+        }
       }
 
       res.json({ received: true });

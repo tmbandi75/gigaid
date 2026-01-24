@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Plan, Capability, PLAN_CAPABILITIES, PLAN_NAMES } from "@shared/plans";
 import { hasCapability, isDeveloper, getUserCapabilities } from "@shared/entitlements";
+import { useOptimisticCapability } from "@/contexts/OptimisticCapabilityContext";
 
 interface UserProfile {
   id: string;
@@ -14,7 +15,12 @@ export function useCapability() {
     queryKey: ["/api/profile"],
   });
   
+  const { hasOptimisticCapability } = useOptimisticCapability();
+  
   const checkCapability = (capability: Capability): boolean => {
+    if (hasOptimisticCapability(capability)) {
+      return true;
+    }
     return hasCapability(user, capability);
   };
   

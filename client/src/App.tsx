@@ -8,6 +8,7 @@ import { VoiceFAB } from "@/components/layout/VoiceFAB";
 import { OnboardingWrapper } from "@/components/onboarding/OnboardingWrapper";
 import { PostHogProvider } from "@/components/PostHogProvider";
 import { DriveModeProvider } from "@/components/drivemode/DriveModeProvider";
+import { OptimisticCapabilityProvider, useOptimisticCapability } from "@/contexts/OptimisticCapabilityContext";
 import { useEffect, useState } from "react";
 import SplashPage from "@/pages/SplashPage";
 
@@ -111,11 +112,15 @@ function ThemeInitializer() {
 }
 
 function SubscriptionHandler() {
+  const { grantOptimisticCapability } = useOptimisticCapability();
+  
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const subscriptionStatus = params.get('subscription');
     
     if (subscriptionStatus === 'success') {
+      grantOptimisticCapability("deposit_enforcement", 15000);
+      
       queryClient.invalidateQueries({ queryKey: ['/api/profile'] });
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       
@@ -123,9 +128,9 @@ function SubscriptionHandler() {
       newUrl.searchParams.delete('subscription');
       window.history.replaceState({}, '', newUrl.toString());
       
-      console.log('[Subscription] Payment successful - profile cache invalidated');
+      console.log('[Subscription] Payment successful - profile cache invalidated, optimistic capability granted');
     }
-  }, []);
+  }, [grantOptimisticCapability]);
   
   return null;
 }
@@ -162,27 +167,29 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <PostHogProvider>
-        <TooltipProvider>
-          <ThemeInitializer />
-          <SubscriptionHandler />
-          <Switch>
-          <Route path="/" component={SplashPage} />
-          <Route path="/welcome" component={SplashPage} />
-          <Route path="/book/:slug" component={PublicBooking} />
-          <Route path="/booking/:token" component={CustomerBookingDetail} />
-          <Route path="/invoice/:token" component={PublicInvoice} />
-          <Route path="/invoice/:id/rate" component={InvoiceRating} />
-          <Route path="/confirm-price/:token" component={ConfirmPrice} />
-          <Route path="/pay-deposit/:token" component={PayDeposit} />
-          <Route path="/crew-portal/:token" component={CrewPortal} />
-          <Route path="/review/:token" component={PublicReview} />
-          <Route path="/qb/:token" component={QuickBookConfirm} />
-          <Route>
-            <SplashRedirect />
-          </Route>
-          </Switch>
-          <Toaster />
-        </TooltipProvider>
+        <OptimisticCapabilityProvider>
+          <TooltipProvider>
+            <ThemeInitializer />
+            <SubscriptionHandler />
+            <Switch>
+            <Route path="/" component={SplashPage} />
+            <Route path="/welcome" component={SplashPage} />
+            <Route path="/book/:slug" component={PublicBooking} />
+            <Route path="/booking/:token" component={CustomerBookingDetail} />
+            <Route path="/invoice/:token" component={PublicInvoice} />
+            <Route path="/invoice/:id/rate" component={InvoiceRating} />
+            <Route path="/confirm-price/:token" component={ConfirmPrice} />
+            <Route path="/pay-deposit/:token" component={PayDeposit} />
+            <Route path="/crew-portal/:token" component={CrewPortal} />
+            <Route path="/review/:token" component={PublicReview} />
+            <Route path="/qb/:token" component={QuickBookConfirm} />
+            <Route>
+              <SplashRedirect />
+            </Route>
+            </Switch>
+            <Toaster />
+          </TooltipProvider>
+        </OptimisticCapabilityProvider>
       </PostHogProvider>
     </QueryClientProvider>
   );
