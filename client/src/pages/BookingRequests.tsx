@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { PageSpinner } from "@/components/ui/spinner";
-import { InlineInfoCard } from "@/components/ui/inline-info-card";
+import { SoftIntercept } from "@/components/ui/soft-intercept";
 import { useCapability } from "@/hooks/useCapability";
 import {
   Dialog,
@@ -122,8 +122,10 @@ export default function BookingRequests() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
   const [remainderNotes, setRemainderNotes] = useState("");
   
-  const { checkCapability } = useCapability();
+  const { checkCapability, checkIsDeveloper } = useCapability();
   const hasRiskProtection = checkCapability("booking_risk_protection");
+  const isDev = checkIsDeveloper();
+  const [dismissedIntercept, setDismissedIntercept] = useState<Set<number>>(new Set());
 
   const { data: bookings, isLoading } = useQuery<BookingRequest[]>({
     queryKey: ["/api/booking-requests"],
@@ -397,13 +399,40 @@ export default function BookingRequests() {
                 </DialogTitle>
               </DialogHeader>
 
-              {selectedBooking.depositAmountCents && selectedBooking.depositAmountCents > 0 && !hasRiskProtection && (
-                <InlineInfoCard
+              {selectedBooking.depositAmountCents && selectedBooking.depositAmountCents > 0 && 
+               !hasRiskProtection && !isDev && !dismissedIntercept.has(selectedBooking.id) && (
+                <SoftIntercept
                   title="This booking looks riskier than usual"
-                  description="Pro+ automatically enforces deposits and protects you from no-shows."
-                  actionLabel="Learn about Pro+"
-                  onAction={() => navigate("/settings/plans")}
-                  data-testid="card-risk-protection-nudge"
+                  description="Pro+ can automatically enforce a deposit and protect you from no-shows and late cancellations."
+                  primaryActionLabel="Protect this job with Pro+"
+                  secondaryActionLabel="Continue without protection"
+                  onPrimary={() => {
+                    console.log("[capability_attempted]", {
+                      capability: "booking_risk_protection",
+                      context: {
+                        booking_id: selectedBooking.id,
+                        source: "soft_intercept"
+                      },
+                      timestamp: new Date().toISOString()
+                    });
+                    navigate("/settings/plans");
+                  }}
+                  onSecondary={() => {
+                    console.log("[capability_attempted]", {
+                      capability: "booking_risk_protection",
+                      context: {
+                        booking_id: selectedBooking.id,
+                        action: "dismissed_soft_intercept"
+                      },
+                      timestamp: new Date().toISOString()
+                    });
+                    setDismissedIntercept(prev => {
+                      const newSet = new Set(prev);
+                      newSet.add(selectedBooking.id);
+                      return newSet;
+                    });
+                  }}
+                  data-testid="card-risk-protection-intercept"
                 />
               )}
 
