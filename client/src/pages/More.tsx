@@ -285,10 +285,14 @@ export default function More() {
 
         <Card className="border-0 shadow-md border-destructive/10 overflow-hidden">
           <CardContent className="p-0">
-            <a 
-              href="/api/logout"
+            <div 
+              onClick={() => {
+                window.location.href = '/api/logout';
+              }}
               className="flex items-center justify-between p-4 hover-elevate cursor-pointer"
               data-testid="menu-logout"
+              role="button"
+              tabIndex={0}
             >
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-destructive/10 flex items-center justify-center">
@@ -299,7 +303,7 @@ export default function More() {
                   <p className="text-xs text-muted-foreground">Sign out of your account</p>
                 </div>
               </div>
-            </a>
+            </div>
           </CardContent>
         </Card>
 
