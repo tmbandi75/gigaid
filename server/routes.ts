@@ -1432,12 +1432,15 @@ export async function registerRoutes(
 
   app.post("/api/leads", isAuthenticated, async (req, res) => {
     try {
-      // Auto-add userId if not provided
-      const dataWithUser = {
-        ...req.body,
-        userId: req.body.userId || (req as any).userId,
-      };
-      const validated = insertLeadSchema.parse(dataWithUser);
+      // Get authenticated user ID
+      const authUserId = getAuthenticatedUserId(req);
+      if (!authUserId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      // Always use authenticated user ID
+      const { userId: _userId, ...leadData } = req.body;
+      const validated = insertLeadSchema.parse({ ...leadData, userId: authUserId });
       const lead = await storage.createLead(validated);
       
       emitCanonicalEvent({
