@@ -10,7 +10,9 @@ import { PostHogProvider } from "@/components/PostHogProvider";
 import { DriveModeProvider } from "@/components/drivemode/DriveModeProvider";
 import { OptimisticCapabilityProvider, useOptimisticCapability } from "@/contexts/OptimisticCapabilityContext";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
 import SplashPage from "@/pages/SplashPage";
+import LandingPage from "@/pages/LandingPage";
 
 import TodaysGamePlanPage from "@/pages/TodaysGamePlanPage";
 import Dashboard from "@/pages/Dashboard";
@@ -135,22 +137,42 @@ function SubscriptionHandler() {
   return null;
 }
 
-function SplashRedirect() {
-  const [, setLocation] = useLocation();
-  const [checked, setChecked] = useState(false);
+function AuthenticatedApp() {
+  const [location, setLocation] = useLocation();
+  const { isAuthenticated, isLoading } = useAuth();
   
   useEffect(() => {
-    const splashSeen = localStorage.getItem('gigaid_splash_seen');
-    if (!splashSeen) {
-      setLocation('/welcome');
+    // Redirect authenticated users from "/" or "/welcome" 
+    if (isAuthenticated && !isLoading) {
+      if (location === "/" || location === "/welcome") {
+        const splashSeen = localStorage.getItem('gigaid_splash_seen');
+        if (splashSeen) {
+          setLocation('/dashboard');
+        }
+      }
     }
-    setChecked(true);
-  }, [setLocation]);
+  }, [isAuthenticated, isLoading, location, setLocation]);
   
-  if (!checked) {
-    return null;
+  // Show loading state while checking auth
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
   }
   
+  // Show landing page for unauthenticated users
+  if (!isAuthenticated) {
+    return <LandingPage />;
+  }
+  
+  // Handle "/" and "/welcome" routes for authenticated users
+  if (location === "/" || location === "/welcome") {
+    return <SplashPage />;
+  }
+  
+  // Show app for authenticated users
   return (
     <DriveModeProvider>
       <OnboardingWrapper>
@@ -172,8 +194,6 @@ function App() {
             <ThemeInitializer />
             <SubscriptionHandler />
             <Switch>
-            <Route path="/" component={SplashPage} />
-            <Route path="/welcome" component={SplashPage} />
             <Route path="/book/:slug" component={PublicBooking} />
             <Route path="/booking/:token" component={CustomerBookingDetail} />
             <Route path="/invoice/:token" component={PublicInvoice} />
@@ -184,7 +204,7 @@ function App() {
             <Route path="/review/:token" component={PublicReview} />
             <Route path="/qb/:token" component={QuickBookConfirm} />
             <Route>
-              <SplashRedirect />
+              <AuthenticatedApp />
             </Route>
             </Switch>
             <Toaster />

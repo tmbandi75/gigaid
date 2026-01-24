@@ -4,6 +4,7 @@ import crypto, { randomUUID } from "crypto";
 import path from "path";
 import fs from "fs";
 import { storage } from "./storage";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { 
   insertJobSchema, 
   insertLeadSchema, 
@@ -64,7 +65,9 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  const defaultUserId = "demo-user";
+  // Setup authentication FIRST before any other routes
+  await setupAuth(app);
+  registerAuthRoutes(app);
 
   registerObjectStorageRoutes(app);
   
@@ -73,6 +76,22 @@ export async function registerRoutes(
   app.use("/api", leadEmailRoutes);
   
   startCopilotScheduler();
+  
+  // Helper function to get authenticated user ID from request
+  function getAuthenticatedUserId(req: Request): string | null {
+    const user = req.user as any;
+    return user?.claims?.sub || null;
+  }
+  
+  // Middleware to require authentication and set userId
+  const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+    const userId = getAuthenticatedUserId(req);
+    if (!userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+    (req as any).userId = userId;
+    next();
+  };
 
   // Offline sync endpoints
   app.post("/api/offline/assets", async (req, res) => {
@@ -139,12 +158,12 @@ export async function registerRoutes(
     });
   });
 
-  app.get("/api/profile", async (req, res) => {
+  app.get("/api/profile", isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser(defaultUserId);
+      const user = await storage.getUser((req as any).userId);
       if (!user) {
         return res.json({
-          id: defaultUserId,
+          id: (req as any).userId,
           name: "Gig Worker",
           email: "gig@example.com",
           phone: null,
@@ -176,10 +195,10 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/profile", async (req, res) => {
+  app.patch("/api/profile", isAuthenticated, async (req, res) => {
     try {
       const { name, email, phone, photo, businessName, bio, serviceArea } = req.body;
-      let user = await storage.getUser(defaultUserId);
+      let user = await storage.getUser((req as any).userId);
       
       if (!user) {
         user = await storage.createUser({
@@ -205,10 +224,10 @@ export async function registerRoutes(
       if (bio !== undefined) updates.bio = bio;
       if (serviceArea !== undefined) updates.serviceArea = serviceArea;
       
-      const updatedUser = await storage.updateUser(defaultUserId, updates);
+      const updatedUser = await storage.updateUser((req as any).userId, updates);
       
       res.json({
-        id: updatedUser?.id || defaultUserId,
+        id: updatedUser?.id || (req as any).userId,
         name: updatedUser?.name || name,
         email: updatedUser?.email || email,
         phone: updatedUser?.phone || phone,
@@ -229,16 +248,16 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/dashboard/summary", async (req, res) => {
+  app.get("/api/dashboard/summary", isAuthenticated, async (req, res) => {
     try {
-      const summary = await storage.getDashboardSummary(defaultUserId);
+      const summary = await storage.getDashboardSummary((req as any).userId);
       res.json(summary);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch dashboard summary" });
     }
   });
 
-  app.get("/api/dashboard/game-plan", async (req, res) => {
+  app.get("/api/dashboard/game-plan", isAuthenticated, async (req, res) => {
     try {
       const now = new Date();
       const today = now.toISOString().split("T")[0];
@@ -247,10 +266,10 @@ export async function registerRoutes(
       const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
       const [jobs, leads, invoices, reminders] = await Promise.all([
-        storage.getJobs(defaultUserId),
-        storage.getLeads(defaultUserId),
-        storage.getInvoices(defaultUserId),
-        storage.getReminders(defaultUserId),
+        storage.getJobs((req as any).userId),
+        storage.getLeads((req as any).userId),
+        storage.getInvoices((req as any).userId),
+        storage.getReminders((req as any).userId),
       ]);
 
       interface ActionItem {
@@ -440,9 +459,9 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/owner/metrics", async (req, res) => {
+  app.get("/api/owner/metrics", isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser(defaultUserId);
+      const user = await storage.getUser((req as any).userId);
       const isPro = user?.isPro ?? true; // Owner View now available to all users
 
       const now = new Date();
@@ -451,9 +470,9 @@ export async function registerRoutes(
       const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-      const jobs = await storage.getJobs(defaultUserId);
-      const leads = await storage.getLeads(defaultUserId);
-      const invoices = await storage.getInvoices(defaultUserId);
+      const jobs = await storage.getJobs((req as any).userId);
+      const leads = await storage.getLeads((req as any).userId);
+      const invoices = await storage.getInvoices((req as any).userId);
 
       const completedJobsThisWeek = jobs.filter(job => {
         if (job.status !== "completed") return false;
@@ -537,7 +556,7 @@ export async function registerRoutes(
       }).length;
 
       // Calculate total deposits collected this week from job payments
-      const jobPayments = await storage.getJobPayments(defaultUserId);
+      const jobPayments = await storage.getJobPayments((req as any).userId);
       const depositPaymentsThisWeek = jobPayments.filter(payment => {
         if (!payment.notes) return false;
         try {
@@ -572,9 +591,9 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/jobs", async (req, res) => {
+  app.get("/api/jobs", isAuthenticated, async (req, res) => {
     try {
-      const jobs = await storage.getJobs(defaultUserId);
+      const jobs = await storage.getJobs((req as any).userId);
       res.json(jobs);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch jobs" });
@@ -582,11 +601,11 @@ export async function registerRoutes(
   });
 
   // Get job usage info for progressive warnings
-  app.get("/api/jobs/usage", async (req, res) => {
+  app.get("/api/jobs/usage", isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser(defaultUserId);
+      const user = await storage.getUser((req as any).userId);
       const userPlan = (user?.plan as Plan) || Plan.FREE;
-      const jobs = await storage.getJobs(defaultUserId);
+      const jobs = await storage.getJobs((req as any).userId);
       const totalJobCount = jobs.length;
       const limit = PLAN_LIMITS[userPlan].maxJobs;
       
@@ -606,9 +625,9 @@ export async function registerRoutes(
   });
 
   // Drive Mode: Get today's jobs
-  app.get("/api/jobs/today", async (req, res) => {
+  app.get("/api/jobs/today", isAuthenticated, async (req, res) => {
     try {
-      const jobs = await storage.getJobs(defaultUserId);
+      const jobs = await storage.getJobs((req as any).userId);
       const today = new Date().toISOString().split('T')[0];
       const todayJobs = jobs.filter(job => {
         const jobDate = job.scheduledDate?.split('T')[0];
@@ -637,7 +656,7 @@ export async function registerRoutes(
   });
 
   // Drive Mode: Add note to job
-  app.post("/api/jobs/:id/notes", async (req, res) => {
+  app.post("/api/jobs/:id/notes", isAuthenticated, async (req, res) => {
     try {
       const job = await storage.getJob(req.params.id);
       if (!job) {
@@ -658,7 +677,7 @@ export async function registerRoutes(
   });
 
   // Drive Mode: Update job status
-  app.patch("/api/jobs/:id/status", async (req, res) => {
+  app.patch("/api/jobs/:id/status", isAuthenticated, async (req, res) => {
     try {
       const job = await storage.getJob(req.params.id);
       if (!job) {
@@ -680,7 +699,7 @@ export async function registerRoutes(
   });
 
   // Drive Mode: Save voice note to job
-  app.post("/api/jobs/:id/voice-notes", async (req, res) => {
+  app.post("/api/jobs/:id/voice-notes", isAuthenticated, async (req, res) => {
     try {
       const job = await storage.getJob(req.params.id);
       if (!job) {
@@ -700,7 +719,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/jobs/:id", async (req, res) => {
+  app.get("/api/jobs/:id", isAuthenticated, async (req, res) => {
     try {
       const job = await storage.getJob(req.params.id);
       if (!job) {
@@ -712,7 +731,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/jobs", async (req, res) => {
+  app.post("/api/jobs", isAuthenticated, async (req, res) => {
     try {
       // Extract leadId from body (not part of job schema)
       const { leadId, ...jobData } = req.body;
@@ -782,7 +801,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/jobs/:id", async (req, res) => {
+  app.patch("/api/jobs/:id", isAuthenticated, async (req, res) => {
     try {
       const existingJob = await storage.getJob(req.params.id);
       if (!existingJob) {
@@ -1261,8 +1280,7 @@ export async function registerRoutes(
 
   app.get("/api/public/confirm/:token", async (req, res) => {
     try {
-      const jobs = await storage.getJobs(defaultUserId);
-      const job = jobs.find(j => j.clientConfirmToken === req.params.token);
+      const job = await storage.getJobByConfirmToken(req.params.token);
       
       if (!job) {
         return res.status(404).json({ error: "Confirmation not found or expired" });
@@ -1297,7 +1315,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/jobs/:id/photos", async (req, res) => {
+  app.post("/api/jobs/:id/photos", isAuthenticated, async (req, res) => {
     try {
       const job = await storage.getJob(req.params.id);
       if (!job) {
@@ -1370,7 +1388,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/jobs/:id", async (req, res) => {
+  app.delete("/api/jobs/:id", isAuthenticated, async (req, res) => {
     try {
       const deleted = await storage.deleteJob(req.params.id);
       if (!deleted) {
@@ -1382,16 +1400,16 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/leads", async (req, res) => {
+  app.get("/api/leads", isAuthenticated, async (req, res) => {
     try {
-      const leads = await storage.getLeads(defaultUserId);
+      const leads = await storage.getLeads((req as any).userId);
       res.json(leads);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch leads" });
     }
   });
 
-  app.get("/api/leads/:id", async (req, res) => {
+  app.get("/api/leads/:id", isAuthenticated, async (req, res) => {
     try {
       const lead = await storage.getLead(req.params.id);
       if (!lead) {
@@ -1403,12 +1421,12 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/leads", async (req, res) => {
+  app.post("/api/leads", isAuthenticated, async (req, res) => {
     try {
       // Auto-add userId if not provided
       const dataWithUser = {
         ...req.body,
-        userId: req.body.userId || defaultUserId,
+        userId: req.body.userId || (req as any).userId,
       };
       const validated = insertLeadSchema.parse(dataWithUser);
       const lead = await storage.createLead(validated);
@@ -1429,7 +1447,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/leads/:id", async (req, res) => {
+  app.patch("/api/leads/:id", isAuthenticated, async (req, res) => {
     try {
       const existingLead = await storage.getLead(req.params.id);
       const updates = insertLeadSchema.partial().parse(req.body);
@@ -1497,7 +1515,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/leads/:id", async (req, res) => {
+  app.delete("/api/leads/:id", isAuthenticated, async (req, res) => {
     try {
       const deleted = await storage.deleteLead(req.params.id);
       if (!deleted) {
@@ -1510,7 +1528,7 @@ export async function registerRoutes(
   });
 
   // Convert lead to job
-  app.post("/api/leads/:id/convert", async (req, res) => {
+  app.post("/api/leads/:id/convert", isAuthenticated, async (req, res) => {
     try {
       const lead = await storage.getLead(req.params.id);
       if (!lead) {
@@ -1579,9 +1597,9 @@ export async function registerRoutes(
   });
 
   // Get leads needing follow-up check (24h since response copied)
-  app.get("/api/leads/follow-up-needed", async (req, res) => {
+  app.get("/api/leads/follow-up-needed", isAuthenticated, async (req, res) => {
     try {
-      const leads = await storage.getLeads(defaultUserId);
+      const leads = await storage.getLeads((req as any).userId);
       const now = new Date().getTime();
       const twentyFourHours = 24 * 60 * 60 * 1000;
       
@@ -1606,7 +1624,7 @@ export async function registerRoutes(
   });
 
   // Update follow-up status (user answers "Did they reply?")
-  app.post("/api/leads/:id/follow-up-response", async (req, res) => {
+  app.post("/api/leads/:id/follow-up-response", isAuthenticated, async (req, res) => {
     try {
       const { response } = req.body; // "replied", "waiting", "no_response"
       const lead = await storage.getLead(req.params.id);
@@ -1640,16 +1658,16 @@ export async function registerRoutes(
   });
 
   // Price Confirmations - lightweight price agreements
-  app.get("/api/price-confirmations", async (req, res) => {
+  app.get("/api/price-confirmations", isAuthenticated, async (req, res) => {
     try {
-      const confirmations = await storage.getPriceConfirmationsByUser(defaultUserId);
+      const confirmations = await storage.getPriceConfirmationsByUser((req as any).userId);
       res.json(confirmations);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch price confirmations" });
     }
   });
 
-  app.get("/api/price-confirmations/:id", async (req, res) => {
+  app.get("/api/price-confirmations/:id", isAuthenticated, async (req, res) => {
     try {
       const confirmation = await storage.getPriceConfirmation(req.params.id);
       if (!confirmation) {
@@ -1661,7 +1679,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/leads/:leadId/price-confirmations", async (req, res) => {
+  app.get("/api/leads/:leadId/price-confirmations", isAuthenticated, async (req, res) => {
     try {
       const confirmations = await storage.getPriceConfirmationsByLead(req.params.leadId);
       res.json(confirmations);
@@ -1670,7 +1688,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/leads/:leadId/active-price-confirmation", async (req, res) => {
+  app.get("/api/leads/:leadId/active-price-confirmation", isAuthenticated, async (req, res) => {
     try {
       const confirmation = await storage.getActivePriceConfirmationForLead(req.params.leadId);
       res.json(confirmation || null);
@@ -1710,7 +1728,7 @@ export async function registerRoutes(
       
       const confirmation = await storage.createPriceConfirmation({
         leadId,
-        userId: defaultUserId,
+        userId: (req as any).userId,
         serviceType: serviceType || lead.serviceType,
         agreedPrice: priceValue,
         notes: notes || null,
@@ -1727,7 +1745,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/price-confirmations/:id", async (req, res) => {
+  app.patch("/api/price-confirmations/:id", isAuthenticated, async (req, res) => {
     try {
       const { serviceType, agreedPrice, notes } = req.body;
       const updates: Record<string, any> = {};
@@ -1746,7 +1764,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/price-confirmations/:id", async (req, res) => {
+  app.delete("/api/price-confirmations/:id", isAuthenticated, async (req, res) => {
     try {
       const deleted = await storage.deletePriceConfirmation(req.params.id);
       if (!deleted) {
@@ -1759,7 +1777,7 @@ export async function registerRoutes(
   });
 
   // Send price confirmation to client
-  app.post("/api/price-confirmations/:id/send", async (req, res) => {
+  app.post("/api/price-confirmations/:id/send", isAuthenticated, async (req, res) => {
     try {
       const confirmation = await storage.getPriceConfirmation(req.params.id);
       if (!confirmation) {
@@ -1772,7 +1790,7 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Lead not found" });
       }
       
-      const provider = await storage.getUser(defaultUserId);
+      const provider = await storage.getUser((req as any).userId);
       const baseUrl = process.env.FRONTEND_URL || "https://account.gigaid.ai";
       const confirmationUrl = `${baseUrl}/confirm-price/${confirmation.confirmationToken}`;
       
@@ -2109,16 +2127,16 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/invoices", async (req, res) => {
+  app.get("/api/invoices", isAuthenticated, async (req, res) => {
     try {
-      const invoices = await storage.getInvoices(defaultUserId);
+      const invoices = await storage.getInvoices((req as any).userId);
       res.json(invoices);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch invoices" });
     }
   });
 
-  app.get("/api/invoices/:id", async (req, res) => {
+  app.get("/api/invoices/:id", isAuthenticated, async (req, res) => {
     try {
       const invoice = await storage.getInvoice(req.params.id);
       if (!invoice) {
@@ -2188,7 +2206,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/invoices", async (req, res) => {
+  app.post("/api/invoices", isAuthenticated, async (req, res) => {
     try {
       const validated = insertInvoiceSchema.parse(req.body);
       const invoice = await storage.createInvoice(validated);
@@ -2484,10 +2502,10 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/ai/schedule-suggestions", async (req, res) => {
+  app.post("/api/ai/schedule-suggestions", isAuthenticated, async (req, res) => {
     try {
       const validated = scheduleSuggestionsSchema.parse(req.body);
-      const jobs = await storage.getJobs(defaultUserId);
+      const jobs = await storage.getJobs((req as any).userId);
       const suggestions = await suggestScheduleSlots(
         jobs,
         validated.duration,
@@ -2503,7 +2521,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/ai/follow-up", async (req, res) => {
+  app.post("/api/ai/follow-up", isAuthenticated, async (req, res) => {
     try {
       const validated = followUpSchema.parse(req.body);
       const followUp = await generateFollowUp({
@@ -2524,7 +2542,7 @@ export async function registerRoutes(
   });
 
   // SMS Send Endpoint - logs outgoing messages to database
-  app.post("/api/sms/send", async (req, res) => {
+  app.post("/api/sms/send", isAuthenticated, async (req, res) => {
     try {
       const { to, message, clientName, relatedJobId, relatedLeadId } = req.body;
       if (!to || !message) {
@@ -2532,7 +2550,7 @@ export async function registerRoutes(
       }
       
       // Check if user can send outbound SMS
-      const user = await storage.getUser(defaultUserId);
+      const user = await storage.getUser((req as any).userId);
       const userPlan = (user?.plan as Plan) || Plan.FREE;
       
       // Developer bypass
@@ -2549,7 +2567,7 @@ export async function registerRoutes(
       if (success) {
         // Log the outgoing message to the database
         await storage.createSmsMessage({
-          userId: defaultUserId,
+          userId: (req as any).userId,
           clientPhone: to,
           clientName: clientName || null,
           direction: "outbound",
@@ -2617,51 +2635,11 @@ export async function registerRoutes(
           console.error("[IntentDetection] Failed to detect SMS intent:", err);
         }
       } else {
-        // No previous conversation found - try to identify sender from jobs/leads/invoices
-        console.log(`[SMS Webhook] No previous conversation found for ${From}, attempting to identify sender...`);
-        
-        // Use efficient phone lookup to find client info
-        const clientInfo = await storage.findClientByPhone(defaultUserId, From);
-        
-        if (clientInfo) {
-          console.log(`[SMS Webhook] Matched to client: ${clientInfo.clientName}`);
-        }
-        
-        // Store the message with whatever info we found
-        await storage.createSmsMessage({
-          userId: defaultUserId,
-          clientPhone: From,
-          clientName: clientInfo?.clientName || "Unknown Sender",
-          direction: "inbound",
-          body: Body,
-          twilioSid: MessageSid,
-          relatedJobId: clientInfo?.relatedJobId || null,
-          relatedLeadId: clientInfo?.relatedLeadId || null,
-          isRead: false,
-        });
-        console.log(`[SMS Webhook] Incoming from ${From} (${clientInfo?.clientName || 'Unknown'}) stored for default user`);
-        
-        // Intent detection: check message for time/price cues
-        if (clientInfo?.relatedLeadId || clientInfo?.relatedJobId) {
-          try {
-            const { detectIntentFromInboundMessage, generateReadyActionFromSignal } = await import("./intentDetectionEngine");
-            const entityType = clientInfo.relatedLeadId ? "lead" : "job";
-            const entityId = clientInfo.relatedLeadId || clientInfo.relatedJobId!;
-            
-            const signal = await detectIntentFromInboundMessage(
-              defaultUserId,
-              entityType,
-              entityId,
-              Body
-            );
-            if (signal) {
-              await generateReadyActionFromSignal(signal);
-              console.log(`[IntentDetection] Created ready action from SMS intent: ${signal.signalType}`);
-            }
-          } catch (err) {
-            console.error("[IntentDetection] Failed to detect SMS intent:", err);
-          }
-        }
+        // No previous conversation found - cannot route message without knowing the provider
+        // TODO: Implement Twilio number lookup to determine which provider owns this number
+        console.log(`[SMS Webhook] No previous conversation found for ${From} - cannot route without prior context`);
+        console.log(`[SMS Webhook] Message from unknown sender: ${Body.substring(0, 50)}...`);
+        // Do not store the message since we don't know which provider it belongs to
       }
 
       // Respond to Twilio with empty TwiML to acknowledge receipt
@@ -2674,9 +2652,9 @@ export async function registerRoutes(
   });
 
   // SMS Inbox Endpoints
-  app.get("/api/sms/messages", async (req, res) => {
+  app.get("/api/sms/messages", isAuthenticated, async (req, res) => {
     try {
-      const messages = await storage.getSmsMessages(defaultUserId);
+      const messages = await storage.getSmsMessages((req as any).userId);
       res.json(messages);
     } catch (error) {
       console.error("SMS messages fetch error:", error);
@@ -2684,9 +2662,9 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/sms/conversations", async (req, res) => {
+  app.get("/api/sms/conversations", isAuthenticated, async (req, res) => {
     try {
-      const messages = await storage.getSmsMessages(defaultUserId);
+      const messages = await storage.getSmsMessages((req as any).userId);
       
       // Group by client phone and get latest message per conversation
       const conversationsMap = new Map<string, {
@@ -2731,13 +2709,13 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/sms/conversation/:phone", async (req, res) => {
+  app.get("/api/sms/conversation/:phone", isAuthenticated, async (req, res) => {
     try {
       const { phone } = req.params;
-      const messages = await storage.getSmsMessagesByPhone(defaultUserId, phone);
+      const messages = await storage.getSmsMessagesByPhone((req as any).userId, phone);
       
       // Mark messages as read
-      await storage.markSmsMessagesAsRead(defaultUserId, phone);
+      await storage.markSmsMessagesAsRead((req as any).userId, phone);
       
       res.json(messages);
     } catch (error) {
@@ -2746,9 +2724,9 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/sms/unread-count", async (req, res) => {
+  app.get("/api/sms/unread-count", isAuthenticated, async (req, res) => {
     try {
-      const count = await storage.getUnreadSmsCount(defaultUserId);
+      const count = await storage.getUnreadSmsCount((req as any).userId);
       res.json({ count });
     } catch (error) {
       console.error("Unread count fetch error:", error);
@@ -2756,7 +2734,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/leads/:id/sms-messages", async (req, res) => {
+  app.get("/api/leads/:id/sms-messages", isAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
       const lead = await storage.getLead(id);
@@ -2767,7 +2745,7 @@ export async function registerRoutes(
         return res.json([]);
       }
       const normalizedPhone = lead.clientPhone.replace(/\D/g, '');
-      const messages = await storage.getSmsMessagesByPhone(defaultUserId, normalizedPhone);
+      const messages = await storage.getSmsMessagesByPhone((req as any).userId, normalizedPhone);
       const leadMessages = messages.filter(msg => 
         msg.relatedLeadId === id || 
         msg.clientPhone.replace(/\D/g, '') === normalizedPhone
@@ -2780,16 +2758,16 @@ export async function registerRoutes(
   });
 
   // Reminders Endpoints
-  app.get("/api/reminders", async (req, res) => {
+  app.get("/api/reminders", isAuthenticated, async (req, res) => {
     try {
-      const reminders = await storage.getReminders(defaultUserId);
+      const reminders = await storage.getReminders((req as any).userId);
       res.json(reminders);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch reminders" });
     }
   });
 
-  app.get("/api/reminders/:id", async (req, res) => {
+  app.get("/api/reminders/:id", isAuthenticated, async (req, res) => {
     try {
       const reminder = await storage.getReminder(req.params.id);
       if (!reminder) {
@@ -2801,11 +2779,11 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/reminders", async (req, res) => {
+  app.post("/api/reminders", isAuthenticated, async (req, res) => {
     try {
       const validated = insertReminderSchema.parse({
         ...req.body,
-        userId: defaultUserId,
+        userId: (req as any).userId,
       });
       const reminder = await storage.createReminder(validated);
       res.status(201).json(reminder);
@@ -2817,7 +2795,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/reminders/:id", async (req, res) => {
+  app.patch("/api/reminders/:id", isAuthenticated, async (req, res) => {
     try {
       const reminder = await storage.updateReminder(req.params.id, req.body);
       if (!reminder) {
@@ -2829,7 +2807,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/reminders/:id", async (req, res) => {
+  app.delete("/api/reminders/:id", isAuthenticated, async (req, res) => {
     try {
       const deleted = await storage.deleteReminder(req.params.id);
       if (!deleted) {
@@ -2842,20 +2820,20 @@ export async function registerRoutes(
   });
 
   // Crew Members Endpoints
-  app.get("/api/crew", async (req, res) => {
+  app.get("/api/crew", isAuthenticated, async (req, res) => {
     try {
-      const crew = await storage.getCrewMembers(defaultUserId);
+      const crew = await storage.getCrewMembers((req as any).userId);
       res.json(crew);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch crew members" });
     }
   });
 
-  app.post("/api/crew", async (req, res) => {
+  app.post("/api/crew", isAuthenticated, async (req, res) => {
     try {
       const validated = insertCrewMemberSchema.parse({
         ...req.body,
-        userId: defaultUserId,
+        userId: (req as any).userId,
       });
       const member = await storage.createCrewMember(validated);
       res.status(201).json(member);
@@ -2867,7 +2845,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/crew/:id", async (req, res) => {
+  app.patch("/api/crew/:id", isAuthenticated, async (req, res) => {
     try {
       const member = await storage.updateCrewMember(req.params.id, req.body);
       if (!member) {
@@ -2879,7 +2857,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/crew/:id", async (req, res) => {
+  app.delete("/api/crew/:id", isAuthenticated, async (req, res) => {
     try {
       const deleted = await storage.deleteCrewMember(req.params.id);
       if (!deleted) {
@@ -2892,9 +2870,9 @@ export async function registerRoutes(
   });
 
   // Get all invites for a specific crew member
-  app.get("/api/crew/:crewMemberId/invites", async (req, res) => {
+  app.get("/api/crew/:crewMemberId/invites", isAuthenticated, async (req, res) => {
     try {
-      const allInvites = await storage.getCrewInvites(defaultUserId);
+      const allInvites = await storage.getCrewInvites((req as any).userId);
       const memberInvites = allInvites.filter(
         (inv: any) => String(inv.crewMemberId) === req.params.crewMemberId
       );
@@ -2925,9 +2903,9 @@ export async function registerRoutes(
   };
 
   // Get all crew invites for a user
-  app.get("/api/crew-invites", async (req, res) => {
+  app.get("/api/crew-invites", isAuthenticated, async (req, res) => {
     try {
-      const invites = await storage.getCrewInvites(defaultUserId);
+      const invites = await storage.getCrewInvites((req as any).userId);
       res.json(invites);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch crew invites" });
@@ -2935,7 +2913,7 @@ export async function registerRoutes(
   });
 
   // Get crew invites for a specific job
-  app.get("/api/jobs/:jobId/crew-invites", async (req, res) => {
+  app.get("/api/jobs/:jobId/crew-invites", isAuthenticated, async (req, res) => {
     try {
       const invites = await storage.getCrewInvitesByJob(req.params.jobId);
       res.json(invites);
@@ -2945,7 +2923,7 @@ export async function registerRoutes(
   });
 
   // Create a new crew invite and optionally send notifications
-  app.post("/api/crew-invites", async (req, res) => {
+  app.post("/api/crew-invites", isAuthenticated, async (req, res) => {
     try {
       const { crewMemberId, jobId, sendSms, sendEmailNotification, expiryHours = 48 } = req.body;
 
@@ -2966,7 +2944,7 @@ export async function registerRoutes(
       const expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000).toISOString();
 
       const invite = await storage.createCrewInvite({
-        userId: defaultUserId,
+        userId: (req as any).userId,
         crewMemberId,
         jobId,
         token,
@@ -2992,7 +2970,7 @@ export async function registerRoutes(
       }
 
       // Get owner info
-      const owner = await storage.getUser(defaultUserId);
+      const owner = await storage.getUser((req as any).userId);
       const ownerName = owner?.name || owner?.businessName || "Your Team Lead";
 
       // Send SMS if requested
@@ -3306,10 +3284,10 @@ export async function registerRoutes(
   });
 
   // Revoke a crew invite (owner only)
-  app.post("/api/crew-invites/:id/revoke", async (req, res) => {
+  app.post("/api/crew-invites/:id/revoke", isAuthenticated, async (req, res) => {
     try {
       const invite = await storage.getCrewInvite(req.params.id);
-      if (!invite || invite.userId !== defaultUserId) {
+      if (!invite || invite.userId !== (req as any).userId) {
         return res.status(404).json({ error: "Invite not found" });
       }
 
@@ -3325,11 +3303,11 @@ export async function registerRoutes(
   });
 
   // Resend invite notification
-  app.post("/api/crew-invites/:id/resend", async (req, res) => {
+  app.post("/api/crew-invites/:id/resend", isAuthenticated, async (req, res) => {
     try {
       const { sendSms: sendSmsNotification, sendEmailNotification } = req.body;
       const invite = await storage.getCrewInvite(req.params.id);
-      if (!invite || invite.userId !== defaultUserId) {
+      if (!invite || invite.userId !== (req as any).userId) {
         return res.status(404).json({ error: "Invite not found" });
       }
 
@@ -3406,7 +3384,7 @@ export async function registerRoutes(
   });
 
   // Get crew messages for a job
-  app.get("/api/jobs/:jobId/crew-messages", async (req, res) => {
+  app.get("/api/jobs/:jobId/crew-messages", isAuthenticated, async (req, res) => {
     try {
       const messages = await storage.getCrewMessages(req.params.jobId);
       res.json(messages);
@@ -3416,7 +3394,7 @@ export async function registerRoutes(
   });
 
   // Send message from owner to crew
-  app.post("/api/jobs/:jobId/crew-messages", async (req, res) => {
+  app.post("/api/jobs/:jobId/crew-messages", isAuthenticated, async (req, res) => {
     try {
       const { crewMemberId, message } = req.body;
       if (!message || message.trim().length === 0) {
@@ -3424,7 +3402,7 @@ export async function registerRoutes(
       }
 
       const newMessage = await storage.createCrewMessage({
-        userId: defaultUserId,
+        userId: (req as any).userId,
         jobId: req.params.jobId,
         crewMemberId,
         message: message.trim(),
@@ -3434,7 +3412,7 @@ export async function registerRoutes(
       // Notify crew member
       const crewMember = await storage.getCrewMember(crewMemberId);
       const job = await storage.getJob(req.params.jobId);
-      const owner = await storage.getUser(defaultUserId);
+      const owner = await storage.getUser((req as any).userId);
 
       if (crewMember?.phone) {
         try {
@@ -3464,10 +3442,10 @@ export async function registerRoutes(
   });
 
   // Referrals Endpoints
-  app.get("/api/referrals", async (req, res) => {
+  app.get("/api/referrals", isAuthenticated, async (req, res) => {
     try {
-      const referrals = await storage.getReferrals(defaultUserId);
-      const user = await storage.getUser(defaultUserId);
+      const referrals = await storage.getReferrals((req as any).userId);
+      const user = await storage.getUser((req as any).userId);
       res.json({
         referralCode: user?.referralCode || "",
         referrals,
@@ -3478,11 +3456,11 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/referrals", async (req, res) => {
+  app.post("/api/referrals", isAuthenticated, async (req, res) => {
     try {
       const { email, phone } = req.body;
       const referral = await storage.createReferral({
-        referrerId: defaultUserId,
+        referrerId: (req as any).userId,
         referredEmail: email || null,
         referredPhone: phone || null,
         referredUserId: null,
@@ -3493,10 +3471,10 @@ export async function registerRoutes(
     }
   });
 
-  // Booking Requests (Public)
-  app.get("/api/booking-requests", async (req, res) => {
+  // Booking Requests
+  app.get("/api/booking-requests", isAuthenticated, async (req, res) => {
     try {
-      const requests = await storage.getBookingRequests(defaultUserId);
+      const requests = await storage.getBookingRequests((req as any).userId);
       res.json(requests);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch booking requests" });
@@ -3748,20 +3726,20 @@ export async function registerRoutes(
   });
 
   // Voice Notes Endpoints
-  app.get("/api/voice-notes", async (req, res) => {
+  app.get("/api/voice-notes", isAuthenticated, async (req, res) => {
     try {
-      const notes = await storage.getVoiceNotes(defaultUserId);
+      const notes = await storage.getVoiceNotes((req as any).userId);
       res.json(notes);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch voice notes" });
     }
   });
 
-  app.post("/api/voice-notes", async (req, res) => {
+  app.post("/api/voice-notes", isAuthenticated, async (req, res) => {
     try {
       const validated = insertVoiceNoteSchema.parse({
         ...req.body,
-        userId: defaultUserId,
+        userId: (req as any).userId,
       });
       const note = await storage.createVoiceNote(validated);
       res.status(201).json(note);
@@ -3773,7 +3751,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/voice-notes/:id", async (req, res) => {
+  app.patch("/api/voice-notes/:id", isAuthenticated, async (req, res) => {
     try {
       const note = await storage.updateVoiceNote(req.params.id, req.body);
       if (!note) {
@@ -3785,7 +3763,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/voice-notes/:id", async (req, res) => {
+  app.delete("/api/voice-notes/:id", isAuthenticated, async (req, res) => {
     try {
       const deleted = await storage.deleteVoiceNote(req.params.id);
       if (!deleted) {
@@ -3798,20 +3776,20 @@ export async function registerRoutes(
   });
 
   // Reviews Endpoints
-  app.get("/api/reviews", async (req, res) => {
+  app.get("/api/reviews", isAuthenticated, async (req, res) => {
     try {
-      const reviews = await storage.getReviews(defaultUserId);
+      const reviews = await storage.getReviews((req as any).userId);
       res.json(reviews);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch reviews" });
     }
   });
 
-  app.post("/api/reviews", async (req, res) => {
+  app.post("/api/reviews", isAuthenticated, async (req, res) => {
     try {
       const validated = insertReviewSchema.parse({
         ...req.body,
-        userId: defaultUserId,
+        userId: (req as any).userId,
       });
       const review = await storage.createReview(validated);
       res.status(201).json(review);
@@ -3823,11 +3801,11 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/reviews/:id/respond", async (req, res) => {
+  app.post("/api/reviews/:id/respond", isAuthenticated, async (req, res) => {
     try {
       const { response } = req.body;
       const review = await storage.getReview(req.params.id);
-      if (!review || review.userId !== defaultUserId) {
+      if (!review || review.userId !== (req as any).userId) {
         return res.status(404).json({ error: "Review not found" });
       }
       const updated = await storage.updateReview(req.params.id, {
@@ -3914,7 +3892,7 @@ export async function registerRoutes(
   });
 
   // User settings for public profile and notifications
-  app.patch("/api/settings", async (req, res) => {
+  app.patch("/api/settings", isAuthenticated, async (req, res) => {
     try {
       const { 
         publicProfileEnabled, 
@@ -3933,7 +3911,7 @@ export async function registerRoutes(
       } = req.body;
       
       // Check if this is the first time enabling public profile (booking link created)
-      const existingUser = await storage.getUser(defaultUserId);
+      const existingUser = await storage.getUser((req as any).userId);
       const updates: Record<string, any> = {
         publicProfileEnabled,
         publicProfileSlug,
@@ -3956,13 +3934,13 @@ export async function registerRoutes(
         updates.bookingLinkCreatedAt = new Date().toISOString();
         emitCanonicalEvent({
           eventName: "booking_link_created",
-          userId: defaultUserId,
+          userId: (req as any).userId,
           context: { slug: publicProfileSlug },
           source: "web",
         });
       }
       
-      const user = await storage.updateUser(defaultUserId, updates);
+      const user = await storage.updateUser((req as any).userId, updates);
       
       res.json(user);
     } catch (error) {
@@ -3971,16 +3949,16 @@ export async function registerRoutes(
   });
   
   // Track when user shares their booking link
-  app.post("/api/track/booking-link-shared", async (req, res) => {
+  app.post("/api/track/booking-link-shared", isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser(defaultUserId);
+      const user = await storage.getUser((req as any).userId);
       if (user && !user.bookingLinkSharedAt) {
-        await storage.updateUser(defaultUserId, {
+        await storage.updateUser((req as any).userId, {
           bookingLinkSharedAt: new Date().toISOString(),
         });
         emitCanonicalEvent({
           eventName: "booking_link_shared",
-          userId: defaultUserId,
+          userId: (req as any).userId,
           context: { method: req.body.method || "unknown" },
           source: "web",
         });
@@ -4446,9 +4424,9 @@ Final price confirmed onsite.`;
   });
 
   // Get pending estimation requests (provider)
-  app.get("/api/estimation-requests", async (req, res) => {
+  app.get("/api/estimation-requests", isAuthenticated, async (req, res) => {
     try {
-      const requests = await storage.getPendingEstimationRequests(defaultUserId);
+      const requests = await storage.getPendingEstimationRequests((req as any).userId);
       res.json(requests);
     } catch (error) {
       console.error("Error fetching estimation requests:", error);
@@ -4457,9 +4435,9 @@ Final price confirmed onsite.`;
   });
 
   // Get all estimation requests (provider)
-  app.get("/api/estimation-requests/all", async (req, res) => {
+  app.get("/api/estimation-requests/all", isAuthenticated, async (req, res) => {
     try {
-      const requests = await storage.getEstimationRequests(defaultUserId);
+      const requests = await storage.getEstimationRequests((req as any).userId);
       res.json(requests);
     } catch (error) {
       console.error("Error fetching estimation requests:", error);
@@ -4468,13 +4446,13 @@ Final price confirmed onsite.`;
   });
 
   // Review and send estimate (provider)
-  app.post("/api/estimation-requests/:id/review", async (req, res) => {
+  app.post("/api/estimation-requests/:id/review", isAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
       const { providerEstimateLow, providerEstimateHigh, providerNotes } = req.body;
 
       const request = await storage.getEstimationRequest(id);
-      if (!request || request.providerId !== defaultUserId) {
+      if (!request || request.providerId !== (req as any).userId) {
         return res.status(404).json({ error: "Request not found" });
       }
 
@@ -4494,12 +4472,12 @@ Final price confirmed onsite.`;
   });
 
   // Send estimate to customer (provider)
-  app.post("/api/estimation-requests/:id/send", async (req, res) => {
+  app.post("/api/estimation-requests/:id/send", isAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
       const request = await storage.getEstimationRequest(id);
       
-      if (!request || request.providerId !== defaultUserId) {
+      if (!request || request.providerId !== (req as any).userId) {
         return res.status(404).json({ error: "Request not found" });
       }
 
@@ -4507,7 +4485,7 @@ Final price confirmed onsite.`;
         return res.status(400).json({ error: "Estimate not reviewed yet" });
       }
 
-      const user = await storage.getUser(defaultUserId);
+      const user = await storage.getUser((req as any).userId);
       const baseUrl = process.env.FRONTEND_URL || "https://account.gigaid.ai";
       const confirmUrl = `${baseUrl}/confirm-estimate/${request.confirmToken}`;
 
@@ -4648,9 +4626,9 @@ Final price confirmed onsite.`;
   });
 
   // Onboarding endpoints
-  app.get("/api/onboarding", async (req, res) => {
+  app.get("/api/onboarding", isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser(defaultUserId);
+      const user = await storage.getUser((req as any).userId);
       res.json({
         completed: user?.onboardingCompleted || false,
         step: user?.onboardingStep || 0,
@@ -4660,13 +4638,13 @@ Final price confirmed onsite.`;
     }
   });
 
-  app.patch("/api/onboarding", async (req, res) => {
+  app.patch("/api/onboarding", isAuthenticated, async (req, res) => {
     try {
       const { step, completed } = req.body;
-      const previousUser = await storage.getUser(defaultUserId);
+      const previousUser = await storage.getUser((req as any).userId);
       const previousStep = previousUser?.onboardingStep || 0;
       
-      const user = await storage.updateUser(defaultUserId, {
+      const user = await storage.updateUser((req as any).userId, {
         onboardingStep: step,
         onboardingCompleted: completed,
       });
@@ -4674,7 +4652,7 @@ Final price confirmed onsite.`;
       if (step !== undefined && step > previousStep) {
         emitCanonicalEvent({
           eventName: "onboarding_step_completed",
-          userId: defaultUserId,
+          userId: (req as any).userId,
           context: { step, previousStep, completed },
           source: "web",
         });
@@ -4689,14 +4667,14 @@ Final price confirmed onsite.`;
     }
   });
 
-  app.post("/api/onboarding/send-booking-link", async (req, res) => {
+  app.post("/api/onboarding/send-booking-link", isAuthenticated, async (req, res) => {
     try {
       const { phoneNumber } = req.body;
       if (!phoneNumber) {
         return res.status(400).json({ error: "Phone number is required" });
       }
 
-      const user = await storage.getUser(defaultUserId);
+      const user = await storage.getUser((req as any).userId);
       if (!user?.publicProfileSlug) {
         return res.status(400).json({ error: "Booking link not set up yet" });
       }
@@ -4709,7 +4687,7 @@ Final price confirmed onsite.`;
       
       emitCanonicalEvent({
         eventName: "booking_link_shared",
-        userId: defaultUserId,
+        userId: (req as any).userId,
         context: { bookingUrl, phoneNumber: phoneNumber.slice(-4) },
         source: "web",
       });
@@ -4771,9 +4749,9 @@ Final price confirmed onsite.`;
   });
 
   // AI Booking Insights
-  app.get("/api/ai/booking-insights", async (req, res) => {
+  app.get("/api/ai/booking-insights", isAuthenticated, async (req, res) => {
     try {
-      const jobs = await storage.getJobs(defaultUserId);
+      const jobs = await storage.getJobs((req as any).userId);
       const jobData = jobs.map(j => ({
         service: j.title,
         date: j.scheduledDate,
@@ -4791,7 +4769,7 @@ Final price confirmed onsite.`;
   });
 
   // AI Feature Unlock Nudge
-  app.post("/api/ai/feature-nudge", async (req, res) => {
+  app.post("/api/ai/feature-nudge", isAuthenticated, async (req, res) => {
     try {
       const { completedFeatures, incompleteFeatures, userType } = req.body;
       const { generateFeatureNudge } = await import("./ai/aiService");
@@ -4808,7 +4786,7 @@ Final price confirmed onsite.`;
   });
 
   // AI Service Builder
-  app.post("/api/ai/build-services", async (req, res) => {
+  app.post("/api/ai/build-services", isAuthenticated, async (req, res) => {
     try {
       const { description } = req.body;
       if (!description) {
@@ -4824,7 +4802,7 @@ Final price confirmed onsite.`;
   });
 
   // AI Review Draft Generator
-  app.post("/api/ai/generate-negotiation-reply", async (req, res) => {
+  app.post("/api/ai/generate-negotiation-reply", isAuthenticated, async (req, res) => {
     try {
       const { scenario, clientName, serviceType, description } = req.body;
       
@@ -4939,9 +4917,9 @@ Return ONLY the message text, no JSON or formatting.`
   // ============ PAYMENT METHODS API ============
 
   // Get user's configured payment methods
-  app.get("/api/payment-methods", async (req, res) => {
+  app.get("/api/payment-methods", isAuthenticated, async (req, res) => {
     try {
-      const methods = await storage.getUserPaymentMethods(defaultUserId);
+      const methods = await storage.getUserPaymentMethods((req as any).userId);
       res.json(methods);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch payment methods" });
@@ -4949,14 +4927,14 @@ Return ONLY the message text, no JSON or formatting.`
   });
 
   // Create/add a new payment method
-  app.post("/api/payment-methods", async (req, res) => {
+  app.post("/api/payment-methods", isAuthenticated, async (req, res) => {
     try {
       const { type, label, instructions, isEnabled } = req.body;
       if (!type) {
         return res.status(400).json({ error: "Payment type is required" });
       }
       const method = await storage.createUserPaymentMethod({
-        userId: defaultUserId,
+        userId: (req as any).userId,
         type,
         label: label || null,
         instructions: instructions || null,
@@ -4969,7 +4947,7 @@ Return ONLY the message text, no JSON or formatting.`
   });
 
   // Update a payment method
-  app.patch("/api/payment-methods/:id", async (req, res) => {
+  app.patch("/api/payment-methods/:id", isAuthenticated, async (req, res) => {
     try {
       const { type, label, instructions, isEnabled } = req.body;
       const method = await storage.updateUserPaymentMethod(req.params.id, {
@@ -4988,7 +4966,7 @@ Return ONLY the message text, no JSON or formatting.`
   });
 
   // Delete a payment method
-  app.delete("/api/payment-methods/:id", async (req, res) => {
+  app.delete("/api/payment-methods/:id", isAuthenticated, async (req, res) => {
     try {
       const deleted = await storage.deleteUserPaymentMethod(req.params.id);
       if (!deleted) {
@@ -5001,14 +4979,14 @@ Return ONLY the message text, no JSON or formatting.`
   });
 
   // Bulk update payment methods (for settings page)
-  app.post("/api/payment-methods/bulk-update", async (req, res) => {
+  app.post("/api/payment-methods/bulk-update", isAuthenticated, async (req, res) => {
     try {
       const { methods } = req.body;
       if (!Array.isArray(methods)) {
         return res.status(400).json({ error: "Methods array is required" });
       }
 
-      const existingMethods = await storage.getUserPaymentMethods(defaultUserId);
+      const existingMethods = await storage.getUserPaymentMethods((req as any).userId);
       const results = [];
 
       for (const methodData of methods) {
@@ -5023,7 +5001,7 @@ Return ONLY the message text, no JSON or formatting.`
           if (updated) results.push(updated);
         } else if (methodData.isEnabled) {
           const created = await storage.createUserPaymentMethod({
-            userId: defaultUserId,
+            userId: (req as any).userId,
             type: methodData.type,
             label: methodData.label || null,
             instructions: methodData.instructions || null,
@@ -5042,9 +5020,9 @@ Return ONLY the message text, no JSON or formatting.`
   // ============ JOB PAYMENTS API ============
 
   // Get all payments for user
-  app.get("/api/payments", async (req, res) => {
+  app.get("/api/payments", isAuthenticated, async (req, res) => {
     try {
-      const payments = await storage.getJobPayments(defaultUserId);
+      const payments = await storage.getJobPayments((req as any).userId);
       res.json(payments);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch payments" });
@@ -5052,7 +5030,7 @@ Return ONLY the message text, no JSON or formatting.`
   });
 
   // Get payments for a specific invoice
-  app.get("/api/invoices/:id/payments", async (req, res) => {
+  app.get("/api/invoices/:id/payments", isAuthenticated, async (req, res) => {
     try {
       const payments = await storage.getJobPaymentsByInvoice(req.params.id);
       res.json(payments);
@@ -5062,14 +5040,14 @@ Return ONLY the message text, no JSON or formatting.`
   });
 
   // Create a payment record (for manual payments)
-  app.post("/api/payments", async (req, res) => {
+  app.post("/api/payments", isAuthenticated, async (req, res) => {
     try {
       const { invoiceId, jobId, clientName, clientEmail, amount, method, notes, proofUrl } = req.body;
       if (!amount || !method) {
         return res.status(400).json({ error: "Amount and method are required" });
       }
       const payment = await storage.createJobPayment({
-        userId: defaultUserId,
+        userId: (req as any).userId,
         invoiceId: invoiceId || null,
         jobId: jobId || null,
         clientName: clientName || null,
@@ -5174,7 +5152,7 @@ Return ONLY the message text, no JSON or formatting.`
       const baseUrl = process.env.FRONTEND_URL || `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
       
       // Get user for checkout metadata
-      const user = await storage.getUser(defaultUserId);
+      const user = await storage.getUser((req as any).userId);
 
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
@@ -5197,11 +5175,11 @@ Return ONLY the message text, no JSON or formatting.`
         cancel_url: `${baseUrl}${returnTo || "/"}?subscription=cancelled`,
         metadata: {
           plan: "pro_plus",
-          user_id: user?.id || defaultUserId,
+          user_id: user?.id || (req as any).userId,
         },
         subscription_data: {
           metadata: {
-            user_id: user?.id || defaultUserId,
+            user_id: user?.id || (req as any).userId,
             plan: "pro_plus",
           },
         },
@@ -5439,9 +5417,9 @@ Return ONLY the message text, no JSON or formatting.`
   // ============ STRIPE CONNECT (PROVIDER ONBOARDING) ============
 
   // Get provider's Stripe Connect status
-  app.get("/api/stripe/connect/status", async (req, res) => {
+  app.get("/api/stripe/connect/status", isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser(defaultUserId);
+      const user = await storage.getUser((req as any).userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -5473,9 +5451,9 @@ Return ONLY the message text, no JSON or formatting.`
   });
 
   // Create Stripe Connect onboarding link for provider
-  app.post("/api/stripe/connect/onboard", async (req, res) => {
+  app.post("/api/stripe/connect/onboard", isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser(defaultUserId);
+      const user = await storage.getUser((req as any).userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -5523,9 +5501,9 @@ Return ONLY the message text, no JSON or formatting.`
   });
 
   // Create Stripe Connect dashboard login link for provider
-  app.post("/api/stripe/connect/dashboard", async (req, res) => {
+  app.post("/api/stripe/connect/dashboard", isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser(defaultUserId);
+      const user = await storage.getUser((req as any).userId);
       if (!user?.stripeConnectAccountId) {
         return res.status(400).json({ error: "No Stripe Connect account" });
       }
@@ -5542,7 +5520,7 @@ Return ONLY the message text, no JSON or formatting.`
   });
 
   // Update provider's deposit settings
-  app.patch("/api/stripe/connect/deposit-settings", async (req, res) => {
+  app.patch("/api/stripe/connect/deposit-settings", isAuthenticated, async (req, res) => {
     try {
       const { 
         depositEnabled, 
@@ -5554,7 +5532,7 @@ Return ONLY the message text, no JSON or formatting.`
         lateRescheduleRetainPctCap,
       } = req.body;
 
-      const updated = await storage.updateUser(defaultUserId, {
+      const updated = await storage.updateUser((req as any).userId, {
         depositEnabled: depositEnabled ?? undefined,
         depositType: depositType ?? undefined,
         depositValue: depositValue ?? undefined,
@@ -6302,7 +6280,7 @@ Return ONLY the message text, no JSON or formatting.`
         bookingId: booking.id,
         eventType: "admin_force_released",
         actorType: "admin",
-        actorId: defaultUserId,
+        actorId: (req as any).userId,
         metadata: JSON.stringify({
           amount: releaseAmount,
           transferId: transfer.id,
@@ -6360,7 +6338,7 @@ Return ONLY the message text, no JSON or formatting.`
         bookingId: booking.id,
         eventType: "admin_refunded_full",
         actorType: "admin",
-        actorId: defaultUserId,
+        actorId: (req as any).userId,
         metadata: JSON.stringify({
           amount: refund.amount,
           refundId: refund.id,
@@ -6425,7 +6403,7 @@ Return ONLY the message text, no JSON or formatting.`
         bookingId: booking.id,
         eventType: "admin_refunded_partial",
         actorType: "admin",
-        actorId: defaultUserId,
+        actorId: (req as any).userId,
         metadata: JSON.stringify({
           refundedAmount: amountCents,
           remainingAmount,
@@ -6479,7 +6457,7 @@ Return ONLY the message text, no JSON or formatting.`
           bookingId: booking.id,
           eventType: "dispute_resolved_refund",
           actorType: "admin",
-          actorId: defaultUserId,
+          actorId: (req as any).userId,
           metadata: JSON.stringify({
             resolution: "refund_customer",
             amount: refundAmountCents || booking.depositAmountCents,
@@ -6511,7 +6489,7 @@ Return ONLY the message text, no JSON or formatting.`
             bookingId: booking.id,
             eventType: "dispute_resolved_released",
             actorType: "admin",
-            actorId: defaultUserId,
+            actorId: (req as any).userId,
             metadata: JSON.stringify({
               resolution: "release_to_provider",
               amount: releaseAmount,
@@ -6555,7 +6533,7 @@ Return ONLY the message text, no JSON or formatting.`
           bookingId: booking.id,
           eventType: "dispute_resolved_split",
           actorType: "admin",
-          actorId: defaultUserId,
+          actorId: (req as any).userId,
           metadata: JSON.stringify({
             resolution: "split",
             refundedAmount: refundAmount,
@@ -6781,8 +6759,17 @@ Return ONLY the message text, no JSON or formatting.`
         case "charge.refunded": {
           const charge = event.data.object as any;
           const paymentIntentId = charge.payment_intent;
-          const allBookings = await storage.getBookingRequests(defaultUserId);
-          const booking = allBookings.find(b => b.stripePaymentIntentId === paymentIntentId);
+          // Use booking_id from metadata if available, otherwise log warning
+          const bookingId = charge.metadata?.booking_id;
+          let booking = bookingId ? await storage.getBookingRequest(bookingId) : undefined;
+          
+          // Fallback: lookup by payment intent ID (requires scanning - less efficient)
+          if (!booking && paymentIntentId) {
+            // TODO: Add storage method getBookingByPaymentIntentId for efficiency
+            const allBookings = await storage.getBookingRequestsAwaitingRelease();
+            booking = allBookings.find(b => b.stripePaymentIntentId === paymentIntentId);
+          }
+          
           if (booking) {
             const isFullRefund = charge.amount_refunded === charge.amount;
             await storage.updateBookingRequest(booking.id, {
@@ -6830,8 +6817,17 @@ Return ONLY the message text, no JSON or formatting.`
         case "charge.dispute.created": {
           const dispute = event.data.object as any;
           const chargeId = dispute.charge;
-          const allBookings = await storage.getBookingRequests(defaultUserId);
-          const booking = allBookings.find(b => b.stripeChargeId === chargeId);
+          // Use booking_id from metadata if available
+          const bookingId = dispute.metadata?.booking_id;
+          let booking = bookingId ? await storage.getBookingRequest(bookingId) : undefined;
+          
+          // Fallback: lookup by charge ID (requires scanning - less efficient)
+          if (!booking && chargeId) {
+            // TODO: Add storage method getBookingByChargeId for efficiency
+            const allBookings = await storage.getBookingRequestsAwaitingRelease();
+            booking = allBookings.find(b => b.stripeChargeId === chargeId);
+          }
+          
           if (booking) {
             await storage.updateBookingRequest(booking.id, {
               depositStatus: "on_hold_dispute",
@@ -6866,7 +6862,10 @@ Return ONLY the message text, no JSON or formatting.`
         case "payment_intent.payment_failed": {
           const paymentIntent = event.data.object as any;
           const bookingId = paymentIntent.metadata?.booking_id;
-          const userId = paymentIntent.metadata?.user_id || defaultUserId;
+          const userId = paymentIntent.metadata?.user_id;
+          if (!userId) {
+            console.warn(`[Stripe Webhook] payment_intent.payment_failed missing user_id in metadata`);
+          }
           
           emitCanonicalEvent({
             eventName: "payment_failed",
@@ -6887,7 +6886,11 @@ Return ONLY the message text, no JSON or formatting.`
         case "customer.subscription.created": {
           const subscription = event.data.object as any;
           const customerId = subscription.customer;
-          const userId = subscription.metadata?.user_id || defaultUserId;
+          const userId = subscription.metadata?.user_id;
+          if (!userId) {
+            console.error(`[Stripe Webhook] subscription.created missing user_id in metadata - cannot process`);
+            break;
+          }
           const planFromMetadata = subscription.metadata?.plan || "pro_plus";
           
           const user = await storage.getUser(userId);
@@ -6939,7 +6942,11 @@ Return ONLY the message text, no JSON or formatting.`
 
         case "customer.subscription.deleted": {
           const subscription = event.data.object as any;
-          const userId = subscription.metadata?.user_id || defaultUserId;
+          const userId = subscription.metadata?.user_id;
+          if (!userId) {
+            console.error(`[Stripe Webhook] subscription.deleted missing user_id in metadata - cannot process`);
+            break;
+          }
           
           // Downgrade user to free plan
           await storage.updateUser(userId, { 
@@ -7083,16 +7090,16 @@ Return ONLY the message text, no JSON or formatting.`
   });
 
   // Export all data as JSON
-  app.get("/api/export/json", async (req, res) => {
+  app.get("/api/export/json", isAuthenticated, async (req, res) => {
     try {
-      const jobs = await storage.getJobs(defaultUserId);
-      const leads = await storage.getLeads(defaultUserId);
-      const invoices = await storage.getInvoices(defaultUserId);
-      const reminders = await storage.getReminders(defaultUserId);
-      const crewMembers = await storage.getCrewMembers(defaultUserId);
-      const reviews = await storage.getReviews(defaultUserId);
-      const user = await storage.getUser(defaultUserId);
-      const aiNudges = await storage.getAiNudges(defaultUserId);
+      const jobs = await storage.getJobs((req as any).userId);
+      const leads = await storage.getLeads((req as any).userId);
+      const invoices = await storage.getInvoices((req as any).userId);
+      const reminders = await storage.getReminders((req as any).userId);
+      const crewMembers = await storage.getCrewMembers((req as any).userId);
+      const reviews = await storage.getReviews((req as any).userId);
+      const user = await storage.getUser((req as any).userId);
+      const aiNudges = await storage.getAiNudges((req as any).userId);
       const featureFlags = await storage.getAllFeatureFlags();
 
       const exportData = {
@@ -7139,13 +7146,13 @@ Return ONLY the message text, no JSON or formatting.`
   });
 
   // Export data relationships as DOT (GraphViz) file
-  app.get("/api/export/dot", async (req, res) => {
+  app.get("/api/export/dot", isAuthenticated, async (req, res) => {
     try {
-      const jobs = await storage.getJobs(defaultUserId);
-      const leads = await storage.getLeads(defaultUserId);
-      const invoices = await storage.getInvoices(defaultUserId);
-      const crewMembers = await storage.getCrewMembers(defaultUserId);
-      const user = await storage.getUser(defaultUserId);
+      const jobs = await storage.getJobs((req as any).userId);
+      const leads = await storage.getLeads((req as any).userId);
+      const invoices = await storage.getInvoices((req as any).userId);
+      const crewMembers = await storage.getCrewMembers((req as any).userId);
+      const user = await storage.getUser((req as any).userId);
 
       let dot = `digraph GigAid {
   rankdir=LR;
@@ -7275,14 +7282,14 @@ Return ONLY the message text, no JSON or formatting.`
   // ========================================
 
   // Parse shared content into lead data
-  app.post("/api/share/parse", async (req, res) => {
+  app.post("/api/share/parse", isAuthenticated, async (req, res) => {
     try {
       const { text, url } = req.body;
       if (!text) {
         return res.status(400).json({ error: "No text provided" });
       }
 
-      const user = await storage.getUser(defaultUserId);
+      const user = await storage.getUser((req as any).userId);
       const parsed = await parseSharedContent({
         text,
         url,
@@ -7298,14 +7305,14 @@ Return ONLY the message text, no JSON or formatting.`
   });
 
   // Generate quick reply suggestions
-  app.post("/api/share/replies", async (req, res) => {
+  app.post("/api/share/replies", isAuthenticated, async (req, res) => {
     try {
       const { text, context } = req.body;
       if (!text) {
         return res.status(400).json({ error: "No text provided" });
       }
 
-      const user = await storage.getUser(defaultUserId);
+      const user = await storage.getUser((req as any).userId);
       const replies = await generateQuickReplies({
         originalMessage: text,
         context: context || "general inquiry",
@@ -7323,14 +7330,14 @@ Return ONLY the message text, no JSON or formatting.`
   // On The Way Notification
   // ========================================
 
-  app.post("/api/jobs/:id/on-the-way", async (req, res) => {
+  app.post("/api/jobs/:id/on-the-way", isAuthenticated, async (req, res) => {
     try {
       const job = await storage.getJob(req.params.id);
       if (!job) {
         return res.status(404).json({ error: "Job not found" });
       }
 
-      const user = await storage.getUser(defaultUserId);
+      const user = await storage.getUser((req as any).userId);
       const providerName = user?.name || "Your service provider";
       const eta = req.body.eta || "soon";
 
@@ -7837,19 +7844,19 @@ Return ONLY the message text, no JSON or formatting.`
 
   // AI Interventions - Phase 2: Rare, moment-of-truth interventions
   // Max 1 intervention per user per calendar day
-  app.get("/api/ai/intervention", async (req, res) => {
+  app.get("/api/ai/intervention", isAuthenticated, async (req, res) => {
     try {
       const { entity_type, entity_id } = req.query;
       
       // Check if we can show an intervention today
-      const canShow = await canShowInterventionToday(defaultUserId);
+      const canShow = await canShowInterventionToday((req as any).userId);
       if (!canShow) {
         return res.json({ intervention: null });
       }
       
       // Check for specific intervention conditions
       const intervention = await checkForIntervention(
-        defaultUserId,
+        (req as any).userId,
         entity_type as string || "",
         entity_id as string || "",
         {}
@@ -7858,7 +7865,7 @@ Return ONLY the message text, no JSON or formatting.`
       if (intervention.shouldIntervene && intervention.message) {
         // Record the intervention (shown to user)
         await recordIntervention(
-          defaultUserId,
+          (req as any).userId,
           intervention.interventionType || "revenue_risk",
           entity_type as string || null,
           entity_id as string || null,
@@ -7882,11 +7889,11 @@ Return ONLY the message text, no JSON or formatting.`
   });
 
   // GigAid Impact - outcomes attribution stats
-  app.get("/api/ai/impact", async (req, res) => {
+  app.get("/api/ai/impact", isAuthenticated, async (req, res) => {
     try {
-      const nudges = await storage.getAiNudges(defaultUserId);
-      const invoices = await storage.getInvoices(defaultUserId);
-      const leads = await storage.getLeads(defaultUserId);
+      const nudges = await storage.getAiNudges((req as any).userId);
+      const invoices = await storage.getInvoices((req as any).userId);
+      const leads = await storage.getLeads((req as any).userId);
 
       // Count acted and completed nudges by type
       const actedNudges = nudges.filter(n => n.status === "acted" || n.status === "completed");
@@ -7967,16 +7974,16 @@ Return ONLY the message text, no JSON or formatting.`
 
   // Admin endpoint to force-regenerate nudges and backfill missing ones
   // ?force=true bypasses daily cap (for testing only)
-  app.post("/api/admin/backfill-nudges", async (req, res) => {
+  app.post("/api/admin/backfill-nudges", isAuthenticated, async (req, res) => {
     try {
       const forceBypass = req.query.force === "true";
       
       // Force regenerate nudges for the user
-      const result = await generateNudgesForUser(defaultUserId, forceBypass);
+      const result = await generateNudgesForUser((req as any).userId, forceBypass);
       
       // Also check for completed jobs without invoices and create nudges
-      const jobs = await storage.getJobs(defaultUserId);
-      const invoices = await storage.getInvoices(defaultUserId);
+      const jobs = await storage.getJobs((req as any).userId);
+      const invoices = await storage.getInvoices((req as any).userId);
       
       const completedWithoutInvoice = jobs.filter(job => 
         job.status === "completed" && 
@@ -7987,12 +7994,12 @@ Return ONLY the message text, no JSON or formatting.`
       let backfilledCount = 0;
       for (const job of completedWithoutInvoice) {
         const amount = job.price ? job.price / 100 : 0;
-        const dedupeKey = `${defaultUserId}:job:${job.id}:invoice_create_from_job_done:backfill`;
+        const dedupeKey = `${(req as any).userId}:job:${job.id}:invoice_create_from_job_done:backfill`;
         
         const existing = await storage.getAiNudgeByDedupeKey(dedupeKey);
         if (!existing) {
           await storage.createAiNudge({
-            userId: defaultUserId,
+            userId: (req as any).userId,
             entityType: "job",
             entityId: job.id,
             nudgeType: "invoice_create_from_job_done",
@@ -8660,10 +8667,10 @@ Return ONLY the message text, no JSON or formatting.`
   };
 
   // POST /api/quickbook/parse - Parse pasted message and create draft
-  app.post("/api/quickbook/parse", checkQuickbookEnabled, async (req, res) => {
+  app.post("/api/quickbook/parse", isAuthenticated, checkQuickbookEnabled, async (req, res) => {
     try {
       // Rate limiting check
-      if (!checkQuickbookParseRateLimit(defaultUserId)) {
+      if (!checkQuickbookParseRateLimit((req as any).userId)) {
         return res.status(429).json({ error: "Too many requests. Please wait a minute and try again." });
       }
 
@@ -8775,7 +8782,7 @@ Return ONLY the message text, no JSON or formatting.`
 
       // Create draft in database
       const draft = await storage.createJobDraft({
-        userId: defaultUserId,
+        userId: (req as any).userId,
         sourceText: trimmed,
         parsedFields: JSON.stringify(parsedFields),
         confidence: JSON.stringify(confidence),
@@ -8800,13 +8807,13 @@ Return ONLY the message text, no JSON or formatting.`
   });
 
   // GET /api/quickbook/draft/:id - Get draft by ID
-  app.get("/api/quickbook/draft/:id", checkQuickbookEnabled, async (req, res) => {
+  app.get("/api/quickbook/draft/:id", isAuthenticated, checkQuickbookEnabled, async (req, res) => {
     try {
       const draft = await storage.getJobDraft(req.params.id);
       if (!draft) {
         return res.status(404).json({ error: "Draft not found" });
       }
-      if (draft.userId !== defaultUserId) {
+      if (draft.userId !== (req as any).userId) {
         return res.status(403).json({ error: "Access denied" });
       }
 
@@ -8823,13 +8830,13 @@ Return ONLY the message text, no JSON or formatting.`
   });
 
   // PATCH /api/quickbook/draft/:id - Update draft fields
-  app.patch("/api/quickbook/draft/:id", checkQuickbookEnabled, async (req, res) => {
+  app.patch("/api/quickbook/draft/:id", isAuthenticated, checkQuickbookEnabled, async (req, res) => {
     try {
       const draft = await storage.getJobDraft(req.params.id);
       if (!draft) {
         return res.status(404).json({ error: "Draft not found" });
       }
-      if (draft.userId !== defaultUserId) {
+      if (draft.userId !== (req as any).userId) {
         return res.status(403).json({ error: "Access denied" });
       }
 
@@ -8871,13 +8878,13 @@ Return ONLY the message text, no JSON or formatting.`
   });
 
   // POST /api/quickbook/draft/:id/send-link - Generate booking link and mark as sent
-  app.post("/api/quickbook/draft/:id/send-link", checkQuickbookEnabled, async (req, res) => {
+  app.post("/api/quickbook/draft/:id/send-link", isAuthenticated, checkQuickbookEnabled, async (req, res) => {
     try {
       const draft = await storage.getJobDraft(req.params.id);
       if (!draft) {
         return res.status(404).json({ error: "Draft not found" });
       }
-      if (draft.userId !== defaultUserId) {
+      if (draft.userId !== (req as any).userId) {
         return res.status(403).json({ error: "Access denied" });
       }
 
@@ -9047,14 +9054,14 @@ Return ONLY the message text, no JSON or formatting.`
   // It tests BOTH paths: UPDATE to completed and INSERT with completed status.
   // 
   // CRITICAL: This test MUST pass. If it fails, revenue protection is broken.
-  app.post("/api/test/no-silent-completion", async (req, res) => {
+  app.post("/api/test/no-silent-completion", isAuthenticated, async (req, res) => {
     const results: { test: string; passed: boolean; details: string }[] = [];
     
     try {
       // TEST 1: UPDATE path - create job then try to complete without resolution
       try {
         const testJob = await storage.createJob({
-          userId: defaultUserId,
+          userId: (req as any).userId,
           title: "Test Enforcement Job (UPDATE)",
           serviceType: "Test",
           status: "scheduled",
@@ -9096,7 +9103,7 @@ Return ONLY the message text, no JSON or formatting.`
         let insertBlocked = false;
         try {
           await storage.createJob({
-            userId: defaultUserId,
+            userId: (req as any).userId,
             title: "Test Enforcement Job (INSERT)",
             serviceType: "Test",
             status: "completed", // Directly inserting as completed - MUST fail
@@ -9130,7 +9137,7 @@ Return ONLY the message text, no JSON or formatting.`
       // TEST 3: LEGITIMATE FLOW - create job, add resolution, then complete
       try {
         const legitJob = await storage.createJob({
-          userId: defaultUserId,
+          userId: (req as any).userId,
           title: "Test Legitimate Flow",
           serviceType: "Test",
           status: "scheduled",
@@ -9147,7 +9154,7 @@ Return ONLY the message text, no JSON or formatting.`
           resolutionType: "waived",
           waiverReason: "internal",
           resolvedAt: new Date().toISOString(),
-          resolvedByUserId: defaultUserId,
+          resolvedByUserId: (req as any).userId,
           createdAt: new Date().toISOString(),
         });
 
@@ -9288,7 +9295,7 @@ Return ONLY the message text, no JSON or formatting.`
   });
 
   // Create a new support ticket
-  app.post("/api/support/tickets", async (req, res) => {
+  app.post("/api/support/tickets", isAuthenticated, async (req, res) => {
     try {
       // Validate input
       const parseResult = createTicketSchema.safeParse(req.body);
@@ -9302,7 +9309,7 @@ Return ONLY the message text, no JSON or formatting.`
       const { subject, description, priority, type, category } = parseResult.data;
       
       // Get user info for the ticket
-      const user = await storage.getUser(defaultUserId);
+      const user = await storage.getUser((req as any).userId);
       if (!user?.email) {
         return res.status(400).json({ 
           error: "Please add an email to your profile before creating a support ticket" 
@@ -9340,9 +9347,9 @@ Return ONLY the message text, no JSON or formatting.`
   });
 
   // Get user's support tickets
-  app.get("/api/support/tickets", async (req, res) => {
+  app.get("/api/support/tickets", isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser(defaultUserId);
+      const user = await storage.getUser((req as any).userId);
       const email = user?.email;
       
       if (!email) {

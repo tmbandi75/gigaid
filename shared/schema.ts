@@ -1828,3 +1828,4 @@ export type InsertAiIntervention = z.infer<typeof insertAiInterventionSchema>;
 export type AiIntervention = typeof aiInterventions.$inferSelect;
 
 export * from "./models/chat";
+export * from "./models/auth";
