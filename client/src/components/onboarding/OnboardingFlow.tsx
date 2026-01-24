@@ -122,7 +122,10 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [pricing, setPricing] = useState({
     serviceName: "",
     typicalPrice: "",
+    priceMin: "",
+    priceMax: "",
     duration: "60",
+    pricingType: "fixed" as "fixed" | "range" | "varies",
   });
   
   const [deposit, setDeposit] = useState({
@@ -253,14 +256,36 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   };
 
   const handlePricingSubmit = async () => {
-    if (!pricing.typicalPrice) {
+    // Validate based on pricing type
+    if (pricing.pricingType === "fixed" && !pricing.typicalPrice) {
       toast({ title: "Please enter your typical price" });
       return;
     }
+    if (pricing.pricingType === "range" && (!pricing.priceMin || !pricing.priceMax)) {
+      toast({ title: "Please enter both minimum and maximum prices" });
+      return;
+    }
     
-    const priceInCents = Math.round(parseFloat(pricing.typicalPrice) * 100);
+    // Calculate price in cents based on pricing type
+    let priceInCents = 0;
+    let priceMinCents: number | null = null;
+    let priceMaxCents: number | null = null;
+    
+    if (pricing.pricingType === "fixed") {
+      priceInCents = Math.round(parseFloat(pricing.typicalPrice) * 100);
+    } else if (pricing.pricingType === "range") {
+      priceMinCents = Math.round(parseFloat(pricing.priceMin) * 100);
+      priceMaxCents = Math.round(parseFloat(pricing.priceMax) * 100);
+      // Use the average as the default price for calculations
+      priceInCents = Math.round((priceMinCents + priceMaxCents) / 2);
+    }
+    // For "varies" type, priceInCents stays 0 (no default price)
+    
     await updateProfileMutation.mutateAsync({
-      defaultPrice: priceInCents,
+      defaultPrice: pricing.pricingType === "varies" ? null : priceInCents,
+      defaultPriceMin: priceMinCents,
+      defaultPriceMax: priceMaxCents,
+      pricingType: pricing.pricingType,
       slotDuration: parseInt(pricing.duration) || 60,
     });
     
@@ -553,58 +578,163 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           {/* Step 3: Pricing */}
           {step === 3 && (
             <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500" data-testid="step-pricing">
-              <div className="flex-1 space-y-8">
+              <div className="flex-1 space-y-6">
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-primary">Step 2 of 6</p>
                   <h1 className="text-3xl font-bold tracking-tight">What do you usually charge?</h1>
                   <p className="text-muted-foreground">This helps with estimates and invoices.</p>
                 </div>
                 
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="serviceName" className="text-base">Default service name</Label>
-                    <Input
-                      id="serviceName"
-                      value={pricing.serviceName}
-                      onChange={(e) => setPricing({ ...pricing, serviceName: e.target.value })}
-                      placeholder="e.g., Standard Service Call"
-                      className="h-12 text-lg rounded-xl"
-                      data-testid="input-service-name"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="typicalPrice" className="text-base">Typical price *</Label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl text-muted-foreground">$</span>
-                      <Input
-                        id="typicalPrice"
-                        type="number"
-                        value={pricing.typicalPrice}
-                        onChange={(e) => setPricing({ ...pricing, typicalPrice: e.target.value })}
-                        placeholder="0"
-                        className="h-14 text-2xl font-semibold pl-10 rounded-xl"
-                        data-testid="input-typical-price"
-                      />
+                <div className="space-y-5">
+                  {/* Pricing type selector */}
+                  <div className="space-y-3">
+                    <Label className="text-base">How do you price your work?</Label>
+                    <div className="grid gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPricing({ ...pricing, pricingType: "fixed" })}
+                        className={`flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all ${
+                          pricing.pricingType === "fixed" 
+                            ? "border-primary bg-primary/5" 
+                            : "border-border hover:border-primary/50"
+                        }`}
+                        data-testid="button-pricing-fixed"
+                      >
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                          pricing.pricingType === "fixed" ? "border-primary" : "border-muted-foreground"
+                        }`}>
+                          {pricing.pricingType === "fixed" && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                        </div>
+                        <div>
+                          <p className="font-medium">Fixed price</p>
+                          <p className="text-sm text-muted-foreground">I charge the same for most jobs</p>
+                        </div>
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={() => setPricing({ ...pricing, pricingType: "range" })}
+                        className={`flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all ${
+                          pricing.pricingType === "range" 
+                            ? "border-primary bg-primary/5" 
+                            : "border-border hover:border-primary/50"
+                        }`}
+                        data-testid="button-pricing-range"
+                      >
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                          pricing.pricingType === "range" ? "border-primary" : "border-muted-foreground"
+                        }`}>
+                          {pricing.pricingType === "range" && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                        </div>
+                        <div>
+                          <p className="font-medium">Price range</p>
+                          <p className="text-sm text-muted-foreground">My prices vary within a range</p>
+                        </div>
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={() => setPricing({ ...pricing, pricingType: "varies" })}
+                        className={`flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all ${
+                          pricing.pricingType === "varies" 
+                            ? "border-primary bg-primary/5" 
+                            : "border-border hover:border-primary/50"
+                        }`}
+                        data-testid="button-pricing-varies"
+                      >
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                          pricing.pricingType === "varies" ? "border-primary" : "border-muted-foreground"
+                        }`}>
+                          {pricing.pricingType === "varies" && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                        </div>
+                        <div>
+                          <p className="font-medium">It depends</p>
+                          <p className="text-sm text-muted-foreground">I quote each job individually</p>
+                        </div>
+                      </button>
                     </div>
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="duration" className="text-base">Typical duration (optional)</Label>
-                    <div className="flex gap-2">
-                      {["30", "60", "90", "120"].map((mins) => (
-                        <Button
-                          key={mins}
-                          variant={pricing.duration === mins ? "default" : "outline"}
-                          className="flex-1 h-12 rounded-xl"
-                          onClick={() => setPricing({ ...pricing, duration: mins })}
-                          data-testid={`button-duration-${mins}`}
-                        >
-                          {parseInt(mins) < 60 ? `${mins}m` : `${parseInt(mins) / 60}h`}
-                        </Button>
-                      ))}
+                  {/* Fixed price input */}
+                  {pricing.pricingType === "fixed" && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <Label htmlFor="typicalPrice" className="text-base">Your typical price</Label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl text-muted-foreground">$</span>
+                        <Input
+                          id="typicalPrice"
+                          type="number"
+                          value={pricing.typicalPrice}
+                          onChange={(e) => setPricing({ ...pricing, typicalPrice: e.target.value })}
+                          placeholder="0"
+                          className="h-14 text-2xl font-semibold pl-10 rounded-xl"
+                          data-testid="input-typical-price"
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
+                  
+                  {/* Price range inputs */}
+                  {pricing.pricingType === "range" && (
+                    <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <Label className="text-base">Your price range</Label>
+                      <div className="flex items-center gap-3">
+                        <div className="relative flex-1">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-muted-foreground">$</span>
+                          <Input
+                            type="number"
+                            value={pricing.priceMin}
+                            onChange={(e) => setPricing({ ...pricing, priceMin: e.target.value })}
+                            placeholder="Min"
+                            className="h-14 text-xl font-semibold pl-10 rounded-xl"
+                            data-testid="input-price-min"
+                          />
+                        </div>
+                        <span className="text-muted-foreground font-medium">to</span>
+                        <div className="relative flex-1">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-muted-foreground">$</span>
+                          <Input
+                            type="number"
+                            value={pricing.priceMax}
+                            onChange={(e) => setPricing({ ...pricing, priceMax: e.target.value })}
+                            placeholder="Max"
+                            className="h-14 text-xl font-semibold pl-10 rounded-xl"
+                            data-testid="input-price-max"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* "It depends" message */}
+                  {pricing.pricingType === "varies" && (
+                    <div className="p-4 rounded-xl bg-muted/50 border border-border animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <p className="text-sm text-muted-foreground">
+                        No problem! You can set prices when creating each job or invoice. 
+                        We'll skip the deposit step since it needs a price to calculate.
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Duration selector - not shown for "varies" */}
+                  {pricing.pricingType !== "varies" && (
+                    <div className="space-y-2">
+                      <Label className="text-base">Typical duration (optional)</Label>
+                      <div className="flex gap-2">
+                        {["30", "60", "90", "120"].map((mins) => (
+                          <Button
+                            key={mins}
+                            variant={pricing.duration === mins ? "default" : "outline"}
+                            className="flex-1 h-12 rounded-xl"
+                            onClick={() => setPricing({ ...pricing, duration: mins })}
+                            data-testid={`button-duration-${mins}`}
+                          >
+                            {parseInt(mins) < 60 ? `${mins}m` : `${parseInt(mins) / 60}h`}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -613,7 +743,11 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                   size="lg" 
                   className="w-full h-14 text-lg rounded-2xl"
                   onClick={handlePricingSubmit}
-                  disabled={!pricing.typicalPrice || updateProfileMutation.isPending}
+                  disabled={
+                    (pricing.pricingType === "fixed" && !pricing.typicalPrice) ||
+                    (pricing.pricingType === "range" && (!pricing.priceMin || !pricing.priceMax)) ||
+                    updateProfileMutation.isPending
+                  }
                   data-testid="button-pricing-continue"
                 >
                   {updateProfileMutation.isPending ? (
@@ -669,15 +803,26 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                           <span>20%</span>
                           <span>50%</span>
                         </div>
-                        {pricing.typicalPrice && (
-                          <p className="text-center text-sm text-muted-foreground pt-2">
-                            On a ${pricing.typicalPrice} job, you'd collect{" "}
-                            <span className="font-semibold text-foreground">
-                              ${(parseFloat(pricing.typicalPrice) * deposit.percentage / 100).toFixed(0)}
-                            </span>{" "}
-                            upfront
-                          </p>
-                        )}
+                        {(() => {
+                          const examplePrice = pricing.pricingType === "fixed" && pricing.typicalPrice 
+                            ? parseFloat(pricing.typicalPrice)
+                            : pricing.pricingType === "range" && pricing.priceMin && pricing.priceMax
+                              ? (parseFloat(pricing.priceMin) + parseFloat(pricing.priceMax)) / 2
+                              : null;
+                          
+                          if (examplePrice) {
+                            return (
+                              <p className="text-center text-sm text-muted-foreground pt-2">
+                                On a ${examplePrice.toFixed(0)} job, you'd collect{" "}
+                                <span className="font-semibold text-foreground">
+                                  ${(examplePrice * deposit.percentage / 100).toFixed(0)}
+                                </span>{" "}
+                                upfront
+                              </p>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                     )}
                   </CardContent>

@@ -37,6 +37,9 @@ export const users = pgTable("users", {
   // Money protection fields (required for full functionality)
   defaultServiceType: text("default_service_type"), // Primary service type
   defaultPrice: integer("default_price"), // Default price in cents
+  defaultPriceMin: integer("default_price_min"), // Min price for range pricing
+  defaultPriceMax: integer("default_price_max"), // Max price for range pricing  
+  pricingType: text("pricing_type").default("fixed"), // fixed, range, varies
   depositPolicySet: boolean("deposit_policy_set").default(false), // Whether user explicitly set deposit policy
   
   // AI onboarding shown flag
