@@ -24,6 +24,11 @@ function getUserIdFromRequest(req: Request): string | null {
 export function registerAuthRoutes(app: Express): void {
   // Get current authenticated user - supports both Replit session and JWT Bearer token
   app.get("/api/auth/user", async (req: Request, res: Response) => {
+    // Prevent caching of auth responses
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    
     try {
       const userId = getUserIdFromRequest(req);
       
