@@ -114,6 +114,8 @@ export default function Settings() {
     noShowProtectionEnabled: true,
   });
   const [customServiceInput, setCustomServiceInput] = useState("");
+  const [showQuickSetup, setShowQuickSetup] = useState(false);
+  const [quickSetupPrice, setQuickSetupPrice] = useState("");
 
   useEffect(() => {
     if (profile) {
@@ -152,6 +154,37 @@ export default function Settings() {
       toast({ title: "Failed to save settings", variant: "destructive" });
     },
   });
+
+  const quickSetupMutation = useMutation({
+    mutationFn: async (price: number) => {
+      await apiRequest("PATCH", "/api/onboarding", {
+        defaultPrice: price,
+        depositPolicySet: true,
+        completed: true,
+        state: "completed",
+        step: 8
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/onboarding"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
+      setShowQuickSetup(false);
+      setQuickSetupPrice("");
+      toast({ title: "Deposit protection enabled" });
+    },
+    onError: () => {
+      toast({ title: "Failed to save settings", variant: "destructive" });
+    },
+  });
+
+  const handleQuickSetup = () => {
+    const priceInCents = Math.round(parseFloat(quickSetupPrice) * 100);
+    if (isNaN(priceInCents) || priceInCents <= 0) {
+      toast({ title: "Please enter a valid price", variant: "destructive" });
+      return;
+    }
+    quickSetupMutation.mutate(priceInCents);
+  };
 
   const handleSave = () => {
     const dataToSave = {
@@ -330,19 +363,65 @@ export default function Settings() {
                   <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                     <Lock className="h-5 w-5 text-primary" />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2 flex-1">
                     <p className="font-medium text-foreground">Set a default price to enable booking protection</p>
                     <p className="text-sm text-muted-foreground">
                       Complete your pricing setup to automatically protect against no-shows.
                     </p>
-                    <Button
-                      size="sm"
-                      className="mt-2"
-                      onClick={() => navigate("/onboarding?step=4")}
-                      data-testid="button-setup-deposit"
-                    >
-                      Quick setup (30 sec)
-                    </Button>
+                    {showQuickSetup ? (
+                      <div className="mt-3 space-y-3">
+                        <div>
+                          <Label htmlFor="quick-setup-price" className="text-sm">Your typical job price</Label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="relative flex-1">
+                              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                id="quick-setup-price"
+                                type="number"
+                                placeholder="150"
+                                value={quickSetupPrice}
+                                onChange={(e) => setQuickSetupPrice(e.target.value)}
+                                className="pl-9"
+                                data-testid="input-quick-setup-price"
+                              />
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            This enables automatic 30% deposit protection for bookings
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={handleQuickSetup}
+                            disabled={quickSetupMutation.isPending}
+                            data-testid="button-save-quick-setup"
+                          >
+                            {quickSetupMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            ) : null}
+                            Enable Protection
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setShowQuickSetup(false)}
+                            data-testid="button-cancel-quick-setup"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => setShowQuickSetup(true)}
+                        data-testid="button-setup-deposit"
+                      >
+                        Quick setup (30 sec)
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
