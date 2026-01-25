@@ -38,6 +38,7 @@ import {
   MessageSquare,
   Mic,
   Send,
+  CreditCard,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
@@ -287,6 +288,10 @@ export function AppSidebar() {
             <DropdownMenuItem onClick={() => navigate("/help")} data-testid="dropdown-help">
               <HelpCircle className="h-4 w-4 mr-2" />
               Help & Support
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/pricing")} data-testid="dropdown-pricing">
+              <CreditCard className="h-4 w-4 mr-2" />
+              View Plans
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-destructive" data-testid="dropdown-logout">

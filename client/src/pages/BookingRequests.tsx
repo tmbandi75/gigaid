@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -457,6 +457,11 @@ export default function BookingRequests() {
                             >
                               Continue without protection
                             </Button>
+                          </div>
+                          <div className="text-center mt-2">
+                            <Link href="/pricing" className="text-sm text-muted-foreground hover:underline" data-testid="link-view-all-plans">
+                              View all plans
+                            </Link>
                           </div>
                         </div>
                       </div>

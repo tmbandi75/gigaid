@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
+import { Link } from "wouter";
 
 interface BlockingInterceptProps {
   open: boolean;
@@ -41,22 +42,29 @@ export function BlockingIntercept({
           <p className="text-sm text-muted-foreground">Cancel anytime. No long-term commitment.</p>
         </div>
 
-        <DialogFooter className="flex flex-col sm:flex-row gap-2">
-          <Button
-            variant="outline"
-            onClick={onCancel}
-            className="flex-1"
-            data-testid="button-blocking-cancel"
-          >
-            Continue without protection
-          </Button>
-          <Button
-            onClick={onConfirm}
-            className="flex-1"
-            data-testid="button-blocking-confirm"
-          >
-            Upgrade to Pro+
-          </Button>
+        <DialogFooter className="flex flex-col gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={onCancel}
+              className="flex-1"
+              data-testid="button-blocking-cancel"
+            >
+              Continue without protection
+            </Button>
+            <Button
+              onClick={onConfirm}
+              className="flex-1"
+              data-testid="button-blocking-confirm"
+            >
+              Upgrade to Pro+
+            </Button>
+          </div>
+          <div className="text-center">
+            <Link href="/pricing" className="text-sm text-muted-foreground hover:underline" data-testid="link-view-all-plans">
+              View all plans
+            </Link>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

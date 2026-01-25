@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -100,7 +100,7 @@ function UpgradeGate() {
           <div className="space-y-3">
             <Button 
               className="w-full h-12 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600"
-              onClick={() => navigate("/settings")}
+              onClick={() => navigate("/pricing")}
               data-testid="button-upgrade-pro"
             >
               <Crown className="h-5 w-5 mr-2" />
@@ -114,6 +114,11 @@ function UpgradeGate() {
             >
               Back to Jobs
             </Button>
+            <div className="text-center pt-2">
+              <Link href="/pricing" className="text-sm text-muted-foreground hover:underline" data-testid="link-view-all-plans">
+                View all plans
+              </Link>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useLocation, useParams, useSearch } from "wouter";
+import { useLocation, useParams, useSearch, Link } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -894,6 +894,13 @@ export default function JobForm() {
                       }
                     </p>
                   </div>
+                  {(jobUsage.warningLevel === "blocked" || jobUsage.warningLevel === "critical") && (
+                    <div className="mt-2 text-center">
+                      <Link href="/pricing" className="text-sm text-primary hover:underline" data-testid="link-view-all-plans">
+                        View all plans
+                      </Link>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}

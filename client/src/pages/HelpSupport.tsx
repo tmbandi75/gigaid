@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -410,7 +410,11 @@ const faqs = [
       },
       {
         q: "What's included in the Pro plan?",
-        a: "Pro includes Owner View dashboard access, weekly email summaries, advanced analytics, priority support, and more. Upgrade in Settings!",
+        a: "Pro includes Owner View dashboard access, weekly email summaries, advanced analytics, priority support, and more. View all plans at /pricing to compare features.",
+      },
+      {
+        q: "How do I upgrade my plan?",
+        a: "Visit the Pricing page to compare all plans (Free, Pro, Pro+, Business) and choose the one that fits your needs. You can access it from the user menu under 'View Plans'.",
       },
     ],
   },
@@ -556,7 +560,7 @@ export default function HelpSupport() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <Card className="border-0 shadow-md hover-elevate cursor-pointer" data-testid="card-email-support">
             <CardContent className="p-4">
               <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mb-3">
@@ -575,6 +579,17 @@ export default function HelpSupport() {
               <p className="text-xs text-muted-foreground mt-0.5">1-800-GIG-AID</p>
             </CardContent>
           </Card>
+          <Link href="/pricing" data-testid="link-view-plans">
+            <Card className="border-0 shadow-md hover-elevate cursor-pointer" data-testid="card-view-plans">
+              <CardContent className="p-4">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-500 flex items-center justify-center mb-3">
+                  <CreditCard className="h-5 w-5 text-white" />
+                </div>
+                <p className="font-medium text-sm">View Plans</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Compare pricing</p>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         <Card className="border-0 shadow-md" data-testid="card-faqs">
