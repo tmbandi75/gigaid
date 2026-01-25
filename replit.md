@@ -40,6 +40,7 @@ Preferred communication style: Simple, everyday language.
 - **Today's Money Plan**: Global action queue prioritizing leads, jobs, and invoices by revenue impact. Features smart prioritization (urgent/important/normal), snooze functionality, and deduplication. Enable via `today_money_plan` feature flag.
 - **Outcome Attribution**: Conservative impact metrics showing time and money saved through GigAid suggestions. Calculates days saved (0.5 per acted nudge) and cash acceleration. Enable via `outcome_attribution` feature flag.
 - **iOS App Build (Capacitor)**: The web application is packaged as a native iOS app using Capacitor, enabling native features and App Store distribution.
+- **Android App Build (Capacitor)**: The web application is packaged as a native Android app using Capacitor, enabling native features and Play Store distribution.
 - **Universal Priority Signals**: AI-inferred priority badges (high, at_risk, time_sensitive, payment_risk) appear on leads, jobs, invoices, and messages to help users focus on what matters most.
 - **Progressive Disclosure**: Advanced AI tools (Get More Bookings, Know Who's Serious, Grow My Business, Referral Generator) are gated until user completes their first job or receives first payment, reducing cognitive overload for new users.
 - **Verb-Based Status Labels**: All status chips and filters use action-oriented language ("Just Added", "Coming Up", "Awaiting Reply", "Not Sent") instead of technical states for better clarity.
@@ -55,7 +56,7 @@ Preferred communication style: Simple, everyday language.
 - **Development Tools**: Vite, tsx, drizzle-kit
 - **Payment Processing**: Stripe Connect (requires `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_CLIENT_ID`, `FRONTEND_URL`)
 - **Mapping & Geocoding**: Google Maps API (requires `GOOGLE_MAPS_API_KEY`, `VITE_GOOGLE_MAPS_API_KEY`), Google Maps JavaScript API, Geocoding API, Places API
-- **Mobile Packaging**: Capacitor (for iOS), PWA for Android (via PWABuilder)
+- **Mobile Packaging**: Capacitor (for iOS and Android), PWA for Android (via PWABuilder as alternative)
 - **Mobile Authentication**: Firebase Admin SDK for server-side token verification (requires `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, `APP_JWT_SECRET`)
 
 ## Authentication Architecture
@@ -130,3 +131,68 @@ Accounts are automatically linked by:
 - All emoji usage must come from the approved whitelist
 - UI must remain fully understandable with emojis removed
 - Prefer Lucide icons over emojis when possible
+
+## Mobile App Build (Capacitor)
+
+### Directory Structure
+- `ios/` - iOS native project (Xcode)
+- `android/` - Android native project (Android Studio)
+- `capacitor.config.ts` - Capacitor configuration
+
+### Prerequisites
+- **For Android**: Android Studio with SDK 24+ installed locally
+- **For iOS**: Xcode 15+ installed on macOS
+
+### Building for Android
+
+1. **Build the web app and sync to Android:**
+   ```bash
+   npm run build
+   npx cap sync android
+   ```
+
+2. **Add Firebase config (required for authentication):**
+   - Download `google-services.json` from Firebase Console
+   - Place it in `android/app/google-services.json`
+
+3. **Open in Android Studio:**
+   ```bash
+   npx cap open android
+   ```
+
+4. **Build APK/AAB:**
+   - In Android Studio: Build > Build Bundle(s) / APK(s) > Build APK(s)
+   - Or for release: Build > Generate Signed Bundle / APK
+
+### Building for iOS
+
+1. **Build the web app and sync to iOS:**
+   ```bash
+   npm run build
+   npx cap sync ios
+   ```
+
+2. **Add Firebase config (required for authentication):**
+   - Download `GoogleService-Info.plist` from Firebase Console
+   - Add it to the Xcode project via Xcode
+
+3. **Open in Xcode:**
+   ```bash
+   npx cap open ios
+   ```
+
+4. **Build and run:**
+   - Select target device/simulator
+   - Click Run or archive for distribution
+
+### Useful Capacitor Commands
+- `npx cap sync` - Build and copy web assets to native projects
+- `npx cap copy` - Copy web assets without rebuilding plugins
+- `npx cap update` - Update native project dependencies
+- `npx cap doctor` - Check project health
+
+### Firebase Configuration Files
+- **Android**: `android/app/google-services.json`
+- **iOS**: `ios/App/App/GoogleService-Info.plist`
+
+These files are required for Firebase Authentication to work in the native apps.
