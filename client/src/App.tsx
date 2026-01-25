@@ -141,7 +141,7 @@ function SubscriptionHandler() {
 
 function AuthenticatedApp() {
   const [location, setLocation] = useLocation();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   
   useEffect(() => {
     // Redirect authenticated users from "/" or "/welcome" 
@@ -152,6 +152,11 @@ function AuthenticatedApp() {
           setLocation('/dashboard');
         }
       }
+    }
+    
+    // Redirect unauthenticated users to home (which shows landing page)
+    if (!isAuthenticated && !isLoading && location !== "/" && location !== "/welcome") {
+      setLocation('/');
     }
   }, [isAuthenticated, isLoading, location, setLocation]);
   
@@ -164,8 +169,8 @@ function AuthenticatedApp() {
     );
   }
   
-  // Show landing page for unauthenticated users
-  if (!isAuthenticated) {
+  // Show landing page for unauthenticated users (user is null/undefined)
+  if (!user) {
     return <LandingPage />;
   }
   
