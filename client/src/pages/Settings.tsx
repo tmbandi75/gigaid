@@ -652,39 +652,6 @@ export default function Settings() {
           </Card>
         )}
 
-        <Card className="border-0 shadow-md overflow-hidden" data-testid="card-premium">
-          <div className="bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-400 p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-2xl bg-white/20 flex items-center justify-center">
-                <Crown className="h-6 w-6 text-white" />
-              </div>
-              <div className="text-white">
-                <h3 className="font-bold">Upgrade to Pro</h3>
-                <p className="text-sm text-white/80">Unlock all premium features</p>
-              </div>
-            </div>
-          </div>
-          <CardContent className="p-4">
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              {[
-                { icon: Sparkles, label: "Web Dashboard" },
-                { icon: Sparkles, label: "Calendar Sync" },
-                { icon: Sparkles, label: "Analytics" },
-                { icon: Sparkles, label: "Priority Support" },
-              ].map((feature, index) => (
-                <div key={index} className="flex items-center gap-2 text-sm">
-                  <Check className="h-4 w-4 text-green-500" />
-                  <span>{feature.label}</span>
-                </div>
-              ))}
-            </div>
-            <Button className="w-full bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600" data-testid="button-upgrade-pro">
-              <Crown className="h-4 w-4 mr-2" />
-              Upgrade - $9.99/month
-            </Button>
-          </CardContent>
-        </Card>
-
         <Button 
           onClick={handleSave} 
           className="w-full h-12 text-base" 
