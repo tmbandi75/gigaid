@@ -24,6 +24,7 @@ import {
   Smartphone,
   Banknote,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface DepositData {
   job: {
@@ -230,6 +231,7 @@ export default function PayDeposit() {
   const [selectedMethod, setSelectedMethod] = useState<string>("");
   const [proofUrl, setProofUrl] = useState("");
   const [paymentSubmitted, setPaymentSubmitted] = useState(false);
+  const { toast } = useToast();
 
   const { data, isLoading, error, refetch } = useQuery<DepositData>({
     queryKey: ["/api/public/deposit", token],
@@ -261,6 +263,11 @@ export default function PayDeposit() {
     onSuccess: () => {
       setPaymentSubmitted(true);
       refetch();
+      // Show "Deposit secured" confirmation
+      toast({ 
+        title: "Deposit secured", 
+        description: "Your appointment is confirmed and protected. GigAid has you covered." 
+      });
     },
   });
 
@@ -431,6 +438,11 @@ export default function PayDeposit() {
                       onSuccess={() => {
                         setPaymentSubmitted(true);
                         refetch();
+                        // Show "Deposit secured" confirmation for Stripe payments too
+                        toast({ 
+                          title: "Deposit secured", 
+                          description: "Your appointment is confirmed and protected. GigAid has you covered." 
+                        });
                       }}
                     />
                   </div>

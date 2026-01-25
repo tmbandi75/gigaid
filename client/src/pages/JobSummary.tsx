@@ -34,7 +34,14 @@ import { JobLocationMap } from "@/components/JobLocationMap";
 import { GetPaidDialog } from "@/components/job/GetPaidDialog";
 import { NextActionBanner } from "@/components/NextActionBanner";
 import { IntentActionCard } from "@/components/IntentActionCard";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: React.ElementType }> = {
   scheduled: { label: "Scheduled", color: "text-blue-600", bgColor: "bg-blue-500/10", icon: Calendar },
@@ -75,11 +82,32 @@ export default function JobSummary() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showGetPaid, setShowGetPaid] = useState(false);
+  const [showPostJobMomentum, setShowPostJobMomentum] = useState(false);
+  const [momentumShown, setMomentumShown] = useState(false);
 
   const { data: job, isLoading } = useQuery<Job>({
     queryKey: ["/api/jobs", id],
     enabled: !!id,
   });
+
+  // Show Post-Job Momentum dialog when job is completed + paid and hasn't been shown yet
+  useEffect(() => {
+    if (
+      job && 
+      job.status === "completed" && 
+      job.paymentStatus === "paid" && 
+      !job.reviewRequestedAt &&
+      job.clientPhone &&
+      !momentumShown
+    ) {
+      // Show momentum dialog after a short delay
+      const timer = setTimeout(() => {
+        setShowPostJobMomentum(true);
+        setMomentumShown(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [job, momentumShown]);
 
   // Fetch job photos
   interface PhotoAsset {
@@ -550,6 +578,77 @@ export default function JobSummary() {
         jobTitle={job.title}
         amount={job.price ?? undefined}
       />
+
+      {/* Post-Job Momentum Dialog */}
+      <Dialog open={showPostJobMomentum} onOpenChange={setShowPostJobMomentum}>
+        <DialogContent className="sm:max-w-md" data-testid="dialog-post-job-momentum">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <CheckCircle2 className="h-6 w-6 text-green-500" />
+              You're protected
+            </DialogTitle>
+            <DialogDescription>
+              Job done, payment secured. GigAid is watching your back. Now let's build on this win.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-3 pt-2">
+            <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
+              <p className="text-sm font-medium mb-1">Want a review?</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Reviews help you get more bookings. Happy customers are 3x more likely to leave one if asked right away.
+              </p>
+              <Button
+                className="w-full"
+                onClick={() => {
+                  requestReviewMutation.mutate();
+                  setShowPostJobMomentum(false);
+                }}
+                disabled={requestReviewMutation.isPending}
+                data-testid="button-momentum-request-review"
+              >
+                {requestReviewMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
+                Ask for a Review
+              </Button>
+            </div>
+
+            <div className="p-3 bg-muted/50 rounded-lg">
+              <p className="text-sm font-medium mb-1">I'll watch for repeat business</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                A check-in message 2 weeks later can lead to more work. I'll remind you.
+              </p>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  toast({
+                    title: "I'm on it",
+                    description: "I'll remind you to follow up with this client in 2 weeks. This stays on my radar."
+                  });
+                  setShowPostJobMomentum(false);
+                }}
+                data-testid="button-momentum-set-reminder"
+              >
+                <Clock className="h-4 w-4 mr-2" />
+                Remind Me in 2 Weeks
+              </Button>
+            </div>
+
+            <Button
+              variant="ghost"
+              className="w-full text-muted-foreground"
+              onClick={() => setShowPostJobMomentum(false)}
+              data-testid="button-momentum-skip"
+            >
+              Maybe later
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
