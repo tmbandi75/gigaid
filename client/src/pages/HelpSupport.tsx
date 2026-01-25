@@ -34,6 +34,7 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
+  Navigation,
 } from "lucide-react";
 
 const faqs = [
@@ -410,11 +411,141 @@ const faqs = [
       },
       {
         q: "What's included in the Pro plan?",
-        a: "Pro includes Owner View dashboard access, weekly email summaries, advanced analytics, priority support, and more. View all plans at /pricing to compare features.",
+        a: "Pro ($19/month) includes Owner View dashboard, weekly email summaries, advanced analytics, priority support, and unlimited jobs. Pro+ ($28/month) adds Risk Protection and AI campaign suggestions. Business ($49/month) includes crew management and dedicated support.",
       },
       {
         q: "How do I upgrade my plan?",
-        a: "Visit the Pricing page to compare all plans (Free, Pro, Pro+, Business) and choose the one that fits your needs. You can access it from the user menu under 'View Plans'.",
+        a: "Visit the Pricing page to compare all plans (Free, Pro, Pro+, Business) and choose the one that fits your needs. You can access it from the user menu under 'View Plans' or from the Help page.",
+      },
+    ],
+  },
+  {
+    category: "Drive Mode",
+    icon: Navigation,
+    color: "from-red-500 to-orange-500",
+    questions: [
+      {
+        q: "What is Drive Mode?",
+        a: "Drive Mode is a hands-free interface with large touch targets designed for use while traveling between jobs. It shows your scheduled jobs for the day and lets you take quick actions safely.",
+      },
+      {
+        q: "How do I activate Drive Mode?",
+        a: "You can access Drive Mode from the More menu. When you're moving at driving speed (over 12 mph) for about a minute, GigAid will also suggest switching to Drive Mode automatically.",
+      },
+      {
+        q: "What can I do in Drive Mode?",
+        a: "Drive Mode offers three quick actions: record a voice note about the job, mark the current job as complete, or add a written note. All actions work even when offline and sync later.",
+      },
+      {
+        q: "Does Drive Mode work offline?",
+        a: "Yes! All Drive Mode actions are saved locally first and automatically sync when you're back online. You'll never lose notes or updates even without cell service.",
+      },
+      {
+        q: "How do I dismiss the Drive Mode prompt?",
+        a: "If you decline the Drive Mode suggestion twice, it won't prompt you again. You can always access it manually from the More menu when you want it.",
+      },
+    ],
+  },
+  {
+    category: "Offline & Sync",
+    icon: Zap,
+    color: "from-gray-500 to-slate-600",
+    questions: [
+      {
+        q: "Does GigAid work offline?",
+        a: "Yes! GigAid saves your work locally when offline. Notes, photos, voice notes, and status updates are stored on your device and automatically sync when you reconnect.",
+      },
+      {
+        q: "What happens to my data when I'm offline?",
+        a: "Your changes are safely stored in your device's local database. When you're back online, everything syncs automatically in the background. You'll see a small indicator when items are waiting to sync.",
+      },
+      {
+        q: "Can I add photos while offline?",
+        a: "Absolutely! Photos are stored locally as files and upload automatically when you're back online. This is great for documenting work at job sites with poor cell coverage.",
+      },
+    ],
+  },
+  {
+    category: "Client Notifications",
+    icon: Send,
+    color: "from-sky-500 to-blue-500",
+    questions: [
+      {
+        q: "What are Event-Driven Notifications?",
+        a: "Event-Driven Notifications let you reach out to past clients based on triggers like weather events, seasonal needs, or your availability. Great for generating repeat business!",
+      },
+      {
+        q: "How do I send notifications to past clients?",
+        a: "Go to Notify Clients from the sidebar. Select the event type (weather, seasonal, availability, or safety), choose which clients to notify, and send. GigAid handles the messaging.",
+      },
+      {
+        q: "Are there limits on notifications?",
+        a: "Yes, to prevent spam: you can send one notification per service type per week, and two per account per week. Messages are limited to 320 characters for SMS, and quiet hours are enforced.",
+      },
+      {
+        q: "Does GigAid suggest when to notify clients?",
+        a: "Pro+ and Business plans include AI-powered suggestions that detect opportunities like upcoming storms or seasonal transitions. These are suggestions only - GigAid never auto-sends messages.",
+      },
+    ],
+  },
+  {
+    category: "Today's Money Plan",
+    icon: CreditCard,
+    color: "from-lime-500 to-green-500",
+    questions: [
+      {
+        q: "What is Today's Money Plan?",
+        a: "Today's Money Plan is your daily action queue that prioritizes leads, jobs, and invoices by their revenue impact. It shows you what to focus on to maximize your earnings today.",
+      },
+      {
+        q: "How does prioritization work?",
+        a: "Items are ranked as urgent (needs immediate action), important (high revenue potential), or normal. The system considers deadlines, client responsiveness, and payment amounts.",
+      },
+      {
+        q: "Can I snooze items in Money Plan?",
+        a: "Yes! If something isn't relevant right now, you can snooze it. Snoozed items reappear later so nothing falls through the cracks.",
+      },
+      {
+        q: "How do I access Today's Money Plan?",
+        a: "Look for Today's Money Plan in your dashboard or sidebar. It updates throughout the day as you complete tasks and new opportunities arise.",
+      },
+    ],
+  },
+  {
+    category: "Priority Signals",
+    icon: AlertCircle,
+    color: "from-fuchsia-500 to-pink-500",
+    questions: [
+      {
+        q: "What are Priority Signals?",
+        a: "Priority Signals are AI-inferred badges that appear on leads, jobs, invoices, and messages to help you focus on what matters most. They highlight items needing urgent attention.",
+      },
+      {
+        q: "What types of signals are there?",
+        a: "There are four signal types: High Priority (important items), At Risk (might be lost), Time Sensitive (deadline approaching), and Payment Risk (potential payment issues).",
+      },
+      {
+        q: "How does GigAid determine priority?",
+        a: "The AI analyzes patterns like client response times, job values, deadline proximity, and historical data to infer which items need your attention most.",
+      },
+    ],
+  },
+  {
+    category: "Mobile Apps",
+    icon: Phone,
+    color: "from-violet-500 to-indigo-500",
+    questions: [
+      {
+        q: "Is there a mobile app for GigAid?",
+        a: "Yes! GigAid is available as a native app for both iOS and Android. The mobile apps offer the same features as the web version plus native capabilities like push notifications.",
+      },
+      {
+        q: "How do I sign in on the mobile app?",
+        a: "The mobile app supports sign-in with Google, Apple, email, or phone number. Your account automatically links with your web account using your email or phone.",
+      },
+      {
+        q: "Will my data sync between web and mobile?",
+        a: "Absolutely! All your leads, jobs, invoices, and settings sync seamlessly between the web and mobile apps. Changes made on one appear instantly on the other.",
       },
     ],
   },
