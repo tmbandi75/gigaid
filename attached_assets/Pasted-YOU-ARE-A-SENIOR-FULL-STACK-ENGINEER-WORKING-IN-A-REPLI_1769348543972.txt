@@ -1,0 +1,172 @@
+YOU ARE A SENIOR FULL-STACK ENGINEER WORKING IN A REPLIT APP (React + API routes). Implement a “Post-Job Momentum Engine” that automatically schedules a follow-up message (and optional review request) after a job is marked COMPLETE. This feature must increase retention by making the app work even when the user is not inside it.
+
+GOALS
+- When a job is completed, automatically schedule a follow-up message to the client (default 24–48 hours later).
+- Include an optional “Leave a review” link in the message.
+- If the job is unpaid, optionally schedule a gentle payment reminder.
+- Provide a simple Settings UI for the pro to:
+  - Enable/disable this automation
+  - Choose delay (24h / 48h)
+  - Edit the message template (one template for follow-up + one for payment reminder)
+  - Configure review link destination (Google review link or custom URL)
+
+NON-NEGOTIABLE GUARDRAILS
+- Additive changes only. Do NOT break existing job, invoice, lead flows.
+- Do NOT spam: at most 1 follow-up + 1 payment reminder per completed job.
+- Do NOT send messages immediately on completion; always schedule with a delay.
+- Always allow manual cancellation per job before the message is sent.
+- No scary/urgent copy. Keep tone friendly and professional.
+- Logging must not store sensitive message content beyond required template fields.
+
+ASSUMPTIONS (adapt if codebase differs)
+- There is a jobs table and job status can transition to “completed” (or similar).
+- There is a clients table with phone/email (at least one contact method).
+- There is some existing messaging channel OR we can start with “queued outbound messages” (even if send is stubbed).
+- The backend can run scheduled tasks (cron-style or a lightweight polling worker).
+
+PHASE 1 IMPLEMENTATION (MVP): QUEUE + SCHEDULER
+We will implement the scheduling and queuing fully. The actual delivery can be:
+- SMS provider if available (Twilio/etc), OR
+- Email provider if available, OR
+- If no provider exists yet, create a “Messages” queue UI and mark as “Ready to send” and “Sent” (manual send later).
+But the scheduling, canceling, and tracking must be real.
+
+STEP 1 — Database (additive migrations)
+Create tables (or add equivalent models):
+
+A) user_automation_settings
+- id (pk)
+- user_id (fk)
+- post_job_followup_enabled BOOLEAN DEFAULT true
+- followup_delay_hours INT DEFAULT 24   -- allowed values 24 or 48
+- followup_template TEXT
+- payment_reminder_enabled BOOLEAN DEFAULT true
+- payment_reminder_delay_hours INT DEFAULT 24
+- payment_reminder_template TEXT
+- review_link_url TEXT NULL
+- created_at, updated_at
+
+Default followup_template (keep short):
+"Hi {{client_first_name}} — thanks again for choosing me. If you need anything else, just reply here."
+
+Default payment_reminder_template:
+"Hi {{client_first_name}} — quick note: the invoice for {{job_title}} is still open. No rush—sharing here in case it got buried: {{invoice_link}}"
+
+B) outbound_messages
+- id (pk)
+- user_id (fk)
+- job_id (fk)
+- client_id (fk)
+- channel TEXT NOT NULL  -- 'sms'|'email'|'inapp'
+- to_address TEXT NOT NULL  -- phone/e-mail
+- type TEXT NOT NULL -- 'followup'|'payment_reminder'|'review_request'
+- status TEXT NOT NULL -- 'scheduled'|'queued'|'sent'|'canceled'|'failed'
+- scheduled_for TIMESTAMP NOT NULL
+- sent_at TIMESTAMP NULL
+- canceled_at TIMESTAMP NULL
+- failure_reason TEXT NULL
+- template_rendered TEXT NULL (optional: store final rendered message; if storing, keep it only if needed)
+- metadata JSON NULL (job_title, invoice_id, etc)
+- created_at, updated_at
+
+Indexes:
+- (status, scheduled_for)
+- (job_id, type)
+- (user_id, status)
+
+STEP 2 — Template rendering utility
+Create a shared function renderTemplate(template, context) that replaces:
+- {{client_first_name}}
+- {{client_name}}
+- {{job_title}}
+- {{invoice_link}}
+- {{review_link}}
+and safely removes missing placeholders (replace with empty string).
+
+Ensure it does NOT allow arbitrary code execution; simple string replacement only.
+
+STEP 3 — Hook into Job completion event
+Find where job status is updated. When status changes from NOT completed -> completed:
+- Load user_automation_settings (create default row if missing)
+- If post_job_followup_enabled:
+  - Determine contact channel preference:
+    - If client has phone -> sms
+    - else if client has email -> email
+    - else -> inapp
+  - Create outbound_messages row:
+    type='followup'
+    status='scheduled'
+    scheduled_for = now + followup_delay_hours
+- If payment_reminder_enabled AND job has unpaid invoice balance:
+  - Create outbound_messages row:
+    type='payment_reminder'
+    status='scheduled'
+    scheduled_for = now + payment_reminder_delay_hours
+
+Also: If review_link_url exists, append a short one-liner to followup message:
+"If you were happy with the work, a quick review helps a lot: {{review_link}}"
+
+STEP 4 — Cancelation controls
+Add endpoint:
+POST /api/outbound-messages/:id/cancel
+- Only the owner (user_id) can cancel
+- Only if status is 'scheduled' or 'queued'
+- Set status='canceled' and canceled_at=now
+
+Add a per-job panel:
+- “Scheduled Follow-up” with time + cancel button
+- “Scheduled Payment Reminder” if applicable
+
+STEP 5 — Scheduler worker (cron / polling)
+Implement a server-side scheduled process that runs every 1–5 minutes:
+- Select outbound_messages where status='scheduled' AND scheduled_for <= now
+- Transition them to status='queued'
+- Attempt delivery if provider exists:
+  - If SMS provider configured -> send, mark sent
+  - else if email provider configured -> send, mark sent
+  - else: leave as queued and visible in UI "Ready to send"
+- On success: status='sent', sent_at=now
+- On failure: status='failed', failure_reason set (truncate), keep retriable=false for MVP
+
+CRITICAL: ensure idempotency
+- Use a DB transaction or update with a WHERE status='scheduled' condition.
+- Never send the same message twice.
+
+STEP 6 — Settings UI (simple)
+Add Settings page section: “Automation”
+Controls:
+- Toggle: “Auto follow-up after job completion”
+- Choice: 24h / 48h
+- Textarea: follow-up template
+- Toggle: “Auto payment reminder if unpaid”
+- Choice: 24h / 48h
+- Textarea: payment template
+- Input: Review link URL (optional)
+- Save button
+Validation:
+- Limit templates to 500 chars
+- Validate URL format if present
+
+STEP 7 — Safety + UX
+- Rate limit: do not create more than 2 scheduled messages per job (followup + payment reminder).
+- If job is re-opened and completed again, do NOT schedule duplicates if already scheduled/sent for that job/type.
+- If client replies is out of scope; ignore for now.
+
+STEP 8 — Minimal telemetry
+Log events (no message bodies):
+- followup_scheduled (job_id, delay_hours)
+- reminder_scheduled
+- message_canceled
+- message_sent
+- message_failed
+
+DELIVERABLES
+- Migrations + models
+- Job completion hook
+- /api settings GET/PUT
+- /api outbound message cancel
+- Worker/scheduler
+- UI: Settings + per-job scheduled messages panel
+- Basic tests or smoke-check script
+
+IMPLEMENT NOW, FOLLOWING THE EXISTING PROJECT CONVENTIONS.

@@ -1996,5 +1996,92 @@ export const insertCampaignSuggestionSchema = createInsertSchema(campaignSuggest
 export type InsertCampaignSuggestion = z.infer<typeof insertCampaignSuggestionSchema>;
 export type CampaignSuggestion = typeof campaignSuggestions.$inferSelect;
 
+// ============================================================================
+// POST-JOB MOMENTUM ENGINE
+// Automated follow-up and payment reminder scheduling after job completion
+// ============================================================================
+
+// User automation settings for post-job follow-ups
+export const userAutomationSettings = pgTable("user_automation_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique(),
+  
+  // Follow-up settings
+  postJobFollowupEnabled: boolean("post_job_followup_enabled").default(true),
+  followupDelayHours: integer("followup_delay_hours").default(24), // 24 or 48
+  followupTemplate: text("followup_template").default(
+    "Hi {{client_first_name}} — thanks again for choosing me. If you need anything else, just reply here."
+  ),
+  
+  // Payment reminder settings
+  paymentReminderEnabled: boolean("payment_reminder_enabled").default(true),
+  paymentReminderDelayHours: integer("payment_reminder_delay_hours").default(24),
+  paymentReminderTemplate: text("payment_reminder_template").default(
+    "Hi {{client_first_name}} — quick note: the invoice for {{job_title}} is still open. No rush—sharing here in case it got buried: {{invoice_link}}"
+  ),
+  
+  // Review link
+  reviewLinkUrl: text("review_link_url"),
+  
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at"),
+}, (table) => [
+  index("user_automation_settings_user_idx").on(table.userId),
+]);
+
+export const insertUserAutomationSettingsSchema = createInsertSchema(userAutomationSettings).omit({
+  id: true,
+});
+
+export type InsertUserAutomationSettings = z.infer<typeof insertUserAutomationSettingsSchema>;
+export type UserAutomationSettings = typeof userAutomationSettings.$inferSelect;
+
+// Outbound message types
+export const outboundMessageTypes = ["followup", "payment_reminder", "review_request"] as const;
+export type OutboundMessageType = typeof outboundMessageTypes[number];
+
+// Outbound message channels
+export const outboundMessageChannels = ["sms", "email", "inapp"] as const;
+export type OutboundMessageChannel = typeof outboundMessageChannels[number];
+
+// Outbound message statuses
+export const outboundMessageStatuses = ["scheduled", "queued", "sent", "canceled", "failed"] as const;
+export type OutboundMessageStatus = typeof outboundMessageStatuses[number];
+
+// Outbound messages queue for scheduled follow-ups and reminders
+export const outboundMessages = pgTable("outbound_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  jobId: varchar("job_id").notNull(),
+  clientId: varchar("client_id"),
+  
+  channel: text("channel").notNull(), // sms, email, inapp
+  toAddress: text("to_address").notNull(), // phone or email
+  type: text("type").notNull(), // followup, payment_reminder, review_request
+  status: text("status").notNull().default("scheduled"), // scheduled, queued, sent, canceled, failed
+  
+  scheduledFor: text("scheduled_for").notNull(), // ISO timestamp
+  sentAt: text("sent_at"),
+  canceledAt: text("canceled_at"),
+  failureReason: text("failure_reason"),
+  
+  templateRendered: text("template_rendered"), // Final rendered message
+  metadata: text("metadata"), // JSON: job_title, invoice_id, etc
+  
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at"),
+}, (table) => [
+  index("outbound_messages_status_scheduled_idx").on(table.status, table.scheduledFor),
+  index("outbound_messages_job_type_idx").on(table.jobId, table.type),
+  index("outbound_messages_user_status_idx").on(table.userId, table.status),
+]);
+
+export const insertOutboundMessageSchema = createInsertSchema(outboundMessages).omit({
+  id: true,
+});
+
+export type InsertOutboundMessage = z.infer<typeof insertOutboundMessageSchema>;
+export type OutboundMessage = typeof outboundMessages.$inferSelect;
+
 export * from "./models/chat";
 export * from "./models/auth";

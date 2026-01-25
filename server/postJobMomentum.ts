@@ -1,0 +1,389 @@
+import { db } from "./db";
+import { 
+  userAutomationSettings, 
+  outboundMessages, 
+  jobs, 
+  invoices,
+  clients,
+  type UserAutomationSettings,
+  type OutboundMessage,
+  type Job,
+  type Client
+} from "@shared/schema";
+import { eq, and, lte, inArray } from "drizzle-orm";
+
+// Template rendering utility - simple string replacement, no code execution
+export function renderTemplate(template: string, context: Record<string, string | undefined>): string {
+  let result = template;
+  
+  // Replace known placeholders
+  const placeholders = [
+    "client_first_name",
+    "client_name", 
+    "job_title",
+    "invoice_link",
+    "review_link"
+  ];
+  
+  for (const placeholder of placeholders) {
+    const regex = new RegExp(`\\{\\{${placeholder}\\}\\}`, "g");
+    const value = context[placeholder] ?? "";
+    result = result.replace(regex, value);
+  }
+  
+  // Remove any remaining unrecognized placeholders (safety)
+  result = result.replace(/\{\{[^}]+\}\}/g, "");
+  
+  return result.trim();
+}
+
+// Get or create user automation settings with defaults
+export async function getOrCreateAutomationSettings(userId: string): Promise<UserAutomationSettings> {
+  const existing = await db
+    .select()
+    .from(userAutomationSettings)
+    .where(eq(userAutomationSettings.userId, userId))
+    .limit(1);
+  
+  if (existing.length > 0) {
+    return existing[0];
+  }
+  
+  // Create with defaults
+  const [created] = await db
+    .insert(userAutomationSettings)
+    .values({
+      userId,
+      createdAt: new Date().toISOString(),
+    })
+    .returning();
+  
+  return created;
+}
+
+// Schedule follow-up message after job completion
+export async function schedulePostJobMessages(job: Job, previousStatus: string): Promise<void> {
+  // Only trigger when transitioning TO completed from a non-completed state
+  if (job.status !== "completed" || previousStatus === "completed") {
+    return;
+  }
+  
+  const userId = job.userId;
+  if (!userId) return;
+  
+  // Get automation settings
+  const settings = await getOrCreateAutomationSettings(userId);
+  
+  // Get client info
+  let client: Client | null = null;
+  if (job.clientPhone || job.clientEmail) {
+    const clients_result = await db
+      .select()
+      .from(clients)
+      .where(
+        and(
+          eq(clients.userId, userId),
+          job.clientPhone 
+            ? eq(clients.clientPhone, job.clientPhone)
+            : eq(clients.clientEmail, job.clientEmail || "")
+        )
+      )
+      .limit(1);
+    client = clients_result[0] || null;
+  }
+  
+  // Determine contact channel and address
+  const toAddress = job.clientPhone || job.clientEmail;
+  if (!toAddress) {
+    console.log(`[PostJobMomentum] No contact info for job ${job.id}, skipping`);
+    return;
+  }
+  
+  const channel = job.clientPhone ? "sms" : "email";
+  const clientFirstName = job.clientName?.split(" ")[0] || "there";
+  
+  // Check for existing scheduled messages to prevent duplicates
+  const existingMessages = await db
+    .select()
+    .from(outboundMessages)
+    .where(
+      and(
+        eq(outboundMessages.jobId, job.id),
+        inArray(outboundMessages.status, ["scheduled", "queued", "sent"])
+      )
+    );
+  
+  const hasFollowup = existingMessages.some(m => m.type === "followup");
+  const hasPaymentReminder = existingMessages.some(m => m.type === "payment_reminder");
+  
+  const now = new Date();
+  
+  // Schedule follow-up if enabled and not already scheduled
+  if (settings.postJobFollowupEnabled && !hasFollowup) {
+    const scheduledFor = new Date(now.getTime() + (settings.followupDelayHours || 24) * 60 * 60 * 1000);
+    
+    // Build template with optional review link
+    let template = settings.followupTemplate || "";
+    if (settings.reviewLinkUrl) {
+      template += "\n\nIf you were happy with the work, a quick review helps a lot: {{review_link}}";
+    }
+    
+    const renderedMessage = renderTemplate(template, {
+      client_first_name: clientFirstName,
+      client_name: job.clientName || "",
+      job_title: job.title || "the job",
+      review_link: settings.reviewLinkUrl || "",
+    });
+    
+    await db.insert(outboundMessages).values({
+      userId,
+      jobId: job.id,
+      clientId: client?.id,
+      channel,
+      toAddress,
+      type: "followup",
+      status: "scheduled",
+      scheduledFor: scheduledFor.toISOString(),
+      templateRendered: renderedMessage,
+      metadata: JSON.stringify({ jobTitle: job.title }),
+      createdAt: now.toISOString(),
+    });
+    
+    console.log(`[PostJobMomentum] Scheduled followup for job ${job.id} at ${scheduledFor.toISOString()}`);
+  }
+  
+  // Schedule payment reminder if enabled, job is unpaid, and not already scheduled
+  if (settings.paymentReminderEnabled && !hasPaymentReminder) {
+    // Check if job has unpaid balance
+    const jobInvoices = await db
+      .select()
+      .from(invoices)
+      .where(eq(invoices.jobId, job.id));
+    
+    const hasUnpaidInvoice = jobInvoices.some(inv => 
+      inv.status !== "paid" && (inv.amountCents || 0) > 0
+    );
+    
+    if (hasUnpaidInvoice) {
+      const scheduledFor = new Date(now.getTime() + (settings.paymentReminderDelayHours || 24) * 60 * 60 * 1000);
+      
+      const invoice = jobInvoices.find(inv => inv.status !== "paid");
+      const invoiceLink = invoice ? `${process.env.FRONTEND_URL || ""}/pay/${job.id}` : "";
+      
+      const renderedMessage = renderTemplate(settings.paymentReminderTemplate || "", {
+        client_first_name: clientFirstName,
+        client_name: job.clientName || "",
+        job_title: job.title || "the job",
+        invoice_link: invoiceLink,
+      });
+      
+      await db.insert(outboundMessages).values({
+        userId,
+        jobId: job.id,
+        clientId: client?.id,
+        channel,
+        toAddress,
+        type: "payment_reminder",
+        status: "scheduled",
+        scheduledFor: scheduledFor.toISOString(),
+        templateRendered: renderedMessage,
+        metadata: JSON.stringify({ 
+          jobTitle: job.title,
+          invoiceId: invoice?.id 
+        }),
+        createdAt: now.toISOString(),
+      });
+      
+      console.log(`[PostJobMomentum] Scheduled payment reminder for job ${job.id} at ${scheduledFor.toISOString()}`);
+    }
+  }
+}
+
+// Cancel a scheduled message
+export async function cancelOutboundMessage(messageId: string, userId: string): Promise<boolean> {
+  const result = await db
+    .update(outboundMessages)
+    .set({
+      status: "canceled",
+      canceledAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })
+    .where(
+      and(
+        eq(outboundMessages.id, messageId),
+        eq(outboundMessages.userId, userId),
+        inArray(outboundMessages.status, ["scheduled", "queued"])
+      )
+    )
+    .returning();
+  
+  if (result.length > 0) {
+    console.log(`[PostJobMomentum] Canceled message ${messageId}`);
+    return true;
+  }
+  return false;
+}
+
+// Get scheduled messages for a job
+export async function getScheduledMessagesForJob(jobId: string, userId: string): Promise<OutboundMessage[]> {
+  return db
+    .select()
+    .from(outboundMessages)
+    .where(
+      and(
+        eq(outboundMessages.jobId, jobId),
+        eq(outboundMessages.userId, userId)
+      )
+    );
+}
+
+// Scheduler worker: process due messages
+export async function processScheduledMessages(): Promise<number> {
+  const now = new Date().toISOString();
+  
+  // Find messages that are scheduled and due
+  const dueMessages = await db
+    .select()
+    .from(outboundMessages)
+    .where(
+      and(
+        eq(outboundMessages.status, "scheduled"),
+        lte(outboundMessages.scheduledFor, now)
+      )
+    )
+    .limit(50); // Process in batches
+  
+  let processed = 0;
+  
+  for (const message of dueMessages) {
+    try {
+      // Transition to queued (with idempotency check)
+      const updated = await db
+        .update(outboundMessages)
+        .set({ 
+          status: "queued",
+          updatedAt: new Date().toISOString()
+        })
+        .where(
+          and(
+            eq(outboundMessages.id, message.id),
+            eq(outboundMessages.status, "scheduled") // Idempotency
+          )
+        )
+        .returning();
+      
+      if (updated.length === 0) {
+        continue; // Already processed by another worker
+      }
+      
+      // Attempt to send via available provider
+      const sent = await attemptSendMessage(message);
+      
+      if (sent) {
+        await db
+          .update(outboundMessages)
+          .set({
+            status: "sent",
+            sentAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          })
+          .where(eq(outboundMessages.id, message.id));
+        
+        console.log(`[PostJobMomentum] Sent ${message.type} message ${message.id}`);
+      }
+      // If not sent, stays as "queued" for manual review
+      
+      processed++;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      await db
+        .update(outboundMessages)
+        .set({
+          status: "failed",
+          failureReason: errorMessage.substring(0, 500),
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(outboundMessages.id, message.id));
+      
+      console.error(`[PostJobMomentum] Failed to send message ${message.id}:`, errorMessage);
+    }
+  }
+  
+  return processed;
+}
+
+// Attempt to send message via available provider
+async function attemptSendMessage(message: OutboundMessage): Promise<boolean> {
+  // Check for Twilio SMS if channel is sms
+  if (message.channel === "sms" && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+    try {
+      const twilio = await import("twilio");
+      const client = twilio.default(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+      
+      await client.messages.create({
+        body: message.templateRendered || "",
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: message.toAddress,
+      });
+      
+      return true;
+    } catch (error) {
+      console.error(`[PostJobMomentum] Twilio send failed:`, error);
+      throw error;
+    }
+  }
+  
+  // Check for SendGrid email if channel is email
+  if (message.channel === "email" && process.env.SENDGRID_API_KEY) {
+    try {
+      const sgMail = await import("@sendgrid/mail");
+      sgMail.default.setApiKey(process.env.SENDGRID_API_KEY);
+      
+      await sgMail.default.send({
+        to: message.toAddress,
+        from: process.env.SENDGRID_FROM_EMAIL || "noreply@gigaid.app",
+        subject: message.type === "payment_reminder" ? "Quick reminder about your invoice" : "Thanks for choosing me!",
+        text: message.templateRendered || "",
+      });
+      
+      return true;
+    } catch (error) {
+      console.error(`[PostJobMomentum] SendGrid send failed:`, error);
+      throw error;
+    }
+  }
+  
+  // No provider available - leave as queued for manual send
+  console.log(`[PostJobMomentum] No provider for ${message.channel}, leaving as queued`);
+  return false;
+}
+
+// Start the scheduler (call this from server startup)
+let schedulerInterval: NodeJS.Timeout | null = null;
+
+export function startMomentumScheduler(intervalMs: number = 60000): void {
+  if (schedulerInterval) {
+    return; // Already running
+  }
+  
+  console.log(`[PostJobMomentum] Starting scheduler with ${intervalMs}ms interval`);
+  
+  schedulerInterval = setInterval(async () => {
+    try {
+      const processed = await processScheduledMessages();
+      if (processed > 0) {
+        console.log(`[PostJobMomentum] Processed ${processed} messages`);
+      }
+    } catch (error) {
+      console.error(`[PostJobMomentum] Scheduler error:`, error);
+    }
+  }, intervalMs);
+}
+
+export function stopMomentumScheduler(): void {
+  if (schedulerInterval) {
+    clearInterval(schedulerInterval);
+    schedulerInterval = null;
+    console.log(`[PostJobMomentum] Scheduler stopped`);
+  }
+}

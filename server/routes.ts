@@ -811,12 +811,23 @@ export async function registerRoutes(
       if (!job) {
         return res.status(404).json({ error: "Job not found" });
       }
+      const previousStatus = job.status;
       const validated = updateStatusSchema.parse(req.body);
       const updates: any = { status: validated.status };
       if (validated.status === 'completed') {
         updates.completedAt = new Date().toISOString();
       }
       const updated = await storage.updateJob(req.params.id, updates);
+      
+      // Post-Job Momentum: Schedule follow-up messages on completion (fire and forget)
+      if (updated && validated.status === 'completed' && previousStatus !== 'completed') {
+        import("./postJobMomentum").then(({ schedulePostJobMessages }) => {
+          schedulePostJobMessages(updated, previousStatus || "").catch(err => {
+            console.error("[PostJobMomentum] Failed to schedule messages:", err);
+          });
+        }).catch(() => {});
+      }
+      
       res.json(updated);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -9944,6 +9955,156 @@ Return ONLY the message text, no JSON or formatting.`
       console.error("Error processing opt-out:", error);
       res.status(500).json({ error: "Failed to process opt-out" });
     }
+  });
+
+  // ============================================================================
+  // POST-JOB MOMENTUM ENGINE API ROUTES
+  // ============================================================================
+
+  // Get user automation settings
+  app.get("/api/automation-settings", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { getOrCreateAutomationSettings } = await import("./postJobMomentum");
+      const settings = await getOrCreateAutomationSettings(userId);
+      res.json(settings);
+    } catch (error: any) {
+      console.error("Error fetching automation settings:", error);
+      res.status(500).json({ error: "Failed to fetch automation settings" });
+    }
+  });
+
+  // Update user automation settings
+  app.put("/api/automation-settings", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { 
+        postJobFollowupEnabled,
+        followupDelayHours,
+        followupTemplate,
+        paymentReminderEnabled,
+        paymentReminderDelayHours,
+        paymentReminderTemplate,
+        reviewLinkUrl
+      } = req.body;
+      
+      // Validate
+      if (followupDelayHours && ![24, 48].includes(followupDelayHours)) {
+        return res.status(400).json({ error: "followupDelayHours must be 24 or 48" });
+      }
+      if (paymentReminderDelayHours && ![24, 48].includes(paymentReminderDelayHours)) {
+        return res.status(400).json({ error: "paymentReminderDelayHours must be 24 or 48" });
+      }
+      if (followupTemplate && followupTemplate.length > 500) {
+        return res.status(400).json({ error: "followupTemplate must be 500 characters or less" });
+      }
+      if (paymentReminderTemplate && paymentReminderTemplate.length > 500) {
+        return res.status(400).json({ error: "paymentReminderTemplate must be 500 characters or less" });
+      }
+      if (reviewLinkUrl && !/^https?:\/\/.+/.test(reviewLinkUrl)) {
+        return res.status(400).json({ error: "reviewLinkUrl must be a valid URL" });
+      }
+      
+      const { db } = await import("./db");
+      const { userAutomationSettings } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      // Upsert settings
+      const { getOrCreateAutomationSettings } = await import("./postJobMomentum");
+      await getOrCreateAutomationSettings(userId); // Ensure row exists
+      
+      const [updated] = await db
+        .update(userAutomationSettings)
+        .set({
+          postJobFollowupEnabled: postJobFollowupEnabled ?? undefined,
+          followupDelayHours: followupDelayHours ?? undefined,
+          followupTemplate: followupTemplate ?? undefined,
+          paymentReminderEnabled: paymentReminderEnabled ?? undefined,
+          paymentReminderDelayHours: paymentReminderDelayHours ?? undefined,
+          paymentReminderTemplate: paymentReminderTemplate ?? undefined,
+          reviewLinkUrl: reviewLinkUrl ?? undefined,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(userAutomationSettings.userId, userId))
+        .returning();
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating automation settings:", error);
+      res.status(500).json({ error: "Failed to update automation settings" });
+    }
+  });
+
+  // Get scheduled messages for a job
+  app.get("/api/jobs/:jobId/scheduled-messages", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { jobId } = req.params;
+      
+      const { getScheduledMessagesForJob } = await import("./postJobMomentum");
+      const messages = await getScheduledMessagesForJob(jobId, userId);
+      res.json(messages);
+    } catch (error: any) {
+      console.error("Error fetching scheduled messages:", error);
+      res.status(500).json({ error: "Failed to fetch scheduled messages" });
+    }
+  });
+
+  // Cancel a scheduled message
+  app.post("/api/outbound-messages/:id/cancel", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { id } = req.params;
+      
+      const { cancelOutboundMessage } = await import("./postJobMomentum");
+      const success = await cancelOutboundMessage(id, userId);
+      
+      if (success) {
+        res.json({ success: true, message: "Message canceled" });
+      } else {
+        res.status(400).json({ error: "Cannot cancel message - already sent or not found" });
+      }
+    } catch (error: any) {
+      console.error("Error canceling message:", error);
+      res.status(500).json({ error: "Failed to cancel message" });
+    }
+  });
+
+  // Get all scheduled/queued messages for user (for Messages queue UI)
+  app.get("/api/outbound-messages", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const status = req.query.status as string | undefined;
+      
+      const { db } = await import("./db");
+      const { outboundMessages } = await import("@shared/schema");
+      const { eq, and, inArray } = await import("drizzle-orm");
+      
+      let query = db.select().from(outboundMessages).where(eq(outboundMessages.userId, userId));
+      
+      if (status) {
+        const statuses = status.split(",");
+        query = db.select().from(outboundMessages).where(
+          and(
+            eq(outboundMessages.userId, userId),
+            inArray(outboundMessages.status, statuses)
+          )
+        );
+      }
+      
+      const messages = await query;
+      res.json(messages);
+    } catch (error: any) {
+      console.error("Error fetching outbound messages:", error);
+      res.status(500).json({ error: "Failed to fetch outbound messages" });
+    }
+  });
+
+  // Start the momentum scheduler
+  import("./postJobMomentum").then(({ startMomentumScheduler }) => {
+    startMomentumScheduler(60000); // Check every minute
+  }).catch(err => {
+    console.error("[PostJobMomentum] Failed to start scheduler:", err);
   });
 
   return httpServer;
