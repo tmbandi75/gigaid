@@ -7924,15 +7924,15 @@ Return ONLY the message text, no JSON or formatting.`
   // ==================== AI NUDGES ====================
   
   // Generate nudges for the current user
-  app.post("/api/ai/nudges/generate", async (req, res) => {
+  app.post("/api/ai/nudges/generate", isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser("demo-user");
-      if (!user) {
-        return res.status(401).json({ error: "Not authenticated" });
+      const userId = (req as any).userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
       }
 
       const { generateNudgesForUser } = await import("./nudgeGenerator");
-      const result = await generateNudgesForUser(user.id);
+      const result = await generateNudgesForUser(userId);
       
       res.json(result);
     } catch (error) {
@@ -7945,11 +7945,15 @@ Return ONLY the message text, no JSON or formatting.`
   // Optional query params:
   // - entity_type & entity_id: filter by specific entity
   // - mode=daily: return top 3 nudges for "Today's Game Plan"
-  app.get("/api/ai/nudges", async (req, res) => {
+  app.get("/api/ai/nudges", isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser("demo-user");
+      const userId = (req as any).userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      const user = await storage.getUser(userId);
       if (!user) {
-        return res.status(401).json({ error: "Not authenticated" });
+        return res.status(401).json({ error: "User not found" });
       }
 
       const { entity_type, entity_id, mode } = req.query;
@@ -8391,9 +8395,13 @@ Return ONLY the message text, no JSON or formatting.`
         });
       }
 
+      const userId = (req as any).userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
       const { ActionQueueGenerator } = await import("./actionQueueGenerator");
       const generator = new ActionQueueGenerator(storage);
-      const items = await generator.generateQueue("demo-user");
+      const items = await generator.generateQueue(userId);
       
       res.json({ 
         success: true, 
@@ -8414,9 +8422,13 @@ Return ONLY the message text, no JSON or formatting.`
         return res.json([]);
       }
 
+      const userId = (req as any).userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
       const { status } = req.query;
       const items = await storage.getActionQueueItems(
-        "demo-user", 
+        userId, 
         status as string | undefined
       );
       res.json(items);
@@ -8491,9 +8503,12 @@ Return ONLY the message text, no JSON or formatting.`
   const { getNextActionsForUser, actOnAction, dismissAction } = await import("./nextBestActionEngine");
   
   // Get all active next actions for user
-  app.get("/api/next-actions", async (req, res) => {
+  app.get("/api/next-actions", isAuthenticated, async (req, res) => {
     try {
-      const userId = "demo-user";
+      const userId = (req as any).userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
       const entityType = req.query.entityType as string | undefined;
       
       const actions = await storage.getNextActions(userId, entityType);
@@ -8556,9 +8571,12 @@ Return ONLY the message text, no JSON or formatting.`
   } = await import("./intentDetectionEngine");
   
   // Get all active ready actions for user
-  app.get("/api/ready-actions", async (req, res) => {
+  app.get("/api/ready-actions", isAuthenticated, async (req, res) => {
     try {
-      const userId = "demo-user";
+      const userId = (req as any).userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
       const actions = await storage.getReadyActions(userId);
       res.json(actions);
     } catch (error) {
@@ -8580,9 +8598,14 @@ Return ONLY the message text, no JSON or formatting.`
   });
   
   // Act on ready action (create invoice and send with booking link)
-  app.post("/api/ready-actions/:id/act", async (req, res) => {
+  app.post("/api/ready-actions/:id/act", isAuthenticated, async (req, res) => {
     try {
-      const action = await storage.getReadyActions("demo-user")
+      const userId = (req as any).userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      const action = await storage.getReadyActions(userId)
         .then(actions => actions.find(a => a.id === req.params.id));
       
       if (!action) {
@@ -8598,7 +8621,7 @@ Return ONLY the message text, no JSON or formatting.`
       const invoiceUrl = `${frontendUrl}/pay/${publicToken}`;
       
       // Generate booking link for the client
-      const user = await storage.getUser("demo-user");
+      const user = await storage.getUser(userId);
       const bookingLink = user?.publicProfileSlug 
         ? `${frontendUrl}/book/${user.publicProfileSlug}`
         : null;
@@ -8608,7 +8631,7 @@ Return ONLY the message text, no JSON or formatting.`
       
       // Create the invoice from prefilled data with ready action tracking
       const invoice = await storage.createInvoice({
-        userId: "demo-user",
+        userId,
         clientName: action.prefilledClientName || "Client",
         clientEmail: action.prefilledClientEmail,
         clientPhone: action.prefilledClientPhone,
@@ -8722,8 +8745,13 @@ Return ONLY the message text, no JSON or formatting.`
   // Tracks user corrections to AI suggestions for continuous model improvement
   // This is completely invisible to users - no UI surfaces this data
   
-  app.post("/api/ai-overrides", async (req, res) => {
+  app.post("/api/ai-overrides", isAuthenticated, async (req, res) => {
     try {
+      const userId = (req as any).userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
       const { 
         entityType, 
         entityId, 
@@ -8748,7 +8776,7 @@ Return ONLY the message text, no JSON or formatting.`
       const timeOfDay = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
       
       const override = await storage.createAiOverride({
-        userId: "demo-user",
+        userId,
         entityType,
         entityId,
         overrideType,
@@ -8807,8 +8835,13 @@ Return ONLY the message text, no JSON or formatting.`
   // GigAid Impact metrics showing "GigAid helped you collect $X faster"
 
   // Compute daily outcome metrics
-  app.post("/api/outcomes/compute", async (req, res) => {
+  app.post("/api/outcomes/compute", isAuthenticated, async (req, res) => {
     try {
+      const userId = (req as any).userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
       const flag = await storage.getFeatureFlag("outcome_attribution");
       if (!flag?.enabled) {
         return res.status(403).json({ 
@@ -8819,7 +8852,6 @@ Return ONLY the message text, no JSON or formatting.`
 
       const { date } = req.body;
       const metricDate = date || new Date().toISOString().split('T')[0];
-      const userId = "demo-user";
 
       // Check if metrics already exist for this date
       const existing = await storage.getOutcomeMetricsDailyByDate(userId, metricDate);
@@ -8905,8 +8937,13 @@ Return ONLY the message text, no JSON or formatting.`
   });
 
   // Get outcome metrics for date range
-  app.get("/api/outcomes", async (req, res) => {
+  app.get("/api/outcomes", isAuthenticated, async (req, res) => {
     try {
+      const userId = (req as any).userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
       const flag = await storage.getFeatureFlag("outcome_attribution");
       if (!flag?.enabled) {
         return res.json({ metrics: [], summary: null });
@@ -8920,7 +8957,7 @@ Return ONLY the message text, no JSON or formatting.`
         return d.toISOString().split('T')[0];
       })();
 
-      const metrics = await storage.getOutcomeMetricsDaily("demo-user", start, end);
+      const metrics = await storage.getOutcomeMetricsDaily(userId, start, end);
 
       // Calculate summary
       const summary = {

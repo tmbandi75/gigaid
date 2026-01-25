@@ -7,6 +7,7 @@ import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { authStorage } from "./storage";
+import { verifyAppJwt } from "../../appJwt";
 
 const getOidcConfig = memoize(
   async () => {
@@ -144,9 +145,24 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  // First, check for JWT Bearer token (mobile/Firebase auth)
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    const payload = verifyAppJwt(token);
+    if (payload?.sub) {
+      // Valid JWT - set userId and proceed
+      (req as any).userId = payload.sub;
+      return next();
+    }
+    // Invalid JWT - don't fall through to session auth, just reject
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  // Fall back to Replit Auth session
   const user = req.user as any;
 
-  if (!req.isAuthenticated() || !user.expires_at) {
+  if (!req.isAuthenticated() || !user?.expires_at) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
