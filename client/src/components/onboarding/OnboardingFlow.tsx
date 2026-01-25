@@ -313,6 +313,9 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
       depositEnabled: deposit.enabled,
       depositValue: deposit.percentage,
       depositPolicySet: true,
+      // Auto-enable public profile when reaching booking link step
+      // This ensures the booking link will work immediately
+      publicProfileEnabled: true,
     });
     
     updateOnboardingMutation.mutate({ step: 5 });

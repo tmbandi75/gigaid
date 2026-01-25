@@ -898,7 +898,20 @@ export class MemStorage implements IStorage {
   }
 
   async getUserByPublicSlug(slug: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(u => u.publicProfileSlug === slug);
+    // First try to find by publicProfileSlug
+    const userBySlug = Array.from(this.users.values()).find(u => u.publicProfileSlug === slug);
+    if (userBySlug) {
+      return userBySlug;
+    }
+    
+    // If slug looks like a UUID, also try to find by user ID
+    // This supports booking links that use user ID as fallback during onboarding
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(slug)) {
+      return Array.from(this.users.values()).find(u => u.id === slug);
+    }
+    
+    return undefined;
   }
 
   async getUserByReferralCode(code: string): Promise<User | undefined> {

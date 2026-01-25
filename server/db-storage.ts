@@ -142,8 +142,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByPublicSlug(slug: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.publicProfileSlug, slug));
-    return user || undefined;
+    // First try to find by publicProfileSlug
+    const [userBySlug] = await db.select().from(users).where(eq(users.publicProfileSlug, slug));
+    if (userBySlug) {
+      return userBySlug;
+    }
+    
+    // If slug looks like a UUID, also try to find by user ID
+    // This supports booking links that use user ID as fallback during onboarding
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(slug)) {
+      const [userById] = await db.select().from(users).where(eq(users.id, slug));
+      return userById || undefined;
+    }
+    
+    return undefined;
   }
 
   async getUserByReferralCode(code: string): Promise<User | undefined> {

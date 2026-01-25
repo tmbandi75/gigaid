@@ -3739,8 +3739,16 @@ export async function registerRoutes(
 
   app.post("/api/public/book/:slug", async (req, res) => {
     try {
-      const user = await storage.getUserByPublicSlug(req.params.slug);
-      if (!user || !user.publicProfileEnabled) {
+      const slug = req.params.slug;
+      const user = await storage.getUserByPublicSlug(slug);
+      
+      // Check if slug is a UUID (user ID) - this is used for onboarding flow
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const isUserIdLookup = uuidRegex.test(slug) && user?.id === slug;
+      
+      // For publicProfileSlug lookups, require publicProfileEnabled
+      // For user ID lookups (onboarding), allow access even if not enabled
+      if (!user || (!user.publicProfileEnabled && !isUserIdLookup)) {
         return res.status(404).json({ error: "Profile not found" });
       }
       const validated = insertBookingRequestSchema.parse({
@@ -4108,8 +4116,16 @@ export async function registerRoutes(
   // Public Profile Endpoints
   app.get("/api/public/profile/:slug", async (req, res) => {
     try {
-      const user = await storage.getUserByPublicSlug(req.params.slug);
-      if (!user || !user.publicProfileEnabled) {
+      const slug = req.params.slug;
+      const user = await storage.getUserByPublicSlug(slug);
+      
+      // Check if slug is a UUID (user ID) - this is used for onboarding flow
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const isUserIdLookup = uuidRegex.test(slug) && user?.id === slug;
+      
+      // For publicProfileSlug lookups, require publicProfileEnabled
+      // For user ID lookups (onboarding), allow access even if not enabled
+      if (!user || (!user.publicProfileEnabled && !isUserIdLookup)) {
         return res.status(404).json({ error: "Profile not found" });
       }
       const reviews = await storage.getPublicReviews(user.id);
@@ -4236,8 +4252,16 @@ export async function registerRoutes(
   // Get available time slots for a date (public)
   app.get("/api/public/available-slots/:slug/:date", async (req, res) => {
     try {
-      const user = await storage.getUserByPublicSlug(req.params.slug);
-      if (!user || !user.publicProfileEnabled) {
+      const slug = req.params.slug;
+      const user = await storage.getUserByPublicSlug(slug);
+      
+      // Check if slug is a UUID (user ID) - this is used for onboarding flow
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const isUserIdLookup = uuidRegex.test(slug) && user?.id === slug;
+      
+      // For publicProfileSlug lookups, require publicProfileEnabled
+      // For user ID lookups (onboarding), allow access even if not enabled
+      if (!user || (!user.publicProfileEnabled && !isUserIdLookup)) {
         return res.status(404).json({ error: "Profile not found" });
       }
 
@@ -4306,8 +4330,16 @@ export async function registerRoutes(
     try {
       const { getDistanceBetweenZips, estimateTravelTime, extractZipFromLocation } = await import("./zipDistance");
       
-      const user = await storage.getUserByPublicSlug(req.params.slug);
-      if (!user || !user.publicProfileEnabled) {
+      const slug = req.params.slug;
+      const user = await storage.getUserByPublicSlug(slug);
+      
+      // Check if slug is a UUID (user ID) - this is used for onboarding flow
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const isUserIdLookup = uuidRegex.test(slug) && user?.id === slug;
+      
+      // For publicProfileSlug lookups, require publicProfileEnabled
+      // For user ID lookups (onboarding), allow access even if not enabled
+      if (!user || (!user.publicProfileEnabled && !isUserIdLookup)) {
         return res.status(404).json({ error: "Profile not found" });
       }
 
@@ -4451,7 +4483,14 @@ export async function registerRoutes(
       }
 
       const user = await storage.getUserByPublicSlug(slug);
-      if (!user || !user.publicProfileEnabled) {
+      
+      // Check if slug is a UUID (user ID) - this is used for onboarding flow
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const isUserIdLookup = uuidRegex.test(slug) && user?.id === slug;
+      
+      // For publicProfileSlug lookups, require publicProfileEnabled
+      // For user ID lookups (onboarding), allow access even if not enabled
+      if (!user || (!user.publicProfileEnabled && !isUserIdLookup)) {
         return res.status(404).json({ error: "Profile not found" });
       }
 
