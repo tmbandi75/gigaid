@@ -31,6 +31,7 @@ import { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useDriveModeContext } from "@/components/drivemode/DriveModeProvider";
+import { useAuth } from "@/hooks/use-auth";
 
 interface UserProfile {
   id: string;
@@ -103,6 +104,7 @@ export default function More() {
   const [, navigate] = useLocation();
   const [darkMode, setDarkMode] = useState(false);
   const { enterDriveMode, gpsStatus, currentSpeed } = useDriveModeContext();
+  const { logout } = useAuth();
 
   const { data: profile } = useQuery<UserProfile>({
     queryKey: ["/api/profile"],
@@ -287,10 +289,10 @@ export default function More() {
           <CardContent className="p-0">
             <div 
               onClick={() => {
-                window.location.href = '/api/logout';
+                logout();
               }}
               className="flex items-center justify-between p-4 hover-elevate cursor-pointer"
-              data-testid="menu-logout"
+              data-testid="logout-button"
               role="button"
               tabIndex={0}
             >
