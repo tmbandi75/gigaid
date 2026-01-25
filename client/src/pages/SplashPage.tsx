@@ -8,12 +8,17 @@ export default function SplashPage() {
 
   const handleLogIn = () => {
     localStorage.setItem("gigaid_splash_seen", "true");
-    setLocation("/dashboard");
+    setLocation("/login?mode=signin");
   };
 
   const handleCreateAccount = () => {
     localStorage.setItem("gigaid_splash_seen", "true");
-    setLocation("/dashboard");
+    setLocation("/login?mode=signup");
+  };
+
+  const handleForgotPassword = () => {
+    localStorage.setItem("gigaid_splash_seen", "true");
+    setLocation("/login?mode=forgot");
   };
 
   return (
@@ -86,6 +91,7 @@ export default function SplashPage() {
         </Button>
 
         <button
+          onClick={handleForgotPassword}
           className="w-full text-center text-white/70 hover:text-white py-2 text-base"
           data-testid="button-forgot-password"
         >

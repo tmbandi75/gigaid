@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,16 +13,34 @@ import { useToast } from "@/hooks/use-toast";
 
 type AuthMode = "signin" | "signup" | "forgot";
 
+function getInitialMode(): AuthMode {
+  if (typeof window === "undefined") return "signin";
+  const params = new URLSearchParams(window.location.search);
+  const modeParam = params.get("mode");
+  if (modeParam === "signup" || modeParam === "forgot") {
+    return modeParam;
+  }
+  return "signin";
+}
+
 export default function Login() {
   const [, navigate] = useLocation();
   const { isAuthenticated, isLoggingOut, refetchUser } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isEmailLoading, setIsEmailLoading] = useState(false);
-  const [mode, setMode] = useState<AuthMode>("signin");
+  const [mode, setMode] = useState<AuthMode>(getInitialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const modeParam = params.get("mode");
+    if (modeParam === "signup" || modeParam === "forgot" || modeParam === "signin") {
+      setMode(modeParam as AuthMode);
+    }
+  }, []);
 
   // CRITICAL: Do NOT auto-redirect if logout is in progress
   // This prevents the race condition where isAuthenticated briefly flips true
