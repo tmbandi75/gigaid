@@ -100,7 +100,12 @@ function Router() {
       <Route path="/admin/cockpit" component={AdminCockpit} />
       <Route path="/admin/users" component={AdminUsers} />
       <Route path="/admin/users/:userId" component={AdminUserDetail} />
-      <Route path="/onboarding/:step" component={OnboardingPage} />
+      <Route path="/onboarding/:step">
+        {(params) => {
+          console.log("[Route /onboarding/:step] Matched! params:", params);
+          return <OnboardingPage />;
+        }}
+      </Route>
       <Route path="/onboarding" component={OnboardingPage} />
       <Route component={NotFound} />
     </Switch>
