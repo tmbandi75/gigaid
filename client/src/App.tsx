@@ -100,8 +100,8 @@ function Router() {
       <Route path="/admin/cockpit" component={AdminCockpit} />
       <Route path="/admin/users" component={AdminUsers} />
       <Route path="/admin/users/:userId" component={AdminUserDetail} />
-      <Route path="/onboarding" component={OnboardingPage} />
       <Route path="/onboarding/:step" component={OnboardingPage} />
+      <Route path="/onboarding" component={OnboardingPage} />
       <Route component={NotFound} />
     </Switch>
   );
