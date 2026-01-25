@@ -155,12 +155,17 @@ Accounts are automatically linked by:
    - Download `google-services.json` from Firebase Console
    - Place it in `android/app/google-services.json`
 
-3. **Open in Android Studio:**
+3. **Configure Firebase Console for Android:**
+   - Add your app's SHA-1 and SHA-256 fingerprints to Firebase Console (Project Settings > Your Apps > Add fingerprint)
+   - To get fingerprints, run: `cd android && ./gradlew signingReport`
+   - Enable desired auth providers in Firebase Console (Authentication > Sign-in method)
+
+4. **Open in Android Studio:**
    ```bash
    npx cap open android
    ```
 
-4. **Build APK/AAB:**
+5. **Build APK/AAB:**
    - In Android Studio: Build > Build Bundle(s) / APK(s) > Build APK(s)
    - Or for release: Build > Generate Signed Bundle / APK
 
