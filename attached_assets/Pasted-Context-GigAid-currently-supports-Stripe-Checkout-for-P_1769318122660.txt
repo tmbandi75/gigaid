@@ -1,0 +1,77 @@
+Context
+GigAid currently supports Stripe Checkout for Pro+ only, triggered from contextual upgrade moments.
+We want to add an in-app Pricing page that serves as a reference surface, not a conversion driver.
+
+The pricing page must exist inside the app, but it should never interrupt the user’s workflow.
+
+Goals
+- Provide a clear, factual comparison of plans
+- Support contextual upgrade prompts (job limit, deposits, risk flags)
+- Preserve trust by avoiding aggressive upsells
+
+Routing
+- Add route: /pricing
+- Do NOT auto-redirect users to this page
+- Page must be accessible only via:
+  - Footer link (“View plans”)
+  - Help / FAQ
+  - “View all plans” link inside existing upgrade modals
+
+Plans & Pricing
+Free — $0
+Pro — $19/month
+Pro+ — $28/month
+Business — $49/month
+
+CTAs (exact copy)
+Free:
+  CTA: "Start Free"
+  Behavior:
+    - If unauthenticated → redirect to signup
+    - If authenticated → route to dashboard
+
+Pro:
+  CTA: "Upgrade to Pro"
+  Action: startStripeCheckout("pro")
+
+Pro+:
+  CTA: "Protect My Bookings"
+  Action: startStripeCheckout("pro_plus")
+
+Business:
+  CTA: "Run This as a Business"
+  Action: startStripeCheckout("business")
+
+UI Rules
+- Single CTA per plan
+- No “Most Popular” badges
+- No urgency or discount language
+- No animations longer than 150ms
+- Calm, factual tone
+- Optional muted subtext allowed (secondary text only)
+
+State Handling
+- If user is already on a plan:
+  - Disable that plan’s CTA
+  - Replace button label with "Current Plan"
+- Never block downgrade visibility
+
+Backend
+- Extend existing POST /api/subscription/checkout
+- Accept plan values:
+    "pro"
+    "pro_plus"
+    "business"
+- Map each plan to its Stripe Price ID
+- Preserve existing Pro+ checkout behavior
+
+Guardrails
+- Do NOT add pricing cards to dashboard
+- Do NOT add upgrade CTAs to Settings
+- Do NOT add popups or banners pointing to pricing
+- Contextual upgrade triggers remain the primary conversion mechanism
+
+Success Criteria
+- Users can understand plan differences without friction
+- Pricing feels informative, not sales-driven
+- Pro+ remains the strongest value signal without visual manipulation
