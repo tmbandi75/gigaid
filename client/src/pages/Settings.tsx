@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { 
   Bell, 
@@ -66,6 +67,7 @@ export default function Settings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [bookingLinkCopied, setBookingLinkCopied] = useState(false);
+  const { isAuthenticated } = useAuth();
   
   const { data: aiNudgesFlag } = useFeatureFlag("ai_micro_nudges");
   const updateFeatureFlag = useUpdateFeatureFlag();
@@ -514,38 +516,40 @@ export default function Settings() {
 
         {stripeEnabled && <StripeConnectSettings />}
 
-        <Card className="border-0 shadow-md" data-testid="card-export">
-          <CardContent className="p-4">
-            <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                <Download className="h-4 w-4 text-white" />
+        {isAuthenticated && (
+          <Card className="border-0 shadow-md" data-testid="card-export">
+            <CardContent className="p-4">
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                  <Download className="h-4 w-4 text-white" />
+                </div>
+                Export Data
+              </h3>
+              <div className="space-y-3">
+                <a href="/api/export/json" download className="block">
+                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover-elevate cursor-pointer">
+                    <FileJson className="h-5 w-5 text-blue-500" />
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">Download JSON</p>
+                      <p className="text-xs text-muted-foreground">Complete data export</p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </a>
+                <a href="/api/export/dot" download className="block">
+                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover-elevate cursor-pointer">
+                    <Share className="h-5 w-5 text-purple-500" />
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">Download DOT Graph</p>
+                      <p className="text-xs text-muted-foreground">Data relationships (GraphViz)</p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </a>
               </div>
-              Export Data
-            </h3>
-            <div className="space-y-3">
-              <a href="/api/export/json" download className="block">
-                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover-elevate cursor-pointer">
-                  <FileJson className="h-5 w-5 text-blue-500" />
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">Download JSON</p>
-                    <p className="text-xs text-muted-foreground">Complete data export</p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </a>
-              <a href="/api/export/dot" download className="block">
-                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover-elevate cursor-pointer">
-                  <Share className="h-5 w-5 text-purple-500" />
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">Download DOT Graph</p>
-                    <p className="text-xs text-muted-foreground">Data relationships (GraphViz)</p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </a>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="border-0 shadow-md overflow-hidden" data-testid="card-premium">
           <div className="bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-400 p-4">
