@@ -56,6 +56,49 @@ Preferred communication style: Simple, everyday language.
 - **Payment Processing**: Stripe Connect (requires `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_CLIENT_ID`, `FRONTEND_URL`)
 - **Mapping & Geocoding**: Google Maps API (requires `GOOGLE_MAPS_API_KEY`, `VITE_GOOGLE_MAPS_API_KEY`), Google Maps JavaScript API, Geocoding API, Places API
 - **Mobile Packaging**: Capacitor (for iOS), PWA for Android (via PWABuilder)
+- **Mobile Authentication**: Firebase Admin SDK for server-side token verification (requires `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, `APP_JWT_SECRET`)
+
+## Authentication Architecture
+
+### Dual Authentication System
+The app supports two authentication methods:
+1. **Web (Replit Auth)**: Uses OpenID Connect with Replit as the identity provider. Session-based with cookies.
+2. **Mobile (Firebase Auth)**: Uses Firebase Authentication with Google, Apple, Email, or Phone sign-in. JWT-based with Bearer tokens.
+
+### Account Linking
+Accounts are automatically linked by:
+1. Firebase UID (if user has logged in via Firebase before)
+2. Normalized email address (lowercase, trimmed)
+3. Phone number (E.164 format)
+4. Raw email address (fallback)
+
+### Mobile Auth Flow
+1. Mobile app authenticates user with Firebase (Google/Apple/Email/Phone)
+2. Mobile app receives Firebase ID token
+3. App sends ID token to `POST /api/auth/mobile/firebase`
+4. Server verifies token with Firebase Admin SDK
+5. Server finds or creates user, links accounts if applicable
+6. Server issues app-specific JWT (30-day expiry)
+7. Mobile app stores JWT and uses it for all API calls via `Authorization: Bearer <token>`
+
+### Database Fields
+- `firebaseUid`: Unique Firebase user ID
+- `emailNormalized`: Lowercase, trimmed email for matching
+- `phoneE164`: Phone number in E.164 format for matching
+- `authProvider`: Primary auth provider ('replit' | 'firebase')
+- `updatedAt`: Last update timestamp
+
+### API Endpoints
+- `POST /api/auth/mobile/firebase`: Exchange Firebase ID token for app JWT
+- `GET /api/auth/mobile/status`: Check Firebase configuration status
+- `GET /api/auth/user`: Get current user (supports both session and JWT)
+
+### Files
+- `server/firebaseAdmin.ts`: Firebase Admin SDK initialization and token verification
+- `server/appJwt.ts`: App JWT signing and verification
+- `server/mobileAuthRoutes.ts`: Mobile authentication endpoints
+- `client/src/lib/auth/mobileAuth.ts`: Frontend mobile auth helpers
+- `client/src/components/MobileLogin.tsx`: Mobile login UI component
 
 ## UI Policies
 

@@ -61,6 +61,8 @@ import {
   getBookingProtection,
   canShowInterventionToday,
 } from "./bookingProtection";
+import mobileAuthRoutes from "./mobileAuthRoutes";
+import { verifyAppJwt } from "./appJwt";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -75,14 +77,45 @@ export async function registerRoutes(
   app.use("/api/admin/cockpit", cockpitRoutes);
   app.use("/api/admin/users", adminUsersRoutes);
   app.use("/api", leadEmailRoutes);
+  app.use("/api/auth", mobileAuthRoutes);
   
   startCopilotScheduler();
   startCampaignSuggestionScheduler();
   
   // Helper function to get authenticated user ID from request
+  // Supports both Replit Auth (session) and mobile JWT Bearer token
   function getAuthenticatedUserId(req: Request): string | null {
+    // First, check for JWT Bearer token (mobile auth)
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const payload = verifyAppJwt(token);
+      if (payload?.sub) {
+        return payload.sub;
+      }
+    }
+    
+    // Fall back to Replit Auth session
     const user = req.user as any;
     return user?.claims?.sub || null;
+  }
+  
+  // Get auth provider type from request
+  function getAuthProvider(req: Request): 'replit' | 'firebase' | null {
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const payload = verifyAppJwt(token);
+      if (payload?.provider) {
+        return payload.provider;
+      }
+    }
+    
+    const user = req.user as any;
+    if (user?.claims?.sub) {
+      return 'replit';
+    }
+    return null;
   }
   
   // Middleware to require authentication and set userId
@@ -92,6 +125,7 @@ export async function registerRoutes(
       return res.status(401).json({ error: "Authentication required" });
     }
     (req as any).userId = userId;
+    (req as any).authProvider = getAuthProvider(req);
     next();
   };
 

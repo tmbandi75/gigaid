@@ -28,16 +28,25 @@ class AuthStorage implements IAuthStorage {
     // Check if user exists
     const [existingUser] = await db.select().from(users).where(eq(users.id, userData.id));
     
+    // Normalize email for account linking
+    const emailNormalized = userData.email 
+      ? userData.email.toLowerCase().trim() 
+      : null;
+    
     if (existingUser) {
       // Update existing user - only update auth-related fields
+      // Also populate emailNormalized for account linking with Firebase mobile auth
       const [user] = await db
         .update(users)
         .set({
           email: userData.email,
+          emailNormalized: emailNormalized || existingUser.emailNormalized,
           firstName: userData.firstName,
           lastName: userData.lastName,
           photo: userData.profileImageUrl,
+          authProvider: existingUser.authProvider || 'replit',
           lastActiveAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         })
         .where(eq(users.id, userData.id))
         .returning();
@@ -45,6 +54,7 @@ class AuthStorage implements IAuthStorage {
     }
     
     // Create new user with default plan = "free"
+    const now = new Date().toISOString();
     const [user] = await db
       .insert(users)
       .values({
@@ -52,15 +62,18 @@ class AuthStorage implements IAuthStorage {
         username: userData.email || userData.id, // Use email as username, fallback to id
         password: "", // Empty password for OAuth users
         email: userData.email,
+        emailNormalized: emailNormalized,
         firstName: userData.firstName,
         lastName: userData.lastName,
         name: userData.firstName && userData.lastName 
           ? `${userData.firstName} ${userData.lastName}` 
           : userData.firstName || userData.lastName || null,
         photo: userData.profileImageUrl,
+        authProvider: 'replit',
         plan: "free", // Default plan for new users
-        createdAt: new Date().toISOString(),
-        lastActiveAt: new Date().toISOString(),
+        createdAt: now,
+        updatedAt: now,
+        lastActiveAt: now,
       })
       .returning();
     

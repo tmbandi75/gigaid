@@ -94,6 +94,13 @@ export const users = pgTable("users", {
   plan: text("plan").default("free"), // free, pro, pro_plus, business
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
+  
+  // Firebase Auth fields for mobile authentication
+  firebaseUid: text("firebase_uid").unique(),
+  emailNormalized: text("email_normalized"),
+  phoneE164: text("phone_e164"),
+  authProvider: text("auth_provider"), // 'replit' | 'firebase' | null (indicates primary provider)
+  updatedAt: text("updated_at"),
 });
 
 // Availability type for frontend use
