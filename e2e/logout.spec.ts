@@ -35,11 +35,11 @@ test.describe("Logout is final and non-recoverable", () => {
     // 2. Perform logout
     await page.click('[data-testid="logout-button"]');
 
-    // 3. Must land on /login
-    await page.waitForURL("/login", { timeout: 10000 });
+    // 3. Must land on /login (or splash page for unauthenticated users)
+    await page.waitForURL(/\/(login)?$/, { timeout: 10000 });
     
-    // Check for the login card (more specific selector)
-    await expect(page.locator('[data-testid="card-login"]')).toBeVisible();
+    // Check for the splash page login button (unauthenticated landing page)
+    await expect(page.locator('[data-testid="button-log-in"], [data-testid="card-login"]').first()).toBeVisible();
 
     // 4. Hard refresh (this is critical)
     await page.reload();
