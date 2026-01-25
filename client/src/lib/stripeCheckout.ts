@@ -1,11 +1,13 @@
 import { apiRequest } from "./queryClient";
 import { STRIPE_ENABLED } from "@shared/stripeConfig";
 
+export type SubscriptionPlan = "pro" | "pro_plus" | "business";
+
 export async function startStripeCheckout({
   plan,
   returnTo
 }: {
-  plan: "pro_plus";
+  plan: SubscriptionPlan;
   returnTo: string;
 }): Promise<void> {
   if (!STRIPE_ENABLED) {
