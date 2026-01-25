@@ -685,9 +685,13 @@ export async function registerRoutes(
   app.get("/api/jobs/today", isAuthenticated, async (req, res) => {
     try {
       const jobs = await storage.getJobs((req as any).userId);
-      const today = new Date().toISOString().split('T')[0];
+      // Use local date (server time) instead of UTC to match user expectations
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const todayJobs = jobs.filter(job => {
-        const jobDate = job.scheduledDate?.split('T')[0];
+        if (!job.scheduledDate) return false;
+        // Extract just the date portion (YYYY-MM-DD) from scheduledDate
+        const jobDate = job.scheduledDate.split('T')[0];
         return jobDate === today && job.status !== 'cancelled';
       });
       res.json(todayJobs);
