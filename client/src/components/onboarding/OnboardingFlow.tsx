@@ -62,6 +62,7 @@ import { serviceCategories, type ServiceIconName } from "@shared/service-categor
 
 interface OnboardingFlowProps {
   onComplete: () => void;
+  initialStep?: number;
 }
 
 const iconMap: Record<ServiceIconName, LucideIcon> = {
@@ -102,12 +103,12 @@ const getIconForCategory = (iconName: ServiceIconName): LucideIcon => {
 // Steps: 1=Welcome, 2=Identity, 3=Pricing, 4=Deposit, 5=BookingLink, 6=Payments, 7=AICard, 8=Complete
 const TOTAL_STEPS = 8;
 
-export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
+export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps) {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(initialStep || 1);
   const [showSkipModal, setShowSkipModal] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [initialized, setInitialized] = useState(false);

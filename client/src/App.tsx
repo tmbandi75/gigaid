@@ -58,6 +58,7 @@ import AdminUserDetail from "@/pages/AdminUserDetail";
 import VoiceNotesPage from "@/pages/VoiceNotesPage";
 import TermsOfService from "@/pages/terms";
 import PrivacyPolicy from "@/pages/privacy";
+import OnboardingPage from "@/pages/OnboardingPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -99,6 +100,7 @@ function Router() {
       <Route path="/admin/cockpit" component={AdminCockpit} />
       <Route path="/admin/users" component={AdminUsers} />
       <Route path="/admin/users/:userId" component={AdminUserDetail} />
+      <Route path="/onboarding" component={OnboardingPage} />
       <Route component={NotFound} />
     </Switch>
   );
