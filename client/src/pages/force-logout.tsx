@@ -23,7 +23,7 @@ export default function ForceLogout() {
         
         setStatus("Clearing server session...");
         try {
-          await fetch("/api/logout", { 
+          await fetch("/api/auth/logout", { 
             method: "POST",
             credentials: "include" 
           });

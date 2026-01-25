@@ -41,6 +41,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/use-auth";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -87,6 +88,7 @@ const businessItems = [
 export function AppSidebar() {
   const [location, navigate] = useLocation();
   const [darkMode, setDarkMode] = useState(false);
+  const { logout } = useAuth();
 
   const { data: profile } = useQuery<UserProfile>({
     queryKey: ["/api/profile"],
@@ -294,7 +296,7 @@ export function AppSidebar() {
               View Plans
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive" data-testid="dropdown-logout">
+            <DropdownMenuItem onClick={() => logout()} className="text-destructive" data-testid="dropdown-logout">
               <LogOut className="h-4 w-4 mr-2" />
               Log Out
             </DropdownMenuItem>

@@ -34,6 +34,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { useAuth } from "@/hooks/use-auth";
 
 interface ResponsiveLayoutProps {
   children: React.ReactNode;
@@ -172,6 +173,7 @@ function MobileBottomNav() {
 
 function DesktopHeader() {
   const [location, navigate] = useLocation();
+  const { logout } = useAuth();
 
   const { data: summary } = useQuery<DashboardSummary>({
     queryKey: ["/api/dashboard/summary"],
@@ -325,7 +327,7 @@ function DesktopHeader() {
               Help & Support
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive" data-testid="header-dropdown-logout">
+            <DropdownMenuItem onClick={() => logout()} className="text-destructive" data-testid="header-dropdown-logout">
               Log Out
             </DropdownMenuItem>
           </DropdownMenuContent>
