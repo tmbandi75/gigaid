@@ -1,0 +1,136 @@
+YOU ARE A SENIOR MOBILE + BACKEND ENGINEER.
+
+Implement Apple App Store–compliant account deletion functionality.
+This is a BLOCKING compliance requirement (App Store Review Guideline 5.1.1).
+
+SCOPE
+- Add in-app account deletion
+- Minimal UX
+- Safe backend handling
+- No breaking changes
+- No auth changes
+- No new business logic beyond deletion
+
+DO NOT overbuild.
+DO NOT add support flows.
+DO NOT add grace-period UX.
+DO NOT add email confirmation requirements.
+
+────────────────────────────────────────
+UX IMPLEMENTATION (REQUIRED)
+────────────────────────────────────────
+
+LOCATION:
+Settings → Account
+
+Add a visible action:
+Button label (exact):
+“Delete account”
+
+Style:
+- Destructive (red)
+- Clearly separated from other actions
+
+────────────────────────────────────────
+CONFIRMATION SCREEN
+────────────────────────────────────────
+
+Title:
+“Delete your account?”
+
+Body copy (exact or equivalent):
+“This will permanently delete your account and associated data. This action cannot be undone.”
+
+Buttons:
+Primary (destructive):
+“Delete account”
+
+Secondary:
+“Cancel”
+
+RULES:
+- No extra steps
+- No hidden confirmation
+- No timers
+- No forced logout before confirmation
+
+────────────────────────────────────────
+BEHAVIOR ON CONFIRMATION
+────────────────────────────────────────
+
+On confirm:
+1. Call backend endpoint POST /api/account/delete
+2. On success:
+   - Log the user out
+   - Redirect to Welcome / Sign In screen
+3. On failure:
+   - Show inline error:
+     “We couldn’t delete your account. Please try again.”
+
+────────────────────────────────────────
+BACKEND IMPLEMENTATION
+────────────────────────────────────────
+
+Add endpoint:
+POST /api/account/delete
+
+Auth:
+- Requires authenticated user (Replit Auth or App JWT)
+
+Behavior:
+- Identify current user_id
+- Delete or anonymize user data
+- Ensure no future login is possible
+
+ACCEPTABLE IMPLEMENTATIONS:
+Option A (Hard delete):
+- Delete user row
+- Cascade delete or null related records
+
+Option B (Soft delete — RECOMMENDED):
+- Set users.deleted_at timestamp
+- Remove email
+- Remove phone
+- Invalidate sessions
+- Prevent login if deleted_at is set
+
+Either option is acceptable for Apple.
+
+DO NOT:
+- Return detailed internal errors
+- Leave account usable after deletion
+- Keep PII attached to active records
+
+────────────────────────────────────────
+EDGE CASE HANDLING
+────────────────────────────────────────
+
+- If user is already deleted:
+  - Return 200 OK
+- If session expires during deletion:
+  - Return 401 and force logout
+- If deletion succeeds but logout fails:
+  - Force client-side logout
+
+────────────────────────────────────────
+PRIVACY COMPLIANCE
+────────────────────────────────────────
+
+Ensure:
+- Email
+- Phone number
+- Auth identifiers
+Are deleted or anonymized.
+
+This must match App Store privacy declarations.
+
+────────────────────────────────────────
+SUCCESS CRITERIA
+────────────────────────────────────────
+
+- User can delete account in-app
+- No support or email required
+- Account cannot be used afterward
+- Apple Guideline 5.1.1 satisfied
+
+IMPLEMENT NOW.

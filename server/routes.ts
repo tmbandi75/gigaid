@@ -119,11 +119,23 @@ export async function registerRoutes(
   }
   
   // Middleware to require authentication and set userId
-  const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+  // Also blocks access for deleted accounts (Apple App Store compliance)
+  const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
     const userId = getAuthenticatedUserId(req);
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
     }
+    
+    // Check if account is deleted
+    try {
+      const user = await storage.getUser(userId);
+      if (user?.deletedAt) {
+        return res.status(401).json({ error: "Account has been deleted" });
+      }
+    } catch (error) {
+      // Allow through if user check fails - they may be new
+    }
+    
     (req as any).userId = userId;
     (req as any).authProvider = getAuthProvider(req);
     next();
@@ -298,6 +310,61 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Profile update error:", error);
       res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
+  // Account deletion endpoint - Apple App Store Guideline 5.1.1 compliance
+  // Uses requireAuth to support both Replit Auth (web) and App JWT (mobile)
+  app.post("/api/account/delete", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        // User already deleted or doesn't exist - return success
+        return res.json({ success: true, message: "Account deleted" });
+      }
+
+      // Check if already deleted (soft delete)
+      if (user.deletedAt) {
+        return res.json({ success: true, message: "Account already deleted" });
+      }
+
+      const now = new Date().toISOString();
+      const anonymizedEmail = `deleted_${userId}@deleted.gigaid.app`;
+      
+      // Soft delete: anonymize PII and mark as deleted
+      await storage.updateUser(userId, {
+        email: anonymizedEmail,
+        emailNormalized: anonymizedEmail,
+        phone: null,
+        phoneE164: null,
+        name: "Deleted User",
+        firstName: null,
+        lastName: null,
+        photo: null,
+        bio: null,
+        businessName: null,
+        firebaseUid: null,
+        deletedAt: now,
+        updatedAt: now,
+      });
+
+      console.log(`[AccountDelete] User ${userId} account deleted at ${now}`);
+      
+      // Destroy session if it exists
+      if (req.session) {
+        req.session.destroy((err: any) => {
+          if (err) {
+            console.error("[AccountDelete] Session destroy error:", err);
+          }
+        });
+      }
+
+      res.json({ success: true, message: "Account deleted" });
+    } catch (error) {
+      console.error("[AccountDelete] Error:", error);
+      res.status(500).json({ error: "Failed to delete account" });
     }
   });
 

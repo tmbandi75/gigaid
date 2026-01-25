@@ -32,7 +32,19 @@ import {
   DollarSign,
   Shield,
   Lock,
+  Trash2,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { AvailabilityEditor, DEFAULT_AVAILABILITY } from "@/components/settings/AvailabilityEditor";
 import { PaymentMethodsSettings } from "@/components/PaymentMethodsSettings";
 import { StripeConnectSettings } from "@/components/settings/StripeConnectSettings";
@@ -154,6 +166,22 @@ export default function Settings() {
       toast({ title: "Failed to save settings", variant: "destructive" });
     },
   });
+
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await apiRequest("POST", "/api/account/delete", {});
+      // Force logout and redirect
+      window.location.href = "/";
+    } catch (error) {
+      setDeleteError("We couldn't delete your account. Please try again.");
+      setIsDeleting(false);
+    }
+  };
 
   const quickSetupMutation = useMutation({
     mutationFn: async (price: number) => {
@@ -663,6 +691,58 @@ export default function Settings() {
           ) : null}
           Save Settings
         </Button>
+
+        {isAuthenticated && (
+          <Card className="border-0 shadow-md mt-8" data-testid="card-delete-account">
+            <CardContent className="p-4">
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
+                  <Trash2 className="h-4 w-4 text-white" />
+                </div>
+                Account
+              </h3>
+              <Separator className="my-4" />
+              {deleteError && (
+                <div className="p-3 mb-4 text-sm text-destructive bg-destructive/10 rounded-md" data-testid="text-delete-error">
+                  {deleteError}
+                </div>
+              )}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="destructive" 
+                    className="w-full"
+                    data-testid="button-delete-account"
+                  >
+                    Delete account
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent data-testid="dialog-delete-account">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete your account and associated data. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDeleteAccount}
+                      disabled={isDeleting}
+                      className="bg-destructive text-destructive-foreground"
+                      data-testid="button-confirm-delete"
+                    >
+                      {isDeleting ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : null}
+                      Delete account
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

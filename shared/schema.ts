@@ -101,6 +101,7 @@ export const users = pgTable("users", {
   phoneE164: text("phone_e164"),
   authProvider: text("auth_provider"), // 'replit' | 'firebase' | null (indicates primary provider)
   updatedAt: text("updated_at"),
+  deletedAt: text("deleted_at"), // Soft delete timestamp - Apple App Store compliance
 });
 
 // Availability type for frontend use
