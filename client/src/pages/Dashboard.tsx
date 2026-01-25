@@ -9,11 +9,13 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
+import { GoldenPathGuide } from "@/components/onboarding/GoldenPathGuide";
 import FollowUpCheckIn from "@/components/FollowUpCheckIn";
 import { TodaysGamePlan } from "@/components/TodaysGamePlan";
 import { NudgeCard } from "@/components/nudges/NudgeCard";
 import { GigAidImpact } from "@/components/GigAidImpact";
 import { MoneyPlanWidget } from "@/components/MoneyPlanWidget";
+import { useRecentActivityFeedback } from "@/hooks/useRecentActivityFeedback";
 import {
   Briefcase,
   Users,
@@ -88,6 +90,8 @@ export default function Dashboard() {
   const [period, setPeriod] = useState<"weekly" | "monthly">("weekly");
   const [showWelcome, setShowWelcome] = useState(false);
   const [showInactivityModal, setShowInactivityModal] = useState(false);
+  
+  useRecentActivityFeedback();
 
   const { data: summary, isLoading } = useQuery<DashboardSummary>({
     queryKey: ["/api/dashboard/summary"],
@@ -298,6 +302,10 @@ export default function Dashboard() {
             onComplete={handleOnboardingComplete}
             bookingSlug={profile?.publicProfileSlug}
           />
+        )}
+        
+        {onboarding?.completed && (
+          <GoldenPathGuide onNavigate={navigate} />
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

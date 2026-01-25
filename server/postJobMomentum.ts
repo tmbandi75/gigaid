@@ -22,7 +22,10 @@ export function renderTemplate(template: string, context: Record<string, string 
     "client_name", 
     "job_title",
     "invoice_link",
-    "review_link"
+    "review_link",
+    "job_date",
+    "job_time",
+    "confirm_link"
   ];
   
   for (const placeholder of placeholders) {
@@ -167,7 +170,7 @@ export async function schedulePostJobMessages(job: Job, previousStatus: string):
       .where(eq(invoices.jobId, job.id));
     
     const hasUnpaidInvoice = jobInvoices.some(inv => 
-      inv.status !== "paid" && (inv.amountCents || 0) > 0
+      inv.status !== "paid" && (inv.amount || 0) > 0
     );
     
     if (hasUnpaidInvoice) {
@@ -203,6 +206,126 @@ export async function schedulePostJobMessages(job: Job, previousStatus: string):
       console.log(`[PostJobMomentum] Scheduled payment reminder for job ${job.id} at ${scheduledFor.toISOString()}`);
     }
   }
+}
+
+// Schedule confirmation message when job is scheduled/rescheduled
+export async function scheduleJobConfirmation(job: Job, isReschedule: boolean = false): Promise<void> {
+  // Only for jobs with scheduled date/time and contact info
+  if (!job.scheduledDate || !job.scheduledTime) {
+    console.log(`[PostJobMomentum] Job ${job.id} has no scheduled date/time, skipping confirmation`);
+    return;
+  }
+  
+  const toAddress = job.clientPhone || job.clientEmail;
+  if (!toAddress) {
+    console.log(`[PostJobMomentum] Job ${job.id} has no contact info, skipping confirmation`);
+    return;
+  }
+  
+  const userId = job.userId;
+  if (!userId) return;
+  
+  // Get automation settings
+  const settings = await getOrCreateAutomationSettings(userId);
+  
+  if (!settings.autoConfirmEnabled) {
+    console.log(`[PostJobMomentum] Auto-confirm disabled for user ${userId}`);
+    return;
+  }
+  
+  // Check for existing confirmation for this job (avoid duplicates)
+  const existingConfirmations = await db
+    .select()
+    .from(outboundMessages)
+    .where(
+      and(
+        eq(outboundMessages.jobId, job.id),
+        eq(outboundMessages.type, "confirmation"),
+        inArray(outboundMessages.status, ["scheduled", "queued", "sent"])
+      )
+    );
+  
+  // If rescheduling, cancel any pending confirmations and schedule new one
+  if (isReschedule && existingConfirmations.length > 0) {
+    const pending = existingConfirmations.filter(m => m.status === "scheduled" || m.status === "queued");
+    for (const msg of pending) {
+      await db
+        .update(outboundMessages)
+        .set({
+          status: "canceled",
+          canceledAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(outboundMessages.id, msg.id));
+      console.log(`[PostJobMomentum] Canceled old confirmation ${msg.id} for reschedule`);
+    }
+  } else if (!isReschedule && existingConfirmations.length > 0) {
+    console.log(`[PostJobMomentum] Confirmation already exists for job ${job.id}, skipping`);
+    return;
+  }
+  
+  const channel = job.clientPhone ? "sms" : "email";
+  const clientFirstName = job.clientName?.split(" ")[0] || "there";
+  
+  // Format date and time for display
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  };
+  
+  const formatTime = (timeStr: string) => {
+    const [hours, minutes] = timeStr.split(":");
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? "PM" : "AM";
+    const hour12 = h % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+  };
+  
+  // Generate confirm token
+  const crypto = await import("crypto");
+  const confirmToken = crypto.randomBytes(16).toString("base64url");
+  const confirmUrl = `${process.env.FRONTEND_URL || "https://account.gigaid.ai"}/confirm/${confirmToken}`;
+  
+  // Store token on job for confirmation tracking
+  await db
+    .update(jobs)
+    .set({ clientConfirmToken: confirmToken })
+    .where(eq(jobs.id, job.id));
+  
+  const template = settings.confirmationTemplate || 
+    "Hi {{client_first_name}} — just confirming we're set for {{job_date}} at {{job_time}}. Reply YES to confirm, or let me know if anything changes.";
+  
+  const renderedMessage = renderTemplate(template, {
+    client_first_name: clientFirstName,
+    client_name: job.clientName || "",
+    job_title: job.title || "",
+    job_date: formatDate(job.scheduledDate),
+    job_time: formatTime(job.scheduledTime),
+    confirm_link: confirmUrl,
+  });
+  
+  // Schedule immediately (send within next scheduler run)
+  const now = new Date();
+  
+  await db.insert(outboundMessages).values({
+    userId,
+    jobId: job.id,
+    channel,
+    toAddress,
+    type: "confirmation",
+    status: "scheduled",
+    scheduledFor: now.toISOString(), // Send immediately
+    templateRendered: renderedMessage,
+    metadata: JSON.stringify({
+      jobTitle: job.title,
+      scheduledDate: job.scheduledDate,
+      scheduledTime: job.scheduledTime,
+      isReschedule,
+    }),
+    createdAt: now.toISOString(),
+  });
+  
+  console.log(`[PostJobMomentum] Scheduled ${isReschedule ? "reschedule " : ""}confirmation for job ${job.id}`);
 }
 
 // Cancel a scheduled message

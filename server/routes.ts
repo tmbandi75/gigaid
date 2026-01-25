@@ -926,6 +926,13 @@ export async function registerRoutes(
         source: "web",
       });
       
+      // Auto-schedule confirmation if job has scheduled date/time
+      if (job.scheduledDate && job.scheduledTime) {
+        import("./postJobMomentum")
+          .then(({ scheduleJobConfirmation }) => scheduleJobConfirmation(job, false))
+          .catch(err => console.error("[PostJobMomentum] Failed to schedule confirmation:", err));
+      }
+      
       // Auto-link lead if leadId provided
       if (leadId && typeof leadId === "string") {
         const lead = await storage.getLead(leadId);
@@ -1016,6 +1023,17 @@ export async function registerRoutes(
       const job = await storage.updateJob(req.params.id, updates);
       if (!job) {
         return res.status(404).json({ error: "Job not found" });
+      }
+      
+      // Auto-schedule confirmation on reschedule (date/time changed)
+      const isReschedule = (
+        (updates.scheduledDate && updates.scheduledDate !== existingJob.scheduledDate) ||
+        (updates.scheduledTime && updates.scheduledTime !== existingJob.scheduledTime)
+      );
+      if (isReschedule && job.scheduledDate && job.scheduledTime) {
+        import("./postJobMomentum")
+          .then(({ scheduleJobConfirmation }) => scheduleJobConfirmation(job, true))
+          .catch(err => console.error("[PostJobMomentum] Failed to schedule reschedule confirmation:", err));
       }
       
       // Revenue protection: Auto-create draft invoice when job is completed
@@ -9985,7 +10003,9 @@ Return ONLY the message text, no JSON or formatting.`
         paymentReminderEnabled,
         paymentReminderDelayHours,
         paymentReminderTemplate,
-        reviewLinkUrl
+        reviewLinkUrl,
+        autoConfirmEnabled,
+        confirmationTemplate
       } = req.body;
       
       // Validate
@@ -10000,6 +10020,9 @@ Return ONLY the message text, no JSON or formatting.`
       }
       if (paymentReminderTemplate && paymentReminderTemplate.length > 500) {
         return res.status(400).json({ error: "paymentReminderTemplate must be 500 characters or less" });
+      }
+      if (confirmationTemplate && confirmationTemplate.length > 500) {
+        return res.status(400).json({ error: "confirmationTemplate must be 500 characters or less" });
       }
       if (reviewLinkUrl && !/^https?:\/\/.+/.test(reviewLinkUrl)) {
         return res.status(400).json({ error: "reviewLinkUrl must be a valid URL" });
@@ -10023,6 +10046,8 @@ Return ONLY the message text, no JSON or formatting.`
           paymentReminderDelayHours: paymentReminderDelayHours ?? undefined,
           paymentReminderTemplate: paymentReminderTemplate ?? undefined,
           reviewLinkUrl: reviewLinkUrl ?? undefined,
+          autoConfirmEnabled: autoConfirmEnabled ?? undefined,
+          confirmationTemplate: confirmationTemplate ?? undefined,
           updatedAt: new Date().toISOString(),
         })
         .where(eq(userAutomationSettings.userId, userId))
@@ -10097,6 +10122,59 @@ Return ONLY the message text, no JSON or formatting.`
     } catch (error: any) {
       console.error("Error fetching outbound messages:", error);
       res.status(500).json({ error: "Failed to fetch outbound messages" });
+    }
+  });
+
+  // Get recent activity for micro-confirmations
+  app.get("/api/recent-activity", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { db } = await import("./db");
+      const { outboundMessages, invoices } = await import("@shared/schema");
+      const { eq, and, gte } = await import("drizzle-orm");
+      
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      
+      const recentMessages = await db
+        .select({
+          id: outboundMessages.id,
+          type: outboundMessages.type,
+          status: outboundMessages.status,
+          sentAt: outboundMessages.sentAt,
+          jobId: outboundMessages.jobId,
+        })
+        .from(outboundMessages)
+        .where(
+          and(
+            eq(outboundMessages.userId, userId),
+            eq(outboundMessages.status, "sent"),
+            gte(outboundMessages.sentAt, oneDayAgo)
+          )
+        )
+        .limit(10);
+      
+      const recentPayments = await db
+        .select({
+          invoiceId: invoices.id,
+          paidAt: invoices.paidAt,
+        })
+        .from(invoices)
+        .where(
+          and(
+            eq(invoices.userId, userId),
+            eq(invoices.status, "paid"),
+            gte(invoices.paidAt, oneDayAgo)
+          )
+        )
+        .limit(10);
+      
+      res.json({ 
+        recentMessages, 
+        recentPayments: recentPayments.filter(p => p.paidAt) 
+      });
+    } catch (error: any) {
+      console.error("Error fetching recent activity:", error);
+      res.status(500).json({ error: "Failed to fetch recent activity" });
     }
   });
 

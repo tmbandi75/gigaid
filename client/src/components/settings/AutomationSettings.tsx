@@ -13,7 +13,8 @@ import {
   MessageSquare, 
   Star,
   Loader2,
-  Save
+  Save,
+  Calendar
 } from "lucide-react";
 import {
   Select,
@@ -33,6 +34,8 @@ interface AutomationSettings {
   paymentReminderDelayHours: number;
   paymentReminderTemplate: string;
   reviewLinkUrl: string | null;
+  autoConfirmEnabled: boolean;
+  confirmationTemplate: string | null;
 }
 
 export function AutomationSettings() {
@@ -50,6 +53,8 @@ export function AutomationSettings() {
   const [reminderDelay, setReminderDelay] = useState("24");
   const [reminderTemplate, setReminderTemplate] = useState("");
   const [reviewLink, setReviewLink] = useState("");
+  const [confirmEnabled, setConfirmEnabled] = useState(true);
+  const [confirmTemplate, setConfirmTemplate] = useState("");
   
   useEffect(() => {
     if (settings) {
@@ -60,6 +65,8 @@ export function AutomationSettings() {
       setReminderDelay(String(settings.paymentReminderDelayHours || 24));
       setReminderTemplate(settings.paymentReminderTemplate || "");
       setReviewLink(settings.reviewLinkUrl || "");
+      setConfirmEnabled(settings.autoConfirmEnabled ?? true);
+      setConfirmTemplate(settings.confirmationTemplate || "");
     }
   }, [settings]);
   
@@ -73,6 +80,8 @@ export function AutomationSettings() {
         paymentReminderDelayHours: parseInt(reminderDelay),
         paymentReminderTemplate: reminderTemplate,
         reviewLinkUrl: reviewLink || null,
+        autoConfirmEnabled: confirmEnabled,
+        confirmationTemplate: confirmTemplate || null,
       });
     },
     onSuccess: () => {
@@ -115,6 +124,46 @@ export function AutomationSettings() {
         </p>
         
         <div className="space-y-6">
+          <div className="p-4 rounded-lg border bg-muted/30">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-blue-500" />
+                <span className="font-medium text-sm">Auto Booking Confirmation</span>
+              </div>
+              <Switch
+                checked={confirmEnabled}
+                onCheckedChange={setConfirmEnabled}
+                data-testid="switch-confirm-enabled"
+              />
+            </div>
+            
+            {confirmEnabled && (
+              <div className="space-y-3 mt-3">
+                <p className="text-xs text-muted-foreground">
+                  Automatically sends when you schedule or reschedule a job.
+                </p>
+                
+                <div>
+                  <Label className="text-xs text-muted-foreground">
+                    Message template ({confirmTemplate.length}/500)
+                  </Label>
+                  <Textarea
+                    className="mt-1 text-sm"
+                    rows={3}
+                    maxLength={500}
+                    value={confirmTemplate}
+                    onChange={(e) => setConfirmTemplate(e.target.value)}
+                    placeholder="Hi {{client_first_name}} — just confirming we're set for {{job_date}} at {{job_time}}..."
+                    data-testid="textarea-confirm-template"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Use: {"{{client_first_name}}"}, {"{{job_date}}"}, {"{{job_time}}"}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+          
           <div className="p-4 rounded-lg border bg-muted/30">
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-2">

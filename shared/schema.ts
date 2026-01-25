@@ -2023,6 +2023,12 @@ export const userAutomationSettings = pgTable("user_automation_settings", {
   // Review link
   reviewLinkUrl: text("review_link_url"),
   
+  // Auto-confirmation settings
+  autoConfirmEnabled: boolean("auto_confirm_enabled").default(true),
+  confirmationTemplate: text("confirmation_template").default(
+    "Hi {{client_first_name}} — just confirming we're set for {{job_date}} at {{job_time}}. Reply YES to confirm, or let me know if anything changes."
+  ),
+  
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at"),
 }, (table) => [
@@ -2037,7 +2043,7 @@ export type InsertUserAutomationSettings = z.infer<typeof insertUserAutomationSe
 export type UserAutomationSettings = typeof userAutomationSettings.$inferSelect;
 
 // Outbound message types
-export const outboundMessageTypes = ["followup", "payment_reminder", "review_request"] as const;
+export const outboundMessageTypes = ["followup", "payment_reminder", "review_request", "confirmation"] as const;
 export type OutboundMessageType = typeof outboundMessageTypes[number];
 
 // Outbound message channels
