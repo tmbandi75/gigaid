@@ -264,11 +264,11 @@ export default function JobSummary() {
             <div className="flex-1 min-w-0">
               <h1 className="text-xl font-bold truncate" data-testid="text-job-title">{job.title}</h1>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <Badge className={`${status.bgColor} ${status.color} border-0`} data-testid="badge-status">
+                <Badge className="bg-white/20 text-white border-0 backdrop-blur-sm" data-testid="badge-status">
                   <StatusIcon className="h-3 w-3 mr-1" />
                   {status.label}
                 </Badge>
-                <Badge className={`${paymentStatus.bgColor} ${paymentStatus.color} border-0`} data-testid="badge-payment">
+                <Badge className="bg-white/20 text-white border-0 backdrop-blur-sm" data-testid="badge-payment">
                   <DollarSign className="h-3 w-3 mr-1" />
                   {paymentStatus.label}
                 </Badge>
