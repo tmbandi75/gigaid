@@ -1,0 +1,171 @@
+1️⃣ Turn “Suggestions” into Automatic Outcomes
+
+Impact: 🔥🔥🔥🔥🔥 (biggest retention lift)
+
+What to change
+
+Right now:
+
+You suggest follow-ups, invoices, confirmations.
+
+Change to:
+
+Auto-schedule them, with visible cancel buttons.
+
+Minimal execution
+
+On job completion:
+
+Schedule follow-up message (24–48h)
+
+Schedule review request
+
+Schedule payment reminder if unpaid
+
+Show:
+
+“Scheduled — tap to cancel”
+
+Why it works
+
+Users don’t want to be reminded.
+They want the app to just handle it.
+
+This single shift:
+
+reduces cognitive load
+
+increases trust
+
+increases habit formation
+
+2️⃣ Enable “No Silent Completion” (Guardrail Mode)
+
+Impact: 🔥🔥🔥🔥
+
+Your own feature flag tells the story:
+
+enforce_no_silent_completion = false
+
+What to change
+
+Turn it ON, but softly.
+
+New rule (non-hostile)
+
+When user taps “Complete Job”:
+
+If no invoice sent → prompt:
+
+“Want to send the invoice now?”
+
+If invoice unpaid → prompt:
+
+“You’re about to mark this complete without payment. Continue?”
+
+Allow override — but make the risk visible.
+
+Why it works
+
+This aligns GigAid with its core promise:
+
+“Protect my money when I’m tired and rushing.”
+
+Users don’t churn from guardrails.
+They churn when apps let them make mistakes.
+
+3️⃣ Make Client Confirmation Real, Not Conceptual
+
+Impact: 🔥🔥🔥
+
+Right now:
+
+clientConfirmStatus = pending
+
+confirmations sent = 0
+
+What to change
+
+Fire confirmations automatically when:
+
+job scheduled
+
+job rescheduled
+
+Minimal execution
+
+Auto-send confirmation message:
+
+“Just confirming we’re set for {{date}} at {{time}}. Reply YES to confirm.”
+
+Update status based on response.
+
+Why it works
+
+This kills:
+
+no-shows
+
+awkward check-ins
+
+manual texting
+
+And it makes GigAid feel professional, not DIY.
+
+4️⃣ Add Post-Job Momentum Feedback
+
+Impact: 🔥🔥🔥
+
+Right now the app goes quiet after job completion.
+
+What to change
+
+After follow-up/review/payment events:
+Show micro-confirmations:
+
+“Follow-up sent”
+
+“Invoice paid”
+
+“Review requested”
+
+No dashboards. No charts.
+Just confirmation that GigAid did its job.
+
+Why it works
+
+Users trust systems they can see working.
+
+This reinforces:
+
+“I should keep using this.”
+
+5️⃣ Force One First-Run Golden Path
+
+Impact: 🔥🔥
+
+You currently allow exploration too early.
+
+What to change
+
+On first login:
+
+Highlight exactly one path:
+
+Add job → Send invoice → Protected
+
+Allow skipping — but guide once.
+
+Minimal execution
+
+Inline coach marks
+
+Dismiss forever after first run
+
+Why it works
+
+Confidence beats flexibility early.
+
+Users need to feel:
+
+“I’m using this correctly.”
