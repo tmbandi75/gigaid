@@ -103,10 +103,15 @@ function Router() {
       <Route path="/onboarding/:step">
         {(params) => {
           console.log("[Route /onboarding/:step] Matched! params:", params);
+          return <OnboardingPage key={`onboarding-${params?.step}`} />;
+        }}
+      </Route>
+      <Route path="/onboarding">
+        {() => {
+          console.log("[Route /onboarding] Matched!");
           return <OnboardingPage />;
         }}
       </Route>
-      <Route path="/onboarding" component={OnboardingPage} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -222,6 +227,8 @@ function App() {
             <Route path="/qb/:token" component={QuickBookConfirm} />
             <Route path="/terms" component={TermsOfService} />
             <Route path="/privacy" component={PrivacyPolicy} />
+            <Route path="/onboarding/:step" component={OnboardingPage} />
+            <Route path="/onboarding" component={OnboardingPage} />
             <Route>
               <AuthenticatedApp />
             </Route>
