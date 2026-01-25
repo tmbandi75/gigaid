@@ -56,6 +56,8 @@ import AdminCockpit from "@/pages/AdminCockpit";
 import AdminUsers from "@/pages/AdminUsers";
 import AdminUserDetail from "@/pages/AdminUserDetail";
 import VoiceNotesPage from "@/pages/VoiceNotesPage";
+import TermsOfService from "@/pages/terms";
+import PrivacyPolicy from "@/pages/privacy";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -210,6 +212,8 @@ function App() {
             <Route path="/crew-portal/:token" component={CrewPortal} />
             <Route path="/review/:token" component={PublicReview} />
             <Route path="/qb/:token" component={QuickBookConfirm} />
+            <Route path="/terms" component={TermsOfService} />
+            <Route path="/privacy" component={PrivacyPolicy} />
             <Route>
               <AuthenticatedApp />
             </Route>

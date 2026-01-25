@@ -1,0 +1,128 @@
+YOU ARE A SENIOR FULL-STACK ENGINEER. Implement mobile-compatible authentication using Firebase Auth WITHOUT breaking the existing web login (Replit Auth). Web can remain on Replit Auth. Mobile must use Firebase Auth (Apple/Google/Email/Phone-ready), with account linking by email/phone at the database layer.
+
+NON-NEGOTIABLES / GUARDRAILS
+- Do NOT remove or change existing Replit Auth behavior for web.
+- Do NOT require mobile users to use the web auth flow.
+- Do NOT store Firebase ID tokens in the database.
+- Verify Firebase ID tokens server-side using Firebase Admin SDK.
+- Maintain backward compatibility with existing user records.
+- All auth changes must be additive (new endpoints, new fields).
+- If the app has a middleware that assumes a single auth provider, extend it to support both providers with minimal risk.
+
+ASSUMPTIONS (if any differ in codebase, adapt accordingly)
+- Frontend is React (web) and will later be wrapped as native (Capacitor/React Native) for iOS/Android.
+- Backend exposes API routes under /api/*.
+- There is a users table (or equivalent) and a concept of a current user id.
+- There is an existing auth middleware reading Replit Auth/session for web.
+
+GOAL
+- Add Firebase-based auth for mobile clients.
+- Keep Replit Auth for web.
+- Unify accounts by matching normalized email (preferred) or phone number (E.164).
+- Create a single “app session” token issued by our backend (JWT) that represents the internal user_id. Mobile uses this JWT after Firebase verification.
+
+STEP 1 — Add DB fields (additive migration)
+- Add the following columns to the users table (or create an auth_identities table if preferred, but additive columns is OK):
+  - auth_provider TEXT NULL  -- 'replit' | 'firebase'
+  - auth_provider_id TEXT NULL -- Replit user id or Firebase uid
+  - email TEXT NULL
+  - email_normalized TEXT NULL (lowercased + trimmed)
+  - phone_e164 TEXT NULL
+  - created_at, updated_at if not present
+- Add indexes:
+  - unique index on (auth_provider, auth_provider_id) where both not null
+  - index on email_normalized
+  - index on phone_e164
+
+If the schema is managed with Prisma/Drizzle/SQL migrations, implement using the project’s migration system.
+
+STEP 2 — Add env vars + Firebase Admin setup
+- Add env vars:
+  - FIREBASE_PROJECT_ID
+  - FIREBASE_CLIENT_EMAIL
+  - FIREBASE_PRIVATE_KEY  (supports multiline; ensure newline escapes are handled)
+  - APP_JWT_SECRET
+  - APP_JWT_ISSUER (optional)
+- Add server module: src/server/firebaseAdmin.ts (or equivalent)
+  - Initialize admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId,
+        clientEmail,
+        privateKey: privateKey.replace(/\\n/g, '\n')
+      })
+    })
+  - Export verifyFirebaseIdToken(idToken) -> decoded token
+
+STEP 3 — Add backend endpoints (additive)
+Add:
+A) POST /api/auth/mobile/firebase
+Request: { idToken: string }
+Behavior:
+  1) Verify idToken with Firebase Admin.
+  2) Extract firebase_uid = decoded.uid
+  3) Extract email (decoded.email) if present; normalize to email_normalized
+  4) Extract phone number (decoded.phone_number) if present; normalize to E.164 already provided by Firebase
+  5) Find existing user in this order:
+     - If email_normalized present: find user where email_normalized matches
+     - Else if phone_e164 present: find user where phone_e164 matches
+     - Else: create a new user (edge case; allow but warn)
+  6) Link identity:
+     - Set auth_provider='firebase' and auth_provider_id=firebase_uid if empty OR if the user currently has replit and we allow multiple identities:
+         Option 1 (simpler): keep columns for "primary provider" only:
+           - If user exists with Replit auth, DO NOT overwrite auth_provider/auth_provider_id.
+           - Instead add table auth_identities(user_id, provider, provider_id, created_at) and insert firebase identity.
+         Option 2 (acceptable quick path): add firebase_uid column separate:
+           - firebase_uid TEXT NULL unique
+           - Keep replit columns as-is.
+     Choose the least invasive approach based on existing schema.
+  7) Update user.email/email_normalized if empty and Firebase provided email.
+  8) Update user.phone_e164 if empty and Firebase provided phone.
+  9) Issue backend session JWT (APP session):
+     - payload: { sub: user_id, provider: 'firebase', firebase_uid, email_normalized }
+     - exp: 30 days
+  10) Return { token: appJwt, user: { id, email, phone } }
+
+B) GET /api/me
+- If existing /api/me exists, extend it to accept:
+  - Authorization: Bearer <appJwt> for mobile
+  - existing Replit session/cookie for web
+- Return the same user shape for both.
+
+STEP 4 — Auth middleware update (minimal)
+- Extend existing auth middleware:
+  - If Authorization Bearer appJwt exists: verify with APP_JWT_SECRET and set req.userId
+  - Else fallback to existing Replit auth/session method.
+- Ensure all protected endpoints accept either auth method.
+
+STEP 5 — Frontend (mobile-ready) integration points (no breaking web)
+- Add a thin client helper:
+  - src/lib/auth/mobileAuth.ts
+  - function signInWithFirebaseIdToken(idToken):
+      POST /api/auth/mobile/firebase with idToken
+      store appJwt in secure storage (for web dev: localStorage; for native later: SecureStorage/Keychain)
+- Do NOT change web login pages yet.
+- Add an optional “MobileLogin” route/component that can be used by native wrapper later.
+
+STEP 6 — Add tests / sanity checks
+- Add a minimal integration test or a script:
+  - Verifies /api/auth/mobile/firebase rejects invalid tokens
+  - Accepts valid tokens in dev if a FIREBASE_EMULATOR is used OR provide a mocked admin verifier in test environment.
+
+STEP 7 — Logging & observability (basic)
+- Log auth events server-side:
+  - linked_by=email vs linked_by=phone vs created_new_user
+- Never log raw idToken.
+
+DELIVERABLES
+- DB migration(s)
+- Firebase Admin verify module
+- /api/auth/mobile/firebase endpoint
+- Updated auth middleware supporting both Replit and appJwt
+- Minimal “MobileLogin” integration helper
+- Update README with env vars and setup notes
+
+STOP CONDITIONS
+- Web login continues to function as before (Replit Auth).
+- Mobile flow can obtain appJwt with Firebase idToken and call protected APIs successfully.
+
+IMPLEMENT NOW.

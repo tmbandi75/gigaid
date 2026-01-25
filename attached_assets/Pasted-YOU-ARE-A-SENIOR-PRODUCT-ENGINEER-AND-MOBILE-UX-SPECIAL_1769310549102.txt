@@ -1,0 +1,247 @@
+YOU ARE A SENIOR PRODUCT ENGINEER AND MOBILE UX SPECIALIST.
+Implement App Store–compliant authentication UX for a native mobile app (iOS + Android) using an existing Firebase Authentication backend.
+
+SCOPE
+- UX only: screens, layout, copy, ordering, edge cases.
+- Do NOT modify backend auth logic.
+- Do NOT remove or bypass any authentication method.
+- Do NOT introduce dark patterns or forced sign-in methods.
+
+GOAL
+- Pass Apple App Store review on first submission.
+- Provide fast, clear login for gig workers.
+- Meet Apple’s Sign in with Apple requirements.
+- Preserve optionality (no forced social login).
+
+NON-NEGOTIABLE UX RULES (Apple Review Critical)
+1. If any third-party sign-in exists (e.g., Google), “Sign in with Apple” MUST:
+   - Be present
+   - Be visible on the primary auth screen
+   - Be listed first
+2. Users must have at least one non-social fallback (Email or Phone).
+3. Terms of Service and Privacy Policy must be visible BEFORE login.
+4. Phone auth must disclose SMS usage clearly.
+5. No login method may be hidden behind another.
+6. No dead ends (every screen has a clear next step or back).
+7. No forced account creation when signing in.
+8. “Skip for now” is allowed only AFTER authentication (never before).
+
+────────────────────────────────────────
+SCREEN 1 — WELCOME / SIGN IN
+────────────────────────────────────────
+
+Title:
+“Welcome to GigAid”
+
+Subtitle:
+“Sign in in seconds. Your jobs stay synced across devices.”
+
+Primary Buttons (TOP → BOTTOM ORDER — DO NOT CHANGE):
+1. Continue with Apple
+2. Continue with Google
+3. Continue with Phone
+4. Continue with Email
+
+Button Labels (exact copy):
+- “Continue with Apple”
+- “Continue with Google”
+- “Continue with Phone”
+- “Continue with Email”
+
+Footer (always visible):
+“By continuing, you agree to our Terms of Service and Privacy Policy.”
+
+- “Terms of Service” → in-app browser
+- “Privacy Policy” → in-app browser
+
+DESIGN NOTES:
+- Apple button uses official Apple branding.
+- Apple button visually first and equally weighted.
+- No “Sign up” vs “Log in” split — single unified entry.
+- No default selection.
+
+────────────────────────────────────────
+FLOW A — SIGN IN WITH APPLE
+────────────────────────────────────────
+
+Behavior:
+- Trigger native Apple Sign In sheet.
+- On success, proceed immediately to app loading state.
+
+EDGE CASES:
+- If Apple provides a private relay email:
+  - Allow login without interruption.
+  - After login, show a non-blocking prompt:
+    “Add a recovery email (recommended).”
+    Buttons:
+      - “Add email”
+      - “Skip”
+
+- If Apple email matches an existing account:
+  - Auto-link silently.
+  - Do NOT show merge prompts during login.
+
+────────────────────────────────────────
+FLOW B — SIGN IN WITH GOOGLE
+────────────────────────────────────────
+
+Behavior:
+- Trigger native Google Sign In.
+- On success, proceed immediately.
+
+EDGE CASES:
+- If Google email matches existing account:
+  - Auto-link silently.
+- No additional confirmation screens.
+
+────────────────────────────────────────
+FLOW C — PHONE NUMBER (SMS)
+────────────────────────────────────────
+
+SCREEN C1 — ENTER PHONE
+Title:
+“What’s your phone number?”
+
+Helper Text:
+“We’ll text you a one-time code. No spam.”
+
+Input:
+- Phone number input with country selector.
+- Numeric keypad.
+
+Primary Button:
+“Send code”
+
+Secondary:
+“Back”
+
+DISCLOSURE (required, visible):
+“Message and data rates may apply.”
+
+SCREEN C2 — VERIFY CODE
+Title:
+“Enter the code”
+
+- 6-digit code input (individual boxes).
+- Auto-advance on input.
+
+Buttons:
+- “Verify”
+- “Resend code” (disabled for 30 seconds)
+- “Change number”
+
+EDGE CASES:
+- If phone number already exists:
+  - Allow sign-in.
+  - Do NOT create a duplicate account.
+- If verification fails:
+  - Inline error: “That code didn’t work. Try again.”
+
+────────────────────────────────────────
+FLOW D — EMAIL
+────────────────────────────────────────
+
+SCREEN D1 — EMAIL ENTRY
+Title:
+“Continue with email”
+
+Input:
+- Email address
+
+Primary Button:
+“Continue”
+
+Behavior:
+- If email exists → go to password screen.
+- If email does not exist → go to create password.
+
+SCREEN D2 — PASSWORD
+Title:
+“Enter your password”
+
+Primary Button:
+“Continue”
+
+Secondary:
+“Forgot password?”
+
+SCREEN D3 — CREATE ACCOUNT
+Title:
+“Create your account”
+
+Inputs:
+- Password
+- Confirm password
+
+Primary Button:
+“Create account”
+
+HELPER COPY:
+“Use email if you change phones often.”
+
+────────────────────────────────────────
+POST-AUTH — FIRST-RUN SETUP (OPTIONAL)
+────────────────────────────────────────
+
+Title:
+“Finish setting up GigAid”
+
+Fields (all optional):
+- Business name
+- Primary service category
+- ZIP code
+
+Primary Button:
+“Finish setup”
+
+Secondary Button (ALWAYS VISIBLE):
+“Skip for now”
+
+RULE:
+- Skipping never blocks dashboard access.
+
+────────────────────────────────────────
+SETTINGS — ACCOUNT (POST-LOGIN)
+────────────────────────────────────────
+
+Section: Account
+Displays:
+- Signed in with: Apple / Google / Phone / Email
+- Verified email (if present)
+- Verified phone number (if present)
+
+Button:
+“Link another sign-in method”
+
+Options:
+- Apple
+- Google
+- Phone
+- Email
+
+RULES:
+- Linking is optional.
+- No forced merges.
+- No destructive actions without confirmation.
+
+────────────────────────────────────────
+FORBIDDEN UX (DO NOT IMPLEMENT)
+────────────────────────────────────────
+- ❌ No forced Apple-only login
+- ❌ No hiding Email behind “More options”
+- ❌ No login walls before showing legal links
+- ❌ No blocking access to dashboard after auth
+- ❌ No marketing copy during login
+- ❌ No account merge prompts during sign-in
+
+────────────────────────────────────────
+SUCCESS CRITERIA
+────────────────────────────────────────
+- Apple Sign In is present, primary, and compliant
+- All login methods accessible from first screen
+- Legal links visible pre-login
+- Phone auth disclosures present
+- No reviewer-flagged dark patterns
+- UX matches this spec exactly
+
+IMPLEMENT NOW.

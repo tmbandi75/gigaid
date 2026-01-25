@@ -37,6 +37,7 @@ import { AvailabilityEditor, DEFAULT_AVAILABILITY } from "@/components/settings/
 import { PaymentMethodsSettings } from "@/components/PaymentMethodsSettings";
 import { StripeConnectSettings } from "@/components/settings/StripeConnectSettings";
 import { EmailSignatureSettings } from "@/components/settings/EmailSignatureSettings";
+import { AccountLinking } from "@/components/mobile-auth/AccountLinking";
 import type { Referral, WeeklyAvailability, FeatureFlag } from "@shared/schema";
 import { useFeatureFlag, useUpdateFeatureFlag } from "@/hooks/use-nudges";
 
@@ -266,6 +267,27 @@ export default function Settings() {
         </Card>
 
         <EmailSignatureSettings />
+
+        <AccountLinking
+          currentProvider={profile?.authProvider || 'email'}
+          linkedMethods={[
+            ...(profile?.firebaseUid ? [{ provider: 'google' as const, verified: true }] : []),
+          ]}
+          email={profile?.email}
+          phone={profile?.phone}
+          onLinkApple={async () => {
+            toast({ title: "Apple linking", description: "Apple Sign In linking is available in the mobile app" });
+          }}
+          onLinkGoogle={async () => {
+            toast({ title: "Google linking", description: "Google Sign In linking is available in the mobile app" });
+          }}
+          onLinkPhone={() => {
+            toast({ title: "Phone linking", description: "Phone verification linking is available in the mobile app" });
+          }}
+          onLinkEmail={() => {
+            toast({ title: "Email linking", description: "Email linking is available in the mobile app" });
+          }}
+        />
 
         <Card className="border-0 shadow-md" data-testid="card-ai-suggestions">
           <CardContent className="p-4">
