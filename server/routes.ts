@@ -1339,12 +1339,17 @@ export async function registerRoutes(
   });
 
   // Send deposit request to client via SMS
-  app.post("/api/jobs/:id/deposit/send-request", async (req, res) => {
+  app.post("/api/jobs/:id/deposit/send-request", isAuthenticated, async (req, res) => {
     try {
       const job = await storage.getJob(req.params.id);
       
       if (!job) {
         return res.status(404).json({ error: "Job not found" });
+      }
+      
+      // Verify job ownership
+      if (job.userId !== req.user!.id) {
+        return res.status(403).json({ error: "Not authorized to send deposit request for this job" });
       }
       
       if (!job.clientPhone) {

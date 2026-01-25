@@ -152,6 +152,7 @@ export default function JobSummary() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs", id, "deposit-status"] });
       toast({ title: "Deposit request sent!", description: "Your client will receive an SMS with payment link." });
     },
     onError: (error: Error) => {
@@ -461,7 +462,7 @@ export default function JobSummary() {
         )}
 
         {depositStatus?.hasDeposit && (
-          <Card className="border-0 shadow-md border-l-4 border-l-amber-500" data-testid="card-deposit">
+          <Card className="border-0 shadow-md" data-testid="card-deposit">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Shield className="h-4 w-4 text-amber-500" />
