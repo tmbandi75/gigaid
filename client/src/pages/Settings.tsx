@@ -338,7 +338,7 @@ export default function Settings() {
                     <Button
                       size="sm"
                       className="mt-2"
-                      onClick={() => navigate("/onboarding/4")}
+                      onClick={() => navigate("/onboarding?step=4")}
                       data-testid="button-setup-deposit"
                     >
                       Quick setup (30 sec)
