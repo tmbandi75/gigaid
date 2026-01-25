@@ -15,7 +15,7 @@ type AuthMode = "signin" | "signup" | "forgot";
 
 export default function Login() {
   const [, navigate] = useLocation();
-  const { isAuthenticated, refetchUser } = useAuth();
+  const { isAuthenticated, isLoggingOut, refetchUser } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isEmailLoading, setIsEmailLoading] = useState(false);
@@ -24,7 +24,10 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  if (isAuthenticated) {
+  // CRITICAL: Do NOT auto-redirect if logout is in progress
+  // This prevents the race condition where isAuthenticated briefly flips true
+  // during logout teardown
+  if (isAuthenticated && !isLoggingOut) {
     navigate("/");
     return null;
   }

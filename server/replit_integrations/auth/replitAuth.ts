@@ -142,6 +142,69 @@ export async function setupAuth(app: Express) {
       );
     });
   });
+
+  // POST logout endpoint for deterministic client-side logout
+  // Returns JSON acknowledgment only after all logout operations complete
+  app.post("/api/auth/logout", async (req, res) => {
+    const startTime = Date.now();
+    console.log("[Auth] POST /api/auth/logout - starting deterministic logout, timestamp:", startTime);
+    
+    try {
+      // Step 1: Await passport logout completion
+      await new Promise<void>((resolve) => {
+        req.logout((err) => {
+          if (err) {
+            console.error("[Auth] Passport logout error:", err);
+          }
+          console.log("[Auth] Passport logout complete, timestamp:", Date.now());
+          resolve();
+        });
+      });
+      
+      // Step 2: Await session destruction
+      if (req.session) {
+        await new Promise<void>((resolve) => {
+          req.session.destroy((err) => {
+            if (err) {
+              console.error("[Auth] Session destroy error:", err);
+            }
+            console.log("[Auth] Session destroyed, timestamp:", Date.now());
+            resolve();
+          });
+        });
+      }
+      
+      // Step 3: Clear session cookie with EXACT same options as getSession() config
+      // MUST match: secure: true, sameSite: "none" to properly clear the cookie
+      const cookieOptions = {
+        path: "/",
+        httpOnly: true,
+        secure: true,
+        sameSite: "none" as const,
+      };
+      
+      res.clearCookie("connect.sid", cookieOptions);
+      console.log("[Auth] Cleared connect.sid cookie with options:", cookieOptions);
+      
+      // Also clear any other potential session cookies
+      const cookieNames = Object.keys(req.cookies || {});
+      for (const name of cookieNames) {
+        if (name.includes("session") || name.includes("sid")) {
+          res.clearCookie(name, cookieOptions);
+          console.log("[Auth] Cleared additional cookie:", name);
+        }
+      }
+      
+      const endTime = Date.now();
+      console.log("[Auth] POST /api/auth/logout - complete, duration:", endTime - startTime, "ms");
+      
+      res.json({ success: true, timestamp: endTime });
+      
+    } catch (error) {
+      console.error("[Auth] Logout error:", error);
+      res.status(500).json({ success: false, error: "Logout failed" });
+    }
+  });
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {

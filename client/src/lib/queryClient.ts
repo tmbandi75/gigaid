@@ -1,6 +1,18 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { getAuthToken } from "./authToken";
 
+// Global logout state - prevents any API calls during logout
+let isLoggingOutGlobal = false;
+
+export function setGlobalLoggingOut(value: boolean): void {
+  isLoggingOutGlobal = value;
+  console.log("[QueryClient] Global logout state set to:", value, "timestamp:", Date.now());
+}
+
+export function getGlobalLoggingOut(): boolean {
+  return isLoggingOutGlobal;
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -21,6 +33,12 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  // Block all API requests during logout to prevent rehydration
+  if (isLoggingOutGlobal) {
+    console.log("[QueryClient] API request blocked during logout:", method, url);
+    throw new Error("Logout in progress");
+  }
+
   const headers: Record<string, string> = {
     ...getAuthHeaders(),
   };
@@ -45,6 +63,15 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    // Block all queries during logout to prevent rehydration
+    if (isLoggingOutGlobal) {
+      console.log("[QueryClient] Query blocked during logout:", queryKey);
+      if (unauthorizedBehavior === "returnNull") {
+        return null;
+      }
+      throw new Error("Logout in progress");
+    }
+
     const res = await fetch(queryKey.join("/") as string, {
       credentials: "include",
       headers: getAuthHeaders(),
