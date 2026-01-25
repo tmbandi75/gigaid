@@ -83,9 +83,9 @@ export default function Settings() {
   });
 
   // Only apply gating once onboarding status is known - don't gate during loading
-  const isExploreMode = onboardingStatus?.state === "skipped_explore";
+  // Show setup prompt only if moneyProtectionReady is false (pricing/deposit not configured)
   const isMoneyProtectionReady = onboardingStatus ? onboardingStatus.moneyProtectionReady : true;
-  const needsSetup = !isOnboardingLoading && (isExploreMode || !isMoneyProtectionReady);
+  const needsSetup = !isOnboardingLoading && !isMoneyProtectionReady;
 
   const { data: paymentMethods } = useQuery<PaymentMethod[]>({
     queryKey: ["/api/payment-methods"],
