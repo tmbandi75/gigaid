@@ -119,6 +119,10 @@ export function useAuth() {
       console.log("[Auth] Step 7: Clearing sessionStorage");
       sessionStorage.clear();
       
+      // Step 7b: Clear splash seen flag to ensure landing page shows
+      console.log("[Auth] Step 7b: Clearing splash seen flag");
+      localStorage.removeItem("gigaid_splash_seen");
+      
       console.log("[Auth] ========== LOGOUT COMPLETE ==========");
       console.log("[Auth] Final timestamp:", Date.now());
       

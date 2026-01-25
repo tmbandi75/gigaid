@@ -46,17 +46,17 @@ export default function ForceLogout() {
         setStatus("Clearing sessionStorage...");
         sessionStorage.clear();
         
-        setStatus("All cleared! Redirecting to login...");
+        setStatus("All cleared! Redirecting...");
         
         setTimeout(() => {
-          window.location.replace("/login");
+          window.location.replace("/");
         }, 1000);
         
       } catch (error) {
         console.error("Force logout error:", error);
         setStatus("Error occurred. Redirecting anyway...");
         setTimeout(() => {
-          window.location.replace("/login");
+          window.location.replace("/");
         }, 1000);
       }
     }
