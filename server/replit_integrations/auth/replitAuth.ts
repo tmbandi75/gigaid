@@ -7,7 +7,8 @@ import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { authStorage } from "./storage";
-import { verifyAppJwt } from "../../appJwt";
+import { storage } from "../../storage";
+import { verifyAppJwt, signAppJwt } from "../../appJwt";
 
 const getOidcConfig = memoize(
   async () => {
@@ -205,6 +206,60 @@ export async function setupAuth(app: Express) {
       res.status(500).json({ success: false, error: "Logout failed" });
     }
   });
+
+  // TEST-ONLY: Direct login endpoint for E2E testing (development only)
+  if (process.env.NODE_ENV === "development") {
+    app.post("/api/auth/test-login", async (req, res) => {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: "Email required" });
+      }
+      
+      console.log("[Auth] TEST-LOGIN: Creating session for:", email);
+      
+      try {
+        // Find user by email
+        const user = await storage.getUserByEmail(email);
+        
+        if (!user) {
+          return res.status(404).json({ error: "User not found" });
+        }
+        
+        // Create a mock session user object similar to what Passport would create
+        const sessionUser = {
+          claims: {
+            sub: user.id,
+            email: user.email,
+            name: user.name || user.email,
+          },
+          expires_at: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60, // 1 week
+        };
+        
+        // Generate a JWT token for the user (works without cookies)
+        const token = signAppJwt({
+          sub: user.id,
+          provider: 'firebase',
+          email_normalized: user.email?.toLowerCase(),
+        });
+        
+        // Also log the user in via Passport (for session-based auth)
+        req.login(sessionUser, (err) => {
+          if (err) {
+            console.error("[Auth] TEST-LOGIN error:", err);
+            // Still return token even if session fails
+          }
+          
+          console.log("[Auth] TEST-LOGIN: Session created for user:", user.id);
+          res.json({ success: true, userId: user.id, token });
+        });
+        
+      } catch (error) {
+        console.error("[Auth] TEST-LOGIN error:", error);
+        res.status(500).json({ error: "Login failed" });
+      }
+    });
+  }
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
