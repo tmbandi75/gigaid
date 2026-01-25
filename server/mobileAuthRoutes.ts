@@ -221,4 +221,208 @@ router.get('/mobile/status', (req: Request, res: Response) => {
   });
 });
 
+// Web Firebase Auth endpoint - same logic as mobile but for web clients
+router.post('/web/firebase', async (req: Request, res: Response) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken || typeof idToken !== 'string') {
+      return res.status(400).json({ error: 'idToken is required' });
+    }
+
+    if (!isFirebaseConfigured()) {
+      return res.status(503).json({ 
+        error: 'Firebase authentication is not configured. Please contact support.' 
+      });
+    }
+
+    if (!isAppJwtConfigured()) {
+      return res.status(503).json({ 
+        error: 'Authentication is not fully configured. Please contact support.' 
+      });
+    }
+
+    const decoded = await verifyFirebaseIdToken(idToken);
+    if (!decoded) {
+      return res.status(401).json({ error: 'Invalid or expired Firebase token' });
+    }
+
+    const firebaseUid = decoded.uid;
+    const email = decoded.email;
+    const emailNormalized = normalizeEmail(email);
+    const phoneE164 = decoded.phone_number;
+    const name = decoded.name;
+    const photo = decoded.picture;
+
+    console.log('[WebAuth] Processing Firebase auth:', {
+      firebaseUid,
+      emailNormalized,
+      phoneE164,
+      signInProvider: decoded.firebase.sign_in_provider,
+    });
+
+    let existingUser = null;
+    let linkedBy: 'email' | 'phone' | 'new_user' = 'new_user';
+
+    // Check by Firebase UID first
+    const existingByFirebaseUid = await db
+      .select()
+      .from(users)
+      .where(eq(users.firebaseUid, firebaseUid))
+      .limit(1);
+
+    if (existingByFirebaseUid.length > 0) {
+      existingUser = existingByFirebaseUid[0];
+      linkedBy = 'email';
+      console.log('[WebAuth] Found existing user by Firebase UID:', existingUser.id);
+    }
+
+    // Check by normalized email
+    if (!existingUser && emailNormalized) {
+      const existingByEmail = await db
+        .select()
+        .from(users)
+        .where(eq(users.emailNormalized, emailNormalized))
+        .limit(1);
+      
+      if (existingByEmail.length > 0) {
+        existingUser = existingByEmail[0];
+        linkedBy = 'email';
+        console.log('[WebAuth] Linking Firebase to existing user by email:', existingUser.id);
+      }
+    }
+
+    // Check by phone
+    if (!existingUser && phoneE164) {
+      const existingByPhone = await db
+        .select()
+        .from(users)
+        .where(eq(users.phoneE164, phoneE164))
+        .limit(1);
+      
+      if (existingByPhone.length > 0) {
+        existingUser = existingByPhone[0];
+        linkedBy = 'phone';
+        console.log('[WebAuth] Linking Firebase to existing user by phone:', existingUser.id);
+      }
+    }
+
+    // Check by raw email as fallback
+    if (!existingUser && email) {
+      const existingByRawEmail = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+      
+      if (existingByRawEmail.length > 0) {
+        existingUser = existingByRawEmail[0];
+        linkedBy = 'email';
+        console.log('[WebAuth] Linking Firebase to existing user by raw email:', existingUser.id);
+      }
+    }
+
+    let userId: string;
+    const now = new Date().toISOString();
+
+    if (existingUser) {
+      userId = existingUser.id;
+
+      const updates: Record<string, any> = {
+        updatedAt: now,
+      };
+
+      if (!existingUser.firebaseUid) {
+        updates.firebaseUid = firebaseUid;
+      }
+      if (!existingUser.emailNormalized && emailNormalized) {
+        updates.emailNormalized = emailNormalized;
+      }
+      if (!existingUser.email && email) {
+        updates.email = email;
+      }
+      if (!existingUser.phoneE164 && phoneE164) {
+        updates.phoneE164 = phoneE164;
+      }
+      if (!existingUser.phone && phoneE164) {
+        updates.phone = phoneE164;
+      }
+      if (!existingUser.photo && photo) {
+        updates.photo = photo;
+      }
+      if (!existingUser.name && name) {
+        updates.name = name;
+      }
+
+      if (Object.keys(updates).length > 1) {
+        await db.update(users).set(updates).where(eq(users.id, userId));
+        console.log('[WebAuth] Updated user with Firebase data:', updates);
+      }
+    } else {
+      // Create new user
+      const username = emailNormalized || `firebase_${firebaseUid}`;
+      
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          username,
+          password: '',
+          email,
+          emailNormalized,
+          phone: phoneE164,
+          phoneE164,
+          name,
+          photo,
+          firebaseUid,
+          authProvider: 'firebase',
+          createdAt: now,
+          updatedAt: now,
+          onboardingState: 'not_started',
+        })
+        .returning();
+
+      userId = newUser.id;
+      linkedBy = 'new_user';
+      console.log('[WebAuth] Created new user from Firebase:', userId);
+    }
+
+    const appToken = signAppJwt({
+      sub: userId,
+      provider: 'firebase',
+      email_normalized: emailNormalized,
+      firebase_uid: firebaseUid,
+    });
+
+    const response: MobileAuthResponse = {
+      token: appToken,
+      user: {
+        id: userId,
+        email,
+        phone: phoneE164,
+        name,
+      },
+      linkedBy,
+    };
+
+    console.log('[WebAuth] Auth successful:', { userId, linkedBy });
+    return res.json(response);
+  } catch (error) {
+    console.error('[WebAuth] Error:', error);
+    return res.status(500).json({ error: 'Internal server error during authentication' });
+  }
+});
+
+// Web auth status endpoint
+router.get('/web/status', (req: Request, res: Response) => {
+  const firebaseReady = isFirebaseConfigured();
+  const jwtReady = isAppJwtConfigured();
+  
+  res.json({
+    firebaseConfigured: firebaseReady,
+    jwtConfigured: jwtReady,
+    webAuthReady: firebaseReady && jwtReady,
+    supportedProviders: ['google', 'apple', 'email'],
+  });
+});
+
 export default router;

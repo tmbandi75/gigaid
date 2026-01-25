@@ -48,7 +48,7 @@ export default function LandingPage() {
             <span className="font-bold text-xl">GigAid</span>
           </div>
           <Button asChild data-testid="button-login-header">
-            <a href="/api/login">Sign In</a>
+            <a href="/login">Sign In</a>
           </Button>
         </div>
       </header>
@@ -65,7 +65,7 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" asChild data-testid="button-get-started">
-              <a href="/api/login">Get Started Free</a>
+              <a href="/login">Get Started Free</a>
             </Button>
           </div>
           <p className="text-sm text-muted-foreground mt-4" data-testid="text-free-plan-note">
@@ -106,7 +106,7 @@ export default function LandingPage() {
             Join thousands of service professionals who use GigAid to manage their business.
           </p>
           <Button size="lg" asChild data-testid="button-cta-signup">
-            <a href="/api/login">Start Free Today</a>
+            <a href="/login">Start Free Today</a>
           </Button>
         </div>
       </section>

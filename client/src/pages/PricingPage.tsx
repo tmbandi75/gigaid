@@ -101,7 +101,7 @@ export default function PricingPage() {
       if (isAuthenticated) {
         navigate("/");
       } else {
-        navigate("/api/login");
+        navigate("/login");
       }
       return;
     }
