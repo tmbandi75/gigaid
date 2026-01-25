@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Mail, ArrowLeft } from "lucide-react";
+import { Loader2, Mail, ArrowLeft, Zap } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword } from "@/lib/firebase";
 import { setAuthToken } from "@/lib/authToken";
@@ -12,6 +12,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 
 type AuthMode = "signin" | "signup" | "forgot";
+
+const isDevelopment = import.meta.env.MODE === 'development';
 
 export default function Login() {
   const [, navigate] = useLocation();

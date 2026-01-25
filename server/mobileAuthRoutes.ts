@@ -425,4 +425,57 @@ router.get('/web/status', (req: Request, res: Response) => {
   });
 });
 
+router.post('/dev/login', async (req: Request, res: Response) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Dev login not available in production' });
+  }
+
+  const { email } = req.body;
+  if (!email || typeof email !== 'string') {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  if (!isAppJwtConfigured()) {
+    return res.status(503).json({ error: 'JWT not configured' });
+  }
+
+  try {
+    const normalizedEmail = normalizeEmail(email);
+    
+    let existingUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.emailNormalized, normalizedEmail!))
+      .limit(1);
+
+    let user;
+    if (existingUser.length > 0) {
+      user = existingUser[0];
+    } else {
+      const newUser = await storage.createUser({
+        email: email,
+        emailNormalized: normalizedEmail,
+        authProvider: 'firebase',
+        name: email.split('@')[0],
+      });
+      user = newUser;
+    }
+
+    const token = signAppJwt({ userId: user.id, email: user.email });
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      },
+      mode: 'development',
+    });
+  } catch (error) {
+    console.error('Dev login error:', error);
+    res.status(500).json({ error: 'Dev login failed' });
+  }
+});
+
 export default router;
