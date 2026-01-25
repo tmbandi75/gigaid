@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/use-auth";
 import SplashPage from "@/pages/SplashPage";
 import LandingPage from "@/pages/LandingPage";
 import Login from "@/pages/Login";
+import ForceLogout from "@/pages/force-logout";
 
 import TodaysGamePlanPage from "@/pages/TodaysGamePlanPage";
 import Dashboard from "@/pages/Dashboard";
@@ -221,6 +222,7 @@ function App() {
             <Route path="/terms" component={TermsOfService} />
             <Route path="/privacy" component={PrivacyPolicy} />
             <Route path="/login" component={Login} />
+            <Route path="/force-logout" component={ForceLogout} />
             <Route>
               <AuthenticatedApp />
             </Route>
