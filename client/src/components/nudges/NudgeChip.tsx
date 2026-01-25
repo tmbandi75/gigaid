@@ -10,42 +10,47 @@ interface NudgeChipProps {
 const nudgeConfig: Record<string, { icon: typeof Sparkles; label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   lead_follow_up: {
     icon: MessageSquare,
-    label: "Follow up",
+    label: "Don't lose this",
     variant: "default",
   },
   lead_convert_to_job: {
     icon: FileText,
-    label: "Create job",
+    label: "Lock it in",
     variant: "secondary",
   },
   lead_silent_rescue: {
     icon: Clock,
-    label: "Check in",
+    label: "Going cold",
     variant: "outline",
   },
   lead_hot_alert: {
     icon: Flame,
-    label: "Hot lead",
+    label: "Act now",
+    variant: "destructive",
+  },
+  lead_conversion_required: {
+    icon: AlertCircle,
+    label: "Protect this",
     variant: "destructive",
   },
   invoice_reminder: {
     icon: DollarSign,
-    label: "Send reminder",
+    label: "Secure payment",
     variant: "default",
   },
   invoice_reminder_firm: {
     icon: DollarSign,
-    label: "Follow up",
+    label: "Money waiting",
     variant: "secondary",
   },
   invoice_overdue_escalation: {
     icon: AlertTriangle,
-    label: "Overdue",
+    label: "At risk",
     variant: "destructive",
   },
   invoice_create_from_job_done: {
     icon: FileText,
-    label: "Create invoice",
+    label: "Get paid",
     variant: "secondary",
   },
   invoice_weekly_summary: {
@@ -55,8 +60,13 @@ const nudgeConfig: Record<string, { icon: typeof Sparkles; label: string; varian
   },
   job_stuck: {
     icon: AlertCircle,
-    label: "Update job",
+    label: "Needs attention",
     variant: "secondary",
+  },
+  job_invoice_escalation: {
+    icon: AlertTriangle,
+    label: "Unpaid work",
+    variant: "destructive",
   },
 };
 

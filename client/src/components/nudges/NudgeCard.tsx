@@ -74,9 +74,9 @@ export function NudgeCard({ maxNudges = 3 }: NudgeCardProps) {
                 <Sparkles className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-semibold">AI Suggestions</p>
+                <p className="text-sm font-semibold">I'm watching out for you</p>
                 <p className="text-xs text-muted-foreground">
-                  {activeNudges.length} action{activeNudges.length !== 1 ? "s" : ""} recommended
+                  {activeNudges.length} thing{activeNudges.length !== 1 ? "s" : ""} I noticed
                 </p>
               </div>
             </div>

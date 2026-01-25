@@ -48,7 +48,7 @@ function generateLeadNudges(lead: Lead, userId: string): NudgeCandidate[] {
       entityId: lead.id,
       nudgeType: "lead_follow_up",
       priority: 90,
-      explainText: "Follow up now — replies drop after 24h.",
+      explainText: "I noticed this lead hasn't heard from you yet. Acting now protects your chance.",
       actionPayload: {
         suggestedMessage: `Hi ${lead.clientName || "there"}! Just following up on your inquiry about ${lead.serviceType || "our services"}. When would be a good time to chat?`,
       },
@@ -65,7 +65,7 @@ function generateLeadNudges(lead: Lead, userId: string): NudgeCandidate[] {
       entityId: lead.id,
       nudgeType: "lead_silent_rescue",
       priority: 80,
-      explainText: "Customers often respond to a quick check-in.",
+      explainText: "This lead is going quiet. A quick check-in could save it.",
       actionPayload: {
         suggestedMessage: `Hey ${lead.clientName || "there"}, just checking in to see if you're still interested. Let me know if you have any questions!`,
       },
@@ -92,8 +92,8 @@ function generateLeadNudges(lead: Lead, userId: string): NudgeCandidate[] {
       nudgeType: "lead_convert_to_job",
       priority: finalPriority,
       explainText: isHighScoreResponded 
-        ? `High-intent lead (score ${lead.score}). Ready to book?` 
-        : "Turn this into a job?",
+        ? `This looks like a serious buyer. Lock it in before they go elsewhere.` 
+        : "This lead is warm. Booking now secures the opportunity.",
       actionPayload: {
         jobPrefill: {
           clientName: lead.clientName,
@@ -119,7 +119,7 @@ function generateLeadNudges(lead: Lead, userId: string): NudgeCandidate[] {
       entityId: lead.id,
       nudgeType: "lead_hot_alert",
       priority: 95, // High priority
-      explainText: `Hot lead! Score: ${lead.score}. Respond quickly.`,
+      explainText: `I spotted a high-intent buyer. Quick response protects this one.`,
       actionPayload: {
         suggestedMessage: `Hi ${lead.clientName || "there"}! Thanks for reaching out about ${lead.serviceType || "our services"}. I'd love to help. What time works best for you?`,
         leadScore: lead.score,
@@ -143,7 +143,7 @@ function generateLeadNudges(lead: Lead, userId: string): NudgeCandidate[] {
       entityId: lead.id,
       nudgeType: "lead_conversion_required",
       priority: 92, // High priority - this is enforcement, not suggestion
-      explainText: "This lead is highly likely to convert. Turning it into a job protects the opportunity.",
+      explainText: "I'm watching this one closely. It's ready to book — don't let it slip away.",
       actionPayload: {
         jobPrefill: {
           clientName: lead.clientName,
@@ -176,7 +176,7 @@ function generateInvoiceNudges(invoice: Invoice, userId: string): NudgeCandidate
         entityId: invoice.id,
         nudgeType: "invoice_reminder",
         priority: 90,
-        explainText: `You're owed $${amount.toFixed(0)} — send a friendly reminder?`,
+        explainText: `I'm tracking $${amount.toFixed(0)} owed to you. A gentle nudge keeps it moving.`,
         actionPayload: {
           reminderMessage: `Hi ${invoice.clientName}! Just a friendly reminder about invoice #${invoice.invoiceNumber} for $${amount.toFixed(2)}. Let me know if you have any questions! Payment link: {link}`,
           escalationLevel: "gentle",
@@ -191,7 +191,7 @@ function generateInvoiceNudges(invoice: Invoice, userId: string): NudgeCandidate
         entityId: invoice.id,
         nudgeType: "invoice_reminder_firm",
         priority: 92,
-        explainText: `$${amount.toFixed(0)} unpaid for 3+ days — follow up now.`,
+        explainText: `$${amount.toFixed(0)} has been waiting 3+ days. I'm keeping an eye on this for you.`,
         actionPayload: {
           reminderMessage: `Hi ${invoice.clientName}, following up on invoice #${invoice.invoiceNumber} for $${amount.toFixed(2)} sent a few days ago. Would appreciate if you could take a look when you get a chance. Payment link: {link}`,
           escalationLevel: "firm",
@@ -206,7 +206,7 @@ function generateInvoiceNudges(invoice: Invoice, userId: string): NudgeCandidate
         entityId: invoice.id,
         nudgeType: "invoice_overdue_escalation",
         priority: 95,
-        explainText: `Invoice overdue 7+ days — $${amount.toFixed(0)} at risk. Take action now.`,
+        explainText: `Warning: $${amount.toFixed(0)} is 7+ days overdue. I don't want you to lose this.`,
         actionPayload: {
           firmerMessage: `Hi ${invoice.clientName}, I noticed invoice #${invoice.invoiceNumber} ($${amount.toFixed(2)}) from over a week ago is still outstanding. Please let me know if there's an issue I can help resolve.`,
           escalationLevel: "urgent",
@@ -238,7 +238,7 @@ function generateJobNudges(
       entityId: job.id,
       nudgeType: "invoice_create_from_job_done",
       priority: 88,
-      explainText: "Invoice now while the job is fresh.",
+      explainText: "Job done, payment pending. I'm making sure you get paid.",
       actionPayload: {
         invoicePrefill: {
           clientName: job.clientName,
@@ -267,7 +267,7 @@ function generateJobNudges(
         entityId: job.id,
         nudgeType: "job_stuck",
         priority: 80,
-        explainText: "This job was scheduled 2+ days ago. Update status?",
+        explainText: "I noticed this job hasn't been updated in a while. Keeping your records current protects you.",
         actionPayload: {
           suggestedActions: ["mark_completed", "reschedule", "cancel"],
         },
@@ -295,8 +295,8 @@ function generateJobNudges(
       nudgeType: "job_invoice_escalation",
       priority: 90, // High priority escalation
       explainText: amount > 0 
-        ? `Job completed but $${amount.toFixed(0)} still unpaid after 48h. Resolve payment now.`
-        : "Job completed 48h ago but payment unresolved. Take action.",
+        ? `I'm guarding $${amount.toFixed(0)} that's been waiting 48+ hours. Let's secure it.`
+        : "This job's payment is still open. I'm watching it for you.",
       actionPayload: {
         resolutionType: resolution.resolutionType,
         paymentMethod: resolution.paymentMethod,

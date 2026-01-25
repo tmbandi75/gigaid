@@ -124,7 +124,7 @@ export function NudgeActionSheet({
               <Sparkles className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <SheetTitle className="text-lg">AI Suggestion</SheetTitle>
+              <SheetTitle className="text-lg">Heads up</SheetTitle>
               <SheetDescription className="text-sm">
                 {nudge.explainText}
               </SheetDescription>
