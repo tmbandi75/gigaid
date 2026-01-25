@@ -1,0 +1,128 @@
+Purpose: Prepare a Capacitor app so a developer can build a test APK locally following your exact instructions.
+
+REPLIT PROMPT — Android Test APK Prep (Capacitor + Firebase)
+
+ROLE
+You are a senior mobile build engineer preparing an Android APK handoff for local build.
+
+GOAL
+Prepare this project so it can be opened in Android Studio and built into a debug test APK without errors.
+
+NON-GOALS
+
+❌ Do NOT attempt to generate an APK
+
+❌ Do NOT require Play Store setup
+
+❌ Do NOT modify Firebase backend logic
+
+❌ Do NOT fake or auto-generate google-services.json
+
+STEP 1 — Validate Android Platform
+
+Ensure @capacitor/android is installed
+
+Ensure android/ directory exists
+
+If missing, run:
+
+npx cap add android
+
+
+Validate capacitor.config.ts|json contains:
+
+appId
+
+appName
+
+Fail if missing.
+
+STEP 2 — Build & Sync Web Assets
+
+Run:
+
+npm run build
+npx cap sync android
+
+
+Validate:
+
+android/app/src/main/assets/public exists
+
+Web assets are non-empty
+
+Fail loudly if assets are missing.
+
+STEP 3 — Firebase Android Guardrail
+
+Check for:
+
+android/app/google-services.json
+
+
+If missing:
+❌ Stop and print:
+
+“Add google-services.json from Firebase Console
+Project Settings → Your Android App → Download google-services.json
+Place it in android/app/”
+
+Do not create a placeholder.
+
+STEP 4 — Gradle Configuration Validation
+
+Verify:
+
+android/app/build.gradle applies:
+
+apply plugin: 'com.google.gms.google-services'
+
+
+android/build.gradle includes:
+
+classpath 'com.google.gms:google-services:'
+
+
+Fail with explanation if missing.
+
+STEP 5 — SHA Fingerprint Instructions
+
+Print (do not run):
+
+cd android
+./gradlew signingReport
+
+
+Explain briefly:
+
+Debug SHA-1 is required for Firebase Auth / Google Sign-In
+
+Paste SHA-1 into Firebase Console → Android App settings
+
+STEP 6 — Android Studio Handoff
+
+Output only the following instructions:
+
+Local APK build steps:
+
+1. Install Android Studio
+2. Run: npx cap open android
+3. Allow Gradle sync to complete
+4. Build APK:
+   Android Studio → Build → Build Bundle(s) / APK(s) → Build APK(s)
+5. APK output location:
+   android/app/build/outputs/apk/debug/
+
+OUTPUT RULES
+
+Use clear section headers
+
+Commands in code blocks
+
+Prefix failures with ❌
+
+Prefix validations with ✅
+
+No emojis
+
+No marketing tone
