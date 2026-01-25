@@ -59,6 +59,7 @@ import VoiceNotesPage from "@/pages/VoiceNotesPage";
 import TermsOfService from "@/pages/terms";
 import PrivacyPolicy from "@/pages/privacy";
 import OnboardingPage from "@/pages/OnboardingPage";
+import PricingPage from "@/pages/PricingPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -97,6 +98,7 @@ function Router() {
       <Route path="/messages" component={Messages} />
       <Route path="/notify-clients" component={NotifyClientsPage} />
       <Route path="/owner" component={OwnerView} />
+      <Route path="/pricing" component={PricingPage} />
       <Route path="/admin/cockpit" component={AdminCockpit} />
       <Route path="/admin/users" component={AdminUsers} />
       <Route path="/admin/users/:userId" component={AdminUserDetail} />
