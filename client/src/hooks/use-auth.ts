@@ -33,7 +33,14 @@ async function logout(): Promise<void> {
   } catch (e) {
     console.error("Firebase sign out error:", e);
   }
-  window.location.href = "/login";
+  // Call server logout to clear session
+  try {
+    await fetch("/api/logout", { credentials: "include" });
+  } catch (e) {
+    console.error("Server logout error:", e);
+  }
+  // Force redirect to login page
+  window.location.replace("/login");
 }
 
 export function useAuth() {
