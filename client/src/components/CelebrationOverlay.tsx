@@ -51,6 +51,11 @@ export function CelebrationOverlay({
                 <p className="mt-1 text-sm text-white/90" data-testid="text-celebration-message">
                   {message}
                 </p>
+                <p className="mt-2 text-xs text-white/70 italic" data-testid="text-gigaid-helped">
+                  {type === "payment_received" 
+                    ? "GigAid helped you collect this faster." 
+                    : "GigAid helped you secure this opportunity."}
+                </p>
               </div>
             </div>
           </div>

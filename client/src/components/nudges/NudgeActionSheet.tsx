@@ -42,13 +42,67 @@ export function NudgeActionSheet({
     }
   }, [nudge]);
 
+  // Trust signal messages based on nudge type
+  const getTrustSignal = (nudgeType: string, actionType: string): { title: string; description: string } => {
+    const signals: Record<string, { title: string; description: string }> = {
+      lead_follow_up: { 
+        title: "Protected", 
+        description: "You reached out before this lead went cold. Response rates drop 60% after 24 hours." 
+      },
+      lead_silent_rescue: { 
+        title: "Good save", 
+        description: "Checking in now prevents this lead from slipping away." 
+      },
+      lead_convert_to_job: { 
+        title: "Locked in", 
+        description: "This opportunity is now secured on your calendar." 
+      },
+      lead_hot_alert: { 
+        title: "Quick action", 
+        description: "Fast responses win 78% more jobs. You're ahead of the competition." 
+      },
+      lead_conversion_required: { 
+        title: "Opportunity protected", 
+        description: "This high-intent lead is now safely booked." 
+      },
+      invoice_reminder: { 
+        title: "Payment nudged", 
+        description: "Gentle reminders recover 85% of delayed payments." 
+      },
+      invoice_reminder_firm: { 
+        title: "Following up", 
+        description: "Consistent follow-up protects your cash flow." 
+      },
+      invoice_overdue_escalation: { 
+        title: "Taking action", 
+        description: "You're not letting this payment slip through the cracks." 
+      },
+      invoice_create_from_job_done: { 
+        title: "Getting paid", 
+        description: "Invoicing quickly means faster payment. You're protecting your earnings." 
+      },
+      job_stuck: { 
+        title: "Updated", 
+        description: "Keeping records current protects you if questions come up later." 
+      },
+      job_invoice_escalation: { 
+        title: "Money protected", 
+        description: "You're making sure this payment doesn't get forgotten." 
+      },
+    };
+    return signals[nudgeType] || { title: "Done", description: "Action completed." };
+  };
+
   const dismissMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", `/api/ai/nudges/${nudge?.id}/dismiss`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/ai/nudges"] });
-      toast({ title: "Dismissed", description: "Nudge dismissed" });
+      toast({ 
+        title: "Got it", 
+        description: "I'll trust your judgment on this one." 
+      });
       onClose();
     },
   });
@@ -59,7 +113,10 @@ export function NudgeActionSheet({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/ai/nudges"] });
-      toast({ title: "Snoozed", description: "We'll remind you later" });
+      toast({ 
+        title: "I'll keep watching", 
+        description: "I'll remind you tomorrow. This stays on my radar." 
+      });
       onClose();
     },
   });
@@ -75,14 +132,18 @@ export function NudgeActionSheet({
     onSuccess: (data, actionType) => {
       queryClient.invalidateQueries({ queryKey: ["/api/ai/nudges"] });
       
+      const trustSignal = getTrustSignal(nudge?.nudgeType || "", actionType);
+      
       if (actionType === "create_job" && data.jobPrefill) {
         onCreateJob?.(data.jobPrefill);
+        toast({ title: trustSignal.title, description: trustSignal.description });
       } else if (actionType === "create_invoice" && data.invoicePrefill) {
         onCreateInvoice?.(data.invoicePrefill);
+        toast({ title: trustSignal.title, description: trustSignal.description });
       } else if (actionType === "send_message") {
         toast({ 
-          title: "Message copied!", 
-          description: "Paste it in your messaging app" 
+          title: trustSignal.title, 
+          description: trustSignal.description 
         });
         navigator.clipboard.writeText(message);
       }
