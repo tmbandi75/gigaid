@@ -5281,8 +5281,28 @@ Return ONLY the message text, no JSON or formatting.`
     try {
       const { plan, returnTo } = req.body;
       
-      if (plan !== "pro_plus") {
-        return res.status(400).json({ error: "Invalid plan" });
+      // Plan configuration with pricing
+      const planConfigs: Record<string, { name: string; description: string; amount: number }> = {
+        pro: {
+          name: "GigAid Pro",
+          description: "Owner View dashboard, weekly summaries, advanced analytics, priority support",
+          amount: 1900,
+        },
+        pro_plus: {
+          name: "GigAid Pro+",
+          description: "Deposit enforcement, booking protection, Today's Money Plan",
+          amount: 2800,
+        },
+        business: {
+          name: "GigAid Business",
+          description: "Multi-provider support, team management, business analytics, API access",
+          amount: 4900,
+        },
+      };
+
+      const planConfig = planConfigs[plan];
+      if (!planConfig) {
+        return res.status(400).json({ error: "Invalid plan. Valid plans: pro, pro_plus, business" });
       }
 
       const { getUncachableStripeClient } = await import("./stripeClient");
@@ -5306,10 +5326,10 @@ Return ONLY the message text, no JSON or formatting.`
             price_data: {
               currency: "usd",
               product_data: {
-                name: "GigAid Pro+",
-                description: "Deposit enforcement, booking protection, Today's Money Plan",
+                name: planConfig.name,
+                description: planConfig.description,
               },
-              unit_amount: 2800,
+              unit_amount: planConfig.amount,
               recurring: { interval: "month" },
             },
             quantity: 1,
@@ -5319,13 +5339,13 @@ Return ONLY the message text, no JSON or formatting.`
         success_url: `${baseUrl}${returnTo || "/"}?subscription=success`,
         cancel_url: `${baseUrl}${returnTo || "/"}?subscription=cancelled`,
         metadata: {
-          plan: "pro_plus",
+          plan,
           user_id: user?.id || (req as any).userId,
         },
         subscription_data: {
           metadata: {
             user_id: user?.id || (req as any).userId,
-            plan: "pro_plus",
+            plan,
           },
         },
       });
