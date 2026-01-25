@@ -149,11 +149,11 @@ export async function setupAuth(app: Express) {
           if (err) {
             console.error("[Auth] Session destroy error:", err);
           }
-          // Always redirect to login page
-          res.redirect("/login");
+          // Redirect to root - LandingPage shows for unauthenticated users
+          res.redirect("/");
         });
       } else {
-        res.redirect("/login");
+        res.redirect("/");
       }
     });
   });

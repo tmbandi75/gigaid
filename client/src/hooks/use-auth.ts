@@ -128,8 +128,9 @@ export function useAuth() {
     
     // Step 8: Only after ALL steps complete, redirect
     // Keep globalIsLoggingOut true - it will be reset on next page load
-    console.log("[Auth] Step 8: Redirecting to /login");
-    window.location.replace("/login");
+    // Redirect to root - LandingPage shows for unauthenticated users
+    console.log("[Auth] Step 8: Redirecting to /");
+    window.location.replace("/");
   }, [queryClient]);
 
   const logoutMutation = useMutation({
