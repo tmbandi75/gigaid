@@ -28,6 +28,8 @@ import {
   XCircle,
   Play,
   Image,
+  Shield,
+  CreditCard,
 } from "lucide-react";
 import type { Job } from "@shared/schema";
 import { JobLocationMap } from "@/components/JobLocationMap";
@@ -124,6 +126,37 @@ export default function JobSummary() {
       return res.json();
     },
     enabled: !!id,
+  });
+
+  // Fetch deposit status
+  interface DepositState {
+    hasDeposit: boolean;
+    depositRequestedCents: number;
+    depositPaidCents: number;
+    depositOutstandingCents?: number;
+    isDepositFullyPaid?: boolean;
+  }
+  const { data: depositStatus } = useQuery<DepositState>({
+    queryKey: ["/api/jobs", id, "deposit-status"],
+    queryFn: async () => {
+      const res = await fetch(`/api/jobs/${id}/deposit-status`);
+      if (!res.ok) return { hasDeposit: false, depositRequestedCents: 0, depositPaidCents: 0 };
+      return res.json();
+    },
+    enabled: !!id,
+  });
+
+  const sendDepositRequestMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", `/api/jobs/${id}/deposit/send-request`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] });
+      toast({ title: "Deposit request sent!", description: "Your client will receive an SMS with payment link." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to send deposit request", description: error.message, variant: "destructive" });
+    },
   });
 
   const onTheWayMutation = useMutation({
@@ -423,6 +456,63 @@ export default function JobSummary() {
                   </Button>
                 )}
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {depositStatus?.hasDeposit && (
+          <Card className="border-0 shadow-md border-l-4 border-l-amber-500" data-testid="card-deposit">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Shield className="h-4 w-4 text-amber-500" />
+                <h3 className="font-semibold text-sm">Deposit Required</h3>
+                {depositStatus.isDepositFullyPaid ? (
+                  <Badge className="bg-green-500/10 text-green-700 border-0 ml-auto">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Paid
+                  </Badge>
+                ) : (
+                  <Badge className="bg-amber-500/10 text-amber-700 border-0 ml-auto">
+                    <Clock className="h-3 w-3 mr-1" />
+                    Awaiting Payment
+                  </Badge>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Deposit Amount</p>
+                  <p className="text-lg font-bold text-amber-600" data-testid="text-deposit-amount">
+                    {formatPrice(depositStatus.depositRequestedCents)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Amount Paid</p>
+                  <p className="text-lg font-bold text-green-600" data-testid="text-deposit-paid">
+                    {formatPrice(depositStatus.depositPaidCents)}
+                  </p>
+                </div>
+              </div>
+              {!depositStatus.isDepositFullyPaid && job.clientPhone && (
+                <Button 
+                  className="w-full gap-2" 
+                  variant="outline"
+                  onClick={() => sendDepositRequestMutation.mutate()}
+                  disabled={sendDepositRequestMutation.isPending}
+                  data-testid="button-send-deposit-request"
+                >
+                  {sendDepositRequestMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CreditCard className="h-4 w-4" />
+                  )}
+                  Request Deposit Payment
+                </Button>
+              )}
+              {!depositStatus.isDepositFullyPaid && !job.clientPhone && (
+                <p className="text-xs text-muted-foreground text-center">
+                  Add client phone number to send deposit request
+                </p>
+              )}
             </CardContent>
           </Card>
         )}

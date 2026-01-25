@@ -1338,6 +1338,78 @@ export async function registerRoutes(
     }
   });
 
+  // Send deposit request to client via SMS
+  app.post("/api/jobs/:id/deposit/send-request", async (req, res) => {
+    try {
+      const job = await storage.getJob(req.params.id);
+      
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
+      if (!job.clientPhone) {
+        return res.status(400).json({ error: "Client phone number required" });
+      }
+      
+      // Get deposit state
+      const payments = await storage.getJobPaymentsByJob(req.params.id);
+      const depositState = computeDepositState(job, payments);
+      
+      if (!depositState.hasDeposit) {
+        return res.status(400).json({ error: "No deposit requested for this job" });
+      }
+      
+      if (depositState.isDepositFullyPaid) {
+        return res.status(400).json({ error: "Deposit already paid" });
+      }
+      
+      // Get provider info for the message
+      const user = await storage.getUser(job.userId);
+      const providerName = user?.businessName || user?.firstName || "Your service provider";
+      
+      // Build deposit payment link
+      const baseUrl = process.env.FRONTEND_URL || `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
+      const depositLink = `${baseUrl}/pay-deposit/${job.id}`;
+      
+      // Format the deposit amount
+      const depositAmountFormatted = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 0,
+      }).format((depositState.depositOutstandingCents || depositState.depositRequestedCents) / 100);
+      
+      // Build SMS message
+      const message = `${providerName} is requesting a ${depositAmountFormatted} deposit for your upcoming ${job.serviceType || "service"} appointment. Pay securely here: ${depositLink}`;
+      
+      // Send SMS
+      const { sendSMS } = await import("./twilio");
+      const success = await sendSMS(job.clientPhone, message);
+      
+      if (!success) {
+        return res.status(500).json({ error: "Failed to send SMS" });
+      }
+      
+      // Update job notes to track that deposit request was sent
+      const now = new Date().toISOString();
+      const existingNotes = job.notes || "";
+      const updatedNotes = existingNotes.includes("[DEPOSIT_REQUEST_SENT:")
+        ? existingNotes.replace(/\[DEPOSIT_REQUEST_SENT:[^\]]+\]/, `[DEPOSIT_REQUEST_SENT:${now}]`)
+        : `${existingNotes} [DEPOSIT_REQUEST_SENT:${now}]`.trim();
+      
+      await storage.updateJob(req.params.id, { notes: updatedNotes });
+      
+      res.json({ 
+        success: true, 
+        message: "Deposit request sent to client",
+        sentAt: now,
+        depositLink,
+      });
+    } catch (error) {
+      console.error("Send deposit request error:", error);
+      res.status(500).json({ error: "Failed to send deposit request" });
+    }
+  });
+
   // Cancel job with deposit handling
   app.post("/api/jobs/:id/cancel-with-deposit", async (req, res) => {
     try {
