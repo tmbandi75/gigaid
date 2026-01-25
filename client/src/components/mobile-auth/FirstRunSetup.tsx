@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 
 interface FirstRunSetupProps {
   onComplete: (data: FirstRunData) => void;
@@ -31,10 +32,17 @@ const SERVICE_CATEGORIES = [
 ];
 
 export function FirstRunSetup({ onComplete, onSkip }: FirstRunSetupProps) {
+  const { user, isAuthenticated } = useAuth();
+  
   const [businessName, setBusinessName] = useState('');
   const [serviceCategory, setServiceCategory] = useState('');
   const [zipCode, setZipCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // POST-AUTH guard: prevent rendering before authentication completes
+  if (!isAuthenticated || !user) {
+    return null;
+  }
 
   const handleFinishSetup = async () => {
     setIsLoading(true);

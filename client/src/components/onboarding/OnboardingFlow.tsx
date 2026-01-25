@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -134,10 +135,8 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
     percentage: 30,
   });
 
-  // Get user data
-  const { data: user } = useQuery({
-    queryKey: ["/api/auth/user"],
-  });
+  // Get user data via useAuth hook
+  const { user, isAuthenticated } = useAuth();
 
   // Get onboarding status from server
   const { data: onboardingStatus } = useQuery<{
@@ -422,6 +421,11 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
     onComplete();
     navigate("/");
   };
+
+  // POST-AUTH guard: prevent rendering before authentication completes
+  if (!isAuthenticated || !user) {
+    return null;
+  }
 
   const progressPercent = step === 1 ? 0 : ((step - 1) / (TOTAL_STEPS - 1)) * 100;
 
