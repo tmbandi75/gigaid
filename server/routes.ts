@@ -206,6 +206,76 @@ export async function registerRoutes(
     });
   });
 
+  // Downloads API - serve DOT and JSON files for download
+  app.get("/api/downloads", (req, res) => {
+    const files = [
+      {
+        id: "architecture-dot",
+        name: "gigaid-architecture.dot",
+        description: "Application architecture diagram in DOT format (Graphviz)",
+        type: "dot",
+        size: "3 KB",
+        path: "/api/downloads/gigaid-architecture.dot"
+      },
+      {
+        id: "data-model-json",
+        name: "gigaid-data-model.json",
+        description: "Data model and entity relationships",
+        type: "json",
+        size: "4 KB",
+        path: "/api/downloads/gigaid-data-model.json"
+      },
+      {
+        id: "package-json",
+        name: "package.json",
+        description: "Project dependencies and scripts",
+        type: "json",
+        size: "5 KB",
+        path: "/api/downloads/package.json"
+      },
+      {
+        id: "manifest-json",
+        name: "manifest.json",
+        description: "PWA manifest configuration",
+        type: "json",
+        size: "1 KB",
+        path: "/api/downloads/manifest.json"
+      },
+      {
+        id: "tsconfig-json",
+        name: "tsconfig.json",
+        description: "TypeScript configuration",
+        type: "json",
+        size: "1 KB",
+        path: "/api/downloads/tsconfig.json"
+      }
+    ];
+    res.json({ files });
+  });
+
+  app.get("/api/downloads/:filename", (req, res) => {
+    const { filename } = req.params;
+    const allowedFiles: Record<string, string> = {
+      "gigaid-architecture.dot": path.join(process.cwd(), "public", "gigaid-architecture.dot"),
+      "gigaid-data-model.json": path.join(process.cwd(), "public", "gigaid-data-model.json"),
+      "package.json": path.join(process.cwd(), "package.json"),
+      "manifest.json": path.join(process.cwd(), "client", "public", "manifest.json"),
+      "tsconfig.json": path.join(process.cwd(), "tsconfig.json")
+    };
+
+    const filePath = allowedFiles[filename];
+    if (!filePath) {
+      return res.status(404).json({ error: "File not found" });
+    }
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: "File not found on disk" });
+    }
+
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.sendFile(filePath);
+  });
+
   app.get("/api/profile", isAuthenticated, async (req, res) => {
     try {
       const user = await storage.getUser((req as any).userId);

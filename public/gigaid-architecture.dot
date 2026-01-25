@@ -1,0 +1,92 @@
+digraph GigAid {
+  rankdir=TB;
+  node [shape=box, style=filled, fontname="Helvetica"];
+  
+  // Title
+  labelloc="t";
+  label="GigAid Application Architecture";
+  fontsize=20;
+  
+  // Subgraphs for organization
+  subgraph cluster_client {
+    label="Frontend (React + TypeScript)";
+    style=filled;
+    color=lightblue;
+    
+    App [label="App.tsx\n(Router & Providers)", fillcolor=lightyellow];
+    Pages [label="Pages\n(Dashboard, Jobs, Leads,\nInvoices, Settings)", fillcolor=lightyellow];
+    Components [label="Components\n(UI, Onboarding, Forms)", fillcolor=lightyellow];
+    Hooks [label="Hooks\n(useAuth, useToast,\nuseQuery)", fillcolor=lightyellow];
+    
+    App -> Pages;
+    Pages -> Components;
+    Pages -> Hooks;
+  }
+  
+  subgraph cluster_server {
+    label="Backend (Express + Node.js)";
+    style=filled;
+    color=lightgreen;
+    
+    Routes [label="API Routes\n(/api/*)", fillcolor=lightcyan];
+    Auth [label="Authentication\n(Firebase + Replit Auth)", fillcolor=lightcyan];
+    Storage [label="Storage Layer\n(Drizzle ORM)", fillcolor=lightcyan];
+    AI [label="AI Services\n(OpenAI Integration)", fillcolor=lightcyan];
+    
+    Routes -> Auth;
+    Routes -> Storage;
+    Routes -> AI;
+  }
+  
+  subgraph cluster_external {
+    label="External Services";
+    style=filled;
+    color=lightyellow;
+    
+    Firebase [label="Firebase Auth", fillcolor=orange];
+    Stripe [label="Stripe Connect\n(Payments)", fillcolor=orange];
+    Twilio [label="Twilio\n(SMS)", fillcolor=orange];
+    GoogleMaps [label="Google Maps\n(Geocoding)", fillcolor=orange];
+    OpenAI [label="OpenAI\n(AI Features)", fillcolor=orange];
+  }
+  
+  subgraph cluster_data {
+    label="Data Layer";
+    style=filled;
+    color=lightpink;
+    
+    PostgreSQL [label="PostgreSQL\n(Neon)", fillcolor=pink];
+    ObjectStorage [label="Object Storage\n(Files/Photos)", fillcolor=pink];
+  }
+  
+  // Connections
+  App -> Routes [label="HTTP/REST", style=dashed];
+  Routes -> PostgreSQL;
+  Routes -> ObjectStorage;
+  Auth -> Firebase;
+  Routes -> Stripe;
+  Routes -> Twilio;
+  Routes -> GoogleMaps;
+  AI -> OpenAI;
+  
+  // Core entities
+  subgraph cluster_entities {
+    label="Core Data Entities";
+    style=filled;
+    color=lavender;
+    
+    Users [label="Users", fillcolor=white];
+    Jobs [label="Jobs", fillcolor=white];
+    Leads [label="Leads", fillcolor=white];
+    Invoices [label="Invoices", fillcolor=white];
+    BookingRequests [label="Booking Requests", fillcolor=white];
+    Messages [label="Messages", fillcolor=white];
+  }
+  
+  Storage -> Users;
+  Storage -> Jobs;
+  Storage -> Leads;
+  Storage -> Invoices;
+  Storage -> BookingRequests;
+  Storage -> Messages;
+}

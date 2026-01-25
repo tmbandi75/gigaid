@@ -1,0 +1,112 @@
+{
+  "name": "GigAid Data Model",
+  "version": "1.0.0",
+  "description": "Core data entities and relationships for the GigAid gig worker management application",
+  "entities": {
+    "User": {
+      "description": "Service provider/gig worker account",
+      "fields": {
+        "id": "UUID - Primary key",
+        "username": "Unique username",
+        "email": "Email address",
+        "phone": "Phone number",
+        "name": "Display name",
+        "businessName": "Business/company name",
+        "services": "Array of services offered",
+        "bio": "Profile biography",
+        "photo": "Profile photo URL",
+        "publicProfileSlug": "Custom booking URL slug",
+        "publicProfileEnabled": "Whether public booking is enabled",
+        "depositEnabled": "Whether deposits are required",
+        "depositValue": "Deposit percentage (0-100)",
+        "availability": "JSON availability schedule",
+        "stripeAccountId": "Stripe Connect account ID",
+        "tier": "Subscription tier (free/pro/pro_plus/business)"
+      }
+    },
+    "Job": {
+      "description": "Scheduled service appointment",
+      "fields": {
+        "id": "UUID - Primary key",
+        "userId": "Foreign key to User",
+        "clientName": "Customer name",
+        "clientPhone": "Customer phone",
+        "clientEmail": "Customer email",
+        "serviceType": "Type of service",
+        "description": "Job description",
+        "price": "Quoted price",
+        "status": "Job status (scheduled/in_progress/completed/cancelled)",
+        "scheduledDate": "Appointment date",
+        "scheduledTime": "Appointment time",
+        "location": "Service location address",
+        "paymentStatus": "Payment status (pending/deposit_paid/paid)"
+      }
+    },
+    "Lead": {
+      "description": "Potential customer inquiry",
+      "fields": {
+        "id": "UUID - Primary key",
+        "userId": "Foreign key to User",
+        "clientName": "Prospect name",
+        "clientPhone": "Prospect phone",
+        "clientEmail": "Prospect email",
+        "serviceType": "Requested service",
+        "description": "Inquiry details",
+        "status": "Lead status (new/contacted/quoted/converted/lost)",
+        "source": "Lead source (booking/referral/manual)",
+        "quotedPrice": "Price quote if provided"
+      }
+    },
+    "Invoice": {
+      "description": "Payment request for services",
+      "fields": {
+        "id": "UUID - Primary key",
+        "userId": "Foreign key to User",
+        "jobId": "Foreign key to Job (optional)",
+        "clientName": "Customer name",
+        "clientEmail": "Customer email",
+        "amount": "Invoice amount",
+        "status": "Invoice status (draft/sent/paid/overdue)",
+        "dueDate": "Payment due date",
+        "paidAt": "Payment timestamp",
+        "stripePaymentIntentId": "Stripe payment ID"
+      }
+    },
+    "BookingRequest": {
+      "description": "Incoming booking from public page",
+      "fields": {
+        "id": "UUID - Primary key",
+        "userId": "Foreign key to User (provider)",
+        "clientName": "Customer name",
+        "clientPhone": "Customer phone",
+        "clientEmail": "Customer email",
+        "serviceType": "Requested service",
+        "preferredDate": "Requested date",
+        "preferredTime": "Requested time",
+        "status": "Request status (pending/accepted/declined)",
+        "depositPaid": "Whether deposit was paid"
+      }
+    },
+    "Message": {
+      "description": "Communication thread with client",
+      "fields": {
+        "id": "UUID - Primary key",
+        "userId": "Foreign key to User",
+        "clientPhone": "Client phone (thread key)",
+        "direction": "Message direction (inbound/outbound)",
+        "content": "Message text",
+        "channel": "Channel (sms/email)",
+        "sentAt": "Timestamp"
+      }
+    }
+  },
+  "relationships": [
+    "User 1:N Jobs",
+    "User 1:N Leads",
+    "User 1:N Invoices",
+    "User 1:N BookingRequests",
+    "User 1:N Messages",
+    "Job 1:1 Invoice (optional)",
+    "Lead 1:1 Job (when converted)"
+  ]
+}
