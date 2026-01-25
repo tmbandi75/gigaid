@@ -158,6 +158,19 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
     if (!initialized && onboardingStatus && user) {
       setInitialized(true);
       
+      // If initialStep is provided, user explicitly wants to edit settings - don't redirect
+      if (initialStep) {
+        setStep(initialStep);
+        // Pre-fill form data from saved state
+        if (onboardingStatus.defaultServiceType) {
+          setIdentity(prev => ({ ...prev, serviceType: onboardingStatus.defaultServiceType || "" }));
+        }
+        if (onboardingStatus.defaultPrice) {
+          setPricing(prev => ({ ...prev, typicalPrice: (onboardingStatus.defaultPrice! / 100).toString() }));
+        }
+        return;
+      }
+      
       // If onboarding is completed or skipped, go to dashboard
       if (onboardingStatus.state === "completed" || onboardingStatus.state === "skipped_explore") {
         onComplete();
@@ -178,7 +191,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
         setPricing(prev => ({ ...prev, typicalPrice: (onboardingStatus.defaultPrice! / 100).toString() }));
       }
     }
-  }, [initialized, onboardingStatus, user, onComplete, navigate]);
+  }, [initialized, onboardingStatus, user, onComplete, navigate, initialStep]);
 
   // Pre-fill from user data
   useEffect(() => {
