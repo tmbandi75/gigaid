@@ -11,9 +11,14 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
-    "@capacitor/cli": "^7.4.4",
-    "@capacitor/core": "^8.0.0",
+    "@capacitor/android": "^8.0.1",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/cli": "^7.4.5",
+    "@capacitor/core": "^8.0.1",
+    "@capacitor/haptics": "^8.0.0",
     "@capacitor/ios": "^8.0.0",
+    "@capacitor/keyboard": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0",
     "@google-cloud/storage": "^7.18.0",
     "@googlemaps/extended-component-library": "^0.6.14",
     "@hookform/resolvers": "^3.10.0",

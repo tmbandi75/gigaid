@@ -8,9 +8,30 @@ const config: CapacitorConfig = {
     androidScheme: 'https',
     iosScheme: 'https',
   },
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 2000,
+      backgroundColor: '#ffffff',
+      showSpinner: false,
+    },
+    Keyboard: {
+      resize: 'body',
+      resizeOnFullScreen: true,
+    },
+    StatusBar: {
+      style: 'dark',
+      backgroundColor: '#ffffff',
+    },
+  },
   ios: {
     contentInset: 'automatic',
     preferredContentMode: 'mobile',
+    backgroundColor: '#1565C0',
+  },
+  android: {
+    allowMixedContent: true,
+    captureInput: true,
+    webContentsDebuggingEnabled: true,
     backgroundColor: '#1565C0',
   },
 };
