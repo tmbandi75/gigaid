@@ -153,23 +153,25 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
     queryKey: ["/api/onboarding"],
   });
 
-  // Initialize step from server state (resume capability)
+  // Handle initialStep prop changes - when user navigates directly to a step
   useEffect(() => {
-    if (!initialized && onboardingStatus && user) {
-      setInitialized(true);
-      
-      // If initialStep is provided, user explicitly wants to edit settings - don't redirect
-      if (initialStep) {
-        setStep(initialStep);
-        // Pre-fill form data from saved state
-        if (onboardingStatus.defaultServiceType) {
-          setIdentity(prev => ({ ...prev, serviceType: onboardingStatus.defaultServiceType || "" }));
-        }
-        if (onboardingStatus.defaultPrice) {
-          setPricing(prev => ({ ...prev, typicalPrice: (onboardingStatus.defaultPrice! / 100).toString() }));
-        }
-        return;
+    if (initialStep && onboardingStatus) {
+      setStep(initialStep);
+      // Pre-fill form data from saved state
+      if (onboardingStatus.defaultServiceType) {
+        setIdentity(prev => ({ ...prev, serviceType: onboardingStatus.defaultServiceType || "" }));
       }
+      if (onboardingStatus.defaultPrice) {
+        setPricing(prev => ({ ...prev, typicalPrice: (onboardingStatus.defaultPrice! / 100).toString() }));
+      }
+      setInitialized(true);
+    }
+  }, [initialStep, onboardingStatus]);
+
+  // Initialize step from server state (resume capability) - only when no initialStep
+  useEffect(() => {
+    if (!initialized && !initialStep && onboardingStatus && user) {
+      setInitialized(true);
       
       // If onboarding is completed or skipped, go to dashboard
       if (onboardingStatus.state === "completed" || onboardingStatus.state === "skipped_explore") {
