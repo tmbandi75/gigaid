@@ -34,6 +34,7 @@ import { JobLocationMap } from "@/components/JobLocationMap";
 import { GetPaidDialog } from "@/components/job/GetPaidDialog";
 import { NextActionBanner } from "@/components/NextActionBanner";
 import { IntentActionCard } from "@/components/IntentActionCard";
+import { ScheduledMessagesPanel } from "@/components/ScheduledMessagesPanel";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -569,6 +570,10 @@ export default function JobSummary() {
             Edit Job Details
           </Button>
         </div>
+        
+        {job.status === "completed" && (
+          <ScheduledMessagesPanel jobId={job.id} />
+        )}
       </div>
 
       <GetPaidDialog

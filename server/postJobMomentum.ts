@@ -102,7 +102,7 @@ export async function schedulePostJobMessages(job: Job, previousStatus: string):
   const channel = job.clientPhone ? "sms" : "email";
   const clientFirstName = job.clientName?.split(" ")[0] || "there";
   
-  // Check for existing scheduled messages to prevent duplicates
+  // Check for existing scheduled messages to prevent duplicates and enforce rate limit
   const existingMessages = await db
     .select()
     .from(outboundMessages)
@@ -112,6 +112,12 @@ export async function schedulePostJobMessages(job: Job, previousStatus: string):
         inArray(outboundMessages.status, ["scheduled", "queued", "sent"])
       )
     );
+  
+  // Rate limit: max 2 messages per job (followup + payment_reminder)
+  if (existingMessages.length >= 2) {
+    console.log(`[PostJobMomentum] Job ${job.id} already has ${existingMessages.length} messages, skipping`);
+    return;
+  }
   
   const hasFollowup = existingMessages.some(m => m.type === "followup");
   const hasPaymentReminder = existingMessages.some(m => m.type === "payment_reminder");

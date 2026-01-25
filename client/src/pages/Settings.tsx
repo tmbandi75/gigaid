@@ -50,6 +50,7 @@ import { PaymentMethodsSettings } from "@/components/PaymentMethodsSettings";
 import { StripeConnectSettings } from "@/components/settings/StripeConnectSettings";
 import { EmailSignatureSettings } from "@/components/settings/EmailSignatureSettings";
 import { AccountLinking } from "@/components/mobile-auth/AccountLinking";
+import { AutomationSettings } from "@/components/settings/AutomationSettings";
 import type { Referral, WeeklyAvailability, FeatureFlag } from "@shared/schema";
 import { useFeatureFlag, useUpdateFeatureFlag } from "@/hooks/use-nudges";
 
@@ -376,6 +377,8 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+
+        <AutomationSettings />
 
         <Card className="border-0 shadow-md" data-testid="card-booking-protection">
           <CardContent className="p-4">
