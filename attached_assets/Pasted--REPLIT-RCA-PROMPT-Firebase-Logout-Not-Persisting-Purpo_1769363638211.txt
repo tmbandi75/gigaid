@@ -1,0 +1,82 @@
+🔍 REPLIT RCA PROMPT — Firebase Logout Not Persisting
+
+Purpose
+Perform a full Root Cause Analysis for why Firebase logout does not persist and the user is immediately re-authenticated or redirected back into the app.
+
+🧠 CONTEXT TO PROVIDE TO REPLIT
+This app uses Firebase Authentication.
+Logout appears to succeed (UI transition occurs),
+but user is immediately returned to the authenticated app state.
+
+Goal: Identify why auth state is rehydrating after logout.
+
+🧪 PROMPT (RUN AS A SINGLE TASK)
+Perform a full Root Cause Analysis (RCA) on Firebase Authentication logout behavior.
+
+DO NOT APPLY FIXES YET.
+ONLY OBSERVE, TRACE, AND REPORT.
+
+Steps:
+
+1. Instrument Firebase Auth State
+   - Add logging around:
+     - signOut()
+     - onAuthStateChanged
+     - getAuth().currentUser
+   - Log timestamps, UID, and call stack origin.
+
+2. Verify Logout Execution
+   - Confirm that:
+     - firebase.auth().signOut() is actually invoked
+     - No promise rejection or silent failure occurs
+   - Log before and after signOut().
+
+3. Trace Auth Rehydration
+   - Identify where Firebase automatically re-authenticates:
+     - on page reload
+     - on route change
+     - via persistence (localStorage / indexedDB)
+   - Log persistence mode:
+     - browserLocalPersistence
+     - browserSessionPersistence
+     - inMemoryPersistence
+
+4. Inspect Route Guards / Middleware
+   - Identify any logic that:
+     - redirects authenticated users automatically
+     - runs before auth state resolves
+   - Log route evaluation order.
+
+5. Inspect App State vs Firebase State
+   - Compare:
+     - Firebase auth state
+     - App-level auth context / store
+   - Identify mismatches where:
+     - App believes user is logged in
+     - Firebase says user is null (or vice versa)
+
+6. Inspect Token & Session Artifacts
+   - Log presence of:
+     - Firebase ID token
+     - refresh token
+     - custom session cookies (if any)
+   - Check if tokens persist post-logout.
+
+7. Check for Silent Re-login Triggers
+   - Google / Apple / OAuth providers auto-restoring session
+   - signInWithRedirect resolving after logout
+   - Auth listeners firing multiple times
+
+8. Output a Structured RCA Report
+   Include:
+   - Root cause category (Persistence, Routing, State Sync, Provider)
+   - Exact failure point
+   - Evidence logs
+   - Why logout appears successful but is not
+   - Recommended FIX (separate section, do not implement)
+
+IMPORTANT:
+- Do not change auth logic.
+- Do not refactor code.
+- Only observe, log, and explain.
+- Output findings in a clear RCA format.
