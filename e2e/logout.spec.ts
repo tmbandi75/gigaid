@@ -6,7 +6,7 @@ test.describe("Logout is final and non-recoverable", () => {
     // 1. Login (use real login flow or helper)
     await page.goto("/login");
 
-    await page.fill('input[name="email"]', "test.user@gigaid.dev");
+    await page.fill('input[name="email"]', "thierry.mbandi@outlook.com");
     await page.fill('input[name="password"]', "Password123!");
     await page.click('button[type="submit"]');
 
