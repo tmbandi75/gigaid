@@ -14,13 +14,14 @@ import {
 } from "firebase/auth";
 import { isNativePlatform } from "./platform";
 
+// Firebase configuration - these are public web API keys (secured via domain restrictions in Firebase Console)
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyBdyS79wNb_GBqARmJmzrBr2ZsdsC_51l8",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "gigaid-9c982.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "gigaid-9c982",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "gigaid-9c982.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "1091854959908",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:1091854959908:web:8c56f7c0a8e3d5f7a1b2c3",
 };
 
 const app = initializeApp(firebaseConfig);
