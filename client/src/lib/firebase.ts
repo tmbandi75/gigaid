@@ -3,6 +3,8 @@ import {
   getAuth, 
   GoogleAuthProvider, 
   signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
   signOut, 
   onAuthStateChanged, 
   createUserWithEmailAndPassword,
@@ -10,6 +12,7 @@ import {
   sendPasswordResetEmail,
   type User as FirebaseUser 
 } from "firebase/auth";
+import { isNativePlatform } from "./platform";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -25,7 +28,37 @@ export const auth = getAuth(app);
 
 const googleProvider = new GoogleAuthProvider();
 
+let redirectResultPromise: Promise<string | null> | null = null;
+
+export function initializeRedirectResultHandler(): Promise<string | null> {
+  if (redirectResultPromise) {
+    return redirectResultPromise;
+  }
+  
+  redirectResultPromise = getRedirectResult(auth)
+    .then(async (result) => {
+      if (result && result.user) {
+        console.log("[Firebase] Redirect result received, getting ID token");
+        const idToken = await result.user.getIdToken();
+        return idToken;
+      }
+      return null;
+    })
+    .catch((error) => {
+      console.error("[Firebase] Redirect result error:", error);
+      return null;
+    });
+  
+  return redirectResultPromise;
+}
+
 export async function signInWithGoogle(): Promise<string> {
+  if (isNativePlatform()) {
+    console.log("[Firebase] Native platform detected, using signInWithRedirect");
+    await signInWithRedirect(auth, googleProvider);
+    throw new Error("Redirect initiated - waiting for redirect result");
+  }
+  
   const result = await signInWithPopup(auth, googleProvider);
   const idToken = await result.user.getIdToken();
   return idToken;

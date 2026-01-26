@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Mail, ArrowLeft } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
-import { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword } from "@/lib/firebase";
+import { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, initializeRedirectResultHandler } from "@/lib/firebase";
 import { setAuthToken } from "@/lib/authToken";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { isNativePlatform } from "@/lib/platform";
 
 type AuthMode = "signin" | "signup" | "forgot";
 
@@ -29,26 +30,12 @@ export default function Login() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isEmailLoading, setIsEmailLoading] = useState(false);
+  const [isCheckingRedirect, setIsCheckingRedirect] = useState(isNativePlatform());
   const [mode, setMode] = useState<AuthMode>(getInitialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const modeParam = params.get("mode");
-    if (modeParam === "signup" || modeParam === "forgot" || modeParam === "signin") {
-      setMode(modeParam as AuthMode);
-    }
-  }, []);
-
-  // CRITICAL: Do NOT auto-redirect if logout is in progress
-  // This prevents the race condition where isAuthenticated briefly flips true
-  // during logout teardown
-  if (isAuthenticated && !isLoggingOut) {
-    navigate("/");
-    return null;
-  }
+  const redirectHandledRef = useRef(false);
 
   const exchangeTokenAndNavigate = async (idToken: string) => {
     const response = await fetch("/api/auth/web/firebase", {
@@ -69,12 +56,77 @@ export default function Login() {
     navigate("/");
   };
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const modeParam = params.get("mode");
+    if (modeParam === "signup" || modeParam === "forgot" || modeParam === "signin") {
+      setMode(modeParam as AuthMode);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isNativePlatform() || redirectHandledRef.current) {
+      setIsCheckingRedirect(false);
+      return;
+    }
+
+    redirectHandledRef.current = true;
+
+    const handleRedirectResult = async () => {
+      try {
+        console.log("[Login] Checking for redirect result on native platform");
+        const idToken = await initializeRedirectResultHandler();
+        if (idToken) {
+          console.log("[Login] Got ID token from redirect, exchanging...");
+          await exchangeTokenAndNavigate(idToken);
+        }
+      } catch (error: any) {
+        console.error("[Login] Redirect result error:", error);
+        toast({
+          title: "Sign in failed",
+          description: error.message || "Please try again",
+          variant: "destructive",
+        });
+      } finally {
+        setIsCheckingRedirect(false);
+      }
+    };
+
+    handleRedirectResult();
+  }, []);
+
+  // CRITICAL: Do NOT auto-redirect if logout is in progress
+  // This prevents the race condition where isAuthenticated briefly flips true
+  // during logout teardown
+  if (isAuthenticated && !isLoggingOut) {
+    navigate("/");
+    return null;
+  }
+
+  // Show loading state while checking for redirect result on native platforms
+  if (isCheckingRedirect) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background" data-testid="login-checking-redirect">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="mt-4 text-muted-foreground">Completing sign in...</p>
+        </div>
+      </div>
+    );
+  }
+
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
       const idToken = await signInWithGoogle();
       await exchangeTokenAndNavigate(idToken);
     } catch (error: any) {
+      // On native platforms, signInWithRedirect throws an error because it navigates away
+      // This is expected behavior - the redirect result will be handled when the app returns
+      if (isNativePlatform() && error.message?.includes("Redirect initiated")) {
+        console.log("[Login] Redirect initiated on native platform, waiting for return");
+        return;
+      }
       console.error("Sign in error:", error);
       toast({
         title: "Sign in failed",
