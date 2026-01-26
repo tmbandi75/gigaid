@@ -2,21 +2,51 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { Zap, RefreshCw, CreditCard, Lock } from "lucide-react";
 import logoImage from "@assets/image_1768959787162.png";
+import { clearAuthToken } from "@/lib/authToken";
+import { firebaseSignOut } from "@/lib/firebase";
 
 export default function SplashPage() {
   const [, setLocation] = useLocation();
 
-  const handleLogIn = () => {
+  // Clear auth state before navigating to login
+  // This ensures users can log in fresh with new credentials
+  const prepareForLogin = async () => {
+    // Clear app JWT token
+    clearAuthToken();
+    
+    // Sign out from Firebase silently
+    try {
+      await firebaseSignOut();
+    } catch (e) {
+      // Ignore errors - user may not have been signed in with Firebase
+    }
+    
+    // Clear server session
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (e) {
+      // Ignore errors - server may not have an active session
+    }
+  };
+
+  const handleLogIn = async () => {
+    await prepareForLogin();
     localStorage.setItem("gigaid_splash_seen", "true");
     setLocation("/login?mode=signin");
   };
 
-  const handleCreateAccount = () => {
+  const handleCreateAccount = async () => {
+    await prepareForLogin();
     localStorage.setItem("gigaid_splash_seen", "true");
     setLocation("/login?mode=signup");
   };
 
-  const handleForgotPassword = () => {
+  const handleForgotPassword = async () => {
+    await prepareForLogin();
     localStorage.setItem("gigaid_splash_seen", "true");
     setLocation("/login?mode=forgot");
   };
@@ -91,8 +121,9 @@ export default function SplashPage() {
         </Button>
 
         <button
+          type="button"
           onClick={handleForgotPassword}
-          className="w-full text-center text-white/70 hover:text-white py-2 text-base"
+          className="w-full text-center text-white/70 hover:text-white py-2 text-base underline cursor-pointer"
           data-testid="button-forgot-password"
         >
           Forgot your password?

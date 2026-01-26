@@ -7,10 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Mail, ArrowLeft } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, initializeRedirectResultHandler } from "@/lib/firebase";
-import { setAuthToken } from "@/lib/authToken";
+import { setAuthToken, clearAuthToken } from "@/lib/authToken";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { isNativePlatform } from "@/lib/platform";
+import { queryClient } from "@/lib/queryClient";
 
 type AuthMode = "signin" | "signup" | "forgot";
 
@@ -22,6 +23,14 @@ function getInitialMode(): AuthMode {
     return modeParam;
   }
   return "signin";
+}
+
+// Check if user explicitly navigated to login (from splash page buttons)
+function isExplicitNavigation(): boolean {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  // If mode param exists, user explicitly clicked a button
+  return params.has("mode");
 }
 
 export default function Login() {
@@ -62,6 +71,13 @@ export default function Login() {
     if (modeParam === "signup" || modeParam === "forgot" || modeParam === "signin") {
       setMode(modeParam as AuthMode);
     }
+    
+    // If explicitly navigating to login, clear any stale auth cache
+    // This ensures the login form is shown and prevents redirect loops
+    if (isExplicitNavigation()) {
+      clearAuthToken();
+      queryClient.setQueryData(["/api/auth/user"], null);
+    }
   }, []);
 
   useEffect(() => {
@@ -95,10 +111,11 @@ export default function Login() {
     handleRedirectResult();
   }, []);
 
-  // CRITICAL: Do NOT auto-redirect if logout is in progress
-  // This prevents the race condition where isAuthenticated briefly flips true
-  // during logout teardown
-  if (isAuthenticated && !isLoggingOut) {
+  // CRITICAL: Do NOT auto-redirect if:
+  // 1. Logout is in progress (race condition prevention)
+  // 2. User explicitly navigated here (clicked Login/Create Account/Forgot Password)
+  // The explicit check allows users to re-authenticate with different credentials
+  if (isAuthenticated && !isLoggingOut && !isExplicitNavigation()) {
     navigate("/");
     return null;
   }
