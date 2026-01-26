@@ -12,8 +12,6 @@ import { OptimisticCapabilityProvider, useOptimisticCapability } from "@/context
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import SplashPage from "@/pages/SplashPage";
-import LandingPage from "@/pages/LandingPage";
-import Login from "@/pages/Login";
 import ForceLogout from "@/pages/force-logout";
 
 import TodaysGamePlanPage from "@/pages/TodaysGamePlanPage";
@@ -152,24 +150,14 @@ function SubscriptionHandler() {
 
 function AuthenticatedApp() {
   const [location, setLocation] = useLocation();
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isLoading, user } = useAuth();
   
+  // Handle redirects in useEffect to avoid render-time side effects
   useEffect(() => {
-    // Redirect authenticated users from "/" or "/welcome" 
-    if (isAuthenticated && !isLoading) {
-      if (location === "/" || location === "/welcome") {
-        const splashSeen = localStorage.getItem('gigaid_splash_seen');
-        if (splashSeen) {
-          setLocation('/dashboard');
-        }
-      }
+    if (!isLoading && user && (location === "/" || location === "/welcome")) {
+      setLocation("/dashboard");
     }
-    
-    // Redirect unauthenticated users to home (which shows landing page)
-    if (!isAuthenticated && !isLoading && location !== "/" && location !== "/welcome") {
-      setLocation('/');
-    }
-  }, [isAuthenticated, isLoading, location, setLocation]);
+  }, [isLoading, user, location, setLocation]);
   
   // Show loading state while checking auth
   if (isLoading) {
@@ -180,14 +168,18 @@ function AuthenticatedApp() {
     );
   }
   
-  // Show landing page for unauthenticated users (user is null/undefined)
+  // Show splash/login page for unauthenticated users
   if (!user) {
-    return <LandingPage />;
+    return <SplashPage />;
   }
   
-  // Handle "/" and "/welcome" routes for authenticated users
+  // Authenticated users at "/" or "/welcome" - show loading while redirect happens
   if (location === "/" || location === "/welcome") {
-    return <SplashPage />;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
   }
   
   // Show app for authenticated users
@@ -224,7 +216,8 @@ function App() {
             <Route path="/terms" component={TermsOfService} />
             <Route path="/privacy" component={PrivacyPolicy} />
             <Route path="/downloads" component={Downloads} />
-            <Route path="/login" component={Login} />
+            {/* /login redirects to home which shows the combined splash/login page */}
+            <Route path="/login" component={SplashPage} />
             <Route path="/force-logout" component={ForceLogout} />
             <Route>
               <AuthenticatedApp />
