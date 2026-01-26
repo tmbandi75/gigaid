@@ -223,6 +223,7 @@ function App() {
             <Route path="/qb/:token" component={QuickBookConfirm} />
             <Route path="/terms" component={TermsOfService} />
             <Route path="/privacy" component={PrivacyPolicy} />
+            <Route path="/downloads" component={Downloads} />
             <Route path="/login" component={Login} />
             <Route path="/force-logout" component={ForceLogout} />
             <Route>
