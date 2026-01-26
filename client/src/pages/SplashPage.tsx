@@ -1,27 +1,29 @@
 import { Button } from "@/components/ui/button";
-import { useLocation } from "wouter";
 import { Zap, RefreshCw, CreditCard, Lock } from "lucide-react";
 import logoImage from "@assets/image_1768959787162.png";
 import { clearAuthToken } from "@/lib/authToken";
 import { firebaseSignOut } from "@/lib/firebase";
+import { queryClient } from "@/lib/queryClient";
 
 export default function SplashPage() {
-  const [, setLocation] = useLocation();
-
-  // Clear auth state before navigating to login
-  // This ensures users can log in fresh with new credentials
-  const prepareForLogin = async () => {
-    // Clear app JWT token
+  // Full auth reset and hard redirect to login page
+  // Uses window.location.href to ensure complete page reload and fresh React state
+  const navigateToLogin = async (mode: "signin" | "signup" | "forgot") => {
+    // Step 1: Clear app JWT token
     clearAuthToken();
     
-    // Sign out from Firebase silently
+    // Step 2: Clear React Query cache to prevent stale auth state
+    queryClient.setQueryData(["/api/auth/user"], null);
+    queryClient.clear();
+    
+    // Step 3: Sign out from Firebase silently
     try {
       await firebaseSignOut();
     } catch (e) {
-      // Ignore errors - user may not have been signed in with Firebase
+      // Ignore errors
     }
     
-    // Clear server session
+    // Step 4: Clear server session
     try {
       await fetch("/api/auth/logout", {
         method: "POST",
@@ -29,26 +31,26 @@ export default function SplashPage() {
         headers: { "Content-Type": "application/json" },
       });
     } catch (e) {
-      // Ignore errors - server may not have an active session
+      // Ignore errors
     }
+    
+    // Step 5: Mark splash as seen
+    localStorage.setItem("gigaid_splash_seen", "true");
+    
+    // Step 6: Hard redirect to force full page reload with fresh React state
+    window.location.href = `/login?mode=${mode}`;
   };
 
-  const handleLogIn = async () => {
-    await prepareForLogin();
-    localStorage.setItem("gigaid_splash_seen", "true");
-    setLocation("/login?mode=signin");
+  const handleLogIn = () => {
+    navigateToLogin("signin");
   };
 
-  const handleCreateAccount = async () => {
-    await prepareForLogin();
-    localStorage.setItem("gigaid_splash_seen", "true");
-    setLocation("/login?mode=signup");
+  const handleCreateAccount = () => {
+    navigateToLogin("signup");
   };
 
-  const handleForgotPassword = async () => {
-    await prepareForLogin();
-    localStorage.setItem("gigaid_splash_seen", "true");
-    setLocation("/login?mode=forgot");
+  const handleForgotPassword = () => {
+    navigateToLogin("forgot");
   };
 
   return (
