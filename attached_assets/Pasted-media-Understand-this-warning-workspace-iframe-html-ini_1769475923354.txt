@@ -1,0 +1,183 @@
+media'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar2fj%3A:32 Allow attribute will take precedence over 'allowfullscreen'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar2fj%3A:32 Allow attribute will take precedence over 'allowpaymentrequest'.Understand this warning
+VM10534 use-auth.ts:16 [Auth] fetchUser called, timestamp: 1769475718001
+VM10534 use-auth.ts:21 [Auth] fetchUser response: 200 timestamp: 1769475718008
+VM11864 posthog-recorder.js:1 [SW] Service worker registered successfully
+VM10512 client:745 WebSocket connection to 'wss://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/vite-hmr?token=N-ppobSEZE6F' failed: 
+createConnection @ VM10512 client:745Understand this error
+VM10512 client:755 WebSocket connection to 'wss://localhost:5173/?token=N-ppobSEZE6F' failed: 
+createConnection @ VM10512 client:755Understand this error
+VM11864 posthog-recorder.js:1 [vite] failed to connect to websocket.
+your current setup:
+  (browser) c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/ <--[HTTP]--> localhost:5173/ (server)
+  (browser) c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev:/vite-hmr <--[WebSocket (failing)]--> localhost:5173/ (server)
+Check out your Vite / network configuration and https://vite.dev/config/server-options.html#server-hmr .
+(anonymous) @ VM11864 posthog-recorder.js:1Understand this error
+ae3220d21b9d3649.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ ae3220d21b9d3649.js:2Understand this warning
+VM11864 posthog-recorder.js:1 [Auth] fetchUser called, timestamp: 1769475779608
+VM11864 posthog-recorder.js:1 [Auth] fetchUser response: 200 timestamp: 1769475779615
+VM11864 posthog-recorder.js:1 Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?
+
+Check the render method of `Primitive.button.SlotClone`.
+    at SidebarMenuButton (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:737:3)
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=a2ca9992:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=a2ca9992:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=a2ca9992:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=a2ca9992:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=a2ca9992:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=a2ca9992:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-62FUAUB7.js?v=a2ca9992:1929:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=a2ca9992:146:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=a2ca9992:931:13
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=a2ca9992:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=a2ca9992:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=a2ca9992:37:15)
+    at Popper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-62FUAUB7.js?v=a2ca9992:1921:11)
+    at Menu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=a2ca9992:100:11)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=a2ca9992:37:15)
+    at DropdownMenu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=a2ca9992:897:5)
+    at div
+    at SidebarFooter (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:489:26)
+    at div
+    at div
+    at div
+    at Sidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:151:3)
+    at AppSidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/AppSidebar.tsx:94:32)
+    at div
+    at div
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=a2ca9992:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=a2ca9992:64:5)
+    at SidebarProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:59:3)
+    at ResponsiveLayout (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/ResponsiveLayout.tsx:588:36)
+    at OnboardingWrapper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/onboarding/OnboardingWrapper.tsx:21:37)
+    at DriveModeProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/drivemode/DriveModeProvider.tsx:38:37)
+    at AuthenticatedApp (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/App.tsx:329:35)
+    at Route (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=a2ca9992:264:16)
+    at Switch (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=a2ca9992:320:17)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=a2ca9992:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=a2ca9992:64:5)
+    at OptimisticCapabilityProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/contexts/OptimisticCapabilityContext.tsx:20:48)
+    at PostHogProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/PostHogProvider.tsx:22:35)
+    at QueryClientProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=a2ca9992:2747:3)
+    at App
+(anonymous) @ VM11864 posthog-recorder.js:1
+printWarning @ VM10521 chunk-LPF6KSF2.js:521
+error @ VM10521 chunk-LPF6KSF2.js:505
+validateFunctionComponentInDev @ VM10521 chunk-LPF6KSF2.js:15061
+mountIndeterminateComponent @ VM10521 chunk-LPF6KSF2.js:15036
+beginWork @ VM10521 chunk-LPF6KSF2.js:15962
+beginWork$1 @ VM10521 chunk-LPF6KSF2.js:19806
+performUnitOfWork @ VM10521 chunk-LPF6KSF2.js:19251
+workLoopSync @ VM10521 chunk-LPF6KSF2.js:19190
+renderRootSync @ VM10521 chunk-LPF6KSF2.js:19169
+performSyncWorkOnRoot @ VM10521 chunk-LPF6KSF2.js:18927
+flushSyncCallbacks @ VM10521 chunk-LPF6KSF2.js:9166
+(anonymous) @ VM10521 chunk-LPF6KSF2.js:18677Understand this error
+VM11864 posthog-recorder.js:1 [Auth] fetchUser called, timestamp: 1769475879791
+VM11864 posthog-recorder.js:1 [Auth] fetchUser response: 200 timestamp: 1769475879815
+VM11864 posthog-recorder.js:1 [Auth] fetchUser called, timestamp: 1769475896205
+VM11864 posthog-recorder.js:1 [Auth] fetchUser response: 200 timestamp: 1769475896224
+VM11864 posthog-recorder.js:1 [Auth] ========== LOGOUT STARTED ==========
+VM11864 posthog-recorder.js:1 [Auth] Logout timestamp: 1769475899881
+VM11864 posthog-recorder.js:1 [QueryClient] Global logout state set to: true timestamp: 1769475899881
+VM11864 posthog-recorder.js:1 [Auth] Step 2: Clearing app JWT token
+VM11864 posthog-recorder.js:1 [Auth] Step 3: Clearing React Query cache
+VM11864 posthog-recorder.js:1 [Auth] Step 4: Signing out from Firebase
+VM11864 posthog-recorder.js:1 [QueryClient] Query blocked during logout: ['/api/profile']
+VM11864 posthog-recorder.js:1 [Auth] Firebase signOut complete, timestamp: 1769475900201
+VM11864 posthog-recorder.js:1 [Auth] Step 5: Calling server logout
+VM11864 posthog-recorder.js:1 [Auth] Server logout acknowledged: {success: true, timestamp: 1769475900310} timestamp: 1769475900679
+VM11864 posthog-recorder.js:1 [Auth] Step 6: Clearing IndexedDB
+VM11864 posthog-recorder.js:1 [Auth] Deleting IndexedDB: firebase-heartbeat-database
+VM11864 posthog-recorder.js:1 [Auth] Deleting IndexedDB: firebaseLocalStorageDb
+VM11864 posthog-recorder.js:1 [Auth] Step 7: Clearing sessionStorage
+VM11864 posthog-recorder.js:1 [Auth] Step 7b: Clearing splash seen flag
+VM11864 posthog-recorder.js:1 [Auth] ========== LOGOUT COMPLETE ==========
+VM11864 posthog-recorder.js:1 [Auth] Final timestamp: 1769475900680
+VM11864 posthog-recorder.js:1 [Auth] Step 8: Redirecting to /
+use-auth.ts:21 [Auth] fetchUser called, timestamp: 1769475901045
+use-auth.ts:28 [Auth] fetchUser response: 200 timestamp: 1769475901057
+client:745 WebSocket connection to 'wss://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/vite-hmr?token=N-ppobSEZE6F' failed: 
+createConnection @ client:745
+connect @ client:411
+connect @ client:751
+connect @ client:289
+connect @ client:373
+(anonymous) @ client:823Understand this error
+client:755 WebSocket connection to 'wss://localhost:5173/?token=N-ppobSEZE6F' failed: 
+createConnection @ client:755
+connect @ client:411
+connect @ client:759Understand this error
+client:765 [vite] failed to connect to websocket.
+your current setup:
+  (browser) c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/ <--[HTTP]--> localhost:5173/ (server)
+  (browser) c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev:/vite-hmr <--[WebSocket (failing)]--> localhost:5173/ (server)
+Check out your Vite / network configuration and https://vite.dev/config/server-options.html#server-hmr .
+(anonymous) @ rrweb-plugin-console-record.js:157
+connect @ client:765
+await in connect
+connect @ client:289
+connect @ client:373
+(anonymous) @ client:823Understand this error
+main.tsx:43 [SW] Service worker registered successfully
+rrweb-plugin-console-record.js:157 Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?
+
+Check the render method of `Primitive.button.SlotClone`.
+    at SidebarMenuButton (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:737:3)
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=a2ca9992:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=a2ca9992:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=a2ca9992:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=a2ca9992:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=a2ca9992:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=a2ca9992:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-62FUAUB7.js?v=a2ca9992:1929:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=a2ca9992:146:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=a2ca9992:931:13
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=a2ca9992:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=a2ca9992:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=a2ca9992:37:15)
+    at Popper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-62FUAUB7.js?v=a2ca9992:1921:11)
+    at Menu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=a2ca9992:100:11)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=a2ca9992:37:15)
+    at DropdownMenu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=a2ca9992:897:5)
+    at div
+    at SidebarFooter (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:489:26)
+    at div
+    at div
+    at div
+    at Sidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:151:3)
+    at AppSidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/AppSidebar.tsx:94:32)
+    at div
+    at div
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=a2ca9992:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=a2ca9992:64:5)
+    at SidebarProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:59:3)
+    at ResponsiveLayout (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/ResponsiveLayout.tsx:588:36)
+    at OnboardingWrapper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/onboarding/OnboardingWrapper.tsx:21:37)
+    at DriveModeProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/drivemode/DriveModeProvider.tsx:38:37)
+    at AuthenticatedApp (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/App.tsx:329:35)
+    at Route (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=a2ca9992:264:16)
+    at Switch (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=a2ca9992:320:17)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=a2ca9992:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=a2ca9992:64:5)
+    at OptimisticCapabilityProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/contexts/OptimisticCapabilityContext.tsx:20:48)
+    at PostHogProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/PostHogProvider.tsx:22:35)
+    at QueryClientProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=a2ca9992:2747:3)
+    at App
+(anonymous) @ rrweb-plugin-console-record.js:157
+printWarning @ chunk-LPF6KSF2.js?v=a2ca9992:521
+error @ chunk-LPF6KSF2.js?v=a2ca9992:505
+validateFunctionComponentInDev @ chunk-LPF6KSF2.js?v=a2ca9992:15061
+mountIndeterminateComponent @ chunk-LPF6KSF2.js?v=a2ca9992:15036
+beginWork @ chunk-LPF6KSF2.js?v=a2ca9992:15962
+beginWork$1 @ chunk-LPF6KSF2.js?v=a2ca9992:19806
+performUnitOfWork @ chunk-LPF6KSF2.js?v=a2ca9992:19251
+workLoopSync @ chunk-LPF6KSF2.js?v=a2ca9992:19190
+renderRootSync @ chunk-LPF6KSF2.js?v=a2ca9992:19169
+performSyncWorkOnRoot @ chunk-LPF6KSF2.js?v=a2ca9992:18927
+flushSyncCallbacks @ chunk-LPF6KSF2.js?v=a2ca9992:9166
+(anonymous) @ chunk-LPF6KSF2.js?v=a2ca9992:18677Understand this error
+use-auth.ts:21 [Auth] fetchUser called, timestamp: 1769475903627
+use-auth.ts:28 [Auth] fetchUser response: 200 timestamp: 1769475903648

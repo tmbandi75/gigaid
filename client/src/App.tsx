@@ -148,16 +148,138 @@ function SubscriptionHandler() {
   return null;
 }
 
+// Auth Gate Diagnostics Panel - DEV ONLY
+function AuthDiagnosticsPanel() {
+  const { firebaseUser, authLoading, lastAuthEventTs, callbackCount } = useFirebaseAuth();
+  const [currentTime, setCurrentTime] = useState(Date.now());
+  
+  // Update current time every second to show time since last event
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+  
+  // Get additional state from useAuth if available
+  let apiUserInfo = "N/A";
+  let apiUserLoading = "N/A";
+  let isLoggingOut = "N/A";
+  let hasAppJwtToken = "N/A";
+  
+  try {
+    // Check for app JWT token
+    const token = localStorage.getItem("gigaid_app_jwt");
+    hasAppJwtToken = token ? "true" : "false";
+  } catch (e) {
+    hasAppJwtToken = "error";
+  }
+  
+  // Check global logout flag
+  try {
+    const { getGlobalLoggingOut } = require("@/lib/queryClient");
+    isLoggingOut = getGlobalLoggingOut() ? "true" : "false";
+  } catch (e) {
+    isLoggingOut = "error";
+  }
+  
+  const timeSinceLastEvent = lastAuthEventTs ? Math.round((currentTime - lastAuthEventTs) / 1000) : null;
+  
+  return (
+    <div 
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        background: "rgba(0,0,0,0.9)",
+        color: "#00ff00",
+        fontFamily: "monospace",
+        fontSize: "12px",
+        padding: "12px",
+        zIndex: 99999,
+        maxHeight: "50vh",
+        overflow: "auto"
+      }}
+      data-testid="auth-diagnostics-panel"
+    >
+      <div style={{ fontWeight: "bold", marginBottom: "8px", color: "#ff6600" }}>
+        AUTH GATE DIAGNOSTICS (DEV ONLY)
+      </div>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <tbody>
+          <tr>
+            <td style={{ padding: "4px", borderBottom: "1px solid #333" }}>firebaseAuthLoading</td>
+            <td style={{ padding: "4px", borderBottom: "1px solid #333", color: authLoading ? "#ff0000" : "#00ff00" }}>
+              {authLoading ? "TRUE (BLOCKING)" : "false"}
+            </td>
+          </tr>
+          <tr>
+            <td style={{ padding: "4px", borderBottom: "1px solid #333" }}>firebaseUser</td>
+            <td style={{ padding: "4px", borderBottom: "1px solid #333" }}>
+              {firebaseUser ? `uid: ${firebaseUser.uid.slice(0,8)}... email: ${firebaseUser.email}` : "null"}
+            </td>
+          </tr>
+          <tr>
+            <td style={{ padding: "4px", borderBottom: "1px solid #333" }}>lastAuthEventTs</td>
+            <td style={{ padding: "4px", borderBottom: "1px solid #333" }}>
+              {lastAuthEventTs ? `${lastAuthEventTs} (${timeSinceLastEvent}s ago)` : "null (never fired)"}
+            </td>
+          </tr>
+          <tr>
+            <td style={{ padding: "4px", borderBottom: "1px solid #333" }}>callbackCount</td>
+            <td style={{ padding: "4px", borderBottom: "1px solid #333" }}>
+              {callbackCount}
+            </td>
+          </tr>
+          <tr>
+            <td style={{ padding: "4px", borderBottom: "1px solid #333" }}>hasAppJwtToken</td>
+            <td style={{ padding: "4px", borderBottom: "1px solid #333" }}>
+              {hasAppJwtToken}
+            </td>
+          </tr>
+          <tr>
+            <td style={{ padding: "4px", borderBottom: "1px solid #333" }}>globalLogoutInProgress</td>
+            <td style={{ padding: "4px", borderBottom: "1px solid #333", color: isLoggingOut === "true" ? "#ff0000" : "#00ff00" }}>
+              {isLoggingOut}
+            </td>
+          </tr>
+          <tr>
+            <td style={{ padding: "4px", borderBottom: "1px solid #333" }}>location.pathname</td>
+            <td style={{ padding: "4px", borderBottom: "1px solid #333" }}>
+              {window.location.pathname}
+            </td>
+          </tr>
+          <tr>
+            <td style={{ padding: "4px", borderBottom: "1px solid #333" }}>currentTime</td>
+            <td style={{ padding: "4px", borderBottom: "1px solid #333" }}>
+              {currentTime}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div style={{ marginTop: "8px", color: "#888" }}>
+        If firebaseAuthLoading is TRUE and callbackCount is 0, onAuthStateChanged never fired.
+        If callbackCount {">"} 0 but authLoading is still TRUE, there is a state update bug.
+      </div>
+    </div>
+  );
+}
+
 function AuthenticatedApp() {
   const [location, setLocation] = useLocation();
-  const { firebaseUser, authLoading } = useFirebaseAuth();
+  const { firebaseUser, authLoading, lastAuthEventTs, callbackCount } = useFirebaseAuth();
   
   // CRITICAL: Block ALL routing decisions until Firebase auth state is resolved
   // No redirects, no rendering decisions until authLoading === false
   if (authLoading) {
     console.log("[AuthenticatedApp] authLoading === true, blocking all routing");
+    console.log("[AuthenticatedApp] lastAuthEventTs:", lastAuthEventTs, "callbackCount:", callbackCount);
+    
+    // Show diagnostics panel in development
+    const isDev = import.meta.env.DEV;
+    
     return (
       <div className="min-h-screen flex items-center justify-center">
+        {isDev && <AuthDiagnosticsPanel />}
         <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>
     );
