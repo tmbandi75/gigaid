@@ -9,8 +9,8 @@ import { OnboardingWrapper } from "@/components/onboarding/OnboardingWrapper";
 import { PostHogProvider } from "@/components/PostHogProvider";
 import { DriveModeProvider } from "@/components/drivemode/DriveModeProvider";
 import { OptimisticCapabilityProvider, useOptimisticCapability } from "@/contexts/OptimisticCapabilityContext";
+import { FirebaseAuthProvider, useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useEffect, useState } from "react";
-import { useAuth } from "@/hooks/use-auth";
 import SplashPage from "@/pages/SplashPage";
 import ForceLogout from "@/pages/force-logout";
 
@@ -150,17 +150,12 @@ function SubscriptionHandler() {
 
 function AuthenticatedApp() {
   const [location, setLocation] = useLocation();
-  const { isLoading, user } = useAuth();
+  const { firebaseUser, authLoading } = useFirebaseAuth();
   
-  // Handle redirects in useEffect to avoid render-time side effects
-  useEffect(() => {
-    if (!isLoading && user && (location === "/" || location === "/welcome")) {
-      setLocation("/dashboard");
-    }
-  }, [isLoading, user, location, setLocation]);
-  
-  // Show loading state while checking auth
-  if (isLoading) {
+  // CRITICAL: Block ALL routing decisions until Firebase auth state is resolved
+  // No redirects, no rendering decisions until authLoading === false
+  if (authLoading) {
+    console.log("[AuthenticatedApp] authLoading === true, blocking all routing");
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
@@ -168,18 +163,19 @@ function AuthenticatedApp() {
     );
   }
   
-  // Show splash/login page for unauthenticated users
-  if (!user) {
+  // authLoading === false: Firebase has definitively resolved auth state
+  console.log("[AuthenticatedApp] authLoading === false, firebaseUser:", firebaseUser?.email ?? "null");
+  
+  // Unauthenticated users see SplashPage (which has login UI)
+  if (!firebaseUser) {
     return <SplashPage />;
   }
   
-  // Authenticated users at "/" or "/welcome" - show loading while redirect happens
+  // Authenticated users: redirect from "/" or "/welcome" to dashboard
+  // This redirect is safe because authLoading === false
   if (location === "/" || location === "/welcome") {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
+    // Use useEffect pattern to avoid render-time navigation
+    return <RedirectToDashboard />;
   }
   
   // Show app for authenticated users
@@ -195,38 +191,54 @@ function AuthenticatedApp() {
   );
 }
 
+function RedirectToDashboard() {
+  const [, setLocation] = useLocation();
+  
+  useEffect(() => {
+    setLocation("/dashboard");
+  }, [setLocation]);
+  
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-pulse text-muted-foreground">Loading...</div>
+    </div>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <PostHogProvider>
-        <OptimisticCapabilityProvider>
-          <TooltipProvider>
-            <ThemeInitializer />
-            <SubscriptionHandler />
-            <Switch>
-            <Route path="/book/:slug" component={PublicBooking} />
-            <Route path="/booking/:token" component={CustomerBookingDetail} />
-            <Route path="/invoice/:token" component={PublicInvoice} />
-            <Route path="/invoice/:id/rate" component={InvoiceRating} />
-            <Route path="/confirm-price/:token" component={ConfirmPrice} />
-            <Route path="/pay-deposit/:token" component={PayDeposit} />
-            <Route path="/crew-portal/:token" component={CrewPortal} />
-            <Route path="/review/:token" component={PublicReview} />
-            <Route path="/qb/:token" component={QuickBookConfirm} />
-            <Route path="/terms" component={TermsOfService} />
-            <Route path="/privacy" component={PrivacyPolicy} />
-            <Route path="/downloads" component={Downloads} />
-            {/* /login redirects to home which shows the combined splash/login page */}
-            <Route path="/login" component={SplashPage} />
-            <Route path="/force-logout" component={ForceLogout} />
-            <Route>
-              <AuthenticatedApp />
-            </Route>
-            </Switch>
-            <Toaster />
-          </TooltipProvider>
-        </OptimisticCapabilityProvider>
-      </PostHogProvider>
+      <FirebaseAuthProvider>
+        <PostHogProvider>
+          <OptimisticCapabilityProvider>
+            <TooltipProvider>
+              <ThemeInitializer />
+              <SubscriptionHandler />
+              <Switch>
+              <Route path="/book/:slug" component={PublicBooking} />
+              <Route path="/booking/:token" component={CustomerBookingDetail} />
+              <Route path="/invoice/:token" component={PublicInvoice} />
+              <Route path="/invoice/:id/rate" component={InvoiceRating} />
+              <Route path="/confirm-price/:token" component={ConfirmPrice} />
+              <Route path="/pay-deposit/:token" component={PayDeposit} />
+              <Route path="/crew-portal/:token" component={CrewPortal} />
+              <Route path="/review/:token" component={PublicReview} />
+              <Route path="/qb/:token" component={QuickBookConfirm} />
+              <Route path="/terms" component={TermsOfService} />
+              <Route path="/privacy" component={PrivacyPolicy} />
+              <Route path="/downloads" component={Downloads} />
+              {/* /login redirects to home which shows the combined splash/login page */}
+              <Route path="/login" component={SplashPage} />
+              <Route path="/force-logout" component={ForceLogout} />
+              <Route>
+                <AuthenticatedApp />
+              </Route>
+              </Switch>
+              <Toaster />
+            </TooltipProvider>
+          </OptimisticCapabilityProvider>
+        </PostHogProvider>
+      </FirebaseAuthProvider>
     </QueryClientProvider>
   );
 }

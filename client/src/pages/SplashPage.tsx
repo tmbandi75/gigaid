@@ -15,19 +15,11 @@ type AuthMode = "signin" | "signup" | "forgot";
 
 export default function SplashPage() {
   const [, navigate] = useLocation();
-  const { refetchUser, user, isLoading: isAuthLoading } = useAuth();
+  const { refetchUser } = useAuth();
   const { toast } = useToast();
   
-  // If user is already authenticated (after auth has resolved), redirect to dashboard
-  useEffect(() => {
-    if (!isAuthLoading && user) {
-      navigate("/dashboard");
-    }
-  }, [user, isAuthLoading, navigate]);
-  
-  // No automatic auth clearing - the page just shows the login form
-  // Users who want to log in fresh will naturally overwrite their auth state
-  // when they successfully authenticate with new credentials
+  // SplashPage is purely presentational - no auth redirect logic here
+  // All auth routing is handled in App.tsx by AuthenticatedApp
 
   const [isLoading, setIsLoading] = useState(false);
   const [isEmailLoading, setIsEmailLoading] = useState(false);
