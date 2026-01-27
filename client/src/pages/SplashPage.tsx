@@ -412,6 +412,16 @@ export default function SplashPage() {
         <div className="text-center text-xs text-white/50">
           By signing in, you agree to our Terms of Service and Privacy Policy
         </div>
+        {/* Dev: Force logout link */}
+        <div className="text-center mt-4">
+          <a 
+            href="/force-logout" 
+            className="text-white/40 text-xs hover:text-white/60 underline"
+            data-testid="link-force-logout"
+          >
+            Clear all auth data
+          </a>
+        </div>
       </div>
     </div>
   );
