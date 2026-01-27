@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
+import { getAuthToken } from "@/lib/authToken";
 import { 
   Bell, 
   Link2, 
@@ -82,6 +83,44 @@ export default function Settings() {
   const queryClient = useQueryClient();
   const [bookingLinkCopied, setBookingLinkCopied] = useState(false);
   const { isAuthenticated } = useAuth();
+
+  const handleAuthenticatedDownload = async (url: string, filename: string) => {
+    try {
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(url, {
+        credentials: "include",
+        headers,
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status}`);
+      }
+      
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+      
+      toast({ title: "Download started", description: `${filename} is downloading` });
+    } catch (error: any) {
+      console.error("Download error:", error);
+      toast({ 
+        title: "Download failed", 
+        description: error.message || "Could not download file",
+        variant: "destructive"
+      });
+    }
+  };
   
   const { data: aiNudgesFlag } = useFeatureFlag("ai_micro_nudges");
   const updateFeatureFlag = useUpdateFeatureFlag();
@@ -658,7 +697,11 @@ export default function Settings() {
                 Export Data
               </h3>
               <div className="space-y-3">
-                <a href="/api/export/json" download className="block">
+                <button 
+                  onClick={() => handleAuthenticatedDownload("/api/export/json", `gigaid-export-${new Date().toISOString().split('T')[0]}.json`)}
+                  className="block w-full text-left"
+                  data-testid="button-download-json"
+                >
                   <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover-elevate cursor-pointer">
                     <FileJson className="h-5 w-5 text-blue-500" />
                     <div className="flex-1">
@@ -667,8 +710,12 @@ export default function Settings() {
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   </div>
-                </a>
-                <a href="/api/export/dot" download className="block">
+                </button>
+                <button 
+                  onClick={() => handleAuthenticatedDownload("/api/export/dot", `gigaid-graph-${new Date().toISOString().split('T')[0]}.dot`)}
+                  className="block w-full text-left"
+                  data-testid="button-download-dot"
+                >
                   <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover-elevate cursor-pointer">
                     <Share className="h-5 w-5 text-purple-500" />
                     <div className="flex-1">
@@ -677,7 +724,7 @@ export default function Settings() {
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   </div>
-                </a>
+                </button>
               </div>
             </CardContent>
           </Card>
