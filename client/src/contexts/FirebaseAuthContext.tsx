@@ -15,9 +15,17 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     console.log("[FirebaseAuth] Setting up onAuthStateChanged listener");
+    console.log("AUTH STATE CHANGE (initial)", {
+      authLoading: true,
+      firebaseUser: null
+    });
     
     const unsubscribe = onFirebaseAuthChange((user) => {
       console.log("[FirebaseAuth] onAuthStateChanged fired:", user ? user.email : "null");
+      console.log("AUTH STATE CHANGE", {
+        authLoading: false,
+        firebaseUser: user ? user.uid : null
+      });
       setFirebaseUser(user);
       setAuthLoading(false);
     });
