@@ -101,26 +101,12 @@ export function useAuth() {
         console.error("[Auth] Server logout error:", e);
       }
       
-      // Step 6: Clear any remaining IndexedDB Firebase data
-      console.log("[Auth] Step 6: Clearing IndexedDB");
-      try {
-        const databases = await indexedDB.databases();
-        for (const db of databases) {
-          if (db.name && (db.name.includes("firebase") || db.name.includes("firebaseLocalStorage"))) {
-            console.log("[Auth] Deleting IndexedDB:", db.name);
-            indexedDB.deleteDatabase(db.name);
-          }
-        }
-      } catch (e) {
-        console.log("[Auth] IndexedDB clear skipped:", e);
-      }
-      
-      // Step 7: Clear sessionStorage as well
-      console.log("[Auth] Step 7: Clearing sessionStorage");
+      // Step 6: Clear sessionStorage
+      console.log("[Auth] Step 6: Clearing sessionStorage");
       sessionStorage.clear();
       
-      // Step 7b: Clear splash seen flag to ensure landing page shows
-      console.log("[Auth] Step 7b: Clearing splash seen flag");
+      // Step 7: Clear splash seen flag to ensure landing page shows
+      console.log("[Auth] Step 7: Clearing splash seen flag");
       localStorage.removeItem("gigaid_splash_seen");
       
       console.log("[Auth] ========== LOGOUT COMPLETE ==========");
@@ -128,13 +114,16 @@ export function useAuth() {
       
     } catch (error) {
       console.error("[Auth] Logout error:", error);
+    } finally {
+      // Reset global logout flag - Firebase onAuthStateChanged will handle state
+      setGlobalLoggingOut(false);
     }
     
-    // Step 8: Only after ALL steps complete, redirect
-    // Keep globalIsLoggingOut true - it will be reset on next page load
-    // Redirect to root - LandingPage shows for unauthenticated users
-    console.log("[Auth] Step 8: Redirecting to /");
-    window.location.replace("/");
+    // NO page reload - Firebase signOut already triggered onAuthStateChanged
+    // which will set firebaseUser=null and authLoading=false, causing
+    // AuthenticatedApp to render SplashPage
+    // Update URL to "/" without page reload
+    window.history.replaceState({}, "", "/");
   }, [queryClient]);
 
   const logoutMutation = useMutation({
