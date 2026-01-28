@@ -4,6 +4,7 @@ import type { User } from "@shared/schema";
 import { getAuthToken, clearAuthToken } from "@/lib/authToken";
 import { firebaseSignOut } from "@/lib/firebase";
 import { setGlobalLoggingOut, getGlobalLoggingOut } from "@/lib/queryClient";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 
 async function fetchUser(): Promise<User | null> {
   // Don't fetch user if we're in the middle of logging out
@@ -41,6 +42,7 @@ async function fetchUser(): Promise<User | null> {
 export function useAuth() {
   const queryClient = useQueryClient();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { isTokenReady, setTokenReady } = useFirebaseAuth();
   
   const { data: user, status, isFetching, refetch } = useQuery<User | null>({
     queryKey: ["/api/auth/user"],
@@ -49,8 +51,8 @@ export function useAuth() {
     staleTime: 1000 * 30,
     refetchOnWindowFocus: true,
     refetchOnMount: "always",
-    // Don't refetch while logging out
-    enabled: !getGlobalLoggingOut(),
+    // Don't refetch while logging out, and only fetch if token is ready
+    enabled: !getGlobalLoggingOut() && isTokenReady,
   });
 
   const performLogout = useCallback(async (): Promise<void> => {
@@ -60,6 +62,10 @@ export function useAuth() {
     // Step 1: Set global logout flag to prevent ALL rehydration
     setGlobalLoggingOut(true);
     setIsLoggingOut(true);
+    
+    // Step 1b: Reset token ready flag
+    console.log("[Auth] Step 1b: Resetting token ready flag");
+    setTokenReady(false);
     
     try {
       // Step 2: Clear app JWT from localStorage
@@ -124,7 +130,7 @@ export function useAuth() {
     // AuthenticatedApp to render SplashPage
     // Update URL to "/" without page reload
     window.history.replaceState({}, "", "/");
-  }, [queryClient]);
+  }, [queryClient, setTokenReady]);
 
   const logoutMutation = useMutation({
     mutationFn: performLogout,
@@ -134,13 +140,14 @@ export function useAuth() {
     },
   });
 
-  const isLoading = status === "pending" || (isFetching && user === undefined);
   const globalLogoutState = getGlobalLoggingOut();
+  const isLoading = status === "pending" || (isFetching && user === undefined) || (!isTokenReady && !globalLogoutState);
 
   return {
     user,
     isLoading,
-    isAuthenticated: !!user && !globalLogoutState,
+    isAuthenticated: !!user && !globalLogoutState && isTokenReady,
+    isTokenReady,
     logout: logoutMutation.mutate,
     isLoggingOut: isLoggingOut || globalLogoutState,
     refetchUser: refetch,

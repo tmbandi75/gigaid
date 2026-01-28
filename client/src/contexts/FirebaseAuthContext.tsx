@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from "react";
 import { onFirebaseAuthChange } from "@/lib/firebase";
 import type { User as FirebaseUser } from "firebase/auth";
+import { getAuthToken } from "@/lib/authToken";
 
 interface FirebaseAuthContextValue {
   firebaseUser: FirebaseUser | null;
@@ -19,7 +20,15 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   const [lastAuthEventTs, setLastAuthEventTs] = useState<number | null>(null);
   const callbackCountRef = useRef(0);
   const [callbackCount, setCallbackCount] = useState(0);
-  const [isTokenReady, setIsTokenReady] = useState(false);
+  
+  // Initialize isTokenReady based on whether we have an existing token in localStorage
+  // This handles page reloads where user is already authenticated
+  const [isTokenReady, setIsTokenReady] = useState(() => {
+    const existingToken = getAuthToken();
+    const hasToken = !!existingToken;
+    console.log("[FirebaseAuth] Initial isTokenReady:", hasToken, "hasExistingToken:", hasToken);
+    return hasToken;
+  });
 
   const setTokenReady = (ready: boolean) => {
     console.log("[FirebaseAuth] setTokenReady called:", ready, "timestamp:", Date.now());
