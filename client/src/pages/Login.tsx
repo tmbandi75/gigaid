@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { isNativePlatform } from "@/lib/platform";
 import { queryClient } from "@/lib/queryClient";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 
 type AuthMode = "signin" | "signup" | "forgot";
 
@@ -37,6 +38,7 @@ export default function Login() {
   const [, navigate] = useLocation();
   const { isAuthenticated, isLoggingOut, refetchUser } = useAuth();
   const { toast } = useToast();
+  const { setTokenReady } = useFirebaseAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [isCheckingRedirect, setIsCheckingRedirect] = useState(isNativePlatform());
@@ -59,7 +61,11 @@ export default function Login() {
     }
 
     const data = await response.json();
+    console.log("[Login] Token exchange successful, setting token...");
     setAuthToken(data.token);
+    
+    console.log("[Login] Marking token as ready...");
+    setTokenReady(true);
     
     await refetchUser();
     navigate("/");

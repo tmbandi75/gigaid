@@ -8,6 +8,7 @@ import { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword } fro
 import { setAuthToken } from "@/lib/authToken";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 
 type AuthMode = "signin" | "signup" | "forgot";
 
@@ -15,6 +16,7 @@ export default function SplashPage() {
   const [, navigate] = useLocation();
   const { refetchUser } = useAuth();
   const { toast } = useToast();
+  const { setTokenReady } = useFirebaseAuth();
 
   const [isLoading, setIsLoading] = useState(false);
   const [isEmailLoading, setIsEmailLoading] = useState(false);
@@ -38,9 +40,13 @@ export default function SplashPage() {
     }
 
     const data = await response.json();
-    console.log("[Login] Token exchange successful");
+    console.log("[Login] Token exchange successful, setting token...");
     setAuthToken(data.token);
     
+    console.log("[Login] Marking token as ready...");
+    setTokenReady(true);
+    
+    console.log("[Login] Refetching user and navigating...");
     await refetchUser();
     navigate("/dashboard");
   };
