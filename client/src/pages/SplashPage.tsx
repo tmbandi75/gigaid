@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
-import { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword } from "@/lib/firebase";
+import { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, getFirebaseAuth } from "@/lib/firebase";
 import { setAuthToken } from "@/lib/authToken";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -41,7 +41,13 @@ export default function SplashPage() {
 
     const data = await response.json();
     console.log("[Login] Token exchange successful, setting token...");
-    setAuthToken(data.token);
+    
+    // Get the current Firebase user's UID to bind token readiness to this user
+    const auth = getFirebaseAuth();
+    const currentUid = auth?.currentUser?.uid || null;
+    console.log("[Login] Current Firebase UID:", currentUid);
+    
+    setAuthToken(data.token, currentUid || undefined);
     
     console.log("[Login] Marking token as ready...");
     setTokenReady(true);

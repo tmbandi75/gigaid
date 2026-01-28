@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v7';
+const CACHE_VERSION = 'v8';
 const STATIC_CACHE = `gigaid-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `gigaid-dynamic-${CACHE_VERSION}`;
 const API_CACHE = `gigaid-api-${CACHE_VERSION}`;

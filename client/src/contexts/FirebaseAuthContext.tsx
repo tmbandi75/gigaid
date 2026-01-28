@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from "react";
 import { onFirebaseAuthChange } from "@/lib/firebase";
 import type { User as FirebaseUser } from "firebase/auth";
-import { isTokenReady as checkTokenReady, resetTokenReadiness } from "@/lib/authToken";
+import { isTokenReadyForUser, resetTokenReadiness } from "@/lib/authToken";
 
 interface FirebaseAuthContextValue {
   firebaseUser: FirebaseUser | null;
@@ -22,20 +22,25 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   const [callbackCount, setCallbackCount] = useState(0);
   const previousFirebaseUidRef = useRef<string | null>(null);
   
-  // Initialize isTokenReady from the module-level token readiness state
-  // This syncs React state with the global auth token module
-  const [isTokenReady, setIsTokenReady] = useState(() => {
-    const ready = checkTokenReady();
-    console.log("[FirebaseAuth] Initial isTokenReady from module:", ready);
-    return ready;
-  });
+  // Track token readiness with React state synced to module-level state
+  // Initialize as false - will be updated based on current Firebase user
+  const [isTokenReady, setIsTokenReady] = useState(false);
 
   const setTokenReady = (ready: boolean) => {
     console.log("[FirebaseAuth] setTokenReady called:", ready, "timestamp:", Date.now());
-    // Note: setAuthToken() automatically sets module-level readiness
+    // Note: setAuthToken() automatically sets module-level readiness with UID
     // This just syncs React state for UI updates
     setIsTokenReady(ready);
   };
+  
+  // Check token readiness whenever Firebase user changes
+  // This ensures token is only "ready" if it was issued for the current user
+  useEffect(() => {
+    const uid = firebaseUser?.uid || null;
+    const ready = isTokenReadyForUser(uid);
+    console.log("[FirebaseAuth] Checking token readiness for user:", uid, "ready:", ready);
+    setIsTokenReady(ready);
+  }, [firebaseUser]);
 
   useEffect(() => {
     const setupTs = Date.now();
