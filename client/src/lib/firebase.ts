@@ -27,6 +27,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
+// Function to get the auth instance (for use in callbacks where direct import may cause issues)
+export function getFirebaseAuth() {
+  return auth;
+}
+
 const googleProvider = new GoogleAuthProvider();
 
 let redirectResultPromise: Promise<string | null> | null = null;
