@@ -1,5 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
-import { getAuthToken } from "./authToken";
+import { getAuthToken, isTokenReady } from "./authToken";
 
 // Global logout state - prevents any API calls during logout
 let isLoggingOutGlobal = false;
@@ -39,9 +39,21 @@ export async function apiRequest(
     throw new Error("Logout in progress");
   }
 
-  const headers: Record<string, string> = {
-    ...getAuthHeaders(),
-  };
+  // For mutating requests (POST, PUT, PATCH, DELETE), verify token is ready
+  // This prevents data loss from silent 401 failures on first login attempt
+  const isMutatingRequest = method !== "GET" && method !== "HEAD";
+  const token = getAuthToken();
+  const tokenReady = isTokenReady();
+  
+  if (isMutatingRequest && (!token || !tokenReady)) {
+    console.error("[QueryClient] BLOCKED: Mutating request before token ready:", method, url, { hasToken: !!token, tokenReady });
+    throw new Error("Authentication required - please sign in again");
+  }
+
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
   if (data) {
     headers["Content-Type"] = "application/json";
   }
