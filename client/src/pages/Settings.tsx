@@ -534,35 +534,7 @@ export default function Settings() {
                 />
               </div>
 
-              {settings.publicProfileEnabled && needsSetup && (
-                <>
-                  <Separator />
-                  <div className="p-4 rounded-xl border-dashed border-2 border-amber-500/30 bg-amber-500/5">
-                    <div className="flex items-start gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
-                        <Lock className="h-5 w-5 text-amber-600" />
-                      </div>
-                      <div className="space-y-2">
-                        <p className="font-medium text-foreground">Finish setup to enable deposits and booking links</p>
-                        <p className="text-sm text-muted-foreground">
-                          Your profile is visible, but deposits won't be collected until you complete setup.
-                        </p>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="mt-2"
-                          onClick={() => navigate("/onboarding")}
-                          data-testid="button-setup-booking"
-                        >
-                          Quick setup (30 sec)
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {settings.publicProfileEnabled && !needsSetup && (
+              {settings.publicProfileEnabled && (
                 <>
                   <Separator />
                   <div className="space-y-2">
@@ -583,6 +555,31 @@ export default function Settings() {
                       {window.location.origin}/book/{settings.publicProfileSlug || "your-name"}
                     </p>
                   </div>
+                  
+                  {needsSetup && (
+                    <div className="p-4 rounded-xl border-dashed border-2 border-amber-500/30 bg-amber-500/5">
+                      <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                          <Lock className="h-5 w-5 text-amber-600" />
+                        </div>
+                        <div className="space-y-2">
+                          <p className="font-medium text-foreground">Complete setup to enable deposits</p>
+                          <p className="text-sm text-muted-foreground">
+                            Your booking link works, but deposits won't be collected until you complete setup.
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="mt-2"
+                            onClick={() => navigate("/onboarding")}
+                            data-testid="button-setup-booking"
+                          >
+                            Quick setup (30 sec)
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-3">
                     <Label className="text-sm">Your Services</Label>
