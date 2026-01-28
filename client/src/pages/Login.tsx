@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Loader2, Mail, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, initializeRedirectResultHandler, getFirebaseAuth } from "@/lib/firebase";
 import { setAuthToken, clearAuthToken } from "@/lib/authToken";
@@ -26,11 +24,9 @@ function getInitialMode(): AuthMode {
   return "signin";
 }
 
-// Check if user explicitly navigated to login (from splash page buttons)
 function isExplicitNavigation(): boolean {
   if (typeof window === "undefined") return false;
   const params = new URLSearchParams(window.location.search);
-  // If mode param exists, user explicitly clicked a button
   return params.has("mode");
 }
 
@@ -61,16 +57,10 @@ export default function Login() {
     }
 
     const data = await response.json();
-    console.log("[Login] Token exchange successful, setting token...");
-    
-    // Get the current Firebase user's UID to bind token readiness to this user
     const auth = getFirebaseAuth();
     const currentUid = auth?.currentUser?.uid || null;
-    console.log("[Login] Current Firebase UID:", currentUid);
     
     setAuthToken(data.token, currentUid || undefined);
-    
-    console.log("[Login] Marking token as ready...");
     setTokenReady(true);
     
     await refetchUser();
@@ -84,8 +74,6 @@ export default function Login() {
       setMode(modeParam as AuthMode);
     }
     
-    // If explicitly navigating to login, clear any stale auth cache
-    // This ensures the login form is shown and prevents redirect loops
     if (isExplicitNavigation()) {
       clearAuthToken();
       queryClient.setQueryData(["/api/auth/user"], null);
@@ -102,14 +90,11 @@ export default function Login() {
 
     const handleRedirectResult = async () => {
       try {
-        console.log("[Login] Checking for redirect result on native platform");
         const idToken = await initializeRedirectResultHandler();
         if (idToken) {
-          console.log("[Login] Got ID token from redirect, exchanging...");
           await exchangeTokenAndNavigate(idToken);
         }
       } catch (error: any) {
-        console.error("[Login] Redirect result error:", error);
         toast({
           title: "Sign in failed",
           description: error.message || "Please try again",
@@ -123,22 +108,17 @@ export default function Login() {
     handleRedirectResult();
   }, []);
 
-  // CRITICAL: Do NOT auto-redirect if:
-  // 1. Logout is in progress (race condition prevention)
-  // 2. User explicitly navigated here (clicked Login/Create Account/Forgot Password)
-  // The explicit check allows users to re-authenticate with different credentials
   if (isAuthenticated && !isLoggingOut && !isExplicitNavigation()) {
     navigate("/");
     return null;
   }
 
-  // Show loading state while checking for redirect result on native platforms
   if (isCheckingRedirect) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background" data-testid="login-checking-redirect">
+      <div className="min-h-screen flex items-center justify-center bg-[#4F46E5]" data-testid="login-checking-redirect">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="mt-4 text-muted-foreground">Completing sign in...</p>
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-white" />
+          <p className="mt-4 text-white/80">Completing sign in...</p>
         </div>
       </div>
     );
@@ -150,13 +130,9 @@ export default function Login() {
       const idToken = await signInWithGoogle();
       await exchangeTokenAndNavigate(idToken);
     } catch (error: any) {
-      // On native platforms, signInWithRedirect throws an error because it navigates away
-      // This is expected behavior - the redirect result will be handled when the app returns
       if (isNativePlatform() && error.message?.includes("Redirect initiated")) {
-        console.log("[Login] Redirect initiated on native platform, waiting for return");
         return;
       }
-      console.error("Sign in error:", error);
       toast({
         title: "Sign in failed",
         description: error.message || "Please try again",
@@ -189,7 +165,6 @@ export default function Login() {
         });
         setMode("signin");
       } catch (error: any) {
-        console.error("Password reset error:", error);
         let message = "Please try again";
         if (error.code === "auth/user-not-found") {
           message = "No account found with this email";
@@ -241,7 +216,6 @@ export default function Login() {
         : await signInWithEmail(email, password);
       await exchangeTokenAndNavigate(idToken);
     } catch (error: any) {
-      console.error("Email auth error:", error);
       let message = "Please try again";
       if (error.code === "auth/email-already-in-use") {
         message = "An account with this email already exists";
@@ -262,45 +236,63 @@ export default function Login() {
     }
   };
 
-  const getHeaderText = () => {
-    switch (mode) {
-      case "signup":
-        return { title: "Create an account", description: "Get started with GigAid" };
-      case "forgot":
-        return { title: "Reset your password", description: "We'll send you a link to reset your password" };
-      default:
-        return { title: "Welcome to GigAid", description: "Sign in to manage your jobs, leads, and invoices" };
-    }
-  };
-
-  const headerText = getHeaderText();
+  const isDisabled = isLoading || isEmailLoading;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10 p-4">
-      <Card className="w-full max-w-md" data-testid="card-login">
-        <CardHeader className="text-center">
-          {mode === "forgot" && (
-            <button
-              type="button"
-              onClick={() => setMode("signin")}
-              className="absolute left-4 top-4 text-muted-foreground hover:text-foreground"
-              data-testid="button-back-to-signin"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-          )}
-          <CardTitle className="text-2xl font-bold">{headerText.title}</CardTitle>
-          <CardDescription>{headerText.description}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+    <div className="min-h-screen relative overflow-hidden" data-testid="login-page">
+      {/* Blue gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#6366F1] via-[#4F46E5] to-[#3730A3]" />
+      
+      {/* Decorative floating shapes */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Top right large circle */}
+        <div className="absolute -top-20 -right-20 w-64 h-64 bg-[#818CF8]/30 rounded-full blur-sm" />
+        {/* Top right small circle */}
+        <div className="absolute top-16 right-10 w-20 h-20 bg-[#6366F1]/50 rounded-full" />
+        {/* Middle right blob */}
+        <div className="absolute top-1/4 -right-10 w-40 h-40 bg-[#4338CA]/40 rounded-full blur-md" />
+        {/* Bottom left large circle */}
+        <div className="absolute -bottom-16 -left-16 w-56 h-56 bg-[#818CF8]/25 rounded-full" />
+        {/* Bottom center blob */}
+        <div className="absolute bottom-32 left-1/4 w-24 h-24 bg-[#6366F1]/30 rounded-full blur-sm" />
+        {/* Mid-left accent */}
+        <div className="absolute top-1/2 -left-8 w-32 h-32 bg-[#4338CA]/30 rounded-full blur-md" />
+      </div>
+
+      {/* Content */}
+      <div className="relative min-h-screen flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-sm space-y-6">
+          {/* Header */}
+          <div className="text-center space-y-2">
+            {mode === "forgot" && (
+              <button
+                type="button"
+                onClick={() => setMode("signin")}
+                className="absolute left-6 top-6 text-white/80 hover:text-white transition-colors"
+                data-testid="button-back-to-signin"
+              >
+                <ArrowLeft className="h-6 w-6" />
+              </button>
+            )}
+            <h1 className="text-3xl font-bold text-white">
+              {mode === "forgot" 
+                ? "Reset Password" 
+                : mode === "signup" 
+                  ? "Join GigAid™" 
+                  : "Welcome to GigAid™"}
+            </h1>
+            {mode === "forgot" && (
+              <p className="text-white/70 text-sm">We'll send you a reset link</p>
+            )}
+          </div>
+
+          {/* Google Sign In - not shown in forgot mode */}
           {mode !== "forgot" && (
             <>
               <Button
                 onClick={handleGoogleSignIn}
-                disabled={isLoading || isEmailLoading}
-                className="w-full gap-2"
-                size="lg"
-                variant="outline"
+                disabled={isDisabled}
+                className="w-full h-12 gap-3 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-full shadow-lg"
                 data-testid="button-google-signin"
               >
                 {isLoading ? (
@@ -311,115 +303,104 @@ export default function Login() {
                 Continue with Google
               </Button>
 
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">Or continue with email</span>
-                </div>
+              {/* OR Divider */}
+              <div className="relative flex items-center py-2">
+                <div className="flex-1 border-t border-white/30" />
+                <span className="px-4 text-white/60 text-sm font-medium">OR</span>
+                <div className="flex-1 border-t border-white/30" />
               </div>
             </>
           )}
 
+          {/* Email/Password Form */}
           <form onSubmit={handleEmailAuth} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading || isEmailLoading}
-                data-testid="input-email"
-              />
-            </div>
+            <Input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isDisabled}
+              className="h-12 bg-white/90 border-0 rounded-full px-5 text-gray-700 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-white/50"
+              data-testid="input-email"
+            />
+            
             {mode !== "forgot" && (
               <>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Password</Label>
-                    {mode === "signin" && (
-                      <button
-                        type="button"
-                        onClick={() => setMode("forgot")}
-                        className="text-xs text-primary hover:underline"
-                        data-testid="button-forgot-password"
-                      >
-                        Forgot password?
-                      </button>
-                    )}
-                  </div>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={isLoading || isEmailLoading}
-                    data-testid="input-password"
-                  />
-                </div>
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isDisabled}
+                  className="h-12 bg-white/90 border-0 rounded-full px-5 text-gray-700 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-white/50"
+                  data-testid="input-password"
+                />
+                
                 {mode === "signup" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      placeholder="Confirm your password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      disabled={isLoading || isEmailLoading}
-                      data-testid="input-confirm-password"
-                    />
-                  </div>
+                  <Input
+                    type="password"
+                    placeholder="Confirm Password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    disabled={isDisabled}
+                    className="h-12 bg-white/90 border-0 rounded-full px-5 text-gray-700 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-white/50"
+                    data-testid="input-confirm-password"
+                  />
                 )}
               </>
             )}
+
             <Button
               type="submit"
-              disabled={isLoading || isEmailLoading}
-              className="w-full gap-2"
-              size="lg"
+              disabled={isDisabled}
+              className="w-full h-12 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold rounded-full shadow-lg"
               data-testid="button-email-submit"
             >
               {isEmailLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
+              ) : mode === "forgot" ? (
+                "Send Reset Link"
+              ) : mode === "signup" ? (
+                "Create Account"
               ) : (
-                <Mail className="h-5 w-5" />
+                "Sign in"
               )}
-              {mode === "forgot" ? "Send Reset Link" : mode === "signup" ? "Create Account" : "Sign In"}
             </Button>
           </form>
 
-          {mode !== "forgot" && (
-            <div className="text-center text-sm">
-              <span className="text-muted-foreground">
-                {mode === "signup" ? "Already have an account? " : "Don't have an account? "}
-              </span>
+          {/* Links */}
+          <div className="text-center space-y-3">
+            {mode === "signin" && (
               <button
                 type="button"
-                onClick={() => {
-                  setMode(mode === "signup" ? "signin" : "signup");
-                  setPassword("");
-                  setConfirmPassword("");
-                }}
-                className="text-primary hover:underline font-medium"
-                data-testid="button-toggle-auth-mode"
+                onClick={() => setMode("forgot")}
+                className="text-white/80 hover:text-white text-sm transition-colors"
+                data-testid="button-forgot-password"
               >
-                {mode === "signup" ? "Sign in" : "Sign up"}
+                Forgot password?
               </button>
-            </div>
-          )}
-          
-          <div className="text-center text-xs text-muted-foreground pt-2">
-            By signing in, you agree to our Terms of Service and Privacy Policy
+            )}
+            
+            {mode !== "forgot" && (
+              <p className="text-white/80 text-sm">
+                {mode === "signup" ? "Already have an account? " : "No account? "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode(mode === "signup" ? "signin" : "signup");
+                    setPassword("");
+                    setConfirmPassword("");
+                  }}
+                  className="text-white font-semibold hover:underline"
+                  data-testid="button-toggle-auth-mode"
+                >
+                  {mode === "signup" ? "Sign in" : "Sign up"}
+                </button>
+              </p>
+            )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

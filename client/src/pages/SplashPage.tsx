@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, getFirebaseAuth } from "@/lib/firebase";
 import { setAuthToken } from "@/lib/authToken";
@@ -24,10 +24,8 @@ export default function SplashPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
 
   const exchangeTokenAndNavigate = async (idToken: string) => {
-    console.log("[Login] Exchanging token with server...");
     const response = await fetch("/api/auth/web/firebase", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -40,36 +38,23 @@ export default function SplashPage() {
     }
 
     const data = await response.json();
-    console.log("[Login] Token exchange successful, setting token...");
-    
-    // Get the current Firebase user's UID to bind token readiness to this user
     const auth = getFirebaseAuth();
     const currentUid = auth?.currentUser?.uid || null;
-    console.log("[Login] Current Firebase UID:", currentUid);
     
     setAuthToken(data.token, currentUid || undefined);
-    
-    console.log("[Login] Marking token as ready...");
     setTokenReady(true);
     
-    console.log("[Login] Refetching user and navigating...");
     await refetchUser();
     navigate("/dashboard");
   };
 
   const handleGoogleSignIn = async () => {
-    console.log("[Login] Google sign-in clicked");
     setIsLoading(true);
-    setError(null);
     
     try {
-      console.log("[Login] Calling signInWithGoogle...");
       const idToken = await signInWithGoogle();
-      console.log("[Login] Got ID token, exchanging...");
       await exchangeTokenAndNavigate(idToken);
     } catch (err: any) {
-      console.error("[Login] Google sign-in error:", err);
-      setError(err.message || "Sign in failed");
       toast({
         title: "Sign in failed",
         description: err.message || "Please try again",
@@ -82,10 +67,13 @@ export default function SplashPage() {
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     
     if (!email) {
-      setError("Please enter your email address");
+      toast({
+        title: "Missing email",
+        description: "Please enter your email address",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -99,7 +87,17 @@ export default function SplashPage() {
         });
         setMode("signin");
       } catch (err: any) {
-        setError(err.message || "Reset failed");
+        let message = "Please try again";
+        if (err.code === "auth/user-not-found") {
+          message = "No account found with this email";
+        } else if (err.code === "auth/invalid-email") {
+          message = "Please enter a valid email address";
+        }
+        toast({
+          title: "Reset failed",
+          description: message,
+          variant: "destructive",
+        });
       } finally {
         setIsEmailLoading(false);
       }
@@ -107,12 +105,29 @@ export default function SplashPage() {
     }
 
     if (!password) {
-      setError("Please enter your password");
+      toast({
+        title: "Missing password",
+        description: "Please enter your password",
+        variant: "destructive",
+      });
       return;
     }
 
     if (mode === "signup" && password !== confirmPassword) {
-      setError("Passwords do not match");
+      toast({
+        title: "Passwords don't match",
+        description: "Please make sure your passwords match",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (password.length < 6) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -123,160 +138,189 @@ export default function SplashPage() {
         : await signInWithEmail(email, password);
       await exchangeTokenAndNavigate(idToken);
     } catch (err: any) {
-      console.error("[Login] Email auth error:", err);
-      setError(err.message || "Authentication failed");
+      let message = "Please try again";
+      if (err.code === "auth/email-already-in-use") {
+        message = "An account with this email already exists";
+      } else if (err.code === "auth/invalid-email") {
+        message = "Please enter a valid email address";
+      } else if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+        message = "Invalid email or password";
+      } else if (err.code === "auth/weak-password") {
+        message = "Password is too weak";
+      }
+      toast({
+        title: mode === "signup" ? "Sign up failed" : "Sign in failed",
+        description: message,
+        variant: "destructive",
+      });
     } finally {
       setIsEmailLoading(false);
     }
   };
 
+  const isDisabled = isLoading || isEmailLoading;
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold">GigAid</h1>
-          <p className="text-muted-foreground">
-            {mode === "signin" && "Sign in to your account"}
-            {mode === "signup" && "Create a new account"}
-            {mode === "forgot" && "Reset your password"}
-          </p>
-        </div>
+    <div className="min-h-screen relative overflow-hidden" data-testid="splash-page">
+      {/* Blue gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#6366F1] via-[#4F46E5] to-[#3730A3]" />
+      
+      {/* Decorative floating shapes */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Top right large circle */}
+        <div className="absolute -top-20 -right-20 w-64 h-64 bg-[#818CF8]/30 rounded-full blur-sm" />
+        {/* Top right small circle */}
+        <div className="absolute top-16 right-10 w-20 h-20 bg-[#6366F1]/50 rounded-full" />
+        {/* Middle right blob */}
+        <div className="absolute top-1/4 -right-10 w-40 h-40 bg-[#4338CA]/40 rounded-full blur-md" />
+        {/* Bottom left large circle */}
+        <div className="absolute -bottom-16 -left-16 w-56 h-56 bg-[#818CF8]/25 rounded-full" />
+        {/* Bottom center blob */}
+        <div className="absolute bottom-32 left-1/4 w-24 h-24 bg-[#6366F1]/30 rounded-full blur-sm" />
+        {/* Mid-left accent */}
+        <div className="absolute top-1/2 -left-8 w-32 h-32 bg-[#4338CA]/30 rounded-full blur-md" />
+      </div>
 
-        {error && (
-          <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-md text-sm">
-            {error}
+      {/* Content */}
+      <div className="relative min-h-screen flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-sm space-y-6">
+          {/* Header */}
+          <div className="text-center space-y-2">
+            {mode === "forgot" && (
+              <button
+                type="button"
+                onClick={() => setMode("signin")}
+                className="absolute left-6 top-6 text-white/80 hover:text-white transition-colors"
+                data-testid="button-back-to-signin"
+              >
+                <ArrowLeft className="h-6 w-6" />
+              </button>
+            )}
+            <h1 className="text-3xl font-bold text-white">
+              {mode === "forgot" 
+                ? "Reset Password" 
+                : mode === "signup" 
+                  ? "Join GigAid™" 
+                  : "Welcome to GigAid™"}
+            </h1>
+            {mode === "forgot" && (
+              <p className="text-white/70 text-sm">We'll send you a reset link</p>
+            )}
           </div>
-        )}
 
-        <Button
-          onClick={handleGoogleSignIn}
-          disabled={isLoading}
-          className="w-full"
-          variant="outline"
-          size="lg"
-          data-testid="button-google-signin"
-        >
-          {isLoading ? (
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          ) : (
-            <SiGoogle className="w-4 h-4 mr-2" />
-          )}
-          Continue with Google
-        </Button>
-
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">Or</span>
-          </div>
-        </div>
-
-        <form onSubmit={handleEmailAuth} className="space-y-4">
-          <Input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={isEmailLoading}
-            data-testid="input-email"
-          />
-          
+          {/* Google Sign In - not shown in forgot mode */}
           {mode !== "forgot" && (
-            <Input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isEmailLoading}
-              data-testid="input-password"
-            />
-          )}
-
-          {mode === "signup" && (
-            <Input
-              type="password"
-              placeholder="Confirm password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              disabled={isEmailLoading}
-              data-testid="input-confirm-password"
-            />
-          )}
-
-          <Button
-            type="submit"
-            disabled={isEmailLoading}
-            className="w-full"
-            data-testid="button-email-submit"
-          >
-            {isEmailLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            {mode === "signin" && "Sign in"}
-            {mode === "signup" && "Sign up"}
-            {mode === "forgot" && "Send reset email"}
-          </Button>
-        </form>
-
-        <div className="text-center space-y-2 text-sm">
-          {mode === "signin" && (
             <>
+              <Button
+                onClick={handleGoogleSignIn}
+                disabled={isDisabled}
+                className="w-full h-12 gap-3 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-full shadow-lg"
+                data-testid="button-google-signin"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <SiGoogle className="h-5 w-5" />
+                )}
+                Continue with Google
+              </Button>
+
+              {/* OR Divider */}
+              <div className="relative flex items-center py-2">
+                <div className="flex-1 border-t border-white/30" />
+                <span className="px-4 text-white/60 text-sm font-medium">OR</span>
+                <div className="flex-1 border-t border-white/30" />
+              </div>
+            </>
+          )}
+
+          {/* Email/Password Form */}
+          <form onSubmit={handleEmailAuth} className="space-y-4">
+            <Input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isDisabled}
+              className="h-12 bg-white/90 border-0 rounded-full px-5 text-gray-700 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-white/50"
+              data-testid="input-email"
+            />
+            
+            {mode !== "forgot" && (
+              <>
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isDisabled}
+                  className="h-12 bg-white/90 border-0 rounded-full px-5 text-gray-700 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-white/50"
+                  data-testid="input-password"
+                />
+                
+                {mode === "signup" && (
+                  <Input
+                    type="password"
+                    placeholder="Confirm Password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    disabled={isDisabled}
+                    className="h-12 bg-white/90 border-0 rounded-full px-5 text-gray-700 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-white/50"
+                    data-testid="input-confirm-password"
+                  />
+                )}
+              </>
+            )}
+
+            <Button
+              type="submit"
+              disabled={isDisabled}
+              className="w-full h-12 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold rounded-full shadow-lg"
+              data-testid="button-email-submit"
+            >
+              {isEmailLoading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : mode === "forgot" ? (
+                "Send Reset Link"
+              ) : mode === "signup" ? (
+                "Create Account"
+              ) : (
+                "Sign in"
+              )}
+            </Button>
+          </form>
+
+          {/* Links */}
+          <div className="text-center space-y-3">
+            {mode === "signin" && (
               <button
                 type="button"
                 onClick={() => setMode("forgot")}
-                className="text-muted-foreground hover:underline"
+                className="text-white/80 hover:text-white text-sm transition-colors"
                 data-testid="button-forgot-password"
               >
                 Forgot password?
               </button>
-              <div>
-                <span className="text-muted-foreground">No account? </span>
+            )}
+            
+            {mode !== "forgot" && (
+              <p className="text-white/80 text-sm">
+                {mode === "signup" ? "Already have an account? " : "No account? "}
                 <button
                   type="button"
-                  onClick={() => setMode("signup")}
-                  className="text-primary hover:underline"
-                  data-testid="button-switch-signup"
+                  onClick={() => {
+                    setMode(mode === "signup" ? "signin" : "signup");
+                    setPassword("");
+                    setConfirmPassword("");
+                  }}
+                  className="text-white font-semibold hover:underline"
+                  data-testid="button-toggle-auth-mode"
                 >
-                  Sign up
+                  {mode === "signup" ? "Sign in" : "Sign up"}
                 </button>
-              </div>
-            </>
-          )}
-          
-          {mode === "signup" && (
-            <div>
-              <span className="text-muted-foreground">Have an account? </span>
-              <button
-                type="button"
-                onClick={() => setMode("signin")}
-                className="text-primary hover:underline"
-                data-testid="button-switch-signin"
-              >
-                Sign in
-              </button>
-            </div>
-          )}
-
-          {mode === "forgot" && (
-            <button
-              type="button"
-              onClick={() => setMode("signin")}
-              className="text-primary hover:underline"
-              data-testid="button-back-signin"
-            >
-              Back to sign in
-            </button>
-          )}
-        </div>
-
-        <div className="text-center pt-4 border-t">
-          <a
-            href="/force-logout"
-            className="text-xs text-muted-foreground hover:underline"
-            data-testid="link-force-logout"
-          >
-            Clear all auth data
-          </a>
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>
