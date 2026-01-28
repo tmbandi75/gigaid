@@ -7,6 +7,8 @@ interface FirebaseAuthContextValue {
   authLoading: boolean;
   lastAuthEventTs: number | null;
   callbackCount: number;
+  isTokenReady: boolean;
+  setTokenReady: (ready: boolean) => void;
 }
 
 const FirebaseAuthContext = createContext<FirebaseAuthContextValue | null>(null);
@@ -17,6 +19,12 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   const [lastAuthEventTs, setLastAuthEventTs] = useState<number | null>(null);
   const callbackCountRef = useRef(0);
   const [callbackCount, setCallbackCount] = useState(0);
+  const [isTokenReady, setIsTokenReady] = useState(false);
+
+  const setTokenReady = (ready: boolean) => {
+    console.log("[FirebaseAuth] setTokenReady called:", ready, "timestamp:", Date.now());
+    setIsTokenReady(ready);
+  };
 
   useEffect(() => {
     const setupTs = Date.now();
@@ -62,7 +70,7 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <FirebaseAuthContext.Provider value={{ firebaseUser, authLoading, lastAuthEventTs, callbackCount }}>
+    <FirebaseAuthContext.Provider value={{ firebaseUser, authLoading, lastAuthEventTs, callbackCount, isTokenReady, setTokenReady }}>
       {children}
     </FirebaseAuthContext.Provider>
   );
