@@ -327,91 +327,6 @@ function RedirectToDashboard() {
   );
 }
 
-// Always-visible floating diagnostics (DEV ONLY)
-function FloatingAuthDiagnostics() {
-  const { firebaseUser, authLoading, lastAuthEventTs, callbackCount } = useFirebaseAuth();
-  const [expanded, setExpanded] = useState(false);
-  const [currentTime, setCurrentTime] = useState(Date.now());
-  
-  useEffect(() => {
-    const interval = setInterval(() => setCurrentTime(Date.now()), 1000);
-    return () => clearInterval(interval);
-  }, []);
-  
-  // Only show in development
-  if (!import.meta.env.DEV) return null;
-  
-  let globalLogout = false;
-  try {
-    const { getGlobalLoggingOut } = require("@/lib/queryClient");
-    globalLogout = getGlobalLoggingOut();
-  } catch (e) {}
-  
-  const hasJwt = !!localStorage.getItem("gigaid_app_jwt");
-  const timeSince = lastAuthEventTs ? Math.round((currentTime - lastAuthEventTs) / 1000) : null;
-  
-  if (!expanded) {
-    return (
-      <div 
-        onClick={() => setExpanded(true)}
-        style={{
-          position: "fixed",
-          bottom: "10px",
-          right: "10px",
-          background: authLoading ? "#ff0000" : "#00aa00",
-          color: "white",
-          padding: "6px 10px",
-          borderRadius: "4px",
-          fontSize: "11px",
-          fontFamily: "monospace",
-          cursor: "pointer",
-          zIndex: 99999,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
-        }}
-        data-testid="auth-diagnostics-toggle"
-      >
-        AUTH: {authLoading ? "LOADING" : (firebaseUser ? "OK" : "NULL")} | cb#{callbackCount}
-      </div>
-    );
-  }
-  
-  return (
-    <div 
-      style={{
-        position: "fixed",
-        bottom: "10px",
-        right: "10px",
-        background: "rgba(0,0,0,0.95)",
-        color: "#00ff00",
-        padding: "12px",
-        borderRadius: "6px",
-        fontSize: "11px",
-        fontFamily: "monospace",
-        zIndex: 99999,
-        minWidth: "280px",
-        boxShadow: "0 2px 12px rgba(0,0,0,0.5)"
-      }}
-      data-testid="auth-diagnostics-panel"
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-        <span style={{ color: "#ff6600", fontWeight: "bold" }}>AUTH DIAGNOSTICS</span>
-        <span onClick={() => setExpanded(false)} style={{ cursor: "pointer", color: "#888" }}>[X]</span>
-      </div>
-      <div style={{ color: authLoading ? "#ff0000" : "#00ff00" }}>
-        authLoading: {authLoading ? "TRUE (BLOCKING)" : "false"}
-      </div>
-      <div>firebaseUser: {firebaseUser ? firebaseUser.email : "null"}</div>
-      <div>callbackCount: {callbackCount}</div>
-      <div>lastEvent: {timeSince !== null ? `${timeSince}s ago` : "never"}</div>
-      <div>hasJWT: {hasJwt ? "yes" : "no"}</div>
-      <div style={{ color: globalLogout ? "#ff0000" : "#00ff00" }}>
-        globalLogout: {globalLogout ? "TRUE" : "false"}
-      </div>
-      <div>path: {window.location.pathname}</div>
-    </div>
-  );
-}
-
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -421,7 +336,6 @@ function App() {
             <TooltipProvider>
               <ThemeInitializer />
               <SubscriptionHandler />
-              <FloatingAuthDiagnostics />
               <Switch>
               <Route path="/book/:slug" component={PublicBooking} />
               <Route path="/booking/:token" component={CustomerBookingDetail} />
