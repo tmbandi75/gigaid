@@ -358,14 +358,15 @@ export default function Jobs() {
 
   const totalEarnings = jobs.filter(j => j.status === "completed").reduce((sum, j) => sum + (j.price || 0), 0);
   const activeCount = jobs.filter(j => j.status === "scheduled" || j.status === "in_progress").length;
+  const completedCount = jobs.filter(j => j.status === "completed").length;
 
   const showTableView = !isMobile && viewMode === "table";
   const showCalendarView = viewMode === "calendar";
 
-  return (
+  const renderMobileLayout = () => (
     <div className="flex flex-col min-h-full bg-background" data-testid="page-jobs">
       <div 
-        className="relative overflow-hidden text-white px-4 md:px-6 lg:px-8 pt-6 pb-8 md:pb-6"
+        className="relative overflow-hidden text-white px-4 pt-6 pb-8"
         style={{ 
           background: isDarkMode 
             ? 'linear-gradient(180deg, #0F2A4A 0%, #132E52 100%)'
@@ -377,59 +378,41 @@ export default function Jobs() {
           <div className="absolute bottom-0 -left-10 w-32 h-32 bg-violet-400/20 rounded-full blur-2xl" />
         </div>
         
-        <div className="relative max-w-7xl mx-auto">
+        <div className="relative">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold">Jobs</h1>
+              <h1 className="text-2xl font-bold">Jobs</h1>
               <p className="text-sm text-primary-foreground/80">Manage your work schedule</p>
             </div>
             <Link href="/jobs/new">
-              <Button className="bg-white/20 hover:bg-white/30 text-white hidden md:flex" data-testid="button-add-job-header-desktop">
-                <Plus className="h-5 w-5 mr-2" />
-                Add Job
-              </Button>
-              <Button size="icon" className="bg-white/20 hover:bg-white/30 text-white md:hidden" data-testid="button-add-job-header">
+              <Button size="icon" className="bg-white/20 hover:bg-white/30 text-white" data-testid="button-add-job-header">
                 <Plus className="h-5 w-5" />
               </Button>
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-1">
                 <Calendar className="h-4 w-4 text-primary-foreground/80" />
                 <span className="text-xs text-primary-foreground/80">Active</span>
               </div>
-              <p className="text-2xl md:text-3xl font-bold" data-testid="text-active-count">{activeCount}</p>
+              <p className="text-2xl font-bold" data-testid="text-active-count">{activeCount}</p>
             </div>
             <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-1">
                 <TrendingUp className="h-4 w-4 text-primary-foreground/80" />
                 <span className="text-xs text-primary-foreground/80">Earned</span>
               </div>
-              <p className="text-2xl md:text-3xl font-bold" data-testid="text-total-earned">{formatCurrency(totalEarnings)}</p>
-            </div>
-            <div className="hidden md:block bg-white/15 backdrop-blur rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <CheckCircle2 className="h-4 w-4 text-primary-foreground/80" />
-                <span className="text-xs text-primary-foreground/80">Completed</span>
-              </div>
-              <p className="text-2xl md:text-3xl font-bold" data-testid="text-completed-count">{jobs.filter(j => j.status === "completed").length}</p>
-            </div>
-            <div className="hidden md:block bg-white/15 backdrop-blur rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Briefcase className="h-4 w-4 text-primary-foreground/80" />
-                <span className="text-xs text-primary-foreground/80">Total</span>
-              </div>
-              <p className="text-2xl md:text-3xl font-bold" data-testid="text-total-jobs">{jobs.length}</p>
+              <p className="text-2xl font-bold" data-testid="text-total-earned">{formatCurrency(totalEarnings)}</p>
             </div>
           </div>
         </div>
       </div>
       
-      <div className="flex-1 px-4 md:px-6 lg:px-8 py-6 -mt-4 max-w-7xl mx-auto w-full">
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <Card className="border-0 shadow-md overflow-hidden flex-1">
+      <div className="flex-1 px-4 py-6 -mt-4">
+        <div className="flex flex-col gap-4 mb-6">
+          <Card className="border-0 shadow-md overflow-hidden">
             <CardContent className="p-1">
               <div className="flex gap-1">
                 {filters.map((f) => (
@@ -455,6 +438,134 @@ export default function Jobs() {
               variant={viewMode === "calendar" ? "default" : "ghost"}
               size="sm"
               onClick={() => setViewMode("calendar")}
+              className="flex-1 h-9"
+              data-testid="view-mode-calendar"
+            >
+              <Calendar className="h-4 w-4 mr-1" />
+              Calendar
+            </Button>
+            <Button
+              variant={viewMode === "cards" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("cards")}
+              className="flex-1 h-9"
+              data-testid="view-mode-cards"
+            >
+              <LayoutGrid className="h-4 w-4 mr-1" />
+              Cards
+            </Button>
+          </div>
+
+          <Link href="/jobs/new">
+            <Button className="w-full h-12 bg-gradient-to-r from-primary to-violet-600 shadow-lg" data-testid="button-add-job">
+              <Plus className="h-5 w-5 mr-2" />
+              Add New Job
+            </Button>
+          </Link>
+        </div>
+
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="border-0 shadow-sm">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="h-12 w-12 bg-muted animate-pulse rounded-xl" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-32 bg-muted animate-pulse rounded" />
+                      <div className="h-3 w-24 bg-muted animate-pulse rounded" />
+                      <div className="h-3 w-40 bg-muted animate-pulse rounded" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : showCalendarView ? (
+          <JobsCalendar jobs={filteredJobs} />
+        ) : filteredJobs.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <div className="space-y-3">
+            {filteredJobs.map((job) => (
+              <JobCard key={job.id} job={job} nudges={nudges} onNudgeClick={handleNudgeClick} />
+            ))}
+          </div>
+        )}
+        
+        <div className="h-6" />
+      </div>
+    </div>
+  );
+
+  const renderDesktopLayout = () => (
+    <div className="flex flex-col min-h-full bg-background" data-testid="page-jobs">
+      <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+          <div className="flex items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/10 to-violet-500/10 flex items-center justify-center">
+                <Briefcase className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground" data-testid="page-title">Jobs</h1>
+                <p className="text-sm text-muted-foreground">Manage your work schedule</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-8 pr-6 border-r">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground" data-testid="text-active-count">{activeCount}</p>
+                  <p className="text-xs text-muted-foreground">Active</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground" data-testid="text-total-earned">{formatCurrency(totalEarnings)}</p>
+                  <p className="text-xs text-muted-foreground">Earned</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground" data-testid="text-completed-count">{completedCount}</p>
+                  <p className="text-xs text-muted-foreground">Completed</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground" data-testid="text-total-jobs">{jobs.length}</p>
+                  <p className="text-xs text-muted-foreground">Total</p>
+                </div>
+              </div>
+
+              <Link href="/jobs/new">
+                <Button className="bg-gradient-to-r from-primary to-violet-600 shadow-md" data-testid="button-add-job-header-desktop">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Job
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="flex-1 max-w-7xl mx-auto w-full px-6 lg:px-8 py-6">
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg">
+            {filters.map((f) => (
+              <Button
+                key={f.value}
+                variant={filter === f.value ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setFilter(f.value)}
+                className="h-9"
+                data-testid={`filter-${f.value}`}
+              >
+                {f.label}
+              </Button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
+            <Button
+              variant={viewMode === "calendar" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("calendar")}
               className="h-9"
               data-testid="view-mode-calendar"
             >
@@ -471,34 +582,25 @@ export default function Jobs() {
               <LayoutGrid className="h-4 w-4 mr-1" />
               Cards
             </Button>
-            {!isMobile && (
-              <Button
-                variant={viewMode === "table" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("table")}
-                className="h-9"
-                data-testid="view-mode-table"
-              >
-                <List className="h-4 w-4 mr-1" />
-                Table
-              </Button>
-            )}
-          </div>
-
-          <Link href="/jobs/new" className="md:hidden">
-            <Button className="w-full h-12 bg-gradient-to-r from-primary to-violet-600 shadow-lg" data-testid="button-add-job">
-              <Plus className="h-5 w-5 mr-2" />
-              Add New Job
+            <Button
+              variant={viewMode === "table" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("table")}
+              className="h-9"
+              data-testid="view-mode-table"
+            >
+              <List className="h-4 w-4 mr-1" />
+              Table
             </Button>
-          </Link>
+          </div>
         </div>
 
         {isLoading ? (
           showTableView ? (
             <JobsTableView jobs={[]} isLoading={true} />
           ) : (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
+            <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
                 <Card key={i} className="border-0 shadow-sm">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
@@ -519,10 +621,10 @@ export default function Jobs() {
         ) : filteredJobs.length === 0 ? (
           <EmptyState />
         ) : showTableView ? (
-          <div className="space-y-6">
+          <div className="space-y-8">
             {upcomingJobs.length > 0 && (
               <div>
-                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4 flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
                   Upcoming ({upcomingJobs.length})
                 </h2>
@@ -531,7 +633,7 @@ export default function Jobs() {
             )}
             {pastJobs.length > 0 && (
               <div>
-                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4 flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4" />
                   Past Jobs ({pastJobs.length})
                 </h2>
@@ -540,14 +642,14 @@ export default function Jobs() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-8">
             {upcomingJobs.length > 0 && (
-              <div className={pastJobs.length === 0 ? "lg:col-span-2" : ""}>
-                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+              <div>
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4 flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
                   Upcoming ({upcomingJobs.length})
                 </h2>
-                <div className="space-y-3">
+                <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
                   {upcomingJobs.map((job) => (
                     <JobCard key={job.id} job={job} nudges={nudges} onNudgeClick={handleNudgeClick} />
                   ))}
@@ -556,12 +658,12 @@ export default function Jobs() {
             )}
             
             {pastJobs.length > 0 && (
-              <div className={upcomingJobs.length === 0 ? "lg:col-span-2" : ""}>
-                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+              <div>
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4 flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4" />
                   Past Jobs ({pastJobs.length})
                 </h2>
-                <div className="space-y-3">
+                <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
                   {pastJobs.map((job) => (
                     <JobCard key={job.id} job={job} nudges={nudges} onNudgeClick={handleNudgeClick} />
                   ))}
@@ -570,8 +672,6 @@ export default function Jobs() {
             )}
           </div>
         )}
-        
-        <div className="h-6" />
       </div>
 
       <NudgeActionSheet
@@ -580,5 +680,18 @@ export default function Jobs() {
         onClose={() => setSelectedNudge(null)}
       />
     </div>
+  );
+
+  return (
+    <>
+      {isMobile ? renderMobileLayout() : renderDesktopLayout()}
+      {isMobile && (
+        <NudgeActionSheet
+          nudge={selectedNudge}
+          open={!!selectedNudge}
+          onClose={() => setSelectedNudge(null)}
+        />
+      )}
+    </>
   );
 }
