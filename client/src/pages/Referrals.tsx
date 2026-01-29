@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   Gift,
   Copy,
@@ -18,6 +19,7 @@ import {
   Sparkles,
   Loader2,
   UserPlus,
+  Wallet,
 } from "lucide-react";
 import { format } from "date-fns";
 import type { Referral } from "@shared/schema";
@@ -36,6 +38,34 @@ export default function Referrals() {
 
   const { data: referralData, isLoading } = useQuery<ReferralData>({
     queryKey: ["/api/referrals"],
+  });
+
+  // Calculate redeemable rewards (rewarded but not yet redeemed)
+  const redeemableReferrals = referralData?.referrals?.filter(
+    (r) => r.status === "rewarded" && !r.redeemedAt
+  ) || [];
+  const redeemableAmount = redeemableReferrals.reduce(
+    (sum, r) => sum + (r.rewardAmount || 0),
+    0
+  );
+
+  const redeemMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/referrals/redeem"),
+    onSuccess: async (response) => {
+      const data = await response.json();
+      toast({
+        title: "Rewards redeemed!",
+        description: data.message,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/referrals"] });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to redeem",
+        description: "Please try again later",
+        variant: "destructive",
+      });
+    },
   });
 
   const copyReferralLink = () => {
@@ -218,6 +248,44 @@ export default function Referrals() {
           </Card>
         </div>
 
+        {redeemableAmount > 0 && (
+          <Card className="border-0 shadow-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <Wallet className="h-6 w-6 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-lg">
+                      ${(redeemableAmount / 100).toFixed(2)} Available
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      From {redeemableReferrals.length} referral{redeemableReferrals.length !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => redeemMutation.mutate()}
+                  disabled={redeemMutation.isPending}
+                  className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                  data-testid="button-redeem-rewards"
+                >
+                  {redeemMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Gift className="h-4 w-4 mr-2" />
+                  )}
+                  Redeem
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                Credit will be applied to your next subscription invoice
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="border-0 shadow-md">
           <CardContent className="p-4">
             <h3 className="font-semibold mb-4 flex items-center gap-2">
@@ -268,9 +336,21 @@ export default function Referrals() {
                         Joined {referral.createdAt ? format(new Date(referral.createdAt), "MMM d, yyyy") : "recently"}
                       </p>
                     </div>
-                    {referral.rewardAmount && referral.rewardAmount > 0 && (
+                    {referral.status === "redeemed" ? (
+                      <Badge variant="secondary" className="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                        Redeemed
+                      </Badge>
+                    ) : referral.status === "rewarded" && referral.rewardAmount && referral.rewardAmount > 0 ? (
                       <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                         +${(referral.rewardAmount / 100).toFixed(2)}
+                      </Badge>
+                    ) : referral.status === "signed_up" ? (
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                        Signed Up
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+                        Pending
                       </Badge>
                     )}
                   </div>

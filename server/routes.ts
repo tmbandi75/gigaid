@@ -3826,6 +3826,18 @@ export async function registerRoutes(
         return res.status(400).json({ error: "No credit amount available" });
       }
 
+      // Mark referrals as redeemed FIRST to prevent race conditions
+      // This makes the operation idempotent - if we crash after this,
+      // re-running won't double-apply credits
+      const now = new Date().toISOString();
+      const referralIds = unredeemed.map((r) => r.id);
+      for (const referral of unredeemed) {
+        await storage.updateReferral(referral.id, {
+          status: "redeemed",
+          redeemedAt: now,
+        });
+      }
+
       // Apply credit to Stripe customer balance if user has Stripe customer
       const { STRIPE_ENABLED } = await import("@shared/stripeConfig");
       let stripeApplied = false;
@@ -3836,25 +3848,22 @@ export async function registerRoutes(
           const stripe = await getUncachableStripeClient();
           
           // Add credit to customer balance (negative value = credit)
+          // Include referral IDs in metadata for idempotency tracking
           await stripe.customers.createBalanceTransaction(user.stripeCustomerId, {
             amount: -totalCredit, // Negative = credit to customer
             currency: "usd",
             description: `Referral rewards credit - ${unredeemed.length} referral(s)`,
+            metadata: {
+              referralIds: referralIds.join(","),
+              userId: userId,
+            },
           });
           stripeApplied = true;
         } catch (stripeError) {
           console.error("Failed to apply Stripe credit:", stripeError);
-          // Continue without Stripe - will track in subscriptionCredit field
+          // Stripe failed but referrals are already marked redeemed
+          // Track credit locally as fallback
         }
-      }
-
-      // Mark all referrals as redeemed
-      const now = new Date().toISOString();
-      for (const referral of unredeemed) {
-        await storage.updateReferral(referral.id, {
-          status: "redeemed",
-          redeemedAt: now,
-        });
       }
 
       // Update user's subscription credit balance if Stripe wasn't used
