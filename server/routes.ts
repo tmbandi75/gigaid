@@ -3797,6 +3797,89 @@ export async function registerRoutes(
     }
   });
 
+  // Redeem referral rewards as subscription credit
+  app.post("/api/referrals/redeem", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Get all rewarded referrals that haven't been redeemed
+      const referrals = await storage.getReferrals(userId);
+      const unredeemed = referrals.filter(
+        (r) => r.status === "rewarded" && !r.redeemedAt
+      );
+
+      if (unredeemed.length === 0) {
+        return res.status(400).json({ error: "No rewards available to redeem" });
+      }
+
+      // Calculate total credit amount
+      const totalCredit = unredeemed.reduce(
+        (sum, r) => sum + (r.rewardAmount || 0),
+        0
+      );
+
+      if (totalCredit <= 0) {
+        return res.status(400).json({ error: "No credit amount available" });
+      }
+
+      // Apply credit to Stripe customer balance if user has Stripe customer
+      const { STRIPE_ENABLED } = await import("@shared/stripeConfig");
+      let stripeApplied = false;
+
+      if (STRIPE_ENABLED && user.stripeCustomerId) {
+        try {
+          const { getUncachableStripeClient } = await import("./stripeClient");
+          const stripe = await getUncachableStripeClient();
+          
+          // Add credit to customer balance (negative value = credit)
+          await stripe.customers.createBalanceTransaction(user.stripeCustomerId, {
+            amount: -totalCredit, // Negative = credit to customer
+            currency: "usd",
+            description: `Referral rewards credit - ${unredeemed.length} referral(s)`,
+          });
+          stripeApplied = true;
+        } catch (stripeError) {
+          console.error("Failed to apply Stripe credit:", stripeError);
+          // Continue without Stripe - will track in subscriptionCredit field
+        }
+      }
+
+      // Mark all referrals as redeemed
+      const now = new Date().toISOString();
+      for (const referral of unredeemed) {
+        await storage.updateReferral(referral.id, {
+          status: "redeemed",
+          redeemedAt: now,
+        });
+      }
+
+      // Update user's subscription credit balance if Stripe wasn't used
+      if (!stripeApplied) {
+        const currentCredit = user.subscriptionCredit || 0;
+        await storage.updateUser(userId, {
+          subscriptionCredit: currentCredit + totalCredit,
+        });
+      }
+
+      res.json({
+        success: true,
+        creditAmount: totalCredit,
+        redeemedCount: unredeemed.length,
+        appliedToStripe: stripeApplied,
+        message: stripeApplied
+          ? `$${(totalCredit / 100).toFixed(2)} credit applied to your next invoice`
+          : `$${(totalCredit / 100).toFixed(2)} credit saved to your account`,
+      });
+    } catch (error) {
+      console.error("Failed to redeem referral rewards:", error);
+      res.status(500).json({ error: "Failed to redeem rewards" });
+    }
+  });
+
   // Booking Requests
   app.get("/api/booking-requests", isAuthenticated, async (req, res) => {
     try {
