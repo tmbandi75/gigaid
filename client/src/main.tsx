@@ -2,6 +2,20 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 
+// Force clear old caches on startup
+async function clearOldCaches() {
+  if ('caches' in window) {
+    const cacheNames = await caches.keys();
+    const oldCaches = cacheNames.filter(name => !name.includes('v13'));
+    await Promise.all(oldCaches.map(name => caches.delete(name)));
+    if (oldCaches.length > 0) {
+      console.log('[Cache] Cleared old caches:', oldCaches);
+    }
+  }
+}
+
+clearOldCaches();
+
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) {
     return;
