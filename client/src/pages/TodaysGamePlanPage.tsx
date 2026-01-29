@@ -28,6 +28,7 @@ import {
   X,
   Zap,
   Target,
+  Wrench,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -196,6 +197,18 @@ export default function TodaysGamePlanPage() {
     refetchOnWindowFocus: true,
   });
 
+  const { data: profile } = useQuery<{ services: string[] | null }>({
+    queryKey: ["/api/profile"],
+  });
+
+  const { data: dashboardSummary } = useQuery<{ totalJobs: number; completedJobs: number }>({
+    queryKey: ["/api/dashboard/summary"],
+  });
+
+  const { data: invoices } = useQuery<{ id: string }[]>({
+    queryKey: ["/api/invoices"],
+  });
+
   const actMutation = useMutation({
     mutationFn: (id: string) => apiRequest("POST", `/api/next-actions/${id}/act`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] }),
@@ -220,6 +233,27 @@ export default function TodaysGamePlanPage() {
     stats: { jobsToday: 0, moneyCollectedToday: 0, moneyWaiting: 0, messagesToSend: 0 },
     recentlyCompleted: [],
   };
+
+  const servicesCount = profile?.services?.length || 0;
+  const totalJobs = dashboardSummary?.totalJobs || 0;
+  const totalInvoices = invoices?.length || 0;
+
+  type FirstTimeUserState = "no_services" | "no_jobs" | "no_invoices" | "normal";
+  
+  const getFirstTimeUserState = (): FirstTimeUserState => {
+    if (servicesCount === 0 && totalJobs === 0 && totalInvoices === 0) {
+      return "no_services";
+    }
+    if (servicesCount > 0 && totalJobs === 0) {
+      return "no_jobs";
+    }
+    if (totalJobs > 0 && totalInvoices === 0) {
+      return "no_invoices";
+    }
+    return "normal";
+  };
+
+  const firstTimeUserState = getFirstTimeUserState();
 
   function renderMobileHeader() {
     return (
@@ -263,10 +297,118 @@ export default function TodaysGamePlanPage() {
 
         <motion.section variants={itemVariants} aria-labelledby="do-this-first">
           <h2 id="do-this-first" className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-            Do This First
+            {firstTimeUserState === "no_services" ? "Start here" : "Do This First"}
           </h2>
           <AnimatePresence mode="wait">
-            {priorityItem ? (
+            {firstTimeUserState === "no_services" ? (
+              <motion.div
+                key="add-service"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+              >
+                <Card
+                  className="border-0 shadow-md overflow-hidden border-l-4 border-l-primary"
+                  data-testid="card-add-first-service"
+                >
+                  <CardContent className="p-4 lg:p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-primary">
+                        <Wrench className="h-6 w-6 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-foreground text-lg">
+                          Add your first service
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Tell GigAid what kind of work you do so we can help you book jobs and get paid.
+                        </p>
+                        <Button
+                          className="mt-4"
+                          onClick={() => navigate("/settings")}
+                          data-testid="button-add-first-service"
+                        >
+                          Add a service
+                          <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ) : firstTimeUserState === "no_jobs" ? (
+              <motion.div
+                key="add-job"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+              >
+                <Card
+                  className="border-0 shadow-md overflow-hidden border-l-4 border-l-blue-500"
+                  data-testid="card-add-first-job"
+                >
+                  <CardContent className="p-4 lg:p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-blue-500">
+                        <Briefcase className="h-6 w-6 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-foreground text-lg">
+                          Create your first job
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Add a job to start tracking your work and getting paid.
+                        </p>
+                        <Button
+                          className="mt-4"
+                          onClick={() => navigate("/jobs/new")}
+                          data-testid="button-add-first-job"
+                        >
+                          Create a job
+                          <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ) : firstTimeUserState === "no_invoices" ? (
+              <motion.div
+                key="add-invoice"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+              >
+                <Card
+                  className="border-0 shadow-md overflow-hidden border-l-4 border-l-emerald-500"
+                  data-testid="card-add-first-invoice"
+                >
+                  <CardContent className="p-4 lg:p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-emerald-500">
+                        <DollarSign className="h-6 w-6 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-foreground text-lg">
+                          Create your first invoice
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Send an invoice to get paid for your work.
+                        </p>
+                        <Button
+                          className="mt-4"
+                          onClick={() => navigate("/invoices/new")}
+                          data-testid="button-add-first-invoice"
+                        >
+                          Create invoice
+                          <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ) : priorityItem ? (
               <motion.div
                 key="priority"
                 initial={{ opacity: 0, scale: 0.98 }}
