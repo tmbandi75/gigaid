@@ -94,6 +94,7 @@ export const users = pgTable("users", {
   plan: text("plan").default("free"), // free, pro, pro_plus, business
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
+  subscriptionCredit: integer("subscription_credit").default(0), // Credit balance in cents from referral rewards
   
   // Firebase Auth fields for mobile authentication
   firebaseUid: text("firebase_uid").unique(),
@@ -603,10 +604,11 @@ export const referrals = pgTable("referrals", {
   referredEmail: text("referred_email"),
   referredPhone: text("referred_phone"),
   referredUserId: text("referred_user_id"),
-  status: text("status").notNull().default("pending"), // pending, signed_up, rewarded
+  status: text("status").notNull().default("pending"), // pending, signed_up, rewarded, redeemed
   rewardAmount: integer("reward_amount").default(0),
   createdAt: text("created_at").notNull(),
   convertedAt: text("converted_at"),
+  redeemedAt: text("redeemed_at"), // When reward was redeemed for subscription credit
 });
 
 export const insertReferralSchema = createInsertSchema(referrals).omit({
