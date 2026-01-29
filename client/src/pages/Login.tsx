@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, initializeRedirectResultHandler, getFirebaseAuth } from "@/lib/firebase";
 import { setAuthToken, clearAuthToken } from "@/lib/authToken";
@@ -42,6 +42,8 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const redirectHandledRef = useRef(false);
 
   const exchangeTokenAndNavigate = async (idToken: string) => {
@@ -281,6 +283,11 @@ export default function Login() {
                   ? "Join GigAid™" 
                   : "Welcome to GigAid™"}
             </h1>
+            {mode === "signin" && (
+              <p className="text-white/85 text-base font-medium mt-2">
+                Book jobs faster. Get paid upfront. Stay organized.
+              </p>
+            )}
             {mode === "forgot" && (
               <p className="text-white/70 text-sm">We'll send you a reset link</p>
             )}
@@ -326,26 +333,48 @@ export default function Login() {
             
             {mode !== "forgot" && (
               <>
-                <Input
-                  type="password"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isDisabled}
-                  className="h-12 bg-white/90 border-0 rounded-full px-5 text-gray-700 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-white/50"
-                  data-testid="input-password"
-                />
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isDisabled}
+                    className="h-12 bg-white/90 border-0 rounded-full px-5 pr-12 text-gray-700 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-white/50"
+                    data-testid="input-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors p-1"
+                    data-testid="button-toggle-password-visibility"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
                 
                 {mode === "signup" && (
-                  <Input
-                    type="password"
-                    placeholder="Confirm Password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    disabled={isDisabled}
-                    className="h-12 bg-white/90 border-0 rounded-full px-5 text-gray-700 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-white/50"
-                    data-testid="input-confirm-password"
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Confirm Password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      disabled={isDisabled}
+                      className="h-12 bg-white/90 border-0 rounded-full px-5 pr-12 text-gray-700 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-white/50"
+                      data-testid="input-confirm-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors p-1"
+                      data-testid="button-toggle-confirm-password-visibility"
+                      aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
                 )}
               </>
             )}
@@ -374,7 +403,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => setMode("forgot")}
-                className="text-white/80 hover:text-white text-sm transition-colors"
+                className="text-white/90 hover:text-white hover:underline text-sm font-medium transition-colors"
                 data-testid="button-forgot-password"
               >
                 Forgot password?
