@@ -1,0 +1,135 @@
+Replit Agent Prompt — Redesign Onboarding Page to Match Login Visual Style
+
+IMPORTANT: This is a visual + layout redesign only.
+Do NOT change onboarding logic, completion rules, routing, or backend behavior.
+
+📌 Context
+
+The GigAid login page uses:
+
+Rich purple gradient background
+
+Soft blurred color accents
+
+High contrast white typography
+
+Modern, polished SaaS aesthetic
+
+The onboarding page currently feels dull and colorless in comparison, creating a visual disconnect after login.
+
+🎯 Objective
+
+Redesign the onboarding page so it:
+
+Visually matches the login page’s color palette and energy
+
+Feels modern, welcoming, and motivating
+
+Improves perceived quality and excitement
+
+Keeps all existing onboarding steps and logic intact
+
+🎨 Visual Design Requirements (Very Explicit)
+1. Background & Color System
+
+Reuse the same or very similar gradient used on the login page
+
+Include soft blurred accent shapes (low opacity) for depth
+
+Avoid flat gray or white backgrounds
+
+Maintain high contrast for readability
+
+2. Layout & Structure
+
+Center the onboarding content inside a card-style container
+
+Card should:
+
+Have subtle rounding
+
+Use a soft shadow or glow
+
+Stand out against the gradient background
+
+Maintain current step order and flow
+
+3. Typography & Hierarchy
+
+Large, friendly headline at top (white or near-white)
+
+Clear subtext explaining the step purpose
+
+Strong visual hierarchy:
+
+Headline
+
+Supporting text
+
+Primary CTA
+
+Avoid small, low-contrast text
+
+4. Buttons & CTAs
+
+Primary CTA should:
+
+Use the same button styling as login
+
+Be visually prominent
+
+Feel tappable and confident
+
+Secondary actions should be visually subordinate
+
+5. Progress Feedback (If Already Present)
+
+If a progress indicator exists:
+
+Redesign it to match the new color palette
+
+Use color fills, subtle glow, or gradient accents
+
+Do NOT add new steps or logic
+
+✏️ Copy Guidance (Optional but Allowed)
+
+Keep copy concise and encouraging
+
+Tone: supportive, confident, not corporate
+
+No jokes, no fluff
+
+🚫 Non-Goals (Strict)
+
+Do NOT change onboarding steps
+
+Do NOT add or remove questions
+
+Do NOT change validation rules
+
+Do NOT modify navigation or completion behavior
+
+Do NOT introduce new APIs or state
+
+🧪 Acceptance Criteria
+
+Onboarding page visually feels like part of the same product as login
+
+No dull or flat sections remain
+
+Mobile and desktop both look polished
+
+Existing onboarding logic works exactly as before
+
+📝 Implementation Notes
+
+Reuse existing CSS / Tailwind tokens where possible
+
+If gradients already exist, extend them instead of inventing new ones
+
+Keep changes localized to onboarding components
+
+🔒 Final Instruction
+
+This is a visual redesign to elevate first impressions, not a functional rewrite.

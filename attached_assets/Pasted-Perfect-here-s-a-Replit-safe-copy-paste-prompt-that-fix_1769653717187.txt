@@ -1,0 +1,151 @@
+Perfect — here’s a **Replit-safe, copy-paste prompt** that fixes this **without blowing up onboarding, auth, or navigation**.
+This is written to keep the agent tightly scoped and deterministic.
+
+---
+
+## ✅ Replit Agent Prompt — Fix “Today’s Game Plan” First-Time User Logic
+
+> **IMPORTANT:** This is a **logic + copy fix only**.
+> **Do NOT change database schema, APIs, auth, billing, or routing.**
+
+---
+
+### 📌 Context
+
+On first login, **new users with no services, jobs, or invoices** are currently shown:
+
+> **Do This First → Create New Invoice**
+
+This is incorrect and confusing for first-time users.
+
+We need to update **Today’s Game Plan** so the **primary CTA is context-aware** based on user state.
+
+---
+
+### 🎯 Objective
+
+Ensure that first-time users are guided through a **natural setup order**:
+
+1. Services
+2. Jobs
+3. Invoices
+
+---
+
+### 🧠 Required Logic (Very Explicit)
+
+Update the logic that determines the **primary “Do This First / Start Here” card** using the following rules:
+
+#### Rule 1 — Brand New User
+
+```
+IF user has:
+- 0 services
+- 0 jobs
+- 0 invoices
+```
+
+**Show:**
+
+* Title: `Start here`
+* Primary CTA: **Add your first service**
+* Helper text (optional):
+
+  > Tell GigAid what kind of work you do so we can help you book jobs and get paid.
+
+CTA action:
+
+* Navigate to **Add Service** flow (existing route)
+
+---
+
+#### Rule 2 — Services Exist, No Jobs
+
+```
+IF user has:
+- ≥1 service
+- 0 jobs
+```
+
+**Show:**
+
+* Primary CTA: **Create your first job**
+* CTA navigates to existing “New Job” flow
+
+---
+
+#### Rule 3 — Jobs Exist, No Invoices
+
+```
+IF user has:
+- ≥1 job
+- 0 invoices
+```
+
+**Show:**
+
+* Primary CTA: **Create invoice**
+* CTA navigates to existing invoice creation flow
+
+---
+
+#### Rule 4 — Normal State
+
+```
+IF user has:
+- jobs AND invoices
+```
+
+**Show:**
+
+* Existing Today’s Game Plan logic (unchanged)
+
+---
+
+### ✏️ Copy Changes (Minimal)
+
+* Replace “Do This First” with **“Start here”** for Rule 1 only
+* Keep existing wording for other states unless already present
+
+---
+
+### 🚫 Non-Goals (Do NOT Do These)
+
+* Do NOT add new onboarding screens
+* Do NOT change pricing gates
+* Do NOT add new APIs
+* Do NOT modify backend logic
+* Do NOT change database schema
+* Do NOT introduce new UI components unless strictly necessary
+
+---
+
+### 🧪 Acceptance Criteria
+
+* Brand-new users never see “Create Invoice” as their first action
+* First CTA always makes sense for user state
+* Existing users see no regressions
+* Logic is deterministic and testable
+
+---
+
+### 📝 Implementation Notes
+
+* Use existing user data already loaded in Today’s Game Plan
+* Prefer simple conditional guards over refactors
+* Keep changes localized to the Game Plan component / logic
+
+---
+
+### 🔒 Final Instruction
+
+This is a **behavior fix**, not a redesign.
+Preserve all existing layout, styles, and flows.
+
+---
+
+If you want next, I can:
+
+* Add a **“First Job in 5 Minutes” progress indicator**
+* Write **unit tests for this decision tree**
+* Help you define the **activation milestone** that flips users out of onboarding mode
