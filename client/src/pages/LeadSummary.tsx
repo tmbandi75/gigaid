@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest } from "@/lib/queryClient";
 import {
   ArrowLeft,
@@ -12,6 +13,7 @@ import {
   Phone,
   Mail,
   User,
+  UserPlus,
   Briefcase,
   MessageCircle,
   FileText,
@@ -71,6 +73,7 @@ export default function LeadSummary() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
 
   const { data: lead, isLoading } = useQuery<Lead>({
     queryKey: ["/api/leads", id],
@@ -181,57 +184,90 @@ export default function LeadSummary() {
   const priceConfirmationStatus = activePriceConfirmation?.status;
   const pcStatus = priceConfirmationStatus ? priceConfirmationStatusConfig[priceConfirmationStatus] : null;
 
-  return (
-    <div className="min-h-screen bg-background pb-24" data-testid="page-lead-summary">
-      <div className="relative overflow-hidden bg-gradient-to-br from-teal-500 via-teal-600 to-emerald-600 text-white px-4 pt-6 pb-16">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 -left-10 w-32 h-32 bg-emerald-400/20 rounded-full blur-2xl" />
+  const renderMobileHeader = () => (
+    <div className="relative overflow-hidden bg-gradient-to-br from-teal-500 via-teal-600 to-emerald-600 text-white px-4 pt-6 pb-16">
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 -left-10 w-32 h-32 bg-emerald-400/20 rounded-full blur-2xl" />
+      </div>
+      
+      <div className="relative">
+        <div className="flex items-center justify-between mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/leads")}
+            className="text-white hover:bg-white/20 -ml-2"
+            data-testid="button-back"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate(`/leads/${id}/edit`)}
+            data-testid="button-edit"
+          >
+            <Edit className="h-4 w-4 mr-1" />
+            Edit
+          </Button>
         </div>
         
-        <div className="relative">
-          <div className="flex items-center justify-between mb-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/leads")}
-              className="text-white hover:bg-white/20 -ml-2"
-              data-testid="button-back"
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => navigate(`/leads/${id}/edit`)}
-              data-testid="button-edit"
-            >
-              <Edit className="h-4 w-4 mr-1" />
-              Edit
-            </Button>
+        <div className="flex items-start gap-3">
+          <div className="h-12 w-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
+            <User className="h-6 w-6" />
           </div>
-          
-          <div className="flex items-start gap-3">
-            <div className="h-12 w-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
-              <User className="h-6 w-6" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-bold truncate" data-testid="text-client-name">{lead.clientName}</h1>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <Badge className={`${status.bgColor} ${status.color} border-0`} data-testid="badge-status">
-                  {status.label}
-                </Badge>
-                <Badge variant="secondary" className="bg-white/20 text-white border-0" data-testid="badge-source">
-                  {source.label}
-                </Badge>
-              </div>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-bold truncate" data-testid="text-client-name">{lead.clientName}</h1>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <Badge className={`${status.bgColor} ${status.color} border-0`} data-testid="badge-status">
+                {status.label}
+              </Badge>
+              <Badge variant="secondary" className="bg-white/20 text-white border-0" data-testid="badge-source">
+                {source.label}
+              </Badge>
             </div>
           </div>
         </div>
       </div>
+    </div>
+  );
 
-      <div className="px-4 -mt-8 relative z-10 space-y-4">
+  const renderDesktopHeader = () => (
+    <div className="border-b bg-background sticky top-0 z-[999]" data-testid="desktop-header">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shrink-0">
+            <UserPlus className="h-6 w-6 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl font-bold truncate" data-testid="text-client-name">{lead.clientName}</h1>
+            <div className="flex items-center gap-2 mt-1">
+              <Badge className={`${status.bgColor} ${status.color} border-0`} data-testid="badge-status">
+                {status.label}
+              </Badge>
+            </div>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate(`/leads/${id}/edit`)}
+            data-testid="button-edit-desktop"
+          >
+            <Edit className="h-4 w-4 mr-1" />
+            Edit
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className={`min-h-screen bg-background ${isMobile ? "pb-24" : "pb-8"}`} data-testid="page-lead-summary">
+      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
+
+      <div className={`${isMobile ? "px-4 -mt-8 relative z-10" : "max-w-7xl mx-auto px-6 lg:px-8 py-8"} space-y-4`}>
         <IntentActionCard entityType="lead" entityId={id!} />
         <NextActionBanner entityType="lead" entityId={id!} />
         

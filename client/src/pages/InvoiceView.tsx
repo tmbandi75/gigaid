@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -146,6 +147,7 @@ export default function InvoiceView() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("cash");
   const [copied, setCopied] = useState(false);
@@ -332,9 +334,8 @@ export default function InvoiceView() {
   const discount = invoice.discount || 0;
   const total = subtotal + tax - discount;
 
-  return (
-    <div className="flex flex-col min-h-full bg-background" data-testid="page-invoice-view">
-      <div className={`relative overflow-hidden bg-gradient-to-br ${config.gradient} text-white px-4 pt-4 pb-6`}>
+  const renderMobileHeader = () => (
+    <div className={`relative overflow-hidden bg-gradient-to-br ${config.gradient} text-white px-4 pt-4 pb-6`}>
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-20 -right-20 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
           <div className="absolute bottom-0 -left-20 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
@@ -391,8 +392,29 @@ export default function InvoiceView() {
           </div>
         </div>
       </div>
+  );
+
+  const renderDesktopHeader = () => (
+    <div className="border-b bg-background sticky top-0 z-[999]">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/10 flex items-center justify-center">
+            <FileText className="h-6 w-6 text-blue-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Invoice #{invoice.invoiceNumber}</h1>
+            <p className="text-sm text-muted-foreground">{config.description}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col min-h-full bg-background" data-testid="page-invoice-view">
+      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
       
-      <div className="flex-1 px-4 pt-4 pb-6 space-y-4">
+      <div className={`flex-1 ${isMobile ? 'px-4 pt-4 pb-6' : 'max-w-7xl mx-auto w-full px-6 lg:px-8 pt-6 pb-8'} space-y-4`}>
         <NextActionBanner entityType="invoice" entityId={id!} />
         
         {featureFlag?.enabled && nudges.length > 0 && (

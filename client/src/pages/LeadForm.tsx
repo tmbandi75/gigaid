@@ -34,8 +34,9 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Loader2, DollarSign, Send, Check, Clock, Eye, ExternalLink } from "lucide-react";
+import { ArrowLeft, Loader2, DollarSign, Send, Check, Clock, Eye, ExternalLink, UserPlus } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { ServiceTypeSelect } from "@/components/ui/service-type-select";
 import type { Lead, PriceConfirmation } from "@shared/schema";
@@ -69,6 +70,7 @@ export default function LeadForm() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [priceDialogOpen, setPriceDialogOpen] = useState(false);
   const [priceAmount, setPriceAmount] = useState("");
   const [priceNotes, setPriceNotes] = useState("");
@@ -244,6 +246,23 @@ export default function LeadForm() {
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
+  const renderMobileHeader = () => (
+    <TopBar title={isEditing ? "Edit Lead" : "New Lead"} showActions={false} />
+  );
+
+  const renderDesktopHeader = () => (
+    <div className="border-b bg-background sticky top-0 z-[999]">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5 flex items-center gap-4">
+        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+          <UserPlus className="h-6 w-6 text-white" />
+        </div>
+        <h1 className="text-2xl font-bold text-foreground">
+          {isEditing ? "Edit Lead" : "New Lead"}
+        </h1>
+      </div>
+    </div>
+  );
+
   if (isEditing && isLoadingLead) {
     return (
       <div className="flex flex-col min-h-full">
@@ -257,30 +276,32 @@ export default function LeadForm() {
 
   return (
     <div className="flex flex-col min-h-full" data-testid="page-lead-form">
-      <TopBar title={isEditing ? "Edit Lead" : "New Lead"} showActions={false} />
+      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
       
-      <div className="px-4 py-4 lg:px-8 lg:max-w-5xl lg:mx-auto">
-        <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate(isEditing ? `/leads/${id}` : "/leads")}
-            className="-ml-2"
-            data-testid="button-back"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back
-          </Button>
-          
-          {isEditing && existingLead?.sourceUrl && (
-            <a href={existingLead.sourceUrl} target="_blank" rel="noopener noreferrer">
-              <Button variant="default" size="sm" className="bg-blue-600" data-testid="button-open-source">
-                <ExternalLink className="h-4 w-4 mr-1" />
-                Open original post
-              </Button>
-            </a>
-          )}
-        </div>
+      <div className={`flex-1 ${isMobile ? "px-4 py-4" : "px-6 lg:px-8 lg:max-w-7xl lg:mx-auto"} ${isMobile ? "pb-6" : "pb-12"}`}>
+        {isMobile && (
+          <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(isEditing ? `/leads/${id}` : "/leads")}
+              className="-ml-2"
+              data-testid="button-back"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back
+            </Button>
+            
+            {isEditing && existingLead?.sourceUrl && (
+              <a href={existingLead.sourceUrl} target="_blank" rel="noopener noreferrer">
+                <Button variant="default" size="sm" className="bg-blue-600" data-testid="button-open-source">
+                  <ExternalLink className="h-4 w-4 mr-1" />
+                  Open original post
+                </Button>
+              </a>
+            )}
+          </div>
+        )}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

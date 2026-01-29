@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { TopBar } from "@/components/layout/TopBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,7 +37,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Loader2, Send, CheckCircle, Mail, MessageSquare, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Loader2, Send, CheckCircle, Mail, MessageSquare, AlertTriangle, FileText } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import type { Invoice } from "@shared/schema";
 
@@ -64,6 +65,7 @@ export default function InvoiceForm() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [sendViaEmail, setSendViaEmail] = useState(true);
   const [sendViaSms, setSendViaSms] = useState(true);
@@ -220,6 +222,30 @@ export default function InvoiceForm() {
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
+  const renderMobileHeader = () => (
+    <TopBar title={isEditing ? `Invoice #${existingInvoice?.invoiceNumber}` : "New Invoice"} showActions={false} />
+  );
+
+  const renderDesktopHeader = () => (
+    <div className="border-b bg-background sticky top-0 z-[999]">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/10 flex items-center justify-center">
+            <FileText className="h-6 w-6 text-blue-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground" data-testid="page-title">
+              {isEditing ? "Edit Invoice" : "New Invoice"}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {isEditing ? `Invoice #${existingInvoice?.invoiceNumber}` : "Create a new invoice"}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   if (isEditing && isLoadingInvoice) {
     return (
       <div className="flex flex-col min-h-full">
@@ -233,19 +259,21 @@ export default function InvoiceForm() {
 
   return (
     <div className="flex flex-col min-h-full" data-testid="page-invoice-form">
-      <TopBar title={isEditing ? `Invoice #${existingInvoice?.invoiceNumber}` : "New Invoice"} showActions={false} />
+      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
       
-      <div className="px-4 py-4 lg:px-8 lg:max-w-5xl lg:mx-auto">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate("/invoices")}
-          className="mb-4 -ml-2"
-          data-testid="button-back"
-        >
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Back
-        </Button>
+      <div className={isMobile ? "px-4 py-4 pb-8" : "px-6 lg:px-8 max-w-7xl mx-auto w-full py-6"}>
+        {isMobile && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/invoices")}
+            className="mb-4 -ml-2"
+            data-testid="button-back"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+        )}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

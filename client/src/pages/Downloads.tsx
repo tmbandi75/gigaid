@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Download, FileJson, FileCode, Loader2 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DownloadFile {
   id: string;
@@ -14,6 +15,7 @@ interface DownloadFile {
 }
 
 export default function Downloads() {
+  const isMobile = useIsMobile();
   const { data, isLoading } = useQuery<{ files: DownloadFile[] }>({
     queryKey: ["/api/downloads"],
   });
@@ -38,6 +40,37 @@ export default function Downloads() {
     }
   };
 
+  const renderMobileHeader = () => (
+    <div className="px-4 py-6">
+      <h1 className="text-3xl font-bold tracking-tight" data-testid="text-downloads-title">
+        Downloads
+      </h1>
+      <p className="text-muted-foreground mt-2">
+        Download GigAid project files including architecture diagrams and configuration files.
+      </p>
+    </div>
+  );
+
+  const renderDesktopHeader = () => (
+    <div className="border-b bg-background sticky top-0 z-[999]">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 flex items-center justify-center">
+            <Download className="h-6 w-6 text-blue-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground" data-testid="text-downloads-title">
+              Downloads
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Download GigAid project files including architecture diagrams and configuration files.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -47,64 +80,62 @@ export default function Downloads() {
   }
 
   return (
-    <div className="container max-w-4xl mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight" data-testid="text-downloads-title">
-          Downloads
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Download GigAid project files including architecture diagrams and configuration files.
-        </p>
-      </div>
+    <div className="flex flex-col min-h-full bg-background" data-testid="page-downloads">
+      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
 
-      <div className="grid gap-4">
-        {data?.files.map((file) => (
-          <Card key={file.id} className="hover-elevate" data-testid={`card-download-${file.id}`}>
-            <CardHeader className="flex flex-row items-center gap-4 pb-2">
-              {getFileIcon(file.type)}
-              <div className="flex-1">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  {file.name}
-                  <Badge variant="secondary" className="text-xs">
-                    {file.type.toUpperCase()}
-                  </Badge>
-                </CardTitle>
-                <CardDescription>{file.description}</CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent className="flex items-center justify-between pt-0">
-              <span className="text-sm text-muted-foreground">{file.size}</span>
-              <Button
-                onClick={() => handleDownload(file)}
-                size="sm"
-                data-testid={`button-download-${file.id}`}
+      <div className={isMobile ? "flex-1 px-4 py-6 space-y-4" : "flex-1 max-w-7xl mx-auto w-full px-6 lg:px-8 py-6"}>
+        <div className="grid gap-4">
+          {data?.files.map((file) => (
+            <Card key={file.id} className="hover-elevate" data-testid={`card-download-${file.id}`}>
+              <CardHeader className="flex flex-row items-center gap-4 pb-2">
+                {getFileIcon(file.type)}
+                <div className="flex-1">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    {file.name}
+                    <Badge variant="secondary" className="text-xs">
+                      {file.type.toUpperCase()}
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription>{file.description}</CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent className="flex items-center justify-between pt-0">
+                <span className="text-sm text-muted-foreground">{file.size}</span>
+                <Button
+                  onClick={() => handleDownload(file)}
+                  size="sm"
+                  data-testid={`button-download-${file.id}`}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="mt-8 p-4 bg-muted rounded-lg">
+          <h2 className="font-semibold mb-2">About these files</h2>
+          <ul className="text-sm text-muted-foreground space-y-1">
+            <li>
+              <strong>DOT files</strong> can be visualized using Graphviz or online tools like{" "}
+              <a
+                href="https://dreampuf.github.io/GraphvizOnline/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
               >
-                <Download className="h-4 w-4 mr-2" />
-                Download
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                Graphviz Online
+              </a>
+            </li>
+            <li>
+              <strong>JSON files</strong> contain structured data about the project configuration and data models
+            </li>
+          </ul>
+        </div>
 
-      <div className="mt-8 p-4 bg-muted rounded-lg">
-        <h2 className="font-semibold mb-2">About these files</h2>
-        <ul className="text-sm text-muted-foreground space-y-1">
-          <li>
-            <strong>DOT files</strong> can be visualized using Graphviz or online tools like{" "}
-            <a
-              href="https://dreampuf.github.io/GraphvizOnline/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              Graphviz Online
-            </a>
-          </li>
-          <li>
-            <strong>JSON files</strong> contain structured data about the project configuration and data models
-          </li>
-        </ul>
+        {/* Extra padding to clear the fixed bottom navigation bar */}
+        <div className={isMobile ? "h-20" : "h-8"} />
       </div>
     </div>
   );

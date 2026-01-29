@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest } from "@/lib/queryClient";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -23,7 +24,8 @@ import {
   MapPin,
   Lock,
   DollarSign,
-  Wallet
+  Wallet,
+  ArrowLeft
 } from "lucide-react";
 import {
   Dialog,
@@ -310,6 +312,7 @@ export default function CustomerBookingDetail() {
   const { token } = useParams<{ token: string }>();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [showIssueDialog, setShowIssueDialog] = useState(false);
   const [issueDescription, setIssueDescription] = useState("");
 
@@ -409,6 +412,45 @@ export default function CustomerBookingDetail() {
     }
   };
 
+  const renderMobileHeader = () => (
+    <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-cyan-800 text-white px-4 pt-6 pb-8">
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 -left-10 w-32 h-32 bg-blue-400/10 rounded-full blur-2xl" />
+      </div>
+      <div className="relative">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => window.history.back()}
+          className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
+          data-testid="button-back"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back
+        </Button>
+        <h1 className="text-2xl font-bold">Your Booking</h1>
+        <p className="text-blue-100/80 mt-1">Service booking details</p>
+      </div>
+    </div>
+  );
+
+  const renderDesktopHeader = () => (
+    <div className="border-b bg-background sticky top-0 z-[999]">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-600 via-blue-700 to-cyan-800 flex items-center justify-center">
+            <Calendar className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Booking Details</h1>
+            <p className="text-sm text-muted-foreground">Service booking information</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -443,14 +485,10 @@ export default function CustomerBookingDetail() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-2xl mx-auto p-4 space-y-6">
-        {/* Header */}
-        <div className="text-center py-4">
-          <h1 className="text-2xl font-bold" data-testid="text-booking-title">Your Booking</h1>
-          <p className="text-muted-foreground">
-            with {booking.provider?.businessName || booking.provider?.name || "Your Provider"}
-          </p>
-        </div>
+      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
+      
+      <div className={`${isMobile ? "content-container -mt-4 relative z-10" : "max-w-7xl mx-auto px-6 lg:px-8 py-8"}`}>
+        <div className={`space-y-6 ${isMobile ? "p-4" : ""}`}>
 
         {/* Booking Details Card */}
         <Card>
@@ -764,8 +802,9 @@ export default function CustomerBookingDetail() {
         )}
 
         {/* Footer */}
-        <div className="text-center text-sm text-muted-foreground py-4">
+        <div className={`text-center text-sm text-muted-foreground py-4 ${isMobile ? "pb-20" : ""}`}>
           <p>Questions? Contact your service provider directly.</p>
+        </div>
         </div>
       </div>
 

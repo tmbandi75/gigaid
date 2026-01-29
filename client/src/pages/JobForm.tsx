@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useCelebration } from "@/hooks/use-celebration";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { CelebrationOverlay } from "@/components/CelebrationOverlay";
 import {
   Select,
@@ -344,6 +345,7 @@ export default function JobForm() {
   const searchString = useSearch();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showGetPaidDialog, setShowGetPaidDialog] = useState(false);
   const [completedJobData, setCompletedJobData] = useState<{ 
@@ -802,6 +804,67 @@ export default function JobForm() {
     }
   };
 
+  const renderMobileHeader = () => (
+    <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-violet-600 text-primary-foreground px-4 pt-4 pb-6">
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 -left-10 w-32 h-32 bg-violet-400/20 rounded-full blur-2xl" />
+      </div>
+      
+      <div className="relative">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate(isEditing ? `/jobs/${id}` : "/jobs")}
+          className="text-primary-foreground hover:bg-white/20 -ml-2 mb-3"
+          data-testid="button-back"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back
+        </Button>
+        
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+            {isEditing ? (
+              <Wrench className="h-6 w-6" />
+            ) : (
+              <Briefcase className="h-6 w-6" />
+            )}
+          </div>
+          <div>
+            <h1 className="text-xl font-bold">
+              {isEditing ? "Edit Job" : "New Job"}
+            </h1>
+            <p className="text-sm text-primary-foreground/80">
+              {isEditing ? "Update job details" : "Create a new job entry"}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderDesktopHeader = () => (
+    <div className="border-b bg-background sticky top-0 z-[999]">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-violet-600/20 flex items-center justify-center">
+            {isEditing ? (
+              <Wrench className="h-6 w-6 text-primary" />
+            ) : (
+              <Briefcase className="h-6 w-6 text-primary" />
+            )}
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">
+              {isEditing ? "Edit Job" : "New Job"}
+            </h1>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   if (isEditing && isLoadingJob) {
     return (
       <div className="flex flex-col min-h-full bg-background">
@@ -817,45 +880,9 @@ export default function JobForm() {
 
   return (
     <div className="flex flex-col min-h-full bg-background" data-testid="page-job-form">
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-violet-600 text-primary-foreground px-4 pt-4 pb-6">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 -left-10 w-32 h-32 bg-violet-400/20 rounded-full blur-2xl" />
-        </div>
-        
-        <div className="relative">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate(isEditing ? `/jobs/${id}` : "/jobs")}
-            className="text-primary-foreground hover:bg-white/20 -ml-2 mb-3"
-            data-testid="button-back"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back
-          </Button>
-          
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-              {isEditing ? (
-                <Wrench className="h-6 w-6" />
-              ) : (
-                <Briefcase className="h-6 w-6" />
-              )}
-            </div>
-            <div>
-              <h1 className="text-xl font-bold">
-                {isEditing ? "Edit Job" : "New Job"}
-              </h1>
-              <p className="text-sm text-primary-foreground/80">
-                {isEditing ? "Update job details" : "Create a new job entry"}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
       
-      <div className="flex-1 px-4 py-6 -mt-2 lg:px-8 lg:max-w-5xl lg:mx-auto lg:w-full">
+      <div className={`flex-1 ${isMobile ? "px-4 py-6" : "px-6 lg:px-8 lg:max-w-7xl lg:mx-auto lg:w-full"} ${isMobile ? "-mt-2" : ""}`}>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             {/* Progressive job limit warnings for Free plan */}
@@ -1484,7 +1511,7 @@ export default function JobForm() {
               )}
             </Button>
             
-            <div className="h-6" />
+            <div className={isMobile ? "h-6" : "h-8"} />
           </form>
         </Form>
       </div>
