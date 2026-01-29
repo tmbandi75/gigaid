@@ -309,9 +309,9 @@ export default function More() {
           </CardContent>
         </Card>
 
-        <div className="text-center py-4">
-          <img src="/gigaid-logo.png" alt="GigAid" className="h-6 mx-auto mb-1" style={{ filter: 'drop-shadow(0 1px 2px rgba(255,255,255,0.3))' }} />
-          <p className="text-xs text-muted-foreground">v1.0.0</p>
+        <div className="text-center py-6">
+          <img src="/gigaid-logo.png" alt="GigAid" className="h-16 mx-auto mb-2" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }} />
+          <p className="text-sm text-muted-foreground">v1.0.0</p>
         </div>
         
         {/* Extra padding to clear the fixed bottom navigation bar */}
