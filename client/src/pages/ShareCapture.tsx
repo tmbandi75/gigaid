@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   MessageSquare, 
@@ -25,6 +26,7 @@ import {
   Briefcase,
   ChevronDown,
   X,
+  Share2,
   Wrench,
   Plug,
   SprayCan,
@@ -122,6 +124,7 @@ const SOURCES = [
 export default function ShareCapture() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   const [sharedText, setSharedText] = useState("");
   const [parsedLead, setParsedLead] = useState<ParsedLead | null>(null);
@@ -301,40 +304,59 @@ export default function ShareCapture() {
     casual: { icon: Zap, color: "border-amber-500 bg-amber-50 dark:bg-amber-950/30", label: "Casual" },
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/30" data-testid="page-share-capture">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-lg border-b">
-        <div className="flex items-center justify-between px-4 py-3">
-          <button
-            onClick={() => step === "input" ? navigate("/more") : setStep(step === "review" ? "input" : "review")}
-            className="p-2 -ml-2 rounded-full hover-elevate"
-            data-testid="button-back"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div className="flex items-center gap-2">
-            {["input", "review", "reply"].map((s, i) => (
-              <div
-                key={s}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  s === step ? "w-8 bg-primary" : 
-                  ["input", "review", "reply"].indexOf(step) > i ? "w-3 bg-primary/60" : "w-3 bg-muted"
-                }`}
-              />
-            ))}
+  const renderMobileHeader = () => (
+    <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-lg border-b">
+      <div className="flex items-center justify-between px-4 py-3">
+        <button
+          onClick={() => step === "input" ? navigate("/more") : setStep(step === "review" ? "input" : "review")}
+          className="p-2 -ml-2 rounded-full hover-elevate"
+          data-testid="button-back"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div className="flex items-center gap-2">
+          {["input", "review", "reply"].map((s, i) => (
+            <div
+              key={s}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                s === step ? "w-8 bg-primary" : 
+                ["input", "review", "reply"].indexOf(step) > i ? "w-3 bg-primary/60" : "w-3 bg-muted"
+              }`}
+            />
+          ))}
+        </div>
+        <button
+          onClick={() => navigate("/leads")}
+          className="p-2 -mr-2 rounded-full hover-elevate"
+          data-testid="button-close"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderDesktopHeader = () => (
+    <div className="border-b bg-background sticky top-0 z-[999]">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0">
+            <Share2 className="h-6 w-6 text-primary" />
           </div>
-          <button
-            onClick={() => navigate("/leads")}
-            className="p-2 -mr-2 rounded-full hover-elevate"
-            data-testid="button-close"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div>
+            <h1 className="text-2xl font-bold">Quick Capture</h1>
+            <p className="text-sm text-muted-foreground">Save leads from any app</p>
+          </div>
         </div>
       </div>
+    </div>
+  );
 
-      <div className="px-4 py-6 max-w-lg mx-auto">
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/30" data-testid="page-share-capture">
+      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
+
+      <div className={`${isMobile ? "px-4 py-6 max-w-lg mx-auto pb-8" : "px-6 lg:px-8 py-8 max-w-7xl mx-auto pb-12"}`}>
         <AnimatePresence mode="wait">
           {/* STEP 1: Input */}
           {step === "input" && (

@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest } from "@/lib/queryClient";
 import { 
   Bell, 
@@ -44,6 +45,7 @@ function formatPhoneNumber(value: string): string {
 export default function Reminders() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [selectedReminder, setSelectedReminder] = useState<Reminder | null>(null);
@@ -220,6 +222,83 @@ export default function Reminders() {
     "Following up on your recent inquiry",
   ];
 
+  const renderMobileHeader = () => (
+    <div className="bg-gradient-to-br from-violet-500 to-purple-600 text-white p-6 rounded-b-3xl mb-6">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h1 className="text-2xl font-bold">Reminders</h1>
+          <p className="text-violet-100 text-sm">Keep your clients informed</p>
+        </div>
+        <Button 
+          onClick={() => setIsDialogOpen(true)} 
+          className="bg-white/20 hover:bg-white/30 backdrop-blur-sm border-0"
+          data-testid="button-add-reminder"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          New
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
+          <div className="text-2xl font-bold">{pendingCount}</div>
+          <div className="text-xs text-violet-100">Pending</div>
+        </div>
+        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
+          <div className="text-2xl font-bold">{sentCount}</div>
+          <div className="text-xs text-violet-100">Sent</div>
+        </div>
+        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
+          <div className="text-2xl font-bold">{reminders.length}</div>
+          <div className="text-xs text-violet-100">Total</div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderDesktopHeader = () => (
+    <div className="border-b bg-background sticky top-0 z-[999]">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 flex items-center justify-center">
+              <Bell className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">Reminders</h1>
+              <p className="text-sm text-muted-foreground">SMS & voice alerts</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <div className="flex gap-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{pendingCount}</div>
+                <div className="text-xs text-muted-foreground">Pending</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{sentCount}</div>
+                <div className="text-xs text-muted-foreground">Sent</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-600 dark:text-red-400">{failedCount}</div>
+                <div className="text-xs text-muted-foreground">Failed</div>
+              </div>
+            </div>
+
+            <Button 
+              onClick={() => setIsDialogOpen(true)} 
+              data-testid="button-add-reminder"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Reminder
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -229,42 +308,10 @@ export default function Reminders() {
   }
 
   return (
-    <div className="pb-24" data-testid="page-reminders">
-      {/* Header with gradient */}
-      <div className="bg-gradient-to-br from-violet-500 to-purple-600 text-white p-6 rounded-b-3xl mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold">Reminders</h1>
-            <p className="text-violet-100 text-sm">Keep your clients informed</p>
-          </div>
-          <Button 
-            onClick={() => setIsDialogOpen(true)} 
-            className="bg-white/20 hover:bg-white/30 backdrop-blur-sm border-0"
-            data-testid="button-add-reminder"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New
-          </Button>
-        </div>
+    <div className={isMobile ? "pb-24" : "pb-6"} data-testid="page-reminders">
+      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
 
-        {/* Stats row */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
-            <div className="text-2xl font-bold">{pendingCount}</div>
-            <div className="text-xs text-violet-100">Pending</div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
-            <div className="text-2xl font-bold">{sentCount}</div>
-            <div className="text-xs text-violet-100">Sent</div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
-            <div className="text-2xl font-bold">{reminders.length}</div>
-            <div className="text-xs text-violet-100">Total</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="content-container space-y-4">
+      <div className={isMobile ? "content-container space-y-4" : "max-w-7xl mx-auto px-6 lg:px-8 space-y-4"}>
         {/* Filter tabs */}
         <Tabs value={filterStatus} onValueChange={(v) => setFilterStatus(v as FilterStatus)}>
           <TabsList className="w-full grid grid-cols-4">

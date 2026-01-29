@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DollarSign,
   Briefcase,
@@ -178,6 +179,7 @@ function MetricCard({
 
 export default function OwnerView() {
   const [, navigate] = useLocation();
+  const isMobile = useIsMobile();
 
   const { data: metrics, isLoading, error } = useQuery<OwnerMetrics>({
     queryKey: ["/api/owner/metrics"],
@@ -209,9 +211,71 @@ export default function OwnerView() {
     }).format(cents / 100);
   };
 
+  const renderMobileHeader = () => (
+    <div 
+      className="relative overflow-hidden text-white px-4 pt-6 pb-8"
+      style={{ 
+        background: 'linear-gradient(180deg, #1F6FD6 0%, #2A5FCC 45%, #3A4F9F 100%)',
+        boxShadow: 'inset 0 -16px 24px rgba(0, 0, 0, 0.08)'
+      }}
+    >
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 -left-10 w-32 h-32 bg-violet-400/20 rounded-full blur-2xl" />
+      </div>
+      
+      <div className="relative">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center">
+            <Crown className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Owner View</h1>
+            <p className="text-sm text-primary-foreground/80">Business snapshot</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <DollarSign className="h-4 w-4 text-primary-foreground/80" />
+              <span className="text-xs text-primary-foreground/80">Weekly</span>
+            </div>
+            <p className="text-xl font-bold">{formatCurrency(metrics.weeklyRevenue)}</p>
+          </div>
+          <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Briefcase className="h-4 w-4 text-primary-foreground/80" />
+              <span className="text-xs text-primary-foreground/80">This week</span>
+            </div>
+            <p className="text-xl font-bold">{metrics.jobsCompletedThisWeek}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderDesktopHeader = () => (
+    <div className="border-b bg-background sticky top-0 z-[999]">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center">
+            <Crown className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Owner View</h1>
+            <p className="text-sm text-muted-foreground">Business snapshot</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="flex flex-col min-h-full bg-background pb-20" data-testid="page-owner-view">
-      <div className="max-w-7xl mx-auto px-4 py-6 w-full">
+    <div className={`flex flex-col min-h-full bg-background ${isMobile ? "pb-20" : "pb-8"}`} data-testid="page-owner-view">
+      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
+      
+      <div className={`${isMobile ? "px-4 py-4" : "max-w-7xl mx-auto px-6 lg:px-8 py-8"} w-full`}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <MetricCard
             title="Weekly Revenue"

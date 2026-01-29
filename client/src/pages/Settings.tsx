@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,6 +82,7 @@ export default function Settings() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [bookingLinkCopied, setBookingLinkCopied] = useState(false);
   const { isAuthenticated } = useAuth();
 
@@ -300,37 +302,55 @@ export default function Settings() {
     setSettings({ ...settings, services: settings.services.filter(s => s !== service) });
   };
 
-  return (
-    <div className="min-h-screen bg-background pb-24" data-testid="page-settings">
-      <div className="relative overflow-hidden bg-gradient-to-br from-slate-600 via-slate-700 to-slate-800 text-white px-4 pt-6 pb-8">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 -left-10 w-32 h-32 bg-slate-400/10 rounded-full blur-2xl" />
-        </div>
-        <div className="relative">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate("/more")}
-            className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
-            data-testid="button-back"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back
-          </Button>
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center">
-              <SettingsIcon className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">Settings</h1>
-              <p className="text-slate-300/80">Configure your app preferences</p>
-            </div>
+  const renderMobileHeader = () => (
+    <div className="relative overflow-hidden bg-gradient-to-br from-slate-600 via-slate-700 to-slate-800 text-white px-4 pt-6 pb-8">
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 -left-10 w-32 h-32 bg-slate-400/10 rounded-full blur-2xl" />
+      </div>
+      <div className="relative">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate("/more")}
+          className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
+          data-testid="button-back"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back
+        </Button>
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center">
+            <SettingsIcon className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Settings</h1>
+            <p className="text-slate-300/80">Configure your app preferences</p>
           </div>
         </div>
       </div>
+    </div>
+  );
 
-      <div className="px-4 py-4 space-y-4 lg:px-8 lg:max-w-5xl lg:mx-auto">
+  const renderDesktopHeader = () => (
+    <div className="border-b bg-background sticky top-0 z-[999]">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5 flex items-center gap-4">
+        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-slate-500/10 to-gray-500/10 flex items-center justify-center">
+          <SettingsIcon className="h-6 w-6 text-slate-700 dark:text-slate-300" />
+        </div>
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Settings</h1>
+          <p className="text-sm text-muted-foreground">App preferences</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className={`min-h-screen bg-background ${isMobile ? 'pb-24' : 'pb-12'}`} data-testid="page-settings">
+      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
+
+      <div className={`space-y-4 ${isMobile ? 'px-4 py-4' : 'max-w-7xl mx-auto px-6 lg:px-8 py-6'}`}>
         <Card className="border-0 shadow-md" data-testid="card-notifications">
           <CardContent className="p-4">
             <h3 className="font-semibold mb-4 flex items-center gap-2">

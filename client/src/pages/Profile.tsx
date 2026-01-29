@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useUpload } from "@/hooks/use-upload";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest } from "@/lib/queryClient";
 import { 
   ArrowLeft, 
@@ -34,6 +35,7 @@ import {
   Check,
   Briefcase,
   Globe,
+  User,
 } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { BioEditor } from "@/components/settings/BioEditor";
@@ -90,6 +92,7 @@ export default function Profile() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -206,26 +209,114 @@ export default function Profile() {
     .toUpperCase()
     .slice(0, 2);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="relative overflow-hidden bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 text-white px-4 pt-6 pb-20">
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
-          </div>
-          <div className="relative">
+  const renderMobileHeader = (title: string, subtitle?: string) => (
+    <div className="relative overflow-hidden bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 text-white px-4 pt-6 pb-28">
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 -left-10 w-32 h-32 bg-slate-400/10 rounded-full blur-2xl" />
+      </div>
+      <div className="relative">
+        <div className="flex items-center justify-between mb-6">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/more")}
+            className="-ml-2 text-white/80 hover:text-white hover:bg-white/10"
+            data-testid="button-back"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+          {!isEditing && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/more")}
-              className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
+              onClick={() => setIsEditing(true)}
+              className="text-white/80 hover:text-white hover:bg-white/10"
+              data-testid="button-edit-profile"
             >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back
+              <Pencil className="h-4 w-4 mr-1" />
+              Edit
             </Button>
-            <h1 className="text-2xl font-bold">Profile</h1>
+          )}
+          {isEditing && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsEditing(false)}
+              className="-mr-2 text-white/80 hover:text-white hover:bg-white/10"
+              data-testid="button-cancel-edit"
+            >
+              <X className="h-4 w-4 mr-1" />
+              Cancel
+            </Button>
+          )}
+        </div>
+        <h1 className="text-2xl font-bold">{title}</h1>
+        {subtitle && <p className="text-slate-300/80 mt-1">{subtitle}</p>}
+      </div>
+    </div>
+  );
+
+  const renderDesktopHeader = (title: string, subtitle?: string) => (
+    <div className="border-b bg-background sticky top-0 z-[999]">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center">
+            <User className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-foreground">{title}</h1>
+            {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
           </div>
         </div>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Avatar className="h-10 w-10 ring-2 ring-background">
+              {currentPhoto ? (
+                <AvatarImage src={currentPhoto} alt="Profile" />
+              ) : null}
+              <AvatarFallback className="bg-gradient-to-br from-primary to-violet-600 text-white text-xs font-semibold">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+          {!isEditing && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsEditing(true)}
+              className="text-muted-foreground hover:text-foreground"
+              data-testid="button-edit-profile"
+            >
+              <Pencil className="h-4 w-4 mr-1" />
+              Edit
+            </Button>
+          )}
+          {isEditing && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsEditing(false)}
+              className="text-muted-foreground hover:text-foreground"
+              data-testid="button-cancel-edit"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        {isMobile ? (
+          renderMobileHeader("Profile")
+        ) : (
+          renderDesktopHeader("Profile", "Your information")
+        )}
         <PageSpinner message="Loading profile..." />
       </div>
     );
@@ -234,40 +325,14 @@ export default function Profile() {
   // VIEW MODE
   if (!isEditing) {
     return (
-      <div className="min-h-screen bg-background pb-24" data-testid="page-profile">
-        <div className="relative overflow-hidden bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 text-white px-4 pt-6 pb-28">
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 -left-10 w-32 h-32 bg-slate-400/10 rounded-full blur-2xl" />
-          </div>
-          <div className="relative">
-            <div className="flex items-center justify-between mb-6">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/more")}
-                className="-ml-2 text-white/80 hover:text-white hover:bg-white/10"
-                data-testid="button-back"
-              >
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsEditing(true)}
-                className="text-white/80 hover:text-white hover:bg-white/10"
-                data-testid="button-edit-profile"
-              >
-                <Pencil className="h-4 w-4 mr-1" />
-                Edit
-              </Button>
-            </div>
-            <h1 className="text-2xl font-bold">My Profile</h1>
-          </div>
-        </div>
+      <div className={`min-h-screen bg-background ${isMobile ? "pb-24" : "pb-8"}`} data-testid="page-profile">
+        {isMobile ? (
+          renderMobileHeader("My Profile")
+        ) : (
+          renderDesktopHeader("Profile", "Your information")
+        )}
 
-        <div className="px-4 -mt-20 relative z-10 lg:px-8 lg:max-w-5xl lg:mx-auto">
+        <div className={isMobile ? "px-4 -mt-20 relative z-10" : "max-w-7xl mx-auto px-6 lg:px-8 py-8"}>
           <Card className="border-0 shadow-lg">
             <CardContent className="pt-6">
               <div className="flex flex-col items-center text-center">
@@ -352,31 +417,14 @@ export default function Profile() {
 
   // EDIT MODE
   return (
-    <div className="min-h-screen bg-background pb-24" data-testid="page-profile-edit">
-      <div className="relative overflow-hidden bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 text-white px-4 pt-6 pb-24">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 -left-10 w-32 h-32 bg-slate-400/10 rounded-full blur-2xl" />
-        </div>
-        <div className="relative">
-          <div className="flex items-center justify-between mb-6">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCancelEdit}
-              className="-ml-2 text-white/80 hover:text-white hover:bg-white/10"
-              data-testid="button-cancel-edit"
-            >
-              <X className="h-4 w-4 mr-1" />
-              Cancel
-            </Button>
-          </div>
-          <h1 className="text-2xl font-bold">Edit Profile</h1>
-          <p className="text-slate-300/80 mt-1">Update your personal information</p>
-        </div>
-      </div>
+    <div className={`min-h-screen bg-background ${isMobile ? "pb-24" : "pb-8"}`} data-testid="page-profile-edit">
+      {isMobile ? (
+        renderMobileHeader("Edit Profile", "Update your personal information")
+      ) : (
+        renderDesktopHeader("Edit Profile", "Update your personal information")
+      )}
 
-      <div className="px-4 -mt-16 relative z-10 lg:px-8 lg:max-w-5xl lg:mx-auto">
+      <div className={isMobile ? "px-4 -mt-16 relative z-10" : "max-w-7xl mx-auto px-6 lg:px-8 py-8"}>
         <Card className="border-0 shadow-lg mb-6">
           <CardContent className="pt-6 flex flex-col items-center">
             <div className="relative mb-4">

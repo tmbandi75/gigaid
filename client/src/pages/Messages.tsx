@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { PriorityBadge, inferMessagePriority } from "@/components/priority/PriorityBadge";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface Conversation {
@@ -288,6 +289,7 @@ function MessageThread({
 export default function Messages() {
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const [selectedName, setSelectedName] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const { data: conversations = [], isLoading } = useQuery<Conversation[]>({
     queryKey: ["/api/sms/conversations"],
@@ -305,15 +307,35 @@ export default function Messages() {
     setSelectedName(null);
   };
 
-  return (
-    <div className="flex flex-col h-full max-h-[calc(100vh-120px)]">
-      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b">
-        <h1 className="text-xl font-semibold">Messages</h1>
+  const renderMobileHeader = () => (
+    <div className="flex items-center justify-between gap-2 px-4 py-3 border-b">
+      <h1 className="text-xl font-semibold">Messages</h1>
+    </div>
+  );
+
+  const renderDesktopHeader = () => (
+    <div className="border-b bg-background sticky top-0 z-[999]">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500/10 to-blue-500/10 flex items-center justify-center">
+            <MessageSquare className="h-6 w-6 text-indigo-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground" data-testid="page-title">Messages</h1>
+            <p className="text-sm text-muted-foreground">Client conversations</p>
+          </div>
+        </div>
       </div>
+    </div>
+  );
+
+  const renderMobileLayout = () => (
+    <div className="flex flex-col h-full max-h-[calc(100vh-120px)]" data-testid="page-messages">
+      {renderMobileHeader()}
 
       <div className="flex-1 flex overflow-hidden">
-        <div className={`w-full md:w-80 md:border-r flex-shrink-0 overflow-y-auto ${
-          selectedPhone ? "hidden md:block" : ""
+        <div className={`w-full flex-shrink-0 overflow-y-auto ${
+          selectedPhone ? "hidden" : ""
         }`}>
           {isLoading ? (
             <div className="flex items-center justify-center h-32">
@@ -330,7 +352,7 @@ export default function Messages() {
           )}
         </div>
 
-        <div className={`flex-1 ${selectedPhone ? "" : "hidden md:flex md:items-center md:justify-center"}`}>
+        <div className={`flex-1 ${selectedPhone ? "" : "hidden"}`}>
           {selectedPhone ? (
             <MessageThread
               phone={selectedPhone}
@@ -352,4 +374,54 @@ export default function Messages() {
       </div>
     </div>
   );
+
+  const renderDesktopLayout = () => (
+    <div className="flex flex-col h-screen bg-background" data-testid="page-messages">
+      {renderDesktopHeader()}
+
+      <div className="flex-1 flex overflow-hidden max-w-7xl mx-auto w-full px-6 lg:px-8 py-6">
+        <div className="w-80 border-r flex-shrink-0 overflow-y-auto">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="p-2">
+              <ConversationList
+                conversations={conversations}
+                onSelect={handleSelectConversation}
+                selectedPhone={selectedPhone}
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 flex items-center justify-center">
+          {selectedPhone ? (
+            <MessageThread
+              phone={selectedPhone}
+              clientName={selectedName}
+              onBack={handleBack}
+            />
+          ) : (
+            <div className="text-center p-6">
+              <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                <MessageSquare className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="font-medium text-foreground mb-2">Select a conversation</h3>
+              <p className="text-sm text-muted-foreground">
+                Choose a conversation from the list to view messages
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  if (isMobile === undefined) {
+    return null;
+  }
+
+  return isMobile ? renderMobileLayout() : renderDesktopLayout();
 }

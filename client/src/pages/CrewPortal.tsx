@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest } from "@/lib/queryClient";
 import {
   MapPin,
@@ -26,6 +27,7 @@ import {
   ExternalLink,
   Upload,
   Plus,
+  Users,
 } from "lucide-react";
 
 interface CrewPortalData {
@@ -74,6 +76,7 @@ export default function CrewPortal() {
   const params = useParams<{ token: string }>();
   const token = params.token;
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const [messageText, setMessageText] = useState("");
   const [declineReason, setDeclineReason] = useState("");
@@ -288,23 +291,47 @@ export default function CrewPortal() {
   const isDeclined = invite.status === "declined";
   const canRespond = !isConfirmed && !isDeclined && invite.status !== "revoked";
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-primary/10 to-background">
-      <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-6 pb-8">
-        <div className="max-w-lg mx-auto">
-          <p className="text-sm opacity-90 mb-1">Job Assignment</p>
-          <h1 className="text-2xl font-bold mb-2" data-testid="text-job-title">
-            {job?.title || "Job Details"}
-          </h1>
-          {crewMember && (
-            <p className="text-sm opacity-90">
-              Hi {crewMember.name.split(" ")[0]}, here are your job details
+  const renderMobileHeader = () => (
+    <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-6 pb-8">
+      <div className="max-w-lg mx-auto">
+        <p className="text-sm opacity-90 mb-1">Job Assignment</p>
+        <h1 className="text-2xl font-bold mb-2" data-testid="text-job-title">
+          {job?.title || "Job Details"}
+        </h1>
+        {crewMember && (
+          <p className="text-sm opacity-90">
+            Hi {crewMember.name.split(" ")[0]}, here are your job details
+          </p>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderDesktopHeader = () => (
+    <div className="border-b bg-background sticky top-0 z-[999]">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center flex-shrink-0">
+            <Users className="w-6 h-6 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-foreground" data-testid="text-job-title">
+              Crew Portal
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {job?.title || "Job Assignment"}
             </p>
-          )}
+          </div>
         </div>
       </div>
+    </div>
+  );
 
-      <div className="max-w-lg mx-auto px-4 -mt-4 pb-8 space-y-4">
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-primary/10 to-background">
+      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
+
+      <div className={`${isMobile ? "max-w-lg mx-auto px-4 -mt-4" : "max-w-7xl mx-auto px-6 lg:px-8"} ${isMobile ? "pb-8" : "pb-12"} space-y-4`}>
         {isConfirmed && (
           <Card className="border-green-500/50 bg-green-50 dark:bg-green-950/20">
             <CardContent className="py-4 flex items-center gap-3">

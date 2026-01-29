@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageSpinner } from "@/components/ui/spinner";
 import { apiRequest } from "@/lib/queryClient";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,7 @@ import {
   Sparkles,
   X,
   Zap,
+  Target,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -178,6 +180,7 @@ export default function TodaysGamePlanPage() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const [showVoiceNotes, setShowVoiceNotes] = useState(false);
+  const isMobile = useIsMobile();
 
   const { data, isLoading } = useQuery<GamePlanData>({
     queryKey: ["/api/dashboard/game-plan"],
@@ -218,22 +221,43 @@ export default function TodaysGamePlanPage() {
     recentlyCompleted: [],
   };
 
+  function renderMobileHeader() {
+    return (
+      <div className="px-4 py-5 bg-background border-b">
+        <h1 className="text-2xl font-bold text-foreground mb-1">Today's Game Plan</h1>
+        <p className="text-sm text-muted-foreground">Do these things to stay on track and get paid</p>
+      </div>
+    );
+  }
+
+  function renderDesktopHeader() {
+    return (
+      <div className="border-b bg-background sticky top-0 z-[999]">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-violet-500/20 flex items-center justify-center flex-shrink-0">
+              <Target className="h-6 w-6 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold text-foreground">Today's Game Plan</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">Do these things to stay on track and get paid</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background" data-testid="page-game-plan">
+      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
+      
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="p-4 lg:p-8 lg:max-w-2xl lg:mx-auto space-y-6"
+        className={`space-y-6 ${isMobile ? "p-4 pb-12" : "p-8 pb-16 lg:max-w-5xl lg:mx-auto"}`}
       >
-        <motion.div variants={itemVariants} className="mb-4">
-          <h1 className="text-xl font-bold text-foreground" data-testid="heading-game-plan">
-            Today's Game Plan
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Do these things to stay on track and get paid
-          </p>
-        </motion.div>
 
         <CampaignSuggestionBanner />
 

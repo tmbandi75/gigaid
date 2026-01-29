@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -121,6 +122,7 @@ export default function BookingRequests() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedBooking, setSelectedBooking] = useState<BookingRequest | null>(null);
   const [showRemainderPaymentDialog, setShowRemainderPaymentDialog] = useState(false);
@@ -224,75 +226,94 @@ export default function BookingRequests() {
   const pendingCount = bookings?.filter(b => b.status === "pending").length || 0;
   const acceptedCount = bookings?.filter(b => b.status === "accepted").length || 0;
 
+  const renderMobileHeader = () => (
+    <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 text-white px-4 pt-6 pb-8">
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 -left-10 w-32 h-32 bg-emerald-400/10 rounded-full blur-2xl" />
+      </div>
+      <div className="relative">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate("/more")}
+          className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
+          data-testid="button-back"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back
+        </Button>
+        <h1 className="text-2xl font-bold">Booking Requests</h1>
+        <p className="text-emerald-100/80 mt-1">Manage customer bookings</p>
+        
+        <div className="flex gap-6 mt-6">
+          <div className="text-center">
+            <p className="text-3xl font-bold">{pendingCount}</p>
+            <p className="text-xs text-emerald-100/70 uppercase tracking-wide">Pending</p>
+          </div>
+          <div className="w-px bg-white/20" />
+          <div className="text-center">
+            <p className="text-3xl font-bold">{acceptedCount}</p>
+            <p className="text-xs text-emerald-100/70 uppercase tracking-wide">Accepted</p>
+          </div>
+          <div className="w-px bg-white/20" />
+          <div className="text-center">
+            <p className="text-3xl font-bold">{bookings?.length || 0}</p>
+            <p className="text-xs text-emerald-100/70 uppercase tracking-wide">Total</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderDesktopHeader = () => (
+    <div className="border-b bg-background sticky top-0 z-[999]">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+        <div className="flex items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 flex items-center justify-center">
+              <Calendar className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">Booking Requests</h1>
+              <p className="text-sm text-muted-foreground">Manage customer bookings</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-8">
+            <div className="text-center">
+              <p className="text-2xl font-bold">{pendingCount}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Pending</p>
+            </div>
+            <div className="w-px bg-border h-8" />
+            <div className="text-center">
+              <p className="text-2xl font-bold">{acceptedCount}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Accepted</p>
+            </div>
+            <div className="w-px bg-border h-8" />
+            <div className="text-center">
+              <p className="text-2xl font-bold">{bookings?.length || 0}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Total</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 text-white px-4 pt-6 pb-8">
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 -left-10 w-32 h-32 bg-emerald-400/10 rounded-full blur-2xl" />
-          </div>
-          <div className="relative">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/more")}
-              className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
-              data-testid="button-back"
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back
-            </Button>
-            <h1 className="text-2xl font-bold">Booking Requests</h1>
-            <p className="text-emerald-100/80 mt-1">Manage customer bookings</p>
-          </div>
-        </div>
+        {isMobile ? renderMobileHeader() : renderDesktopHeader()}
         <PageSpinner message="Loading bookings..." />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20" data-testid="page-booking-requests">
-      <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 text-white px-4 pt-6 pb-8">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 -left-10 w-32 h-32 bg-emerald-400/10 rounded-full blur-2xl" />
-        </div>
-        <div className="relative">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate("/more")}
-            className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
-            data-testid="button-back"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back
-          </Button>
-          <h1 className="text-2xl font-bold">Booking Requests</h1>
-          <p className="text-emerald-100/80 mt-1">Manage customer bookings</p>
-          
-          <div className="flex gap-6 mt-6">
-            <div className="text-center">
-              <p className="text-3xl font-bold">{pendingCount}</p>
-              <p className="text-xs text-emerald-100/70 uppercase tracking-wide">Pending</p>
-            </div>
-            <div className="w-px bg-white/20" />
-            <div className="text-center">
-              <p className="text-3xl font-bold">{acceptedCount}</p>
-              <p className="text-xs text-emerald-100/70 uppercase tracking-wide">Accepted</p>
-            </div>
-            <div className="w-px bg-white/20" />
-            <div className="text-center">
-              <p className="text-3xl font-bold">{bookings?.length || 0}</p>
-              <p className="text-xs text-emerald-100/70 uppercase tracking-wide">Total</p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className={`min-h-screen bg-background ${isMobile ? "pb-20" : ""}`} data-testid="page-booking-requests">
+      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
       
-      <div className="content-container -mt-4 relative z-10">
+      <div className={`${isMobile ? "content-container -mt-4 relative z-10" : "max-w-7xl mx-auto px-6 lg:px-8 py-8"}`}>
         <Card className="border-0 shadow-lg mb-4">
           <CardContent className="p-2">
             <div className="flex gap-1 overflow-x-auto">

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -416,6 +417,7 @@ const guides: Guide[] = [
 ];
 
 export default function UserGuides() {
+  const isMobile = useIsMobile();
   const [, navigate] = useLocation();
   const [selectedGuide, setSelectedGuide] = useState<Guide | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
@@ -449,41 +451,63 @@ export default function UserGuides() {
     ? (completedSteps.size / selectedGuide.steps.length) * 100 
     : 0;
 
-  return (
-    <div className="min-h-screen bg-background pb-24" data-testid="page-user-guides">
-      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-700 text-white px-4 pt-6 pb-12">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 -left-10 w-32 h-32 bg-purple-400/10 rounded-full blur-2xl" />
-        </div>
-        <div className="relative">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleBack}
-            className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
-            data-testid="button-back"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            {selectedGuide ? "All Guides" : "Help & Support"}
-          </Button>
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center">
-              <Book className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">
-                {selectedGuide ? selectedGuide.title : "User Guides"}
-              </h1>
-              <p className="text-purple-200/80">
-                {selectedGuide ? selectedGuide.description : "Step-by-step tutorials"}
-              </p>
-            </div>
+  const renderMobileHeader = () => (
+    <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-700 text-white px-4 pt-6 pb-12">
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 -left-10 w-32 h-32 bg-purple-400/10 rounded-full blur-2xl" />
+      </div>
+      <div className="relative">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleBack}
+          className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
+          data-testid="button-back"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          {selectedGuide ? "All Guides" : "Help & Support"}
+        </Button>
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center">
+            <Book className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">
+              {selectedGuide ? selectedGuide.title : "User Guides"}
+            </h1>
+            <p className="text-purple-200/80">
+              {selectedGuide ? selectedGuide.description : "Step-by-step tutorials"}
+            </p>
           </div>
         </div>
       </div>
+    </div>
+  );
 
-      <div className="px-4 -mt-6 relative z-10">
+  const renderDesktopHeader = () => (
+    <div className="border-b bg-background sticky top-0 z-[999]">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-700 flex items-center justify-center">
+            <Book className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">User Guides</h1>
+            <p className="text-muted-foreground">
+              {selectedGuide ? selectedGuide.description : "Step-by-step tutorials to help you master GigAid"}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className={`min-h-screen bg-background ${isMobile ? "pb-24" : "pb-8"}`} data-testid="page-user-guides">
+      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
+
+      <div className={isMobile ? "px-4 -mt-6 relative z-10" : "max-w-7xl mx-auto px-6 lg:px-8 py-8"}>
         {!selectedGuide ? (
           <div className="space-y-3">
             <Card className="border-0 shadow-lg bg-gradient-to-r from-pink-500 to-rose-500 text-white" data-testid="card-featured-guide">

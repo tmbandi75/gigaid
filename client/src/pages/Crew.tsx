@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest } from "@/lib/queryClient";
 import { 
   Users, 
@@ -56,6 +57,7 @@ interface CrewInvite {
 export default function Crew() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [expandedMember, setExpandedMember] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -202,6 +204,84 @@ export default function Crew() {
     toast({ title: "Link copied to clipboard" });
   };
 
+  const renderMobileHeader = () => (
+    <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-violet-600 text-primary-foreground px-4 pt-6 pb-8">
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 -left-10 w-32 h-32 bg-violet-400/20 rounded-full blur-2xl" />
+      </div>
+      
+      <div className="relative">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">My Crew</h1>
+            <p className="text-sm text-primary-foreground/80">Manage your team members</p>
+          </div>
+          <Button 
+            onClick={() => setIsDialogOpen(true)} 
+            size="icon"
+            className="bg-white/20 hover:bg-white/30 text-white"
+            aria-label="Add crew member"
+            data-testid="button-add-crew-header"
+          >
+            <Plus className="h-5 w-5" />
+          </Button>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Users className="h-4 w-4 text-primary-foreground/80" />
+              <span className="text-xs text-primary-foreground/80">Total</span>
+            </div>
+            <p className="text-2xl font-bold" data-testid="stat-total">{totalCount}</p>
+          </div>
+          <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <UserCheck className="h-4 w-4 text-primary-foreground/80" />
+              <span className="text-xs text-primary-foreground/80">Active</span>
+            </div>
+            <p className="text-2xl font-bold" data-testid="stat-active">{activeCount}</p>
+          </div>
+          <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Clock className="h-4 w-4 text-primary-foreground/80" />
+              <span className="text-xs text-primary-foreground/80">Invited</span>
+            </div>
+            <p className="text-2xl font-bold" data-testid="stat-invited">{invitedCount}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderDesktopHeader = () => (
+    <div className="border-b bg-background sticky top-0 z-[999]">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center flex-shrink-0">
+              <Users className="h-6 w-6 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Crew</h1>
+              <p className="text-sm text-muted-foreground">Manage team members</p>
+            </div>
+          </div>
+          <Button 
+            onClick={() => setIsDialogOpen(true)}
+            className="bg-gradient-to-r from-primary to-violet-600"
+            data-testid="button-add-crew-header"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Crew
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
   // Calculate stats
   const activeCount = crew.filter(m => m.status === "joined").length;
   const invitedCount = crew.filter(m => m.status === "invited").length;
@@ -239,59 +319,10 @@ export default function Crew() {
 
   return (
     <div className="flex flex-col min-h-full bg-background" data-testid="page-crew">
-      {/* Hero Header with Gradient */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-violet-600 text-primary-foreground px-4 pt-6 pb-8">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 -left-10 w-32 h-32 bg-violet-400/20 rounded-full blur-2xl" />
-        </div>
-        
-        <div className="relative">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold">My Crew</h1>
-              <p className="text-sm text-primary-foreground/80">Manage your team members</p>
-            </div>
-            <Button 
-              onClick={() => setIsDialogOpen(true)} 
-              size="icon"
-              className="bg-white/20 hover:bg-white/30 text-white"
-              aria-label="Add crew member"
-              data-testid="button-add-crew-header"
-            >
-              <Plus className="h-5 w-5" />
-            </Button>
-          </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Users className="h-4 w-4 text-primary-foreground/80" />
-                <span className="text-xs text-primary-foreground/80">Total</span>
-              </div>
-              <p className="text-2xl font-bold" data-testid="stat-total">{totalCount}</p>
-            </div>
-            <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <UserCheck className="h-4 w-4 text-primary-foreground/80" />
-                <span className="text-xs text-primary-foreground/80">Active</span>
-              </div>
-              <p className="text-2xl font-bold" data-testid="stat-active">{activeCount}</p>
-            </div>
-            <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Clock className="h-4 w-4 text-primary-foreground/80" />
-                <span className="text-xs text-primary-foreground/80">Invited</span>
-              </div>
-              <p className="text-2xl font-bold" data-testid="stat-invited">{invitedCount}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
 
       {/* Main Content */}
-      <div className="flex-1 px-4 py-6 -mt-4">
+      <div className={`flex-1 ${isMobile ? "px-4 py-6 -mt-4" : "max-w-7xl mx-auto px-6 lg:px-8 py-8 w-full"}`}>
         {/* Add Crew Button */}
         <Button 
           onClick={() => setIsDialogOpen(true)}
@@ -546,7 +577,7 @@ export default function Crew() {
           </div>
         )}
         
-        <div className="h-6" />
+        <div className={isMobile ? "h-6" : "h-8"} />
       </div>
 
       {/* Add Crew Dialog */}
