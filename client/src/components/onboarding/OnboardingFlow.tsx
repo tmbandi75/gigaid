@@ -433,7 +433,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
   const progressPercent = step === 1 ? 0 : ((step - 1) / (TOTAL_STEPS - 1)) * 100;
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-br from-background via-background to-primary/5 flex flex-col" data-testid="onboarding-flow">
+    <div className="flex flex-col min-h-[70vh]" data-testid="onboarding-flow">
       {/* Skip Modal */}
       <Dialog open={showSkipModal} onOpenChange={setShowSkipModal}>
         <DialogContent className="sm:max-w-md">
@@ -456,16 +456,16 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
 
       {/* Progress bar */}
       {step > 1 && step < 8 && (
-        <div className="absolute top-0 left-0 right-0 h-1 bg-muted">
+        <div className="h-1.5 bg-muted rounded-t-2xl overflow-hidden">
           <div 
-            className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-500 ease-out"
+            className="h-full bg-gradient-to-r from-[#6366F1] to-[#4F46E5] transition-all duration-500 ease-out"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
       )}
 
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-lg mx-auto px-6 py-12 min-h-full flex flex-col">
+        <div className="max-w-lg mx-auto px-6 py-8 min-h-full flex flex-col">
           
           {/* Step 1: Welcome */}
           {step === 1 && (
@@ -486,7 +486,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
                 <div className="space-y-3 pt-4">
                   <Button 
                     size="lg" 
-                    className="w-full h-14 text-lg rounded-2xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
+                    className="w-full h-14 text-lg rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-[#4F46E5]/30"
                     onClick={handleStartSetup}
                     data-testid="button-start-setup"
                   >
@@ -511,7 +511,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
             <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500" data-testid="step-identity">
               <div className="flex-1 space-y-8">
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-primary">Step 1 of 6</p>
+                  <p className="text-sm font-medium text-[#6366F1]">Step 1 of 6</p>
                   <h1 className="text-3xl font-bold tracking-tight">Tell us about yourself</h1>
                   <p className="text-muted-foreground">Just the basics to get started.</p>
                 </div>
@@ -583,7 +583,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
               <div className="pt-6">
                 <Button 
                   size="lg" 
-                  className="w-full h-14 text-lg rounded-2xl"
+                  className="w-full h-14 text-lg rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-[#4F46E5]/30"
                   onClick={handleIdentitySubmit}
                   disabled={!identity.firstName.trim() || !identity.serviceType || updateProfileMutation.isPending}
                   data-testid="button-identity-continue"
@@ -603,7 +603,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
             <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500" data-testid="step-pricing">
               <div className="flex-1 space-y-6">
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-primary">Step 2 of 6</p>
+                  <p className="text-sm font-medium text-[#6366F1]">Step 2 of 6</p>
                   <h1 className="text-3xl font-bold tracking-tight">What do you usually charge?</h1>
                   <p className="text-muted-foreground">This helps with estimates and invoices.</p>
                 </div>
@@ -764,7 +764,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
               <div className="pt-6">
                 <Button 
                   size="lg" 
-                  className="w-full h-14 text-lg rounded-2xl"
+                  className="w-full h-14 text-lg rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-[#4F46E5]/30"
                   onClick={handlePricingSubmit}
                   disabled={
                     (pricing.pricingType === "fixed" && !pricing.typicalPrice) ||
@@ -788,7 +788,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
             <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500" data-testid="step-deposit">
               <div className="flex-1 space-y-8">
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-primary">Step 3 of 6</p>
+                  <p className="text-sm font-medium text-[#6366F1]">Step 3 of 6</p>
                   <h1 className="text-3xl font-bold tracking-tight">Protect your time</h1>
                   <p className="text-muted-foreground">Deposits reduce no-shows and last-minute cancellations.</p>
                 </div>
@@ -859,7 +859,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
               <div className="pt-6">
                 <Button 
                   size="lg" 
-                  className="w-full h-14 text-lg rounded-2xl"
+                  className="w-full h-14 text-lg rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-[#4F46E5]/30"
                   onClick={handleDepositSubmit}
                   disabled={updateProfileMutation.isPending}
                   data-testid="button-deposit-continue"
@@ -879,7 +879,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
             <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500" data-testid="step-booking-link">
               <div className="flex-1 space-y-8">
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-primary">Step 4 of 6</p>
+                  <p className="text-sm font-medium text-[#6366F1]">Step 4 of 6</p>
                   <h1 className="text-3xl font-bold tracking-tight">Your booking link is ready</h1>
                   <p className="text-muted-foreground">Share it with clients so they can book you directly.</p>
                 </div>
@@ -925,7 +925,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
               <div className="pt-6">
                 <Button 
                   size="lg" 
-                  className="w-full h-14 text-lg rounded-2xl"
+                  className="w-full h-14 text-lg rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-[#4F46E5]/30"
                   onClick={handleBookingLinkContinue}
                   data-testid="button-booking-continue"
                 >
@@ -941,7 +941,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
             <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500" data-testid="step-payments">
               <div className="flex-1 space-y-8">
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-primary">Step 5 of 6</p>
+                  <p className="text-sm font-medium text-[#6366F1]">Step 5 of 6</p>
                   <h1 className="text-3xl font-bold tracking-tight">Get paid automatically</h1>
                   <p className="text-muted-foreground">Connect payments so deposits go straight to your bank.</p>
                 </div>
@@ -957,7 +957,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
                     </div>
                     <Button 
                       size="lg" 
-                      className="w-full h-12 rounded-xl"
+                      className="w-full h-12 rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-[#4F46E5]/30"
                       onClick={handlePaymentsConnect}
                       data-testid="button-connect-payments"
                     >
@@ -999,7 +999,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
                   
                   <Button 
                     size="lg" 
-                    className="w-full h-14 text-lg rounded-2xl"
+                    className="w-full h-14 text-lg rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-[#4F46E5]/30"
                     onClick={handleAICardDismiss}
                     data-testid="button-got-it"
                   >
@@ -1027,7 +1027,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
                 <div className="space-y-4 pt-4">
                   <Button 
                     size="lg" 
-                    className="w-full h-14 text-lg rounded-2xl shadow-lg shadow-primary/20"
+                    className="w-full h-14 text-lg rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-[#4F46E5]/30"
                     onClick={handleGoToDashboard}
                     data-testid="button-go-dashboard"
                   >
