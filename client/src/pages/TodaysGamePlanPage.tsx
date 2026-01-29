@@ -256,7 +256,7 @@ export default function TodaysGamePlanPage() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className={`space-y-6 ${isMobile ? "p-4 pb-12" : "p-8 pb-16 lg:max-w-5xl lg:mx-auto"}`}
+        className={`space-y-6 ${isMobile ? "px-4 py-6 pb-24" : "max-w-7xl mx-auto px-6 lg:px-8 py-6"}`}
       >
 
         <CampaignSuggestionBanner />

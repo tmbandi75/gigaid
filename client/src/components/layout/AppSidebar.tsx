@@ -132,7 +132,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar data-testid="sidebar-desktop">
-      <SidebarHeader className="p-4 border-b border-sidebar-border">
+      <SidebarHeader className="p-4 border-b border-sidebar-border bg-background">
         <Link href="/">
           <div className="flex flex-col cursor-pointer" data-testid="sidebar-header">
             <img src="/gigaid-logo.png" alt="GigAid" className="h-[120px]" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
