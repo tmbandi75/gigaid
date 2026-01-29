@@ -212,33 +212,29 @@ export default function Invoices() {
     count: { all: invoices.length, draft: invoices.filter(i => i.status === "draft").length, sent: invoices.filter(i => i.status === "sent").length, paid: invoices.filter(i => i.status === "paid").length }
   };
 
-  return (
+  const renderMobileLayout = () => (
     <div className="flex flex-col min-h-full bg-background" data-testid="page-invoices">
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-600 text-white px-4 md:px-6 lg:px-8 pt-6 pb-6">
+      <div className="relative overflow-hidden bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-600 text-white px-4 pt-6 pb-6">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-20 -right-20 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
           <div className="absolute top-10 -left-20 w-40 h-40 bg-cyan-400/20 rounded-full blur-2xl" />
           <div className="absolute bottom-0 right-10 w-32 h-32 bg-blue-300/10 rounded-full blur-2xl" />
         </div>
         
-        <div className="relative max-w-7xl mx-auto">
+        <div className="relative">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Invoices</h1>
+              <h1 className="text-2xl font-bold tracking-tight">Invoices</h1>
               <p className="text-sm text-white/70 mt-0.5">Manage your billing</p>
             </div>
             <Link href="/invoices/new">
-              <Button className="bg-white/20 hover:bg-white/30 text-white hidden md:flex" data-testid="button-add-invoice-header-desktop">
-                <Plus className="h-5 w-5 mr-2" />
-                Create Invoice
-              </Button>
-              <Button size="icon" className="h-11 w-11 rounded-xl bg-white/20 backdrop-blur hover:bg-white/30 text-white border border-white/20 md:hidden" data-testid="button-add-invoice-header">
+              <Button size="icon" className="h-11 w-11 rounded-xl bg-white/20 backdrop-blur hover:bg-white/30 text-white border border-white/20" data-testid="button-add-invoice-header">
                 <Plus className="h-5 w-5" />
               </Button>
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
               <div className="flex items-center gap-2 mb-2">
                 <div className="h-8 w-8 rounded-lg bg-emerald-400/20 flex items-center justify-center">
@@ -246,7 +242,7 @@ export default function Invoices() {
                 </div>
                 <span className="text-xs font-medium text-white/80">Collected</span>
               </div>
-              <p className="text-2xl md:text-3xl font-bold tracking-tight" data-testid="text-total-paid">{formatCurrency(stats.paid)}</p>
+              <p className="text-2xl font-bold tracking-tight" data-testid="text-total-paid">{formatCurrency(stats.paid)}</p>
               <p className="text-xs text-white/60 mt-1">{stats.count.paid} paid</p>
             </div>
             
@@ -257,38 +253,16 @@ export default function Invoices() {
                 </div>
                 <span className="text-xs font-medium text-white/80">Outstanding</span>
               </div>
-              <p className="text-2xl md:text-3xl font-bold tracking-tight" data-testid="text-total-pending">{formatCurrency(stats.pending)}</p>
+              <p className="text-2xl font-bold tracking-tight" data-testid="text-total-pending">{formatCurrency(stats.pending)}</p>
               <p className="text-xs text-white/60 mt-1">{stats.count.sent} pending</p>
-            </div>
-
-            <div className="hidden md:block bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="h-8 w-8 rounded-lg bg-slate-400/20 flex items-center justify-center">
-                  <Clock className="h-4 w-4 text-slate-200" />
-                </div>
-                <span className="text-xs font-medium text-white/80">Drafts</span>
-              </div>
-              <p className="text-2xl md:text-3xl font-bold tracking-tight" data-testid="text-drafts-count">{stats.count.draft}</p>
-              <p className="text-xs text-white/60 mt-1">in progress</p>
-            </div>
-
-            <div className="hidden md:block bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="h-8 w-8 rounded-lg bg-blue-400/20 flex items-center justify-center">
-                  <TrendingUp className="h-4 w-4 text-blue-200" />
-                </div>
-                <span className="text-xs font-medium text-white/80">Total</span>
-              </div>
-              <p className="text-2xl md:text-3xl font-bold tracking-tight" data-testid="text-total-invoices">{formatCurrency(stats.total)}</p>
-              <p className="text-xs text-white/60 mt-1">{stats.count.all} invoices</p>
             </div>
           </div>
         </div>
       </div>
       
-      <div className="flex-1 px-4 md:px-6 lg:px-8 pt-4 max-w-7xl mx-auto w-full">
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <Card className="border-0 shadow-lg overflow-hidden bg-card flex-1">
+      <div className="flex-1 px-4 pt-4">
+        <div className="flex flex-col gap-4 mb-6">
+          <Card className="border-0 shadow-lg overflow-hidden bg-card">
             <CardContent className="p-1.5">
               <div className="flex gap-1">
                 {filters.map((f) => {
@@ -319,30 +293,7 @@ export default function Invoices() {
             </CardContent>
           </Card>
 
-          {!isMobile && (
-            <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
-              <Button
-                variant={viewMode === "table" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("table")}
-                data-testid="view-mode-table"
-              >
-                <List className="h-4 w-4 mr-2" />
-                Table
-              </Button>
-              <Button
-                variant={viewMode === "cards" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("cards")}
-                data-testid="view-mode-cards"
-              >
-                <LayoutGrid className="h-4 w-4 mr-2" />
-                Cards
-              </Button>
-            </div>
-          )}
-
-          <Link href="/invoices/new" className="md:hidden">
+          <Link href="/invoices/new">
             <Button className="w-full h-14 text-base font-semibold bg-gradient-to-r from-blue-500 to-cyan-500 shadow-lg shadow-blue-500/20 rounded-xl" data-testid="button-add-invoice">
               <div className="h-8 w-8 rounded-lg bg-white/20 flex items-center justify-center mr-3">
                 <Plus className="h-5 w-5" />
@@ -353,11 +304,145 @@ export default function Invoices() {
         </div>
 
         {isLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="border-0 shadow-sm overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="flex">
+                    <div className="w-1.5 bg-muted animate-pulse" />
+                    <div className="flex-1 p-4">
+                      <div className="flex items-center gap-4">
+                        <div className="h-14 w-14 bg-muted animate-pulse rounded-2xl" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 w-32 bg-muted animate-pulse rounded-lg" />
+                          <div className="h-3 w-24 bg-muted animate-pulse rounded-lg" />
+                        </div>
+                        <div className="h-6 w-16 bg-muted animate-pulse rounded-lg" />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : filteredInvoices.length === 0 ? (
+          <EmptyState filter={filter} />
+        ) : (
+          <div className="space-y-3">
+            {filteredInvoices.map((invoice) => (
+              <InvoiceCard 
+                key={invoice.id} 
+                invoice={invoice}
+                nudges={nudges}
+                onNudgeClick={(nudge) => setSelectedNudge(nudge)}
+              />
+            ))}
+          </div>
+        )}
+        
+        <div className="h-8" />
+      </div>
+    </div>
+  );
+
+  const renderDesktopLayout = () => (
+    <div className="flex flex-col min-h-full bg-background" data-testid="page-invoices">
+      <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-[999]">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+          <div className="flex items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/10 flex items-center justify-center">
+                <FileText className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground" data-testid="page-title">Invoices</h1>
+                <p className="text-sm text-muted-foreground">Manage your billing</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-8 pr-6 border-r">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-emerald-600" data-testid="text-total-paid">{formatCurrency(stats.paid)}</p>
+                  <p className="text-xs text-muted-foreground">Collected</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-amber-600" data-testid="text-total-pending">{formatCurrency(stats.pending)}</p>
+                  <p className="text-xs text-muted-foreground">Outstanding</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground" data-testid="text-drafts-count">{stats.count.draft}</p>
+                  <p className="text-xs text-muted-foreground">Drafts</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground" data-testid="text-total-invoices">{stats.count.all}</p>
+                  <p className="text-xs text-muted-foreground">Total</p>
+                </div>
+              </div>
+
+              <Link href="/invoices/new">
+                <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 shadow-md" data-testid="button-add-invoice-header-desktop">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Invoice
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="flex-1 max-w-7xl mx-auto w-full px-6 lg:px-8 py-6">
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg">
+            {filters.map((f) => (
+              <Button
+                key={f.value}
+                variant={filter === f.value ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setFilter(f.value)}
+                className={`h-9 ${filter === f.value ? "bg-blue-500 hover:bg-blue-600" : ""}`}
+                data-testid={`filter-${f.value}`}
+              >
+                {f.label}
+                {f.value !== "all" && stats.count[f.value as keyof typeof stats.count] > 0 && (
+                  <span className="ml-1.5 text-xs opacity-75">
+                    ({stats.count[f.value as keyof typeof stats.count]})
+                  </span>
+                )}
+              </Button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
+            <Button
+              variant={viewMode === "table" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("table")}
+              className="h-9"
+              data-testid="view-mode-table"
+            >
+              <List className="h-4 w-4 mr-1" />
+              Table
+            </Button>
+            <Button
+              variant={viewMode === "cards" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("cards")}
+              className="h-9"
+              data-testid="view-mode-cards"
+            >
+              <LayoutGrid className="h-4 w-4 mr-1" />
+              Cards
+            </Button>
+          </div>
+        </div>
+
+        {isLoading ? (
           showTableView ? (
             <InvoicesTableView invoices={[]} isLoading={true} />
           ) : (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
+            <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
                 <Card key={i} className="border-0 shadow-sm overflow-hidden">
                   <CardContent className="p-0">
                     <div className="flex">
@@ -383,7 +468,7 @@ export default function Invoices() {
         ) : showTableView ? (
           <InvoicesTableView invoices={filteredInvoices} />
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
             {filteredInvoices.map((invoice) => (
               <InvoiceCard 
                 key={invoice.id} 
@@ -394,15 +479,19 @@ export default function Invoices() {
             ))}
           </div>
         )}
-        
-        <div className="h-8" />
       </div>
+    </div>
+  );
+
+  return (
+    <>
+      {isMobile ? renderMobileLayout() : renderDesktopLayout()}
 
       <NudgeActionSheet
         nudge={selectedNudge}
         open={!!selectedNudge}
         onClose={() => setSelectedNudge(null)}
       />
-    </div>
+    </>
   );
 }

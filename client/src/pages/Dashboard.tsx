@@ -16,6 +16,7 @@ import { NudgeCard } from "@/components/nudges/NudgeCard";
 import { GigAidImpact } from "@/components/GigAidImpact";
 import { MoneyPlanWidget } from "@/components/MoneyPlanWidget";
 import { useRecentActivityFeedback } from "@/hooks/useRecentActivityFeedback";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Briefcase,
   Users,
@@ -90,6 +91,7 @@ export default function Dashboard() {
   const [period, setPeriod] = useState<"weekly" | "monthly">("weekly");
   const [showWelcome, setShowWelcome] = useState(false);
   const [showInactivityModal, setShowInactivityModal] = useState(false);
+  const isMobile = useIsMobile();
   
   useRecentActivityFeedback();
 
@@ -152,149 +154,159 @@ export default function Dashboard() {
     { icon: FileText, label: "Invoice", href: "/invoices/new", gradient: "from-blue-500 to-cyan-500" },
   ];
 
-  return (
-    <div className="flex flex-col min-h-full bg-background" data-testid="page-dashboard">
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-violet-600 text-primary-foreground px-4 md:px-6 lg:px-8 pt-6 pb-8 md:pb-6">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 -left-10 w-32 h-32 bg-violet-400/20 rounded-full blur-2xl" />
+  const renderMobileHeader = () => (
+    <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-violet-600 text-primary-foreground px-4 pt-6 pb-8">
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 -left-10 w-32 h-32 bg-violet-400/20 rounded-full blur-2xl" />
+      </div>
+
+      <div className="relative">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-primary-foreground/80 text-sm">{getGreeting()}</p>
+            <h1 className="text-2xl font-bold">Dashboard</h1>
+          </div>
+          <Link href="/reminders">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-primary-foreground hover:bg-white/20 relative"
+              data-testid="button-notifications"
+            >
+              <Bell className="h-5 w-5" />
+              {(summary?.pendingReminders ?? 0) > 0 && (
+                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-[10px] font-bold flex items-center justify-center">
+                  {summary?.pendingReminders}
+                </span>
+              )}
+            </Button>
+          </Link>
         </div>
 
-        <div className="relative max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-4 md:mb-6">
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setPeriod("weekly")}
+            className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-all ${
+              period === "weekly"
+                ? "bg-white/25 text-white"
+                : "bg-white/10 text-white/70 hover:bg-white/15"
+            }`}
+            data-testid="tab-weekly"
+          >
+            Weekly
+          </button>
+          <button
+            onClick={() => setPeriod("monthly")}
+            className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-all ${
+              period === "monthly"
+                ? "bg-white/25 text-white"
+                : "bg-white/10 text-white/70 hover:bg-white/15"
+            }`}
+            data-testid="tab-monthly"
+          >
+            Monthly
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <DollarSign className="h-4 w-4 text-primary-foreground/80" />
+              <span className="text-xs text-primary-foreground/80">{periodLabel}</span>
+            </div>
+            <p className="text-2xl font-bold" data-testid="text-period-earnings">
+              {isLoading ? "..." : formatCurrency(period === "weekly" ? (summary?.weeklyStats?.earningsThisWeek ?? 0) : (summary?.monthlyStats?.earningsThisMonth ?? 0))}
+            </p>
+          </div>
+
+          <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Briefcase className="h-4 w-4 text-primary-foreground/80" />
+              <span className="text-xs text-primary-foreground/80">Jobs</span>
+            </div>
+            <p className="text-2xl font-bold" data-testid="text-period-jobs">
+              {isLoading ? "..." : (period === "weekly" ? (summary?.weeklyStats?.jobsThisWeek ?? 0) : (summary?.monthlyStats?.jobsThisMonth ?? 0))}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderDesktopHeader = () => (
+    <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-[999]">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+        <div className="flex items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/10 to-violet-500/10 flex items-center justify-center">
+              <Briefcase className="h-6 w-6 text-primary" />
+            </div>
             <div>
-              <p className="text-primary-foreground/80 text-sm">{getGreeting()}</p>
-              <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="hidden md:flex gap-2">
-                <button
-                  onClick={() => setPeriod("weekly")}
-                  className={`py-2 px-4 rounded-xl text-sm font-medium transition-all ${
-                    period === "weekly"
-                      ? "bg-white/25 text-white"
-                      : "bg-white/10 text-white/70 hover:bg-white/15"
-                  }`}
-                  data-testid="tab-weekly-desktop"
-                >
-                  Weekly
-                </button>
-                <button
-                  onClick={() => setPeriod("monthly")}
-                  className={`py-2 px-4 rounded-xl text-sm font-medium transition-all ${
-                    period === "monthly"
-                      ? "bg-white/25 text-white"
-                      : "bg-white/10 text-white/70 hover:bg-white/15"
-                  }`}
-                  data-testid="tab-monthly-desktop"
-                >
-                  Monthly
-                </button>
-              </div>
-              <Link href="/reminders" className="md:hidden">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-primary-foreground hover:bg-white/20 relative"
-                  data-testid="button-notifications"
-                >
-                  <Bell className="h-5 w-5" />
-                  {(summary?.pendingReminders ?? 0) > 0 && (
-                    <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-[10px] font-bold flex items-center justify-center">
-                      {summary?.pendingReminders}
-                    </span>
-                  )}
-                </Button>
-              </Link>
+              <p className="text-sm text-muted-foreground">{getGreeting()}</p>
+              <h1 className="text-2xl font-bold text-foreground" data-testid="page-title">Dashboard</h1>
             </div>
           </div>
 
-          <div className="flex gap-2 mb-4 md:hidden">
-            <button
-              onClick={() => setPeriod("weekly")}
-              className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-all ${
-                period === "weekly"
-                  ? "bg-white/25 text-white"
-                  : "bg-white/10 text-white/70 hover:bg-white/15"
-              }`}
-              data-testid="tab-weekly"
-            >
-              Weekly
-            </button>
-            <button
-              onClick={() => setPeriod("monthly")}
-              className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-all ${
-                period === "monthly"
-                  ? "bg-white/25 text-white"
-                  : "bg-white/10 text-white/70 hover:bg-white/15"
-              }`}
-              data-testid="tab-monthly"
-            >
-              Monthly
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-            <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <DollarSign className="h-4 w-4 text-primary-foreground/80" />
-                <span className="text-xs text-primary-foreground/80">{periodLabel}</span>
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-8 pr-6 border-r">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-foreground" data-testid="text-period-earnings">
+                  {isLoading ? "..." : formatCurrency(period === "weekly" ? (summary?.weeklyStats?.earningsThisWeek ?? 0) : (summary?.monthlyStats?.earningsThisMonth ?? 0))}
+                </p>
+                <p className="text-xs text-muted-foreground">{periodLabel} Revenue</p>
               </div>
-              <p className="text-2xl md:text-3xl font-bold" data-testid="text-period-earnings">
-                {isLoading ? "..." : formatCurrency(period === "weekly" ? (summary?.weeklyStats?.earningsThisWeek ?? 0) : (summary?.monthlyStats?.earningsThisMonth ?? 0))}
-              </p>
-              <div className="flex items-center gap-1 mt-1 text-xs text-primary-foreground/80">
-                <TrendingUp className="h-3 w-3" />
-                <span>Revenue</span>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-foreground" data-testid="text-period-jobs">
+                  {isLoading ? "..." : periodJobs}
+                </p>
+                <p className="text-xs text-muted-foreground">Jobs</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-foreground" data-testid="text-period-leads">
+                  {isLoading ? "..." : (period === "weekly" ? (summary?.weeklyStats?.leadsThisWeek ?? 0) : (summary?.monthlyStats?.leadsThisMonth ?? 0))}
+                </p>
+                <p className="text-xs text-muted-foreground">Leads</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-foreground" data-testid="text-completion-rate">
+                  {isLoading ? "..." : `${completionRate}%`}
+                </p>
+                <p className="text-xs text-muted-foreground">Completion</p>
               </div>
             </div>
 
-            <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Briefcase className="h-4 w-4 text-primary-foreground/80" />
-                <span className="text-xs text-primary-foreground/80">Jobs</span>
-              </div>
-              <p className="text-2xl md:text-3xl font-bold" data-testid="text-period-jobs">
-                {isLoading ? "..." : (period === "weekly" ? (summary?.weeklyStats?.jobsThisWeek ?? 0) : (summary?.monthlyStats?.jobsThisMonth ?? 0))}
-              </p>
-              <div className="flex items-center gap-1 mt-1 text-xs text-primary-foreground/80">
-                <TrendingUp className="h-3 w-3" />
-                <span>{completionRate}% done</span>
-              </div>
-            </div>
-
-            <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Users className="h-4 w-4 text-primary-foreground/80" />
-                <span className="text-xs text-primary-foreground/80">Leads</span>
-              </div>
-              <p className="text-2xl md:text-3xl font-bold" data-testid="text-period-leads">
-                {isLoading ? "..." : (period === "weekly" ? (summary?.weeklyStats?.leadsThisWeek ?? 0) : (summary?.monthlyStats?.leadsThisMonth ?? 0))}
-              </p>
-              <div className="flex items-center gap-1 mt-1 text-xs text-primary-foreground/80">
-                <ArrowUpRight className="h-3 w-3" />
-                <span>{summary?.newLeads ?? 0} new</span>
-              </div>
-            </div>
-
-            <div className="hidden md:block bg-white/15 backdrop-blur rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <CheckCircle2 className="h-4 w-4 text-primary-foreground/80" />
-                <span className="text-xs text-primary-foreground/80">Completion</span>
-              </div>
-              <p className="text-2xl md:text-3xl font-bold" data-testid="text-completion-rate">
-                {isLoading ? "..." : `${completionRate}%`}
-              </p>
-              <div className="flex items-center gap-1 mt-1 text-xs text-primary-foreground/80">
-                <TrendingUp className="h-3 w-3" />
-                <span>Rate</span>
-              </div>
+            <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg">
+              <Button
+                variant={period === "weekly" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setPeriod("weekly")}
+                className="h-9"
+                data-testid="tab-weekly-desktop"
+              >
+                Weekly
+              </Button>
+              <Button
+                variant={period === "monthly" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setPeriod("monthly")}
+                className="h-9"
+                data-testid="tab-monthly-desktop"
+              >
+                Monthly
+              </Button>
             </div>
           </div>
         </div>
       </div>
+    </div>
+  );
 
-      <div className="flex-1 px-4 md:px-6 lg:px-8 py-6 space-y-6 -mt-4 max-w-7xl mx-auto w-full">
+  return (
+    <div className="flex flex-col min-h-full bg-background" data-testid="page-dashboard">
+      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
+
+      <div className={`flex-1 px-4 md:px-6 lg:px-8 py-6 space-y-6 max-w-7xl mx-auto w-full ${isMobile ? "-mt-4" : ""}`}>
         {!onboarding?.completed && onboarding?.step !== undefined && (
           <OnboardingChecklist
             currentStep={onboarding.step}
@@ -501,51 +513,53 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <Card className="bg-gradient-to-br from-primary/5 to-violet-500/5 border-primary/20 hidden md:block" data-testid="card-ai-tip">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-6">
-              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center flex-shrink-0 shadow-lg">
-                <Zap className="h-7 w-7 text-white" />
+        {isMobile ? (
+          <Card className="bg-gradient-to-br from-primary/5 to-violet-500/5 border-primary/20" data-testid="card-ai-tip-mobile">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+                  <Zap className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-sm mb-1">AI Assistant Ready</p>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Use voice commands to create jobs, send invoices, and manage your business hands-free.
+                  </p>
+                  <Link href="/ai-tools">
+                    <Button size="sm" variant="outline" className="h-8" data-testid="button-try-ai-mobile">
+                      <Sparkles className="h-3 w-3 mr-2" />
+                      Explore AI Tools
+                    </Button>
+                  </Link>
+                </div>
               </div>
-              <div className="flex-1">
-                <p className="font-semibold text-base mb-1">AI Assistant Ready</p>
-                <p className="text-sm text-muted-foreground">
-                  Use voice commands to create jobs, send invoices, and manage your business hands-free.
-                </p>
-              </div>
-              <Link href="/ai-tools">
-                <Button variant="outline" data-testid="button-try-ai">
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Explore AI Tools
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-primary/5 to-violet-500/5 border-primary/20 md:hidden" data-testid="card-ai-tip-mobile">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center flex-shrink-0 shadow-lg">
-                <Zap className="h-5 w-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-sm mb-1">AI Assistant Ready</p>
-                <p className="text-xs text-muted-foreground mb-3">
-                  Use voice commands to create jobs, send invoices, and manage your business hands-free.
-                </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-gradient-to-br from-primary/5 to-violet-500/5 border-primary/20" data-testid="card-ai-tip">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-6">
+                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+                  <Zap className="h-7 w-7 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-base mb-1">AI Assistant Ready</p>
+                  <p className="text-sm text-muted-foreground">
+                    Use voice commands to create jobs, send invoices, and manage your business hands-free.
+                  </p>
+                </div>
                 <Link href="/ai-tools">
-                  <Button size="sm" variant="outline" className="h-8" data-testid="button-try-ai-mobile">
-                    <Sparkles className="h-3 w-3 mr-2" />
+                  <Button variant="outline" data-testid="button-try-ai">
+                    <Sparkles className="h-4 w-4 mr-2" />
                     Explore AI Tools
                   </Button>
                 </Link>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
-        <div className="h-20 md:h-8" />
+        <div className={isMobile ? "h-20" : "h-8"} />
       </div>
 
       <WelcomeModal

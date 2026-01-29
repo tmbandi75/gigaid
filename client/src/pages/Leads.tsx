@@ -325,7 +325,10 @@ export default function Leads() {
   const newCount = leads.filter(l => l.status === "new").length;
   const convertedCount = leads.filter(l => l.status === "converted").length;
 
-  return (
+  const contactedCount = leads.filter(l => l.status === "response_sent").length;
+  const totalLeadsCount = leads.length;
+
+  const renderMobileLayout = () => (
     <div className="flex flex-col min-h-full bg-background" data-testid="page-leads">
       <div 
         className="relative overflow-hidden text-white px-4 pt-6 pb-8"
@@ -343,63 +346,45 @@ export default function Leads() {
         <div className="relative">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold">Leads</h1>
+              <h1 className="text-2xl font-bold">Leads</h1>
               <p className="text-sm text-white/80">Track potential clients</p>
             </div>
             <Link href="/leads/new">
-              <Button className="bg-white/20 hover:bg-white/30 text-white hidden md:flex" data-testid="button-add-lead-header-desktop">
-                <Plus className="h-5 w-5 mr-2" />
-                Add Lead
-              </Button>
-              <Button size="icon" className="bg-white/20 hover:bg-white/30 text-white md:hidden" data-testid="button-add-lead-header">
+              <Button size="icon" className="bg-white/20 hover:bg-white/30 text-white" data-testid="button-add-lead-header">
                 <Plus className="h-5 w-5" />
               </Button>
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-1">
                 <Users className="h-4 w-4 text-white/80" />
                 <span className="text-xs text-white/80">New</span>
               </div>
-              <p className="text-2xl md:text-3xl font-bold" data-testid="text-new-count">{newCount}</p>
+              <p className="text-2xl font-bold" data-testid="text-new-count">{newCount}</p>
             </div>
             <div className="bg-white/15 backdrop-blur rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-1">
                 <TrendingUp className="h-4 w-4 text-white/80" />
                 <span className="text-xs text-white/80">Converted</span>
               </div>
-              <p className="text-2xl md:text-3xl font-bold" data-testid="text-converted-count">{convertedCount}</p>
-            </div>
-            <div className="hidden md:block bg-white/15 backdrop-blur rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <MessageSquare className="h-4 w-4 text-white/80" />
-                <span className="text-xs text-white/80">Contacted</span>
-              </div>
-              <p className="text-2xl md:text-3xl font-bold" data-testid="text-contacted-count">{filteredLeads.filter(l => l.status === "response_sent").length}</p>
-            </div>
-            <div className="hidden md:block bg-white/15 backdrop-blur rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Star className="h-4 w-4 text-white/80" />
-                <span className="text-xs text-white/80">Total</span>
-              </div>
-              <p className="text-2xl md:text-3xl font-bold" data-testid="text-total-leads">{filteredLeads.length}</p>
+              <p className="text-2xl font-bold" data-testid="text-converted-count">{convertedCount}</p>
             </div>
           </div>
         </div>
       </div>
       
-      <div className="flex-1 px-4 md:px-6 lg:px-8 py-6 -mt-4 max-w-7xl mx-auto w-full">
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <Card className="border-0 shadow-md overflow-hidden flex-1">
+      <div className="flex-1 px-4 py-6 -mt-4">
+        <div className="flex flex-col gap-4 mb-6">
+          <Card className="border-0 shadow-md overflow-hidden">
             <CardContent className="p-1">
-              <div className="flex gap-1">
-                {filters.map((f) => (
+              <div className="flex gap-1 overflow-x-auto">
+                {filters.slice(0, 4).map((f) => (
                   <button
                     key={f.value}
                     onClick={() => setFilter(f.value)}
-                    className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all ${
+                    className={`flex-1 py-2.5 px-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
                       filter === f.value
                         ? "bg-emerald-500 text-white shadow-sm"
                         : "text-muted-foreground hover:bg-muted/50"
@@ -413,30 +398,7 @@ export default function Leads() {
             </CardContent>
           </Card>
 
-          {!isMobile && (
-            <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
-              <Button
-                variant={viewMode === "table" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("table")}
-                data-testid="view-mode-table"
-              >
-                <List className="h-4 w-4 mr-2" />
-                Table
-              </Button>
-              <Button
-                variant={viewMode === "cards" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("cards")}
-                data-testid="view-mode-cards"
-              >
-                <LayoutGrid className="h-4 w-4 mr-2" />
-                Cards
-              </Button>
-            </div>
-          )}
-
-          <Link href="/leads/new" className="md:hidden">
+          <Link href="/leads/new">
             <Button className="w-full h-12 bg-gradient-to-r from-emerald-500 to-teal-500 shadow-lg" data-testid="button-add-lead">
               <Plus className="h-5 w-5 mr-2" />
               Add New Lead
@@ -444,15 +406,142 @@ export default function Leads() {
           </Link>
         </div>
 
-        {/* Follow-up check-ins */}
+        <FollowUpCheckIn />
+
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="border-0 shadow-sm">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="h-12 w-12 bg-muted animate-pulse rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-32 bg-muted animate-pulse rounded" />
+                      <div className="h-3 w-24 bg-muted animate-pulse rounded" />
+                      <div className="h-3 w-40 bg-muted animate-pulse rounded" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : filteredLeads.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <div className="space-y-3">
+            {filteredLeads.map((lead) => (
+              <LeadCard 
+                key={lead.id} 
+                lead={lead}
+                nudges={nudges}
+                onGenerateFollowUp={handleGenerateFollowUp}
+                onSendText={(phone) => sendText({ phoneNumber: phone, message: "" })}
+                onNudgeClick={(nudge) => setSelectedNudge(nudge)}
+              />
+            ))}
+          </div>
+        )}
+        
+        <div className="h-6" />
+      </div>
+    </div>
+  );
+
+  const renderDesktopLayout = () => (
+    <div className="flex flex-col min-h-full bg-background" data-testid="page-leads">
+      <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-[999]">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+          <div className="flex items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 flex items-center justify-center">
+                <Users className="h-6 w-6 text-emerald-600" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground" data-testid="page-title">Leads</h1>
+                <p className="text-sm text-muted-foreground">Track potential clients</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-8 pr-6 border-r">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground" data-testid="text-new-count">{newCount}</p>
+                  <p className="text-xs text-muted-foreground">New</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground" data-testid="text-converted-count">{convertedCount}</p>
+                  <p className="text-xs text-muted-foreground">Converted</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground" data-testid="text-contacted-count">{contactedCount}</p>
+                  <p className="text-xs text-muted-foreground">Contacted</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground" data-testid="text-total-leads">{totalLeadsCount}</p>
+                  <p className="text-xs text-muted-foreground">Total</p>
+                </div>
+              </div>
+
+              <Link href="/leads/new">
+                <Button className="bg-gradient-to-r from-emerald-500 to-teal-500 shadow-md" data-testid="button-add-lead-header-desktop">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Lead
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="flex-1 max-w-7xl mx-auto w-full px-6 lg:px-8 py-6">
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg">
+            {filters.map((f) => (
+              <Button
+                key={f.value}
+                variant={filter === f.value ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setFilter(f.value)}
+                className={`h-9 ${filter === f.value ? "bg-emerald-500 hover:bg-emerald-600" : ""}`}
+                data-testid={`filter-${f.value}`}
+              >
+                {f.label}
+              </Button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
+            <Button
+              variant={viewMode === "table" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("table")}
+              className="h-9"
+              data-testid="view-mode-table"
+            >
+              <List className="h-4 w-4 mr-1" />
+              Table
+            </Button>
+            <Button
+              variant={viewMode === "cards" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("cards")}
+              className="h-9"
+              data-testid="view-mode-cards"
+            >
+              <LayoutGrid className="h-4 w-4 mr-1" />
+              Cards
+            </Button>
+          </div>
+        </div>
+
         <FollowUpCheckIn />
 
         {isLoading ? (
           showTableView ? (
             <LeadsTableView leads={[]} isLoading={true} />
           ) : (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
+            <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
                 <Card key={i} className="border-0 shadow-sm">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
@@ -473,7 +562,7 @@ export default function Leads() {
         ) : showTableView ? (
           <LeadsTableView leads={filteredLeads} />
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
             {filteredLeads.map((lead) => (
               <LeadCard 
                 key={lead.id} 
@@ -486,9 +575,13 @@ export default function Leads() {
             ))}
           </div>
         )}
-        
-        <div className="h-6" />
       </div>
+    </div>
+  );
+
+  return (
+    <>
+      {isMobile ? renderMobileLayout() : renderDesktopLayout()}
 
       <Dialog open={!!selectedLead} onOpenChange={(open) => !open && setSelectedLead(null)}>
         <DialogContent className="sm:max-w-md" data-testid="dialog-followup">
@@ -589,6 +682,6 @@ export default function Leads() {
         open={!!selectedNudge}
         onClose={() => setSelectedNudge(null)}
       />
-    </div>
+    </>
   );
 }
