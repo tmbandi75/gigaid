@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Gift,
   Copy,
@@ -31,6 +32,7 @@ export default function Referrals() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
+  const isMobile = useIsMobile();
 
   const { data: referralData, isLoading } = useQuery<ReferralData>({
     queryKey: ["/api/referrals"],
@@ -65,27 +67,69 @@ export default function Referrals() {
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
+  const renderMobileHeader = () => (
+    <div className="relative overflow-hidden bg-gradient-to-br from-pink-500 via-rose-500 to-red-500 text-white px-4 pt-6 pb-16">
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 -left-10 w-32 h-32 bg-rose-400/20 rounded-full blur-2xl" />
+        <div className="absolute top-1/2 right-1/4 w-24 h-24 bg-pink-300/10 rounded-full blur-2xl" />
+      </div>
+      <div className="relative">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate("/more")}
+          className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
+          data-testid="button-back"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back
+        </Button>
+        <div className="flex items-center gap-3 mb-2">
+          <div className="h-12 w-12 rounded-2xl bg-white/20 flex items-center justify-center">
+            <Gift className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Referrals</h1>
+            <p className="text-rose-100/80">Invite friends, earn rewards</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderDesktopHeader = () => (
+    <div className="border-b bg-background sticky top-0 z-[999]">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+        <div className="flex items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-pink-500/10 to-rose-500/10 flex items-center justify-center">
+              <Gift className="h-6 w-6 text-pink-500" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Referrals</h1>
+              <p className="text-sm text-muted-foreground">Invite friends, earn rewards</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-8 pr-6 border-r">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-foreground" data-testid="text-total-referred">{referralData?.referrals?.length || 0}</p>
+              <p className="text-xs text-muted-foreground">Referred</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-foreground" data-testid="text-total-rewards">${((referralData?.totalRewards || 0) / 100).toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground">Rewards</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="relative overflow-hidden bg-gradient-to-br from-pink-500 via-rose-500 to-red-500 text-white px-4 pt-6 pb-8">
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
-          </div>
-          <div className="relative">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/more")}
-              className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
-              data-testid="button-back"
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back
-            </Button>
-            <h1 className="text-2xl font-bold">Referrals</h1>
-          </div>
-        </div>
+        {isMobile ? renderMobileHeader() : renderDesktopHeader()}
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -97,37 +141,10 @@ export default function Referrals() {
   const totalRewards = referralData?.totalRewards || 0;
 
   return (
-    <div className="min-h-screen bg-background pb-24" data-testid="page-referrals">
-      <div className="relative overflow-hidden bg-gradient-to-br from-pink-500 via-rose-500 to-red-500 text-white px-4 pt-6 pb-16">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 -left-10 w-32 h-32 bg-rose-400/20 rounded-full blur-2xl" />
-          <div className="absolute top-1/2 right-1/4 w-24 h-24 bg-pink-300/10 rounded-full blur-2xl" />
-        </div>
-        <div className="relative">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate("/more")}
-            className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
-            data-testid="button-back"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back
-          </Button>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="h-12 w-12 rounded-2xl bg-white/20 flex items-center justify-center">
-              <Gift className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">Referrals</h1>
-              <p className="text-rose-100/80">Invite friends, earn rewards</p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-background" data-testid="page-referrals">
+      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
 
-      <div className="px-4 -mt-10 relative z-10 space-y-4">
+      <div className={`${isMobile ? "px-4 -mt-10 pb-24" : "max-w-7xl mx-auto px-6 lg:px-8 py-6 pb-12"} relative z-10 space-y-4`}>
         <Card className="border-0 shadow-lg overflow-hidden">
           <CardContent className="p-0">
             <div className="bg-gradient-to-r from-rose-50 to-pink-50 dark:from-rose-900/10 dark:to-pink-900/10 p-6">

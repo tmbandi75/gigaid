@@ -19,6 +19,7 @@ import { NewServiceAIInput } from "@/components/ai/NewServiceAIInput";
 import { ReviewDraftGenerator } from "@/components/ai/ReviewDraftGenerator";
 import { ClientTags } from "@/components/ai/ClientTags";
 import { EstimationTool } from "@/components/ai/EstimationTool";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   Sparkles, 
   Calendar, 
@@ -51,6 +52,7 @@ interface AIFeature {
 
 export default function AITools() {
   const [activeFeature, setActiveFeature] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const { data: summary } = useQuery<DashboardSummary>({
     queryKey: ["/api/dashboard/summary"],
@@ -58,6 +60,43 @@ export default function AITools() {
 
   // Advanced features unlock after first completed job, invoice sent, or payment collected
   const hasUnlockedAdvanced = (summary?.completedJobs ?? 0) > 0 || (summary?.totalEarnings ?? 0) > 0;
+
+  const renderMobileHeader = () => (
+    <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-background px-4 pt-6 pb-8">
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-4 -right-4 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 -left-8 w-24 h-24 bg-violet-500/10 rounded-full blur-2xl" />
+      </div>
+      
+      <div className="relative">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center shadow-lg">
+            <Sparkles className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Business Co-Pilot</h1>
+            <p className="text-sm text-muted-foreground">See what works. Fix what doesn't. Get paid faster.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderDesktopHeader = () => (
+    <div className="border-b bg-background sticky top-0 z-[999]">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center shadow-lg">
+            <Sparkles className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold">Business Co-Pilot</h1>
+            <p className="text-sm text-muted-foreground">See what works. Fix what doesn't. Get paid faster.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   const features: AIFeature[] = [
     {
@@ -248,27 +287,10 @@ export default function AITools() {
 
   return (
     <div className="flex flex-col min-h-full bg-background" data-testid="page-ai-tools">
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-background px-4 pt-6 pb-8">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-4 -right-4 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 -left-8 w-24 h-24 bg-violet-500/10 rounded-full blur-2xl" />
-        </div>
-        
-        <div className="relative">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center shadow-lg">
-              <Sparkles className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">Business Co-Pilot</h1>
-              <p className="text-sm text-muted-foreground">See what works. Fix what doesn't. Get paid faster.</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
 
-      <ScrollArea className="flex-1 px-4 pb-24">
-        <div className="py-4 space-y-6">
+      <ScrollArea className={isMobile ? "flex-1 px-4 pb-24" : "flex-1 max-w-7xl mx-auto w-full px-6 lg:px-8 py-6"}>
+        <div className={isMobile ? "py-4 space-y-6" : "space-y-8"}>
           {categories.map((category) => {
             const categoryFeatures = features.filter((f) => f.category === category.id);
             return (
@@ -283,7 +305,7 @@ export default function AITools() {
                   </Badge>
                 </div>
                 
-                <div className="grid grid-cols-1 gap-3">
+                <div className={isMobile ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 lg:grid-cols-3 gap-4"}>
                   {categoryFeatures.map((feature) => {
                     const isLocked = feature.requiresUnlock && !hasUnlockedAdvanced;
                     return (
@@ -297,8 +319,8 @@ export default function AITools() {
                         onClick={() => !isLocked && setActiveFeature(feature.id)}
                         data-testid={`card-feature-${feature.id}`}
                       >
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-4">
+                        <CardContent className={isMobile ? "p-4" : "p-4"}>
+                          <div className={isMobile ? "flex items-center gap-4" : "flex flex-col gap-3"}>
                             <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${isLocked ? "from-gray-400 to-gray-500" : feature.gradient} flex items-center justify-center shadow-md flex-shrink-0 relative`}>
                               <feature.icon className="h-6 w-6 text-white" />
                               {isLocked && (
@@ -309,14 +331,16 @@ export default function AITools() {
                             </div>
                             <div className="flex-1 min-w-0">
                               <h3 className="font-semibold text-base mb-0.5">{feature.title}</h3>
-                              <p className="text-sm text-muted-foreground line-clamp-1" data-testid={isLocked ? `text-locked-${feature.id}` : undefined}>
+                              <p className={isMobile ? "text-sm text-muted-foreground line-clamp-1" : "text-sm text-muted-foreground line-clamp-2"} data-testid={isLocked ? `text-locked-${feature.id}` : undefined}>
                                 {isLocked ? "Unlocks after your first paid job" : feature.description}
                               </p>
                             </div>
-                            {isLocked ? (
-                              <Lock className="h-5 w-5 text-muted-foreground/50 flex-shrink-0" />
-                            ) : (
-                              <ChevronRight className="h-5 w-5 text-muted-foreground/50 flex-shrink-0 group-hover:text-primary transition-colors" />
+                            {isMobile && (
+                              isLocked ? (
+                                <Lock className="h-5 w-5 text-muted-foreground/50 flex-shrink-0" />
+                              ) : (
+                                <ChevronRight className="h-5 w-5 text-muted-foreground/50 flex-shrink-0 group-hover:text-primary transition-colors" />
+                              )
                             )}
                           </div>
                         </CardContent>

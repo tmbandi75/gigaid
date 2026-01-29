@@ -235,7 +235,7 @@ export default function Dashboard() {
   );
 
   const renderDesktopHeader = () => (
-    <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-[999]">
+    <div className="border-b bg-background sticky top-0 z-[999]">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
         <div className="flex items-center justify-between gap-6">
           <div className="flex items-center gap-4">

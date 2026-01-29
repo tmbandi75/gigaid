@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   HelpCircle, 
@@ -588,6 +589,7 @@ const getStatusLabel = (status: string) => {
 export default function HelpSupport() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
   const [contactForm, setContactForm] = useState({
     subject: "",
@@ -630,6 +632,52 @@ export default function HelpSupport() {
     ),
   })).filter(category => category.questions.length > 0);
 
+  const renderMobileHeader = () => (
+    <div className="relative overflow-hidden bg-gradient-to-br from-slate-600 via-slate-700 to-slate-800 text-white px-4 pt-6 pb-12">
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 -left-10 w-32 h-32 bg-slate-400/10 rounded-full blur-2xl" />
+      </div>
+      <div className="relative">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate("/more")}
+          className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
+          data-testid="button-back"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back
+        </Button>
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center">
+            <Headphones className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Help & Support</h1>
+            <p className="text-slate-300/80">We're here to help you</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderDesktopHeader = () => (
+    <div className="border-b bg-background sticky top-0 z-[999]">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center flex-shrink-0">
+            <Headphones className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Help & Support</h1>
+            <p className="text-sm text-muted-foreground">Browse our guides and submit support tickets</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactForm.subject || !contactForm.message) {
@@ -646,36 +694,10 @@ export default function HelpSupport() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24" data-testid="page-help-support">
-      <div className="relative overflow-hidden bg-gradient-to-br from-slate-600 via-slate-700 to-slate-800 text-white px-4 pt-6 pb-12">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 -left-10 w-32 h-32 bg-slate-400/10 rounded-full blur-2xl" />
-        </div>
-        <div className="relative">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate("/more")}
-            className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
-            data-testid="button-back"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back
-          </Button>
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center">
-              <Headphones className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">Help & Support</h1>
-              <p className="text-slate-300/80">We're here to help you</p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className={`min-h-screen bg-background ${isMobile ? "pb-24" : "pb-8"}`} data-testid="page-help-support">
+      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
 
-      <div className="px-4 -mt-6 relative z-10 space-y-4">
+      <div className={`${isMobile ? "px-4 -mt-6 relative z-10 space-y-4" : "max-w-7xl mx-auto px-6 lg:px-8 py-8 space-y-6"}`}>
         <Card className="border-0 shadow-lg">
           <CardContent className="p-3">
             <div className="relative">

@@ -26,12 +26,14 @@ import {
   MapPin,
   Navigation,
   Send,
+  Menu,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useDriveModeContext } from "@/components/drivemode/DriveModeProvider";
 import { useAuth } from "@/hooks/use-auth";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface UserProfile {
   id: string;
@@ -105,6 +107,7 @@ export default function More() {
   const [darkMode, setDarkMode] = useState(false);
   const { enterDriveMode, gpsStatus, currentSpeed } = useDriveModeContext();
   const { logout } = useAuth();
+  const isMobile = useIsMobile();
 
   const { data: profile } = useQuery<UserProfile>({
     queryKey: ["/api/profile"],
@@ -136,46 +139,90 @@ export default function More() {
     }
   };
 
-  return (
-    <div className="flex flex-col min-h-full bg-background" data-testid="page-more">
-      <div 
-        className="relative overflow-hidden text-white px-4 pt-6 pb-8"
-        style={{ 
-          background: 'linear-gradient(180deg, #1F2937 0%, #111827 100%)',
-          boxShadow: 'inset 0 -12px 20px rgba(0, 0, 0, 0.25)'
-        }}>
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 -left-10 w-32 h-32 bg-slate-400/10 rounded-full blur-2xl" />
+  const renderMobileHeader = () => (
+    <div 
+      className="relative overflow-hidden text-white px-4 pt-6 pb-8"
+      style={{ 
+        background: 'linear-gradient(180deg, #1F2937 0%, #111827 100%)',
+        boxShadow: 'inset 0 -12px 20px rgba(0, 0, 0, 0.25)'
+      }}>
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 -left-10 w-32 h-32 bg-slate-400/10 rounded-full blur-2xl" />
+      </div>
+      
+      <div className="relative">
+        <div 
+          className="flex items-center gap-4 cursor-pointer"
+          onClick={() => navigate("/profile")}
+          data-testid="card-profile"
+        >
+          <Avatar className="h-16 w-16 ring-2 ring-white/20">
+            {profile?.photo ? (
+              <AvatarImage src={profile.photo} alt="Profile" />
+            ) : null}
+            <AvatarFallback className="bg-gradient-to-br from-primary to-violet-600 text-white text-xl font-semibold">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <h2 className="font-semibold text-lg">{displayName}</h2>
+            <p className="text-sm text-white/70">{businessName}</p>
+            <Badge variant="secondary" className="mt-1.5 text-[10px] bg-white/10 text-white border-0">
+              Free Plan
+            </Badge>
+          </div>
+          <ChevronRight className="h-5 w-5 text-white/50" />
         </div>
-        
-        <div className="relative">
-          <div 
-            className="flex items-center gap-4 cursor-pointer"
-            onClick={() => navigate("/profile")}
-            data-testid="card-profile"
-          >
-            <Avatar className="h-16 w-16 ring-2 ring-white/20">
-              {profile?.photo ? (
-                <AvatarImage src={profile.photo} alt="Profile" />
-              ) : null}
-              <AvatarFallback className="bg-gradient-to-br from-primary to-violet-600 text-white text-xl font-semibold">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <h2 className="font-semibold text-lg">{displayName}</h2>
-              <p className="text-sm text-white/70">{businessName}</p>
-              <Badge variant="secondary" className="mt-1.5 text-[10px] bg-white/10 text-white border-0">
-                Free Plan
-              </Badge>
+      </div>
+    </div>
+  );
+
+  const renderDesktopHeader = () => (
+    <div className="border-b bg-background sticky top-0 z-[999]">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+        <div className="flex items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-slate-500/10 to-gray-500/10 flex items-center justify-center">
+              <Menu className="h-6 w-6 text-slate-600" />
             </div>
-            <ChevronRight className="h-5 w-5 text-white/50" />
+            <div>
+              <h1 className="text-2xl font-bold text-foreground" data-testid="page-title">Menu</h1>
+              <p className="text-sm text-muted-foreground">Tools, settings, and account</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <div 
+              className="flex items-center gap-3 px-4 py-2 rounded-lg hover-elevate cursor-pointer border"
+              onClick={() => navigate("/profile")}
+              data-testid="card-profile-desktop"
+            >
+              <Avatar className="h-10 w-10">
+                {profile?.photo ? (
+                  <AvatarImage src={profile.photo} alt="Profile" />
+                ) : null}
+                <AvatarFallback className="bg-gradient-to-br from-primary to-violet-600 text-white font-semibold">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-medium text-foreground">{displayName}</p>
+                <p className="text-xs text-muted-foreground">{businessName}</p>
+              </div>
+              <Badge variant="secondary" className="text-[10px]">Free Plan</Badge>
+            </div>
           </div>
         </div>
       </div>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col min-h-full bg-background" data-testid="page-more">
+      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
       
-      <div className="flex-1 px-4 py-6 -mt-4 space-y-4">
+      <div className={isMobile ? "flex-1 px-4 py-6 -mt-4 space-y-4" : "flex-1 max-w-7xl mx-auto w-full px-6 lg:px-8 py-6 space-y-4"}>
         <Card className="border-0 shadow-md overflow-hidden">
           <CardContent className="p-0">
             <div 
@@ -315,7 +362,7 @@ export default function More() {
         </div>
         
         {/* Extra padding to clear the fixed bottom navigation bar */}
-        <div className="h-20" />
+        <div className={isMobile ? "h-20" : "h-8"} />
       </div>
     </div>
   );

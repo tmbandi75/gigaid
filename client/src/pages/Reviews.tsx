@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest } from "@/lib/queryClient";
 import { 
   Star, 
@@ -33,6 +34,7 @@ export default function Reviews() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
   const [responseText, setResponseText] = useState("");
   const [filter, setFilter] = useState<"all" | "pending" | "responded">("all");
@@ -97,27 +99,72 @@ export default function Reviews() {
     respondMutation.mutate({ id: selectedReview.id, response: responseText.trim() });
   };
 
+  const renderMobileHeader = () => (
+    <div className="relative overflow-hidden bg-gradient-to-br from-amber-500 via-yellow-500 to-orange-500 text-white px-4 pt-6 pb-12">
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 -left-10 w-32 h-32 bg-orange-400/20 rounded-full blur-2xl" />
+      </div>
+      <div className="relative">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate("/more")}
+          className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
+          data-testid="button-back"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back
+        </Button>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Reviews</h1>
+            <p className="text-amber-100/80 mt-1">See what clients say about you</p>
+          </div>
+          {pendingCount > 0 && (
+            <Badge className="bg-white/20 text-white border-0">
+              {pendingCount} awaiting response
+            </Badge>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderDesktopHeader = () => (
+    <div className="border-b bg-background sticky top-0 z-[999]">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+        <div className="flex items-center gap-4">
+          <div className="h-10 w-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+            <Star className="h-5 w-5 text-amber-600" />
+          </div>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold">Reviews</h1>
+            <p className="text-sm text-muted-foreground">See what clients say about you</p>
+          </div>
+          <div className="flex items-center gap-6">
+            <div className="text-right">
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-bold">{stats.averageRating.toFixed(1)}</span>
+                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+              </div>
+              <p className="text-xs text-muted-foreground">{stats.totalReviews} reviews</p>
+            </div>
+            {pendingCount > 0 && (
+              <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0">
+                {pendingCount} pending
+              </Badge>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="relative overflow-hidden bg-gradient-to-br from-amber-500 via-yellow-500 to-orange-500 text-white px-4 pt-6 pb-8">
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
-          </div>
-          <div className="relative">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/more")}
-              className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
-              data-testid="button-back"
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back
-            </Button>
-            <h1 className="text-2xl font-bold">Reviews</h1>
-          </div>
-        </div>
+        {isMobile ? renderMobileHeader() : renderDesktopHeader()}
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -126,38 +173,10 @@ export default function Reviews() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24" data-testid="page-reviews">
-      <div className="relative overflow-hidden bg-gradient-to-br from-amber-500 via-yellow-500 to-orange-500 text-white px-4 pt-6 pb-12">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 -left-10 w-32 h-32 bg-orange-400/20 rounded-full blur-2xl" />
-        </div>
-        <div className="relative">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate("/more")}
-            className="mb-4 -ml-2 text-white/80 hover:text-white hover:bg-white/10"
-            data-testid="button-back"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back
-          </Button>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">Reviews</h1>
-              <p className="text-amber-100/80 mt-1">See what clients say about you</p>
-            </div>
-            {pendingCount > 0 && (
-              <Badge className="bg-white/20 text-white border-0">
-                {pendingCount} awaiting response
-              </Badge>
-            )}
-          </div>
-        </div>
-      </div>
+    <div className={`min-h-screen bg-background ${isMobile ? "pb-24" : "pb-6"}`} data-testid="page-reviews">
+      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
 
-      <div className="px-4 -mt-6 relative z-10 space-y-4">
+      <div className={`${isMobile ? "px-4 -mt-6 relative z-10" : "max-w-7xl mx-auto px-6 lg:px-8 py-8"} space-y-4`}>
         <Card className="border-0 shadow-lg overflow-hidden" data-testid="card-review-stats">
           <CardContent className="p-0">
             <div className="flex">
