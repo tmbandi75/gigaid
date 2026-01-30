@@ -10,6 +10,9 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+  updatePassword,
   type User as FirebaseUser 
 } from "firebase/auth";
 import { isNativePlatform } from "./platform";
@@ -98,4 +101,24 @@ export async function signInWithEmail(email: string, password: string): Promise<
 
 export async function resetPassword(email: string): Promise<void> {
   await sendPasswordResetEmail(auth, email);
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  const user = auth.currentUser;
+  if (!user || !user.email) {
+    throw new Error("No user is currently signed in");
+  }
+  
+  // Re-authenticate the user with current password
+  const credential = EmailAuthProvider.credential(user.email, currentPassword);
+  await reauthenticateWithCredential(user, credential);
+  
+  // Update to new password
+  await updatePassword(user, newPassword);
+}
+
+export function isEmailPasswordUser(): boolean {
+  const user = auth.currentUser;
+  if (!user) return false;
+  return user.providerData.some(provider => provider.providerId === "password");
 }

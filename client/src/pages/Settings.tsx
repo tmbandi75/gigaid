@@ -53,6 +53,8 @@ import { StripeConnectSettings } from "@/components/settings/StripeConnectSettin
 import { EmailSignatureSettings } from "@/components/settings/EmailSignatureSettings";
 import { AccountLinking } from "@/components/mobile-auth/AccountLinking";
 import { AutomationSettings } from "@/components/settings/AutomationSettings";
+import { ChangePasswordDialog } from "@/components/settings/ChangePasswordDialog";
+import { isEmailPasswordUser } from "@/lib/firebase";
 import type { Referral, WeeklyAvailability, FeatureFlag } from "@shared/schema";
 import { useFeatureFlag, useUpdateFeatureFlag } from "@/hooks/use-nudges";
 
@@ -760,15 +762,22 @@ export default function Settings() {
         </Button>
 
         {isAuthenticated && (
-          <Card className="border-0 shadow-md mt-8" data-testid="card-delete-account">
+          <Card className="border-0 shadow-md mt-8" data-testid="card-account-settings">
             <CardContent className="p-4">
               <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
-                  <Trash2 className="h-4 w-4 text-white" />
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                  <Lock className="h-4 w-4 text-white" />
                 </div>
-                Account
+                Account & Security
               </h3>
               <Separator className="my-4" />
+              
+              {isEmailPasswordUser() && (
+                <div className="mb-4">
+                  <ChangePasswordDialog />
+                </div>
+              )}
+              
               {deleteError && (
                 <div className="p-3 mb-4 text-sm text-destructive bg-destructive/10 rounded-md" data-testid="text-delete-error">
                   {deleteError}
