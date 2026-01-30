@@ -21,6 +21,19 @@ export function isValidAdminApiKey(authHeader: string | undefined): boolean {
 }
 
 export function adminMiddleware(req: Request, res: Response, next: NextFunction) {
+  // DEV ONLY - bypass authentication for Retool integration testing
+  if (process.env.NODE_ENV !== 'production') {
+    (req as any).user = {
+      id: 'retool-admin',
+      email: 'admin@gigaid.ai',
+      role: 'admin'
+    };
+    (req as any).userId = 'retool-admin';
+    (req as any).userEmail = 'admin@gigaid.ai';
+    (req as any).isApiKeyAuth = true;
+    return next();
+  }
+
   const authHeader = req.headers.authorization;
   if (isValidAdminApiKey(authHeader)) {
     (req as any).isApiKeyAuth = true;
