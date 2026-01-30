@@ -66,6 +66,7 @@ export default function Login() {
     setTokenReady(true);
     
     await refetchUser();
+    // Navigate to dashboard - OnboardingWrapper will redirect to /onboarding if not completed
     navigate("/");
   };
 

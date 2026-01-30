@@ -18,7 +18,8 @@ export default function OnboardingPage() {
   const requestedStep = params.step || queryStep;
 
   const handleComplete = () => {
-    navigate("/dashboard");
+    // Navigate to root - will redirect to dashboard for completed users
+    navigate("/");
   };
 
   return (
