@@ -188,9 +188,9 @@ export default function AdminBilling() {
                     <div key={cohort.month} className="flex items-center justify-between py-2 border-b last:border-0">
                       <span className="text-sm">{cohort.month}</span>
                       <div className="flex items-center gap-4">
-                        <span className="text-sm text-muted-foreground">{cohort.signups} signups</span>
-                        <Badge variant={cohort.conversionRate > 5 ? "default" : "secondary"}>
-                          {cohort.conversionRate.toFixed(1)}%
+                        <span className="text-sm text-muted-foreground">{cohort.signups ?? 0} signups</span>
+                        <Badge variant={(cohort.conversionRate ?? 0) > 5 ? "default" : "secondary"}>
+                          {(cohort.conversionRate ?? 0).toFixed(1)}%
                         </Badge>
                       </div>
                     </div>
