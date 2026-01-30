@@ -437,6 +437,24 @@ export default function Settings() {
                   data-testid="switch-ai-nudges"
                 />
               </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm">Reset Coaching Tips</p>
+                  <p className="text-xs text-muted-foreground">Show helpful tips again on all screens</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    resetCoaching();
+                    toast({ title: "Coaching tips reset", description: "You'll see helpful tips again as you use the app." });
+                  }}
+                  data-testid="button-reset-coaching"
+                >
+                  Reset
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -780,24 +798,6 @@ export default function Settings() {
                 </div>
               )}
 
-              <div className="mb-4">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    resetCoaching();
-                    toast({ title: "Coaching tips reset", description: "You'll see helpful tips again as you use the app." });
-                  }}
-                  data-testid="button-reset-coaching"
-                >
-                  Reset Coaching Tips
-                </Button>
-                <p className="text-xs text-muted-foreground mt-2 text-center">
-                  Show helpful tips again on Dashboard, Jobs, Leads, and Invoices
-                </p>
-              </div>
-              <Separator className="my-4" />
-              
               {deleteError && (
                 <div className="p-3 mb-4 text-sm text-destructive bg-destructive/10 rounded-md" data-testid="text-delete-error">
                   {deleteError}
