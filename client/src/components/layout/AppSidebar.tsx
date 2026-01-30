@@ -100,13 +100,13 @@ export function AppSidebar() {
     refetchInterval: 30000,
   });
 
-  const { data: adminStatus } = useQuery<{ role: string }>({
-    queryKey: ["/api/admin/auth/me"],
+  const { data: adminStatus } = useQuery<{ isAdmin: boolean; role?: string }>({
+    queryKey: ["/api/admin/status"],
     retry: false,
     staleTime: Infinity,
   });
 
-  const isAdmin = !!adminStatus?.role;
+  const isAdmin = adminStatus?.isAdmin === true;
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains("dark");

@@ -86,6 +86,48 @@ export async function registerRoutes(
   app.use("/api/admin/audit-logs", adminAuditLogRoutes);
   app.use("/api/admin/analytics", adminAnalyticsRoutes);
   app.use("/api/admin/customerio", adminCustomerioRoutes);
+  
+  // Simple admin status check (uses regular auth, no admin middleware)
+  app.get("/api/admin/status", isAuthenticated, async (req: Request, res: Response) => {
+    const user = (req as any).user;
+    const userId = user?.id;
+    const userEmail = user?.email;
+    
+    if (!userId && !userEmail) {
+      return res.json({ isAdmin: false });
+    }
+    
+    // Import isAdminUser dynamically to check admin status
+    const { isAdminUser } = await import("./copilot/adminMiddleware");
+    const isAdmin = isAdminUser(userId, userEmail);
+    
+    if (isAdmin) {
+      return res.json({ isAdmin: true, role: "super_admin" });
+    }
+    
+    // Check database for admin record
+    const { db } = await import("./db");
+    const { admins } = await import("@shared/schema");
+    const { eq, or } = await import("drizzle-orm");
+    
+    const conditions = [];
+    if (userId) conditions.push(eq(admins.userId, userId));
+    if (userEmail) conditions.push(eq(admins.email, userEmail));
+    
+    if (conditions.length > 0) {
+      const [dbAdmin] = await db.select()
+        .from(admins)
+        .where(or(...conditions))
+        .limit(1);
+      
+      if (dbAdmin && dbAdmin.isActive) {
+        return res.json({ isAdmin: true, role: dbAdmin.role });
+      }
+    }
+    
+    return res.json({ isAdmin: false });
+  });
+
   app.use("/api", leadEmailRoutes);
   app.use("/api/auth", mobileAuthRoutes);
   
