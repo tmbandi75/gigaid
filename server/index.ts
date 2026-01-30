@@ -105,6 +105,12 @@ app.use((req, res, next) => {
     },
     () => {
       log(`serving on port ${port}`);
+      
+      // [DEV ONLY] Temporary log for admin API key verification - REMOVE AFTER CONFIRMING
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[DEV ONLY] GIGAID_ADMIN_API_KEY:', process.env.GIGAID_ADMIN_API_KEY);
+      }
+      
       startReminderScheduler();
       startAutoReleaseScheduler();
       const baseUrl = process.env.FRONTEND_URL || `http://localhost:${port}`;
