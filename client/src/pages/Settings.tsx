@@ -57,6 +57,7 @@ import { ChangePasswordDialog } from "@/components/settings/ChangePasswordDialog
 import { isEmailPasswordUser } from "@/lib/firebase";
 import type { Referral, WeeklyAvailability, FeatureFlag } from "@shared/schema";
 import { useFeatureFlag, useUpdateFeatureFlag } from "@/hooks/use-nudges";
+import { useCoachingState } from "@/coaching/useCoachingState";
 
 interface ReferralData {
   referralCode: string;
@@ -87,6 +88,7 @@ export default function Settings() {
   const isMobile = useIsMobile();
   const [bookingLinkCopied, setBookingLinkCopied] = useState(false);
   const { isAuthenticated } = useAuth();
+  const { reset: resetCoaching } = useCoachingState();
 
   const handleAuthenticatedDownload = async (url: string, filename: string) => {
     try {
@@ -777,6 +779,24 @@ export default function Settings() {
                   <ChangePasswordDialog />
                 </div>
               )}
+
+              <div className="mb-4">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    resetCoaching();
+                    toast({ title: "Coaching tips reset", description: "You'll see helpful tips again as you use the app." });
+                  }}
+                  data-testid="button-reset-coaching"
+                >
+                  Reset Coaching Tips
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  Show helpful tips again on Dashboard, Jobs, Leads, and Invoices
+                </p>
+              </div>
+              <Separator className="my-4" />
               
               {deleteError && (
                 <div className="p-3 mb-4 text-sm text-destructive bg-destructive/10 rounded-md" data-testid="text-delete-error">
