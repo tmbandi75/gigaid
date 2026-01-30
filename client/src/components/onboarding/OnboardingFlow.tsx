@@ -173,7 +173,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
       setInitialized(true);
       
       // If onboarding is completed or skipped, go to dashboard
-      if (onboardingStatus.state === "completed" || onboardingStatus.state === "skipped_explore") {
+      if (onboardingStatus.completed || onboardingStatus.state === "completed" || onboardingStatus.state === "skipped_explore") {
         onComplete();
         navigate("/");
         return;
