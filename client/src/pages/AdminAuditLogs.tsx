@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { 
   Select,
   SelectContent,
@@ -12,7 +13,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { 
-  ArrowLeft,
   Search,
   Download,
   Loader2,
@@ -21,9 +21,11 @@ import {
   Filter,
   FileText,
   User,
-  Calendar
+  Calendar,
+  Sparkles,
+  ArrowRight,
 } from "lucide-react";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 
 interface AuditLog {
   id: string;
@@ -51,20 +53,20 @@ interface AuditLogsResponse {
 
 function ActionBadge({ action }: { action: string }) {
   const colors: Record<string, string> = {
-    billing_grant_comp: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-    billing_revoke_comp: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-    billing_pause: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-    billing_resume: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-    billing_cancel: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-    account_disable: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-    account_enable: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-    admin_created: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-    admin_updated: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-    admin_deactivated: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+    billing_grant_comp: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+    billing_revoke_comp: "bg-red-500/10 text-red-600 border-red-500/20",
+    billing_pause: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+    billing_resume: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+    billing_cancel: "bg-red-500/10 text-red-600 border-red-500/20",
+    account_disable: "bg-red-500/10 text-red-600 border-red-500/20",
+    account_enable: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+    admin_created: "bg-violet-500/10 text-violet-600 border-violet-500/20",
+    admin_updated: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+    admin_deactivated: "bg-red-500/10 text-red-600 border-red-500/20",
   };
   
   return (
-    <Badge className={colors[action] || "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"}>
+    <Badge variant="outline" className={cn("capitalize", colors[action] || "bg-slate-500/10 text-slate-600 border-slate-500/20")}>
       {action.replace(/_/g, " ")}
     </Badge>
   );
@@ -109,186 +111,171 @@ export default function AdminAuditLogs() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/admin/cockpit">
-              <Button variant="ghost" size="icon" data-testid="button-back">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold">Audit Logs</h1>
-              <p className="text-muted-foreground">View and export admin action history</p>
-            </div>
-          </div>
-          <Button variant="outline" onClick={handleExport} data-testid="button-export">
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </Button>
+    <div className="space-y-6" data-testid="page-admin-audit-logs">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <Sparkles className="h-6 w-6 text-violet-500" />
+            Audit Logs
+          </h1>
+          <p className="text-muted-foreground mt-1">View and export admin action history</p>
         </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Filters
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSearch} className="grid gap-4 md:grid-cols-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by reason..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9"
-                  data-testid="input-search"
-                />
-              </div>
-              <Select value={actionFilter} onValueChange={(v) => { setActionFilter(v); setPage(1); }}>
-                <SelectTrigger data-testid="select-action">
-                  <SelectValue placeholder="All actions" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All actions</SelectItem>
-                  {actionKeys?.actionKeys.map((key) => (
-                    <SelectItem key={key} value={key}>
-                      {key.replace(/_/g, " ")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
-                placeholder="Start date"
-                data-testid="input-start-date"
-              />
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
-                placeholder="End date"
-                data-testid="input-end-date"
-              />
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Action History
-            </CardTitle>
-            <CardDescription>
-              {data?.pagination ? `${data.pagination.total.toLocaleString()} total entries` : "Loading..."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : data?.logs && data.logs.length > 0 ? (
-              <div className="space-y-4">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-3 px-2 font-medium">Time</th>
-                        <th className="text-left py-3 px-2 font-medium">Action</th>
-                        <th className="text-left py-3 px-2 font-medium">Actor</th>
-                        <th className="text-left py-3 px-2 font-medium">Target</th>
-                        <th className="text-left py-3 px-2 font-medium">Reason</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.logs.map((log) => (
-                        <tr 
-                          key={log.id} 
-                          className="border-b hover-elevate cursor-pointer"
-                          onClick={() => navigate(`/admin/users/${log.targetUserId}`)}
-                          data-testid={`log-row-${log.id}`}
-                        >
-                          <td className="py-3 px-2 whitespace-nowrap">
-                            <div className="flex items-center gap-1 text-muted-foreground">
-                              <Calendar className="h-3 w-3" />
-                              {new Date(log.createdAt).toLocaleString()}
-                            </div>
-                          </td>
-                          <td className="py-3 px-2">
-                            <ActionBadge action={log.actionKey} />
-                          </td>
-                          <td className="py-3 px-2">
-                            <div className="flex items-center gap-1">
-                              <User className="h-3 w-3 text-muted-foreground" />
-                              <span className="truncate max-w-[150px]">
-                                {log.actor?.email || log.actorUserId}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-2">
-                            {log.target ? (
-                              <span className="truncate max-w-[150px]">
-                                {log.target.email || log.targetUserId}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-2">
-                            <span className="truncate max-w-[200px] block">
-                              {log.reason}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="flex items-center justify-between pt-4">
-                  <p className="text-sm text-muted-foreground">
-                    Page {data.pagination.page} of {data.pagination.totalPages}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage(page - 1)}
-                      disabled={page <= 1}
-                      data-testid="button-prev"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Previous
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage(page + 1)}
-                      disabled={page >= data.pagination.totalPages}
-                      data-testid="button-next"
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No audit logs found</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <Button variant="outline" onClick={handleExport} data-testid="button-export" className="gap-2">
+          <Download className="h-4 w-4" />
+          Export CSV
+        </Button>
       </div>
+
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Filter className="h-5 w-5 text-violet-500" />
+            <CardTitle>Filters</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSearch} className="grid gap-4 md:grid-cols-4">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by reason..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-11 h-11 rounded-xl"
+                data-testid="input-search"
+              />
+            </div>
+            <Select value={actionFilter} onValueChange={(v) => { setActionFilter(v); setPage(1); }}>
+              <SelectTrigger data-testid="select-action" className="h-11 rounded-xl">
+                <SelectValue placeholder="All actions" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All actions</SelectItem>
+                {actionKeys?.actionKeys.map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {key.replace(/_/g, " ")}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
+              placeholder="Start date"
+              data-testid="input-start-date"
+              className="h-11 rounded-xl"
+            />
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
+              placeholder="End date"
+              data-testid="input-end-date"
+              className="h-11 rounded-xl"
+            />
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-violet-500" />
+            <CardTitle>Action History</CardTitle>
+          </div>
+          <CardDescription>
+            {data?.pagination ? `${data.pagination.total.toLocaleString()} total entries` : "Loading..."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+              <p className="text-sm text-muted-foreground mt-3">Loading audit logs...</p>
+            </div>
+          ) : data?.logs && data.logs.length > 0 ? (
+            <div className="space-y-4">
+              <div className="space-y-3">
+                {data.logs.map((log) => (
+                  <div 
+                    key={log.id}
+                    className="p-4 rounded-xl border bg-card hover-elevate cursor-pointer group"
+                    onClick={() => navigate(`/admin/users/${log.targetUserId}`)}
+                    data-testid={`log-row-${log.id}`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <ActionBadge action={log.actionKey} />
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(log.createdAt).toLocaleString()}
+                          </div>
+                        </div>
+                        <p className="text-sm">{log.reason}</p>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            <span className="truncate max-w-[200px]">
+                              By: {log.actor?.email || log.actorUserId}
+                            </span>
+                          </div>
+                          {log.target && (
+                            <div className="flex items-center gap-1">
+                              <span className="truncate max-w-[200px]">
+                                Target: {log.target.email || log.targetUserId}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-4" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between pt-4">
+                <p className="text-sm text-muted-foreground">
+                  Page {data.pagination.page} of {data.pagination.totalPages}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(page - 1)}
+                    disabled={page <= 1}
+                    data-testid="button-prev"
+                    className="gap-1"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(page + 1)}
+                    disabled={page >= data.pagination.totalPages}
+                    data-testid="button-next"
+                    className="gap-1"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <div className="h-12 w-12 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
+                <FileText className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <p className="text-muted-foreground">No audit logs found</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -60,6 +60,7 @@ import AdminAuditLogs from "@/pages/AdminAuditLogs";
 import AdminAnalytics from "@/pages/AdminAnalytics";
 import AdminCustomerIO from "@/pages/AdminCustomerIO";
 import AdminBilling from "@/pages/AdminBilling";
+import { AdminLayout } from "@/components/layout/AdminLayout";
 import VoiceNotesPage from "@/pages/VoiceNotesPage";
 import TermsOfService from "@/pages/terms";
 import PrivacyPolicy from "@/pages/privacy";
@@ -199,8 +200,12 @@ function AuthenticatedApp() {
   return (
     <DriveModeProvider>
       <OnboardingWrapper>
-        {isOnboardingRoute || isAdminRoute ? (
+        {isOnboardingRoute ? (
           <Router />
+        ) : isAdminRoute ? (
+          <AdminLayout>
+            <Router />
+          </AdminLayout>
         ) : (
           <>
             <ResponsiveLayout>

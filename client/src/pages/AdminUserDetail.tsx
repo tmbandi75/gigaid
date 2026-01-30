@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { 
-  ArrowLeft,
   User,
   Activity,
   MessageSquare,
@@ -36,7 +35,8 @@ import {
   FileText,
   Send,
   CheckCircle,
-  XCircle
+  XCircle,
+  Sparkles
 } from "lucide-react";
 import { Link } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -1152,45 +1152,29 @@ export default function AdminUserDetail() {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
-        <AlertTriangle className="h-12 w-12 text-muted-foreground" />
+      <div className="flex flex-col items-center justify-center gap-4 py-20">
+        <div className="h-16 w-16 rounded-2xl bg-red-500/10 flex items-center justify-center">
+          <AlertTriangle className="h-8 w-8 text-red-500" />
+        </div>
         <h1 className="text-xl font-semibold">User Not Found</h1>
-        <Link href="/admin/users">
-          <Button variant="outline">Back to Users</Button>
-        </Link>
+        <p className="text-muted-foreground">The user you're looking for doesn't exist.</p>
       </div>
     );
   }
 
-  const backUrl = from === "cockpit" 
-    ? "/admin/cockpit" 
-    : view 
-      ? `/admin/users?view=${view}` 
-      : "/admin/users";
-
   return (
-    <div className="min-h-screen bg-background pb-8" data-testid="page-admin-user-detail">
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white px-4 py-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-4">
-            <Link href={backUrl}>
-              <Button variant="ghost" size="sm" className="text-white hover:text-white/80" data-testid="button-back">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                {from === "cockpit" ? "Back to Cockpit" : "Back to Users"}
-              </Button>
-            </Link>
-          </div>
-          <div className="mt-4">
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <User className="h-6 w-6" />
-              User Detail
-            </h1>
-            <p className="text-slate-300 text-sm mt-1 font-mono">{userId}</p>
-          </div>
+    <div className="space-y-6" data-testid="page-admin-user-detail">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <Sparkles className="h-6 w-6 text-violet-500" />
+            User Detail
+          </h1>
+          <p className="text-muted-foreground mt-1 font-mono text-sm">{userId}</p>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 -mt-4 space-y-4">
+      <div className="space-y-4">
         <ContextBanner context={data.context} />
         
         <ProfileSection profile={data.profile} />

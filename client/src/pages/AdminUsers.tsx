@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getAuthToken } from "@/lib/authToken";
+import { cn } from "@/lib/utils";
 import { 
   Search,
   Users,
@@ -14,12 +15,14 @@ import {
   AlertTriangle,
   CreditCard,
   TrendingDown,
-  ArrowLeft,
   Loader2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  UserCheck,
+  Clock,
+  ArrowRight,
+  Sparkles,
 } from "lucide-react";
-import { Link } from "wouter";
 
 interface UserListItem {
   id: string;
@@ -54,61 +57,85 @@ const viewConfig = {
     label: "All Users",
     icon: Users,
     description: "All registered users",
+    color: "text-blue-500",
+    bg: "bg-blue-500/10",
   },
   pro_users: {
     label: "Pro Users",
     icon: CreditCard,
     description: "Paying subscribers",
+    color: "text-emerald-500",
+    bg: "bg-emerald-500/10",
   },
   free_users: {
     label: "Free Users",
     icon: Users,
     description: "Free tier users",
+    color: "text-slate-500",
+    bg: "bg-slate-500/10",
   },
   active_7d: {
     label: "Active (7d)",
-    icon: Users,
+    icon: UserCheck,
     description: "Active in last 7 days",
+    color: "text-violet-500",
+    bg: "bg-violet-500/10",
   },
   active_30d: {
     label: "Active (30d)",
-    icon: Users,
+    icon: UserCheck,
     description: "Active in last 30 days",
+    color: "text-purple-500",
+    bg: "bg-purple-500/10",
   },
   onboarding_stalled: {
-    label: "Onboarding Stalled",
+    label: "Stalled",
     icon: UserX,
     description: "Users who haven't completed onboarding",
+    color: "text-amber-500",
+    bg: "bg-amber-500/10",
   },
   high_intent_no_booking: {
     label: "High Intent",
     icon: TrendingDown,
     description: "Created booking link but no bookings",
+    color: "text-orange-500",
+    bg: "bg-orange-500/10",
   },
   payment_failed_recent: {
-    label: "Payment Failed",
+    label: "Failed Payments",
     icon: CreditCard,
     description: "Failed payments in last 7 days",
+    color: "text-red-500",
+    bg: "bg-red-500/10",
   },
   inactive_7d_paying: {
-    label: "Inactive Paying",
+    label: "At Risk",
     icon: AlertTriangle,
     description: "Paying users inactive for 7+ days",
+    color: "text-amber-500",
+    bg: "bg-amber-500/10",
   },
   churned_30d: {
     label: "Churned",
     icon: UserX,
     description: "Cancelled subscription in last 30 days",
+    color: "text-red-500",
+    bg: "bg-red-500/10",
   },
   comp_access: {
     label: "Comp Access",
     icon: CreditCard,
     description: "Users with complimentary access",
+    color: "text-teal-500",
+    bg: "bg-teal-500/10",
   },
   disabled_accounts: {
     label: "Disabled",
     icon: UserX,
     description: "Disabled accounts",
+    color: "text-slate-500",
+    bg: "bg-slate-500/10",
   },
 };
 
@@ -124,32 +151,43 @@ function UserRow({ user, fromView }: { user: UserListItem; fromView?: string }) 
 
   return (
     <div 
-      className="flex items-center justify-between p-3 rounded-lg hover-elevate cursor-pointer border"
+      className="flex items-center justify-between p-4 rounded-xl border bg-card hover-elevate cursor-pointer group transition-all"
       onClick={handleClick}
       data-testid={`user-row-${user.id}`}
     >
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-medium truncate">
-            {user.name || user.username || "Unknown"}
-          </span>
-          {user.isPro && (
-            <Badge variant="secondary" className="text-xs">Pro</Badge>
-          )}
-          {user.onboardingCompleted === false && (
-            <Badge variant="outline" className="text-xs">Onboarding</Badge>
-          )}
+      <div className="flex items-center gap-4 flex-1 min-w-0">
+        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-medium text-sm shrink-0">
+          {(user.name || user.username || "?").charAt(0).toUpperCase()}
         </div>
-        <div className="text-sm text-muted-foreground truncate">
-          {user.email || user.phone || user.id.slice(0, 8)}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-medium truncate">
+              {user.name || user.username || "Unknown"}
+            </span>
+            {user.isPro && (
+              <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-xs">Pro</Badge>
+            )}
+            {user.onboardingCompleted === false && (
+              <Badge variant="outline" className="text-xs">Onboarding</Badge>
+            )}
+          </div>
+          <div className="text-sm text-muted-foreground truncate">
+            {user.email || user.phone || user.id.slice(0, 8)}
+          </div>
         </div>
       </div>
-      <div className="text-right text-sm text-muted-foreground">
-        {user.lastActiveAt ? (
-          <span>Active {new Date(user.lastActiveAt).toLocaleDateString()}</span>
-        ) : (
-          <span>Never active</span>
-        )}
+      <div className="flex items-center gap-3">
+        <div className="text-right text-sm text-muted-foreground hidden sm:block">
+          {user.lastActiveAt ? (
+            <div className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {new Date(user.lastActiveAt).toLocaleDateString()}
+            </div>
+          ) : (
+            <span className="text-xs">Never active</span>
+          )}
+        </div>
+        <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
       </div>
     </div>
   );
@@ -187,31 +225,36 @@ function SearchPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
+      <div className="flex gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search by email, user ID, or phone..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="pl-10"
+            className="pl-11 h-11 rounded-xl"
             data-testid="input-search"
           />
         </div>
-        <Button onClick={handleSearch} disabled={searchQuery.length < 2} data-testid="button-search">
+        <Button 
+          onClick={handleSearch} 
+          disabled={searchQuery.length < 2} 
+          data-testid="button-search"
+          className="h-11 px-6 rounded-xl"
+        >
           Search
         </Button>
       </div>
 
       {isLoading && (
-        <div className="flex justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
         </div>
       )}
 
       {data?.users && data.users.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {data.users.map((user) => (
             <UserRow key={user.id} user={user} />
           ))}
@@ -219,8 +262,20 @@ function SearchPanel() {
       )}
 
       {data?.users && data.users.length === 0 && debouncedQuery.length >= 2 && (
-        <div className="text-center py-8 text-muted-foreground">
-          No users found matching "{debouncedQuery}"
+        <div className="text-center py-12">
+          <div className="h-12 w-12 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
+            <Search className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <p className="text-muted-foreground">No users found matching "{debouncedQuery}"</p>
+        </div>
+      )}
+
+      {!debouncedQuery && (
+        <div className="text-center py-12">
+          <div className="h-12 w-12 rounded-xl bg-violet-500/10 flex items-center justify-center mx-auto mb-3">
+            <Search className="h-6 w-6 text-violet-500" />
+          </div>
+          <p className="text-muted-foreground">Enter at least 2 characters to search</p>
         </div>
       )}
     </div>
@@ -246,59 +301,75 @@ function ViewPanel({ view }: { view: string }) {
   });
 
   const config = viewConfig[view as keyof typeof viewConfig];
+  const IconComponent = config?.icon || Users;
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="flex flex-col items-center justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+        <p className="text-sm text-muted-foreground mt-3">Loading users...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-12 text-destructive">
-        Failed to load users. Please try again.
+      <div className="text-center py-16">
+        <div className="h-12 w-12 rounded-xl bg-red-500/10 flex items-center justify-center mx-auto mb-3">
+          <AlertTriangle className="h-6 w-6 text-red-500" />
+        </div>
+        <p className="text-destructive font-medium">Failed to load users</p>
+        <p className="text-sm text-muted-foreground mt-1">Please try again</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-semibold">{config?.label || view}</h3>
-          <p className="text-sm text-muted-foreground">{config?.description}</p>
+      <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border">
+        <div className="flex items-center gap-3">
+          <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center", config?.bg)}>
+            <IconComponent className={cn("h-5 w-5", config?.color)} />
+          </div>
+          <div>
+            <h3 className="font-semibold">{config?.label || view}</h3>
+            <p className="text-sm text-muted-foreground">{config?.description}</p>
+          </div>
         </div>
-        <Badge variant="outline">
+        <Badge variant="outline" className="text-sm">
           {data?.pagination.total || 0} users
         </Badge>
       </div>
 
       {data?.users && data.users.length > 0 ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {data.users.map((user) => (
             <UserRow key={user.id} user={user} fromView={view} />
           ))}
         </div>
       ) : (
-        <div className="text-center py-12 text-muted-foreground">
-          No users in this view
+        <div className="text-center py-16">
+          <div className="h-12 w-12 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
+            <Users className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <p className="text-muted-foreground">No users in this view</p>
         </div>
       )}
 
       {data?.pagination && data.pagination.totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-4">
+        <div className="flex items-center justify-center gap-3 pt-4">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1}
             data-testid="button-prev-page"
+            className="gap-1"
           >
             <ChevronLeft className="h-4 w-4" />
+            Previous
           </Button>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-sm text-muted-foreground px-4">
             Page {page} of {data.pagination.totalPages}
           </span>
           <Button
@@ -307,7 +378,9 @@ function ViewPanel({ view }: { view: string }) {
             onClick={() => setPage(p => Math.min(data.pagination.totalPages, p + 1))}
             disabled={page === data.pagination.totalPages}
             data-testid="button-next-page"
+            className="gap-1"
           >
+            Next
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -320,68 +393,56 @@ export default function AdminUsers() {
   const [activeView, setActiveView] = useState("search");
 
   return (
-    <div className="min-h-screen bg-background pb-8" data-testid="page-admin-users">
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white px-4 py-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-4">
-            <Link href="/admin/cockpit">
-              <Button variant="ghost" size="sm" className="text-white hover:text-white/80" data-testid="button-back-cockpit">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Cockpit
-              </Button>
-            </Link>
-          </div>
-          <div className="mt-4">
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Users className="h-6 w-6" />
-              User Management
-            </h1>
-            <p className="text-slate-300 text-sm mt-1">Search and view user details</p>
-          </div>
+    <div className="space-y-6" data-testid="page-admin-users">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <Sparkles className="h-6 w-6 text-violet-500" />
+            User Management
+          </h1>
+          <p className="text-muted-foreground mt-1">Search and manage user accounts</p>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 -mt-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <Tabs value={activeView} onValueChange={setActiveView}>
-              <TabsList className="grid grid-cols-3 lg:grid-cols-6 w-full">
-                <TabsTrigger value="search" data-testid="tab-search">
-                  <Search className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">Search</span>
-                </TabsTrigger>
-                <TabsTrigger value="onboarding_stalled" data-testid="tab-onboarding">
-                  <UserX className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">Stalled</span>
-                </TabsTrigger>
-                <TabsTrigger value="high_intent_no_booking" data-testid="tab-high-intent">
-                  <TrendingDown className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">Intent</span>
-                </TabsTrigger>
-                <TabsTrigger value="payment_failed_recent" data-testid="tab-payment-failed">
-                  <CreditCard className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">Failed</span>
-                </TabsTrigger>
-                <TabsTrigger value="inactive_7d_paying" data-testid="tab-inactive">
-                  <AlertTriangle className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">Inactive</span>
-                </TabsTrigger>
-                <TabsTrigger value="churned_30d" data-testid="tab-churned">
-                  <UserX className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">Churned</span>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </CardHeader>
-          <CardContent className="pt-4">
-            {activeView === "search" ? (
-              <SearchPanel />
-            ) : (
-              <ViewPanel view={activeView} />
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="border-b">
+          <Tabs value={activeView} onValueChange={setActiveView}>
+            <TabsList className="grid grid-cols-3 lg:grid-cols-6 w-full bg-muted/30 p-1 rounded-xl">
+              <TabsTrigger value="search" data-testid="tab-search" className="rounded-lg gap-1.5">
+                <Search className="h-4 w-4" />
+                <span className="hidden sm:inline">Search</span>
+              </TabsTrigger>
+              <TabsTrigger value="onboarding_stalled" data-testid="tab-onboarding" className="rounded-lg gap-1.5">
+                <UserX className="h-4 w-4" />
+                <span className="hidden sm:inline">Stalled</span>
+              </TabsTrigger>
+              <TabsTrigger value="high_intent_no_booking" data-testid="tab-high-intent" className="rounded-lg gap-1.5">
+                <TrendingDown className="h-4 w-4" />
+                <span className="hidden sm:inline">Intent</span>
+              </TabsTrigger>
+              <TabsTrigger value="payment_failed_recent" data-testid="tab-payment-failed" className="rounded-lg gap-1.5">
+                <CreditCard className="h-4 w-4" />
+                <span className="hidden sm:inline">Failed</span>
+              </TabsTrigger>
+              <TabsTrigger value="inactive_7d_paying" data-testid="tab-inactive" className="rounded-lg gap-1.5">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="hidden sm:inline">At Risk</span>
+              </TabsTrigger>
+              <TabsTrigger value="churned_30d" data-testid="tab-churned" className="rounded-lg gap-1.5">
+                <UserX className="h-4 w-4" />
+                <span className="hidden sm:inline">Churned</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </CardHeader>
+        <CardContent className="pt-6">
+          {activeView === "search" ? (
+            <SearchPanel />
+          ) : (
+            <ViewPanel view={activeView} />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
