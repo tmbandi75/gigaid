@@ -1,11 +1,50 @@
 import { Request, Response, NextFunction } from "express";
 import { db } from "../db";
-import { admins, type AdminRole } from "@shared/schema";
+import { admins, users, type AdminRole } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
+import { verifyAppJwt } from "../appJwt";
 
 // Fallback admin user IDs for bootstrapping (before admins table is populated)
 const BOOTSTRAP_ADMIN_USER_IDS = (process.env.ADMIN_USER_IDS || "demo-user").split(",").map(s => s.trim());
 const BOOTSTRAP_ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").split(",").map(s => s.trim()).filter(Boolean);
+
+// Helper to extract user info from request (JWT or Replit Auth session)
+async function extractUserFromRequest(req: Request): Promise<{ userId: string | null; userEmail: string | null }> {
+  let userId: string | null = null;
+  let userEmail: string | null = null;
+
+  // Check for JWT Bearer token (mobile/Firebase auth)
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    const payload = verifyAppJwt(token);
+    if (payload?.sub) {
+      userId = payload.sub;
+      userEmail = payload.email_normalized || null;
+    }
+  }
+
+  // Fall back to Replit Auth session
+  if (!userId) {
+    const user = (req as any).user;
+    userId = user?.claims?.sub || null;
+  }
+
+  // If we have userId but no email, look it up from database
+  if (userId && !userEmail) {
+    try {
+      const [dbUser] = await db.select({ email: users.email })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      userEmail = dbUser?.email || null;
+    } catch (error) {
+      console.error("[AdminMiddleware] Failed to look up user email:", error);
+    }
+  }
+
+  return { userId, userEmail };
+}
 
 // Cache admin lookups for 5 minutes
 const adminCache = new Map<string, { admin: any; expires: number }>();
@@ -87,8 +126,8 @@ export interface AdminRequest extends Request {
 
 // Basic admin middleware - allows any admin role
 export async function adminMiddleware(req: Request, res: Response, next: NextFunction) {
-  const userId = (req as any).userId;
-  const userEmail = (req as any).userEmail;
+  // Extract user info from request (JWT token or Replit Auth session)
+  const { userId, userEmail } = await extractUserFromRequest(req);
 
   // Require authenticated identity
   if (!userId && !userEmail) {
@@ -96,10 +135,10 @@ export async function adminMiddleware(req: Request, res: Response, next: NextFun
   }
 
   // Check bootstrap admins first (super_admin by default)
-  if (isBootstrapAdmin(userId, userEmail)) {
+  if (isBootstrapAdmin(userId || undefined, userEmail || undefined)) {
     (req as AdminRequest).adminRole = "super_admin";
-    (req as AdminRequest).adminUserId = userId || userEmail;
-    (req as AdminRequest).userEmail = userEmail;
+    (req as AdminRequest).adminUserId = userId || userEmail || undefined;
+    (req as AdminRequest).userEmail = userEmail || undefined;
     return next();
   }
 
@@ -109,7 +148,7 @@ export async function adminMiddleware(req: Request, res: Response, next: NextFun
     if (dbAdmin && dbAdmin.isActive) {
       (req as AdminRequest).adminRole = dbAdmin.role;
       (req as AdminRequest).adminUserId = userId;
-      (req as AdminRequest).userEmail = userEmail;
+      (req as AdminRequest).userEmail = userEmail || undefined;
       return next();
     }
   }
@@ -141,9 +180,8 @@ export function requireRole(...allowedRoles: AdminRole[]) {
       return res.status(403).json({ error: `Requires one of: ${allowedRoles.join(", ")}` });
     }
 
-    // Otherwise, do full admin check
-    const userId = (req as any).userId;
-    const userEmail = (req as any).userEmail;
+    // Extract user info from request (JWT token or Replit Auth session)
+    const { userId, userEmail } = await extractUserFromRequest(req);
 
     // Require authenticated identity
     if (!userId && !userEmail) {
@@ -151,9 +189,9 @@ export function requireRole(...allowedRoles: AdminRole[]) {
     }
 
     // Bootstrap admins are super_admin
-    if (isBootstrapAdmin(userId, userEmail)) {
+    if (isBootstrapAdmin(userId || undefined, userEmail || undefined)) {
       adminReq.adminRole = "super_admin";
-      adminReq.adminUserId = userId || userEmail;
+      adminReq.adminUserId = userId || userEmail || undefined;
       if (allowedRoles.includes("super_admin")) {
         return next();
       }
