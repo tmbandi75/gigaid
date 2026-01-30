@@ -518,4 +518,22 @@ router.get("/activation-funnel", async (req, res) => {
   }
 });
 
+// Manual refresh endpoint - re-runs copilot evaluation and recomputes metrics
+router.post("/refresh", async (req, res) => {
+  try {
+    console.log("[Cockpit] Manual refresh triggered");
+    
+    // Recompute metrics snapshot
+    await computeMetricsSnapshot();
+    
+    // Re-run copilot evaluation
+    await runCopilotEvaluation();
+    
+    res.json({ success: true, message: "Data refreshed successfully" });
+  } catch (error) {
+    console.error("[Cockpit] Refresh error:", error);
+    res.status(500).json({ error: "Failed to refresh data" });
+  }
+});
+
 export default router;
