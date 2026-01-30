@@ -103,12 +103,6 @@ export const users = pgTable("users", {
   authProvider: text("auth_provider"), // 'replit' | 'firebase' | null (indicates primary provider)
   updatedAt: text("updated_at"),
   deletedAt: text("deleted_at"), // Soft delete timestamp - Apple App Store compliance
-  
-  // Admin suspension fields
-  suspended: boolean("suspended").default(false),
-  suspendedAt: text("suspended_at"),
-  suspendedBy: text("suspended_by"),
-  suspendedReason: text("suspended_reason"),
 });
 
 // Availability type for frontend use
@@ -2099,85 +2093,3 @@ export type OutboundMessage = typeof outboundMessages.$inferSelect;
 
 export * from "./models/chat";
 export * from "./models/auth";
-
-// ============================================================================
-// ADMIN SYSTEM
-// Internal admin interface for managing users, billing, and operations
-// ============================================================================
-
-// Admin roles
-export const adminRoles = ["super_admin", "admin", "read_only"] as const;
-export type AdminRole = typeof adminRoles[number];
-
-// Admin users table
-export const admins = pgTable("admins", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: text("email").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
-  name: text("name"),
-  role: text("role").notNull().default("read_only"), // super_admin, admin, read_only
-  enabled: boolean("enabled").default(true),
-  lastLoginAt: text("last_login_at"),
-  createdAt: text("created_at").notNull(),
-  updatedAt: text("updated_at"),
-});
-
-export const insertAdminSchema = createInsertSchema(admins).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  lastLoginAt: true,
-});
-
-export type InsertAdmin = z.infer<typeof insertAdminSchema>;
-export type Admin = typeof admins.$inferSelect;
-
-// Admin audit log - tracks ALL admin actions
-export const adminAuditLogs = pgTable("admin_audit_logs", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  adminId: varchar("admin_id").notNull(),
-  adminEmail: text("admin_email").notNull(),
-  adminRole: text("admin_role").notNull(),
-  action: text("action").notNull(), // e.g., "user.suspend", "user.reactivate", "billing.refund"
-  targetType: text("target_type").notNull(), // user, billing, campaign, system
-  targetId: varchar("target_id"), // ID of the affected entity
-  metadata: text("metadata"), // JSON with before/after state, additional context
-  ipAddress: text("ip_address"),
-  userAgent: text("user_agent"),
-  createdAt: text("created_at").notNull(),
-}, (table) => [
-  index("admin_audit_logs_admin_idx").on(table.adminId),
-  index("admin_audit_logs_target_idx").on(table.targetType, table.targetId),
-  index("admin_audit_logs_action_idx").on(table.action),
-  index("admin_audit_logs_created_idx").on(table.createdAt),
-]);
-
-export const insertAdminAuditLogSchema = createInsertSchema(adminAuditLogs).omit({
-  id: true,
-});
-
-export type InsertAdminAuditLog = z.infer<typeof insertAdminAuditLogSchema>;
-export type AdminAuditLog = typeof adminAuditLogs.$inferSelect;
-
-// Admin notes on users - internal only, never exposed to users
-export const adminNotes = pgTable("admin_notes", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  adminId: varchar("admin_id").notNull(),
-  adminEmail: text("admin_email").notNull(),
-  userId: varchar("user_id").notNull(),
-  content: text("content").notNull(),
-  createdAt: text("created_at").notNull(),
-  updatedAt: text("updated_at"),
-}, (table) => [
-  index("admin_notes_user_idx").on(table.userId),
-  index("admin_notes_admin_idx").on(table.adminId),
-]);
-
-export const insertAdminNoteSchema = createInsertSchema(adminNotes).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export type InsertAdminNote = z.infer<typeof insertAdminNoteSchema>;
-export type AdminNote = typeof adminNotes.$inferSelect;

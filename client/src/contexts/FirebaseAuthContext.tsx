@@ -33,42 +33,14 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
     setIsTokenReady(ready);
   };
   
-  // Timeout fallback: If Firebase auth hasn't responded after 3 seconds, assume web session auth
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (authLoading && !isTokenReady) {
-        console.log("[FirebaseAuth] Timeout - Firebase auth not responding, using web session auth");
-        setAuthLoading(false);
-        setIsTokenReady(true);
-      }
-    }, 3000);
-    
-    return () => clearTimeout(timeout);
-  }, [authLoading, isTokenReady]);
-  
-  // Check token readiness whenever Firebase user or auth loading changes
+  // Check token readiness whenever Firebase user changes
   // This ensures token is only "ready" if it was issued for the current user
-  // OR if there's no Firebase user (web session will be used)
   useEffect(() => {
-    // Still loading - don't set ready yet
-    if (authLoading) {
-      return;
-    }
-    
     const uid = firebaseUser?.uid || null;
-    
-    // No Firebase user - web session auth will be used, so we're ready
-    if (!uid) {
-      console.log("[FirebaseAuth] No Firebase user - using web session auth, setting ready=true");
-      setIsTokenReady(true);
-      return;
-    }
-    
-    // Have Firebase user - check if token matches
     const ready = isTokenReadyForUser(uid);
     console.log("[FirebaseAuth] Checking token readiness for user:", uid, "ready:", ready);
     setIsTokenReady(ready);
-  }, [firebaseUser, authLoading]);
+  }, [firebaseUser]);
 
   useEffect(() => {
     const setupTs = Date.now();

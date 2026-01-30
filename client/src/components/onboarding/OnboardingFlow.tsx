@@ -425,14 +425,9 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
     navigate("/");
   };
 
-  // POST-AUTH guard: show loading while authentication completes
+  // POST-AUTH guard: prevent rendering before authentication completes
   if (!isAuthenticated || !user) {
-    return (
-      <div className="flex flex-col min-h-[70vh] items-center justify-center" data-testid="onboarding-loading">
-        <Loader2 className="h-8 w-8 animate-spin text-[#6366F1]" />
-        <p className="text-muted-foreground mt-4">Loading your profile...</p>
-      </div>
-    );
+    return null;
   }
 
   const progressPercent = step === 1 ? 0 : ((step - 1) / (TOTAL_STEPS - 1)) * 100;
