@@ -425,9 +425,47 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
     navigate("/");
   };
 
-  // POST-AUTH guard: prevent rendering before authentication completes
+  // POST-AUTH guard: show sign-in prompt if not authenticated
   if (!isAuthenticated || !user) {
-    return null;
+    return (
+      <div className="flex flex-col min-h-[70vh]" data-testid="onboarding-flow-unauthenticated">
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-lg mx-auto px-6 py-8 min-h-full flex flex-col">
+            <div className="flex-1 flex flex-col justify-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="space-y-8 text-center">
+                <div className="space-y-2">
+                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 mb-4">
+                    <Shield className="w-10 h-10 text-primary" />
+                  </div>
+                  <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+                    Get paid before the job starts
+                  </h1>
+                  <p className="text-lg text-muted-foreground max-w-sm mx-auto">
+                    GigAid protects your time with deposits and smart booking.
+                  </p>
+                </div>
+                
+                <div className="space-y-3 pt-4">
+                  <a href="/api/login" className="block">
+                    <Button 
+                      size="lg" 
+                      className="w-full h-14 text-lg rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-[#4F46E5]/30"
+                      data-testid="button-sign-in"
+                    >
+                      Sign in to get started
+                      <ArrowRight className="w-5 h-5 ml-2" />
+                    </Button>
+                  </a>
+                  <p className="text-sm text-muted-foreground">
+                    New to GigAid? Sign in to create your account.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const progressPercent = step === 1 ? 0 : ((step - 1) / (TOTAL_STEPS - 1)) * 100;
