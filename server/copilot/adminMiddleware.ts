@@ -82,6 +82,7 @@ export function isAdminUser(userId: string | undefined, userEmail: string | unde
 export interface AdminRequest extends Request {
   adminRole?: AdminRole;
   adminUserId?: string;
+  userEmail?: string;
 }
 
 // Basic admin middleware - allows any admin role
@@ -98,6 +99,7 @@ export async function adminMiddleware(req: Request, res: Response, next: NextFun
   if (isBootstrapAdmin(userId, userEmail)) {
     (req as AdminRequest).adminRole = "super_admin";
     (req as AdminRequest).adminUserId = userId || userEmail;
+    (req as AdminRequest).userEmail = userEmail;
     return next();
   }
 
@@ -107,6 +109,7 @@ export async function adminMiddleware(req: Request, res: Response, next: NextFun
     if (dbAdmin && dbAdmin.isActive) {
       (req as AdminRequest).adminRole = dbAdmin.role;
       (req as AdminRequest).adminUserId = userId;
+      (req as AdminRequest).userEmail = userEmail;
       return next();
     }
   }
@@ -117,6 +120,7 @@ export async function adminMiddleware(req: Request, res: Response, next: NextFun
     if (dbAdminByEmail && dbAdminByEmail.isActive) {
       (req as AdminRequest).adminRole = dbAdminByEmail.role;
       (req as AdminRequest).adminUserId = userId || userEmail;
+      (req as AdminRequest).userEmail = userEmail;
       return next();
     }
   }

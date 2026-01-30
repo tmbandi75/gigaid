@@ -14,7 +14,7 @@ import {
   type AdminActionKey
 } from "@shared/schema";
 import { eq, desc, and, or, ilike, gte, count, sql, isNull, isNotNull, lte } from "drizzle-orm";
-import { adminMiddleware } from "../copilot/adminMiddleware";
+import { adminMiddleware, AdminRequest } from "../copilot/adminMiddleware";
 import { getUncachableStripeClient } from "../stripeClient";
 
 const router = Router();
