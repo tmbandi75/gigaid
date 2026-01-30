@@ -180,14 +180,23 @@ function AuthenticatedApp() {
     return <RedirectToDashboard />;
   }
   
+  // Onboarding page renders full-screen without app shell
+  const isOnboardingRoute = location.startsWith("/onboarding");
+  
   // Show app for authenticated users
   return (
     <DriveModeProvider>
       <OnboardingWrapper>
-        <ResponsiveLayout>
+        {isOnboardingRoute ? (
           <Router />
-        </ResponsiveLayout>
-        <VoiceFAB />
+        ) : (
+          <>
+            <ResponsiveLayout>
+              <Router />
+            </ResponsiveLayout>
+            <VoiceFAB />
+          </>
+        )}
       </OnboardingWrapper>
     </DriveModeProvider>
   );
