@@ -1437,6 +1437,37 @@ export type AttributionDaily = typeof attributionDaily.$inferSelect;
 // ============================================================
 // ADMIN ACTION AUDIT - Immutable log of admin actions
 // ============================================================
+// ============================================================
+// ADMIN ROLES - Role-based access control for admins
+// ============================================================
+export const adminRoles = ["super_admin", "admin", "read_only"] as const;
+export type AdminRole = (typeof adminRoles)[number];
+
+export const admins = pgTable("admins", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
+  email: text("email").notNull(),
+  passwordHash: text("password_hash"),
+  name: text("name"),
+  role: text("role").notNull().default("read_only"),
+  enabled: boolean("enabled").default(true),
+  isActive: boolean("is_active").default(true),
+  createdAt: text("created_at").notNull(),
+  createdBy: varchar("created_by"),
+  lastLoginAt: text("last_login_at"),
+  updatedAt: text("updated_at"),
+}, (table) => [
+  index("admins_user_id_idx").on(table.userId),
+  index("admins_email_idx").on(table.email),
+]);
+
+export const insertAdminSchema = createInsertSchema(admins).omit({
+  id: true,
+});
+
+export type InsertAdmin = z.infer<typeof insertAdminSchema>;
+export type Admin = typeof admins.$inferSelect;
+
 export const adminActionKeys = [
   "user_flagged",
   "add_note",
@@ -1455,7 +1486,10 @@ export const adminActionKeys = [
   "billing_apply_credit",
   "billing_refund",
   "account_disable",
-  "account_enable"
+  "account_enable",
+  "admin_created",
+  "admin_updated",
+  "admin_deactivated"
 ] as const;
 export type AdminActionKey = (typeof adminActionKeys)[number];
 

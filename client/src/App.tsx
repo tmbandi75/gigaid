@@ -55,6 +55,8 @@ import Messages from "@/pages/Messages";
 import AdminCockpit from "@/pages/AdminCockpit";
 import AdminUsers from "@/pages/AdminUsers";
 import AdminUserDetail from "@/pages/AdminUserDetail";
+import AdminSystemHealth from "@/pages/AdminSystemHealth";
+import AdminAuditLogs from "@/pages/AdminAuditLogs";
 import VoiceNotesPage from "@/pages/VoiceNotesPage";
 import TermsOfService from "@/pages/terms";
 import PrivacyPolicy from "@/pages/privacy";
@@ -104,6 +106,8 @@ function Router() {
       <Route path="/admin/cockpit" component={AdminCockpit} />
       <Route path="/admin/users" component={AdminUsers} />
       <Route path="/admin/users/:userId" component={AdminUserDetail} />
+      <Route path="/admin/system" component={AdminSystemHealth} />
+      <Route path="/admin/audit-logs" component={AdminAuditLogs} />
       <Route path="/onboarding/:step" component={OnboardingPage} />
       <Route path="/onboarding" component={OnboardingPage} />
       <Route component={NotFound} />

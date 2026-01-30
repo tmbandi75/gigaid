@@ -38,6 +38,9 @@ import { generateNudgesForUser } from "./nudgeGenerator";
 import { createSupportTicket, getTicketsByEmail, getTicketById, addTicketComment, getTicketComments } from "./zendesk";
 import cockpitRoutes from "./copilot/routes";
 import adminUsersRoutes from "./admin/usersRoutes";
+import adminAuthRoutes from "./admin/authRoutes";
+import adminSystemHealthRoutes from "./admin/systemHealthRoutes";
+import adminAuditLogRoutes from "./admin/auditLogRoutes";
 import leadEmailRoutes from "./leadEmailRoutes";
 import { startCopilotScheduler } from "./copilot/engine";
 import { startCampaignSuggestionScheduler } from "./campaignSuggestionEngine";
@@ -76,6 +79,9 @@ export async function registerRoutes(
   
   app.use("/api/admin/cockpit", cockpitRoutes);
   app.use("/api/admin/users", adminUsersRoutes);
+  app.use("/api/admin/auth", adminAuthRoutes);
+  app.use("/api/admin/system", adminSystemHealthRoutes);
+  app.use("/api/admin/audit-logs", adminAuditLogRoutes);
   app.use("/api", leadEmailRoutes);
   app.use("/api/auth", mobileAuthRoutes);
   

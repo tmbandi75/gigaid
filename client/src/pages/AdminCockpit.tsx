@@ -21,7 +21,9 @@ import {
   ArrowDownRight,
   Minus,
   UserCog,
-  TestTube2
+  TestTube2,
+  Server,
+  FileText
 } from "lucide-react";
 import { Link } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -253,11 +255,23 @@ export default function AdminCockpit() {
               </h1>
               <p className="text-slate-300 text-sm mt-1">Business health at a glance</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Link href="/admin/users">
                 <Button variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10" data-testid="button-user-ops">
                   <UserCog className="h-4 w-4 mr-2" />
-                  User Ops
+                  Users
+                </Button>
+              </Link>
+              <Link href="/admin/system">
+                <Button variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10" data-testid="button-system-health">
+                  <Server className="h-4 w-4 mr-2" />
+                  System
+                </Button>
+              </Link>
+              <Link href="/admin/audit-logs">
+                <Button variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10" data-testid="button-audit-logs">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Audit
                 </Button>
               </Link>
               <Button 
