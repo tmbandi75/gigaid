@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getAuthToken } from "@/lib/authToken";
 import {
   Dialog,
   DialogContent,
@@ -253,7 +254,13 @@ function TimelineSection({ userId }: { userId: string }) {
   const { data, isLoading } = useQuery<{ events: TimelineEvent[] }>({
     queryKey: ["/api/admin/users", userId, "timeline"],
     queryFn: async () => {
-      const res = await fetch(`/api/admin/users/${userId}/timeline`);
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`/api/admin/users/${userId}/timeline`, {
+        credentials: "include",
+        headers,
+      });
       if (!res.ok) throw new Error("Failed to fetch timeline");
       return res.json();
     },
@@ -334,7 +341,13 @@ function AuditSection({ userId }: { userId: string }) {
   const { data, isLoading } = useQuery<{ actions: AuditAction[] }>({
     queryKey: ["/api/admin/users", userId, "audit"],
     queryFn: async () => {
-      const res = await fetch(`/api/admin/users/${userId}/audit`);
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`/api/admin/users/${userId}/audit`, {
+        credentials: "include",
+        headers,
+      });
       if (!res.ok) throw new Error("Failed to fetch audit");
       return res.json();
     },
@@ -457,7 +470,13 @@ function MessagingSection({ userId }: { userId: string }) {
   const { data, isLoading } = useQuery<MessagingData>({
     queryKey: ["/api/admin/users", userId, "messaging"],
     queryFn: async () => {
-      const res = await fetch(`/api/admin/users/${userId}/messaging`);
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`/api/admin/users/${userId}/messaging`, {
+        credentials: "include",
+        headers,
+      });
       if (!res.ok) throw new Error("Failed to fetch messaging");
       return res.json();
     },
@@ -521,7 +540,13 @@ function PaymentsSection({ userId }: { userId: string }) {
   const { data, isLoading } = useQuery<PaymentsData>({
     queryKey: ["/api/admin/users", userId, "payments"],
     queryFn: async () => {
-      const res = await fetch(`/api/admin/users/${userId}/payments`);
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`/api/admin/users/${userId}/payments`, {
+        credentials: "include",
+        headers,
+      });
       if (!res.ok) throw new Error("Failed to fetch payments");
       return res.json();
     },
@@ -1097,10 +1122,16 @@ export default function AdminUserDetail() {
   const { data, isLoading, error } = useQuery<UserDetailResponse>({
     queryKey: ["/api/admin/users", userId],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (from) params.set("from", from);
-      if (view) params.set("metric", view);
-      const res = await fetch(`/api/admin/users/${userId}?${params.toString()}`);
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const urlParams = new URLSearchParams();
+      if (from) urlParams.set("from", from);
+      if (view) urlParams.set("metric", view);
+      const res = await fetch(`/api/admin/users/${userId}?${urlParams.toString()}`, {
+        credentials: "include",
+        headers,
+      });
       if (!res.ok) throw new Error("Failed to fetch user");
       return res.json();
     },

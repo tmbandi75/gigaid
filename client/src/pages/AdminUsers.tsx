@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getAuthToken } from "@/lib/authToken";
 import { 
   Search,
   Users,
@@ -161,7 +162,13 @@ function SearchPanel() {
   const { data, isLoading } = useQuery<SearchResponse>({
     queryKey: ["/api/admin/users/search", debouncedQuery],
     queryFn: async () => {
-      const res = await fetch(`/api/admin/users/search?q=${encodeURIComponent(debouncedQuery)}`);
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`/api/admin/users/search?q=${encodeURIComponent(debouncedQuery)}`, {
+        credentials: "include",
+        headers,
+      });
       if (!res.ok) throw new Error("Search failed");
       return res.json();
     },
@@ -226,7 +233,13 @@ function ViewPanel({ view }: { view: string }) {
   const { data, isLoading, error } = useQuery<ViewResponse>({
     queryKey: ["/api/admin/users/views", view, page],
     queryFn: async () => {
-      const res = await fetch(`/api/admin/users/views?view=${view}&page=${page}`);
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`/api/admin/users/views?view=${view}&page=${page}`, {
+        credentials: "include",
+        headers,
+      });
       if (!res.ok) throw new Error("Failed to load view");
       return res.json();
     },
