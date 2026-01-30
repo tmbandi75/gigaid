@@ -192,12 +192,14 @@ function AuthenticatedApp() {
   
   // Onboarding page renders full-screen without app shell
   const isOnboardingRoute = location.startsWith("/onboarding");
+  // Admin pages have their own layout without the user sidebar
+  const isAdminRoute = location.startsWith("/admin");
   
   // Show app for authenticated users
   return (
     <DriveModeProvider>
       <OnboardingWrapper>
-        {isOnboardingRoute ? (
+        {isOnboardingRoute || isAdminRoute ? (
           <Router />
         ) : (
           <>
