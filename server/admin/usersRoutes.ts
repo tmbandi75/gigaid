@@ -15,6 +15,7 @@ import {
 } from "@shared/schema";
 import { eq, desc, and, or, ilike, gte, count, sql, isNull, isNotNull, lte } from "drizzle-orm";
 import { adminMiddleware } from "../copilot/adminMiddleware";
+import { getUncachableStripeClient } from "../stripeClient";
 
 const router = Router();
 
@@ -215,6 +216,171 @@ router.get("/views", async (req, res) => {
           .offset(offset);
         }
         total = userIds.length;
+        break;
+      }
+
+      case "all_users": {
+        const [countResult] = await db.select({ count: count() }).from(users);
+        total = countResult?.count || 0;
+
+        results = await db.select({
+          id: users.id,
+          email: users.email,
+          username: users.username,
+          name: users.name,
+          isPro: users.isPro,
+          plan: users.plan,
+          onboardingCompleted: users.onboardingCompleted,
+          lastActiveAt: users.lastActiveAt,
+          createdAt: users.createdAt,
+        })
+        .from(users)
+        .orderBy(desc(users.createdAt))
+        .limit(limit)
+        .offset(offset);
+        break;
+      }
+
+      case "pro_users": {
+        const [countResult] = await db.select({ count: count() })
+          .from(users)
+          .where(eq(users.isPro, true));
+        total = countResult?.count || 0;
+
+        results = await db.select({
+          id: users.id,
+          email: users.email,
+          username: users.username,
+          name: users.name,
+          isPro: users.isPro,
+          plan: users.plan,
+          lastActiveAt: users.lastActiveAt,
+          createdAt: users.createdAt,
+        })
+        .from(users)
+        .where(eq(users.isPro, true))
+        .orderBy(desc(users.createdAt))
+        .limit(limit)
+        .offset(offset);
+        break;
+      }
+
+      case "free_users": {
+        const [countResult] = await db.select({ count: count() })
+          .from(users)
+          .where(eq(users.isPro, false));
+        total = countResult?.count || 0;
+
+        results = await db.select({
+          id: users.id,
+          email: users.email,
+          username: users.username,
+          name: users.name,
+          isPro: users.isPro,
+          onboardingCompleted: users.onboardingCompleted,
+          lastActiveAt: users.lastActiveAt,
+          createdAt: users.createdAt,
+        })
+        .from(users)
+        .where(eq(users.isPro, false))
+        .orderBy(desc(users.createdAt))
+        .limit(limit)
+        .offset(offset);
+        break;
+      }
+
+      case "active_7d": {
+        const [countResult] = await db.select({ count: count() })
+          .from(users)
+          .where(gte(users.lastActiveAt, sevenDaysAgo));
+        total = countResult?.count || 0;
+
+        results = await db.select({
+          id: users.id,
+          email: users.email,
+          username: users.username,
+          name: users.name,
+          isPro: users.isPro,
+          lastActiveAt: users.lastActiveAt,
+          createdAt: users.createdAt,
+        })
+        .from(users)
+        .where(gte(users.lastActiveAt, sevenDaysAgo))
+        .orderBy(desc(users.lastActiveAt))
+        .limit(limit)
+        .offset(offset);
+        break;
+      }
+
+      case "active_30d": {
+        const [countResult] = await db.select({ count: count() })
+          .from(users)
+          .where(gte(users.lastActiveAt, thirtyDaysAgo));
+        total = countResult?.count || 0;
+
+        results = await db.select({
+          id: users.id,
+          email: users.email,
+          username: users.username,
+          name: users.name,
+          isPro: users.isPro,
+          lastActiveAt: users.lastActiveAt,
+          createdAt: users.createdAt,
+        })
+        .from(users)
+        .where(gte(users.lastActiveAt, thirtyDaysAgo))
+        .orderBy(desc(users.lastActiveAt))
+        .limit(limit)
+        .offset(offset);
+        break;
+      }
+
+      case "comp_access": {
+        const [countResult] = await db.select({ count: count() })
+          .from(users)
+          .where(isNotNull(users.compAccessGrantedAt));
+        total = countResult?.count || 0;
+
+        results = await db.select({
+          id: users.id,
+          email: users.email,
+          username: users.username,
+          name: users.name,
+          isPro: users.isPro,
+          compAccessGrantedAt: users.compAccessGrantedAt,
+          compAccessExpiresAt: users.compAccessExpiresAt,
+          lastActiveAt: users.lastActiveAt,
+          createdAt: users.createdAt,
+        })
+        .from(users)
+        .where(isNotNull(users.compAccessGrantedAt))
+        .orderBy(desc(users.compAccessGrantedAt))
+        .limit(limit)
+        .offset(offset);
+        break;
+      }
+
+      case "disabled_accounts": {
+        const [countResult] = await db.select({ count: count() })
+          .from(users)
+          .where(eq(users.isDisabled, true));
+        total = countResult?.count || 0;
+
+        results = await db.select({
+          id: users.id,
+          email: users.email,
+          username: users.username,
+          name: users.name,
+          isDisabled: users.isDisabled,
+          disabledAt: users.disabledAt,
+          disabledReason: users.disabledReason,
+          createdAt: users.createdAt,
+        })
+        .from(users)
+        .where(eq(users.isDisabled, true))
+        .orderBy(desc(users.disabledAt))
+        .limit(limit)
+        .offset(offset);
         break;
       }
 
@@ -580,6 +746,223 @@ router.post("/:userId/actions", async (req, res) => {
 
       case "send_one_off_push": {
         console.log(`[Admin] One-off push sent to user ${userId}: ${payload?.message}`);
+        break;
+      }
+
+      case "billing_upgrade":
+      case "billing_downgrade": {
+        const [targetUser] = await db.select({ 
+          stripeCustomerId: users.stripeCustomerId,
+          stripeSubscriptionId: users.stripeSubscriptionId 
+        }).from(users).where(eq(users.id, userId)).limit(1);
+        
+        if (!targetUser?.stripeSubscriptionId) {
+          return res.status(400).json({ error: "User has no active subscription to modify" });
+        }
+        
+        const newPriceId = payload?.priceId;
+        if (!newPriceId) {
+          return res.status(400).json({ error: "New price ID is required for plan changes" });
+        }
+        
+        try {
+          const stripe = await getUncachableStripeClient();
+          const subscription = await stripe.subscriptions.retrieve(targetUser.stripeSubscriptionId);
+          
+          await stripe.subscriptions.update(targetUser.stripeSubscriptionId, {
+            items: [{
+              id: subscription.items.data[0].id,
+              price: newPriceId,
+            }],
+            proration_behavior: 'create_prorations',
+          });
+          
+          const newPlan = action_key === "billing_upgrade" ? "upgraded" : "downgraded";
+          console.log(`[Admin] User ${userId} ${newPlan} to price ${newPriceId}`);
+        } catch (stripeError: any) {
+          console.error("[Admin] Stripe plan change error:", stripeError);
+          return res.status(500).json({ error: `Stripe error: ${stripeError.message}` });
+        }
+        break;
+      }
+
+      case "billing_grant_comp": {
+        const compMonths = payload?.months || 1;
+        const compEndDate = new Date(Date.now() + compMonths * 30 * 24 * 60 * 60 * 1000).toISOString();
+        
+        await db.update(users)
+          .set({ 
+            isPro: true,
+            compAccessGrantedAt: now,
+            compAccessExpiresAt: compEndDate,
+            compAccessGrantedBy: actorUserId,
+          })
+          .where(eq(users.id, userId));
+        
+        console.log(`[Admin] Granted ${compMonths} month(s) comp access to user ${userId}`);
+        break;
+      }
+
+      case "billing_revoke_comp": {
+        await db.update(users)
+          .set({ 
+            isPro: false,
+            compAccessRevokedAt: now,
+            compAccessRevokedBy: actorUserId,
+          })
+          .where(eq(users.id, userId));
+        
+        console.log(`[Admin] Revoked comp access for user ${userId}`);
+        break;
+      }
+
+      case "billing_pause": {
+        const [targetUser] = await db.select({ 
+          stripeSubscriptionId: users.stripeSubscriptionId 
+        }).from(users).where(eq(users.id, userId)).limit(1);
+        
+        if (!targetUser?.stripeSubscriptionId) {
+          return res.status(400).json({ error: "User has no active subscription to pause" });
+        }
+        
+        try {
+          const stripe = await getUncachableStripeClient();
+          await stripe.subscriptions.update(targetUser.stripeSubscriptionId, {
+            pause_collection: {
+              behavior: 'void',
+            },
+          });
+          console.log(`[Admin] Paused subscription for user ${userId}`);
+        } catch (stripeError: any) {
+          console.error("[Admin] Stripe pause error:", stripeError);
+          return res.status(500).json({ error: `Stripe error: ${stripeError.message}` });
+        }
+        break;
+      }
+
+      case "billing_resume": {
+        const [targetUser] = await db.select({ 
+          stripeSubscriptionId: users.stripeSubscriptionId 
+        }).from(users).where(eq(users.id, userId)).limit(1);
+        
+        if (!targetUser?.stripeSubscriptionId) {
+          return res.status(400).json({ error: "User has no subscription to resume" });
+        }
+        
+        try {
+          const stripe = await getUncachableStripeClient();
+          await stripe.subscriptions.update(targetUser.stripeSubscriptionId, {
+            pause_collection: null,
+          });
+          console.log(`[Admin] Resumed subscription for user ${userId}`);
+        } catch (stripeError: any) {
+          console.error("[Admin] Stripe resume error:", stripeError);
+          return res.status(500).json({ error: `Stripe error: ${stripeError.message}` });
+        }
+        break;
+      }
+
+      case "billing_cancel": {
+        const [targetUser] = await db.select({ 
+          stripeSubscriptionId: users.stripeSubscriptionId 
+        }).from(users).where(eq(users.id, userId)).limit(1);
+        
+        if (!targetUser?.stripeSubscriptionId) {
+          return res.status(400).json({ error: "User has no subscription to cancel" });
+        }
+        
+        const cancelImmediately = payload?.immediate === true;
+        
+        try {
+          const stripe = await getUncachableStripeClient();
+          if (cancelImmediately) {
+            await stripe.subscriptions.cancel(targetUser.stripeSubscriptionId);
+          } else {
+            await stripe.subscriptions.update(targetUser.stripeSubscriptionId, {
+              cancel_at_period_end: true,
+            });
+          }
+          console.log(`[Admin] Cancelled subscription for user ${userId} (immediate: ${cancelImmediately})`);
+        } catch (stripeError: any) {
+          console.error("[Admin] Stripe cancel error:", stripeError);
+          return res.status(500).json({ error: `Stripe error: ${stripeError.message}` });
+        }
+        break;
+      }
+
+      case "billing_apply_credit": {
+        const [targetUser] = await db.select({ 
+          stripeCustomerId: users.stripeCustomerId 
+        }).from(users).where(eq(users.id, userId)).limit(1);
+        
+        if (!targetUser?.stripeCustomerId) {
+          return res.status(400).json({ error: "User has no Stripe customer record" });
+        }
+        
+        const creditAmountCents = payload?.amountCents;
+        if (!creditAmountCents || creditAmountCents <= 0) {
+          return res.status(400).json({ error: "Credit amount (in cents) is required and must be positive" });
+        }
+        
+        try {
+          const stripe = await getUncachableStripeClient();
+          await stripe.customers.update(targetUser.stripeCustomerId, {
+            balance: -Math.abs(creditAmountCents),
+          });
+          console.log(`[Admin] Applied $${(creditAmountCents / 100).toFixed(2)} credit to user ${userId}`);
+        } catch (stripeError: any) {
+          console.error("[Admin] Stripe credit error:", stripeError);
+          return res.status(500).json({ error: `Stripe error: ${stripeError.message}` });
+        }
+        break;
+      }
+
+      case "billing_refund": {
+        const chargeId = payload?.chargeId;
+        const refundAmountCents = payload?.amountCents;
+        
+        if (!chargeId) {
+          return res.status(400).json({ error: "Charge ID is required for refunds" });
+        }
+        
+        try {
+          const stripe = await getUncachableStripeClient();
+          const refundParams: any = { charge: chargeId };
+          if (refundAmountCents && refundAmountCents > 0) {
+            refundParams.amount = refundAmountCents;
+          }
+          
+          await stripe.refunds.create(refundParams);
+          console.log(`[Admin] Refunded charge ${chargeId} for user ${userId}`);
+        } catch (stripeError: any) {
+          console.error("[Admin] Stripe refund error:", stripeError);
+          return res.status(500).json({ error: `Stripe error: ${stripeError.message}` });
+        }
+        break;
+      }
+
+      case "account_disable": {
+        await db.update(users)
+          .set({ 
+            isDisabled: true,
+            disabledAt: now,
+            disabledBy: actorUserId,
+            disabledReason: reason.trim(),
+          })
+          .where(eq(users.id, userId));
+        console.log(`[Admin] Disabled account for user ${userId}`);
+        break;
+      }
+
+      case "account_enable": {
+        await db.update(users)
+          .set({ 
+            isDisabled: false,
+            enabledAt: now,
+            enabledBy: actorUserId,
+          })
+          .where(eq(users.id, userId));
+        console.log(`[Admin] Enabled account for user ${userId}`);
         break;
       }
     }

@@ -49,6 +49,31 @@ interface SearchResponse {
 }
 
 const viewConfig = {
+  all_users: {
+    label: "All Users",
+    icon: Users,
+    description: "All registered users",
+  },
+  pro_users: {
+    label: "Pro Users",
+    icon: CreditCard,
+    description: "Paying subscribers",
+  },
+  free_users: {
+    label: "Free Users",
+    icon: Users,
+    description: "Free tier users",
+  },
+  active_7d: {
+    label: "Active (7d)",
+    icon: Users,
+    description: "Active in last 7 days",
+  },
+  active_30d: {
+    label: "Active (30d)",
+    icon: Users,
+    description: "Active in last 30 days",
+  },
   onboarding_stalled: {
     label: "Onboarding Stalled",
     icon: UserX,
@@ -73,6 +98,16 @@ const viewConfig = {
     label: "Churned",
     icon: UserX,
     description: "Cancelled subscription in last 30 days",
+  },
+  comp_access: {
+    label: "Comp Access",
+    icon: CreditCard,
+    description: "Users with complimentary access",
+  },
+  disabled_accounts: {
+    label: "Disabled",
+    icon: UserX,
+    description: "Disabled accounts",
   },
 };
 

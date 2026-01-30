@@ -103,6 +103,21 @@ export const users = pgTable("users", {
   authProvider: text("auth_provider"), // 'replit' | 'firebase' | null (indicates primary provider)
   updatedAt: text("updated_at"),
   deletedAt: text("deleted_at"), // Soft delete timestamp - Apple App Store compliance
+  
+  // Admin-controlled comp access
+  compAccessGrantedAt: text("comp_access_granted_at"),
+  compAccessExpiresAt: text("comp_access_expires_at"),
+  compAccessGrantedBy: varchar("comp_access_granted_by"),
+  compAccessRevokedAt: text("comp_access_revoked_at"),
+  compAccessRevokedBy: varchar("comp_access_revoked_by"),
+  
+  // Account disable controls
+  isDisabled: boolean("is_disabled").default(false),
+  disabledAt: text("disabled_at"),
+  disabledBy: varchar("disabled_by"),
+  disabledReason: text("disabled_reason"),
+  enabledAt: text("enabled_at"),
+  enabledBy: varchar("enabled_by"),
 });
 
 // Availability type for frontend use
@@ -1429,7 +1444,18 @@ export const adminActionKeys = [
   "trigger_webhook_retry",
   "suppress_messaging",
   "unsuppress_messaging",
-  "send_one_off_push"
+  "send_one_off_push",
+  "billing_upgrade",
+  "billing_downgrade",
+  "billing_grant_comp",
+  "billing_revoke_comp",
+  "billing_pause",
+  "billing_resume",
+  "billing_cancel",
+  "billing_apply_credit",
+  "billing_refund",
+  "account_disable",
+  "account_enable"
 ] as const;
 export type AdminActionKey = (typeof adminActionKeys)[number];
 

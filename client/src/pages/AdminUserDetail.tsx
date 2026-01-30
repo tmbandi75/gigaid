@@ -808,6 +808,283 @@ function ActionsSection({ userId, profile }: { userId: string; profile: UserProf
   );
 }
 
+function BillingActionsSection({ userId, profile }: { userId: string; profile: UserProfile }) {
+  const { toast } = useToast();
+  const [actionDialog, setActionDialog] = useState<string | null>(null);
+  const [reason, setReason] = useState("");
+  const [compMonths, setCompMonths] = useState("1");
+  const [creditAmount, setCreditAmount] = useState("");
+  const [cancelImmediate, setCancelImmediate] = useState(false);
+
+  const actionMutation = useMutation({
+    mutationFn: async ({ action_key, payload }: { action_key: string; payload?: any }) => {
+      const res = await apiRequest("POST", `/api/admin/users/${userId}/actions`, {
+        action_key,
+        reason: reason.trim(),
+        payload,
+      });
+      return res;
+    },
+    onSuccess: () => {
+      toast({ title: "Billing action completed and logged" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users", userId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users", userId, "audit"] });
+      setActionDialog(null);
+      setReason("");
+      setCompMonths("1");
+      setCreditAmount("");
+      setCancelImmediate(false);
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Billing action failed", 
+        description: error.message || "Please try again",
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const handleAction = (action_key: string, payload?: any) => {
+    if (!reason.trim()) {
+      toast({ title: "Reason is required", variant: "destructive" });
+      return;
+    }
+    actionMutation.mutate({ action_key, payload });
+  };
+
+  return (
+    <>
+      <Card className="border-green-200 dark:border-green-900">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <CreditCard className="h-4 w-4" />
+            Billing Controls
+          </CardTitle>
+          <CardDescription>
+            Stripe subscription and payment actions
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start"
+            onClick={() => setActionDialog("grant_comp")}
+            data-testid="button-billing-grant-comp"
+          >
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Grant Comp Access
+          </Button>
+
+          {profile.isPro && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start"
+              onClick={() => setActionDialog("revoke_comp")}
+              data-testid="button-billing-revoke-comp"
+            >
+              <XCircle className="h-4 w-4 mr-2" />
+              Revoke Comp Access
+            </Button>
+          )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start"
+            onClick={() => setActionDialog("pause")}
+            data-testid="button-billing-pause"
+          >
+            <Clock className="h-4 w-4 mr-2" />
+            Pause Billing
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start"
+            onClick={() => setActionDialog("resume")}
+            data-testid="button-billing-resume"
+          >
+            <Activity className="h-4 w-4 mr-2" />
+            Resume Billing
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start text-red-600 hover:text-red-700"
+            onClick={() => setActionDialog("cancel")}
+            data-testid="button-billing-cancel"
+          >
+            <XCircle className="h-4 w-4 mr-2" />
+            Cancel Subscription
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start"
+            onClick={() => setActionDialog("credit")}
+            data-testid="button-billing-credit"
+          >
+            <CreditCard className="h-4 w-4 mr-2" />
+            Apply Credit
+          </Button>
+
+          <Separator className="my-2" />
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start text-red-600 hover:text-red-700"
+            onClick={() => setActionDialog("disable")}
+            data-testid="button-account-disable"
+          >
+            <Shield className="h-4 w-4 mr-2" />
+            Disable Account
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start"
+            onClick={() => setActionDialog("enable")}
+            data-testid="button-account-enable"
+          >
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Enable Account
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Dialog open={!!actionDialog} onOpenChange={(open) => !open && setActionDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {actionDialog === "grant_comp" && "Grant Comp Access"}
+              {actionDialog === "revoke_comp" && "Revoke Comp Access"}
+              {actionDialog === "pause" && "Pause Billing"}
+              {actionDialog === "resume" && "Resume Billing"}
+              {actionDialog === "cancel" && "Cancel Subscription"}
+              {actionDialog === "credit" && "Apply Credit"}
+              {actionDialog === "disable" && "Disable Account"}
+              {actionDialog === "enable" && "Enable Account"}
+            </DialogTitle>
+            <DialogDescription>
+              This billing action will be logged with your identity and the reason you provide.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {actionDialog === "grant_comp" && (
+              <div className="space-y-2">
+                <Label>Duration (months)</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="24"
+                  value={compMonths}
+                  onChange={(e) => setCompMonths(e.target.value)}
+                  data-testid="input-comp-months"
+                />
+              </div>
+            )}
+
+            {actionDialog === "credit" && (
+              <div className="space-y-2">
+                <Label>Credit Amount ($)</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  placeholder="e.g., 25.00"
+                  value={creditAmount}
+                  onChange={(e) => setCreditAmount(e.target.value)}
+                  data-testid="input-credit-amount"
+                />
+              </div>
+            )}
+
+            {actionDialog === "cancel" && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={cancelImmediate}
+                    onChange={(e) => setCancelImmediate(e.target.checked)}
+                    className="rounded"
+                    data-testid="checkbox-cancel-immediate"
+                  />
+                  Cancel immediately (otherwise cancels at period end)
+                </Label>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>Reason (required)</Label>
+              <Textarea
+                placeholder="Why are you taking this action?"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                data-testid="input-billing-reason"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setActionDialog(null)}
+              data-testid="button-billing-cancel-dialog"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                switch (actionDialog) {
+                  case "grant_comp":
+                    handleAction("billing_grant_comp", { months: parseInt(compMonths) || 1 });
+                    break;
+                  case "revoke_comp":
+                    handleAction("billing_revoke_comp");
+                    break;
+                  case "pause":
+                    handleAction("billing_pause");
+                    break;
+                  case "resume":
+                    handleAction("billing_resume");
+                    break;
+                  case "cancel":
+                    handleAction("billing_cancel", { immediate: cancelImmediate });
+                    break;
+                  case "credit":
+                    handleAction("billing_apply_credit", { 
+                      amountCents: Math.round((parseFloat(creditAmount) || 0) * 100) 
+                    });
+                    break;
+                  case "disable":
+                    handleAction("account_disable");
+                    break;
+                  case "enable":
+                    handleAction("account_enable");
+                    break;
+                }
+              }}
+              disabled={actionMutation.isPending || !reason.trim()}
+              data-testid="button-billing-confirm"
+            >
+              {actionMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Confirm Action
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 export default function AdminUserDetail() {
   const [, params] = useRoute("/admin/users/:userId");
   const userId = params?.userId;
@@ -914,7 +1191,10 @@ export default function AdminUserDetail() {
             <ExternalLinksSection userId={userId} />
           </TabsContent>
           <TabsContent value="actions" className="mt-4">
-            <ActionsSection userId={userId} profile={data.profile} />
+            <div className="space-y-4">
+              <ActionsSection userId={userId} profile={data.profile} />
+              <BillingActionsSection userId={userId} profile={data.profile} />
+            </div>
           </TabsContent>
         </Tabs>
       </div>
