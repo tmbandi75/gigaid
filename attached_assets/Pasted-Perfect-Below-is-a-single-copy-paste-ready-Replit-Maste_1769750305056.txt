@@ -1,0 +1,324 @@
+Perfect. Below is a **single, copy-paste-ready Replit Master Prompt** you can drop straight into Replit.
+It is **deterministic, backend-first, admin-only**, and explicitly **forbids any user-facing changes**.
+
+---
+
+# 🔧 **REPLIT MASTER PROMPT — GigAid Admin Backend (Founder Control Panel)**
+
+## Objective
+
+Build a **complete, production-ready Admin Backend Interface for GigAid** that allows founders/admins to:
+
+* Manage users
+* Manage billing (Stripe)
+* View user behavior & analytics
+* Integrate and control Customer.io
+* Operate GigAid without touching production databases
+
+### 🚨 HARD CONSTRAINTS (NON-NEGOTIABLE)
+
+* ❌ Do NOT change any existing GigAid user-facing features, flows, UI, or behavior
+* ❌ Do NOT modify onboarding, booking, reminders, jobs, or pricing logic
+* ❌ Do NOT reuse customer UI components
+* ❌ Do NOT introduce new UI or logic visible to end users
+* ✅ Admin system must be completely isolated
+* ✅ Backend-first implementation
+* ✅ All admin actions must be auditable
+
+---
+
+## Architecture Requirements
+
+### Admin Surface
+
+* Admin lives under **`/admin`** or **`admin.gigaid.ai`**
+* All APIs namespaced under **`/api/admin/*`**
+* Admin routes blocked server-side for non-admin users
+
+### Data Safety
+
+* Read + Act model only
+* Admin may update user state, billing state, and integrations
+* Admin may NOT rewire application logic
+* Destructive actions require confirmation
+* Prefer reversible actions where possible
+
+---
+
+## 1️⃣ Admin Authentication & Roles
+
+### Admin Auth
+
+* Email/password login
+* Optional Google OAuth (admin allowlist)
+* Admins stored in `admins` table
+
+### Roles
+
+* `SUPER_ADMIN` — full access
+* `ADMIN` — operational access
+* `READ_ONLY` — view only
+
+### Enforcement
+
+* Server-side role middleware
+* No client-side only gating
+
+---
+
+## 2️⃣ Admin Dashboard (Command Center)
+
+### Global Metrics (Read-Only)
+
+Display:
+
+* Total users
+* Active users (7 / 30 days)
+* Paying users
+* MRR
+* Trial → paid conversion
+* Churn (30 days)
+* Failed payments
+* Users stuck in onboarding
+
+### System Health
+
+* Background job status
+* Stripe connection status
+* Firebase status
+* Customer.io status
+* API error rate
+
+---
+
+## 3️⃣ User Management
+
+### User List
+
+Searchable + filterable table:
+
+* User ID
+* Name
+* Email
+* Phone
+* Signup date
+* Plan
+* Billing status
+* Last active
+* Onboarding completion %
+* Flags (inactive, failed payment, etc.)
+
+Filters:
+
+* Plan
+* Activity state
+* Payment state
+* Onboarding state
+* Acquisition source (if available)
+
+---
+
+### User Detail View
+
+#### Profile (Read-Only)
+
+* User metadata
+* Linked auth providers
+
+#### Plan & Billing
+
+* Current plan
+* Subscription status
+* Renewal date
+* Invoice history
+* Failed payments
+
+Admin actions:
+
+* Upgrade / downgrade plan
+* Grant comped access
+* Pause billing
+* Cancel subscription
+* Apply credits
+* Refund payments
+
+(All actions go through Stripe APIs — no direct DB hacks)
+
+---
+
+#### Usage & Behavior
+
+* Login history
+* Feature usage counters
+* Booking link activity
+* Jobs created
+* Reminders sent
+
+---
+
+#### Admin Actions
+
+* Impersonate user (read-only session)
+* Reset onboarding state
+* Reset feature locks
+* Disable / re-enable account
+* Add internal admin notes (never user-visible)
+
+---
+
+## 4️⃣ Billing & Revenue (Stripe)
+
+### Stripe Integration
+
+Admin-only:
+
+* View subscriptions
+* View invoices
+* Retry failed payments
+* Issue refunds
+* Apply credits
+
+### Revenue Reporting
+
+* MRR by plan
+* New vs churned MRR
+* Revenue by cohort
+* LTV estimates
+
+---
+
+## 5️⃣ User Behavior & Analytics
+
+### Event Timeline (Per User)
+
+* Logins
+* Feature usage
+* Booking link shares
+* Job creation
+* Reminder sends
+* Upgrade attempts
+
+### Funnels
+
+* Signup → onboarding → first booking
+* Trial → paid
+* Paid → inactive → churn
+
+---
+
+## 6️⃣ Customer.io Integration (Admin-Controlled)
+
+### Event Sync
+
+* Send real-time events
+* Backfill historical events
+* Retry failed deliveries
+
+### Campaign Controls
+
+Admin can:
+
+* Trigger campaigns manually
+* Pause campaigns
+* Preview user eligibility
+* View delivery metrics
+
+### User-Level Overrides
+
+* Suppress messaging
+* Force enroll user
+* Remove user from campaign
+
+---
+
+## 7️⃣ Support & Ops Tools
+
+### Admin Notes
+
+* Timestamped
+* Admin-attributed
+* Internal only
+* Never exposed to users
+
+### Issue Flags
+
+* At-risk
+* Payment issues
+* Support escalation
+
+---
+
+## 8️⃣ Audit Logs (MANDATORY)
+
+Log **every admin action**:
+
+* Admin ID
+* Role
+* Action taken
+* Target (user, billing, campaign)
+* Timestamp
+* Before / after state
+
+Logs must be:
+
+* Searchable
+* Filterable
+* Exportable
+
+---
+
+## 9️⃣ Technical Implementation Rules
+
+* Backend-first
+* Clean service separation:
+
+  * UserService
+  * BillingService
+  * AnalyticsService
+  * MessagingService
+* Secure env vars
+* Role-checked middleware
+* No schema changes that impact app runtime
+* No customer UI imports
+
+---
+
+## 🚫 Explicitly Out of Scope
+
+* User onboarding changes
+* App UI changes
+* Pricing page changes
+* Booking logic changes
+* Job or reminder logic changes
+* New user-visible analytics
+
+---
+
+## ✅ Success Criteria
+
+This is successful when:
+
+* Founder can operate GigAid without touching DBs
+* All user, billing, and messaging ops are centralized
+* Admin actions are safe and auditable
+* Zero regressions in the live app
+
+---
+
+### Final Instruction to Replit
+
+> **Build exactly what is described above.
+> Do not add, remove, or reinterpret scope.
+> If unsure, default to safety and isolation.**
+
+---
+
+If you want next:
+
+* ✅ Admin DB schema
+* ✅ Admin UI wireframe
+* ✅ Role-based permission matrix
+* ✅ Day-1 Founder Ops checklist
+* ✅ Post-launch monitoring setup
+
+Just tell me where you want to go next.

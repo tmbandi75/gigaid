@@ -1,0 +1,329 @@
+GigAid Admin Desktop Interface
+
+Product Requirements Document (PRD)
+
+1. Purpose & Goals
+Objective
+
+Build a secure, desktop-first Admin Interface that allows internal GigAid operators to view, manage, and act on users and their activity without touching production databases or code.
+
+Primary Goals
+
+Enable support, ops, and growth teams to manage users safely
+
+Replace ad-hoc scripts, DB access, and manual investigation
+
+Provide visibility into user lifecycle, billing state, and behavior
+
+Support operational actions (suspend, reset onboarding, etc.)
+
+Non-Goals
+
+No end-user (gig worker) access
+
+No full financial accounting (Stripe dashboard replacement)
+
+No complex analytics or BI (handled elsewhere)
+
+2. Target Users & Roles
+Admin Roles
+Role	Capabilities
+Super Admin	Full access, destructive actions
+Support Admin	Read + limited actions
+Growth / Ops	Read-only + tagging
+
+Role enforcement must be server-side, not UI-only.
+
+3. Platform Scope
+
+Desktop-first web application
+
+Internal use only
+
+Built using Retool (initially), with API-driven backend
+
+Responsive but not mobile-optimized
+
+4. High-Level Feature Set
+Core Modules
+
+Users List
+
+User Detail View
+
+User Actions
+
+Audit Log
+
+System Health & Diagnostics (Phase 2)
+
+5. Functional Requirements
+5.1 Users List (Primary Entry)
+Description
+
+A searchable, filterable table showing all GigAid users.
+
+Data Fields (per row)
+
+User ID
+
+Name
+
+Email
+
+Role (Free / Pro / Pro+ / Business)
+
+Billing Status (Active, Trial, Past Due, Canceled)
+
+Enabled / Suspended
+
+Created Date
+
+Last Active Date
+
+Onboarding State
+
+Filters
+
+Search (name, email, ID)
+
+Billing Status
+
+Role / Plan
+
+Enabled / Suspended
+
+Onboarding State
+
+Date range (created)
+
+Behaviors
+
+Server-side pagination
+
+Server-side filtering (no client filtering)
+
+Clicking a row navigates to User Detail
+
+Requirements
+
+Must not load all users into memory
+
+Empty filters must not send "null" or "undefined" params
+
+Loading, empty, and error states required
+
+5.2 User Detail View
+Description
+
+Single-user deep dive screen.
+
+Sections
+Header
+
+Name
+
+Email
+
+User ID (copyable)
+
+Plan
+
+Billing Status
+
+Enabled/Suspended badge
+
+Tabs
+
+Overview
+
+Activity
+
+Jobs
+
+Leads
+
+Invoices
+
+Audit Log
+
+5.2.1 Overview Tab
+
+Account metadata
+
+Onboarding progress
+
+Key stats (jobs created, bookings completed)
+
+Billing summary (read-only)
+
+5.2.2 Activity Tab
+
+Timestamped activity feed
+
+Includes:
+
+Login events
+
+Booking creation
+
+Payment events
+
+Automation triggers
+
+5.2.3 Jobs / Leads / Invoices Tabs
+
+Paginated tables
+
+Read-only
+
+Linked to underlying system objects
+
+5.2.4 User-Level Audit Log
+
+Every admin action affecting this user
+
+Who, what, when, why (if applicable)
+
+6. Admin Actions
+Allowed Actions
+Action	Role Required	Notes
+Suspend user	Support+	Confirmation required
+Reactivate user	Support+	Confirmation required
+Reset onboarding	Support+	Non-destructive
+Force logout	Super Admin	Immediate
+Delete user	Super Admin	Hard confirm + typed input
+Action Requirements
+
+Must be executed via backend API
+
+Must be logged to audit log
+
+Must show success/failure feedback
+
+Destructive actions require modal confirmation
+
+7. Audit Logging (Mandatory)
+Logged Events
+
+Admin login
+
+User suspension / reactivation
+
+Onboarding reset
+
+Billing-related changes
+
+System overrides
+
+Fields
+
+Timestamp
+
+Admin ID
+
+Admin email
+
+Action type
+
+Target user ID
+
+Metadata payload
+
+8. Security Requirements
+Authentication
+
+Admin-only authentication
+
+API key or admin session-based auth
+
+No shared secrets in frontend
+
+Authorization
+
+Server-enforced RBAC
+
+UI must reflect permissions but not rely on them
+
+Safety
+
+No raw SQL access
+
+No mass actions without confirmation
+
+Rate limiting on admin endpoints
+
+9. Performance & Reliability
+
+Initial Users List load < 2s
+
+Pagination responses < 1s
+
+Graceful handling of empty datasets
+
+Clear error messages (no stack traces)
+
+10. Analytics & Monitoring (Admin App)
+
+Track:
+
+Admin logins
+
+Admin actions per user
+
+Time spent per user view
+
+Error rates per endpoint
+
+Purpose: detect misuse, bottlenecks, and training gaps.
+
+11. Non-Functional Requirements
+
+Read-only by default
+
+Explicit intent required for mutations
+
+Clear visual hierarchy (data ≠ actions)
+
+No hidden side effects
+
+12. Phase Breakdown
+Phase 1 (MVP)
+
+Users List
+
+User Detail (Overview only)
+
+Suspend / Reactivate
+
+Audit Log
+
+Phase 2
+
+Jobs / Leads / Invoices
+
+Activity feed
+
+Advanced filters
+
+Admin analytics
+
+Phase 3
+
+Bulk actions
+
+Feature flags per user
+
+Internal notes & tagging
+
+Health diagnostics
+
+13. Success Metrics
+
+<5 minutes to diagnose a support ticket
+
+Zero direct DB access required
+
+100% of admin actions audited
+
+Reduced support resolution time
