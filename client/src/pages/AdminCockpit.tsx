@@ -40,6 +40,7 @@ interface SummaryData {
   activeUsers30d: KPIMetric;
   payingCustomers: KPIMetric;
   mrr: KPIMetric;
+  arr: KPIMetric;
   netChurnPct: KPIMetric;
 }
 
@@ -379,6 +380,13 @@ export default function AdminCockpit() {
                 value={summary.mrr.value}
                 format="currency"
                 metric={summary.mrr}
+                icon={DollarSign}
+              />
+              <KPICard 
+                title="ARR" 
+                value={summary.arr?.value || summary.mrr.value * 12}
+                format="currency"
+                metric={summary.arr || summary.mrr}
                 icon={DollarSign}
               />
               <KPICard 

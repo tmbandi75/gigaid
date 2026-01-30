@@ -91,6 +91,12 @@ router.get("/summary", async (req, res) => {
         deltaMoM: calcDelta(current.mrr, monthAgo?.mrr),
         health: getHealthState(current.mrr, weekAgo?.mrr),
       },
+      arr: {
+        value: current.mrr * 12,
+        deltaWoW: calcDelta(current.mrr * 12, weekAgo?.mrr ? weekAgo.mrr * 12 : undefined),
+        deltaMoM: calcDelta(current.mrr * 12, monthAgo?.mrr ? monthAgo.mrr * 12 : undefined),
+        health: getHealthState(current.mrr * 12, weekAgo?.mrr ? weekAgo.mrr * 12 : undefined),
+      },
       netChurnPct: {
         value: current.netChurnPct || 0,
         deltaWoW: calcDelta(current.netChurnPct || 0, weekAgo?.netChurnPct),
