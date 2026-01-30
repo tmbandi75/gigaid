@@ -72,15 +72,13 @@ export function CoachingRenderer({ screen, placement = 'header' }: CoachingRende
     bookingLinkShared: profile?.bookingLinkShared ?? (onboarding?.step ?? 0) >= 3
   };
 
-  if (isLoading) return null;
-
-  const message = COACHING_MESSAGES.find(
+  const message = !isLoading ? COACHING_MESSAGES.find(
     m =>
       m.screen === screen &&
       m.placement === placement &&
       m.condition(appState) &&
       (!m.once || !hasSeen(m.id))
-  );
+  ) : null;
 
   useEffect(() => {
     if (message) {
@@ -91,9 +89,9 @@ export function CoachingRenderer({ screen, placement = 'header' }: CoachingRende
         placement: message.placement
       });
     }
-  }, [message?.id]);
+  }, [message?.id, markSeen]);
 
-  if (!message) return null;
+  if (isLoading || !message) return null;
 
   return (
     <p 
