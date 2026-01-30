@@ -146,8 +146,10 @@ function MobileBottomNav() {
     >
       <div className="flex items-center justify-around h-16 max-w-md mx-auto">
         {mobileNavItems.map((item) => {
+          // Special case: Plan button (path="/") should also highlight on /dashboard
           const isActive =
             location === item.path ||
+            (item.path === "/" && location === "/dashboard") ||
             (item.path !== "/" && location.startsWith(item.path));
           const Icon = item.icon;
 

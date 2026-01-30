@@ -17,8 +17,20 @@ const ALLOWED_ROUTES_FOR_INCOMPLETE = [
   "/downloads",
 ];
 
+// States that indicate onboarding is effectively complete
+const COMPLETED_STATES = ["completed", "skipped_explore"];
+
 function isAllowedRoute(path: string): boolean {
   return ALLOWED_ROUTES_FOR_INCOMPLETE.some(route => path.startsWith(route));
+}
+
+// Check if onboarding should be considered complete
+// Either the completed flag is true, or the user has a completion state
+function isOnboardingComplete(onboarding: OnboardingStatus | undefined): boolean {
+  if (!onboarding) return false;
+  if (onboarding.completed) return true;
+  if (onboarding.state && COMPLETED_STATES.includes(onboarding.state)) return true;
+  return false;
 }
 
 export function OnboardingWrapper({ children }: { children: React.ReactNode }) {
@@ -28,6 +40,8 @@ export function OnboardingWrapper({ children }: { children: React.ReactNode }) {
     queryKey: ["/api/onboarding"],
   });
 
+  const onboardingComplete = isOnboardingComplete(onboarding);
+
   useEffect(() => {
     // Skip if still loading onboarding status
     if (isLoading) return;
@@ -35,10 +49,10 @@ export function OnboardingWrapper({ children }: { children: React.ReactNode }) {
     if (isAllowedRoute(location)) return;
     
     // Redirect incomplete users to onboarding
-    if (onboarding && !onboarding.completed) {
+    if (onboarding && !onboardingComplete) {
       navigate("/onboarding");
     }
-  }, [isLoading, onboarding, location, navigate]);
+  }, [isLoading, onboarding, onboardingComplete, location, navigate]);
 
   // Show loading while checking onboarding status
   if (isLoading) {
@@ -50,7 +64,7 @@ export function OnboardingWrapper({ children }: { children: React.ReactNode }) {
   }
 
   // Block rendering for incomplete users not on allowed routes (redirect is pending)
-  if (onboarding && !onboarding.completed && !isAllowedRoute(location)) {
+  if (onboarding && !onboardingComplete && !isAllowedRoute(location)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
