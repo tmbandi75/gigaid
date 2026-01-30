@@ -89,17 +89,43 @@ export async function registerRoutes(
   
   // Simple admin status check (uses regular auth, no admin middleware)
   app.get("/api/admin/status", isAuthenticated, async (req: Request, res: Response) => {
-    const user = (req as any).user;
-    const userId = user?.id;
-    const userEmail = user?.email;
+    // Get user ID from JWT Bearer token (Firebase auth) or Replit Auth session
+    let userId: string | null = null;
+    let userEmail: string | null = null;
+    
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const payload = verifyAppJwt(token);
+      if (payload?.sub) {
+        userId = payload.sub;
+        userEmail = payload.email_normalized || null;
+      }
+    }
+    
+    // Fall back to Replit Auth session
+    if (!userId) {
+      const user = req.user as any;
+      userId = user?.claims?.sub || null;
+    }
+    
+    // If we have a userId, look up the user's email from database
+    if (userId && !userEmail) {
+      const dbUser = await storage.getUser(userId);
+      userEmail = dbUser?.email || null;
+    }
+    
+    console.log("[AdminStatus] Checking admin for:", { userId, userEmail });
     
     if (!userId && !userEmail) {
+      console.log("[AdminStatus] No userId or email found, returning false");
       return res.json({ isAdmin: false });
     }
     
     // Import isAdminUser dynamically to check admin status
     const { isAdminUser } = await import("./copilot/adminMiddleware");
-    const isAdmin = isAdminUser(userId, userEmail);
+    const isAdmin = isAdminUser(userId || undefined, userEmail || undefined);
+    console.log("[AdminStatus] Bootstrap admin check:", { userId, userEmail, isAdmin });
     
     if (isAdmin) {
       return res.json({ isAdmin: true, role: "super_admin" });

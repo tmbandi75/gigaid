@@ -103,7 +103,8 @@ export function AppSidebar() {
   const { data: adminStatus } = useQuery<{ isAdmin: boolean; role?: string }>({
     queryKey: ["/api/admin/status"],
     retry: false,
-    staleTime: Infinity,
+    staleTime: 60000, // Re-check every minute
+    refetchOnWindowFocus: true,
   });
 
   const isAdmin = adminStatus?.isAdmin === true;
