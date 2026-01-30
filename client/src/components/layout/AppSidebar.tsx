@@ -151,6 +151,31 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="px-3 py-2">
+        {isAdmin && (
+          <>
+            <SidebarGroup>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.startsWith("/admin")}
+                      tooltip="Admin Cockpit"
+                      data-testid="sidebar-admin-cockpit"
+                    >
+                      <Link href="/admin/cockpit">
+                        <Shield className="h-4 w-4" />
+                        <span>Admin Cockpit</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+            <SidebarSeparator className="my-2" />
+          </>
+        )}
+
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
