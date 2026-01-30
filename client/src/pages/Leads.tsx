@@ -51,6 +51,7 @@ import { PriorityBadge, inferLeadPriority } from "@/components/priority/Priority
 import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
 import { LeadsTableView } from "@/components/leads/LeadsTableView";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 
 interface FollowUpMessage {
   message: string;
@@ -235,6 +236,7 @@ function EmptyState() {
       <p className="text-muted-foreground mb-6 max-w-xs">
         Add leads to track potential clients and grow your business
       </p>
+      <CoachingRenderer screen="leads" placement="empty_state" />
       <Link href="/leads/new">
         <Button className="bg-gradient-to-r from-emerald-500 to-teal-500" data-testid="button-add-first-lead">
           <Plus className="h-4 w-4 mr-2" />
@@ -348,6 +350,7 @@ export default function Leads() {
             <div>
               <h1 className="text-2xl font-bold">Leads</h1>
               <p className="text-sm text-white/80">Track potential clients</p>
+              <CoachingRenderer screen="leads" />
             </div>
             <Link href="/leads/new">
               <Button size="icon" className="bg-white/20 hover:bg-white/30 text-white" data-testid="button-add-lead-header">
@@ -459,6 +462,7 @@ export default function Leads() {
               <div>
                 <h1 className="text-2xl font-bold text-foreground" data-testid="page-title">Leads</h1>
                 <p className="text-sm text-muted-foreground">Track potential clients</p>
+                <CoachingRenderer screen="leads" />
               </div>
             </div>
 

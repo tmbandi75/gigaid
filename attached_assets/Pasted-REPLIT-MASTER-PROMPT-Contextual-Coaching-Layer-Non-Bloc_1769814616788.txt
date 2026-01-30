@@ -1,0 +1,206 @@
+REPLIT MASTER PROMPT — Contextual Coaching Layer (Non-Blocking)
+Objective
+
+Add a contextual education / coaching layer to GigAid that:
+
+Guides users at the moment of intent
+
+Reinforces progress without interruption
+
+Improves activation, retention, and monetization
+
+Does not introduce new screens or navigation
+
+Does not block user actions
+
+Does not change existing feature logic
+
+This layer must feel like a quiet coach, not a tutorial.
+
+Non-Negotiable Constraints
+
+❌ Do NOT add new pages
+❌ Do NOT add onboarding walkthroughs
+❌ Do NOT introduce modal spam
+❌ Do NOT change existing UI layouts
+❌ Do NOT gate functionality
+
+✅ All coaching must be inline, ephemeral, or contextual
+✅ Coaching messages must appear only once per state
+✅ All messages must be dismissible or auto-expire
+✅ Messages must be driven by existing app state
+
+Architecture
+1. Coaching Message Registry
+
+Create a centralized registry defining message → trigger → screen → conditions.
+
+// /src/coaching/coachingMessages.ts
+
+export type CoachingMessage = {
+  id: string
+  screen: 'dashboard' | 'jobs' | 'leads' | 'invoices' | 'tools'
+  placement: 'header' | 'empty_state' | 'inline' | 'toast' | 'tooltip'
+  text: string
+  condition: (state: AppState) => boolean
+  once: boolean
+}
+
+export const COACHING_MESSAGES: CoachingMessage[] = [
+  {
+    id: 'dashboard_add_service',
+    screen: 'dashboard',
+    placement: 'header',
+    text: 'Most solo pros get their first booking after adding just one service.',
+    condition: (s) => s.services.count === 0,
+    once: true
+  },
+  {
+    id: 'dashboard_share_link',
+    screen: 'dashboard',
+    placement: 'header',
+    text: 'Your booking link is your fastest path to your first job — most pros share it by text.',
+    condition: (s) => s.services.count > 0 && s.jobs.count === 0,
+    once: true
+  },
+  {
+    id: 'jobs_empty',
+    screen: 'jobs',
+    placement: 'empty_state',
+    text: 'Jobs usually start from booking links or messages. Add your first job to begin tracking your work and earnings.',
+    condition: (s) => s.jobs.count === 0,
+    once: true
+  },
+  {
+    id: 'leads_empty',
+    screen: 'leads',
+    placement: 'empty_state',
+    text: 'New leads often come from shared booking links or quick replies to messages.',
+    condition: (s) => s.leads.count === 0,
+    once: true
+  },
+  {
+    id: 'invoice_empty',
+    screen: 'invoices',
+    placement: 'empty_state',
+    text: 'Invoices help you get paid on time. Many pros send them right after finishing a job.',
+    condition: (s) => s.invoices.count === 0,
+    once: true
+  }
+]
+
+2. Coaching Display State
+
+Persist which messages have been shown.
+
+// /src/state/useCoachingState.ts
+
+export const useCoachingState = () => {
+  const [seen, setSeen] = useLocalStorage<string[]>('coaching_seen', [])
+
+  const markSeen = (id: string) => {
+    if (!seen.includes(id)) {
+      setSeen([...seen, id])
+    }
+  }
+
+  const hasSeen = (id: string) => seen.includes(id)
+
+  return { hasSeen, markSeen }
+}
+
+3. Coaching Renderer (Non-Blocking)
+// /src/coaching/CoachingRenderer.tsx
+
+export function CoachingRenderer({ screen }: { screen: Screen }) {
+  const { hasSeen, markSeen } = useCoachingState()
+  const appState = useAppState()
+
+  const message = COACHING_MESSAGES.find(
+    m =>
+      m.screen === screen &&
+      m.condition(appState) &&
+      (!m.once || !hasSeen(m.id))
+  )
+
+  if (!message) return null
+
+  useEffect(() => {
+    markSeen(message.id)
+  }, [])
+
+  return (
+    <div className="coaching-message">
+      {message.text}
+    </div>
+  )
+}
+
+4. Screen Integration (Minimal Touch)
+
+Inject CoachingRenderer once per screen, near existing headers or empty states.
+
+// Dashboard.tsx
+<Header />
+<CoachingRenderer screen="dashboard" />
+<DashboardContent />
+
+// Jobs.tsx
+<CoachingRenderer screen="jobs" />
+<JobsEmptyState />
+
+
+Repeat for:
+
+Leads
+
+Invoices
+
+Tools
+
+5. Styling (Soft, Human, Non-SaaS)
+.coaching-message {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+
+No borders.
+No icons.
+No animations.
+
+6. Analytics (Optional but Recommended)
+
+Fire event once per message:
+
+track('coaching_message_shown', {
+  id: message.id,
+  screen: message.screen
+})
+
+Acceptance Criteria
+
+✅ Coaching appears only when relevant
+✅ Never blocks a primary action
+✅ Never repeats once dismissed
+✅ Feels supportive, not instructional
+✅ Requires no backend changes
+
+Success Metrics
+
+↑ Add-service completion rate
+
+↑ First job created
+
+↓ Time-to-first-invoice
+
+↑ Week-1 retention
+
+Final Instruction to Replit
+
+Implement exactly as specified.
+Do not refactor unrelated components.
+Do not change existing UI or business logic.
+Treat coaching as a thin, additive layer only.

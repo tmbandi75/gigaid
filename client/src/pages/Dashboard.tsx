@@ -36,6 +36,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import type { DashboardSummary, Job, Lead } from "@shared/schema";
+import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 
 interface OnboardingStatus {
   completed: boolean;
@@ -166,6 +167,7 @@ export default function Dashboard() {
           <div>
             <p className="text-primary-foreground/80 text-sm">{getGreeting()}</p>
             <h1 className="text-2xl font-bold">Dashboard</h1>
+            <CoachingRenderer screen="dashboard" />
           </div>
           <Link href="/reminders">
             <Button
@@ -245,6 +247,7 @@ export default function Dashboard() {
             <div>
               <p className="text-sm text-muted-foreground">{getGreeting()}</p>
               <h1 className="text-2xl font-bold text-foreground" data-testid="page-title">Dashboard</h1>
+              <CoachingRenderer screen="dashboard" />
             </div>
           </div>
 

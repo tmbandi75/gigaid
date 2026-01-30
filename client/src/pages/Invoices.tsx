@@ -24,6 +24,7 @@ import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
 import { InvoicesTableView } from "@/components/invoices/InvoicesTableView";
 import { PriorityBadge, inferInvoicePriority } from "@/components/priority/PriorityBadge";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 
 const statusConfig: Record<string, { 
   color: string; 
@@ -174,6 +175,7 @@ function EmptyState({ filter }: { filter: string }) {
       <p className="text-muted-foreground mb-8 max-w-xs">
         {msg.desc}
       </p>
+      <CoachingRenderer screen="invoices" placement="empty_state" />
       <Link href="/invoices/new">
         <Button size="lg" className="bg-gradient-to-r from-blue-500 to-cyan-500 shadow-lg shadow-blue-500/25 h-12 px-6" data-testid="button-add-first-invoice">
           <Plus className="h-5 w-5 mr-2" />
@@ -226,6 +228,7 @@ export default function Invoices() {
             <div>
               <h1 className="text-2xl font-bold tracking-tight">Invoices</h1>
               <p className="text-sm text-white/70 mt-0.5">Manage your billing</p>
+              <CoachingRenderer screen="invoices" />
             </div>
             <Link href="/invoices/new">
               <Button size="icon" className="h-11 w-11 rounded-xl bg-white/20 backdrop-blur hover:bg-white/30 text-white border border-white/20" data-testid="button-add-invoice-header">
@@ -357,6 +360,7 @@ export default function Invoices() {
               <div>
                 <h1 className="text-2xl font-bold text-foreground" data-testid="page-title">Invoices</h1>
                 <p className="text-sm text-muted-foreground">Manage your billing</p>
+                <CoachingRenderer screen="invoices" />
               </div>
             </div>
 

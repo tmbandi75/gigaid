@@ -33,6 +33,7 @@ import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
 import { JobsTableView } from "@/components/jobs/JobsTableView";
 import { PriorityBadge, inferJobPriority } from "@/components/priority/PriorityBadge";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { JobResolutionModal } from "@/components/jobs/JobResolutionModal";
 import { JobsCalendar } from "@/components/calendar/JobsCalendar";
 
@@ -310,6 +311,7 @@ function EmptyState() {
       <p className="text-muted-foreground mb-6 max-w-xs">
         Start adding your jobs to keep track of your schedule and earnings
       </p>
+      <CoachingRenderer screen="jobs" placement="empty_state" />
       <Link href="/jobs/new">
         <Button className="bg-gradient-to-r from-primary to-violet-600" data-testid="button-add-first-job">
           <Plus className="h-4 w-4 mr-2" />
@@ -383,6 +385,7 @@ export default function Jobs() {
             <div>
               <h1 className="text-2xl font-bold">Jobs</h1>
               <p className="text-sm text-primary-foreground/80">Manage your work schedule</p>
+              <CoachingRenderer screen="jobs" />
             </div>
             <Link href="/jobs/new">
               <Button size="icon" className="bg-white/20 hover:bg-white/30 text-white" data-testid="button-add-job-header">
@@ -510,6 +513,7 @@ export default function Jobs() {
               <div>
                 <h1 className="text-2xl font-bold text-foreground" data-testid="page-title">Jobs</h1>
                 <p className="text-sm text-muted-foreground">Manage your work schedule</p>
+                <CoachingRenderer screen="jobs" />
               </div>
             </div>
 
