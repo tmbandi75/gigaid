@@ -58,6 +58,8 @@ import AdminUserDetail from "@/pages/AdminUserDetail";
 import AdminSystemHealth from "@/pages/AdminSystemHealth";
 import AdminAuditLogs from "@/pages/AdminAuditLogs";
 import AdminAnalytics from "@/pages/AdminAnalytics";
+import AdminCustomerIO from "@/pages/AdminCustomerIO";
+import AdminBilling from "@/pages/AdminBilling";
 import VoiceNotesPage from "@/pages/VoiceNotesPage";
 import TermsOfService from "@/pages/terms";
 import PrivacyPolicy from "@/pages/privacy";
@@ -110,6 +112,8 @@ function Router() {
       <Route path="/admin/system" component={AdminSystemHealth} />
       <Route path="/admin/audit-logs" component={AdminAuditLogs} />
       <Route path="/admin/analytics" component={AdminAnalytics} />
+      <Route path="/admin/customerio" component={AdminCustomerIO} />
+      <Route path="/admin/billing" component={AdminBilling} />
       <Route path="/onboarding/:step" component={OnboardingPage} />
       <Route path="/onboarding" component={OnboardingPage} />
       <Route component={NotFound} />

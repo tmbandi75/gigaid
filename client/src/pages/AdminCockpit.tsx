@@ -24,7 +24,9 @@ import {
   TestTube2,
   Server,
   FileText,
-  BarChart3
+  BarChart3,
+  Mail,
+  CreditCard
 } from "lucide-react";
 import { Link } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -279,6 +281,18 @@ export default function AdminCockpit() {
                 <Button variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10" data-testid="button-analytics">
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Analytics
+                </Button>
+              </Link>
+              <Link href="/admin/billing">
+                <Button variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10" data-testid="button-billing">
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Billing
+                </Button>
+              </Link>
+              <Link href="/admin/customerio">
+                <Button variant="outline" size="sm" className="text-white border-white/30 hover:bg-white/10" data-testid="button-customerio">
+                  <Mail className="h-4 w-4 mr-2" />
+                  Messaging
                 </Button>
               </Link>
               <Button 
