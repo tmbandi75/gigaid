@@ -30,6 +30,7 @@ import {
   Target,
   Wrench,
 } from "lucide-react";
+import { AddServiceDialog } from "@/components/settings/AddServiceDialog";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ActionItem {
@@ -181,6 +182,7 @@ export default function TodaysGamePlanPage() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const [showVoiceNotes, setShowVoiceNotes] = useState(false);
+  const [showAddService, setShowAddService] = useState(false);
   const isMobile = useIsMobile();
 
   const { data, isLoading } = useQuery<GamePlanData>({
@@ -325,7 +327,7 @@ export default function TodaysGamePlanPage() {
                         </p>
                         <Button
                           className="mt-4"
-                          onClick={() => navigate("/settings")}
+                          onClick={() => setShowAddService(true)}
                           data-testid="button-add-first-service"
                         >
                           Add a service
@@ -764,6 +766,11 @@ export default function TodaysGamePlanPage() {
           />
         </DialogContent>
       </Dialog>
+
+      <AddServiceDialog 
+        open={showAddService} 
+        onOpenChange={setShowAddService} 
+      />
     </div>
   );
 }

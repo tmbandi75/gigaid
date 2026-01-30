@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useEffect, useRef, useState } from "react";
 import confetti from "canvas-confetti";
 import { SendBookingLinkDialog } from "./SendBookingLinkDialog";
+import { AddServiceDialog } from "@/components/settings/AddServiceDialog";
 
 interface OnboardingStep {
   id: string;
@@ -74,6 +75,7 @@ export function OnboardingChecklist({ currentStep, onStepClick, onComplete, book
   const confettiShownRef = useRef(false);
   const prevStepRef = useRef(currentStep);
   const [showSendLinkDialog, setShowSendLinkDialog] = useState(false);
+  const [showAddServiceDialog, setShowAddServiceDialog] = useState(false);
 
   useEffect(() => {
     trackEvent("onboarding_checklist_viewed");
@@ -135,6 +137,11 @@ export function OnboardingChecklist({ currentStep, onStepClick, onComplete, book
     
     if (steps[index].id === "share_booking") {
       setShowSendLinkDialog(true);
+      return;
+    }
+    
+    if (steps[index].id === "add_service") {
+      setShowAddServiceDialog(true);
       return;
     }
     
@@ -229,6 +236,11 @@ export function OnboardingChecklist({ currentStep, onStepClick, onComplete, book
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ["/api/onboarding"] });
         }}
+      />
+
+      <AddServiceDialog
+        open={showAddServiceDialog}
+        onOpenChange={setShowAddServiceDialog}
       />
     </Card>
   );
