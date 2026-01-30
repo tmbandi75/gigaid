@@ -1006,4 +1006,175 @@ router.get("/links/external", async (req, res) => {
   });
 });
 
+router.post("/:userId/notes", async (req: AdminRequest, res) => {
+  try {
+    const { userId } = req.params;
+    const { note } = req.body;
+
+    if (!req.adminUserId) {
+      return res.status(401).json({ error: "Admin identity required" });
+    }
+
+    if (!note || typeof note !== "string" || note.trim().length === 0) {
+      return res.status(400).json({ error: "Note is required" });
+    }
+
+    const [user] = await db.select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const actorUserId = req.adminUserId;
+    const now = new Date().toISOString();
+
+    const [newNote] = await db.insert(userAdminNotes).values({
+      createdAt: now,
+      actorUserId,
+      targetUserId: userId,
+      note: note.trim(),
+    }).returning();
+
+    await db.insert(adminActionAudit).values({
+      createdAt: now,
+      actorUserId,
+      actorEmail: req.userEmail || null,
+      targetUserId: userId,
+      actionKey: "add_note",
+      reason: "Admin added note",
+      payload: JSON.stringify({ noteId: newNote.id }),
+      source: "admin_ui",
+    });
+
+    res.json({ note: newNote });
+  } catch (error) {
+    console.error("[Admin Users] Add note error:", error);
+    res.status(500).json({ error: "Failed to add note" });
+  }
+});
+
+router.get("/:userId/notes", async (req: AdminRequest, res) => {
+  try {
+    const { userId } = req.params;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const offset = parseInt(req.query.offset as string) || 0;
+
+    const notes = await db.select()
+      .from(userAdminNotes)
+      .where(eq(userAdminNotes.targetUserId, userId))
+      .orderBy(desc(userAdminNotes.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    res.json({ notes });
+  } catch (error) {
+    console.error("[Admin Users] Get notes error:", error);
+    res.status(500).json({ error: "Failed to get notes" });
+  }
+});
+
+router.post("/:userId/flag", async (req: AdminRequest, res) => {
+  try {
+    const { userId } = req.params;
+    const { reason } = req.body;
+
+    if (!req.adminUserId) {
+      return res.status(401).json({ error: "Admin identity required" });
+    }
+
+    if (!reason || typeof reason !== "string" || reason.trim().length === 0) {
+      return res.status(400).json({ error: "Reason is required" });
+    }
+
+    const [user] = await db.select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const [existingFlag] = await db.select()
+      .from(userFlags)
+      .where(and(eq(userFlags.userId, userId), isNull(userFlags.unflaggedAt)))
+      .limit(1);
+
+    if (existingFlag) {
+      return res.status(400).json({ error: "User is already flagged" });
+    }
+
+    const actorUserId = req.adminUserId;
+    const now = new Date().toISOString();
+
+    const [newFlag] = await db.insert(userFlags).values({
+      userId,
+      flaggedAt: now,
+      flaggedBy: actorUserId,
+      reason: reason.trim(),
+    }).returning();
+
+    await db.insert(adminActionAudit).values({
+      createdAt: now,
+      actorUserId,
+      actorEmail: req.userEmail || null,
+      targetUserId: userId,
+      actionKey: "user_flagged",
+      reason: reason.trim(),
+      payload: JSON.stringify({ flagId: newFlag.id, action: "flagged" }),
+      source: "admin_ui",
+    });
+
+    res.json({ flag: newFlag });
+  } catch (error) {
+    console.error("[Admin Users] Flag user error:", error);
+    res.status(500).json({ error: "Failed to flag user" });
+  }
+});
+
+router.delete("/:userId/flag", async (req: AdminRequest, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!req.adminUserId) {
+      return res.status(401).json({ error: "Admin identity required" });
+    }
+
+    const [existingFlag] = await db.select()
+      .from(userFlags)
+      .where(and(eq(userFlags.userId, userId), isNull(userFlags.unflaggedAt)))
+      .limit(1);
+
+    if (!existingFlag) {
+      return res.status(404).json({ error: "No active flag found for user" });
+    }
+
+    const actorUserId = req.adminUserId;
+    const now = new Date().toISOString();
+
+    await db.update(userFlags)
+      .set({ unflaggedAt: now, unflaggedBy: actorUserId })
+      .where(eq(userFlags.id, existingFlag.id));
+
+    await db.insert(adminActionAudit).values({
+      createdAt: now,
+      actorUserId,
+      actorEmail: req.userEmail || null,
+      targetUserId: userId,
+      actionKey: "user_flagged",
+      reason: "Flag removed",
+      payload: JSON.stringify({ flagId: existingFlag.id, action: "unflagged" }),
+      source: "admin_ui",
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("[Admin Users] Unflag user error:", error);
+    res.status(500).json({ error: "Failed to unflag user" });
+  }
+});
+
 export default router;
