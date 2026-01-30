@@ -39,6 +39,7 @@ import {
   Mic,
   Send,
   CreditCard,
+  Shield,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -98,6 +99,14 @@ export function AppSidebar() {
     queryKey: ["/api/sms/unread-count"],
     refetchInterval: 30000,
   });
+
+  const { data: adminStatus } = useQuery<{ role: string }>({
+    queryKey: ["/api/admin/auth/me"],
+    retry: false,
+    staleTime: Infinity,
+  });
+
+  const isAdmin = !!adminStatus?.role;
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains("dark");
@@ -295,6 +304,12 @@ export function AppSidebar() {
               <CreditCard className="h-4 w-4 mr-2" />
               View Plans
             </DropdownMenuItem>
+            {isAdmin && (
+              <DropdownMenuItem onClick={() => navigate("/admin/cockpit")} data-testid="dropdown-admin">
+                <Shield className="h-4 w-4 mr-2" />
+                Admin Cockpit
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => logout()} className="text-destructive" data-testid="dropdown-logout">
               <LogOut className="h-4 w-4 mr-2" />
