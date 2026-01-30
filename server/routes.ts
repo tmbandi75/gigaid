@@ -42,6 +42,7 @@ import adminAuthRoutes from "./admin/authRoutes";
 import adminSystemHealthRoutes from "./admin/systemHealthRoutes";
 import adminAuditLogRoutes from "./admin/auditLogRoutes";
 import adminAnalyticsRoutes from "./admin/analyticsRoutes";
+import adminCustomerioRoutes from "./admin/customerioRoutes";
 import leadEmailRoutes from "./leadEmailRoutes";
 import { startCopilotScheduler } from "./copilot/engine";
 import { startCampaignSuggestionScheduler } from "./campaignSuggestionEngine";
@@ -84,6 +85,7 @@ export async function registerRoutes(
   app.use("/api/admin/system", adminSystemHealthRoutes);
   app.use("/api/admin/audit-logs", adminAuditLogRoutes);
   app.use("/api/admin/analytics", adminAnalyticsRoutes);
+  app.use("/api/admin/customerio", adminCustomerioRoutes);
   app.use("/api", leadEmailRoutes);
   app.use("/api/auth", mobileAuthRoutes);
   

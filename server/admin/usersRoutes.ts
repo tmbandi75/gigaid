@@ -1177,4 +1177,246 @@ router.delete("/:userId/flag", async (req: AdminRequest, res) => {
   }
 });
 
+// Impersonate user - returns read-only view of user's data (no actual session created)
+router.get("/:userId/impersonate", async (req: AdminRequest, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!req.adminUserId) {
+      return res.status(401).json({ error: "Admin identity required" });
+    }
+
+    const [targetUser] = await db.select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!targetUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Get user's jobs
+    const userJobs = await db.select()
+      .from(jobs)
+      .where(eq(jobs.userId, userId))
+      .orderBy(desc(jobs.createdAt))
+      .limit(20);
+
+    // Get user's leads
+    const userLeads = await db.select()
+      .from(leads)
+      .where(eq(leads.userId, userId))
+      .orderBy(desc(leads.createdAt))
+      .limit(20);
+
+    // Get user's invoices
+    const userInvoices = await db.select()
+      .from(invoices)
+      .where(eq(invoices.userId, userId))
+      .orderBy(desc(invoices.createdAt))
+      .limit(20);
+
+    // Log the impersonation action
+    await db.insert(adminActionAudit).values({
+      createdAt: new Date().toISOString(),
+      actorUserId: req.adminUserId,
+      actorEmail: req.userEmail || null,
+      targetUserId: userId,
+      actionKey: "impersonate_view",
+      reason: "Admin viewed user data in impersonation mode",
+      payload: null,
+      source: "admin_ui",
+    });
+
+    res.json({
+      user: {
+        id: targetUser.id,
+        email: targetUser.email,
+        username: targetUser.username,
+        name: targetUser.name,
+        phone: targetUser.phone,
+        isPro: targetUser.isPro,
+        plan: targetUser.plan,
+        onboardingCompleted: targetUser.onboardingCompleted,
+        onboardingStep: targetUser.onboardingStep,
+        createdAt: targetUser.createdAt,
+        lastActiveAt: targetUser.lastActiveAt,
+        stripeCustomerId: targetUser.stripeCustomerId,
+        stripeSubscriptionId: targetUser.stripeSubscriptionId,
+      },
+      jobs: userJobs.map(j => ({
+        id: j.id,
+        title: j.title,
+        status: j.status,
+        scheduledDate: j.scheduledDate,
+        price: j.price,
+        createdAt: j.createdAt,
+      })),
+      leads: userLeads.map(l => ({
+        id: l.id,
+        clientName: l.clientName,
+        status: l.status,
+        score: l.score,
+        createdAt: l.createdAt,
+      })),
+      invoices: userInvoices.map(i => ({
+        id: i.id,
+        status: i.status,
+        amount: i.amount,
+        sentAt: i.sentAt,
+        createdAt: i.createdAt,
+      })),
+      isReadOnly: true,
+      viewedBy: req.adminUserId,
+      viewedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("[Admin Users] Impersonate error:", error);
+    res.status(500).json({ error: "Failed to load user view" });
+  }
+});
+
+// Retry failed payment for a user
+router.post("/:userId/retry-payment", async (req: AdminRequest, res) => {
+  try {
+    const { userId } = req.params;
+    const { invoiceId } = req.body;
+
+    if (!req.adminUserId) {
+      return res.status(401).json({ error: "Admin identity required" });
+    }
+
+    const [targetUser] = await db.select({
+      id: users.id,
+      stripeCustomerId: users.stripeCustomerId,
+    })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!targetUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (!targetUser.stripeCustomerId) {
+      return res.status(400).json({ error: "User has no Stripe customer ID" });
+    }
+
+    const stripe = await getUncachableStripeClient();
+
+    let retryResult;
+    if (invoiceId) {
+      // Retry specific invoice
+      retryResult = await stripe.invoices.pay(invoiceId);
+    } else {
+      // Find and retry the latest open/unpaid invoice
+      const invoices = await stripe.invoices.list({
+        customer: targetUser.stripeCustomerId,
+        status: "open",
+        limit: 1,
+      });
+
+      if (invoices.data.length === 0) {
+        return res.status(400).json({ error: "No open invoices found to retry" });
+      }
+
+      retryResult = await stripe.invoices.pay(invoices.data[0].id);
+    }
+
+    // Log the action
+    await db.insert(adminActionAudit).values({
+      createdAt: new Date().toISOString(),
+      actorUserId: req.adminUserId,
+      actorEmail: req.userEmail || null,
+      targetUserId: userId,
+      actionKey: "billing_retry_payment",
+      reason: "Admin retried failed payment",
+      payload: JSON.stringify({ 
+        invoiceId: retryResult.id, 
+        status: retryResult.status,
+        amountDue: retryResult.amount_due,
+      }),
+      source: "admin_ui",
+    });
+
+    res.json({ 
+      success: true, 
+      invoice: {
+        id: retryResult.id,
+        status: retryResult.status,
+        amountDue: retryResult.amount_due,
+        amountPaid: retryResult.amount_paid,
+      }
+    });
+  } catch (error: any) {
+    console.error("[Admin Users] Retry payment error:", error);
+    res.status(500).json({ error: error.message || "Failed to retry payment" });
+  }
+});
+
+// Get user's failed invoices
+router.get("/:userId/failed-invoices", async (req: AdminRequest, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!req.adminUserId) {
+      return res.status(401).json({ error: "Admin identity required" });
+    }
+
+    const [targetUser] = await db.select({
+      stripeCustomerId: users.stripeCustomerId,
+    })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!targetUser?.stripeCustomerId) {
+      return res.json({ invoices: [] });
+    }
+
+    const stripe = await getUncachableStripeClient();
+    
+    // Get open and past_due invoices
+    const [openInvoices, pastDueInvoices] = await Promise.all([
+      stripe.invoices.list({
+        customer: targetUser.stripeCustomerId,
+        status: "open",
+        limit: 10,
+      }),
+      stripe.invoices.list({
+        customer: targetUser.stripeCustomerId,
+        status: "uncollectible",
+        limit: 10,
+      }),
+    ]);
+
+    const allInvoices = [...openInvoices.data, ...pastDueInvoices.data].map(inv => ({
+      id: inv.id,
+      status: inv.status,
+      amountDue: inv.amount_due,
+      amountPaid: inv.amount_paid,
+      created: new Date(inv.created * 1000).toISOString(),
+      dueDate: inv.due_date ? new Date(inv.due_date * 1000).toISOString() : null,
+      attemptCount: inv.attempt_count,
+      lastAttempt: inv.next_payment_attempt ? new Date(inv.next_payment_attempt * 1000).toISOString() : null,
+    }));
+
+    await db.insert(adminActionAudit).values({
+      createdAt: new Date().toISOString(),
+      actorUserId: req.adminUserId,
+      actorEmail: req.userEmail || null,
+      targetUserId: userId,
+      actionKey: "billing_view_failed_invoices",
+      reason: "Admin viewed failed invoices",
+      payload: JSON.stringify({ count: allInvoices.length }),
+      source: "admin_ui",
+    });
+
+    res.json({ invoices: allInvoices });
+  } catch (error) {
+    console.error("[Admin Users] Failed invoices error:", error);
+    res.status(500).json({ error: "Failed to fetch invoices" });
+  }
+});
+
 export default router;
