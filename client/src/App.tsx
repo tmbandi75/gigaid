@@ -67,6 +67,8 @@ import TermsOfService from "@/pages/terms";
 import PrivacyPolicy from "@/pages/privacy";
 import OnboardingPage from "@/pages/OnboardingPage";
 import PricingPage from "@/pages/PricingPage";
+import CheckoutPage from "@/pages/CheckoutPage";
+import CheckoutComplete from "@/pages/CheckoutComplete";
 import Downloads from "@/pages/Downloads";
 import NotFound from "@/pages/not-found";
 
@@ -107,6 +109,8 @@ function Router() {
       <Route path="/notify-clients" component={NotifyClientsPage} />
       <Route path="/owner" component={OwnerView} />
       <Route path="/pricing" component={PricingPage} />
+      <Route path="/checkout" component={CheckoutPage} />
+      <Route path="/checkout/complete" component={CheckoutComplete} />
       <Route path="/downloads" component={Downloads} />
       <Route path="/admin/cockpit" component={AdminCockpit} />
       <Route path="/admin/users" component={AdminUsers} />

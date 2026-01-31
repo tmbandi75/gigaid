@@ -4,9 +4,8 @@ import { Check } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useCapability } from "@/hooks/useCapability";
 import { Plan } from "@shared/plans";
-import { startStripeCheckout, SubscriptionPlan } from "@/lib/stripeCheckout";
+import { navigateToCheckout, SubscriptionPlan } from "@/lib/stripeCheckout";
 import { useLocation } from "wouter";
-import { useState } from "react";
 
 interface PlanFeature {
   text: string;
@@ -89,14 +88,13 @@ const PLANS: PlanInfo[] = [
 ];
 
 export default function PricingPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { getUserPlan } = useCapability();
   const [, navigate] = useLocation();
-  const [loadingPlan, setLoadingPlan] = useState<SubscriptionPlan | null>(null);
 
   const currentPlan = getUserPlan();
 
-  const handlePlanAction = async (plan: PlanInfo) => {
+  const handlePlanAction = (plan: PlanInfo) => {
     if (plan.id === Plan.FREE) {
       if (isAuthenticated) {
         navigate("/");
@@ -108,17 +106,8 @@ export default function PricingPage() {
 
     if (!plan.stripeKey) return;
 
-    setLoadingPlan(plan.stripeKey);
-    try {
-      await startStripeCheckout({
-        plan: plan.stripeKey,
-        returnTo: "/pricing",
-      });
-    } catch (error) {
-      console.error("Checkout error:", error);
-    } finally {
-      setLoadingPlan(null);
-    }
+    // Navigate to embedded checkout page
+    navigateToCheckout(plan.stripeKey);
   };
 
   const isCurrentPlan = (planId: Plan): boolean => {
@@ -148,7 +137,6 @@ export default function PricingPage() {
           {PLANS.map((plan) => {
             const isCurrent = isCurrentPlan(plan.id);
             const isDisabled = isPlanDisabled(plan.id);
-            const isLoading = loadingPlan === plan.stripeKey;
 
             return (
               <Card
@@ -178,11 +166,11 @@ export default function PricingPage() {
                   <Button
                     className="w-full"
                     variant={isCurrent ? "outline" : "default"}
-                    disabled={isDisabled || isLoading}
+                    disabled={isDisabled}
                     onClick={() => handlePlanAction(plan)}
                     data-testid={`button-plan-${plan.id}`}
                   >
-                    {isLoading ? "Loading..." : isCurrent ? "Current Plan" : plan.cta}
+                    {isCurrent ? "Current Plan" : plan.cta}
                   </Button>
                 </CardFooter>
               </Card>
