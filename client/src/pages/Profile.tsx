@@ -111,17 +111,6 @@ export default function Profile() {
     queryKey: ["/api/profile"],
   });
 
-  const { data: subscription } = useQuery<{ plan: string; hasSubscription: boolean }>({
-    queryKey: ["/api/subscription/status"],
-    retry: 1,
-    staleTime: 60000,
-  });
-
-  const isBusinessPlan = subscription?.plan === "business";
-  const currentPlanLabel = subscription?.plan 
-    ? subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1).replace("_", "+") + " Plan"
-    : "Free Plan";
-
   const { uploadFile, isUploading } = useUpload({
     onSuccess: async (response) => {
       setPhotoUrl(response.objectPath);
@@ -372,20 +361,7 @@ export default function Profile() {
                 {profile?.businessName && (
                   <p className="text-sm text-muted-foreground mt-0.5">{profile.businessName}</p>
                 )}
-                {subscription !== undefined && (
-                  isBusinessPlan ? (
-                    <Badge variant="secondary" className="mt-3" data-testid="badge-plan">{currentPlanLabel}</Badge>
-                  ) : (
-                    <Button 
-                      variant="secondary" 
-                      className="mt-3"
-                      onClick={() => navigate("/pricing")}
-                      data-testid="button-plan-upgrade"
-                    >
-                      {currentPlanLabel} — Upgrade
-                    </Button>
-                  )
-                )}
+                <Badge variant="secondary" className="mt-3">Free Plan</Badge>
               </div>
 
               <div className="mt-6 pt-6 border-t border-border/50">
