@@ -102,15 +102,25 @@ export function useCapabilities() {
 }
 
 export function useCanPerform(capability: NewCapability) {
-  const { data: capabilities } = useCapabilities();
+  const { data: capabilities, isLoading } = useCapabilities();
   
-  if (!capabilities) {
-    return { allowed: true, loading: true };
+  if (isLoading || !capabilities) {
+    return { 
+      allowed: false, 
+      loading: true,
+      current: 0,
+      unlimited: false
+    };
   }
   
   const cap = capabilities.capabilities[capability];
   if (!cap) {
-    return { allowed: true, loading: false };
+    return { 
+      allowed: true, 
+      loading: false,
+      current: 0,
+      unlimited: true
+    };
   }
   
   return {
@@ -121,6 +131,7 @@ export function useCanPerform(capability: NewCapability) {
     current: cap.current,
     unlimited: cap.unlimited,
     mode: cap.mode,
+    windowDays: cap.windowDays,
     loading: false
   };
 }

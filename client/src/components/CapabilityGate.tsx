@@ -1,9 +1,10 @@
+import type { ReactNode } from "react";
 import { useCanPerform, type NewCapability } from "@/hooks/useCapability";
 
 interface CapabilityGateProps {
   capability: NewCapability;
-  children: React.ReactNode;
-  fallback?: React.ReactNode;
+  children: ReactNode;
+  fallback?: ReactNode;
   showMessage?: boolean;
 }
 
@@ -16,7 +17,7 @@ export function CapabilityGate({
   const { allowed, reason, loading } = useCanPerform(capability);
   
   if (loading) {
-    return <>{children}</>;
+    return null;
   }
   
   if (!allowed) {
