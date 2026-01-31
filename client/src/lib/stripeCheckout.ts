@@ -1,9 +1,35 @@
-// 🔥 PROOF EXPORT — DO NOT REMOVE
-export const __stripe_resolution_proof = true
+import { apiRequest } from "./queryClient";
+import { STRIPE_ENABLED } from "@shared/stripeConfig";
 
 export type SubscriptionPlan = "pro" | "pro_plus" | "business";
 
-export async function startStripeCheckout(_?: any) {
-  console.log('REAL stripeCheckout.ts is being used')
-  alert('Stripe stub reached — app is no longer crashing')
+export async function startStripeCheckout({
+  plan,
+  returnTo
+}: {
+  plan: SubscriptionPlan;
+  returnTo: string;
+}): Promise<void> {
+  if (!STRIPE_ENABLED) {
+    console.warn("[Stripe] Checkout disabled - STRIPE_ENABLED is false");
+    return;
+  }
+
+  try {
+    const response = await apiRequest("POST", "/api/subscription/checkout", {
+      plan,
+      returnTo
+    });
+    
+    const data = await response.json();
+    
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      console.error("[Stripe] No checkout URL returned");
+    }
+  } catch (error) {
+    console.error("[Stripe] Checkout error:", error);
+    throw error;
+  }
 }
