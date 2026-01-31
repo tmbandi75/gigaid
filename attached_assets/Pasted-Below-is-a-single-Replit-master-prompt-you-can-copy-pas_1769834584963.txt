@@ -1,0 +1,321 @@
+Below is a **single Replit master prompt** you can copy/paste to harden your Stripe integration with **webhooks, signature verification, idempotency, retries, and a dead-simple audit trail** — without refactoring what already works.
+
+---
+
+# 🔐 REPLIT MASTER PROMPT — STRIPE HARDENING (Webhooks + Idempotency + Retries)
+
+## Objective
+
+Harden the existing Stripe integration so payments are **reliably and securely finalized** even when clients close the browser, network calls fail, webhooks arrive out of order, or Stripe retries delivery.
+
+Implement:
+
+1. **Stripe webhook endpoint** with signature verification
+2. **Webhook event storage** (audit trail)
+3. **Idempotent processing** (exactly-once effect)
+4. **Retries + backoff** for transient failures
+5. **Repair / reconcile job** to fix any “stuck” payments
+6. Minimal **admin/debug endpoint** to inspect webhook processing
+
+This must **NOT** change any existing working behavior.
+This must **build on top** of your current deposit/invoice/payment flow.
+
+---
+
+## Non-Negotiable Constraints
+
+❌ Do NOT refactor existing payment creation endpoints that already work
+❌ Do NOT expose Stripe secrets to the frontend
+❌ Do NOT trust frontend “success” callbacks as the source of truth
+❌ Do NOT break Connect flows
+✅ Backend webhooks must become the source of truth
+✅ All webhook processing must be idempotent
+✅ Store enough data to audit any payment dispute
+
+---
+
+## Assumptions (if not present, create them)
+
+* Node/Express (or similar) backend exists at `/api/*`
+* Stripe SDK already installed and used for payments
+* There is a DB available (prefer Postgres / Prisma / Drizzle / Supabase).
+  If you already have a DB layer, use it. Do not replace it.
+
+If you do not have a DB ORM, implement raw SQL migrations and a minimal DB helper.
+
+---
+
+## Deliverables
+
+### A) Environment variables (no secrets in code)
+
+Add:
+
+* `STRIPE_SECRET_KEY`
+* `STRIPE_WEBHOOK_SECRET`
+* `STRIPE_ENV` = `test` or `live`
+
+If missing, add them to `.env.example` and document where to set them in Replit.
+
+---
+
+### B) Create DB tables for audit + idempotency
+
+Create migrations for these tables:
+
+#### 1) `stripe_webhook_events`
+
+Stores every webhook we receive (audit trail).
+
+Columns:
+
+* `id` (uuid pk)
+* `stripe_event_id` (text unique)
+* `type` (text)
+* `api_version` (text nullable)
+* `livemode` (bool)
+* `account` (text nullable)  // connect account id if present
+* `created` (timestamp)      // stripe event created time
+* `payload` (jsonb)          // full event
+* `received_at` (timestamp default now)
+* `processed_at` (timestamp nullable)
+* `status` (text: 'received'|'processed'|'failed')
+* `error` (text nullable)
+* `attempt_count` (int default 0)
+* `next_attempt_at` (timestamp nullable)
+
+Indexes:
+
+* unique(`stripe_event_id`)
+* index(`status`, `next_attempt_at`)
+
+#### 2) `stripe_payment_state`
+
+Tracks canonical payment status used by app.
+
+Columns:
+
+* `id` (uuid pk)
+* `payment_intent_id` (text unique)
+* `charge_id` (text nullable)
+* `customer_id` (text nullable)
+* `connected_account_id` (text nullable)
+* `amount` (int) // cents
+* `currency` (text)
+* `status` (text) // 'requires_payment_method'|'requires_action'|'processing'|'succeeded'|'failed'|'canceled'|'refunded'
+* `last_event_id` (text nullable)
+* `last_event_type` (text nullable)
+* `last_updated_at` (timestamp default now)
+* `metadata` (jsonb nullable) // copy of PI metadata for mapping
+* `job_id` (text nullable) // if you have jobs
+* `invoice_id` (text nullable) // if you have invoices
+
+Indexes:
+
+* unique(`payment_intent_id`)
+* index(`job_id`)
+* index(`invoice_id`)
+
+#### 3) `stripe_idempotency_locks`
+
+Ensures exactly-once effect per stripe event and handler.
+
+Columns:
+
+* `key` (text pk) // e.g. `${eventId}:${handlerName}`
+* `created_at` (timestamp default now)
+
+---
+
+### C) Implement secure webhook endpoint
+
+Create `POST /api/stripe/webhook`
+
+Requirements:
+
+* Must use **raw body** (NOT JSON-parsed) to verify signature
+* Verify using `STRIPE_WEBHOOK_SECRET`
+* Immediately persist the event into `stripe_webhook_events` with status `received`
+* Return 200 quickly if the event already exists (Stripe retries)
+* Enqueue processing asynchronously (in-process job queue is fine)
+* Never throw unhandled errors (always respond with 2xx once stored)
+
+Support Connect:
+
+* Capture `event.account` if present (connect account)
+
+---
+
+### D) Webhook processor with idempotency + retries
+
+Implement a processor that:
+
+1. Selects pending events:
+
+* `status in ('received','failed')`
+* `next_attempt_at IS NULL OR next_attempt_at <= now()`
+* Order by `received_at ASC`
+* Limit batch size (e.g. 25)
+
+2. For each event:
+
+* Increment `attempt_count`
+* Acquire idempotency lock `stripe_idempotency_locks.key = "${stripe_event_id}:process"`
+
+  * If exists, skip (already processed)
+* Process based on event type:
+
+  * `payment_intent.succeeded`
+  * `payment_intent.payment_failed`
+  * `payment_intent.canceled`
+  * `charge.refunded` (or `charge.refund.updated` if used)
+  * `account.updated` (optional but recommended for Connect readiness)
+* Update `stripe_payment_state` for the payment_intent_id:
+
+  * Upsert by `payment_intent_id`
+  * Update status, charge_id, amount, currency, connected_account_id, metadata, last_event fields
+* Also update your app’s domain objects *without refactoring*:
+
+  * If you have an “invoice paid” or “deposit paid” model, update it.
+  * If you have job/invoice ids in Stripe metadata, map using that.
+  * If mapping is missing, store as “unlinked” and expose in debug endpoint.
+
+3. If processing succeeds:
+
+* Mark webhook event status = `processed`, set `processed_at`
+
+4. If processing fails with transient error:
+
+* Mark status = `failed`
+* Set `next_attempt_at = now() + backoff(attempt_count)`
+* Store error text (truncated)
+
+Backoff strategy:
+
+* attempt 1: +30s
+* attempt 2: +2m
+* attempt 3: +10m
+* attempt 4+: +1h (cap)
+
+Define “transient” as:
+
+* DB connection errors
+* timeouts
+* rate limit errors
+* 5xx from Stripe on retrieve calls (if any)
+
+Define “non-transient” as:
+
+* missing required metadata mapping (still store, but mark processed with “unlinked”)
+* invalid state transitions (log, mark processed)
+
+---
+
+### E) Make payment creation idempotent (minimal touch)
+
+Without refactoring existing endpoints, add:
+
+* If you create PaymentIntents server-side:
+
+  * Use Stripe’s `idempotencyKey` option based on:
+
+    * `userId + jobId + amount + purpose + dateBucket`
+* Store `payment_intent_id` in your DB record so repeats don’t create duplicates
+
+If you cannot safely change creation logic, do not refactor—just add guards:
+
+* If an invoice already has a `payment_intent_id`, reuse it.
+
+---
+
+### F) Add a reconciliation job (repair stuck payments)
+
+Create `POST /api/admin/stripe/reconcile` (admin protected)
+
+Behavior:
+
+* Find `stripe_payment_state` records in states:
+
+  * `processing` / `requires_action` older than 15 minutes
+* Fetch latest PaymentIntent status from Stripe
+* Update state + domain objects to match
+* Return summary counts fixed/unchanged
+
+Make this callable manually, and also run it on a schedule if you already have a cron mechanism.
+
+---
+
+### G) Add debug/admin endpoints (read-only)
+
+Create admin-only endpoints:
+
+1. `GET /api/admin/stripe/webhooks?status=failed&limit=50`
+   Returns latest webhook events with:
+
+* event id, type, status, attempt_count, last error, received_at
+
+2. `GET /api/admin/stripe/payments?search=<pi_id|job_id|invoice_id>`
+   Returns `stripe_payment_state` rows
+
+3. `POST /api/admin/stripe/webhooks/:stripe_event_id/retry`
+   Sets status back to `received`, clears `next_attempt_at`
+
+All endpoints must be protected by existing admin auth.
+
+---
+
+### H) Logging + Observability
+
+Add structured logs:
+
+* When webhook received (event id/type/account)
+* When processed successfully
+* When failed + next retry time
+* When idempotency lock prevents duplicate processing
+
+If you have Datadog already, add tags:
+
+* `stripe_event_type`, `livemode`, `connect_account`
+
+---
+
+## Acceptance Criteria (must pass)
+
+1. Webhook signature is verified using raw body
+2. Duplicate webhook deliveries do not cause duplicate payment updates
+3. If the server crashes mid-process, retry resumes safely without double applying
+4. Failed transient processing retries with backoff
+5. You can view failed webhooks and retry them from admin endpoints
+6. Payment state is consistent even when the client closes the browser mid-checkout
+7. Connect events include and preserve `event.account` context
+
+---
+
+## Implementation Notes (Do It This Way)
+
+* Use Stripe’s recommended raw body verification method.
+* Ensure Express does **NOT** apply JSON middleware to the webhook route.
+* Persist event before processing.
+* Processing must be idempotent per event id.
+* Do not depend on frontend signals to mark “paid”.
+
+---
+
+## Output Required From Replit
+
+1. List of files changed/added
+2. SQL migrations (or ORM migrations) created
+3. Exact env vars required and where used
+4. Example curl commands to test:
+
+   * webhook endpoint locally
+   * admin webhooks list
+   * manual reconcile
+
+Proceed now and implement.
+
+---
+
+If you paste that into Replit, it should generate the full “Stripe hardening layer” around what you have.
+
+If you want, I can also give you a **second master prompt** that hardens **Connect edge cases** (capabilities not active, account restricted, payouts disabled, etc.) without changing product UX.

@@ -2559,9 +2559,14 @@ export async function registerRoutes(
 
       const amountToCharge = depositState.depositOutstandingCents || depositState.depositRequestedCents;
 
-      // Create Stripe PaymentIntent
+      // Create Stripe PaymentIntent with idempotency key
       const { getUncachableStripeClient } = await import("./stripeClient");
       const stripe = await getUncachableStripeClient();
+      
+      // Generate idempotency key: userId + jobId + amount + purpose + date bucket (hourly)
+      const dateBucket = new Date().toISOString().slice(0, 13); // YYYY-MM-DDTHH
+      const idempotencyKey = `${job.userId}-${job.id}-${amountToCharge}-deposit-${dateBucket}`;
+      
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amountToCharge,
         currency: "usd",
@@ -2572,6 +2577,8 @@ export async function registerRoutes(
           clientName: job.clientName || "",
         },
         description: `Deposit for ${job.title}`,
+      }, {
+        idempotencyKey,
       });
 
       res.json({
@@ -6458,6 +6465,10 @@ Return ONLY the message text, no JSON or formatting.`
       const { getUncachableStripeClient } = await import("./stripeClient");
       const stripe = await getUncachableStripeClient();
 
+      // Generate idempotency key: providerId + bookingId + amount + purpose + date bucket (hourly)
+      const dateBucket = new Date().toISOString().slice(0, 13); // YYYY-MM-DDTHH
+      const idempotencyKey = `${booking.userId}-${booking.id}-${booking.depositAmountCents}-booking-deposit-${dateBucket}`;
+
       const paymentIntent = await stripe.paymentIntents.create({
         amount: booking.depositAmountCents,
         currency: booking.depositCurrency || "usd",
@@ -6470,6 +6481,8 @@ Return ONLY the message text, no JSON or formatting.`
           client_name: booking.clientName,
         },
         description: `Deposit for service booking - ${booking.clientName}`,
+      }, {
+        idempotencyKey,
       });
 
       await storage.updateBookingRequest(booking.id, {
@@ -6613,6 +6626,10 @@ Return ONLY the message text, no JSON or formatting.`
           return res.status(400).json({ error: "Deposit already paid" });
         }
       } else {
+        // Generate idempotency key: providerId + bookingId + amount + purpose + date bucket (hourly)
+        const dateBucket = new Date().toISOString().slice(0, 13); // YYYY-MM-DDTHH
+        const idempotencyKey = `${booking.userId}-${booking.id}-${booking.depositAmountCents}-booking-deposit-${dateBucket}`;
+
         paymentIntent = await stripe.paymentIntents.create({
           amount: booking.depositAmountCents,
           currency: booking.depositCurrency || "usd",
@@ -6625,6 +6642,8 @@ Return ONLY the message text, no JSON or formatting.`
             client_name: booking.clientName,
           },
           description: `Deposit for service booking - ${booking.clientName}`,
+        }, {
+          idempotencyKey,
         });
 
         await storage.updateBookingRequest(booking.id, {
