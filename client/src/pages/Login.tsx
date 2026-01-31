@@ -266,7 +266,7 @@ export default function Login() {
       <div className="relative min-h-screen flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-sm space-y-6">
           {/* Header */}
-          <div className="text-center space-y-2">
+          <div className="text-center">
             {mode === "forgot" && (
               <button
                 type="button"
@@ -284,13 +284,13 @@ export default function Login() {
                   ? "Join GigAid™" 
                   : "Welcome to GigAid™"}
             </h1>
-            {mode === "signin" && (
-              <p className="text-white text-lg font-medium mt-3">
+            {mode !== "forgot" && mode !== "signup" && (
+              <p className="text-white text-lg font-medium mt-3" data-testid="text-login-slogan">
                 Book jobs faster. Get paid upfront. Stay organized.
               </p>
             )}
             {mode === "forgot" && (
-              <p className="text-white/70 text-sm">We'll send you a reset link</p>
+              <p className="text-white/70 text-sm mt-2">We'll send you a reset link</p>
             )}
           </div>
 
