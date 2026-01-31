@@ -16,7 +16,6 @@ import { logPricingInterest } from "@shared/capabilityLogger";
 import { isHardGated } from "@shared/gatingConfig";
 import { STRIPE_ENABLED } from "@shared/stripeConfig";
 import { startStripeCheckout } from "@/lib/stripeCheckout";
-console.log('startStripeCheckout import OK', startStripeCheckout);
 import {
   Dialog,
   DialogContent,
