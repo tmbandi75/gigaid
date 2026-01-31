@@ -417,7 +417,7 @@ export async function registerRoutes(
     try {
       const { 
         name, email, phone, photo, businessName, bio, serviceArea,
-        firstName, lastName,
+        firstName, lastName, services,
         // Onboarding/money protection fields
         defaultServiceType, defaultPrice, depositPolicySet, aiExpectationShown,
         depositEnabled, depositValue, slotDuration
@@ -449,6 +449,7 @@ export async function registerRoutes(
       if (businessName !== undefined) updates.businessName = businessName;
       if (bio !== undefined) updates.bio = bio;
       if (serviceArea !== undefined) updates.serviceArea = serviceArea;
+      if (services !== undefined) updates.services = services;
       
       // Onboarding/money protection fields
       if (defaultServiceType !== undefined) updates.defaultServiceType = defaultServiceType;
