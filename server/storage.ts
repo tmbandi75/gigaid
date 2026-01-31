@@ -43,6 +43,8 @@ import {
   type ClientNotificationCampaign, type InsertCampaign,
   type CampaignSuggestion, type InsertCampaignSuggestion,
   type CapabilityUsage,
+  type StripeWebhookEvent, type InsertStripeWebhookEvent,
+  type StripePaymentState, type InsertStripePaymentState,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -347,6 +349,28 @@ export interface IStorage {
   getAllCapabilityUsage(userId: string): Promise<CapabilityUsage[]>;
   incrementCapabilityUsage(userId: string, capability: string): Promise<CapabilityUsage>;
   resetCapabilityUsage(userId: string, capability: string): Promise<boolean>;
+
+  // Stripe Webhook Events
+  getStripeWebhookEvent(stripeEventId: string): Promise<StripeWebhookEvent | undefined>;
+  createStripeWebhookEvent(event: InsertStripeWebhookEvent): Promise<StripeWebhookEvent>;
+  incrementStripeWebhookAttempt(stripeEventId: string): Promise<void>;
+  markStripeWebhookProcessed(stripeEventId: string): Promise<void>;
+  markStripeWebhookFailed(stripeEventId: string, error: string, nextAttemptAt: string | null): Promise<void>;
+  getRetryableStripeWebhookEvents(now: string, limit: number): Promise<StripeWebhookEvent[]>;
+  getStripeWebhookEvents(options: { status?: string; limit?: number; offset?: number }): Promise<StripeWebhookEvent[]>;
+
+  // Stripe Payment State
+  getStripePaymentStateByPI(paymentIntentId: string): Promise<StripePaymentState | undefined>;
+  upsertStripePaymentState(state: InsertStripePaymentState): Promise<StripePaymentState>;
+  getStuckStripePayments(cutoffTime: string): Promise<StripePaymentState[]>;
+  searchStripePayments(search: string): Promise<StripePaymentState[]>;
+
+  // Stripe Idempotency Locks
+  acquireStripeIdempotencyLock(key: string): Promise<boolean>;
+  releaseStripeIdempotencyLock(key: string): Promise<void>;
+
+  // Stripe Connect user lookup
+  getUsersByStripeConnectAccountId(accountId: string): Promise<User[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -2865,6 +2889,42 @@ export class MemStorage implements IStorage {
       updatedAt: now
     });
     return true;
+  }
+
+  // Stripe Webhook stub methods (not needed for MemStorage, using DB in production)
+  async getStripeWebhookEvent(_stripeEventId: string): Promise<StripeWebhookEvent | undefined> {
+    return undefined;
+  }
+  async createStripeWebhookEvent(_event: InsertStripeWebhookEvent): Promise<StripeWebhookEvent> {
+    throw new Error("MemStorage does not support Stripe webhooks");
+  }
+  async incrementStripeWebhookAttempt(_stripeEventId: string): Promise<void> {}
+  async markStripeWebhookProcessed(_stripeEventId: string): Promise<void> {}
+  async markStripeWebhookFailed(_stripeEventId: string, _error: string, _nextAttemptAt: string | null): Promise<void> {}
+  async getRetryableStripeWebhookEvents(_now: string, _limit: number): Promise<StripeWebhookEvent[]> {
+    return [];
+  }
+  async getStripeWebhookEvents(_options: { status?: string; limit?: number; offset?: number }): Promise<StripeWebhookEvent[]> {
+    return [];
+  }
+  async getStripePaymentStateByPI(_paymentIntentId: string): Promise<StripePaymentState | undefined> {
+    return undefined;
+  }
+  async upsertStripePaymentState(_state: InsertStripePaymentState): Promise<StripePaymentState> {
+    throw new Error("MemStorage does not support Stripe payment state");
+  }
+  async getStuckStripePayments(_cutoffTime: string): Promise<StripePaymentState[]> {
+    return [];
+  }
+  async searchStripePayments(_search: string): Promise<StripePaymentState[]> {
+    return [];
+  }
+  async acquireStripeIdempotencyLock(_key: string): Promise<boolean> {
+    return true;
+  }
+  async releaseStripeIdempotencyLock(_key: string): Promise<void> {}
+  async getUsersByStripeConnectAccountId(_accountId: string): Promise<User[]> {
+    return Array.from(this.users.values()).filter(u => u.stripeConnectAccountId === _accountId);
   }
 }
 

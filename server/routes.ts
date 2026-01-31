@@ -70,6 +70,7 @@ import {
 } from "./bookingProtection";
 import mobileAuthRoutes from "./mobileAuthRoutes";
 import { verifyAppJwt } from "./appJwt";
+import { registerStripeWebhookRoutes, processRetryableWebhooks, reconcileStuckPayments } from "./stripeWebhookRoutes";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -78,6 +79,9 @@ export async function registerRoutes(
   // Setup authentication FIRST before any other routes
   await setupAuth(app);
   registerAuthRoutes(app);
+
+  // Register Stripe webhook routes (needs raw body before JSON parsing)
+  registerStripeWebhookRoutes(app, storage);
 
   registerObjectStorageRoutes(app);
   

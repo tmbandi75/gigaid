@@ -1,4 +1,4 @@
-import { eq, and, desc, asc, lte, gte, or, ne, isNull, sql, notInArray, lt } from "drizzle-orm";
+import { eq, and, desc, asc, lte, gte, or, ne, isNull, sql, notInArray, lt, inArray } from "drizzle-orm";
 import { db } from "./db";
 import { 
   users, otpCodes, sessions, jobs, leads, invoices, reminders,
@@ -9,6 +9,7 @@ import {
   stallDetections, nextActions, autoExecutionLog, intentSignals, readyActions,
   clients, providerServices, clientNotificationCampaigns, campaignSuggestions,
   capabilityUsage,
+  stripeWebhookEvents, stripePaymentState, stripeIdempotencyLocks,
   type User, type InsertUser,
   type Job, type InsertJob,
   type Lead, type InsertLead,
@@ -53,6 +54,8 @@ import {
   type ClientNotificationCampaign, type InsertCampaign,
   type CampaignSuggestion, type InsertCampaignSuggestion,
   type CapabilityUsage,
+  type StripeWebhookEvent, type InsertStripeWebhookEvent,
+  type StripePaymentState, type InsertStripePaymentState,
 } from "@shared/schema";
 import { IStorage } from "./storage";
 import { randomUUID } from "crypto";
@@ -1958,6 +1961,160 @@ export class DatabaseStorage implements IStorage {
       ))
       .returning();
     return result.length > 0;
+  }
+
+  // ============ STRIPE WEBHOOK STORAGE METHODS ============
+
+  async getStripeWebhookEvent(stripeEventId: string): Promise<StripeWebhookEvent | undefined> {
+    const result = await db.select().from(stripeWebhookEvents)
+      .where(eq(stripeWebhookEvents.stripeEventId, stripeEventId))
+      .limit(1);
+    return result[0];
+  }
+
+  async createStripeWebhookEvent(event: InsertStripeWebhookEvent): Promise<StripeWebhookEvent> {
+    const [created] = await db.insert(stripeWebhookEvents).values(event).returning();
+    return created;
+  }
+
+  async incrementStripeWebhookAttempt(stripeEventId: string): Promise<void> {
+    await db.update(stripeWebhookEvents)
+      .set({ attemptCount: sql`${stripeWebhookEvents.attemptCount} + 1` })
+      .where(eq(stripeWebhookEvents.stripeEventId, stripeEventId));
+  }
+
+  async markStripeWebhookProcessed(stripeEventId: string): Promise<void> {
+    await db.update(stripeWebhookEvents)
+      .set({
+        status: "processed",
+        processedAt: new Date().toISOString(),
+        error: null,
+        nextAttemptAt: null,
+      })
+      .where(eq(stripeWebhookEvents.stripeEventId, stripeEventId));
+  }
+
+  async markStripeWebhookFailed(stripeEventId: string, error: string, nextAttemptAt: string | null): Promise<void> {
+    await db.update(stripeWebhookEvents)
+      .set({
+        status: "failed",
+        error: error.slice(0, 1000),
+        nextAttemptAt,
+      })
+      .where(eq(stripeWebhookEvents.stripeEventId, stripeEventId));
+  }
+
+  async getRetryableStripeWebhookEvents(now: string, limit: number): Promise<StripeWebhookEvent[]> {
+    return await db.select().from(stripeWebhookEvents)
+      .where(
+        and(
+          inArray(stripeWebhookEvents.status, ["received", "failed"]),
+          or(
+            isNull(stripeWebhookEvents.nextAttemptAt),
+            lte(stripeWebhookEvents.nextAttemptAt, now)
+          )
+        )
+      )
+      .orderBy(asc(stripeWebhookEvents.receivedAt))
+      .limit(limit);
+  }
+
+  async getStripeWebhookEvents(options: { status?: string; limit?: number; offset?: number }): Promise<StripeWebhookEvent[]> {
+    const { status, limit = 50, offset = 0 } = options;
+    let query = db.select().from(stripeWebhookEvents);
+    
+    if (status) {
+      query = query.where(eq(stripeWebhookEvents.status, status)) as typeof query;
+    }
+    
+    return await query
+      .orderBy(desc(stripeWebhookEvents.receivedAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getStripePaymentStateByPI(paymentIntentId: string): Promise<StripePaymentState | undefined> {
+    const result = await db.select().from(stripePaymentState)
+      .where(eq(stripePaymentState.paymentIntentId, paymentIntentId))
+      .limit(1);
+    return result[0];
+  }
+
+  async upsertStripePaymentState(state: InsertStripePaymentState): Promise<StripePaymentState> {
+    const existing = await this.getStripePaymentStateByPI(state.paymentIntentId);
+    
+    if (existing) {
+      const [updated] = await db.update(stripePaymentState)
+        .set({
+          chargeId: state.chargeId,
+          customerId: state.customerId,
+          connectedAccountId: state.connectedAccountId,
+          amount: state.amount,
+          currency: state.currency,
+          status: state.status,
+          lastEventId: state.lastEventId,
+          lastEventType: state.lastEventType,
+          lastUpdatedAt: state.lastUpdatedAt,
+          metadata: state.metadata,
+          jobId: state.jobId,
+          invoiceId: state.invoiceId,
+        })
+        .where(eq(stripePaymentState.paymentIntentId, state.paymentIntentId))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(stripePaymentState).values(state).returning();
+      return created;
+    }
+  }
+
+  async getStuckStripePayments(cutoffTime: string): Promise<StripePaymentState[]> {
+    return await db.select().from(stripePaymentState)
+      .where(
+        and(
+          inArray(stripePaymentState.status, ["processing", "requires_action", "requires_confirmation"]),
+          lte(stripePaymentState.lastUpdatedAt, cutoffTime)
+        )
+      )
+      .limit(100);
+  }
+
+  async searchStripePayments(search: string): Promise<StripePaymentState[]> {
+    return await db.select().from(stripePaymentState)
+      .where(
+        or(
+          eq(stripePaymentState.paymentIntentId, search),
+          eq(stripePaymentState.jobId, search),
+          eq(stripePaymentState.invoiceId, search),
+          eq(stripePaymentState.chargeId, search)
+        )
+      )
+      .limit(50);
+  }
+
+  async acquireStripeIdempotencyLock(key: string): Promise<boolean> {
+    try {
+      await db.insert(stripeIdempotencyLocks).values({
+        key,
+        createdAt: new Date().toISOString(),
+      });
+      return true;
+    } catch (err: any) {
+      if (err.code === "23505") {
+        return false;
+      }
+      throw err;
+    }
+  }
+
+  async releaseStripeIdempotencyLock(key: string): Promise<void> {
+    await db.delete(stripeIdempotencyLocks)
+      .where(eq(stripeIdempotencyLocks.key, key));
+  }
+
+  async getUsersByStripeConnectAccountId(accountId: string): Promise<User[]> {
+    return await db.select().from(users)
+      .where(eq(users.stripeConnectAccountId, accountId));
   }
 }
 
