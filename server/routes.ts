@@ -4622,8 +4622,11 @@ export async function registerRoutes(
             const place = zippoData.places[0];
             const lat = parseFloat(place.latitude);
             const lng = parseFloat(place.longitude);
-            console.log(`[ZIPValidation] Zippopotam validated ZIP ${zipCode}: ${place["place name"]}, ${place["state abbreviation"]}`);
-            return res.json({ valid: true, lat, lng });
+            const city = place["place name"];
+            const state = place["state abbreviation"];
+            const locationName = `${city}, ${state}`;
+            console.log(`[ZIPValidation] Zippopotam validated ZIP ${zipCode}: ${locationName}`);
+            return res.json({ valid: true, lat, lng, city, state, locationName });
           }
         } else if (zippoResponse.status === 404) {
           // ZIP code not found - definitely invalid

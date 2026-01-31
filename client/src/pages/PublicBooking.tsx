@@ -97,6 +97,7 @@ export default function PublicBooking() {
   });
   const [bookingPhotos, setBookingPhotos] = useState<string[]>([]);
   const [clientZipCode, setClientZipCode] = useState("");
+  const [clientLocationName, setClientLocationName] = useState("");
   const [zipConfirmed, setZipConfirmed] = useState(false);
   const [zipValidating, setZipValidating] = useState(false);
   const [zipError, setZipError] = useState<string | null>(null);
@@ -157,8 +158,11 @@ export default function PublicBooking() {
       
       if (data.valid) {
         setZipConfirmed(true);
+        if (data.locationName) {
+          setClientLocationName(data.locationName);
+        }
       } else {
-        setZipError("Please enter a valid US ZIP code");
+        setZipError(data.error || "Please enter a valid US ZIP code");
       }
     } catch (error) {
       setZipError("Unable to verify ZIP code. Please try again.");
@@ -545,11 +549,11 @@ export default function PublicBooking() {
                     </div>
                     <Badge variant="secondary" className="text-xs">
                       <MapPin className="h-3 w-3 mr-1" />
-                      {clientZipCode}
+                      {clientLocationName ? `${clientLocationName} ${clientZipCode}` : clientZipCode}
                       <button
                         type="button"
                         className="ml-1 hover:text-primary"
-                        onClick={() => { setZipConfirmed(false); setSelectedTime(null); }}
+                        onClick={() => { setZipConfirmed(false); setSelectedTime(null); setClientLocationName(""); }}
                         data-testid="button-change-zip"
                       >
                         (change)
