@@ -122,6 +122,7 @@ async function processWebhookEvent(stripeEventId: string, storage: IStorage) {
     await handleStripeEvent(event, webhookEvent.account, storage);
 
     await storage.markStripeWebhookProcessed(stripeEventId);
+    await storage.releaseStripeIdempotencyLock(lockKey);
     console.log(`[Stripe Webhook Processor] Successfully processed: ${stripeEventId}`);
   } catch (err: any) {
     console.error(`[Stripe Webhook Processor] Error processing ${stripeEventId}:`, err.message);
@@ -330,6 +331,41 @@ export async function processRetryableWebhooks(storage: IStorage) {
 
   for (const event of pendingEvents) {
     await processWebhookEvent(event.stripeEventId, storage);
+  }
+}
+
+let webhookRetrySchedulerInterval: NodeJS.Timeout | null = null;
+
+export function startWebhookRetryScheduler(storage: IStorage, intervalMs: number = 60000) {
+  if (webhookRetrySchedulerInterval) {
+    clearInterval(webhookRetrySchedulerInterval);
+  }
+  
+  console.log(`[Stripe Webhook Retry] Starting scheduler with ${intervalMs / 1000}s interval`);
+  
+  webhookRetrySchedulerInterval = setInterval(async () => {
+    try {
+      await processRetryableWebhooks(storage);
+      await cleanupStaleIdempotencyLocks(storage);
+    } catch (err: any) {
+      console.error("[Stripe Webhook Retry] Scheduler error:", err.message);
+    }
+  }, intervalMs);
+  
+  setImmediate(async () => {
+    try {
+      await processRetryableWebhooks(storage);
+    } catch (err: any) {
+      console.error("[Stripe Webhook Retry] Initial run error:", err.message);
+    }
+  });
+}
+
+async function cleanupStaleIdempotencyLocks(storage: IStorage) {
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const cleaned = await storage.cleanupStaleStripeIdempotencyLocks(oneHourAgo);
+  if (cleaned > 0) {
+    console.log(`[Stripe Webhook Retry] Cleaned up ${cleaned} stale idempotency locks`);
   }
 }
 

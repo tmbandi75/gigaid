@@ -71,7 +71,7 @@ import {
 } from "./bookingProtection";
 import mobileAuthRoutes from "./mobileAuthRoutes";
 import { verifyAppJwt } from "./appJwt";
-import { registerStripeWebhookRoutes, processRetryableWebhooks, reconcileStuckPayments } from "./stripeWebhookRoutes";
+import { registerStripeWebhookRoutes, processRetryableWebhooks, reconcileStuckPayments, startWebhookRetryScheduler } from "./stripeWebhookRoutes";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -83,6 +83,9 @@ export async function registerRoutes(
 
   // Register Stripe webhook routes (needs raw body before JSON parsing)
   registerStripeWebhookRoutes(app, storage);
+  
+  // Start Stripe webhook retry scheduler (every 60 seconds)
+  startWebhookRetryScheduler(storage, 60000);
 
   registerObjectStorageRoutes(app);
   

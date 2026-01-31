@@ -370,6 +370,7 @@ export interface IStorage {
   // Stripe Idempotency Locks
   acquireStripeIdempotencyLock(key: string): Promise<boolean>;
   releaseStripeIdempotencyLock(key: string): Promise<void>;
+  cleanupStaleStripeIdempotencyLocks(beforeTimestamp: string): Promise<number>;
 
   // Stripe Connect user lookup
   getUsersByStripeConnectAccountId(accountId: string): Promise<User[]>;
@@ -2929,6 +2930,9 @@ export class MemStorage implements IStorage {
     return true;
   }
   async releaseStripeIdempotencyLock(_key: string): Promise<void> {}
+  async cleanupStaleStripeIdempotencyLocks(_beforeTimestamp: string): Promise<number> {
+    return 0;
+  }
   async getUsersByStripeConnectAccountId(_accountId: string): Promise<User[]> {
     return Array.from(this.users.values()).filter(u => u.stripeConnectAccountId === _accountId);
   }

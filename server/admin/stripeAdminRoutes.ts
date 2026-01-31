@@ -108,29 +108,29 @@ router.get("/stats", adminMiddleware, async (req: Request, res: Response) => {
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     
     const [
-      pendingWebhooks,
+      receivedWebhooks,
       failedWebhooks,
       processedWebhooks24h,
-      pendingPayments,
+      processingPayments,
       succeededPayments24h,
     ] = await Promise.all([
-      storage.getStripeWebhookEvents({ status: "pending", limit: 1000 }),
+      storage.getStripeWebhookEvents({ status: "received", limit: 1000 }),
       storage.getStripeWebhookEvents({ status: "failed", limit: 1000 }),
       storage.getStripeWebhookEvents({ status: "processed", limit: 1000 }),
-      storage.getStripePaymentStates({ status: "pending", limit: 1000 }),
+      storage.getStripePaymentStates({ status: "processing", limit: 1000 }),
       storage.getStripePaymentStates({ status: "succeeded", limit: 1000 }),
     ]);
     
     res.json({
       webhooks: {
-        pending: pendingWebhooks.length,
+        received: receivedWebhooks.length,
         failed: failedWebhooks.length,
         processed24h: processedWebhooks24h.filter(
           (e: StripeWebhookEvent) => new Date(e.receivedAt) >= twentyFourHoursAgo
         ).length,
       },
       payments: {
-        pending: pendingPayments.length,
+        processing: processingPayments.length,
         succeeded24h: succeededPayments24h.filter(
           (p: StripePaymentState) => new Date(p.lastUpdatedAt) >= twentyFourHoursAgo
         ).length,

@@ -2133,6 +2133,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(stripeIdempotencyLocks.key, key));
   }
 
+  async cleanupStaleStripeIdempotencyLocks(beforeTimestamp: string): Promise<number> {
+    const result = await db.delete(stripeIdempotencyLocks)
+      .where(lte(stripeIdempotencyLocks.createdAt, beforeTimestamp))
+      .returning();
+    return result.length;
+  }
+
   async getUsersByStripeConnectAccountId(accountId: string): Promise<User[]> {
     return await db.select().from(users)
       .where(eq(users.stripeConnectAccountId, accountId));
