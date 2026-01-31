@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { AddServiceDialog } from "@/components/settings/AddServiceDialog";
 import { motion, AnimatePresence } from "framer-motion";
+import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 
 interface ActionItem {
   id: string;
@@ -262,6 +263,7 @@ export default function TodaysGamePlanPage() {
       <div className="px-4 py-5 bg-background border-b">
         <h1 className="text-2xl font-bold text-foreground mb-1">Today's Game Plan</h1>
         <p className="text-sm text-muted-foreground">Do these things to stay on track and get paid</p>
+        <CoachingRenderer screen="dashboard" />
       </div>
     );
   }
@@ -277,6 +279,7 @@ export default function TodaysGamePlanPage() {
             <div className="flex-1">
               <h1 className="text-2xl font-bold text-foreground">Today's Game Plan</h1>
               <p className="text-sm text-muted-foreground mt-0.5">Do these things to stay on track and get paid</p>
+              <CoachingRenderer screen="dashboard" />
             </div>
           </div>
         </div>
