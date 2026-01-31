@@ -9300,6 +9300,163 @@ Return ONLY the message text, no JSON or formatting.`
     }
   });
 
+  // ==================== CAPABILITY ENFORCEMENT ENDPOINTS ====================
+  // New capability enforcement system with limits, caps, and progressive unlocks
+  
+  const { canPerform, getCapabilityRules, isUnlimited, getLimit } = await import("@shared/capabilities/canPerform");
+  const { CAPABILITY_RULES, CAPABILITY_DISPLAY_NAMES } = await import("@shared/capabilities/capabilityRules");
+  const { PLAN_NAMES, PLAN_ORDER } = await import("@shared/capabilities/plans");
+  type Plan = 'free' | 'pro' | 'pro_plus' | 'business';
+  type Capability = 'jobs.create' | 'invoices.send' | 'leads.manage' | 'clients.manage' | 'booking.link' |
+    'deposit.enforce' | 'booking.risk_protection' | 'price.confirmation' | 'ai.micro_nudges' | 'ai.money_plan' |
+    'ai.outcome_attribution' | 'ai.priority_signals' | 'ai.campaign_suggestions' | 'sms.two_way' |
+    'sms.auto_followups' | 'notifications.event_driven' | 'offline.capture' | 'offline.photos' |
+    'drive.mode' | 'analytics.basic' | 'analytics.advanced' | 'crew.manage' | 'admin.controls';
+
+  // Get all capability rules for current user's plan
+  app.get("/api/capabilities", isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).userId);
+      const plan = (user?.plan as Plan) || 'free';
+      
+      // Get all usage for this user
+      const allUsage = await storage.getAllCapabilityUsage((req as any).userId);
+      const usageMap = new Map(allUsage.map(u => [u.capability, u.usageCount]));
+      
+      // Build capability status for each capability
+      const capabilities: Record<string, any> = {};
+      
+      for (const [capability, displayName] of Object.entries(CAPABILITY_DISPLAY_NAMES)) {
+        const cap = capability as Capability;
+        const usage = usageMap.get(cap) || 0;
+        const result = canPerform(plan, cap, usage);
+        const rules = getCapabilityRules(plan, cap);
+        
+        capabilities[cap] = {
+          displayName,
+          allowed: result.allowed,
+          reason: result.reason,
+          mode: result.mode || rules.mode,
+          limit: result.limit,
+          remaining: result.remaining,
+          current: usage,
+          unlimited: rules.unlimited || false,
+          windowDays: rules.window_days
+        };
+      }
+      
+      res.json({
+        plan,
+        planName: PLAN_NAMES[plan],
+        capabilities
+      });
+    } catch (error) {
+      console.error("Get capabilities error:", error);
+      res.status(500).json({ error: "Failed to get capabilities" });
+    }
+  });
+
+  // Check if user can perform a specific capability
+  app.get("/api/capabilities/:capability/check", isAuthenticated, async (req, res) => {
+    try {
+      const capability = req.params.capability as Capability;
+      const user = await storage.getUser((req as any).userId);
+      const plan = (user?.plan as Plan) || 'free';
+      
+      const usage = await storage.getCapabilityUsage((req as any).userId, capability);
+      const usageCount = usage?.usageCount || 0;
+      
+      const result = canPerform(plan, capability, usageCount);
+      
+      res.json({
+        capability,
+        ...result,
+        current: usageCount,
+        plan,
+        planName: PLAN_NAMES[plan]
+      });
+    } catch (error) {
+      console.error("Check capability error:", error);
+      res.status(500).json({ error: "Failed to check capability" });
+    }
+  });
+
+  // Get user's usage for all capabilities
+  app.get("/api/capabilities/usage", isAuthenticated, async (req, res) => {
+    try {
+      const allUsage = await storage.getAllCapabilityUsage((req as any).userId);
+      res.json(allUsage);
+    } catch (error) {
+      console.error("Get usage error:", error);
+      res.status(500).json({ error: "Failed to get usage" });
+    }
+  });
+
+  // Increment usage for a capability (called after successful action)
+  app.post("/api/capabilities/:capability/increment", isAuthenticated, async (req, res) => {
+    try {
+      const capability = req.params.capability as Capability;
+      const user = await storage.getUser((req as any).userId);
+      const plan = (user?.plan as Plan) || 'free';
+      
+      // Check if action is allowed before incrementing
+      const currentUsage = await storage.getCapabilityUsage((req as any).userId, capability);
+      const usageCount = currentUsage?.usageCount || 0;
+      
+      const checkResult = canPerform(plan, capability, usageCount);
+      
+      if (!checkResult.allowed) {
+        return res.status(403).json({
+          error: "Capability limit reached",
+          reason: checkResult.reason,
+          limitReached: checkResult.limitReached,
+          upgradeRequired: checkResult.upgradeRequired
+        });
+      }
+      
+      const updated = await storage.incrementCapabilityUsage((req as any).userId, capability);
+      
+      // Re-check after increment for new status
+      const newResult = canPerform(plan, capability, updated.usageCount);
+      
+      res.json({
+        capability,
+        usageCount: updated.usageCount,
+        ...newResult
+      });
+    } catch (error) {
+      console.error("Increment usage error:", error);
+      res.status(500).json({ error: "Failed to increment usage" });
+    }
+  });
+
+  // Reset usage for a capability (for admin or window resets)
+  app.post("/api/capabilities/:capability/reset", isAuthenticated, async (req, res) => {
+    try {
+      const capability = req.params.capability;
+      await storage.resetCapabilityUsage((req as any).userId, capability);
+      res.json({ success: true, capability });
+    } catch (error) {
+      console.error("Reset usage error:", error);
+      res.status(500).json({ error: "Failed to reset usage" });
+    }
+  });
+
+  // Get plan comparison for upgrade prompts
+  app.get("/api/plans/compare", async (req, res) => {
+    try {
+      res.json({
+        plans: PLAN_ORDER,
+        planNames: PLAN_NAMES,
+        capabilityRules: CAPABILITY_RULES,
+        capabilityNames: CAPABILITY_DISPLAY_NAMES
+      });
+    } catch (error) {
+      console.error("Get plans error:", error);
+      res.status(500).json({ error: "Failed to get plans" });
+    }
+  });
+
   // ==================== QUICKBOOK ENDPOINTS ====================
   // Feature-flagged "Paste message → booked" flow
   
