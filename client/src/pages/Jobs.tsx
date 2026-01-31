@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useState, useEffect } from "react";
-import type { Job, AiNudge } from "@shared/schema";
+import type { Job, AiNudge, Invoice } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { NudgeChips } from "@/components/nudges/NudgeChip";
@@ -37,6 +37,9 @@ import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { JobResolutionModal } from "@/components/jobs/JobResolutionModal";
 import { JobsCalendar } from "@/components/calendar/JobsCalendar";
 import { BookingLinkSecondary } from "@/components/booking-link";
+import { SwipeableCard, type SwipeAction as SwipeCardAction } from "@/components/ui/swipeable-card";
+import { ActionConfirmDialog } from "@/components/ui/action-confirm-dialog";
+import { getJobActionEligibility, getSwipeActions, type SwipeAction as RulesSwipeAction } from "@shared/archive-delete-rules";
 
 function formatTime(time: string): string {
   const [hours, minutes] = time.split(':');
@@ -101,16 +104,29 @@ const filters = [
   { value: "completed", label: "Done" },
 ];
 
-function JobCard({ job, nudges, onNudgeClick }: { job: Job; nudges: AiNudge[]; onNudgeClick?: (nudge: AiNudge) => void }) {
+interface JobCardProps {
+  job: Job;
+  nudges: AiNudge[];
+  invoices: Invoice[];
+  onNudgeClick?: (nudge: AiNudge) => void;
+}
+
+function JobCard({ job, nudges, invoices, onNudgeClick }: JobCardProps) {
   const config = statusConfig[job.status] || statusConfig.scheduled;
   const StatusIcon = config.icon;
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [showResolutionModal, setShowResolutionModal] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<RulesSwipeAction | null>(null);
+  const isMobile = useIsMobile();
   
   const jobNudges = nudges.filter(n => n.entityType === "job" && n.entityId === job.id);
   const priority = inferJobPriority({ status: job.status, date: job.scheduledDate, time: job.scheduledTime });
+  
+  const hasInvoice = invoices.some(inv => inv.jobId === job.id);
+  const eligibility = getJobActionEligibility(job, hasInvoice);
+  const swipeActions = getSwipeActions("job", eligibility);
 
   const startJobMutation = useMutation({
     mutationFn: async () => {
@@ -124,6 +140,83 @@ function JobCard({ job, nudges, onNudgeClick }: { job: Job; nudges: AiNudge[]; o
       toast({ title: "Failed to start job", variant: "destructive" });
     },
   });
+
+  const cancelJobMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("PATCH", `/api/jobs/${job.id}`, { status: "cancelled" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({ title: "Job cancelled" });
+      setConfirmAction(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to cancel job", variant: "destructive" });
+      setConfirmAction(null);
+    },
+  });
+
+  const archiveJobMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", `/api/jobs/${job.id}/archive`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({ title: "Job archived" });
+      setConfirmAction(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to archive job", variant: "destructive" });
+      setConfirmAction(null);
+    },
+  });
+
+  const deleteJobMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("DELETE", `/api/jobs/${job.id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({ title: "Job deleted" });
+      setConfirmAction(null);
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Cannot delete job", 
+        description: error?.message || "Try archiving instead.",
+        variant: "destructive" 
+      });
+      setConfirmAction(null);
+    },
+  });
+
+  const handleSwipeAction = (action: RulesSwipeAction) => {
+    if (action.requiresConfirmation) {
+      setConfirmAction(action);
+    } else {
+      executeAction(action.id);
+    }
+  };
+
+  const executeAction = (actionId: string) => {
+    if (actionId === "cancel") {
+      cancelJobMutation.mutate();
+    } else if (actionId === "archive") {
+      archiveJobMutation.mutate();
+    } else if (actionId === "delete") {
+      deleteJobMutation.mutate();
+    }
+  };
+
+  const swipeCardActions: SwipeCardAction[] = swipeActions.map(action => ({
+    id: action.id,
+    label: action.label,
+    icon: action.icon as "Archive" | "Trash2" | "X",
+    variant: action.variant,
+    onClick: () => handleSwipeAction(action),
+  }));
+
+  const isPending = cancelJobMutation.isPending || archiveJobMutation.isPending || deleteJobMutation.isPending;
 
   const handleNavigate = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -155,148 +248,175 @@ function JobCard({ job, nudges, onNudgeClick }: { job: Job; nudges: AiNudge[]; o
     navigate(`/invoices/new?jobId=${job.id}`);
   };
   
-  return (
-    <>
-    <Link href={`/jobs/${job.id}`} data-testid={`link-job-${job.id}`}>
-      <Card className="border-0 shadow-sm hover-elevate cursor-pointer overflow-hidden" data-testid={`job-card-${job.id}`}>
-        <CardContent className="p-0">
-          <div className="flex">
-            <div className={`w-1 ${job.status === "in_progress" ? "bg-amber-500" : job.status === "completed" ? "bg-emerald-500" : "bg-primary"}`} />
-            <div className="flex-1 p-3">
-              <div className="flex items-start gap-3">
-                <div className={`h-12 w-12 rounded-xl ${config.bg} flex items-center justify-center flex-shrink-0`}>
-                  <Briefcase className={`h-5 w-5 ${config.color}`} />
+  const cardContent = (
+    <Card className="border-0 shadow-sm hover-elevate cursor-pointer overflow-hidden" data-testid={`job-card-${job.id}`}>
+      <CardContent className="p-0">
+        <div className="flex">
+          <div className={`w-1 ${job.status === "in_progress" ? "bg-amber-500" : job.status === "completed" ? "bg-emerald-500" : "bg-primary"}`} />
+          <div className="flex-1 p-3">
+            <div className="flex items-start gap-3">
+              <div className={`h-12 w-12 rounded-xl ${config.bg} flex items-center justify-center flex-shrink-0`}>
+                <Briefcase className={`h-5 w-5 ${config.color}`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <h3 className="font-semibold text-foreground truncate">{job.title}</h3>
+                    {priority && <PriorityBadge priority={priority} compact />}
+                  </div>
+                  <Badge 
+                    variant="secondary" 
+                    className={`text-[10px] px-2 py-0.5 flex-shrink-0 ${config.bg} ${config.color} border-0`}
+                  >
+                    <StatusIcon className="h-3 w-3 mr-1" />
+                    {statusLabels[job.status]}
+                  </Badge>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <h3 className="font-semibold text-foreground truncate">{job.title}</h3>
-                      {priority && <PriorityBadge priority={priority} compact />}
-                    </div>
+                {job.clientName && (
+                  <p className="text-sm text-muted-foreground mb-1">{job.clientName}</p>
+                )}
+                <p className="text-xs text-muted-foreground/70 mb-2 capitalize">{job.serviceType}</p>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {formatDate(job.scheduledDate)} at {formatTime(job.scheduledTime)}
+                  </span>
+                  {job.price && (
+                    <span className="flex items-center gap-1 font-semibold text-emerald-600">
+                      <DollarSign className="h-3 w-3" />
+                      {(job.price / 100).toFixed(0)}
+                    </span>
+                  )}
+                  {hasDepositRequest(job) && job.status !== "completed" && job.status !== "cancelled" && (
                     <Badge 
                       variant="secondary" 
-                      className={`text-[10px] px-2 py-0.5 flex-shrink-0 ${config.bg} ${config.color} border-0`}
+                      className="text-[10px] px-2 py-0.5 border-0 bg-teal-500/10 text-teal-600"
+                      data-testid={`badge-deposit-${job.id}`}
                     >
-                      <StatusIcon className="h-3 w-3 mr-1" />
-                      {statusLabels[job.status]}
+                      <Shield className="h-3 w-3 mr-1" />
+                      Deposit
                     </Badge>
-                  </div>
-                  {job.clientName && (
-                    <p className="text-sm text-muted-foreground mb-1">{job.clientName}</p>
                   )}
-                  <p className="text-xs text-muted-foreground/70 mb-2 capitalize">{job.serviceType}</p>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {formatDate(job.scheduledDate)} at {formatTime(job.scheduledTime)}
-                    </span>
-                    {job.price && (
-                      <span className="flex items-center gap-1 font-semibold text-emerald-600">
-                        <DollarSign className="h-3 w-3" />
-                        {(job.price / 100).toFixed(0)}
-                      </span>
-                    )}
-                    {hasDepositRequest(job) && job.status !== "completed" && job.status !== "cancelled" && (
-                      <Badge 
-                        variant="secondary" 
-                        className="text-[10px] px-2 py-0.5 border-0 bg-teal-500/10 text-teal-600"
-                        data-testid={`badge-deposit-${job.id}`}
-                      >
-                        <Shield className="h-3 w-3 mr-1" />
-                        Deposit
-                      </Badge>
-                    )}
-                    {job.status === "completed" && (
-                      <Badge 
-                        variant="secondary" 
-                        className={`text-[10px] px-2 py-0.5 border-0 ${
-                          job.paymentStatus === "paid" 
-                            ? "bg-emerald-500/10 text-emerald-600" 
-                            : "bg-amber-500/10 text-amber-600"
-                        }`}
-                        data-testid={`badge-payment-${job.id}`}
-                      >
-                        {job.paymentStatus === "paid" ? (
-                          <>
-                            <CircleDollarSign className="h-3 w-3 mr-1" />
-                            Paid
-                          </>
-                        ) : (
-                          <>
-                            <XCircle className="h-3 w-3 mr-1" />
-                            Unpaid
-                          </>
-                        )}
-                      </Badge>
-                    )}
-                  </div>
-                  {job.location && (
-                    <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
-                      <MapPin className="h-3 w-3" />
-                      <span className="truncate">{job.location}</span>
-                    </div>
-                  )}
-
-                  {jobNudges.length > 0 && (
-                    <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-                      <NudgeChips nudges={jobNudges} onNudgeClick={onNudgeClick} />
-                    </div>
-                  )}
-                  
-                  {(job.status === "scheduled" || job.status === "in_progress") && (
-                    <div className="flex items-center gap-2 mt-3 flex-wrap" onClick={(e) => e.stopPropagation()}>
-                      {job.status === "scheduled" && (
-                        <Button
-                          size="sm"
-                          onClick={handleStartJob}
-                          disabled={startJobMutation.isPending}
-                          data-testid={`button-start-job-${job.id}`}
-                        >
-                          {startJobMutation.isPending ? (
-                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          ) : (
-                            <Play className="h-3 w-3 mr-1" />
-                          )}
-                          Start
-                        </Button>
+                  {job.status === "completed" && (
+                    <Badge 
+                      variant="secondary" 
+                      className={`text-[10px] px-2 py-0.5 border-0 ${
+                        job.paymentStatus === "paid" 
+                          ? "bg-emerald-500/10 text-emerald-600" 
+                          : "bg-amber-500/10 text-amber-600"
+                      }`}
+                      data-testid={`badge-payment-${job.id}`}
+                    >
+                      {job.paymentStatus === "paid" ? (
+                        <>
+                          <CircleDollarSign className="h-3 w-3 mr-1" />
+                          Paid
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Unpaid
+                        </>
                       )}
-                      {job.status === "in_progress" && (
-                        <Button
-                          size="sm"
-                          onClick={handleCompleteJob}
-                          data-testid={`button-complete-job-${job.id}`}
-                        >
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Complete
-                        </Button>
-                      )}
-                      {job.location && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={handleNavigate}
-                          data-testid={`button-navigate-${job.id}`}
-                        >
-                          <Navigation className="h-3 w-3 mr-1" />
-                          Navigate
-                        </Button>
-                      )}
-                    </div>
+                    </Badge>
                   )}
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground/50 flex-shrink-0 mt-2" />
+                {job.location && (
+                  <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                    <MapPin className="h-3 w-3" />
+                    <span className="truncate">{job.location}</span>
+                  </div>
+                )}
+
+                {jobNudges.length > 0 && (
+                  <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                    <NudgeChips nudges={jobNudges} onNudgeClick={onNudgeClick} />
+                  </div>
+                )}
+                
+                {(job.status === "scheduled" || job.status === "in_progress") && (
+                  <div className="flex items-center gap-2 mt-3 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                    {job.status === "scheduled" && (
+                      <Button
+                        size="sm"
+                        onClick={handleStartJob}
+                        disabled={startJobMutation.isPending}
+                        data-testid={`button-start-job-${job.id}`}
+                      >
+                        {startJobMutation.isPending ? (
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        ) : (
+                          <Play className="h-3 w-3 mr-1" />
+                        )}
+                        Start
+                      </Button>
+                    )}
+                    {job.status === "in_progress" && (
+                      <Button
+                        size="sm"
+                        onClick={handleCompleteJob}
+                        data-testid={`button-complete-job-${job.id}`}
+                      >
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Complete
+                      </Button>
+                    )}
+                    {job.location && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleNavigate}
+                        data-testid={`button-navigate-${job.id}`}
+                      >
+                        <Navigation className="h-3 w-3 mr-1" />
+                        Navigate
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground/50 flex-shrink-0 mt-2" />
             </div>
           </div>
-        </CardContent>
-      </Card>
-    </Link>
+        </div>
+      </CardContent>
+    </Card>
+  );
+  
+  return (
+    <>
+    {isMobile && swipeCardActions.length > 0 ? (
+      <SwipeableCard 
+        actions={swipeCardActions} 
+        disabled={isPending}
+        data-testid={`swipeable-job-${job.id}`}
+      >
+        <Link href={`/jobs/${job.id}`} data-testid={`link-job-${job.id}`}>
+          {cardContent}
+        </Link>
+      </SwipeableCard>
+    ) : (
+      <Link href={`/jobs/${job.id}`} data-testid={`link-job-${job.id}`}>
+        {cardContent}
+      </Link>
+    )}
     
     <JobResolutionModal
       open={showResolutionModal}
       job={job}
       onResolved={handleResolved}
       onOpenInvoiceCreate={handleOpenInvoiceCreate}
+    />
+    
+    <ActionConfirmDialog
+      open={confirmAction !== null}
+      onOpenChange={(open) => !open && setConfirmAction(null)}
+      title={confirmAction?.confirmTitle || "Confirm Action"}
+      description={confirmAction?.confirmDescription || "Are you sure?"}
+      confirmLabel={confirmAction?.label || "Confirm"}
+      variant={confirmAction?.variant === "destructive" ? "destructive" : "default"}
+      isPending={isPending}
+      onConfirm={() => confirmAction && executeAction(confirmAction.id)}
     />
     </>
   );
@@ -346,6 +466,10 @@ export default function Jobs() {
 
   const { data: nudges = [] } = useQuery<AiNudge[]>({
     queryKey: ["/api/ai/nudges"],
+  });
+
+  const { data: invoices = [] } = useQuery<Invoice[]>({
+    queryKey: ["/api/invoices"],
   });
 
   const { data: profile } = useQuery<{ services: string[] | null; servicesCount: number; bookingLink: string | null }>({
@@ -502,7 +626,7 @@ export default function Jobs() {
         ) : (
           <div className="space-y-3">
             {filteredJobs.map((job) => (
-              <JobCard key={job.id} job={job} nudges={nudges} onNudgeClick={handleNudgeClick} />
+              <JobCard key={job.id} job={job} nudges={nudges} invoices={invoices} onNudgeClick={handleNudgeClick} />
             ))}
           </div>
         )}
@@ -666,7 +790,7 @@ export default function Jobs() {
                 </h2>
                 <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
                   {upcomingJobs.map((job) => (
-                    <JobCard key={job.id} job={job} nudges={nudges} onNudgeClick={handleNudgeClick} />
+                    <JobCard key={job.id} job={job} nudges={nudges} invoices={invoices} onNudgeClick={handleNudgeClick} />
                   ))}
                 </div>
               </div>
@@ -680,7 +804,7 @@ export default function Jobs() {
                 </h2>
                 <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
                   {pastJobs.map((job) => (
-                    <JobCard key={job.id} job={job} nudges={nudges} onNudgeClick={handleNudgeClick} />
+                    <JobCard key={job.id} job={job} nudges={nudges} invoices={invoices} onNudgeClick={handleNudgeClick} />
                   ))}
                 </div>
               </div>
