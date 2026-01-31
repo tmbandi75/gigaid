@@ -15,10 +15,9 @@ interface CoachingRendererProps {
 }
 
 interface DashboardSummary {
-  leads: number;
-  jobs: number;
-  invoices: number;
-  revenue: number;
+  totalLeads: number;
+  totalJobs: number;
+  totalEarnings: number;
 }
 
 interface Profile {
@@ -60,12 +59,12 @@ export function CoachingRenderer({ screen, placement = 'header' }: CoachingRende
   const appState: AppState = {
     services: { count: profile?.services?.length ?? 0 },
     jobs: { 
-      count: dashboard?.jobs ?? 0,
+      count: dashboard?.totalJobs ?? 0,
       completedCount: jobs?.filter(j => j.status === 'completed').length ?? 0
     },
-    leads: { count: dashboard?.leads ?? 0 },
+    leads: { count: dashboard?.totalLeads ?? 0 },
     invoices: { 
-      count: dashboard?.invoices ?? 0,
+      count: invoices?.length ?? 0,
       sentCount: invoices?.filter(i => i.status === 'sent' || i.status === 'paid').length ?? 0
     },
     messages: { count: 0 },
