@@ -1,0 +1,212 @@
+GLOBAL FORM STATE CONSISTENCY AUDIT
+Objective
+
+Audit all form submissions and edit flows in the GigAid application to identify and fix cases where:
+
+Backend updates succeed
+
+UI does not reflect changes immediately
+
+Changes appear only on a second attempt or refresh
+
+This must be done systematically, not manually.
+
+Scope
+
+Audit all components that:
+
+Submit forms (create or update)
+
+Edit existing records
+
+Call POST / PUT / PATCH APIs
+
+Mutate server state
+
+Examples:
+
+Settings forms
+
+Booking configuration
+
+Availability
+
+Services
+
+Automations
+
+Profile edits
+
+Payment settings
+
+Any modal-based edit flow
+
+STEP 1 — Identify All Mutation Points
+
+Search the codebase for:
+
+fetch( with POST, PUT, or PATCH
+
+axios.post / put / patch
+
+onSubmit
+
+handleSubmit
+
+save*
+
+update*
+
+mutate*
+
+For each mutation, record:
+
+File
+
+Function
+
+API endpoint
+
+Data being updated
+
+STEP 2 — For Each Mutation, Verify UI Rehydration
+
+After a successful mutation, at least one of the following MUST happen:
+
+✅ Refetch updated data
+✅ Update local state with returned payload
+✅ Invalidate cache / query
+✅ Optimistically update UI
+✅ Navigate away and reload source data
+
+Flag any mutation where none of the above occurs.
+
+STEP 3 — Detect the Common Bug Pattern
+
+Specifically flag cases where:
+
+Form submits successfully
+
+API responds 200/201
+
+UI uses stale props or stale state
+
+Component relies on:
+
+initial props
+
+useEffect([])
+
+cached selector
+
+context not updated
+
+These are high-probability failures.
+
+STEP 4 — Apply the Correct Fix Pattern (Choose the Safest)
+
+For each flagged case, apply one of the following (preferred order):
+
+Option A — Update Local State from API Response (BEST)
+const updated = await saveChanges(payload)
+setState(updated)
+
+Option B — Refetch Source of Truth After Submit
+await saveChanges(payload)
+await refetch()
+
+Option C — Cache Invalidation (if using React Query / SWR)
+queryClient.invalidateQueries(['key'])
+
+
+or
+
+mutate()
+
+Option D — Controlled Form Reset
+
+Ensure:
+
+form state resets to updated values
+
+not initial defaults
+
+reset(updatedValues)
+
+STEP 5 — Eliminate Shadow State (Critical)
+
+If both of these exist in a component:
+
+local state copy (useState)
+
+server-backed data source
+
+👉 Remove or synchronize the local copy.
+
+This is the #1 cause of “works on second try”.
+
+STEP 6 — Validation Pass
+
+For each fixed form:
+
+Submit once
+
+Verify UI updates immediately
+
+No refresh required
+
+No second submit required
+
+Non-Negotiable Constraints
+
+❌ Do NOT change API contracts
+❌ Do NOT introduce global state unless necessary
+❌ Do NOT add arbitrary delays or timeouts
+❌ Do NOT require page refreshes
+
+✅ Prefer deterministic state updates
+✅ Treat backend as source of truth
+
+Deliverables
+
+Return:
+
+List of affected forms
+
+Root cause per form
+
+Fix applied per form
+
+Confirmation that first submit reflects UI change
+
+Final Instruction
+
+This audit should result in:
+
+“First submit always reflects the change.”
+
+No exceptions.
+
+Proceed methodically.
+
+🧠 Why this prompt works (important)
+
+This bug is almost never “one place” — it’s a pattern leak.
+
+This prompt:
+
+forces a global audit
+
+catches silent failures
+
+fixes the cause, not the symptom
+
+prevents future regressions
+
+🚀 After This (Optional, but smart)
+
+Once fixed, I strongly recommend adding:
+
+a small useAfterMutation() helper
+
+or a standard save → update → re-render pattern
