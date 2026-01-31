@@ -1,0 +1,126 @@
+REPLIT MASTER PROMPT — STRIPE ISOLATION STUB (UNBLOCK UI)
+Objective
+
+Temporarily isolate Stripe frontend integration to stop the React app from crashing, restore the UI, and allow safe, incremental re-integration later.
+
+This is a frontend-only safety reset.
+
+Non-Negotiable Rules
+
+❌ Do NOT remove Stripe backend routes
+❌ Do NOT delete Stripe configuration
+❌ Do NOT refactor billing logic
+❌ Do NOT change pricing, plans, or entitlements
+
+✅ Replace Stripe frontend helper with a safe stub
+✅ Preserve all imports and call sites
+✅ Ensure app always renders, even if Stripe is broken
+
+Root Cause (Confirmed)
+
+The app crashes because a component imports:
+
+startStripeCheckout
+
+
+…but the resolved module does not export it at runtime.
+
+This is a fatal ES module error that prevents React from mounting.
+
+REQUIRED ACTIONS (DO EXACTLY THESE)
+1️⃣ Open the EXACT file being imported
+
+Open only this file:
+
+src/lib/stripeCheckout.ts
+
+
+⚠️ If more than one file exists with this name, this is the one resolved by:
+
+import { startStripeCheckout } from '@/lib/stripeCheckout'
+
+2️⃣ Replace the ENTIRE file contents with this stub
+
+Paste verbatim:
+
+/**
+ * TEMPORARY STRIPE STUB
+ * --------------------
+ * This prevents the app from crashing while Stripe
+ * is reintroduced incrementally.
+ *
+ * DO NOT remove this file.
+ * DO NOT rename the export.
+ */
+
+export async function startStripeCheckout(_: any) {
+  console.warn('[Stripe Stub] startStripeCheckout called')
+
+  alert(
+    'Stripe checkout is temporarily disabled while setup is finalized.'
+  )
+
+  return
+}
+
+
+✔ Named export exists
+✔ Matches import exactly
+✔ Cannot crash React
+✔ Preserves call sites
+
+3️⃣ DO NOT touch any imports
+
+Do not change:
+
+import { startStripeCheckout } from '@/lib/stripeCheckout'
+
+
+The goal is contract stability.
+
+4️⃣ Restart Replit Completely (Required)
+
+Because the module graph was broken:
+
+Stop the dev server
+
+Save all files
+
+Restart the Repl / Preview
+
+Do NOT rely on hot reload.
+
+Validation Checklist (Must All Pass)
+
+ App loads (no white screen)
+
+ No startStripeCheckout export errors
+
+ Clicking Upgrade shows alert instead of crashing
+
+ Settings, routing, auth all render
+
+ Stripe backend remains untouched
+
+What This Achieves
+
+✅ UI unblocked
+✅ React mounts reliably
+✅ Stripe cannot crash the app
+✅ You can reintroduce Stripe safely, step by step
+
+This is exactly how experienced teams recover from broken payment integrations.
+
+After This (Next Steps — Optional)
+
+Once the app renders again, we can:
+
+Replace alert with fetch → /api/stripe/checkout
+
+Validate response shape
+
+Redirect only if url exists
+
+Add portal / webhooks later
+
+Stripe should never again be allowed to hard-crash the UI.

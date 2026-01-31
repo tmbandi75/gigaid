@@ -1,35 +1,21 @@
-import { apiRequest } from "./queryClient";
-import { STRIPE_ENABLED } from "@shared/stripeConfig";
+/**
+ * TEMPORARY STRIPE STUB
+ * --------------------
+ * This prevents the app from crashing while Stripe
+ * is reintroduced incrementally.
+ *
+ * DO NOT remove this file.
+ * DO NOT rename the export.
+ */
 
 export type SubscriptionPlan = "pro" | "pro_plus" | "business";
 
-export async function startStripeCheckout({
-  plan,
-  returnTo
-}: {
-  plan: SubscriptionPlan;
-  returnTo: string;
-}): Promise<void> {
-  if (!STRIPE_ENABLED) {
-    console.warn("[Stripe] Checkout disabled - STRIPE_ENABLED is false");
-    return;
-  }
+export async function startStripeCheckout(_: any) {
+  console.warn('[Stripe Stub] startStripeCheckout called')
 
-  try {
-    const response = await apiRequest("POST", "/api/subscription/checkout", {
-      plan,
-      returnTo
-    });
-    
-    const data = await response.json();
-    
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      console.error("[Stripe] No checkout URL returned");
-    }
-  } catch (error) {
-    console.error("[Stripe] Checkout error:", error);
-    throw error;
-  }
+  alert(
+    'Stripe checkout is temporarily disabled while setup is finalized.'
+  )
+
+  return
 }
