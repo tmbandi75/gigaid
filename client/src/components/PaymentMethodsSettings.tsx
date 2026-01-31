@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -18,6 +18,7 @@ import {
   Save,
   ChevronDown,
   ChevronUp,
+  Pencil,
 } from "lucide-react";
 import { SiVenmo, SiCashapp } from "react-icons/si";
 
@@ -26,6 +27,7 @@ type PaymentMethodType = "zelle" | "venmo" | "cashapp" | "cash" | "check" | "str
 interface PaymentMethodConfig {
   type: PaymentMethodType;
   label: string;
+  shortLabel: string;
   icon: React.ReactNode;
   hasInstructions: boolean;
   description: string;
@@ -35,42 +37,48 @@ const PAYMENT_METHODS: PaymentMethodConfig[] = [
   {
     type: "zelle",
     label: "Zelle",
-    icon: <Smartphone className="h-5 w-5" />,
+    shortLabel: "Zelle",
+    icon: <Smartphone className="h-4 w-4" />,
     hasInstructions: true,
     description: "Accept payments via Zelle transfer",
   },
   {
     type: "venmo",
     label: "Venmo",
-    icon: <SiVenmo className="h-5 w-5" />,
+    shortLabel: "Venmo",
+    icon: <SiVenmo className="h-4 w-4" />,
     hasInstructions: true,
     description: "Accept payments via Venmo",
   },
   {
     type: "cashapp",
     label: "Cash App",
-    icon: <SiCashapp className="h-5 w-5" />,
+    shortLabel: "CashApp",
+    icon: <SiCashapp className="h-4 w-4" />,
     hasInstructions: true,
     description: "Accept payments via Cash App",
   },
   {
     type: "cash",
     label: "Cash",
-    icon: <Banknote className="h-5 w-5" />,
+    shortLabel: "Cash",
+    icon: <Banknote className="h-4 w-4" />,
     hasInstructions: false,
     description: "Accept cash payments in person",
   },
   {
     type: "check",
     label: "Check",
-    icon: <FileText className="h-5 w-5" />,
+    shortLabel: "Check",
+    icon: <FileText className="h-4 w-4" />,
     hasInstructions: true,
     description: "Accept check payments",
   },
   {
     type: "stripe",
     label: "Card (Stripe)",
-    icon: <CreditCard className="h-5 w-5" />,
+    shortLabel: "Card",
+    icon: <CreditCard className="h-4 w-4" />,
     hasInstructions: false,
     description: "Accept card payments via Stripe",
   },
@@ -99,7 +107,8 @@ interface PaymentMethodsSettingsProps {
 
 export function PaymentMethodsSettings({ onStripeToggle }: PaymentMethodsSettingsProps = {}) {
   const { toast } = useToast();
-  const [expandedMethod, setExpandedMethod] = useState<PaymentMethodType | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethodType | null>(null);
   const [methodStates, setMethodStates] = useState<Record<PaymentMethodType, MethodState>>(() => {
     const initial: Record<string, MethodState> = {};
     PAYMENT_METHODS.forEach((m) => {
@@ -178,139 +187,187 @@ export function PaymentMethodsSettings({ onStripeToggle }: PaymentMethodsSetting
     const newEnabled = !current;
     updateMethodState(type, { isEnabled: newEnabled });
     
-    // Notify parent when Stripe toggle changes
     if (type === "stripe" && onStripeToggle) {
       onStripeToggle(newEnabled);
     }
   };
 
-  const toggleExpand = (type: PaymentMethodType) => {
-    setExpandedMethod((prev) => (prev === type ? null : type));
+  const enabledMethods = PAYMENT_METHODS.filter(m => methodStates[m.type].isEnabled);
+
+  const getSummary = () => {
+    if (enabledMethods.length === 0) return "No payment methods enabled";
+    return `Accepting: ${enabledMethods.map(m => m.shortLabel).join(", ")}`;
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <Card className="border-0 shadow-lg">
-      <CardHeader className="pb-4">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
-            <DollarSign className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <CardTitle className="text-lg">Payment Methods</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Configure how clients can pay you
-            </p>
+    <Card className="border-0 shadow-md" data-testid="card-payment-methods">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shrink-0">
+              <DollarSign className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-base">Payment Methods</CardTitle>
+              <CardDescription className="text-xs">How clients can pay you</CardDescription>
+            </div>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {PAYMENT_METHODS.map((method) => {
-          const state = methodStates[method.type];
-          const isExpanded = expandedMethod === method.type;
+      <CardContent className="space-y-4 pt-0">
+        {/* Payment Method Toggle Buttons */}
+        <div className="space-y-2">
+          <Label className="text-sm">Accept payments via</Label>
+          <div className="flex flex-wrap gap-1.5" data-testid="payment-methods-pills">
+            {PAYMENT_METHODS.map((method) => {
+              const state = methodStates[method.type];
+              return (
+                <Button
+                  key={method.type}
+                  type="button"
+                  variant={state.isEnabled ? "default" : "outline"}
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={() => toggleMethod(method.type)}
+                  data-testid={`button-toggle-${method.type}`}
+                  aria-pressed={state.isEnabled}
+                >
+                  {method.icon}
+                  {method.shortLabel}
+                </Button>
+              );
+            })}
+          </div>
+        </div>
 
-          return (
-            <div
-              key={method.type}
-              className={`rounded-xl border transition-all ${
-                state.isEnabled 
-                  ? "border-primary/30 bg-primary/5" 
-                  : "border-border bg-card"
-              }`}
-              data-testid={`payment-method-${method.type}`}
+        {/* Summary & Edit Toggle */}
+        <div className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-muted/30 border">
+          <p className="text-sm text-muted-foreground flex-1 min-w-0 truncate">
+            {getSummary()}
+          </p>
+          {enabledMethods.length > 0 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const newShowDetails = !showDetails;
+                setShowDetails(newShowDetails);
+                if (newShowDetails && enabledMethods.length > 0) {
+                  setSelectedMethod(enabledMethods[0].type);
+                } else {
+                  setSelectedMethod(null);
+                }
+              }}
+              className="shrink-0"
+              data-testid="button-toggle-details"
             >
-              <div className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-3">
-                  <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-                    state.isEnabled 
-                      ? "bg-primary/20 text-primary" 
-                      : "bg-muted text-muted-foreground"
-                  }`}>
-                    {method.icon}
-                  </div>
-                  <div>
-                    <div className="font-medium">{method.label}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {method.description}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {method.hasInstructions && state.isEnabled && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => toggleExpand(method.type)}
-                      data-testid={`button-expand-${method.type}`}
-                    >
-                      {isExpanded ? (
-                        <ChevronUp className="h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4" />
-                      )}
-                    </Button>
-                  )}
-                  <Switch
-                    checked={state.isEnabled}
-                    onCheckedChange={() => toggleMethod(method.type)}
-                    data-testid={`switch-${method.type}`}
-                  />
-                </div>
-              </div>
+              <Pencil className="h-3.5 w-3.5 mr-1.5" />
+              {showDetails ? "Done" : "Edit Details"}
+              {showDetails ? <ChevronUp className="h-3.5 w-3.5 ml-1" /> : <ChevronDown className="h-3.5 w-3.5 ml-1" />}
+            </Button>
+          )}
+        </div>
 
-              {method.hasInstructions && state.isEnabled && isExpanded && (
-                <div className="px-4 pb-4 space-y-3 border-t pt-3">
+        {/* Expanded Details Editor */}
+        {showDetails && enabledMethods.length > 0 && (
+          <div className="p-3 rounded-lg border bg-background space-y-3" data-testid="payment-details-editor">
+            {/* Method selector tabs */}
+            <div className="flex flex-wrap gap-1.5">
+              {enabledMethods.map((method) => {
+                const isSelected = selectedMethod === method.type;
+                return (
+                  <Button
+                    key={method.type}
+                    type="button"
+                    variant={isSelected ? "default" : "secondary"}
+                    size="sm"
+                    className="gap-1 text-xs"
+                    onClick={() => setSelectedMethod(method.type)}
+                    data-testid={`button-select-${method.type}`}
+                  >
+                    {method.icon}
+                    {method.shortLabel}
+                  </Button>
+                );
+              })}
+            </div>
+
+            {selectedMethod && (
+              <div className="space-y-3 pt-2 border-t">
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="font-medium flex items-center gap-2">
+                    {PAYMENT_METHODS.find(m => m.type === selectedMethod)?.icon}
+                    {PAYMENT_METHODS.find(m => m.type === selectedMethod)?.label}
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Enabled</span>
+                    <Switch
+                      checked={methodStates[selectedMethod].isEnabled}
+                      onCheckedChange={() => toggleMethod(selectedMethod)}
+                      data-testid={`switch-${selectedMethod}`}
+                    />
+                  </div>
+                </div>
+
+                {/* Instructions - only for methods that need them */}
+                {PAYMENT_METHODS.find(m => m.type === selectedMethod)?.hasInstructions && (
                   <div className="space-y-2">
-                    <Label htmlFor={`${method.type}-instructions`}>
+                    <Label htmlFor={`${selectedMethod}-instructions`} className="text-sm">
                       Payment Instructions
                     </Label>
                     <Textarea
-                      id={`${method.type}-instructions`}
-                      placeholder={getPlaceholder(method.type)}
-                      value={state.instructions}
+                      id={`${selectedMethod}-instructions`}
+                      placeholder={getPlaceholder(selectedMethod)}
+                      value={methodStates[selectedMethod].instructions}
                       onChange={(e) =>
-                        updateMethodState(method.type, {
+                        updateMethodState(selectedMethod, {
                           instructions: e.target.value,
                         })
                       }
                       className="resize-none text-sm"
                       rows={2}
-                      data-testid={`input-instructions-${method.type}`}
+                      data-testid={`input-instructions-${selectedMethod}`}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor={`${method.type}-label`}>
-                      Display Name (optional)
-                    </Label>
-                    <Input
-                      id={`${method.type}-label`}
-                      placeholder={`e.g., "My ${method.label}"`}
-                      value={state.customLabel}
-                      onChange={(e) =>
-                        updateMethodState(method.type, {
-                          customLabel: e.target.value,
-                        })
-                      }
-                      data-testid={`input-label-${method.type}`}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
+                )}
 
+                {/* Display Name - available for ALL methods */}
+                <div className="space-y-2">
+                  <Label htmlFor={`${selectedMethod}-label`} className="text-sm">
+                    Display Name (optional)
+                  </Label>
+                  <Input
+                    id={`${selectedMethod}-label`}
+                    placeholder={`e.g., "My ${PAYMENT_METHODS.find(m => m.type === selectedMethod)?.label}"`}
+                    value={methodStates[selectedMethod].customLabel}
+                    onChange={(e) =>
+                      updateMethodState(selectedMethod, {
+                        customLabel: e.target.value,
+                      })
+                    }
+                    className="h-9"
+                    data-testid={`input-label-${selectedMethod}`}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Save Button */}
         <Button
           onClick={handleSave}
           disabled={bulkUpdateMutation.isPending}
-          className="w-full mt-4"
+          className="w-full"
           data-testid="button-save-payment-methods"
         >
           {bulkUpdateMutation.isPending ? (
