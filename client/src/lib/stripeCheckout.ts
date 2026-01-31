@@ -24,7 +24,12 @@ export async function startStripeCheckout({
     const data = await response.json();
     
     if (data.url) {
-      window.location.href = data.url;
+      // Open in new tab to avoid mobile webview issues
+      const newWindow = window.open(data.url, "_blank");
+      if (!newWindow) {
+        // Fallback if popup blocked
+        window.location.href = data.url;
+      }
     } else {
       console.error("[Stripe] No checkout URL returned");
     }
