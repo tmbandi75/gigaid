@@ -1,0 +1,250 @@
+REPLIT MASTER PROMPT — Capability Enforcement Engine (Plans + Limits)
+Objective
+
+Implement a capability enforcement system for GigAid that:
+
+Preserves one unified product experience
+
+Uses limits, caps, and progressive unlocks instead of hard feature locks (except Business)
+
+Allows Free users to experience every core value loop
+
+Enforces plan differences only at execution time
+
+Does not introduce new screens or redesigns
+
+This system must support:
+
+Free → Pro → Pro+ → Business progression
+
+Soft gates (caps, previews, read-only)
+
+Hard gates (Business-only features)
+
+Future pricing or limit changes without refactors
+
+Non-Negotiable Constraints
+
+❌ Do NOT remove or hide features
+❌ Do NOT fork UI by plan
+❌ Do NOT block navigation
+❌ Do NOT add pricing modals
+
+✅ Enforce limits only when the user attempts an action
+✅ Show inline, human-readable limit messages
+✅ All enforcement must be centralized and declarative
+✅ Business-only features may be hard-blocked
+
+1️⃣ Canonical Plan + Capability Schema
+
+Create a single source of truth.
+
+// /src/capabilities/plans.ts
+
+export type Plan = 'free' | 'pro' | 'pro_plus' | 'business'
+
+export type Capability =
+  | 'jobs.create'
+  | 'invoices.send'
+  | 'leads.manage'
+  | 'clients.manage'
+  | 'booking.link'
+  | 'deposit.enforce'
+  | 'booking.risk_protection'
+  | 'price.confirmation'
+  | 'ai.micro_nudges'
+  | 'ai.money_plan'
+  | 'ai.outcome_attribution'
+  | 'ai.priority_signals'
+  | 'ai.campaign_suggestions'
+  | 'sms.two_way'
+  | 'sms.auto_followups'
+  | 'notifications.event_driven'
+  | 'offline.capture'
+  | 'offline.photos'
+  | 'drive.mode'
+  | 'analytics.basic'
+  | 'analytics.advanced'
+  | 'crew.manage'
+  | 'admin.controls'
+
+2️⃣ Capability Rules (Limits, Not Locks)
+// /src/capabilities/capabilityRules.ts
+
+export const CAPABILITY_RULES = {
+  free: {
+    'jobs.create': { limit: 10 },
+    'deposit.enforce': { limit: 1 },
+    'price.confirmation': { limit: 3 },
+    'ai.money_plan': { mode: 'read_only' },
+    'ai.outcome_attribution': { window_days: 7 },
+    'sms.two_way': { limit: 20, reply_only: true },
+    'sms.auto_followups': { limit: 1 },
+    'notifications.event_driven': { mode: 'suggest_only' },
+    'offline.photos': { limit: 3 },
+    'analytics.basic': { window_days: 7 }
+  },
+
+  pro: {
+    'jobs.create': { unlimited: true },
+    'deposit.enforce': { mode: 'partial' },
+    'booking.risk_protection': { mode: 'partial' },
+    'price.confirmation': { unlimited: true },
+    'sms.two_way': { unlimited: true },
+    'sms.auto_followups': { unlimited: true },
+    'notifications.event_driven': { limit: 10 },
+    'ai.money_plan': { mode: 'active' },
+    'analytics.basic': { unlimited: true }
+  },
+
+  pro_plus: {
+    'deposit.enforce': { unlimited: true },
+    'booking.risk_protection': { unlimited: true },
+    'ai.campaign_suggestions': { unlimited: true },
+    'notifications.event_driven': { unlimited: true },
+    'offline.photos': { unlimited: true }
+  },
+
+  business: {
+    '*': { unlimited: true },
+    'crew.manage': { unlimited: true },
+    'admin.controls': { unlimited: true },
+    'analytics.advanced': { unlimited: true }
+  }
+}
+
+
+Rules inherit upward (Free → Pro → Pro+ → Business).
+
+3️⃣ Capability Resolver (Single Enforcement Gate)
+// /src/capabilities/canPerform.ts
+
+export function canPerform(
+  plan: Plan,
+  capability: Capability,
+  usage: number
+): { allowed: boolean; reason?: string } {
+  const rules = resolveRulesForPlan(plan, capability)
+
+  if (!rules) return { allowed: false, reason: 'Upgrade required' }
+
+  if (rules.unlimited) return { allowed: true }
+
+  if (rules.limit !== undefined && usage >= rules.limit) {
+    return {
+      allowed: false,
+      reason: 'You’ve reached the limit for your plan.'
+    }
+  }
+
+  if (rules.mode === 'read_only') {
+    return {
+      allowed: false,
+      reason: 'Upgrade to take action.'
+    }
+  }
+
+  return { allowed: true }
+}
+
+4️⃣ Enforcement Pattern (Inline, Non-Blocking)
+
+Apply enforcement only when an action is attempted.
+
+Example: Creating a Job
+const result = canPerform(
+  user.plan,
+  'jobs.create',
+  user.usage.jobs_created
+)
+
+if (!result.allowed) {
+  showInlineMessage(result.reason)
+  return
+}
+
+Example: Enabling Deposit Enforcement
+if (!canPerform(user.plan, 'deposit.enforce', user.usage.deposits_used).allowed) {
+  showInlineMessage('Deposit protection is limited on your plan.')
+}
+
+5️⃣ Business-Only Hard Locks
+
+These are not previewable.
+
+if (
+  capability === 'crew.manage' ||
+  capability === 'admin.controls'
+) {
+  if (user.plan !== 'business') {
+    return {
+      allowed: false,
+      reason: 'Available on Business plan only.'
+    }
+  }
+}
+
+6️⃣ Usage Tracking (Minimal)
+// Increment only after successful execution
+incrementUsage(userId, capability)
+
+
+Tracked examples:
+
+jobs_created
+
+deposits_used
+
+sms_sent
+
+followups_active
+
+offline_photos_uploaded
+
+7️⃣ Messaging Rules (Critical)
+
+All limit messages must be:
+
+Human
+
+Neutral
+
+Actionable
+
+Approved patterns
+
+“You’ve reached the limit for your plan.”
+
+“Upgrade to unlock unlimited access.”
+
+“Available with expanded coverage.”
+
+❌ No “paywall” language
+❌ No modal blocking
+❌ No urgency spam
+
+8️⃣ Analytics (Optional but Strongly Recommended)
+track('capability_blocked', {
+  capability,
+  plan: user.plan,
+  usage
+})
+
+
+This becomes your pricing intelligence engine.
+
+Acceptance Criteria
+
+✅ Free users experience every core loop
+✅ Limits enforced only at execution
+✅ Business features hard-locked
+✅ No UI duplication
+✅ Centralized rules engine
+✅ Future plan changes require editing one file
+
+Final Instruction to Replit
+
+Implement exactly as specified.
+Do not refactor unrelated logic.
+Treat this as infrastructure, not UI.
+All feature differences must flow through this engine.
