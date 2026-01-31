@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { COACHING_MESSAGES, Screen, AppState, Placement } from './coachingMessages';
 import { useCoachingState } from './useCoachingState';
+import { Lightbulb } from 'lucide-react';
 
 function trackEvent(eventName: string, properties?: Record<string, unknown>) {
   if (typeof window !== 'undefined' && (window as { posthog?: { capture: (event: string, props?: Record<string, unknown>) => void } }).posthog) {
@@ -33,6 +34,8 @@ interface OnboardingStatus {
 
 export function CoachingRenderer({ screen, placement = 'header' }: CoachingRendererProps) {
   const { hasSeen, markSeen } = useCoachingState();
+  const [displayedMessage, setDisplayedMessage] = useState<string | null>(null);
+  const markedRef = useRef<Set<string>>(new Set());
 
   const { data: dashboard, isLoading: dashboardLoading } = useQuery<DashboardSummary>({
     queryKey: ['/api/dashboard/summary'],
@@ -80,24 +83,38 @@ export function CoachingRenderer({ screen, placement = 'header' }: CoachingRende
   ) : null;
 
   useEffect(() => {
-    if (message) {
-      markSeen(message.id);
-      trackEvent('coaching_message_shown', {
-        id: message.id,
-        screen: message.screen,
-        placement: message.placement
-      });
+    if (message && !markedRef.current.has(message.id)) {
+      setDisplayedMessage(message.id);
+      markedRef.current.add(message.id);
+      
+      const timer = setTimeout(() => {
+        markSeen(message.id);
+        trackEvent('coaching_message_shown', {
+          id: message.id,
+          screen: message.screen,
+          placement: message.placement
+        });
+      }, 500);
+      
+      return () => clearTimeout(timer);
     }
   }, [message?.id, markSeen]);
 
-  if (isLoading || !message) return null;
+  const messageToShow = displayedMessage 
+    ? COACHING_MESSAGES.find(m => m.id === displayedMessage) 
+    : message;
+
+  if (isLoading || !messageToShow) return null;
 
   return (
-    <p 
-      className="text-sm text-muted-foreground leading-relaxed mt-1"
-      data-testid={`coaching-${message.id}`}
+    <div 
+      className="flex items-start gap-2 mt-3 p-3 bg-amber-50 dark:bg-amber-950/30 border-l-2 border-amber-400 rounded-r-md"
+      data-testid={`coaching-${messageToShow.id}`}
     >
-      {message.text}
-    </p>
+      <Lightbulb className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+      <p className="text-sm text-amber-800 dark:text-amber-200 leading-relaxed">
+        {messageToShow.text}
+      </p>
+    </div>
   );
 }
