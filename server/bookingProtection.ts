@@ -93,7 +93,12 @@ export async function assessBookingRisk(
 
   const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   const priceThreshold = user[0]?.noShowProtectionPriceThreshold ?? DEFAULT_PRICE_THRESHOLD_CENTS;
-  const depositPercent = user[0]?.noShowProtectionDepositPercent ?? DEFAULT_DEPOSIT_PERCENT;
+  const defaultDepositPercent = user[0]?.noShowProtectionDepositPercent ?? DEFAULT_DEPOSIT_PERCENT;
+  
+  // Check for client-specific deposit override (null means use default)
+  const depositPercent = (clientRecord?.depositOverridePercent !== null && clientRecord?.depositOverridePercent !== undefined)
+    ? clientRecord.depositOverridePercent
+    : defaultDepositPercent;
 
   const isFirstTimeClient = clientRecord?.isFirstTime ?? true;
   const isShortLeadTime = leadTimeHours < SHORT_LEAD_TIME_HOURS;

@@ -1829,6 +1829,7 @@ export const clients = pgTable("clients", {
   totalBookings: integer("total_bookings").default(0),
   lastBookingAt: text("last_booking_at"),
   optedOutOfNotifications: boolean("opted_out_of_notifications").default(false),
+  depositOverridePercent: integer("deposit_override_percent"), // null = use default, 0-100 = custom percentage
   createdAt: text("created_at").notNull(),
 }, (table) => [
   index("clients_user_idx").on(table.userId),

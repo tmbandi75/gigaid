@@ -4737,6 +4737,7 @@ export async function registerRoutes(
         showReviewsOnBooking,
         publicEstimationEnabled,
         noShowProtectionEnabled,
+        noShowProtectionDepositPercent,
       } = req.body;
       
       // Check if this is the first time enabling public profile (booking link created)
@@ -4755,6 +4756,7 @@ export async function registerRoutes(
         showReviewsOnBooking,
         publicEstimationEnabled,
         noShowProtectionEnabled,
+        noShowProtectionDepositPercent,
       };
       
       // Track first time booking link creation
@@ -4795,6 +4797,114 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to track share" });
+    }
+  });
+
+  // Get client by phone, email, or ID (for deposit override lookup)
+  app.get("/api/client", isAuthenticated, async (req, res) => {
+    try {
+      const { phone, email, id: clientId } = req.query;
+      const userId = (req as any).userId;
+      
+      if (!phone && !email && !clientId) {
+        return res.status(400).json({ error: "Phone, email, or client ID required" });
+      }
+      
+      const { eq, and, or } = await import("drizzle-orm");
+      const { db } = await import("./db");
+      const { clients } = await import("@shared/schema");
+      
+      // If clientId is provided, lookup by ID directly
+      if (clientId) {
+        const clientResults = await db.select()
+          .from(clients)
+          .where(and(
+            eq(clients.id, String(clientId)),
+            eq(clients.userId, userId)
+          ))
+          .limit(1);
+        
+        if (clientResults.length === 0) {
+          return res.json({ client: null });
+        }
+        return res.json({ client: clientResults[0] });
+      }
+      
+      // Build conditions for client lookup by phone/email
+      const clientConditions = [];
+      if (phone) {
+        const normalizedPhone = String(phone).replace(/\D/g, "");
+        if (normalizedPhone.length >= 10) {
+          clientConditions.push(eq(clients.clientPhone, normalizedPhone));
+        }
+      }
+      if (email) {
+        const normalizedEmail = String(email).toLowerCase().trim();
+        if (normalizedEmail.includes("@")) {
+          clientConditions.push(eq(clients.clientEmail, normalizedEmail));
+        }
+      }
+      
+      // Return null if no valid conditions
+      if (clientConditions.length === 0) {
+        return res.json({ client: null });
+      }
+      
+      const clientResults = await db.select()
+        .from(clients)
+        .where(and(
+          eq(clients.userId, userId),
+          or(...clientConditions)
+        ))
+        .limit(1);
+      
+      if (clientResults.length === 0) {
+        return res.json({ client: null });
+      }
+      
+      res.json({ client: clientResults[0] });
+    } catch (error) {
+      console.error("Error fetching client:", error);
+      res.status(500).json({ error: "Failed to fetch client" });
+    }
+  });
+
+  // Update client deposit override
+  app.patch("/api/client/:clientId/deposit", isAuthenticated, async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const { depositOverridePercent } = req.body;
+      const userId = (req as any).userId;
+      
+      // Validate deposit percent
+      if (depositOverridePercent !== null && 
+          (typeof depositOverridePercent !== 'number' || 
+           depositOverridePercent < 0 || 
+           depositOverridePercent > 100)) {
+        return res.status(400).json({ error: "Invalid deposit percentage" });
+      }
+      
+      const { eq, and } = await import("drizzle-orm");
+      const { db } = await import("./db");
+      const { clients } = await import("@shared/schema");
+      
+      // Update client
+      const updated = await db.update(clients)
+        .set({ depositOverridePercent })
+        .where(and(
+          eq(clients.id, clientId),
+          eq(clients.userId, userId)
+        ))
+        .returning();
+      
+      if (updated.length === 0) {
+        return res.status(404).json({ error: "Client not found" });
+      }
+      
+      res.json({ client: updated[0] });
+    } catch (error) {
+      console.error("Error updating client deposit:", error);
+      res.status(500).json({ error: "Failed to update client deposit" });
     }
   });
 

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
@@ -169,6 +170,7 @@ export default function Settings() {
     showReviewsOnBooking: true,
     publicEstimationEnabled: true,
     noShowProtectionEnabled: true,
+    noShowProtectionDepositPercent: 25,
   });
   const [customServiceInput, setCustomServiceInput] = useState("");
   const [showQuickSetup, setShowQuickSetup] = useState(false);
@@ -197,6 +199,7 @@ export default function Settings() {
         showReviewsOnBooking: profile.showReviewsOnBooking !== false,
         publicEstimationEnabled: profile.publicEstimationEnabled !== false,
         noShowProtectionEnabled: profile.noShowProtectionEnabled !== false,
+        noShowProtectionDepositPercent: profile.noShowProtectionDepositPercent ?? 25,
       });
     }
   }, [profile]);
@@ -271,6 +274,7 @@ export default function Settings() {
       showReviewsOnBooking: settings.showReviewsOnBooking,
       publicEstimationEnabled: settings.publicEstimationEnabled,
       noShowProtectionEnabled: settings.noShowProtectionEnabled,
+      noShowProtectionDepositPercent: settings.noShowProtectionDepositPercent,
     };
     updateMutation.mutate(dataToSave);
   };
@@ -531,6 +535,31 @@ export default function Settings() {
                     data-testid="switch-no-show-protection"
                   />
                 </div>
+                
+                {settings.noShowProtectionEnabled && (
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <div>
+                      <p className="font-medium text-sm">Default deposit amount</p>
+                      <p className="text-xs text-muted-foreground">Percentage collected upfront for bookings</p>
+                    </div>
+                    <Select
+                      value={String(settings.noShowProtectionDepositPercent)}
+                      onValueChange={(value) => setSettings({ ...settings, noShowProtectionDepositPercent: Number(value) })}
+                    >
+                      <SelectTrigger className="w-24" data-testid="select-deposit-percent">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">0%</SelectItem>
+                        <SelectItem value="10">10%</SelectItem>
+                        <SelectItem value="25">25%</SelectItem>
+                        <SelectItem value="50">50%</SelectItem>
+                        <SelectItem value="75">75%</SelectItem>
+                        <SelectItem value="100">100%</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>

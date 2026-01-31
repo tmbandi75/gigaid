@@ -32,7 +32,8 @@ import {
   Shield,
   CreditCard,
 } from "lucide-react";
-import type { Job } from "@shared/schema";
+import type { Job, Client } from "@shared/schema";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { JobLocationMap } from "@/components/JobLocationMap";
 import { GetPaidDialog } from "@/components/job/GetPaidDialog";
 import { NextActionBanner } from "@/components/NextActionBanner";
@@ -89,6 +90,7 @@ export default function JobSummary() {
   const [showGetPaid, setShowGetPaid] = useState(false);
   const [showPostJobMomentum, setShowPostJobMomentum] = useState(false);
   const [momentumShown, setMomentumShown] = useState(false);
+  const [depositOverride, setDepositOverride] = useState<string | null>(null);
 
   const { data: job, isLoading } = useQuery<Job>({
     queryKey: ["/api/jobs", id],
@@ -147,6 +149,53 @@ export default function JobSummary() {
     },
     enabled: !!id,
   });
+
+  // Fetch client for deposit override
+  const { data: clientData } = useQuery<{ client: Client | null }>({
+    queryKey: ["/api/client", job?.clientPhone, job?.clientEmail],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (job?.clientPhone) params.append("phone", job.clientPhone);
+      if (job?.clientEmail) params.append("email", job.clientEmail);
+      const res = await fetch(`/api/client?${params.toString()}`);
+      if (!res.ok) return { client: null };
+      return res.json();
+    },
+    enabled: !!(job?.clientPhone || job?.clientEmail),
+  });
+
+  // Initialize deposit override from client data
+  useEffect(() => {
+    if (clientData?.client) {
+      setDepositOverride(
+        clientData.client.depositOverridePercent !== null && clientData.client.depositOverridePercent !== undefined
+          ? String(clientData.client.depositOverridePercent)
+          : "default"
+      );
+    }
+  }, [clientData]);
+
+  const updateClientDepositMutation = useMutation({
+    mutationFn: async (newPercent: number | null) => {
+      if (!clientData?.client?.id) throw new Error("No client found");
+      return apiRequest("PATCH", `/api/client/${clientData.client.id}/deposit`, { 
+        depositOverridePercent: newPercent 
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/client"] });
+      toast({ title: "Client deposit setting saved" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update deposit setting", variant: "destructive" });
+    },
+  });
+
+  const handleDepositOverrideChange = (value: string) => {
+    setDepositOverride(value);
+    const newPercent = value === "default" ? null : Number(value);
+    updateClientDepositMutation.mutate(newPercent);
+  };
 
   const sendDepositRequestMutation = useMutation({
     mutationFn: async () => {
@@ -436,6 +485,35 @@ export default function JobSummary() {
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Email</p>
                   <p className="font-medium" data-testid="text-client-email">{job.clientEmail}</p>
+                </div>
+              )}
+              
+              {clientData?.client && (
+                <div className="pt-3 border-t">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Deposit Requirement</p>
+                      <p className="text-xs text-muted-foreground">Custom deposit for this client</p>
+                    </div>
+                    <Select
+                      value={depositOverride || "default"}
+                      onValueChange={handleDepositOverrideChange}
+                      disabled={updateClientDepositMutation.isPending}
+                    >
+                      <SelectTrigger className="w-28" data-testid="select-client-deposit">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="default">Default</SelectItem>
+                        <SelectItem value="0">No deposit</SelectItem>
+                        <SelectItem value="10">10%</SelectItem>
+                        <SelectItem value="25">25%</SelectItem>
+                        <SelectItem value="50">50%</SelectItem>
+                        <SelectItem value="75">75%</SelectItem>
+                        <SelectItem value="100">100%</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               )}
             </div>
