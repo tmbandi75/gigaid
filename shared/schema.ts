@@ -49,7 +49,7 @@ export const users = pgTable("users", {
   notifyBySms: boolean("notify_by_sms").default(true),
   notifyByEmail: boolean("notify_by_email").default(true),
   lastActiveAt: text("last_active_at"),
-  publicProfileEnabled: boolean("public_profile_enabled").default(false),
+  publicProfileEnabled: boolean("public_profile_enabled").default(true),
   publicProfileSlug: text("public_profile_slug"),
   showReviewsOnBooking: boolean("show_reviews_on_booking").default(true),
   referralCode: text("referral_code"),
