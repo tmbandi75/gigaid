@@ -97,9 +97,10 @@ export function isTokenReady(): boolean {
     // Ignore storage errors
   }
   
-  // Token exists but no UID tracking - not properly initialized
-  // This handles stale tokens from before this fix
-  return false;
+  // Token exists but no UID tracking - allow for backward compatibility
+  // Old tokens from before UID tracking was added should still work
+  // The server will validate the token regardless
+  return true;
 }
 
 // Reset token readiness (called when Firebase user changes)
