@@ -2004,6 +2004,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(stripeWebhookEvents.stripeEventId, stripeEventId));
   }
 
+  async updateStripeWebhookEvent(stripeEventId: string, updates: Partial<StripeWebhookEvent>): Promise<void> {
+    const { id, stripeEventId: _, ...validUpdates } = updates;
+    await db.update(stripeWebhookEvents)
+      .set(validUpdates)
+      .where(eq(stripeWebhookEvents.stripeEventId, stripeEventId));
+  }
+
   async getRetryableStripeWebhookEvents(now: string, limit: number): Promise<StripeWebhookEvent[]> {
     return await db.select().from(stripeWebhookEvents)
       .where(
@@ -2090,6 +2097,20 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .limit(50);
+  }
+
+  async getStripePaymentStates(options: { status?: string; limit?: number; offset?: number }): Promise<StripePaymentState[]> {
+    const { status, limit = 50, offset = 0 } = options;
+    let query = db.select().from(stripePaymentState);
+    
+    if (status) {
+      query = query.where(eq(stripePaymentState.status, status)) as typeof query;
+    }
+    
+    return await query
+      .orderBy(desc(stripePaymentState.lastUpdatedAt))
+      .limit(limit)
+      .offset(offset);
   }
 
   async acquireStripeIdempotencyLock(key: string): Promise<boolean> {

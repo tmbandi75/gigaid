@@ -353,6 +353,7 @@ export interface IStorage {
   // Stripe Webhook Events
   getStripeWebhookEvent(stripeEventId: string): Promise<StripeWebhookEvent | undefined>;
   createStripeWebhookEvent(event: InsertStripeWebhookEvent): Promise<StripeWebhookEvent>;
+  updateStripeWebhookEvent(stripeEventId: string, updates: Partial<StripeWebhookEvent>): Promise<void>;
   incrementStripeWebhookAttempt(stripeEventId: string): Promise<void>;
   markStripeWebhookProcessed(stripeEventId: string): Promise<void>;
   markStripeWebhookFailed(stripeEventId: string, error: string, nextAttemptAt: string | null): Promise<void>;
@@ -364,6 +365,7 @@ export interface IStorage {
   upsertStripePaymentState(state: InsertStripePaymentState): Promise<StripePaymentState>;
   getStuckStripePayments(cutoffTime: string): Promise<StripePaymentState[]>;
   searchStripePayments(search: string): Promise<StripePaymentState[]>;
+  getStripePaymentStates(options: { status?: string; limit?: number; offset?: number }): Promise<StripePaymentState[]>;
 
   // Stripe Idempotency Locks
   acquireStripeIdempotencyLock(key: string): Promise<boolean>;
@@ -2898,6 +2900,7 @@ export class MemStorage implements IStorage {
   async createStripeWebhookEvent(_event: InsertStripeWebhookEvent): Promise<StripeWebhookEvent> {
     throw new Error("MemStorage does not support Stripe webhooks");
   }
+  async updateStripeWebhookEvent(_stripeEventId: string, _updates: Partial<StripeWebhookEvent>): Promise<void> {}
   async incrementStripeWebhookAttempt(_stripeEventId: string): Promise<void> {}
   async markStripeWebhookProcessed(_stripeEventId: string): Promise<void> {}
   async markStripeWebhookFailed(_stripeEventId: string, _error: string, _nextAttemptAt: string | null): Promise<void> {}
@@ -2917,6 +2920,9 @@ export class MemStorage implements IStorage {
     return [];
   }
   async searchStripePayments(_search: string): Promise<StripePaymentState[]> {
+    return [];
+  }
+  async getStripePaymentStates(_options: { status?: string; limit?: number; offset?: number }): Promise<StripePaymentState[]> {
     return [];
   }
   async acquireStripeIdempotencyLock(_key: string): Promise<boolean> {

@@ -43,6 +43,7 @@ import adminSystemHealthRoutes from "./admin/systemHealthRoutes";
 import adminAuditLogRoutes from "./admin/auditLogRoutes";
 import adminAnalyticsRoutes from "./admin/analyticsRoutes";
 import adminCustomerioRoutes from "./admin/customerioRoutes";
+import adminStripeRoutes from "./admin/stripeAdminRoutes";
 import leadEmailRoutes from "./leadEmailRoutes";
 import { startCopilotScheduler } from "./copilot/engine";
 import { startCampaignSuggestionScheduler } from "./campaignSuggestionEngine";
@@ -92,6 +93,7 @@ export async function registerRoutes(
   app.use("/api/admin/audit-logs", adminAuditLogRoutes);
   app.use("/api/admin/analytics", adminAnalyticsRoutes);
   app.use("/api/admin/customerio", adminCustomerioRoutes);
+  app.use("/api/admin/stripe", adminStripeRoutes);
   
   // Simple admin status check (uses regular auth, no admin middleware)
   app.get("/api/admin/status", isAuthenticated, async (req: Request, res: Response) => {
