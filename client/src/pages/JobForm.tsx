@@ -62,6 +62,7 @@ import { GetPaidDialog } from "@/components/job/GetPaidDialog";
 import { JobLocationMap } from "@/components/JobLocationMap";
 import { JobResolutionModal } from "@/components/jobs/JobResolutionModal";
 import { AddressAutocomplete } from "@/components/booking/AddressAutocomplete";
+import { CapabilityLimitInfo } from "@/components/CapabilityGate";
 
 interface ScheduleSuggestion {
   date: string;
@@ -838,6 +839,7 @@ export default function JobForm() {
             <p className="text-sm text-primary-foreground/80">
               {isEditing ? "Update job details" : "Create a new job entry"}
             </p>
+            {!isEditing && <CapabilityLimitInfo capability="jobs.create" className="text-primary-foreground/70" />}
           </div>
         </div>
       </div>
@@ -859,6 +861,7 @@ export default function JobForm() {
             <h1 className="text-2xl font-bold text-foreground">
               {isEditing ? "Edit Job" : "New Job"}
             </h1>
+            {!isEditing && <CapabilityLimitInfo capability="jobs.create" />}
           </div>
         </div>
       </div>
