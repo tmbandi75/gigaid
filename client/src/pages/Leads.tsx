@@ -280,11 +280,11 @@ export default function Leads() {
     queryKey: ["/api/nudges"],
   });
 
-  const { data: profile } = useQuery<{ services: string[] | null; bookingLink: string | null }>({
+  const { data: profile } = useQuery<{ services: string[] | null; servicesCount: number; bookingLink: string | null }>({
     queryKey: ["/api/profile"],
   });
 
-  const servicesCount = profile?.services?.length || 0;
+  const servicesCount = profile?.servicesCount || 0;
   const bookingLink = profile?.bookingLink || null;
 
   const showTableView = !isMobile && viewMode === "table";

@@ -370,6 +370,10 @@ export async function registerRoutes(
         ? `https://gigaid.ai/book/${user.publicProfileSlug}`
         : null;
       
+      // Get actual services count from provider_services table
+      const providerServices = await storage.getProviderServices(user.id);
+      const servicesCount = providerServices.length;
+      
       res.json({
         id: user.id,
         name: user.name || "Gig Worker",
@@ -379,6 +383,7 @@ export async function registerRoutes(
         businessName: user.businessName,
         bio: user.bio,
         services: user.services,
+        servicesCount,
         serviceArea: user.serviceArea,
         availability: user.availability,
         slotDuration: user.slotDuration,

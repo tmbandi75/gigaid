@@ -201,7 +201,7 @@ export default function TodaysGamePlanPage() {
     refetchOnWindowFocus: true,
   });
 
-  const { data: profile } = useQuery<{ services: string[] | null; bookingLink: string | null }>({
+  const { data: profile } = useQuery<{ services: string[] | null; servicesCount: number; bookingLink: string | null }>({
     queryKey: ["/api/profile"],
   });
 
@@ -238,7 +238,7 @@ export default function TodaysGamePlanPage() {
     recentlyCompleted: [],
   };
 
-  const servicesCount = profile?.services?.length || 0;
+  const servicesCount = profile?.servicesCount || 0;
   const totalJobs = dashboardSummary?.totalJobs || 0;
   const totalInvoices = invoices?.length || 0;
 
