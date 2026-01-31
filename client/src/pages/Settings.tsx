@@ -42,6 +42,7 @@ import {
   User,
   AlertCircle,
   CheckCircle,
+  Pencil,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -173,7 +174,6 @@ export default function Settings() {
     publicProfileSlug: "",
     notifyBySms: true,
     notifyByEmail: true,
-    services: [] as string[],
     availability: null as WeeklyAvailability | null,
     slotDuration: 60,
     showReviewsOnBooking: true,
@@ -181,7 +181,6 @@ export default function Settings() {
     noShowProtectionEnabled: true,
     noShowProtectionDepositPercent: 25,
   });
-  const [customServiceInput, setCustomServiceInput] = useState("");
   const [showQuickSetup, setShowQuickSetup] = useState(false);
   const [quickSetupPrice, setQuickSetupPrice] = useState("");
 
@@ -202,7 +201,6 @@ export default function Settings() {
         publicProfileSlug: profile.publicProfileSlug || "",
         notifyBySms: profile.notifyBySms !== false,
         notifyByEmail: profile.notifyByEmail !== false,
-        services: profile.services || [],
         availability: parsedAvailability,
         slotDuration: profile.slotDuration || 60,
         showReviewsOnBooking: profile.showReviewsOnBooking !== false,
@@ -276,7 +274,6 @@ export default function Settings() {
       publicProfileSlug: settings.publicProfileSlug,
       notifyBySms: settings.notifyBySms,
       notifyByEmail: settings.notifyByEmail,
-      services: settings.services,
       availability: settings.availability ? JSON.stringify(settings.availability) : null,
       slotDuration: settings.slotDuration,
       showReviewsOnBooking: settings.showReviewsOnBooking,
@@ -287,14 +284,6 @@ export default function Settings() {
     updateMutation.mutate(dataToSave);
   };
   
-  const handleAddCustomService = () => {
-    const trimmed = customServiceInput.trim().toLowerCase();
-    if (trimmed && !settings.services.includes(trimmed)) {
-      setSettings({ ...settings, services: [...settings.services, trimmed] });
-      setCustomServiceInput("");
-    }
-  };
-
   const handleAvailabilityChange = (availability: WeeklyAvailability, slotDuration: number) => {
     setSettings({ ...settings, availability, slotDuration });
   };
@@ -305,16 +294,6 @@ export default function Settings() {
     setBookingLinkCopied(true);
     setTimeout(() => setBookingLinkCopied(false), 2000);
     toast({ title: "Booking link copied!" });
-  };
-
-  const addService = (service: string) => {
-    if (service && !settings.services.includes(service)) {
-      setSettings({ ...settings, services: [...settings.services, service] });
-    }
-  };
-
-  const removeService = (service: string) => {
-    setSettings({ ...settings, services: settings.services.filter(s => s !== service) });
   };
 
   const renderMobileHeader = () => (
@@ -457,55 +436,30 @@ export default function Settings() {
                 )}
 
                 <div className="space-y-3">
-                  <Label className="text-sm">Your Services</Label>
-                  {settings.services.length > 0 && (
+                  <div className="flex items-center justify-between gap-2">
+                    <Label className="text-sm">Your Services</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate("/profile?edit=true")}
+                      data-testid="button-edit-services"
+                    >
+                      <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                      Edit in Profile
+                    </Button>
+                  </div>
+                  {profile?.services && profile.services.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
-                      {settings.services.map((service) => (
-                        <Badge 
-                          key={service} 
-                          variant="secondary" 
-                          className="cursor-pointer" 
-                          onClick={() => removeService(service)}
-                        >
-                          {service} &times;
+                      {profile.services.map((service: string) => (
+                        <Badge key={service} variant="secondary">
+                          {service}
                         </Badge>
                       ))}
                     </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No services added yet. Edit your profile to add services.</p>
                   )}
-                  <div className="flex flex-wrap gap-2">
-                    {["plumbing", "electrical", "cleaning", "handyman", "landscaping"].map((s) => (
-                      !settings.services.includes(s) && (
-                        <Badge
-                          key={s}
-                          variant="outline"
-                          className="cursor-pointer"
-                          onClick={() => addService(s)}
-                          data-testid={`badge-add-${s}`}
-                        >
-                          + {s}
-                        </Badge>
-                      )
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      value={customServiceInput}
-                      onChange={(e) => setCustomServiceInput(e.target.value)}
-                      placeholder="Add custom service..."
-                      className="h-10"
-                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCustomService())}
-                      data-testid="input-custom-service"
-                    />
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="icon"
-                      onClick={handleAddCustomService}
-                      data-testid="button-add-custom-service"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
                 </div>
 
                 <Separator />
