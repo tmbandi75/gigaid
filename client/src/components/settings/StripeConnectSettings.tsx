@@ -54,6 +54,7 @@ export function StripeConnectSettings() {
   const { data: connectStatus, isLoading: statusLoading } = useQuery<ConnectStatus>({
     queryKey: ["/api/stripe/connect/status"],
     refetchInterval: 30000,
+    refetchOnWindowFocus: true,
   });
 
   const { data: profile } = useQuery<any>({

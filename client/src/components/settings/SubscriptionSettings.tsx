@@ -50,6 +50,7 @@ export function SubscriptionSettings() {
   const { data: subscription, isLoading, isError } = useQuery<SubscriptionStatus>({
     queryKey: ["/api/subscription/status"],
     retry: 1,
+    refetchOnWindowFocus: true,
   });
 
   // Default subscription status when API fails or returns no data

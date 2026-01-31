@@ -78,6 +78,12 @@ export default function QuickBook() {
       const res = await apiRequest("PATCH", `/api/quickbook/draft/${draftId}`, { fields: updatedFields });
       return res.json();
     },
+    onSuccess: () => {
+      toast({ title: "Changes saved" });
+    },
+    onError: () => {
+      toast({ title: "Failed to save changes", variant: "destructive" });
+    },
   });
 
   const sendLinkMutation = useMutation({

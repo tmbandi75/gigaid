@@ -216,6 +216,8 @@ export default function JobSummary() {
       return apiRequest("POST", `/api/jobs/${id}/on-the-way`);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
       toast({ title: "Notification sent!", description: "Your client knows you're on the way." });
     },
     onError: () => {
