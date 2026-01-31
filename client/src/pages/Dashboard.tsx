@@ -34,8 +34,6 @@ import {
   CheckCircle2,
   Zap,
   ArrowUpRight,
-  Crown,
-  X,
 } from "lucide-react";
 import type { DashboardSummary, Job, Lead } from "@shared/schema";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
