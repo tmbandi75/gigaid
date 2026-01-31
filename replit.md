@@ -101,6 +101,79 @@ Accounts are automatically linked by:
 - `client/src/lib/auth/mobileAuth.ts`: Frontend mobile auth helpers
 - `client/src/components/MobileLogin.tsx`: Mobile login UI component
 
+## Capability Enforcement Engine
+
+### Overview
+The capability enforcement system uses limits, caps, and progressive unlocks instead of hard feature locks. It preserves one unified product experience where all users can experience every core value loop, with enforcement only at execution time.
+
+### Plans
+- **Free**: Core features with limits (10 jobs, 20 SMS, 3 offline photos, 7-day analytics)
+- **Pro**: Unlimited jobs/SMS, partial deposit/risk protection, 30-day analytics
+- **Pro+**: Full deposit/risk protection, unlimited offline photos, AI campaign suggestions
+- **Business**: Everything unlimited plus crew management and admin controls
+
+### Key Files
+- `shared/capabilities/plans.ts`: Plan and capability type definitions
+- `shared/capabilities/capabilityRules.ts`: Limit rules per plan with inheritance
+- `shared/capabilities/canPerform.ts`: Central resolver function
+- `shared/capabilities/usageTracking.ts`: Usage tracking utilities
+- `client/src/hooks/useCapability.ts`: React hooks for capability checks
+- `client/src/components/CapabilityGate.tsx`: Declarative capability enforcement component
+
+### Capability Types
+Capabilities use namespaced identifiers:
+- Jobs: `jobs.create`
+- SMS: `sms.two_way`, `sms.auto_followups`
+- AI: `ai.money_plan`, `ai.micro_nudges`, `ai.campaign_suggestions`
+- Offline: `offline.photos`, `offline.capture`
+- Analytics: `analytics.basic`, `analytics.advanced`
+- Business-only: `crew.manage`, `admin.controls`
+
+### Rule Modes
+- `unlimited`: No restrictions
+- `limit`: Capped at N uses per window
+- `read_only`: View but cannot take action
+- `suggest_only`: Preview/suggestions only, upgrade to execute
+- `partial`: Reduced functionality
+- `window_days`: Time-based analytics window
+
+### API Endpoints
+- `GET /api/capabilities`: Get all capability statuses for current user
+- `GET /api/capabilities/:capability/check`: Check specific capability
+- `GET /api/capabilities/usage`: Get all usage counts
+- `POST /api/capabilities/:capability/increment`: Increment usage after action
+- `POST /api/capabilities/:capability/reset`: Reset usage count
+- `GET /api/plans/compare`: Get plan comparison data
+
+### Usage Pattern
+```typescript
+// Check before action
+const result = canPerform(user.plan, 'jobs.create', currentUsage);
+if (!result.allowed) {
+  showInlineMessage(result.reason);
+  return;
+}
+
+// Increment after successful action
+await storage.incrementCapabilityUsage(userId, 'jobs.create');
+```
+
+### React Hook Usage
+```typescript
+const { allowed, reason, remaining } = useCanPerform('jobs.create');
+
+if (!allowed) {
+  return <p>{reason}</p>;
+}
+```
+
+### Design Principles
+- No feature hiding or UI forking by plan
+- No navigation blocking
+- No pricing modals
+- Inline, human-readable limit messages
+- All enforcement centralized and declarative
+
 ## UI Policies
 
 ### Emoji Usage Policy
