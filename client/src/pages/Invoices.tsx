@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,13 +18,18 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
-import type { Invoice, AiNudge } from "@shared/schema";
+import type { Invoice, AiNudge, JobPayment } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { NudgeChips } from "@/components/nudges/NudgeChip";
 import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
 import { InvoicesTableView } from "@/components/invoices/InvoicesTableView";
 import { PriorityBadge, inferInvoicePriority } from "@/components/priority/PriorityBadge";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
+import { SwipeableCard, type SwipeAction as SwipeCardAction } from "@/components/ui/swipeable-card";
+import { ActionConfirmDialog } from "@/components/ui/action-confirm-dialog";
+import { getInvoiceActionEligibility, getSwipeActions, type SwipeAction as RulesSwipeAction } from "@shared/archive-delete-rules";
 
 const statusConfig: Record<string, { 
   color: string; 
