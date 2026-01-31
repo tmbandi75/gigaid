@@ -8,6 +8,7 @@ import {
   actionQueueItems, outcomeMetricsDaily, photoAssets, estimationRequests,
   stallDetections, nextActions, autoExecutionLog, intentSignals, readyActions,
   clients, providerServices, clientNotificationCampaigns, campaignSuggestions,
+  capabilityUsage,
   type User, type InsertUser,
   type Job, type InsertJob,
   type Lead, type InsertLead,
@@ -51,6 +52,7 @@ import {
   type ProviderService, type InsertProviderService,
   type ClientNotificationCampaign, type InsertCampaign,
   type CampaignSuggestion, type InsertCampaignSuggestion,
+  type CapabilityUsage,
 } from "@shared/schema";
 import { IStorage } from "./storage";
 import { randomUUID } from "crypto";
@@ -1885,6 +1887,76 @@ export class DatabaseStorage implements IStorage {
       .where(or(...conditions))
       .returning();
     
+    return result.length > 0;
+  }
+
+  // ============================================================
+  // Capability usage tracking
+  // ============================================================
+
+  async getCapabilityUsage(userId: string, capability: string): Promise<CapabilityUsage | undefined> {
+    const result = await db.select()
+      .from(capabilityUsage)
+      .where(and(
+        eq(capabilityUsage.userId, userId),
+        eq(capabilityUsage.capability, capability)
+      ))
+      .limit(1);
+    return result[0];
+  }
+
+  async getAllCapabilityUsage(userId: string): Promise<CapabilityUsage[]> {
+    return db.select()
+      .from(capabilityUsage)
+      .where(eq(capabilityUsage.userId, userId));
+  }
+
+  async incrementCapabilityUsage(userId: string, capability: string): Promise<CapabilityUsage> {
+    const now = new Date().toISOString();
+    const existing = await this.getCapabilityUsage(userId, capability);
+    
+    if (existing) {
+      const result = await db.update(capabilityUsage)
+        .set({
+          usageCount: existing.usageCount + 1,
+          lastUsedAt: now,
+          updatedAt: now
+        })
+        .where(and(
+          eq(capabilityUsage.userId, userId),
+          eq(capabilityUsage.capability, capability)
+        ))
+        .returning();
+      return result[0];
+    }
+    
+    const result = await db.insert(capabilityUsage)
+      .values({
+        userId,
+        capability,
+        usageCount: 1,
+        windowStart: now,
+        lastUsedAt: now,
+        createdAt: now,
+        updatedAt: now
+      })
+      .returning();
+    return result[0];
+  }
+
+  async resetCapabilityUsage(userId: string, capability: string): Promise<boolean> {
+    const now = new Date().toISOString();
+    const result = await db.update(capabilityUsage)
+      .set({
+        usageCount: 0,
+        windowStart: now,
+        updatedAt: now
+      })
+      .where(and(
+        eq(capabilityUsage.userId, userId),
+        eq(capabilityUsage.capability, capability)
+      ))
+      .returning();
     return result.length > 0;
   }
 }

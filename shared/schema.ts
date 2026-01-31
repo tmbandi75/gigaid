@@ -2151,5 +2151,26 @@ export const insertOutboundMessageSchema = createInsertSchema(outboundMessages).
 export type InsertOutboundMessage = z.infer<typeof insertOutboundMessageSchema>;
 export type OutboundMessage = typeof outboundMessages.$inferSelect;
 
+// Capability usage tracking for plan limits
+export const capabilityUsage = pgTable("capability_usage", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  capability: text("capability").notNull(), // e.g., 'jobs.create', 'sms.two_way'
+  usageCount: integer("usage_count").notNull().default(0),
+  windowStart: text("window_start"), // ISO timestamp for time-windowed limits
+  lastUsedAt: text("last_used_at"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at"),
+}, (table) => [
+  index("capability_usage_user_capability_idx").on(table.userId, table.capability),
+]);
+
+export const insertCapabilityUsageSchema = createInsertSchema(capabilityUsage).omit({
+  id: true,
+});
+
+export type InsertCapabilityUsage = z.infer<typeof insertCapabilityUsageSchema>;
+export type CapabilityUsage = typeof capabilityUsage.$inferSelect;
+
 export * from "./models/chat";
 export * from "./models/auth";

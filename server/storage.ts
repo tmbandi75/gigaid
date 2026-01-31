@@ -42,6 +42,7 @@ import {
   type ProviderService, type InsertProviderService,
   type ClientNotificationCampaign, type InsertCampaign,
   type CampaignSuggestion, type InsertCampaignSuggestion,
+  type CapabilityUsage,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -340,6 +341,12 @@ export interface IStorage {
   // Client notification eligibility
   getEligibleClientsForNotification(userId: string, channel: string): Promise<Client[]>;
   optOutClient(phone?: string, email?: string): Promise<boolean>;
+  
+  // Capability usage tracking
+  getCapabilityUsage(userId: string, capability: string): Promise<CapabilityUsage | undefined>;
+  getAllCapabilityUsage(userId: string): Promise<CapabilityUsage[]>;
+  incrementCapabilityUsage(userId: string, capability: string): Promise<CapabilityUsage>;
+  resetCapabilityUsage(userId: string, capability: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -2793,6 +2800,71 @@ export class MemStorage implements IStorage {
       }
     }
     return found;
+  }
+
+  // ============================================================
+  // Capability usage tracking
+  // ============================================================
+  
+  private capabilityUsage: Map<string, CapabilityUsage> = new Map();
+  
+  private getCapabilityKey(userId: string, capability: string): string {
+    return `${userId}:${capability}`;
+  }
+
+  async getCapabilityUsage(userId: string, capability: string): Promise<CapabilityUsage | undefined> {
+    const key = this.getCapabilityKey(userId, capability);
+    return this.capabilityUsage.get(key);
+  }
+
+  async getAllCapabilityUsage(userId: string): Promise<CapabilityUsage[]> {
+    return Array.from(this.capabilityUsage.values())
+      .filter(u => u.userId === userId);
+  }
+
+  async incrementCapabilityUsage(userId: string, capability: string): Promise<CapabilityUsage> {
+    const key = this.getCapabilityKey(userId, capability);
+    const existing = this.capabilityUsage.get(key);
+    const now = new Date().toISOString();
+    
+    if (existing) {
+      const updated: CapabilityUsage = {
+        ...existing,
+        usageCount: existing.usageCount + 1,
+        lastUsedAt: now,
+        updatedAt: now
+      };
+      this.capabilityUsage.set(key, updated);
+      return updated;
+    }
+    
+    const newUsage: CapabilityUsage = {
+      id: crypto.randomUUID(),
+      userId,
+      capability,
+      usageCount: 1,
+      windowStart: now,
+      lastUsedAt: now,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.capabilityUsage.set(key, newUsage);
+    return newUsage;
+  }
+
+  async resetCapabilityUsage(userId: string, capability: string): Promise<boolean> {
+    const key = this.getCapabilityKey(userId, capability);
+    const existing = this.capabilityUsage.get(key);
+    if (!existing) return false;
+    
+    const now = new Date().toISOString();
+    this.capabilityUsage.set(key, {
+      ...existing,
+      usageCount: 0,
+      windowStart: now,
+      updatedAt: now
+    });
+    return true;
   }
 }
 
