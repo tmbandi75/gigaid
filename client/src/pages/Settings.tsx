@@ -391,6 +391,33 @@ export default function Settings() {
           </CardContent>
         </Card>
 
+        <Card className="border-0 shadow-md" data-testid="card-coaching-tips">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center">
+                  <Sparkles className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm">Coaching Tips</p>
+                  <p className="text-xs text-muted-foreground">Show helpful tips again on all screens</p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  resetCoaching();
+                  toast({ title: "Tips reset", description: "You'll see helpful tips again." });
+                }}
+                data-testid="button-reset-coaching-top"
+              >
+                Reset
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         <EmailSignatureSettings />
 
         <AccountLinking
