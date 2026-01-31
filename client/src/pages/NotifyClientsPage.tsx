@@ -333,13 +333,13 @@ export default function NotifyClientsPage() {
                 <Button
                   key={service.id}
                   variant="outline"
-                  className="w-full justify-start h-auto p-4"
+                  className="w-full justify-start h-auto p-4 overflow-hidden"
                   onClick={() => handleServiceSelect(service.id, service.category)}
                   data-testid={`button-service-${service.id}`}
                 >
-                  <div className="text-left">
-                    <div className="font-medium">{service.name}</div>
-                    <div className="text-sm text-muted-foreground">
+                  <div className="text-left w-full min-w-0">
+                    <div className="font-medium break-words">{service.name}</div>
+                    <div className="text-sm text-muted-foreground break-words">
                       {CATEGORY_LABELS[service.category as ServiceCategory] || service.category}
                     </div>
                   </div>
@@ -376,13 +376,13 @@ export default function NotifyClientsPage() {
               <Button
                 key={eventType}
                 variant="outline"
-                className="w-full justify-start h-auto p-4"
+                className="w-full justify-start h-auto p-4 overflow-hidden"
                 onClick={() => handleEventSelect(eventType)}
                 data-testid={`button-event-${eventType}`}
               >
-                <div className="text-left">
+                <div className="text-left w-full min-w-0">
                   <div className="font-medium">{EVENT_LABELS[eventType]}</div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-sm text-muted-foreground break-words">
                     {EVENT_DESCRIPTIONS[eventType]}
                   </div>
                 </div>
@@ -666,13 +666,13 @@ export default function NotifyClientsPage() {
                 <Button
                   key={service.id}
                   variant="outline"
-                  className="w-full justify-start h-auto p-4"
+                  className="w-full justify-start h-auto p-4 overflow-hidden"
                   onClick={() => handleServiceSelect(service.id, service.category)}
                   data-testid={`button-service-${service.id}`}
                 >
-                  <div className="text-left">
-                    <div className="font-medium">{service.name}</div>
-                    <div className="text-sm text-muted-foreground">
+                  <div className="text-left w-full min-w-0">
+                    <div className="font-medium break-words">{service.name}</div>
+                    <div className="text-sm text-muted-foreground break-words">
                       {CATEGORY_LABELS[service.category as ServiceCategory] || service.category}
                     </div>
                   </div>
@@ -709,13 +709,13 @@ export default function NotifyClientsPage() {
               <Button
                 key={eventType}
                 variant="outline"
-                className="w-full justify-start h-auto p-4"
+                className="w-full justify-start h-auto p-4 overflow-hidden"
                 onClick={() => handleEventSelect(eventType)}
                 data-testid={`button-event-${eventType}`}
               >
-                <div className="text-left">
+                <div className="text-left w-full min-w-0">
                   <div className="font-medium">{EVENT_LABELS[eventType]}</div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-sm text-muted-foreground break-words">
                     {EVENT_DESCRIPTIONS[eventType]}
                   </div>
                 </div>
