@@ -1,0 +1,175 @@
+REPLIT MASTER PROMPT — INTENT-DRIVEN UPGRADE ACCESS (SAFE)
+Objective
+
+Add clear, non-intrusive upgrade access for users who want to upgrade immediately, while preserving:
+
+✅ Product-led growth
+✅ Contextual upgrade nudges
+✅ Zero disruption to core flows
+
+This implementation must not introduce popups, paywalls, or forced modals.
+
+Non-Negotiable Constraints
+
+❌ Do NOT block any features
+❌ Do NOT add pricing modals on page load
+❌ Do NOT change existing entitlement logic
+❌ Do NOT refactor billing or Stripe logic
+❌ Do NOT hide or remove any UI
+
+✅ Add discoverable upgrade entry points only
+✅ Use existing routing patterns
+✅ Respect current plan + capability checks
+
+Scope of Changes (FRONTEND ONLY)
+
+Implement three upgrade access points:
+
+Profile / Account Menu (Primary)
+
+Settings Page Plan Status Banner (Secondary)
+
+Reuse existing upgrade destination (Pricing / Billing screen)
+
+No backend changes required.
+
+1️⃣ Profile / Account Menu — “Upgrade Plan ⭐”
+Location
+
+Top-right profile / avatar dropdown menu.
+
+Behavior
+
+Visible to all users except highest plan
+
+Navigates to existing upgrade / billing route
+
+No modal, no confirmation
+
+Implementation
+
+Add a new menu item:
+
+Label:
+Upgrade Plan ⭐
+
+Placement order:
+
+Settings
+Billing
+Upgrade Plan ⭐
+Log out
+
+Logic
+showUpgradeCTA = user.plan !== 'business'
+
+
+⚠️ Do NOT check entitlements client-side beyond plan name
+⚠️ Do NOT show for Business plan users
+
+2️⃣ Settings Page — Plan Status Banner (Top Only)
+Placement
+
+At the very top of the Settings page, above all sections.
+
+Content
+Current Plan: Pro
+Unlock advanced automations, booking protection, and AI tools
+[ Upgrade ]
+
+Rules
+
+One banner
+
+One button
+
+Never repeated elsewhere on the page
+
+Hidden for highest plan
+
+Behavior
+
+Clicking Upgrade navigates to billing / upgrade screen
+
+No modals
+
+No auto-scroll
+
+No animation
+
+Logic
+if (user.plan !== 'business') {
+  renderPlanStatusBanner()
+}
+
+3️⃣ Upgrade Destination (Reuse Existing)
+Navigation Target
+
+Use the existing upgrade / billing route:
+
+Examples (use what exists):
+
+/billing
+
+/upgrade
+
+/settings/billing
+
+❌ Do NOT create a new pricing page
+❌ Do NOT duplicate billing UI
+
+UI Guidelines (STRICT)
+
+Reuse existing Button component
+
+Use secondary or neutral styling
+
+No bright colors or urgency language
+
+No tooltips needed
+
+Desktop + mobile compatible
+
+Accessibility & UX Rules
+
+Menu item must be keyboard accessible
+
+Banner must not push content unpredictably
+
+No layout shift after page load
+
+No state reset when navigating back
+
+Validation Checklist (MUST PASS)
+
+ Power users can upgrade in ≤2 clicks
+
+ Casual users are never interrupted
+
+ No duplicate upgrade buttons on Settings page
+
+ Locked-feature upgrade nudges still work as before
+
+ Business users see no upgrade CTAs
+
+ No backend changes introduced
+
+Final Instruction
+
+This should feel like:
+
+“Nice — exactly where I expected to find it.”
+
+Not:
+
+“Why is this trying to sell me?”
+
+Proceed conservatively and test with:
+
+Free user
+
+Pro user
+
+Pro+ user
+
+Business user
