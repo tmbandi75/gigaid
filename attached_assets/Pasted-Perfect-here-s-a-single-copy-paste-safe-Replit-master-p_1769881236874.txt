@@ -1,0 +1,236 @@
+Perfect — here’s a **single, copy-paste–safe Replit master prompt** that **refactors the Settings page for clarity and intuition** **without hiding, removing, or changing any feature behavior**.
+
+This is written to be **low-risk**, **non-destructive**, and **UX-only**.
+
+---
+
+# 🛠️ REPLIT MASTER PROMPT — SAFE SETTINGS PAGE REFACTOR (UX ONLY)
+
+## Objective
+
+Refactor the **GigAid Settings page** to be **more intuitive, less cognitively heavy, and easier to scan**, while preserving:
+
+✅ All existing features
+✅ All existing data models
+✅ All existing API calls
+✅ All existing permissions & gating
+❌ No feature removal
+❌ No feature hiding
+❌ No backend logic changes
+
+This is a **layout + information architecture refactor only**.
+
+---
+
+## Non-Negotiable Constraints
+
+* ❌ Do NOT remove any settings, toggles, inputs, or flows
+
+* ❌ Do NOT change backend endpoints or payloads
+
+* ❌ Do NOT introduce new feature gating or permissions
+
+* ❌ Do NOT change copy unless explicitly instructed
+
+* ❌ Do NOT break deep links or saved states
+
+* ✅ Reordering, grouping, and collapsing sections is allowed
+
+* ✅ UI components may be reused or wrapped
+
+* ✅ Sections may be collapsible, but must be expandable by default where noted
+
+* ✅ Stripe connection must remain fully functional
+
+---
+
+## High-Level Refactor Strategy
+
+Convert the Settings page from a **long vertical list** into a **clearly sectioned, task-oriented layout** that matches how solo gig workers think:
+
+> Booking → Time → Money → Automation → Preferences
+
+This reduces scroll fatigue and decision overload without hiding power features.
+
+---
+
+## Target Section Order (TOP → BOTTOM)
+
+### 1️⃣ Booking & Public Profile (EXPANDED BY DEFAULT)
+
+Group the following **unchanged components** into a single section:
+
+* Booking URL (with copy button)
+* Services selector (including custom services)
+* Show Reviews toggle
+* Public Price Estimates toggle
+
+**Title:**
+**Booking & Public Profile**
+*Subtitle: “How clients find and book you”*
+
+---
+
+### 2️⃣ Availability & Booking Rules (EXPANDED BY DEFAULT)
+
+Group the following **unchanged components**:
+
+* Weekly availability schedule
+* Appointment duration selector
+* Booking Protection toggle
+* Default deposit percentage
+
+**Title:**
+**Availability & Booking Rules**
+*Subtitle: “When clients can book and how bookings are protected”*
+
+---
+
+### 3️⃣ Payments & Payouts (EXPANDED BY DEFAULT, VISUALLY EMPHASIZED)
+
+Group the following **unchanged components**:
+
+* Payment Methods (Zelle, Venmo, Cash, Check, Stripe)
+* Save Payment Settings button
+* Stripe connection status
+* “Connect Stripe Account” CTA
+* Stripe benefits checklist
+
+**Enhancement (UI only):**
+
+* Add a **status banner** at top of section:
+
+  * If Stripe NOT connected → warning style
+  * If connected → success style
+
+**Title:**
+**Payments & Payouts**
+*Subtitle: “How you get paid and collect deposits”*
+
+⚠️ **Do NOT move or rename Stripe logic**
+⚠️ **Do NOT auto-enable anything**
+
+---
+
+### 4️⃣ Automations (COLLAPSIBLE, EXPANDED BY DEFAULT)
+
+Wrap existing automation features into a single collapsible container:
+
+* Auto Booking Confirmation
+* Auto Follow-up (delay selector + template)
+* Payment Reminder
+* Review Link
+* Save Automation Settings button
+
+**Title:**
+**Automations**
+*Subtitle: “Messages sent automatically on your behalf”*
+
+---
+
+### 5️⃣ Preferences & Account (COLLAPSIBLE, COLLAPSED BY DEFAULT)
+
+Group lower-frequency settings:
+
+#### Notifications
+
+* SMS Notifications
+* Email Notifications
+
+#### AI Suggestions
+
+* Smart Action Nudges toggle
+
+#### Email Signature
+
+* Signature text
+* Logo URL
+* Include logo toggle
+* Save Signature button
+
+#### Account
+
+* Primary sign-in method
+* Verified email
+* Link Apple / Google / Phone
+
+**Title:**
+**Preferences & Account**
+*Subtitle: “App preferences and sign-in options”*
+
+---
+
+## Interaction Rules
+
+* Collapsible sections must:
+
+  * Preserve internal component state
+  * Not reset forms on expand/collapse
+  * Be accessible via keyboard + screen readers
+
+* Section expansion state:
+
+  * Can be local UI state only
+  * No persistence required
+
+---
+
+## Visual Guidelines (NO REDESIGN)
+
+* Reuse existing Card components
+* Add spacing between major sections
+* Use consistent section headers
+* Stripe section may have:
+
+  * Slight border highlight OR
+  * Icon emphasis
+
+❌ No new colors
+❌ No font changes
+❌ No animation beyond expand/collapse
+
+---
+
+## Validation Checklist (MUST PASS)
+
+* [ ] Every existing setting is still reachable
+* [ ] Stripe connect works exactly as before
+* [ ] No API calls were changed or duplicated
+* [ ] No data loss when collapsing sections
+* [ ] Mobile scroll length is reduced
+* [ ] Page feels scannable within 3 seconds
+
+---
+
+## Deliverable
+
+Return:
+
+* Updated Settings page component(s)
+* Any small helper components created (e.g., `SettingsSection`)
+* No backend changes
+* No feature diffs
+
+---
+
+## Final Instruction
+
+This refactor must feel like:
+
+> “Oh — this makes way more sense now”
+
+—not:
+
+> “Something changed, I’m not sure what”
+
+Proceed carefully and incrementally.
+
+---
+
+If you want next:
+
+* I can give you a **diff-based version** (ultra safe)
+* Or a **Bolt-optimized prompt**
+* Or a **before/after activation impact estimate**
+
+Just say the word.
