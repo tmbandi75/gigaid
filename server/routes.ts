@@ -1843,6 +1843,23 @@ export async function registerRoutes(
 
   app.delete("/api/jobs/:id", isAuthenticated, async (req, res) => {
     try {
+      const job = await storage.getJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
+      const { getJobActionEligibility } = await import("@shared/archive-delete-rules");
+      const invoices = await storage.getInvoices(job.userId);
+      const hasInvoice = invoices.some(inv => inv.jobId === job.id);
+      const eligibility = getJobActionEligibility(job, hasInvoice);
+      
+      if (!eligibility.canDelete) {
+        return res.status(403).json({ 
+          error: eligibility.deleteBlockedReason || "This job cannot be deleted.",
+          canArchive: eligibility.canArchive,
+        });
+      }
+      
       const deleted = await storage.deleteJob(req.params.id);
       if (!deleted) {
         return res.status(404).json({ error: "Job not found" });
@@ -1850,6 +1867,49 @@ export async function registerRoutes(
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete job" });
+    }
+  });
+
+  app.post("/api/jobs/:id/archive", isAuthenticated, async (req, res) => {
+    try {
+      const job = await storage.getJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
+      const { getJobActionEligibility } = await import("@shared/archive-delete-rules");
+      const invoices = await storage.getInvoices(job.userId);
+      const hasInvoice = invoices.some(inv => inv.jobId === job.id);
+      const eligibility = getJobActionEligibility(job, hasInvoice);
+      
+      if (!eligibility.canArchive) {
+        return res.status(403).json({ 
+          error: eligibility.archiveBlockedReason || "This job cannot be archived.",
+        });
+      }
+      
+      const updated = await storage.updateJob(req.params.id, { 
+        archivedAt: new Date().toISOString() 
+      });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to archive job" });
+    }
+  });
+
+  app.post("/api/jobs/:id/unarchive", isAuthenticated, async (req, res) => {
+    try {
+      const job = await storage.getJob(req.params.id);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
+      const updated = await storage.updateJob(req.params.id, { 
+        archivedAt: null 
+      });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to unarchive job" });
     }
   });
 
@@ -1984,6 +2044,38 @@ export async function registerRoutes(
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete lead" });
+    }
+  });
+
+  app.post("/api/leads/:id/archive", isAuthenticated, async (req, res) => {
+    try {
+      const lead = await storage.getLead(req.params.id);
+      if (!lead) {
+        return res.status(404).json({ error: "Lead not found" });
+      }
+      
+      const updated = await storage.updateLead(req.params.id, { 
+        archivedAt: new Date().toISOString() 
+      });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to archive lead" });
+    }
+  });
+
+  app.post("/api/leads/:id/unarchive", isAuthenticated, async (req, res) => {
+    try {
+      const lead = await storage.getLead(req.params.id);
+      if (!lead) {
+        return res.status(404).json({ error: "Lead not found" });
+      }
+      
+      const updated = await storage.updateLead(req.params.id, { 
+        archivedAt: null 
+      });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to unarchive lead" });
     }
   });
 
@@ -2934,6 +3026,23 @@ export async function registerRoutes(
 
   app.delete("/api/invoices/:id", async (req, res) => {
     try {
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+      
+      const { getInvoiceActionEligibility } = await import("@shared/archive-delete-rules");
+      const payments = await storage.getJobPaymentsByInvoice(invoice.id);
+      const hasStripePayment = payments.some(p => p.stripePaymentIntentId);
+      const eligibility = getInvoiceActionEligibility(invoice, hasStripePayment);
+      
+      if (!eligibility.canDelete) {
+        return res.status(403).json({ 
+          error: eligibility.deleteBlockedReason || "This invoice cannot be deleted.",
+          canArchive: eligibility.canArchive,
+        });
+      }
+      
       const deleted = await storage.deleteInvoice(req.params.id);
       if (!deleted) {
         return res.status(404).json({ error: "Invoice not found" });
@@ -2941,6 +3050,38 @@ export async function registerRoutes(
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete invoice" });
+    }
+  });
+
+  app.post("/api/invoices/:id/archive", async (req, res) => {
+    try {
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+      
+      const updated = await storage.updateInvoice(req.params.id, { 
+        archivedAt: new Date().toISOString() 
+      });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to archive invoice" });
+    }
+  });
+
+  app.post("/api/invoices/:id/unarchive", async (req, res) => {
+    try {
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+      
+      const updated = await storage.updateInvoice(req.params.id, { 
+        archivedAt: null 
+      });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to unarchive invoice" });
     }
   });
 
