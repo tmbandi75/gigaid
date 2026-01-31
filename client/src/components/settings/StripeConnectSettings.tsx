@@ -84,6 +84,8 @@ export function StripeConnectSettings() {
           title: "Stripe Setup", 
           description: "Complete your Stripe setup in the new tab. Return here when finished." 
         });
+        // Invalidate to refresh status when user returns
+        queryClient.invalidateQueries({ queryKey: ["/api/stripe/connect/status"] });
       } else {
         toast({ title: "Failed to get onboarding URL", variant: "destructive" });
       }
@@ -99,6 +101,8 @@ export function StripeConnectSettings() {
     onSuccess: (data: any) => {
       if (data.url) {
         window.open(data.url, "_blank");
+        // Invalidate to refresh status when user returns from Stripe dashboard
+        queryClient.invalidateQueries({ queryKey: ["/api/stripe/connect/status"] });
       } else {
         toast({ title: "Failed to get dashboard URL", variant: "destructive" });
       }
