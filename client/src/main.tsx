@@ -6,7 +6,7 @@ import "./index.css";
 async function clearOldCaches() {
   if ('caches' in window) {
     const cacheNames = await caches.keys();
-    const oldCaches = cacheNames.filter(name => !name.includes('v13'));
+    const oldCaches = cacheNames.filter(name => !name.includes('v15'));
     await Promise.all(oldCaches.map(name => caches.delete(name)));
     if (oldCaches.length > 0) {
       console.log('[Cache] Cleared old caches:', oldCaches);
