@@ -147,6 +147,13 @@ export default function NotifyClientsPage() {
   });
   const servicesLoading = profileLoading;
 
+  // Auto-populate booking link from profile
+  useEffect(() => {
+    if (profile?.publicProfileSlug && !bookingLink) {
+      setBookingLink(`${window.location.origin}/book/${profile.publicProfileSlug}`);
+    }
+  }, [profile?.publicProfileSlug]);
+
   const { data: eligibleClients, isLoading: clientsLoading } = useQuery<{ count: number; clients: any[] }>({
     queryKey: ["/api/notification-campaigns/eligible-clients", channel],
     enabled: step === "compose" || step === "review",
