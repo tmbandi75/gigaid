@@ -115,7 +115,7 @@ export function AppSidebar() {
   });
 
   const isAdmin = adminStatus?.isAdmin === true;
-  const isBusinessPlan = subscription !== undefined && subscription.plan === "business";
+  const isFreePlan = subscription !== undefined && (subscription.plan === "free" || subscription.hasSubscription === false);
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains("dark");
@@ -275,6 +275,26 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {isFreePlan && (
+          <>
+            <SidebarSeparator className="my-2" />
+            <SidebarGroup>
+              <SidebarGroupContent>
+                <div className="px-2">
+                  <Button
+                    variant="default"
+                    className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 text-white border-0"
+                    onClick={() => navigate("/pricing")}
+                    data-testid="sidebar-upgrade-button"
+                  >
+                    <Crown className="h-4 w-4 mr-2" />
+                    Upgrade to Pro
+                  </Button>
+                </div>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="p-3 border-t border-sidebar-border">
@@ -331,20 +351,13 @@ export function AppSidebar() {
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/pricing")} data-testid="dropdown-pricing">
-              <CreditCard className="h-4 w-4 mr-2" />
-              Billing
-            </DropdownMenuItem>
-            {!isBusinessPlan && (
-              <DropdownMenuItem onClick={() => navigate("/pricing")} data-testid="dropdown-upgrade">
-                <Star className="h-4 w-4 mr-2 text-amber-500" />
-                Upgrade Plan
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate("/help")} data-testid="dropdown-help">
               <HelpCircle className="h-4 w-4 mr-2" />
               Help & Support
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/pricing")} data-testid="dropdown-pricing">
+              <CreditCard className="h-4 w-4 mr-2" />
+              View Plans
             </DropdownMenuItem>
             {isAdmin && (
               <DropdownMenuItem onClick={() => navigate("/admin/cockpit")} data-testid="dropdown-admin">

@@ -147,17 +147,6 @@ export default function Settings() {
     queryKey: ["/api/onboarding"],
   });
 
-  const { data: subscription } = useQuery<{ plan: string; hasSubscription: boolean }>({
-    queryKey: ["/api/subscription/status"],
-    retry: 1,
-    staleTime: 60000,
-  });
-
-  const isBusinessPlan = subscription !== undefined && subscription.plan === "business";
-  const currentPlanLabel = subscription?.plan 
-    ? subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1).replace("_", "+")
-    : "Free";
-
   const isMoneyProtectionReady = onboardingStatus ? onboardingStatus.moneyProtectionReady : true;
   const needsSetup = !isOnboardingLoading && !isMoneyProtectionReady;
 
@@ -377,32 +366,6 @@ export default function Settings() {
 
       <div className={`space-y-4 ${isMobile ? 'px-4 py-4' : 'max-w-7xl mx-auto px-6 lg:px-8 py-6'}`}>
         
-        {/* Plan Status Banner - only shown for non-Business plans */}
-        {!isBusinessPlan && subscription !== undefined && (
-          <Card className="border-0 shadow-sm" data-testid="card-plan-status">
-            <CardContent className="py-4 px-5">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shrink-0">
-                    <Crown className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">Current Plan: {currentPlanLabel}</p>
-                    <p className="text-sm text-muted-foreground">Unlock advanced automations, booking protection, and AI tools</p>
-                  </div>
-                </div>
-                <Button
-                  variant="secondary"
-                  onClick={() => navigate("/pricing")}
-                  data-testid="button-upgrade-plan"
-                >
-                  Upgrade
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* SECTION 1: Booking & Public Profile */}
         <SettingsSection
           title="Booking & Public Profile"
