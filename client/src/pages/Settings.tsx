@@ -54,6 +54,7 @@ import { EmailSignatureSettings } from "@/components/settings/EmailSignatureSett
 import { AccountLinking } from "@/components/mobile-auth/AccountLinking";
 import { AutomationSettings } from "@/components/settings/AutomationSettings";
 import { ChangePasswordDialog } from "@/components/settings/ChangePasswordDialog";
+import { SubscriptionSettings } from "@/components/settings/SubscriptionSettings";
 import { isEmailPasswordUser } from "@/lib/firebase";
 import type { Referral, WeeklyAvailability, FeatureFlag } from "@shared/schema";
 import { useFeatureFlag, useUpdateFeatureFlag } from "@/hooks/use-nudges";
@@ -807,6 +808,12 @@ export default function Settings() {
           ) : null}
           Save Settings
         </Button>
+
+        {isAuthenticated && (
+          <div className="mt-8">
+            <SubscriptionSettings />
+          </div>
+        )}
 
         {isAuthenticated && (
           <Card className="border-0 shadow-md mt-8" data-testid="card-account-settings">

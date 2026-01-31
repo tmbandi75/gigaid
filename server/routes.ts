@@ -5880,6 +5880,174 @@ Return ONLY the message text, no JSON or formatting.`
     }
   });
 
+  // Get subscription status
+  app.get("/api/subscription/status", isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // If no subscription, return free plan status
+      if (!user.stripeSubscriptionId) {
+        return res.json({
+          plan: user.plan || "free",
+          planName: user.plan === "pro" ? "Pro" : user.plan === "pro_plus" ? "Pro+" : user.plan === "business" ? "Business" : "Free",
+          status: "active",
+          hasSubscription: false,
+          currentPeriodEnd: null,
+          cancelAtPeriodEnd: false,
+        });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const { STRIPE_ENABLED } = await import("@shared/stripeConfig");
+      
+      if (!STRIPE_ENABLED) {
+        return res.json({
+          plan: user.plan || "free",
+          planName: user.plan === "pro" ? "Pro" : user.plan === "pro_plus" ? "Pro+" : user.plan === "business" ? "Business" : "Free",
+          status: "active",
+          hasSubscription: !!user.stripeSubscriptionId,
+          currentPeriodEnd: null,
+          cancelAtPeriodEnd: false,
+        });
+      }
+
+      const stripe = await getUncachableStripeClient();
+      const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+
+      const planNames: Record<string, string> = {
+        free: "Free",
+        pro: "Pro",
+        pro_plus: "Pro+",
+        business: "Business",
+      };
+
+      res.json({
+        plan: user.plan || "free",
+        planName: planNames[user.plan || "free"] || "Free",
+        status: subscription.status,
+        hasSubscription: true,
+        currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        cancelAt: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
+      });
+    } catch (error) {
+      console.error("Subscription status error:", error);
+      res.status(500).json({ error: "Failed to get subscription status" });
+    }
+  });
+
+  // Cancel subscription at period end
+  app.post("/api/subscription/cancel", isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (!user.stripeSubscriptionId) {
+        return res.status(400).json({ error: "No active subscription to cancel" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const { STRIPE_ENABLED } = await import("@shared/stripeConfig");
+      
+      if (!STRIPE_ENABLED) {
+        return res.status(503).json({ error: "Subscription management temporarily unavailable" });
+      }
+
+      const stripe = await getUncachableStripeClient();
+      
+      // Cancel at period end (user keeps access until billing period ends)
+      const subscription = await stripe.subscriptions.update(user.stripeSubscriptionId, {
+        cancel_at_period_end: true,
+      });
+
+      res.json({
+        success: true,
+        message: "Subscription will be cancelled at the end of the billing period",
+        cancelAt: new Date(subscription.current_period_end * 1000).toISOString(),
+      });
+    } catch (error) {
+      console.error("Subscription cancel error:", error);
+      res.status(500).json({ error: "Failed to cancel subscription" });
+    }
+  });
+
+  // Reactivate a cancelled subscription (before period end)
+  app.post("/api/subscription/reactivate", isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (!user.stripeSubscriptionId) {
+        return res.status(400).json({ error: "No subscription to reactivate" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const { STRIPE_ENABLED } = await import("@shared/stripeConfig");
+      
+      if (!STRIPE_ENABLED) {
+        return res.status(503).json({ error: "Subscription management temporarily unavailable" });
+      }
+
+      const stripe = await getUncachableStripeClient();
+      
+      // Remove cancellation
+      const subscription = await stripe.subscriptions.update(user.stripeSubscriptionId, {
+        cancel_at_period_end: false,
+      });
+
+      res.json({
+        success: true,
+        message: "Subscription reactivated successfully",
+        status: subscription.status,
+      });
+    } catch (error) {
+      console.error("Subscription reactivate error:", error);
+      res.status(500).json({ error: "Failed to reactivate subscription" });
+    }
+  });
+
+  // Generate Stripe Customer Portal link for self-service billing
+  app.post("/api/subscription/portal", isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (!user.stripeCustomerId) {
+        return res.status(400).json({ error: "No billing account found. Please subscribe to a plan first." });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const { STRIPE_ENABLED } = await import("@shared/stripeConfig");
+      
+      if (!STRIPE_ENABLED) {
+        return res.status(503).json({ error: "Billing portal temporarily unavailable" });
+      }
+
+      const stripe = await getUncachableStripeClient();
+      const baseUrl = process.env.FRONTEND_URL || `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
+      const returnUrl = req.body.returnUrl || "/settings";
+
+      const session = await stripe.billingPortal.sessions.create({
+        customer: user.stripeCustomerId,
+        return_url: `${baseUrl}${returnUrl}`,
+      });
+
+      res.json({ url: session.url });
+    } catch (error) {
+      console.error("Billing portal error:", error);
+      res.status(500).json({ error: "Failed to create billing portal session" });
+    }
+  });
+
   // Create Stripe checkout session for an invoice
   app.post("/api/invoices/:id/stripe-checkout", async (req, res) => {
     try {
