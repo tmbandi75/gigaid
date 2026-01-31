@@ -2258,5 +2258,43 @@ export const stripeIdempotencyLocks = pgTable("stripe_idempotency_locks", {
 
 export type StripeIdempotencyLock = typeof stripeIdempotencyLocks.$inferSelect;
 
+// Stripe disputes - tracks chargebacks and dispute state
+export const stripeDisputes = pgTable("stripe_disputes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  stripeDisputeId: text("stripe_dispute_id").notNull().unique(),
+  chargeId: text("charge_id"),
+  paymentIntentId: text("payment_intent_id"),
+  connectedAccountId: text("connected_account_id"),
+  amount: integer("amount").notNull(), // cents
+  currency: text("currency").notNull().default("usd"),
+  reason: text("reason"), // e.g., fraudulent, duplicate, product_not_received
+  status: text("status").notNull(), // needs_response, under_review, won, lost
+  evidenceDueBy: text("evidence_due_by"),
+  evidenceSubmittedAt: text("evidence_submitted_at"),
+  lastEventId: text("last_event_id"),
+  lastEventType: text("last_event_type"),
+  lastUpdatedAt: text("last_updated_at").notNull(),
+  metadata: text("metadata"), // JSON copy of dispute metadata
+  jobId: varchar("job_id"),
+  invoiceId: varchar("invoice_id"),
+  bookingId: varchar("booking_id"),
+  createdAt: text("created_at").notNull().default(sql`now()`),
+  resolvedAt: text("resolved_at"),
+  resolution: text("resolution"), // won, lost, withdrawn
+}, (table) => [
+  index("stripe_disputes_dispute_id_idx").on(table.stripeDisputeId),
+  index("stripe_disputes_status_idx").on(table.status),
+  index("stripe_disputes_job_idx").on(table.jobId),
+  index("stripe_disputes_invoice_idx").on(table.invoiceId),
+  index("stripe_disputes_booking_idx").on(table.bookingId),
+]);
+
+export const insertStripeDisputeSchema = createInsertSchema(stripeDisputes).omit({
+  id: true,
+});
+
+export type InsertStripeDispute = z.infer<typeof insertStripeDisputeSchema>;
+export type StripeDispute = typeof stripeDisputes.$inferSelect;
+
 export * from "./models/chat";
 export * from "./models/auth";

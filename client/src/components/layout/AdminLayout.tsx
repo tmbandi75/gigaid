@@ -23,6 +23,7 @@ import {
   FileText,
   BarChart3,
   Shield,
+  CreditCard,
   LogOut,
   Moon,
   Sun,
@@ -74,6 +75,12 @@ const adminNavItems = [
     href: "/admin/analytics", 
     icon: BarChart3,
     testId: "nav-analytics",
+  },
+  { 
+    title: "Stripe Monitoring", 
+    href: "/admin/stripe", 
+    icon: CreditCard,
+    testId: "nav-stripe-monitoring",
   },
 ];
 

@@ -9,7 +9,7 @@ import {
   stallDetections, nextActions, autoExecutionLog, intentSignals, readyActions,
   clients, providerServices, clientNotificationCampaigns, campaignSuggestions,
   capabilityUsage,
-  stripeWebhookEvents, stripePaymentState, stripeIdempotencyLocks,
+  stripeWebhookEvents, stripePaymentState, stripeIdempotencyLocks, stripeDisputes,
   type User, type InsertUser,
   type Job, type InsertJob,
   type Lead, type InsertLead,
@@ -56,6 +56,7 @@ import {
   type CapabilityUsage,
   type StripeWebhookEvent, type InsertStripeWebhookEvent,
   type StripePaymentState, type InsertStripePaymentState,
+  type StripeDispute, type InsertStripeDispute,
 } from "@shared/schema";
 import { IStorage } from "./storage";
 import { randomUUID } from "crypto";
@@ -2138,6 +2139,65 @@ export class DatabaseStorage implements IStorage {
       .where(lte(stripeIdempotencyLocks.createdAt, beforeTimestamp))
       .returning();
     return result.length;
+  }
+
+  async getStripeDispute(stripeDisputeId: string): Promise<StripeDispute | undefined> {
+    const results = await db.select().from(stripeDisputes)
+      .where(eq(stripeDisputes.stripeDisputeId, stripeDisputeId))
+      .limit(1);
+    return results[0];
+  }
+
+  async upsertStripeDispute(dispute: InsertStripeDispute): Promise<StripeDispute> {
+    const existing = await this.getStripeDispute(dispute.stripeDisputeId);
+    
+    if (existing) {
+      const result = await db.update(stripeDisputes)
+        .set({
+          ...dispute,
+          lastUpdatedAt: new Date().toISOString(),
+        })
+        .where(eq(stripeDisputes.stripeDisputeId, dispute.stripeDisputeId))
+        .returning();
+      return result[0];
+    }
+    
+    const result = await db.insert(stripeDisputes)
+      .values({
+        ...dispute,
+        createdAt: new Date().toISOString(),
+        lastUpdatedAt: new Date().toISOString(),
+      })
+      .returning();
+    return result[0];
+  }
+
+  async getStripeDisputes(options: { status?: string; limit?: number; offset?: number }): Promise<StripeDispute[]> {
+    const { status, limit = 50, offset = 0 } = options;
+    
+    let query = db.select().from(stripeDisputes);
+    
+    if (status) {
+      query = query.where(eq(stripeDisputes.status, status)) as any;
+    }
+    
+    return await query
+      .orderBy(desc(stripeDisputes.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getActiveStripeDisputes(): Promise<StripeDispute[]> {
+    return await db.select().from(stripeDisputes)
+      .where(
+        or(
+          eq(stripeDisputes.status, "needs_response"),
+          eq(stripeDisputes.status, "under_review"),
+          eq(stripeDisputes.status, "warning_needs_response"),
+          eq(stripeDisputes.status, "warning_under_review")
+        )
+      )
+      .orderBy(asc(stripeDisputes.evidenceDueBy));
   }
 
   async getUsersByStripeConnectAccountId(accountId: string): Promise<User[]> {

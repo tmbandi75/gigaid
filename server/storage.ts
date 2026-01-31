@@ -45,6 +45,7 @@ import {
   type CapabilityUsage,
   type StripeWebhookEvent, type InsertStripeWebhookEvent,
   type StripePaymentState, type InsertStripePaymentState,
+  type StripeDispute, type InsertStripeDispute,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -371,6 +372,12 @@ export interface IStorage {
   acquireStripeIdempotencyLock(key: string): Promise<boolean>;
   releaseStripeIdempotencyLock(key: string): Promise<void>;
   cleanupStaleStripeIdempotencyLocks(beforeTimestamp: string): Promise<number>;
+
+  // Stripe Disputes
+  getStripeDispute(stripeDisputeId: string): Promise<StripeDispute | undefined>;
+  upsertStripeDispute(dispute: InsertStripeDispute): Promise<StripeDispute>;
+  getStripeDisputes(options: { status?: string; limit?: number; offset?: number }): Promise<StripeDispute[]>;
+  getActiveStripeDisputes(): Promise<StripeDispute[]>;
 
   // Stripe Connect user lookup
   getUsersByStripeConnectAccountId(accountId: string): Promise<User[]>;
@@ -2932,6 +2939,18 @@ export class MemStorage implements IStorage {
   async releaseStripeIdempotencyLock(_key: string): Promise<void> {}
   async cleanupStaleStripeIdempotencyLocks(_beforeTimestamp: string): Promise<number> {
     return 0;
+  }
+  async getStripeDispute(_stripeDisputeId: string): Promise<StripeDispute | undefined> {
+    return undefined;
+  }
+  async upsertStripeDispute(_dispute: InsertStripeDispute): Promise<StripeDispute> {
+    throw new Error("MemStorage does not support Stripe disputes");
+  }
+  async getStripeDisputes(_options: { status?: string; limit?: number; offset?: number }): Promise<StripeDispute[]> {
+    return [];
+  }
+  async getActiveStripeDisputes(): Promise<StripeDispute[]> {
+    return [];
   }
   async getUsersByStripeConnectAccountId(_accountId: string): Promise<User[]> {
     return Array.from(this.users.values()).filter(u => u.stripeConnectAccountId === _accountId);

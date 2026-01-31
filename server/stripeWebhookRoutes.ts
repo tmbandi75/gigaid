@@ -11,6 +11,9 @@ const WEBHOOK_EVENT_TYPES = [
   "payment_intent.requires_action",
   "charge.refunded",
   "charge.refund.updated",
+  "charge.dispute.created",
+  "charge.dispute.updated",
+  "charge.dispute.closed",
   "account.updated",
 ];
 
@@ -175,6 +178,14 @@ async function handleStripeEvent(
       break;
     }
 
+    case "charge.dispute.created":
+    case "charge.dispute.updated":
+    case "charge.dispute.closed": {
+      const dispute = event.data.object as Stripe.Dispute;
+      await handleDisputeEvent(event, dispute, connectedAccountId, storage);
+      break;
+    }
+
     default:
       console.log(`[Stripe Webhook Processor] Unhandled event type: ${eventType}`);
   }
@@ -321,6 +332,100 @@ async function handleAccountUpdatedEvent(
     
     console.log(`[Stripe Webhook] Updated Connect status for user ${user.id}: ${status}`);
   }
+}
+
+async function handleDisputeEvent(
+  event: Stripe.Event,
+  dispute: Stripe.Dispute,
+  connectedAccountId: string | null,
+  storage: IStorage
+) {
+  const chargeId = typeof dispute.charge === "string" ? dispute.charge : dispute.charge?.id;
+  const paymentIntentId = typeof dispute.payment_intent === "string" 
+    ? dispute.payment_intent 
+    : dispute.payment_intent?.id || null;
+
+  const metadata = (dispute.metadata || {}) as Record<string, string>;
+  const jobId = metadata.job_id || metadata.jobId || null;
+  const invoiceId = metadata.invoice_id || metadata.invoiceId || null;
+  const bookingId = metadata.booking_id || metadata.bookingId || null;
+
+  const disputeData = {
+    stripeDisputeId: dispute.id,
+    chargeId: chargeId || null,
+    paymentIntentId,
+    connectedAccountId,
+    amount: dispute.amount,
+    currency: dispute.currency,
+    reason: dispute.reason,
+    status: dispute.status,
+    evidenceDueBy: dispute.evidence_details?.due_by 
+      ? new Date(dispute.evidence_details.due_by * 1000).toISOString() 
+      : null,
+    lastEventId: event.id,
+    lastEventType: event.type,
+    lastUpdatedAt: new Date().toISOString(),
+    metadata: JSON.stringify(metadata),
+    jobId,
+    invoiceId,
+    bookingId,
+  };
+
+  await storage.upsertStripeDispute(disputeData);
+
+  if (paymentIntentId) {
+    const existingPaymentState = await storage.getStripePaymentStateByPI(paymentIntentId);
+    if (existingPaymentState) {
+      let paymentStatus = existingPaymentState.status;
+      if (event.type === "charge.dispute.created") {
+        paymentStatus = "disputed";
+      } else if (event.type === "charge.dispute.closed") {
+        if (dispute.status === "won") {
+          paymentStatus = "succeeded";
+        } else if (dispute.status === "lost") {
+          paymentStatus = "refunded";
+        }
+      }
+
+      await storage.upsertStripePaymentState({
+        ...existingPaymentState,
+        status: paymentStatus,
+        lastEventId: event.id,
+        lastEventType: event.type,
+        lastUpdatedAt: new Date().toISOString(),
+      });
+    }
+  }
+
+  if (invoiceId && event.type === "charge.dispute.created") {
+    try {
+      const invoice = await storage.getInvoice(invoiceId);
+      if (invoice) {
+        await storage.updateInvoice(invoiceId, {
+          status: "disputed",
+        });
+        console.log(`[Stripe Webhook] Marked invoice ${invoiceId} as disputed`);
+      }
+    } catch (err: any) {
+      console.error(`[Stripe Webhook] Failed to update invoice ${invoiceId}:`, err.message);
+    }
+  }
+
+  if (jobId && event.type === "charge.dispute.created") {
+    try {
+      const job = await storage.getJob(jobId);
+      if (job) {
+        await storage.updateJob(jobId, {
+          paymentStatus: "disputed",
+        });
+        console.log(`[Stripe Webhook] Marked job ${jobId} payment as disputed`);
+      }
+    } catch (err: any) {
+      console.error(`[Stripe Webhook] Failed to update job ${jobId}:`, err.message);
+    }
+  }
+
+  console.log(`[Stripe Webhook] ${event.type} for dispute ${dispute.id}: status=${dispute.status}, reason=${dispute.reason}`);
 }
 
 export async function processRetryableWebhooks(storage: IStorage) {
