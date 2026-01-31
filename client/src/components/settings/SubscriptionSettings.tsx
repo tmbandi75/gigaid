@@ -47,9 +47,21 @@ export function SubscriptionSettings() {
   const { toast } = useToast();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
 
-  const { data: subscription, isLoading } = useQuery<SubscriptionStatus>({
+  const { data: subscription, isLoading, isError } = useQuery<SubscriptionStatus>({
     queryKey: ["/api/subscription/status"],
+    retry: 1,
   });
+
+  // Default subscription status when API fails or returns no data
+  const effectiveSubscription: SubscriptionStatus = subscription || {
+    plan: "free",
+    planName: "Free",
+    status: "active",
+    hasSubscription: false,
+    currentPeriodEnd: null,
+    cancelAtPeriodEnd: false,
+    cancelAt: null,
+  };
 
   const cancelMutation = useMutation({
     mutationFn: async () => {
@@ -122,8 +134,8 @@ export function SubscriptionSettings() {
     );
   }
 
-  const isFree = !subscription?.hasSubscription || subscription?.plan === "free";
-  const price = PLAN_PRICES[subscription?.plan || "free"] || 0;
+  const isFree = !effectiveSubscription.hasSubscription || effectiveSubscription.plan === "free";
+  const price = PLAN_PRICES[effectiveSubscription.plan] || 0;
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return null;
@@ -151,7 +163,7 @@ export function SubscriptionSettings() {
               <p className="text-sm text-muted-foreground">Current Plan</p>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-lg font-semibold" data-testid="text-current-plan">
-                  {subscription?.planName || "Free"}
+                  {effectiveSubscription.planName}
                 </span>
                 {!isFree && (
                   <Badge variant="secondary" data-testid="badge-plan-price">
@@ -160,7 +172,7 @@ export function SubscriptionSettings() {
                 )}
               </div>
             </div>
-            {subscription?.cancelAtPeriodEnd && (
+            {effectiveSubscription.cancelAtPeriodEnd && (
               <Badge variant="outline" className="text-amber-600 border-amber-300" data-testid="badge-cancelling">
                 <AlertTriangle className="h-3 w-3 mr-1" />
                 Cancelling
@@ -168,16 +180,16 @@ export function SubscriptionSettings() {
             )}
           </div>
 
-          {subscription?.hasSubscription && subscription?.currentPeriodEnd && (
+          {effectiveSubscription.hasSubscription && effectiveSubscription.currentPeriodEnd && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Calendar className="h-4 w-4" />
-              {subscription.cancelAtPeriodEnd ? (
+              {effectiveSubscription.cancelAtPeriodEnd ? (
                 <span data-testid="text-cancel-date">
-                  Access ends {formatDate(subscription.currentPeriodEnd)}
+                  Access ends {formatDate(effectiveSubscription.currentPeriodEnd)}
                 </span>
               ) : (
                 <span data-testid="text-next-billing">
-                  Next billing: {formatDate(subscription.currentPeriodEnd)}
+                  Next billing: {formatDate(effectiveSubscription.currentPeriodEnd)}
                 </span>
               )}
             </div>
@@ -217,7 +229,7 @@ export function SubscriptionSettings() {
                 <ExternalLink className="h-3 w-3 ml-auto" />
               </Button>
 
-              {subscription?.cancelAtPeriodEnd ? (
+              {effectiveSubscription.cancelAtPeriodEnd ? (
                 <Button
                   variant="outline"
                   onClick={() => reactivateMutation.mutate()}
@@ -247,8 +259,8 @@ export function SubscriptionSettings() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Cancel your subscription?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        You'll keep access to {subscription?.planName} features until{" "}
-                        {formatDate(subscription?.currentPeriodEnd || null)}. After that,
+                        You'll keep access to {effectiveSubscription.planName} features until{" "}
+                        {formatDate(effectiveSubscription.currentPeriodEnd)}. After that,
                         your account will be downgraded to the Free plan.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
