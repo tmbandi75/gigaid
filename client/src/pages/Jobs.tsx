@@ -36,6 +36,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { JobResolutionModal } from "@/components/jobs/JobResolutionModal";
 import { JobsCalendar } from "@/components/calendar/JobsCalendar";
+import { BookingLinkSecondary } from "@/components/booking-link";
 
 function formatTime(time: string): string {
   const [hours, minutes] = time.split(':');
@@ -347,6 +348,13 @@ export default function Jobs() {
     queryKey: ["/api/ai/nudges"],
   });
 
+  const { data: profile } = useQuery<{ services: string[] | null; bookingLink: string | null }>({
+    queryKey: ["/api/profile"],
+  });
+
+  const servicesCount = profile?.services?.length || 0;
+  const bookingLink = profile?.bookingLink || null;
+
   const handleNudgeClick = (nudge: AiNudge) => {
     setSelectedNudge(nudge);
   };
@@ -459,12 +467,15 @@ export default function Jobs() {
             </Button>
           </div>
 
-          <Link href="/jobs/new">
-            <Button className="w-full h-12 bg-gradient-to-r from-primary to-violet-600 shadow-lg" data-testid="button-add-job">
-              <Plus className="h-5 w-5 mr-2" />
-              Add New Job
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/jobs/new" className="flex-1">
+              <Button className="w-full h-12 bg-gradient-to-r from-primary to-violet-600 shadow-lg" data-testid="button-add-job">
+                <Plus className="h-5 w-5 mr-2" />
+                Add New Job
+              </Button>
+            </Link>
+            <BookingLinkSecondary bookingLink={bookingLink} servicesCount={servicesCount} />
+          </div>
         </div>
 
         {isLoading ? (

@@ -52,6 +52,7 @@ import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
 import { LeadsTableView } from "@/components/leads/LeadsTableView";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
+import { BookingLinkInline, BookingLinkEmptyState } from "@/components/booking-link";
 
 interface FollowUpMessage {
   message: string;
@@ -226,7 +227,7 @@ function LeadCard({ lead, nudges, onGenerateFollowUp, onSendText, onNudgeClick }
   );
 }
 
-function EmptyState() {
+function EmptyState({ bookingLink, servicesCount }: { bookingLink: string | null; servicesCount: number }) {
   return (
     <div className="flex flex-col items-center py-12 text-center px-4">
       <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center mb-6">
@@ -243,6 +244,7 @@ function EmptyState() {
           Add Your First Lead
         </Button>
       </Link>
+      <BookingLinkEmptyState bookingLink={bookingLink} servicesCount={servicesCount} />
     </div>
   );
 }
@@ -277,6 +279,13 @@ export default function Leads() {
   const { data: nudges = [] } = useQuery<AiNudge[]>({
     queryKey: ["/api/nudges"],
   });
+
+  const { data: profile } = useQuery<{ services: string[] | null; bookingLink: string | null }>({
+    queryKey: ["/api/profile"],
+  });
+
+  const servicesCount = profile?.services?.length || 0;
+  const bookingLink = profile?.bookingLink || null;
 
   const showTableView = !isMobile && viewMode === "table";
 
@@ -409,6 +418,8 @@ export default function Leads() {
           </Link>
         </div>
 
+        <BookingLinkInline bookingLink={bookingLink} servicesCount={servicesCount} />
+
         <FollowUpCheckIn />
 
         {isLoading ? (
@@ -429,7 +440,7 @@ export default function Leads() {
             ))}
           </div>
         ) : filteredLeads.length === 0 ? (
-          <EmptyState />
+          <EmptyState bookingLink={bookingLink} servicesCount={servicesCount} />
         ) : (
           <div className="space-y-3">
             {filteredLeads.map((lead) => (
@@ -538,6 +549,8 @@ export default function Leads() {
           </div>
         </div>
 
+        <BookingLinkInline bookingLink={bookingLink} servicesCount={servicesCount} />
+
         <FollowUpCheckIn />
 
         {isLoading ? (
@@ -562,7 +575,7 @@ export default function Leads() {
             </div>
           )
         ) : filteredLeads.length === 0 ? (
-          <EmptyState />
+          <EmptyState bookingLink={bookingLink} servicesCount={servicesCount} />
         ) : showTableView ? (
           <LeadsTableView leads={filteredLeads} />
         ) : (

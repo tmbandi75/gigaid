@@ -366,6 +366,10 @@ export async function registerRoutes(
           photo: null,
         });
       }
+      const bookingLink = user.publicProfileSlug 
+        ? `https://gigaid.ai/book/${user.publicProfileSlug}`
+        : null;
+      
       res.json({
         id: user.id,
         name: user.name || "Gig Worker",
@@ -380,6 +384,7 @@ export async function registerRoutes(
         slotDuration: user.slotDuration,
         publicProfileEnabled: user.publicProfileEnabled,
         publicProfileSlug: user.publicProfileSlug,
+        bookingLink,
         notifyBySms: user.notifyBySms,
         notifyByEmail: user.notifyByEmail,
         showReviewsOnBooking: user.showReviewsOnBooking,
