@@ -1,21 +1,9 @@
-/**
- * TEMPORARY STRIPE STUB
- * --------------------
- * This prevents the app from crashing while Stripe
- * is reintroduced incrementally.
- *
- * DO NOT remove this file.
- * DO NOT rename the export.
- */
+// 🔥 PROOF EXPORT — DO NOT REMOVE
+export const __stripe_resolution_proof = true
 
 export type SubscriptionPlan = "pro" | "pro_plus" | "business";
 
-export async function startStripeCheckout(_: any) {
-  console.warn('[Stripe Stub] startStripeCheckout called')
-
-  alert(
-    'Stripe checkout is temporarily disabled while setup is finalized.'
-  )
-
-  return
+export async function startStripeCheckout(_?: any) {
+  console.log('REAL stripeCheckout.ts is being used')
+  alert('Stripe stub reached — app is no longer crashing')
 }
