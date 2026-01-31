@@ -399,6 +399,7 @@ export async function registerRoutes(
         noShowProtectionEnabled: user.noShowProtectionEnabled,
       });
     } catch (error) {
+      console.error("[Profile] Error fetching profile:", error);
       res.status(500).json({ error: "Failed to fetch profile" });
     }
   });
