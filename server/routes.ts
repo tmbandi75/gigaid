@@ -5682,6 +5682,7 @@ Return ONLY the message text, no JSON or formatting.`
 
       res.json(results);
     } catch (error) {
+      console.error("[PaymentMethods] Error updating payment methods:", error);
       res.status(500).json({ error: "Failed to update payment methods" });
     }
   });
