@@ -277,18 +277,16 @@ export default function Login() {
                 <ArrowLeft className="h-6 w-6" />
               </button>
             )}
-            <h1 className="text-3xl font-bold text-white">
+            <h1 className="text-3xl font-bold text-white mb-2">
               {mode === "forgot" 
                 ? "Reset Password" 
                 : mode === "signup" 
                   ? "Join GigAid™" 
                   : "Welcome to GigAid™"}
             </h1>
-            {mode !== "forgot" && mode !== "signup" && (
-              <p className="text-white text-lg font-medium mt-3" data-testid="text-login-slogan">
-                Book jobs faster. Get paid upfront. Stay organized.
-              </p>
-            )}
+            <p className="text-white text-lg font-medium" data-testid="text-login-slogan">
+              Book jobs faster. Get paid upfront. Stay organized.
+            </p>
             {mode === "forgot" && (
               <p className="text-white/70 text-sm mt-2">We'll send you a reset link</p>
             )}
