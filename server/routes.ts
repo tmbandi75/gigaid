@@ -62,6 +62,8 @@ import { hasCapability, isDeveloper } from "@shared/entitlements";
 import { isHardGated } from "@shared/gatingConfig";
 import { canCreateJob, canSendSms, canUseAutoFollowups, PLAN_LIMITS } from "@shared/planLimits";
 import { Plan } from "@shared/plans";
+import { canPerform, type CanPerformResult } from "@shared/capabilities/canPerform";
+import type { Plan as CapPlan, Capability } from "@shared/capabilities/plans";
 import {
   getBookingProtection,
   canShowInterventionToday,
@@ -1042,23 +1044,25 @@ export async function registerRoutes(
       // Always use authenticated user ID
       const validated = insertJobSchema.parse({ ...jobData, userId: authUserId });
       
-      // Check job limit for free users
+      // Check job creation capability
       const user = await storage.getUser(authUserId);
-      const userPlan = (user?.plan as Plan) || Plan.FREE;
+      const userPlan = (user?.plan as CapPlan) || 'free';
       
       // Developer bypass
       if (!isDeveloper(user)) {
-        const existingJobs = await storage.getJobs(validated.userId);
-        // Count all jobs ever created (simplest and most predictable)
-        const totalJobCount = existingJobs.length;
+        // Get current usage for jobs.create capability
+        const jobsUsageRecord = await storage.getCapabilityUsage(authUserId, 'jobs.create');
+        const jobsUsage = jobsUsageRecord?.usageCount ?? 0;
+        const capResult = canPerform(userPlan, 'jobs.create', jobsUsage);
         
-        if (!canCreateJob({ plan: userPlan, currentJobCount: totalJobCount })) {
+        if (!capResult.allowed) {
           return res.status(403).json({
             error: "Job limit reached",
             code: "JOB_LIMIT_EXCEEDED",
-            message: "Free plan includes up to 10 jobs. Upgrade to Pro for unlimited jobs.",
-            currentCount: totalJobCount,
-            limit: PLAN_LIMITS[userPlan].maxJobs,
+            message: capResult.reason || "You've reached your job limit. Upgrade for more.",
+            currentCount: jobsUsage,
+            limit: capResult.limit,
+            remaining: capResult.remaining,
             plan: userPlan
           });
         }
@@ -1076,6 +1080,11 @@ export async function registerRoutes(
       }
       
       const job = await storage.createJob(jobWithCoords);
+      
+      // Increment capability usage after successful job creation
+      if (!isDeveloper(user)) {
+        await storage.incrementCapabilityUsage(authUserId, 'jobs.create');
+      }
       
       emitCanonicalEvent({
         eventName: "booking_created",
@@ -1723,19 +1732,41 @@ export async function registerRoutes(
 
       const { photos, isOfflineSync } = req.body;
       
-      // Check if user can use offline photo uploads (Pro+ only for offline-synced photos)
+      // Check offline photos capability
       if (isOfflineSync) {
         const user = await storage.getUser(job.userId);
-        const userPlan = (user?.plan as Plan) || Plan.FREE;
+        const userPlan = (user?.plan as CapPlan) || 'free';
         
         // Developer bypass
-        if (!isDeveloper(user) && !PLAN_LIMITS[userPlan].offlinePhotos) {
-          return res.status(403).json({
-            error: "Offline photo uploads not available",
-            code: "OFFLINE_PHOTOS_NOT_AVAILABLE",
-            message: "Offline photo uploads are available on Pro+.",
-            plan: userPlan
-          });
+        if (!isDeveloper(user)) {
+          const photosUsageRecord = await storage.getCapabilityUsage(job.userId, 'offline.photos');
+          const photosUsage = photosUsageRecord?.usageCount ?? 0;
+          const capResult = canPerform(userPlan, 'offline.photos', photosUsage);
+          
+          if (!capResult.allowed) {
+            return res.status(403).json({
+              error: "Offline photo limit reached",
+              code: "OFFLINE_PHOTOS_LIMIT_EXCEEDED",
+              message: capResult.reason || "You've reached your offline photo limit. Upgrade for more.",
+              currentCount: photosUsage,
+              limit: capResult.limit,
+              remaining: capResult.remaining,
+              plan: userPlan
+            });
+          }
+          
+          // Pre-check: ensure enough remaining capacity for all photos in this request
+          const newPhotosInRequest = Array.isArray(photos) ? photos.filter((p: string) => typeof p === "string" && p.startsWith("/objects/")).length : 0;
+          if (capResult.remaining !== undefined && newPhotosInRequest > capResult.remaining) {
+            return res.status(403).json({
+              error: "Not enough photo capacity",
+              code: "OFFLINE_PHOTOS_BATCH_EXCEEDED",
+              message: `You can only upload ${capResult.remaining} more photo(s). Upgrade for more capacity.`,
+              requestedCount: newPhotosInRequest,
+              remaining: capResult.remaining,
+              plan: userPlan
+            });
+          }
         }
       }
       if (!photos || !Array.isArray(photos)) {
@@ -1755,6 +1786,7 @@ export async function registerRoutes(
       }
 
       // Add new photos that don't exist yet
+      let newPhotosCount = 0;
       for (const photoPath of photos) {
         if (typeof photoPath === "string" && photoPath.startsWith("/objects/") && !existingPaths.has(photoPath)) {
           await storage.createPhotoAsset({
@@ -1766,6 +1798,17 @@ export async function registerRoutes(
             storagePath: photoPath,
             visibility: "private",
           });
+          newPhotosCount++;
+        }
+      }
+      
+      // Increment offline photos usage for each new photo uploaded
+      if (isOfflineSync && newPhotosCount > 0) {
+        const user = await storage.getUser(job.userId);
+        if (!isDeveloper(user)) {
+          for (let i = 0; i < newPhotosCount; i++) {
+            await storage.incrementCapabilityUsage(job.userId, 'offline.photos');
+          }
         }
       }
 
@@ -2963,25 +3006,39 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Phone number and message are required" });
       }
       
-      // Check if user can send outbound SMS
-      const user = await storage.getUser((req as any).userId);
-      const userPlan = (user?.plan as Plan) || Plan.FREE;
+      const userId = (req as any).userId;
+      const user = await storage.getUser(userId);
+      const userPlan = (user?.plan as CapPlan) || 'free';
       
-      // Developer bypass
-      if (!isDeveloper(user) && !canSendSms(userPlan)) {
-        return res.status(403).json({
-          error: "Outbound SMS not available",
-          code: "SMS_NOT_AVAILABLE",
-          message: "Outbound SMS is available on Pro and higher plans.",
-          plan: userPlan
-        });
+      // Check SMS capability using new system
+      if (!isDeveloper(user)) {
+        const smsUsageRecord = await storage.getCapabilityUsage(userId, 'sms.two_way');
+        const smsUsage = smsUsageRecord?.usageCount ?? 0;
+        const capResult = canPerform(userPlan, 'sms.two_way', smsUsage);
+        
+        if (!capResult.allowed) {
+          return res.status(403).json({
+            error: "SMS limit reached",
+            code: "SMS_LIMIT_EXCEEDED",
+            message: capResult.reason || "You've reached your SMS limit. Upgrade for more.",
+            currentCount: smsUsage,
+            limit: capResult.limit,
+            remaining: capResult.remaining,
+            plan: userPlan
+          });
+        }
       }
       
       const success = await sendSMS(to, message);
       if (success) {
+        // Increment SMS usage after successful send
+        if (!isDeveloper(user)) {
+          await storage.incrementCapabilityUsage(userId, 'sms.two_way');
+        }
+        
         // Log the outgoing message to the database
         await storage.createSmsMessage({
-          userId: (req as any).userId,
+          userId,
           clientPhone: to,
           clientName: clientName || null,
           direction: "outbound",
@@ -10377,6 +10434,28 @@ Return ONLY the message text, no JSON or formatting.`
       const userId = (req as any).userId;
       const { serviceId, eventType, eventReason, channel, bookingLink, messageContent } = req.body;
       
+      // Check AI campaign suggestions capability
+      const user = await storage.getUser(userId);
+      const userPlan = (user?.plan as CapPlan) || 'free';
+      
+      if (!isDeveloper(user)) {
+        const campaignUsageRecord = await storage.getCapabilityUsage(userId, 'ai.campaign_suggestions');
+        const campaignUsage = campaignUsageRecord?.usageCount ?? 0;
+        const capResult = canPerform(userPlan, 'ai.campaign_suggestions', campaignUsage);
+        
+        if (!capResult.allowed) {
+          return res.status(403).json({
+            error: "Campaign limit reached",
+            code: "CAMPAIGN_LIMIT_EXCEEDED",
+            message: capResult.reason || "You've reached your campaign limit. Upgrade for more.",
+            currentCount: campaignUsage,
+            limit: capResult.limit,
+            remaining: capResult.remaining,
+            plan: userPlan
+          });
+        }
+      }
+      
       const service = await storage.getProviderServiceById(serviceId);
       if (!service || service.userId !== userId) {
         return res.status(404).json({ error: "Service not found" });
@@ -10435,6 +10514,11 @@ Return ONLY the message text, no JSON or formatting.`
         sentAt: now,
         createdAt: now,
       });
+      
+      // Increment campaign usage after successful creation
+      if (!isDeveloper(user)) {
+        await storage.incrementCapabilityUsage(userId, 'ai.campaign_suggestions');
+      }
       
       let successCount = 0;
       let failCount = 0;
