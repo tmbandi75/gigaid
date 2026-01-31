@@ -34,6 +34,39 @@ import {
   type ServiceCategory,
   type NotificationEventType,
 } from "@shared/schema";
+import { findCategoryForService } from "@shared/service-categories";
+
+// Map service-categories.ts category IDs to schema.ts ServiceCategory types
+const categoryIdToSchemaCategory: Record<string, ServiceCategory> = {
+  "handyman": "handyman_repairs",
+  "plumbing": "plumbing",
+  "electrical": "electrical",
+  "cleaning": "cleaning",
+  "lawn-outdoor": "lawn_landscaping",
+  "windows-exterior": "window_cleaning",
+  "flooring": "carpet_flooring",
+  "carpentry": "handyman_repairs",
+  "hvac": "hvac",
+  "moving": "moving_hauling",
+  "auto": "auto_detailing",
+  "security": "handyman_repairs",
+  "seasonal": "snow_removal",
+  "interior-care": "cleaning",
+  "hair-beauty": "other",
+  "child-care": "other",
+  "pet-care": "other",
+  "house-care": "other",
+  "wellness": "other",
+  "creative": "other",
+  "events": "other",
+  "education": "other",
+  "specialty-cleaning": "cleaning",
+  "professional": "other",
+  "tech-help": "other",
+  "concierge": "other",
+  "inspection": "other",
+  "other": "other",
+};
 
 const CATEGORY_LABELS: Record<ServiceCategory, string> = {
   snow_removal: "Snow Removal",
@@ -97,9 +130,22 @@ export default function NotifyClientsPage() {
     suggestedMessage: string;
   } | null>(null);
 
-  const { data: services, isLoading: servicesLoading } = useQuery<any[]>({
-    queryKey: ["/api/provider-services"],
+  const { data: profile, isLoading: profileLoading } = useQuery<any>({
+    queryKey: ["/api/profile"],
   });
+
+  // Transform profile services (string array) into objects with id, name, and category
+  const services = (profile?.services || []).map((serviceName: string, index: number) => {
+    const category = findCategoryForService(serviceName);
+    const categoryId = category?.id || "other";
+    const schemaCategory = categoryIdToSchemaCategory[categoryId] || "other";
+    return {
+      id: `profile-service-${index}`,
+      name: serviceName,
+      category: schemaCategory,
+    };
+  });
+  const servicesLoading = profileLoading;
 
   const { data: eligibleClients, isLoading: clientsLoading } = useQuery<{ count: number; clients: any[] }>({
     queryKey: ["/api/notification-campaigns/eligible-clients", channel],
@@ -304,9 +350,9 @@ export default function NotifyClientsPage() {
                 <p className="text-muted-foreground mb-4">
                   No services configured yet. Add a service to start notifying clients.
                 </p>
-                <Button onClick={() => setLocation("/settings")} data-testid="button-add-service">
+                <Button onClick={() => setLocation("/profile?edit=true")} data-testid="button-add-service">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Service
+                  Add Services
                 </Button>
               </div>
             )}
@@ -637,9 +683,9 @@ export default function NotifyClientsPage() {
                 <p className="text-muted-foreground mb-4">
                   No services configured yet. Add a service to start notifying clients.
                 </p>
-                <Button onClick={() => setLocation("/settings")} data-testid="button-add-service">
+                <Button onClick={() => setLocation("/profile?edit=true")} data-testid="button-add-service">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Service
+                  Add Services
                 </Button>
               </div>
             )}

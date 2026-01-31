@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -96,6 +96,16 @@ export default function Profile() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  
+  // Auto-enable edit mode if ?edit=true is in the URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("edit") === "true") {
+      setIsEditing(true);
+      // Remove the query param to avoid staying in edit mode on refresh
+      window.history.replaceState({}, "", "/profile");
+    }
+  }, []);
 
   const { data: profile, isLoading } = useQuery<UserProfile>({
     queryKey: ["/api/profile"],
