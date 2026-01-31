@@ -1,1 +1,1 @@
-export const STRIPE_ENABLED = true;
+export const STRIPE_ENABLED = false;

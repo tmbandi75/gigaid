@@ -6152,10 +6152,10 @@ Return ONLY the message text, no JSON or formatting.`
     }
   });
 
-  // Create Pro+ subscription checkout session (supports embedded mode)
-  app.post("/api/subscription/checkout", isAuthenticated, async (req, res) => {
+  // Create Pro+ subscription checkout session
+  app.post("/api/subscription/checkout", async (req, res) => {
     try {
-      const { plan, returnTo, embedded } = req.body;
+      const { plan, returnTo } = req.body;
       
       // Plan configuration with pricing
       const planConfigs: Record<string, { name: string; description: string; amount: number }> = {
@@ -6195,43 +6195,6 @@ Return ONLY the message text, no JSON or formatting.`
       // Get user for checkout metadata
       const user = await storage.getUser((req as any).userId);
 
-      // Use embedded mode for in-app checkout
-      if (embedded) {
-        const session = await stripe.checkout.sessions.create({
-          payment_method_types: ["card"],
-          line_items: [
-            {
-              price_data: {
-                currency: "usd",
-                product_data: {
-                  name: planConfig.name,
-                  description: planConfig.description,
-                },
-                unit_amount: planConfig.amount,
-                recurring: { interval: "month" },
-              },
-              quantity: 1,
-            },
-          ],
-          mode: "subscription",
-          ui_mode: "embedded",
-          return_url: `${baseUrl}/checkout/complete?session_id={CHECKOUT_SESSION_ID}`,
-          metadata: {
-            plan,
-            user_id: user?.id || (req as any).userId,
-          },
-          subscription_data: {
-            metadata: {
-              user_id: user?.id || (req as any).userId,
-              plan,
-            },
-          },
-        });
-
-        return res.json({ clientSecret: session.client_secret });
-      }
-
-      // Standard redirect mode (fallback)
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
         line_items: [
@@ -6267,79 +6230,6 @@ Return ONLY the message text, no JSON or formatting.`
     } catch (error) {
       console.error("Subscription checkout error:", error);
       res.status(500).json({ error: "Failed to create checkout session" });
-    }
-  });
-
-  // Verify subscription checkout session (for embedded checkout)
-  app.get("/api/subscription/verify", async (req, res) => {
-    try {
-      const { session_id } = req.query;
-      
-      if (!session_id || typeof session_id !== 'string') {
-        return res.status(400).json({ error: "Missing session_id" });
-      }
-
-      const { getUncachableStripeClient } = await import("./stripeClient");
-      const stripe = await getUncachableStripeClient();
-      
-      const session = await stripe.checkout.sessions.retrieve(session_id, {
-        expand: ['customer']
-      });
-      
-      if (session.status === 'complete' && session.subscription) {
-        // Get the subscription to extract plan info
-        const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
-        let userId = subscription.metadata?.user_id || session.metadata?.user_id;
-        const plan = subscription.metadata?.plan || session.metadata?.plan;
-        
-        // Fallback: Find user by customer email if metadata is missing
-        if (!userId && session.customer_email) {
-          const allUsers = await storage.getAllUsers?.();
-          if (allUsers) {
-            const matchedUser = allUsers.find(u => 
-              u.email?.toLowerCase() === session.customer_email?.toLowerCase()
-            );
-            if (matchedUser) {
-              userId = matchedUser.id;
-              console.log(`[Subscription] Found user by email fallback: ${userId}`);
-            }
-          }
-        }
-        
-        // Fallback: Find user by Stripe customer ID
-        if (!userId && session.customer) {
-          const customerId = typeof session.customer === 'string' ? session.customer : session.customer.id;
-          const allUsers = await storage.getAllUsers?.();
-          if (allUsers) {
-            const matchedUser = allUsers.find(u => u.stripeCustomerId === customerId);
-            if (matchedUser) {
-              userId = matchedUser.id;
-              console.log(`[Subscription] Found user by customer ID fallback: ${userId}`);
-            }
-          }
-        }
-        
-        if (userId && plan) {
-          // Update user's plan in database
-          await storage.updateUser(userId, {
-            plan: plan,
-            stripeSubscriptionId: subscription.id,
-            stripeCustomerId: typeof session.customer === 'string' ? session.customer : session.customer?.id,
-          });
-          
-          console.log(`[Subscription] User ${userId} upgraded to ${plan} via embedded checkout`);
-          return res.json({ success: true, plan });
-        } else {
-          console.warn(`[Subscription] Could not identify user for session ${session_id}. Metadata: ${JSON.stringify(session.metadata)}`);
-          // Still return success - webhook will handle it
-          return res.json({ success: true, plan, warning: "User not matched" });
-        }
-      }
-      
-      res.json({ success: false, status: session.status });
-    } catch (error) {
-      console.error("Subscription verify error:", error);
-      res.json({ success: false });
     }
   });
 
