@@ -1,0 +1,191 @@
+REPLIT MASTER PROMPT — Booking Link Placement (Intent-Driven)
+Objective
+
+Expose the user’s public booking link in three high-intent locations only, to maximize activation and conversion without clutter or pushiness.
+
+The booking link must:
+
+Feel helpful, not salesy
+
+Appear only where users think about getting work
+
+Reinforce correct mental models (“jobs come from links”)
+
+Respect setup state (services required)
+
+Non-Negotiable Constraints
+
+❌ Do NOT add the booking link to Settings, Profile, Invoices, or global navigation
+❌ Do NOT add floating buttons or persistent banners
+❌ Do NOT block any actions
+❌ Do NOT change existing flows or layouts
+
+✅ Booking link must be copyable and shareable
+✅ Booking link must be disabled until at least one service exists
+✅ All UI must be inline and lightweight
+
+Booking Link Source of Truth
+
+Assume the booking link already exists in user data:
+
+user.bookingLink // e.g. https://gigaid.ai/john-smith
+
+
+If not present, derive it deterministically from user slug.
+
+1️⃣ Today’s Game Plan — Primary Placement (Highest Priority)
+UI Placement
+
+Directly below the primary dashboard CTA
+
+Above secondary cards or metrics
+
+Component
+// components/BookingLinkCard.tsx
+
+export function BookingLinkCard({ user }) {
+  const hasServices = user.servicesCount > 0
+
+  return (
+    <div className="booking-link-card">
+      <div className="title">Your Booking Link</div>
+
+      {hasServices ? (
+        <>
+          <div className="link">{user.bookingLink}</div>
+          <div className="actions">
+            <button onClick={() => copy(user.bookingLink)}>Copy Link</button>
+            <button onClick={() => share(user.bookingLink)}>Share</button>
+          </div>
+          <div className="hint">
+            Most first jobs come from sharing this link by text.
+          </div>
+        </>
+      ) : (
+        <div className="disabled">
+          Add a service to unlock your booking link.
+        </div>
+      )}
+    </div>
+  )
+}
+
+Inject Into Dashboard
+// Dashboard.tsx
+
+<PrimaryCTA />
+<BookingLinkCard user={user} />
+<DashboardContent />
+
+2️⃣ Leads / Requests — Conversion Placement
+UI Placement
+
+Inline banner above lead list
+
+Or inside empty state when no leads exist
+
+Component
+// components/BookingLinkInline.tsx
+
+export function BookingLinkInline({ user }) {
+  if (user.servicesCount === 0) return null
+
+  return (
+    <div className="booking-link-inline">
+      <span>
+        Turn interest into scheduled jobs faster.
+      </span>
+      <button onClick={() => copy(user.bookingLink)}>
+        Copy Booking Link
+      </button>
+    </div>
+  )
+}
+
+Inject Into Leads Page
+// Leads.tsx
+
+<BookingLinkInline user={user} />
+<LeadsList />
+
+Empty State Variant
+// LeadsEmptyState.tsx
+
+<p>
+  New leads often come from sharing your booking link.
+</p>
+
+3️⃣ Jobs Page — Reinforcement Placement (Subtle)
+UI Placement
+
+Secondary action near “Add New Job”
+
+Or companion CTA in empty state
+
+Component
+// components/BookingLinkSecondary.tsx
+
+export function BookingLinkSecondary({ user }) {
+  if (user.servicesCount === 0) return null
+
+  return (
+    <button
+      className="secondary-link"
+      onClick={() => copy(user.bookingLink)}
+    >
+      Share booking link
+    </button>
+  )
+}
+
+Inject Into Jobs Header
+// JobsHeader.tsx
+
+<AddJobButton />
+<BookingLinkSecondary user={user} />
+
+4️⃣ Styling (Minimal, Non-Pushy)
+.booking-link-card {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+
+.booking-link-inline {
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.secondary-link {
+  font-size: 12px;
+  color: #2563eb;
+  background: none;
+}
+
+
+No gradients.
+No animations.
+No emphasis overload.
+
+5️⃣ Analytics (Recommended)
+
+Fire events only on intentful actions:
+
+track('booking_link_copied', { screen })
+track('booking_link_shared', { screen })
+
+Acceptance Criteria
+
+✅ Booking link appears in exactly 3 locations
+✅ Booking link hidden until service exists
+✅ No layout disruption
+✅ No new navigation
+✅ Clear mental model: links → leads → jobs → money
+
+Final Instruction to Replit
+
+Implement exactly as specified.
+Do not surface the booking link anywhere else.
+Treat this as a conversion and activation feature, not a settings option.
