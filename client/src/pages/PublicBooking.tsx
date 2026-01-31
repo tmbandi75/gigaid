@@ -210,7 +210,7 @@ export default function PublicBooking() {
   });
 
   const submitMutation = useMutation({
-    mutationFn: (data: { clientName: string; clientPhone: string; clientEmail: string; serviceType: string; location: string; description: string; preferredDate: string; preferredTime: string; photos?: string[] }) =>
+    mutationFn: (data: { clientName: string; clientPhone: string; clientEmail: string; serviceType: string; location: string; description: string; preferredDate: string; preferredTime: string; photos?: string[]; policyAcknowledged?: boolean }) =>
       apiRequest("POST", `/api/public/book/${slug}`, data),
     onSuccess: () => {
       saveToBookingHistory({
@@ -930,7 +930,7 @@ export default function PublicBooking() {
                     submitMutation.isPending || 
                     !selectedDate || 
                     !selectedTime ||
-                    (profile.depositEnabled && profile.depositValue && profile.depositValue > 0 && !policyAcknowledged)
+                    (profile.depositEnabled && (profile.depositValue ?? 0) > 0 && !policyAcknowledged)
                   }
                   data-testid="button-submit-booking"
                 >
