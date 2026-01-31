@@ -4438,6 +4438,29 @@ export async function registerRoutes(
     }
   });
 
+  // Public ZIP code validation endpoint
+  app.post("/api/public/validate-zip", async (req, res) => {
+    try {
+      const { zipCode } = req.body;
+      
+      if (!zipCode || !/^\d{5}$/.test(zipCode)) {
+        return res.status(400).json({ valid: false, error: "Invalid ZIP code format" });
+      }
+      
+      // Use geocoding to validate if it's a real US ZIP code
+      const result = await geocodeAddress(`${zipCode}, USA`);
+      
+      if (result) {
+        res.json({ valid: true, lat: result.lat, lng: result.lng });
+      } else {
+        res.json({ valid: false, error: "ZIP code not found" });
+      }
+    } catch (error) {
+      console.error("ZIP validation error:", error);
+      res.status(500).json({ valid: false, error: "Validation failed" });
+    }
+  });
+
   // Public Profile Endpoints
   app.get("/api/public/profile/:slug", async (req, res) => {
     try {

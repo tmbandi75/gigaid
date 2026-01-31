@@ -98,6 +98,8 @@ export default function PublicBooking() {
   const [bookingPhotos, setBookingPhotos] = useState<string[]>([]);
   const [clientZipCode, setClientZipCode] = useState("");
   const [zipConfirmed, setZipConfirmed] = useState(false);
+  const [zipValidating, setZipValidating] = useState(false);
+  const [zipError, setZipError] = useState<string | null>(null);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const [bookingHistory, setBookingHistory] = useState<BookingHistoryItem[]>([]);
   const [policyAcknowledged, setPolicyAcknowledged] = useState(false);
@@ -136,6 +138,33 @@ export default function PublicBooking() {
     }));
     setShowHistoryPanel(false);
     toast({ title: "Applied from history" });
+  };
+
+  const validateAndConfirmZip = async () => {
+    if (clientZipCode.length !== 5) return;
+    
+    setZipValidating(true);
+    setZipError(null);
+    
+    try {
+      const res = await fetch("/api/public/validate-zip", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ zipCode: clientZipCode }),
+      });
+      
+      const data = await res.json();
+      
+      if (data.valid) {
+        setZipConfirmed(true);
+      } else {
+        setZipError("Please enter a valid US ZIP code");
+      }
+    } catch (error) {
+      setZipError("Unable to verify ZIP code. Please try again.");
+    } finally {
+      setZipValidating(false);
+    }
   };
 
   const { data: profile, isLoading, error } = useQuery<PublicProfile>({
@@ -477,20 +506,30 @@ export default function PublicBooking() {
                         maxLength={5}
                         placeholder="Enter ZIP code"
                         value={clientZipCode}
-                        onChange={(e) => setClientZipCode(e.target.value.replace(/\D/g, "").slice(0, 5))}
-                        className="flex-1"
+                        onChange={(e) => {
+                          setClientZipCode(e.target.value.replace(/\D/g, "").slice(0, 5));
+                          setZipError(null);
+                        }}
+                        className={`flex-1 ${zipError ? "border-red-500" : ""}`}
                         data-testid="input-client-zip"
                       />
                       <Button
                         type="button"
-                        disabled={clientZipCode.length !== 5}
-                        onClick={() => setZipConfirmed(true)}
+                        disabled={clientZipCode.length !== 5 || zipValidating}
+                        onClick={validateAndConfirmZip}
                         data-testid="button-confirm-zip"
                       >
-                        <Zap className="h-4 w-4 mr-1" />
-                        Find Best Times
+                        {zipValidating ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <Zap className="h-4 w-4 mr-1" />
+                        )}
+                        {zipValidating ? "Checking..." : "Find Best Times"}
                       </Button>
                     </div>
+                    {zipError && (
+                      <p className="text-sm text-red-500 mt-2" data-testid="text-zip-error">{zipError}</p>
+                    )}
                   </div>
                 </div>
               )}
