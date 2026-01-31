@@ -565,6 +565,9 @@ export default function JobForm() {
       });
       return response.json() as Promise<{ suggestions: ScheduleSuggestion[] }>;
     },
+    onError: () => {
+      toast({ title: "Failed to get schedule suggestions", variant: "destructive" });
+    },
   });
 
   const handleGetSuggestions = () => {

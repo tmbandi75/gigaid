@@ -209,6 +209,9 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
     mutationFn: async (data: { step?: number; state?: string; completed?: boolean }) => {
       return apiRequest("PATCH", "/api/onboarding", data);
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/onboarding"] });
+    },
   });
 
   const updateProfileMutation = useMutation({
