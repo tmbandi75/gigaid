@@ -333,7 +333,7 @@ export default function NotifyClientsPage() {
                 <Button
                   key={service.id}
                   variant="outline"
-                  className="w-full justify-start h-auto p-4 overflow-hidden"
+                  className="w-full justify-start h-auto p-4 whitespace-normal"
                   onClick={() => handleServiceSelect(service.id, service.category)}
                   data-testid={`button-service-${service.id}`}
                 >
@@ -376,7 +376,7 @@ export default function NotifyClientsPage() {
               <Button
                 key={eventType}
                 variant="outline"
-                className="w-full justify-start h-auto p-4 overflow-hidden"
+                className="w-full justify-start h-auto p-4 whitespace-normal"
                 onClick={() => handleEventSelect(eventType)}
                 data-testid={`button-event-${eventType}`}
               >
@@ -666,7 +666,7 @@ export default function NotifyClientsPage() {
                 <Button
                   key={service.id}
                   variant="outline"
-                  className="w-full justify-start h-auto p-4 overflow-hidden"
+                  className="w-full justify-start h-auto p-4 whitespace-normal"
                   onClick={() => handleServiceSelect(service.id, service.category)}
                   data-testid={`button-service-${service.id}`}
                 >
@@ -709,7 +709,7 @@ export default function NotifyClientsPage() {
               <Button
                 key={eventType}
                 variant="outline"
-                className="w-full justify-start h-auto p-4 overflow-hidden"
+                className="w-full justify-start h-auto p-4 whitespace-normal"
                 onClick={() => handleEventSelect(eventType)}
                 data-testid={`button-event-${eventType}`}
               >
