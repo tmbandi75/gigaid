@@ -4613,15 +4613,45 @@ export async function registerRoutes(
         return res.json({ valid: false, error: "Please enter a valid US ZIP code" });
       }
       
-      // Try geocoding for precise validation with lat/lng
-      const result = await geocodeAddress(`${zipCode}, USA`);
+      // Try Zippopotam.us API first (free, no API key required)
+      try {
+        const zippoResponse = await fetch(`https://api.zippopotam.us/us/${zipCode}`);
+        if (zippoResponse.ok) {
+          const zippoData = await zippoResponse.json();
+          if (zippoData && zippoData.places && zippoData.places.length > 0) {
+            const place = zippoData.places[0];
+            const lat = parseFloat(place.latitude);
+            const lng = parseFloat(place.longitude);
+            console.log(`[ZIPValidation] Zippopotam validated ZIP ${zipCode}: ${place["place name"]}, ${place["state abbreviation"]}`);
+            return res.json({ valid: true, lat, lng });
+          }
+        } else if (zippoResponse.status === 404) {
+          // ZIP code not found - definitely invalid
+          console.log(`[ZIPValidation] Zippopotam: ZIP ${zipCode} not found`);
+          return res.json({ valid: false, error: "Please enter a valid US ZIP code" });
+        }
+      } catch (zippoError) {
+        console.warn(`[ZIPValidation] Zippopotam API error:`, zippoError);
+        // Fall through to Google Maps
+      }
       
-      if (result) {
+      // Fallback to Google Maps geocoding
+      const { geocodeAddressExtended } = await import("./geocode");
+      const result = await geocodeAddressExtended(`${zipCode}, USA`);
+      
+      if (result.success && result.lat !== undefined && result.lng !== undefined) {
         res.json({ valid: true, lat: result.lat, lng: result.lng });
+      } else if (result.status === "ZERO_RESULTS") {
+        // ZIP code doesn't exist
+        res.json({ valid: false, error: "Please enter a valid US ZIP code" });
+      } else if (result.status === "REQUEST_DENIED" || result.status === "NO_API_KEY") {
+        // Both APIs failed - reject to be safe
+        console.log(`[ZIPValidation] All APIs unavailable, rejecting ZIP ${zipCode}`);
+        res.json({ valid: false, error: "Unable to verify ZIP code. Please try again." });
       } else {
-        // Prefix validation passed, accept even if geocoding API fails
-        console.log(`[Geocode] Accepting ZIP ${zipCode} based on prefix validation (geocoding unavailable)`);
-        res.json({ valid: true, lat: null, lng: null });
+        // Other API errors
+        console.log(`[ZIPValidation] API error (${result.status}), rejecting ZIP ${zipCode}`);
+        res.json({ valid: false, error: "Unable to verify ZIP code. Please try again." });
       }
     } catch (error) {
       console.error("ZIP validation error:", error);

@@ -14,14 +14,29 @@ export interface DrivingDistanceResult {
   durationSeconds: number;
 }
 
+export interface GeocodeExtendedResult {
+  success: boolean;
+  lat?: number;
+  lng?: number;
+  status: "OK" | "ZERO_RESULTS" | "REQUEST_DENIED" | "INVALID_REQUEST" | "OVER_QUERY_LIMIT" | "UNKNOWN_ERROR" | "NO_API_KEY" | "FETCH_ERROR";
+}
+
 export async function geocodeAddress(address: string): Promise<GeocodeResult | null> {
+  const result = await geocodeAddressExtended(address);
+  if (result.success && result.lat !== undefined && result.lng !== undefined) {
+    return { lat: result.lat, lng: result.lng };
+  }
+  return null;
+}
+
+export async function geocodeAddressExtended(address: string): Promise<GeocodeExtendedResult> {
   if (!GOOGLE_MAPS_API_KEY) {
     console.warn("[Geocode] No Google Maps API key configured");
-    return null;
+    return { success: false, status: "NO_API_KEY" };
   }
 
   if (!address || address.trim().length === 0) {
-    return null;
+    return { success: false, status: "INVALID_REQUEST" };
   }
 
   try {
@@ -32,32 +47,44 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult | n
     
     if (!response.ok) {
       console.error("[Geocode] API request failed:", response.status, response.statusText);
-      return null;
+      return { success: false, status: "FETCH_ERROR" };
     }
 
     const data = await response.json();
     
+    if (data.status === "ZERO_RESULTS") {
+      console.warn("[Geocode] No results for address:", address);
+      return { success: false, status: "ZERO_RESULTS" };
+    }
+    
+    if (data.status === "REQUEST_DENIED") {
+      console.warn("[Geocode] Request denied for address:", address, "Error:", data.error_message);
+      return { success: false, status: "REQUEST_DENIED" };
+    }
+    
     if (data.status !== "OK" || !data.results || data.results.length === 0) {
-      console.warn("[Geocode] No results for address:", address, "Status:", data.status);
-      return null;
+      console.warn("[Geocode] Unexpected status for address:", address, "Status:", data.status);
+      return { success: false, status: data.status || "UNKNOWN_ERROR" };
     }
 
     const location = data.results[0].geometry?.location;
     
     if (!location || typeof location.lat !== "number" || typeof location.lng !== "number") {
       console.warn("[Geocode] Invalid location data for address:", address);
-      return null;
+      return { success: false, status: "UNKNOWN_ERROR" };
     }
 
     console.log(`[Geocode] Successfully geocoded "${address}" to (${location.lat}, ${location.lng})`);
     
     return {
+      success: true,
       lat: location.lat,
       lng: location.lng,
+      status: "OK",
     };
   } catch (error) {
     console.error("[Geocode] Error geocoding address:", error);
-    return null;
+    return { success: false, status: "FETCH_ERROR" };
   }
 }
 
