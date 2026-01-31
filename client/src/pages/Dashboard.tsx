@@ -34,8 +34,6 @@ import {
   CheckCircle2,
   Zap,
   ArrowUpRight,
-  Crown,
-  X,
 } from "lucide-react";
 import type { DashboardSummary, Job, Lead } from "@shared/schema";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
@@ -94,9 +92,6 @@ export default function Dashboard() {
   const [period, setPeriod] = useState<"weekly" | "monthly">("weekly");
   const [showWelcome, setShowWelcome] = useState(false);
   const [showInactivityModal, setShowInactivityModal] = useState(false);
-  const [dismissedUpgradeBanner, setDismissedUpgradeBanner] = useState(() => 
-    localStorage.getItem("gig-aid-upgrade-banner-dismissed") === "true"
-  );
   const isMobile = useIsMobile();
   
   useRecentActivityFeedback();
@@ -112,14 +107,6 @@ export default function Dashboard() {
   const { data: profile } = useQuery<UserProfile>({
     queryKey: ["/api/profile"],
   });
-
-  const { data: subscription } = useQuery<{ plan: string; hasSubscription: boolean }>({
-    queryKey: ["/api/subscription/status"],
-    retry: 1,
-    staleTime: 60000,
-  });
-
-  const isFreePlan = subscription !== undefined && (subscription.plan === "free" || subscription.hasSubscription === false);
 
   useEffect(() => {
     const hasSeenWelcome = localStorage.getItem("gig-aid-welcome-seen");
@@ -150,11 +137,6 @@ export default function Dashboard() {
 
   const handleOnboardingComplete = () => {
     localStorage.setItem("gig-aid-onboarding-complete", "true");
-  };
-
-  const handleDismissUpgradeBanner = () => {
-    localStorage.setItem("gig-aid-upgrade-banner-dismissed", "true");
-    setDismissedUpgradeBanner(true);
   };
 
   const stats = period === "weekly" ? summary?.weeklyStats : summary?.monthlyStats;
@@ -339,43 +321,6 @@ export default function Dashboard() {
         
         {onboarding?.completed && (
           <GoldenPathGuide onNavigate={navigate} />
-        )}
-
-        {isFreePlan && !dismissedUpgradeBanner && (
-          <Card className="border-0 shadow-md bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30" data-testid="card-upgrade-banner">
-            <CardContent className="py-4 px-5">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-500 flex items-center justify-center shrink-0">
-                    <Crown className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground">Unlock Pro Features</p>
-                    <p className="text-sm text-muted-foreground">Get unlimited jobs, auto follow-ups, two-way SMS, and more</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={() => navigate("/pricing")}
-                    className="bg-gradient-to-r from-amber-500 to-yellow-500 border-0 text-white"
-                    data-testid="button-upgrade-banner"
-                  >
-                    <Crown className="h-4 w-4 mr-2" />
-                    Upgrade Now
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleDismissUpgradeBanner}
-                    className="text-muted-foreground"
-                    data-testid="button-dismiss-upgrade-banner"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
