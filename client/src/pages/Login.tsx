@@ -285,7 +285,7 @@ export default function Login() {
                   : "Welcome to GigAid™"}
             </h1>
             {mode === "signin" && (
-              <p className="text-white/85 text-base font-medium mt-2">
+              <p className="text-white text-lg font-medium mt-3">
                 Book jobs faster. Get paid upfront. Stay organized.
               </p>
             )}
