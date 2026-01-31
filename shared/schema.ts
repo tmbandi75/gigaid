@@ -2172,5 +2172,91 @@ export const insertCapabilityUsageSchema = createInsertSchema(capabilityUsage).o
 export type InsertCapabilityUsage = z.infer<typeof insertCapabilityUsageSchema>;
 export type CapabilityUsage = typeof capabilityUsage.$inferSelect;
 
+// ============ STRIPE WEBHOOK TABLES ============
+
+// Stripe webhook event statuses
+export const stripeWebhookStatuses = ["received", "processed", "failed"] as const;
+export type StripeWebhookStatus = typeof stripeWebhookStatuses[number];
+
+// Stripe webhook events - audit trail for all received webhooks
+export const stripeWebhookEvents = pgTable("stripe_webhook_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  stripeEventId: text("stripe_event_id").notNull().unique(),
+  type: text("type").notNull(),
+  apiVersion: text("api_version"),
+  livemode: boolean("livemode").notNull().default(false),
+  account: text("account"), // Connect account ID if present
+  created: text("created"), // Stripe event created time (ISO)
+  payload: text("payload").notNull(), // Full event JSON
+  receivedAt: text("received_at").notNull(),
+  processedAt: text("processed_at"),
+  status: text("status").notNull().default("received"),
+  error: text("error"),
+  attemptCount: integer("attempt_count").notNull().default(0),
+  nextAttemptAt: text("next_attempt_at"),
+}, (table) => [
+  index("stripe_webhook_events_status_next_attempt_idx").on(table.status, table.nextAttemptAt),
+  index("stripe_webhook_events_type_idx").on(table.type),
+]);
+
+export const insertStripeWebhookEventSchema = createInsertSchema(stripeWebhookEvents).omit({
+  id: true,
+});
+
+export type InsertStripeWebhookEvent = z.infer<typeof insertStripeWebhookEventSchema>;
+export type StripeWebhookEvent = typeof stripeWebhookEvents.$inferSelect;
+
+// Stripe payment state statuses
+export const stripePaymentStatuses = [
+  "requires_payment_method",
+  "requires_confirmation",
+  "requires_action",
+  "processing",
+  "requires_capture",
+  "canceled",
+  "succeeded",
+  "failed",
+  "refunded",
+  "partially_refunded"
+] as const;
+export type StripePaymentStatus = typeof stripePaymentStatuses[number];
+
+// Stripe payment state - canonical payment status used by app
+export const stripePaymentState = pgTable("stripe_payment_state", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  paymentIntentId: text("payment_intent_id").notNull().unique(),
+  chargeId: text("charge_id"),
+  customerId: text("customer_id"),
+  connectedAccountId: text("connected_account_id"),
+  amount: integer("amount").notNull(), // cents
+  currency: text("currency").notNull().default("usd"),
+  status: text("status").notNull(),
+  lastEventId: text("last_event_id"),
+  lastEventType: text("last_event_type"),
+  lastUpdatedAt: text("last_updated_at").notNull(),
+  metadata: text("metadata"), // JSON copy of PI metadata for mapping
+  jobId: varchar("job_id"),
+  invoiceId: varchar("invoice_id"),
+}, (table) => [
+  index("stripe_payment_state_job_idx").on(table.jobId),
+  index("stripe_payment_state_invoice_idx").on(table.invoiceId),
+  index("stripe_payment_state_status_idx").on(table.status),
+]);
+
+export const insertStripePaymentStateSchema = createInsertSchema(stripePaymentState).omit({
+  id: true,
+});
+
+export type InsertStripePaymentState = z.infer<typeof insertStripePaymentStateSchema>;
+export type StripePaymentState = typeof stripePaymentState.$inferSelect;
+
+// Stripe idempotency locks - ensures exactly-once effect per event/handler
+export const stripeIdempotencyLocks = pgTable("stripe_idempotency_locks", {
+  key: text("key").primaryKey(), // e.g., `${eventId}:${handlerName}`
+  createdAt: text("created_at").notNull(),
+});
+
+export type StripeIdempotencyLock = typeof stripeIdempotencyLocks.$inferSelect;
+
 export * from "./models/chat";
 export * from "./models/auth";
