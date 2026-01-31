@@ -1,0 +1,140 @@
+REPLIT MASTER PROMPT — FIX WHITE SCREEN (STRIPE EXPORT CRASH)
+Objective
+
+Fix the blank white screen caused by a missing named export startStripeCheckout that is crashing the React app at runtime.
+
+This prompt must:
+
+✅ Resolve the exact error shown in console
+
+✅ Guarantee the export exists at the correct path
+
+✅ Eliminate default vs named export mismatch
+
+✅ Require no guessing or refactors
+
+❌ Not touch backend logic
+
+❌ Not hide or remove any UI
+
+Root Cause (Confirmed)
+
+The app crashes because:
+
+BookingRequests.tsx imports:
+{ startStripeCheckout }
+
+But:
+src/lib/stripeCheckout.ts
+does NOT export startStripeCheckout
+
+
+This causes a hard ES module failure, preventing React from mounting.
+
+REQUIRED ACTIONS (DO EXACTLY THESE)
+1️⃣ Open the EXACT file used by the import
+
+Path must be:
+
+src/lib/stripeCheckout.ts
+
+
+⚠️ If there are multiple stripeCheckout.ts files, use this one only.
+
+2️⃣ Add this named export at the BOTTOM of the file
+
+Paste verbatim:
+
+// ✅ Required named export — DO NOT RENAME
+export async function startStripeCheckout(params: {
+  priceId: string
+  successUrl?: string
+  cancelUrl?: string
+}) {
+  const response = await fetch('/api/stripe/checkout', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(params),
+  })
+
+  if (!response.ok) {
+    throw new Error('Failed to start Stripe checkout')
+  }
+
+  const data = await response.json()
+
+  if (!data?.url) {
+    throw new Error('Stripe checkout URL missing')
+  }
+
+  window.location.href = data.url
+}
+
+
+❗ Do NOT convert this to a default export
+❗ Do NOT rename the function
+❗ Do NOT remove existing exports
+
+3️⃣ Verify the import in BookingRequests.tsx
+
+Open:
+
+src/components/BookingRequests.tsx
+
+
+Ensure the import is exactly:
+
+import { startStripeCheckout } from '@/lib/stripeCheckout'
+
+
+❌ No default import
+❌ No case mismatch
+❌ No alternate path
+
+4️⃣ Restart Vite Completely (Required)
+
+Because this was a module graph failure:
+
+Stop the Replit dev server
+
+Save all files
+
+Restart the app / Preview
+
+Do not rely on hot reload.
+
+Explicitly Ignore These (They Are NOT the Bug)
+
+Do NOT attempt to fix:
+
+CSP warnings
+
+unsafe-dynamic
+
+sandbox / iframe warnings
+
+HMR websocket errors
+
+Replit Enterprise watcher logs
+
+These are noise, not fatal.
+
+Validation Checklist (Must All Pass)
+
+ No startStripeCheckout export error in console
+
+ App renders (no white screen)
+
+ React mounts even before auth completes
+
+ Clicking Upgrade triggers checkout navigation or API error (acceptable)
+
+ No feature removed or hidden
+
+Final Instruction
+
+This is a contract fix, not a redesign.
+
+Do not refactor, optimize, or “clean up” anything else until the app renders.
