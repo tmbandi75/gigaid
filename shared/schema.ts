@@ -238,6 +238,8 @@ export const jobs = pgTable("jobs", {
   createdAt: text("created_at").notNull(),
   // No Silent Completion: Track when job status changed to 'completed'
   completedAt: text("completed_at"),
+  // Archive support - soft deletion without data loss
+  archivedAt: text("archived_at"),
 });
 
 export const insertJobSchema = createInsertSchema(jobs).omit({
@@ -329,6 +331,8 @@ export const leads = pgTable("leads", {
   // Intent detection tracking
   respondTapCount: integer("respond_tap_count").default(0), // Number of times user tapped "Respond"
   lastRespondTapAt: text("last_respond_tap_at"), // Last time user tapped "Respond"
+  // Archive support - soft deletion without data loss
+  archivedAt: text("archived_at"),
 });
 
 export const insertLeadSchema = createInsertSchema(leads).omit({
@@ -459,6 +463,8 @@ export const invoices = pgTable("invoices", {
   bookingLink: text("booking_link"),
   intentFollowUpSent: boolean("intent_follow_up_sent").default(false),
   intentFollowUpSentAt: text("intent_follow_up_sent_at"),
+  // Archive support - soft deletion without data loss
+  archivedAt: text("archived_at"),
 });
 
 export const insertInvoiceSchema = createInsertSchema(invoices).omit({
