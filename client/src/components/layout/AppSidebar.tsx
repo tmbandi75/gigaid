@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -107,7 +108,14 @@ export function AppSidebar() {
     refetchOnWindowFocus: true,
   });
 
+  const { data: subscription } = useQuery<{ plan: string; hasSubscription: boolean }>({
+    queryKey: ["/api/subscription/status"],
+    retry: 1,
+    staleTime: 60000,
+  });
+
   const isAdmin = adminStatus?.isAdmin === true;
+  const isFreePlan = subscription !== undefined && (subscription.plan === "free" || subscription.hasSubscription === false);
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains("dark");
@@ -266,6 +274,27 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {isFreePlan && (
+          <>
+            <SidebarSeparator className="my-2" />
+            <SidebarGroup>
+              <SidebarGroupContent>
+                <div className="px-2">
+                  <Button
+                    variant="default"
+                    className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 text-white border-0"
+                    onClick={() => navigate("/pricing")}
+                    data-testid="sidebar-upgrade-button"
+                  >
+                    <Crown className="h-4 w-4 mr-2" />
+                    Upgrade to Pro
+                  </Button>
+                </div>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="p-3 border-t border-sidebar-border">
