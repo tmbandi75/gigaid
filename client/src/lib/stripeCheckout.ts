@@ -14,7 +14,7 @@ export async function startStripeCheckout({
   plan: SubscriptionPlan;
   returnTo: string;
 }): Promise<CheckoutResult> {
-  console.log("[Stripe] Entered startStripeCheckout", { plan, returnTo });
+  console.log("[Stripe] GUARDED CODE REMOVED — entering checkout", { plan, returnTo });
 
   try {
     console.log("[Stripe] Creating checkout session");

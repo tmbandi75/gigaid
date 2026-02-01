@@ -1,0 +1,120 @@
+FINAL SAFE REPLIT MASTER PROMPT
+Stripe Client Guard HARD REMOVAL (Verified)
+Objective
+
+Permanently eliminate ALL client-side Stripe enablement guards that block checkout, specifically any logic that logs:
+
+[Stripe] Checkout disabled - STRIPE_ENABLED is false
+
+
+The client must always attempt checkout.
+Stripe availability must be enforced only on the backend.
+
+Non-Negotiable Constraints
+
+❌ Do NOT refactor Stripe logic
+❌ Do NOT modify backend behavior
+❌ Do NOT change API routes
+❌ Do NOT introduce feature flags
+❌ Do NOT add new conditions
+
+✅ Only DELETE invalid client-side guards
+✅ Add verification logs so removal is provable
+✅ Ensure build recompiles cleanly
+
+Step 1 — Locate the REAL Stripe entry file
+
+Search the entire repo for this exact string:
+
+Checkout disabled - STRIPE_ENABLED is false
+
+
+⚠️ There may be more than one match.
+
+This search determines the actual executing file — not assumptions.
+
+Step 2 — HARD DELETE the guard (mandatory)
+
+In every frontend file where this appears (including stripeCheckout.ts):
+
+❌ DELETE this block entirely (example)
+if (!process.env.STRIPE_ENABLED) {
+  console.warn("[Stripe] Checkout disabled - STRIPE_ENABLED is false");
+  return;
+}
+
+
+or
+
+if (!isStripeEnabled()) {
+  console.warn("[Stripe] Checkout disabled - STRIPE_ENABLED is false");
+  return;
+}
+
+
+🚫 Do NOT replace
+🚫 Do NOT comment
+🚫 Do NOT move
+🚫 Do NOT wrap
+
+It must not exist anywhere in frontend code.
+
+Step 3 — Force a proof log at function entry
+
+At the top of the real checkout function (same file):
+
+export async function startStripeCheckout(planId: string) {
+  console.log("[Stripe] GUARDED CODE REMOVED — entering checkout");
+
+
+This log is proof the old guard is gone.
+
+Step 4 — Ensure checkout always calls backend
+
+Immediately after the entry log:
+
+  console.log("[Stripe] Creating checkout session");
+
+
+Then proceed with the existing API call logic unchanged.
+
+Step 5 — Backend remains authoritative (DO NOT TOUCH)
+
+Confirm backend still contains:
+
+if (process.env.STRIPE_ENABLED !== "true") {
+  return res.status(503).json({ error: "Stripe temporarily disabled" });
+}
+
+
+This is the only valid Stripe gate.
+
+Step 6 — Mandatory Verification
+
+After saving files:
+
+Restart the Replit dev server
+
+Hard refresh the browser (Ctrl+Shift+R)
+
+Click Upgrade
+
+✅ Required console output:
+[Stripe] GUARDED CODE REMOVED — entering checkout
+[Stripe] Creating checkout session
+
+🚫 Forbidden output (must NEVER appear again):
+Checkout disabled - STRIPE_ENABLED is false
+
+
+If that line appears:
+➡️ The guard still exists somewhere else and must be deleted.
+
+Acceptance Criteria (Binary)
+
+✔ Network request to /api/checkout/session is made
+✔ Either redirect to Stripe OR toast from backend
+✔ No client-side STRIPE_ENABLED checks execute
+✔ No silent returns
+
+END OF PROMPT
