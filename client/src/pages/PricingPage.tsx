@@ -99,6 +99,8 @@ export default function PricingPage() {
   const currentPlan = getUserPlan();
 
   const handlePlanAction = async (plan: PlanInfo) => {
+    console.log("[Upgrade] Button clicked", { planId: plan.id, stripeKey: plan.stripeKey });
+    
     if (plan.id === Plan.FREE) {
       if (isAuthenticated) {
         navigate("/");
@@ -108,14 +110,19 @@ export default function PricingPage() {
       return;
     }
 
-    if (!plan.stripeKey) return;
+    if (!plan.stripeKey) {
+      console.warn("[Upgrade] No stripeKey for plan", plan.id);
+      return;
+    }
 
     setLoadingPlan(plan.stripeKey);
     try {
+      console.log("[Upgrade] Calling startStripeCheckout", { plan: plan.stripeKey });
       const result = await startStripeCheckout({
         plan: plan.stripeKey,
         returnTo: "/pricing",
       });
+      console.log("[Upgrade] startStripeCheckout returned", result);
       
       if (!result.success && result.error) {
         toast({

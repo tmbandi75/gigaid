@@ -6317,6 +6317,8 @@ Return ONLY the message text, no JSON or formatting.`
         },
       };
 
+      console.log("[API] Checkout session endpoint hit", { plan, returnTo });
+      
       const planConfig = planConfigs[plan];
       if (!planConfig) {
         return res.status(400).json({ error: "Invalid plan. Valid plans: pro, pro_plus, business" });
@@ -6324,6 +6326,8 @@ Return ONLY the message text, no JSON or formatting.`
 
       const { getUncachableStripeClient } = await import("./stripeClient");
       const { STRIPE_ENABLED } = await import("@shared/stripeConfig");
+      
+      console.log("[API] STRIPE_ENABLED =", STRIPE_ENABLED);
       
       if (!STRIPE_ENABLED) {
         console.warn("[Stripe] Subscription checkout blocked - STRIPE_ENABLED is false");
@@ -6367,6 +6371,7 @@ Return ONLY the message text, no JSON or formatting.`
         },
       });
 
+      console.log("[API] Checkout session created", session.id);
       res.json({ url: session.url });
     } catch (error) {
       console.error("Subscription checkout error:", error);

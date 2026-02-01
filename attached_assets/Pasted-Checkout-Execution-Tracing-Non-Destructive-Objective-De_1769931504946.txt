@@ -1,0 +1,139 @@
+Checkout Execution Tracing (Non-Destructive)
+Objective
+
+Determine exactly where the Upgrade / Checkout flow stops by adding non-invasive tracing at every stage of execution.
+
+This must work without breaking the app and without refactoring Stripe logic.
+
+Non-Negotiable Constraints
+
+❌ Do NOT refactor checkout logic
+❌ Do NOT modify Stripe session creation
+❌ Do NOT change API signatures
+❌ Do NOT introduce try/catch
+❌ Do NOT block rendering
+
+✅ Only add logging, guards, and visible confirmation
+✅ No behavioral changes when working
+✅ No crashes
+
+Step 1 — Instrument the Upgrade Button
+
+Find the actual Upgrade button component.
+
+Add this exact logging to the click handler:
+
+const handleUpgradeClick = async () => {
+  console.log("[Upgrade] Button clicked");
+
+  await handleUpgrade(planId);
+
+  console.log("[Upgrade] handleUpgrade() returned");
+};
+
+
+If the button does NOT already call handleUpgrade, wire it explicitly.
+
+❗ If you do NOT see the first log, the button is not wired.
+
+Step 2 — Instrument the Checkout Function
+
+Inside the function that should trigger Stripe:
+
+export async function handleUpgrade(planId: string) {
+  console.log("[Upgrade] Entered handleUpgrade", { planId });
+
+  if (!isStripeEnabled()) {
+    console.warn("[Stripe] Disabled — blocking checkout");
+    toast({
+      title: "Payments temporarily unavailable",
+      description: "Please try again later.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  console.log("[Stripe] Enabled — proceeding to checkout");
+
+
+⚠️ Do NOT remove or reorder existing logic.
+
+Step 3 — Instrument the API Call
+
+Immediately before the API request:
+
+console.log("[Stripe] Creating checkout session");
+
+
+Immediately after:
+
+console.log("[Stripe] Checkout session response received", response);
+
+
+If this log never appears:
+➡️ The request never fired.
+
+Step 4 — Instrument Redirect
+
+Immediately before redirecting to Stripe:
+
+console.log("[Stripe] Redirecting to Stripe Checkout", session.url);
+
+
+If this log appears but redirect does not happen:
+➡️ The redirect line is missing or blocked.
+
+Step 5 — Backend Confirmation (Zero Risk)
+
+At the top of the Stripe session API route:
+
+console.log("[API] Checkout session endpoint hit");
+
+
+Just before returning the session:
+
+console.log("[API] Checkout session created", session.id);
+
+Acceptance Criteria (Binary)
+
+After clicking Upgrade, one of these MUST be true:
+
+Console shows:
+
+[Upgrade] Button clicked
+
+
+❌ If not → UI wiring bug
+
+Console shows:
+
+[Stripe] Enabled — proceeding to checkout
+
+
+❌ If not → guard still blocking
+
+Backend logs show:
+
+[API] Checkout session endpoint hit
+
+
+❌ If not → request never sent
+
+Console shows:
+
+[Stripe] Redirecting to Stripe Checkout
+
+
+❌ If not → missing redirect
+
+There is no other possibility.
+
+Final Instruction
+
+Once implemented, do NOT change anything else.
+
+Click Upgrade → paste exact console output.
+
+That output will tell us the exact broken line in under 30 seconds.
+
+End of Prompt
