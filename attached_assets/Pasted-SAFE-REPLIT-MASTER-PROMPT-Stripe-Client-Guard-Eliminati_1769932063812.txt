@@ -1,0 +1,146 @@
+SAFE REPLIT MASTER PROMPT
+Stripe Client Guard Elimination (Vite-Safe)
+Objective
+
+Fix the Stripe upgrade flow so that:
+
+The client never blocks checkout based on STRIPE_ENABLED
+
+Stripe enablement is enforced only on the backend
+
+No silent early returns exist in frontend Stripe code
+
+Existing checkout logic remains untouched
+
+The app cannot break due to missing browser env vars
+
+Non-Negotiable Constraints
+
+❌ Do NOT refactor Stripe logic
+❌ Do NOT change API routes or payloads
+❌ Do NOT change backend Stripe behavior
+❌ Do NOT add new features
+❌ Do NOT introduce breaking changes
+
+✅ Only remove invalid client-side guards
+✅ Preserve all working logic
+✅ Add minimal logging for confirmation
+
+Step 1 — Identify forbidden client-side patterns
+
+Search the entire frontend codebase (src/, components/, pages/, lib/) for ANY of the following:
+
+process.env.STRIPE_ENABLED
+STRIPE_ENABLED
+isStripeEnabled()
+Checkout disabled
+
+
+These checks are INVALID in Vite/browser code.
+
+Step 2 — Remove client-side Stripe gating (critical)
+
+In frontend files only (e.g. stripeCheckout.ts, PricingPage.tsx):
+
+❌ REMOVE any blocks like:
+if (!process.env.STRIPE_ENABLED) {
+  console.warn("[Stripe] Checkout disabled");
+  return;
+}
+
+if (!isStripeEnabled()) return;
+
+if (!stripeEnabled) return;
+
+
+⚠️ Do NOT replace these checks
+⚠️ Do NOT move them
+⚠️ Do NOT add alternatives
+
+They must be deleted entirely.
+
+Step 3 — Ensure checkout always attempts API call
+
+Ensure the Stripe entry function begins execution immediately:
+
+export async function startStripeCheckout(planId: string) {
+  console.log("[Stripe] Entered startStripeCheckout");
+
+  console.log("[Stripe] Creating checkout session");
+
+  const res = await fetch("/api/checkout/session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ planId }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    toast({
+      title: "Payments temporarily unavailable",
+      description: data.error ?? "Please try again later.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  const session = await res.json();
+  console.log("[Stripe] Redirecting to Stripe Checkout", session.url);
+  window.location.href = session.url;
+}
+
+
+✅ No env usage
+✅ No Stripe assumptions
+✅ Backend decides outcome
+
+Step 4 — Backend remains authoritative (do not change)
+
+Confirm backend Stripe gate still exists:
+
+if (process.env.STRIPE_ENABLED !== "true") {
+  return res.status(503).json({
+    error: "Stripe temporarily disabled",
+  });
+}
+
+
+This is the only valid place for this check.
+
+Step 5 — Acceptance Verification (required)
+
+After applying changes:
+
+Clicking Upgrade must ALWAYS result in:
+
+Console log:
+
+[Stripe] Entered startStripeCheckout
+[Stripe] Creating checkout session
+
+
+A network request to /api/checkout/session
+
+Then one of:
+
+✅ Redirect to Stripe Checkout
+
+✅ Toast message from backend 503
+
+🚫 You must NEVER see:
+
+Checkout disabled - STRIPE_ENABLED is false
+
+
+If you do → a client guard still exists and must be removed.
+
+Final Instruction
+
+Apply changes incrementally.
+Do NOT refactor.
+Do NOT optimize.
+Do NOT “improve” anything.
+
+This prompt is surgical by design.
+
+END OF PROMPT
