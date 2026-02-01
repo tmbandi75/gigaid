@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { User } from "@shared/schema";
 import { getAuthToken, clearAuthToken } from "@/lib/authToken";
 import { firebaseSignOut } from "@/lib/firebase";
@@ -42,7 +42,33 @@ async function fetchUser(): Promise<User | null> {
 export function useAuth() {
   const queryClient = useQueryClient();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { isTokenReady, setTokenReady } = useFirebaseAuth();
+  const { isTokenReady, setTokenReady, firebaseUser, authLoading } = useFirebaseAuth();
+  
+  // Token readiness timeout - prevent indefinite blocking
+  // After Firebase auth resolves, give token exchange 5 seconds max
+  const [tokenTimeout, setTokenTimeout] = useState(false);
+  
+  useEffect(() => {
+    // Only start timeout once Firebase auth is resolved and we have a user
+    if (!authLoading && firebaseUser && !isTokenReady) {
+      console.log("[Auth] Token not ready after Firebase auth - starting 5s timeout");
+      const timer = setTimeout(() => {
+        console.log("[Auth] Token readiness timeout reached - allowing fallback");
+        setTokenTimeout(true);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+    
+    // Reset timeout if token becomes ready
+    if (isTokenReady) {
+      setTokenTimeout(false);
+    }
+  }, [authLoading, firebaseUser, isTokenReady]);
+  
+  // Query requires token to be ready - don't make API calls without valid token
+  // Timeout allows UI to render, but doesn't enable API calls without token
+  const canFetchUser = !getGlobalLoggingOut() && isTokenReady;
   
   const { data: user, status, isFetching, refetch } = useQuery<User | null>({
     queryKey: ["/api/auth/user"],
@@ -51,8 +77,8 @@ export function useAuth() {
     staleTime: 1000 * 30,
     refetchOnWindowFocus: true,
     refetchOnMount: "always",
-    // Don't refetch while logging out, and only fetch if token is ready
-    enabled: !getGlobalLoggingOut() && isTokenReady,
+    // Only fetch when token is ready - no timeout bypass for API calls
+    enabled: canFetchUser,
   });
 
   const performLogout = useCallback(async (): Promise<void> => {
@@ -141,13 +167,29 @@ export function useAuth() {
   });
 
   const globalLogoutState = getGlobalLoggingOut();
-  const isLoading = status === "pending" || (isFetching && user === undefined) || (!isTokenReady && !globalLogoutState);
+  
+  // isLoading blocks UI rendering during initial auth resolution
+  // After timeout, stop blocking UI even if token isn't ready - user will see app with limited function
+  const tokenBlocking = !isTokenReady && !tokenTimeout && !globalLogoutState;
+  const isLoading = status === "pending" || (isFetching && user === undefined) || tokenBlocking;
+
+  // isAuthenticated is STRICT - requires valid token, not just timeout
+  // This ensures privileged operations require proper auth
+  const isAuthenticated = !!user && !globalLogoutState && isTokenReady;
+  
+  // Separate flag for "UI can render" vs "API calls are authorized"
+  // UI renders after timeout, but API calls still require token
+  const canRenderApp = !authLoading && (firebaseUser !== null);
 
   return {
     user,
     isLoading,
-    isAuthenticated: !!user && !globalLogoutState && isTokenReady,
+    isAuthenticated,
     isTokenReady,
+    // canRenderApp allows UI to show even if token exchange is pending
+    canRenderApp,
+    // tokenPending indicates token exchange is still in progress
+    tokenPending: !isTokenReady && !globalLogoutState && firebaseUser !== null,
     logout: logoutMutation.mutate,
     isLoggingOut: isLoggingOut || globalLogoutState,
     refetchUser: refetch,

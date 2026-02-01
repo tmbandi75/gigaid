@@ -1,0 +1,133 @@
+REPLIT MASTER PROMPT — ELIMINATE WHITE SCREEN & AUTH DEADLOCK
+
+Objective
+Fix the GigAid app getting stuck on a blank screen by resolving an authentication readiness deadlock and hardening Stripe-disabled behavior.
+
+This must be a surgical fix, not a refactor.
+
+PART 1 — Fix Auth Deadlock (CRITICAL)
+
+Audit AuthenticatedApp, FirebaseAuthContext, and authToken logic.
+
+Problem
+
+The app blocks all routing when:
+
+authLoading === true
+
+OR token readiness is false
+
+In some cases:
+
+Firebase user exists
+
+authLoading === false
+
+BUT token readiness never flips to true
+
+This causes permanent UI blocking.
+
+REQUIRED FIX
+
+Update auth gating so that:
+
+✅ If firebaseUser exists
+✅ AND authLoading === false
+
+👉 Allow the app to render routes, even if token readiness is still pending.
+
+Token readiness must:
+
+block privileged API calls
+
+NOT block UI rendering
+
+Implementation Rule
+
+Replace logic like:
+
+if (authLoading || !tokenReady) return <LoadingScreen />
+
+
+With:
+
+if (authLoading) return <LoadingScreen />
+
+
+And gate API calls individually on tokenReady.
+
+PART 2 — Harden Token Readiness Logic
+
+Ensure token readiness:
+
+Resets on user change
+
+Resolves within a bounded time
+
+Cannot block rendering indefinitely
+
+Add:
+
+logging when token readiness fails to resolve
+
+a safe fallback after initial auth success
+
+PART 3 — Stripe Disabled Safety (SECONDARY)
+
+When STRIPE_ENABLED === false:
+
+Do NOT call checkout logic
+
+Do NOT allow pricing buttons to fire checkout handlers
+
+Show disabled UI state or tooltip instead
+
+Ensure:
+
+No Stripe code path can block rendering
+
+Stripe-disabled mode is safe and silent
+
+NON-NEGOTIABLES
+
+❌ Do NOT change Firebase auth provider
+❌ Do NOT loosen security on API calls
+❌ Do NOT remove token checks from backend
+
+✅ UI must never white-screen
+✅ Auth must fail open for rendering
+✅ Security must remain server-enforced
+
+VALIDATION
+
+After fix:
+
+App renders immediately after login
+
+No permanent loading state
+
+Pricing page works even when Stripe disabled
+
+No white screen on refresh
+
+FINAL INSTRUCTION
+
+“Authentication issues must never result in a blank app.”
+
+Proceed carefully and commit once validated.
+
+6️⃣ Why I’m confident this is the fix
+
+Because:
+
+The app is running
+
+React is rendering
+
+Firebase auth succeeds
+
+Routing is blocked by your own guard
+
+CSP is just noise
+
+This is a classic auth-gate deadlock — very common in serious apps, very hard to spot without logs (you added good logs 👍).

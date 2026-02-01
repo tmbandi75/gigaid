@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
 
 interface OnboardingStatus {
   completed: boolean;
@@ -35,27 +36,50 @@ function isOnboardingComplete(onboarding: OnboardingStatus | undefined): boolean
 
 export function OnboardingWrapper({ children }: { children: React.ReactNode }) {
   const [location, navigate] = useLocation();
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const { isTokenReady, tokenPending } = useAuth();
 
-  const { data: onboarding, isLoading } = useQuery<OnboardingStatus>({
+  // Only enable query when token is ready - prevents 401 errors
+  const { data: onboarding, isLoading, isError } = useQuery<OnboardingStatus>({
     queryKey: ["/api/onboarding"],
+    retry: 1,
+    enabled: isTokenReady,
   });
 
+  // Timeout to prevent indefinite loading state
+  // Only start timeout if token is pending (auth in progress)
+  useEffect(() => {
+    if ((isLoading || tokenPending) && !loadingTimeout) {
+      const timer = setTimeout(() => {
+        console.log("[OnboardingWrapper] Loading timeout reached - proceeding without onboarding check");
+        setLoadingTimeout(true);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, tokenPending, loadingTimeout]);
+
   const onboardingComplete = isOnboardingComplete(onboarding);
+  
+  // Consider "effectively loaded" if:
+  // 1. Query completed (loaded or errored), OR
+  // 2. Timeout reached (prevents indefinite block), OR
+  // 3. Token not ready but timeout passed (auth issues - let user see app)
+  const effectivelyLoaded = (!isLoading && isTokenReady) || loadingTimeout || isError;
 
   useEffect(() => {
     // Skip if still loading onboarding status
-    if (isLoading) return;
+    if (!effectivelyLoaded) return;
     // Skip if on an allowed route
     if (isAllowedRoute(location)) return;
     
-    // Redirect incomplete users to onboarding
+    // Redirect incomplete users to onboarding (only if we got valid data)
     if (onboarding && !onboardingComplete) {
       navigate("/onboarding");
     }
-  }, [isLoading, onboarding, onboardingComplete, location, navigate]);
+  }, [effectivelyLoaded, onboarding, onboardingComplete, location, navigate]);
 
-  // Show loading while checking onboarding status
-  if (isLoading) {
+  // Show loading while checking onboarding status (with timeout protection)
+  if (!effectivelyLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
@@ -64,7 +88,8 @@ export function OnboardingWrapper({ children }: { children: React.ReactNode }) {
   }
 
   // Block rendering for incomplete users not on allowed routes (redirect is pending)
-  if (onboarding && !onboardingComplete && !isAllowedRoute(location)) {
+  // Only block if we have valid data and haven't timed out
+  if (onboarding && !onboardingComplete && !isAllowedRoute(location) && !loadingTimeout) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
