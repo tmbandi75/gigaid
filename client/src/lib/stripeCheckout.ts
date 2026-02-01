@@ -1,7 +1,12 @@
 import { apiRequest } from "./queryClient";
-import { STRIPE_ENABLED } from "@shared/stripeConfig";
+import { isStripeEnabled } from "@shared/stripeEnabled";
 
 export type SubscriptionPlan = "pro" | "pro_plus" | "business";
+
+export interface CheckoutResult {
+  success: boolean;
+  error?: string;
+}
 
 export async function startStripeCheckout({
   plan,
@@ -9,10 +14,13 @@ export async function startStripeCheckout({
 }: {
   plan: SubscriptionPlan;
   returnTo: string;
-}): Promise<void> {
-  if (!STRIPE_ENABLED) {
-    console.warn("[Stripe] Checkout disabled - STRIPE_ENABLED is false");
-    return;
+}): Promise<CheckoutResult> {
+  if (!isStripeEnabled()) {
+    console.warn("[Stripe] Checkout blocked: Stripe disabled");
+    return {
+      success: false,
+      error: "Payments temporarily unavailable. Please try again in a few minutes."
+    };
   }
 
   try {
@@ -25,11 +33,19 @@ export async function startStripeCheckout({
     
     if (data.url) {
       window.location.href = data.url;
+      return { success: true };
     } else {
       console.error("[Stripe] No checkout URL returned");
+      return {
+        success: false,
+        error: "Could not start checkout. Please try again."
+      };
     }
   } catch (error) {
     console.error("[Stripe] Checkout error:", error);
-    throw error;
+    return {
+      success: false,
+      error: "Checkout failed. Please try again."
+    };
   }
 }

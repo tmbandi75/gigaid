@@ -1,0 +1,157 @@
+REPLIT MASTER PROMPT
+Stripe Enablement Hardening + Silent-Failure Guard
+Objective
+
+Harden the Stripe upgrade / checkout flow so that:
+
+Stripe is explicitly enabled via STRIPE_ENABLED
+
+Checkout never fails silently
+
+Users receive clear feedback if payments are temporarily unavailable
+
+Existing working Stripe logic is NOT modified or refactored
+
+The app cannot crash due to missing Stripe configuration
+
+Non-Negotiable Constraints
+
+❌ Do NOT refactor or rewrite existing Stripe checkout logic
+❌ Do NOT change existing API routes or request/response shapes
+❌ Do NOT add new Stripe features
+❌ Do NOT throw runtime exceptions
+❌ Do NOT block app startup or rendering
+
+✅ Only add guardrails, helpers, and safe feedback
+✅ Preserve all existing behavior when Stripe is enabled
+✅ Fail softly in production, loudly (console only) in development
+
+Step 1 — Create a single source of truth for Stripe enablement
+
+Create a new helper file:
+
+/lib/stripeEnabled.ts
+
+export function isStripeEnabled(): boolean {
+  return process.env.STRIPE_ENABLED === "true";
+}
+
+
+Do NOT inline env checks elsewhere
+
+Do NOT assume booleans
+
+All Stripe checks must use this helper
+
+Step 2 — Remove all silent early returns
+
+Search the codebase for any of the following patterns:
+
+if (!process.env.STRIPE_ENABLED) return;
+if (!STRIPE_ENABLED) return;
+if (!stripe) return;
+
+
+Replace them with the following guard pattern:
+
+import { isStripeEnabled } from "@/lib/stripeEnabled";
+
+if (!isStripeEnabled()) {
+  console.warn("[Stripe] Checkout blocked: Stripe disabled");
+
+  toast({
+    title: "Payments temporarily unavailable",
+    description: "Please try again in a few minutes.",
+    variant: "destructive",
+  });
+
+  return;
+}
+
+
+⚠️ Important:
+
+Do NOT change the checkout logic that follows
+
+Do NOT wrap existing logic in try/catch unless already present
+
+This guard must sit immediately before checkout execution
+
+Step 3 — Backend protection (non-breaking)
+
+For any API route that creates Stripe sessions (e.g. /api/checkout/*):
+
+Add this at the top of the handler only:
+
+import { isStripeEnabled } from "@/lib/stripeEnabled";
+
+if (!isStripeEnabled()) {
+  return res.status(503).json({
+    error: "Stripe temporarily disabled",
+  });
+}
+
+
+Do NOT change response schemas elsewhere
+
+Do NOT throw
+
+Do NOT log secrets
+
+Step 4 — Dev-only diagnostics (safe)
+
+Add a console warning in app bootstrap or server start:
+
+if (
+  process.env.NODE_ENV === "development" &&
+  process.env.STRIPE_ENABLED !== "true"
+) {
+  console.error(
+    "❌ STRIPE_ENABLED is not set to 'true' — checkout will be blocked"
+  );
+}
+
+
+Console only
+
+No UI blocking
+
+No crashes
+
+Step 5 — Environment validation (non-destructive)
+
+Do NOT crash if missing, but ensure clarity:
+
+Stripe works only when STRIPE_ENABLED="true"
+
+Missing or false values should result in:
+
+Visible user feedback
+
+Logged warning
+
+Graceful exit
+
+Acceptance Criteria
+
+Stripe-enabled environment:
+
+✅ Upgrade redirects to Stripe as before
+
+✅ No behavior change
+
+Stripe-disabled environment:
+
+✅ Upgrade shows a toast message
+
+✅ No silent failure
+
+✅ No crashes
+
+✅ App continues functioning
+
+Dev environment:
+
+✅ Console warning if misconfigured
+
+✅ No thrown exceptions

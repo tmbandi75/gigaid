@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useCapability } from "@/hooks/useCapability";
+import { useToast } from "@/hooks/use-toast";
 import { Plan } from "@shared/plans";
 import { startStripeCheckout, SubscriptionPlan } from "@/lib/stripeCheckout";
 import { useLocation } from "wouter";
@@ -91,6 +92,7 @@ const PLANS: PlanInfo[] = [
 export default function PricingPage() {
   const { user, isAuthenticated } = useAuth();
   const { getUserPlan } = useCapability();
+  const { toast } = useToast();
   const [, navigate] = useLocation();
   const [loadingPlan, setLoadingPlan] = useState<SubscriptionPlan | null>(null);
 
@@ -110,12 +112,25 @@ export default function PricingPage() {
 
     setLoadingPlan(plan.stripeKey);
     try {
-      await startStripeCheckout({
+      const result = await startStripeCheckout({
         plan: plan.stripeKey,
         returnTo: "/pricing",
       });
+      
+      if (!result.success && result.error) {
+        toast({
+          title: "Payments temporarily unavailable",
+          description: result.error,
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error("Checkout error:", error);
+      toast({
+        title: "Checkout failed",
+        description: "Please try again in a few minutes.",
+        variant: "destructive",
+      });
     } finally {
       setLoadingPlan(null);
     }
