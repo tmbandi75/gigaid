@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +43,7 @@ import { Link, useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useSendText } from "@/hooks/use-send-text";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Lead, AiNudge } from "@shared/schema";
 import FollowUpCheckIn from "@/components/FollowUpCheckIn";
 import { NudgeChips } from "@/components/nudges/NudgeChip";
@@ -53,6 +53,13 @@ import { LeadsTableView } from "@/components/leads/LeadsTableView";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { BookingLinkInline, BookingLinkEmptyState } from "@/components/booking-link";
+import { SwipeableCard, type SwipeAction as SwipeCardAction } from "@/components/ui/swipeable-card";
+import { ActionConfirmDialog } from "@/components/ui/action-confirm-dialog";
+import { 
+  getLeadActionEligibility, 
+  getSwipeActions, 
+  type SwipeAction as RulesSwipeAction 
+} from "@shared/archive-delete-rules";
 
 interface FollowUpMessage {
   message: string;
@@ -104,13 +111,88 @@ const filters = [
   { value: "lost", label: "Not Interested" },
 ];
 
-function LeadCard({ lead, nudges, onGenerateFollowUp, onSendText, onNudgeClick }: { lead: Lead; nudges: AiNudge[]; onGenerateFollowUp: (lead: Lead) => void; onSendText: (phone: string) => void; onNudgeClick: (nudge: AiNudge) => void }) {
+interface LeadCardProps {
+  lead: Lead;
+  nudges: AiNudge[];
+  onGenerateFollowUp: (lead: Lead) => void;
+  onSendText: (phone: string) => void;
+  onNudgeClick: (nudge: AiNudge) => void;
+}
+
+function LeadCard({ lead, nudges, onGenerateFollowUp, onSendText, onNudgeClick }: LeadCardProps) {
   const config = statusConfig[lead.status] || statusConfig.new;
   const initials = lead.clientName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   const leadNudges = nudges.filter(n => n.entityType === "lead" && n.entityId === lead.id && n.status === "active");
   const priority = inferLeadPriority({ status: lead.status, createdAt: lead.createdAt, score: lead.score });
-  
-  return (
+  const { toast } = useToast();
+  const isMobile = useIsMobile();
+  const [confirmAction, setConfirmAction] = useState<RulesSwipeAction | null>(null);
+  const queryClient = useQueryClient();
+
+  const eligibility = getLeadActionEligibility(lead);
+  const swipeActions = getSwipeActions("lead", eligibility);
+
+  const archiveLeadMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", `/api/leads/${lead.id}/archive`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      toast({ title: "Request archived" });
+      setConfirmAction(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to archive request", variant: "destructive" });
+      setConfirmAction(null);
+    },
+  });
+
+  const deleteLeadMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("DELETE", `/api/leads/${lead.id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      toast({ title: "Request deleted" });
+      setConfirmAction(null);
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Cannot delete request", 
+        description: error?.message || "Try archiving instead.",
+        variant: "destructive" 
+      });
+      setConfirmAction(null);
+    },
+  });
+
+  const handleSwipeAction = (action: RulesSwipeAction) => {
+    if (action.requiresConfirmation) {
+      setConfirmAction(action);
+    } else {
+      executeAction(action.id);
+    }
+  };
+
+  const executeAction = (actionId: string) => {
+    if (actionId === "archive") {
+      archiveLeadMutation.mutate();
+    } else if (actionId === "delete") {
+      deleteLeadMutation.mutate();
+    }
+  };
+
+  const swipeCardActions: SwipeCardAction[] = swipeActions.map(action => ({
+    id: action.id,
+    label: action.label,
+    icon: action.icon as "Archive" | "Trash2" | "X",
+    variant: action.variant,
+    onClick: () => handleSwipeAction(action),
+  }));
+
+  const isPending = archiveLeadMutation.isPending || deleteLeadMutation.isPending;
+
+  const cardContent = (
     <Card className="border-0 shadow-sm hover-elevate overflow-hidden" data-testid={`lead-card-${lead.id}`}>
       <CardContent className="p-0">
         <div className="flex">
@@ -224,6 +306,31 @@ function LeadCard({ lead, nudges, onGenerateFollowUp, onSendText, onNudgeClick }
         </div>
       </CardContent>
     </Card>
+  );
+  
+  return (
+    <>
+    {isMobile && swipeCardActions.length > 0 ? (
+      <SwipeableCard 
+        actions={swipeCardActions} 
+        disabled={isPending}
+        data-testid={`swipeable-lead-${lead.id}`}
+      >
+        {cardContent}
+      </SwipeableCard>
+    ) : cardContent}
+    
+    <ActionConfirmDialog
+      open={confirmAction !== null}
+      onOpenChange={(open) => !open && setConfirmAction(null)}
+      title={confirmAction?.confirmTitle || "Confirm Action"}
+      description={confirmAction?.confirmDescription || "Are you sure?"}
+      confirmLabel={confirmAction?.label || "Confirm"}
+      variant={confirmAction?.variant === "destructive" ? "destructive" : "default"}
+      isPending={isPending}
+      onConfirm={() => confirmAction && executeAction(confirmAction.id)}
+    />
+    </>
   );
 }
 

@@ -1,0 +1,222 @@
+Here is a **single, copy-paste Replit master prompt** that implements **archive vs delete correctly across Jobs, Requests, and Invoices**, **mobile-first**, **safe**, and **non-destructive**.
+
+This is written to be **implementation-ready**, not conceptual.
+
+---
+
+# 🧭 REPLIT MASTER PROMPT — ARCHIVE VS DELETE RULES (MOBILE SAFE)
+
+## Objective
+
+Implement **consistent, safe archive vs delete behavior** across **Jobs**, **Requests (Leads)**, and **Invoices** in GigAid, optimized for **mobile swipe actions**, while preserving financial and operational integrity.
+
+This must **not remove data improperly** and must **not introduce regressions**.
+
+---
+
+## Non-Negotiable Constraints
+
+❌ Do NOT hard-delete financial or completed records
+❌ Do NOT bypass confirmation for destructive actions (except leads)
+❌ Do NOT remove desktop functionality
+❌ Do NOT change existing API contracts
+
+✅ Implement swipe actions for mobile
+✅ Add archive where delete is unsafe
+✅ Add confirmation modals where required
+✅ Enforce rules in **both UI and backend guards**
+
+---
+
+## GLOBAL RULES (SOURCE OF TRUTH)
+
+### Definitions
+
+* **Delete** = permanent removal
+* **Archive** = hidden from active views, retained for history
+
+---
+
+## OBJECT-LEVEL RULES
+
+### 🧾 Invoices
+
+#### Allowed Actions
+
+* **Archive** → always
+* **Delete** → ONLY if:
+
+  * status = `draft` OR `not_sent`
+  * not paid
+  * no Stripe activity
+
+#### Forbidden
+
+* Delete if:
+
+  * status = `paid`
+  * status = `sent`
+  * Stripe payment exists
+
+#### UI Behavior
+
+Swipe LEFT → reveal:
+
+* Archive
+* Delete (only if eligible)
+
+#### Backend Guard
+
+Reject delete if conditions fail.
+
+---
+
+### 🧰 Jobs
+
+#### Allowed Actions
+
+* **Archive** → completed or canceled jobs
+* **Cancel Job** → upcoming jobs
+
+#### Delete Allowed ONLY if:
+
+* status = `draft`
+* no client notifications sent
+* no invoice attached
+
+#### Forbidden
+
+* Delete in-progress jobs
+* Delete completed jobs
+
+#### UX Language
+
+* Prefer **Cancel** or **Archive**
+* Avoid “Delete Job” except for drafts
+
+---
+
+### 👥 Requests / Leads
+
+#### Allowed Actions
+
+* **Delete** → always
+* **Archive** → optional (secondary)
+
+#### UX
+
+* Swipe LEFT → Delete
+* Confirmation optional (allowed to skip)
+
+---
+
+## DRAFT OBJECTS (SAFE DELETE)
+
+* Draft Jobs → delete allowed
+* Draft Invoices → delete allowed
+
+---
+
+## IMPLEMENTATION TASKS
+
+### 1️⃣ Add Mobile Swipe Actions
+
+For:
+
+* Job cards
+* Request cards
+* Invoice cards
+
+Pattern:
+
+* Swipe LEFT → reveal actions
+* Red button = destructive
+* Grey/neutral = archive
+
+---
+
+### 2️⃣ Add Overflow Menu (⋯) Fallback
+
+Each card must also expose:
+
+* Archive
+* Delete / Cancel (contextual)
+
+Ensures:
+
+* Accessibility
+* Desktop parity
+* Discoverability
+
+---
+
+### 3️⃣ Confirmation Modals (REQUIRED)
+
+Show confirmation for:
+
+* Invoice delete
+* Job cancel
+* Job archive
+
+Copy examples:
+
+> “Delete this draft invoice? This cannot be undone.”
+
+> “Cancel this job? The client will not be charged.”
+
+> “Archive this job? It will be hidden from your active list.”
+
+---
+
+### 4️⃣ Backend Enforcement (CRITICAL)
+
+For delete endpoints:
+
+* Validate eligibility
+* Return 403 with reason if blocked
+
+UI must display:
+
+> “This item can’t be deleted because it has already been sent/paid/completed.”
+
+---
+
+### 5️⃣ State Updates After Action
+
+After archive/delete/cancel:
+
+* Invalidate relevant queries
+* Update lists immediately
+* No second-try behavior allowed
+
+---
+
+## VALIDATION CHECKLIST (MUST PASS)
+
+* [ ] Swipe left works consistently across all lists
+* [ ] Paid invoices cannot be deleted
+* [ ] Draft invoices can be deleted
+* [ ] Completed jobs cannot be deleted
+* [ ] Requests can be deleted freely
+* [ ] Confirmation appears for destructive actions
+* [ ] UI updates immediately on first action
+
+---
+
+## FINAL INSTRUCTION
+
+This implementation must feel:
+
+> “Fast on mobile, safe with money, impossible to accidentally destroy history.”
+
+Proceed carefully and consistently.
+
+---
+
+If you want next, I can:
+
+* add **Undo (Snackbar)** logic
+* generate **exact component code**
+* or help you **stage this behind a feature flag**
+
+Just say the word.

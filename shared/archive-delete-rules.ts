@@ -147,13 +147,26 @@ export function getSwipeActions(
       });
     }
   } else if (type === "lead") {
-    actions.push({
-      id: "delete",
-      label: "Delete",
-      icon: "Trash2",
-      variant: "destructive",
-      requiresConfirmation: false,
-    });
+    if (eligibility.canArchive) {
+      actions.push({
+        id: "archive",
+        label: "Archive",
+        icon: "Archive",
+        variant: "secondary",
+        requiresConfirmation: false,
+      });
+    }
+    if (eligibility.canDelete) {
+      actions.push({
+        id: "delete",
+        label: "Delete",
+        icon: "Trash2",
+        variant: "destructive",
+        requiresConfirmation: true,
+        confirmTitle: "Delete this request?",
+        confirmDescription: "This cannot be undone.",
+      });
+    }
   } else if (type === "invoice") {
     if (eligibility.canArchive) {
       actions.push({

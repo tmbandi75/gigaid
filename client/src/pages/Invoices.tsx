@@ -93,66 +93,170 @@ function formatCurrency(cents: number): string {
   }).format(cents / 100);
 }
 
-function InvoiceCard({ invoice, nudges, onNudgeClick }: { invoice: Invoice; nudges: AiNudge[]; onNudgeClick: (nudge: AiNudge) => void }) {
+interface InvoiceCardProps {
+  invoice: Invoice;
+  nudges: AiNudge[];
+  payments: JobPayment[];
+  onNudgeClick: (nudge: AiNudge) => void;
+}
+
+function InvoiceCard({ invoice, nudges, payments, onNudgeClick }: InvoiceCardProps) {
   const config = statusConfig[invoice.status] || statusConfig.draft;
   const StatusIcon = config.icon;
   const total = invoice.amount + (invoice.tax || 0) - (invoice.discount || 0);
   const invoiceNudges = nudges.filter(n => n.entityType === "invoice" && n.entityId === invoice.id && n.status === "active");
   const priority = inferInvoicePriority({ status: invoice.status, createdAt: invoice.createdAt, amount: invoice.amount });
-  
-  return (
-    <Link href={`/invoices/${invoice.id}/view`} data-testid={`link-invoice-${invoice.id}`}>
-      <Card className="group border-0 shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden" data-testid={`invoice-card-${invoice.id}`}>
-        <CardContent className="p-0">
-          <div className="flex">
-            <div className={`w-1.5 bg-gradient-to-b ${config.gradient}`} />
-            <div className="flex-1 p-3">
-              <div className="flex items-center gap-4">
-                <div className={`relative h-14 w-14 rounded-2xl ${config.bg} flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105`}>
-                  <FileText className={`h-6 w-6 ${config.color}`} />
-                  {invoice.status === "paid" && (
-                    <div className="absolute -bottom-1 -right-1 h-5 w-5 bg-emerald-500 rounded-full flex items-center justify-center shadow-sm">
-                      <CheckCircle className="h-3 w-3 text-white" />
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2 mb-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-foreground">
-                        #{invoice.invoiceNumber}
-                      </span>
-                      {priority && <PriorityBadge priority={priority} compact />}
-                      <Badge 
-                        variant="secondary" 
-                        className={`text-[10px] font-medium px-2 py-0.5 ${config.bg} ${config.color} border ${config.border}`}
-                      >
-                        {config.label}
-                      </Badge>
-                    </div>
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const isMobile = useIsMobile();
+  const [confirmAction, setConfirmAction] = useState<RulesSwipeAction | null>(null);
+
+  const hasStripePayment = payments.some(p => p.invoiceId === invoice.id && p.stripePaymentIntentId);
+  const eligibility = getInvoiceActionEligibility(invoice, hasStripePayment);
+  const swipeActions = getSwipeActions("invoice", eligibility);
+
+  const archiveInvoiceMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", `/api/invoices/${invoice.id}/archive`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      toast({ title: "Invoice archived" });
+      setConfirmAction(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to archive invoice", variant: "destructive" });
+      setConfirmAction(null);
+    },
+  });
+
+  const deleteInvoiceMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("DELETE", `/api/invoices/${invoice.id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      toast({ title: "Invoice deleted" });
+      setConfirmAction(null);
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Cannot delete invoice", 
+        description: error?.message || "Try archiving instead.",
+        variant: "destructive" 
+      });
+      setConfirmAction(null);
+    },
+  });
+
+  const handleSwipeAction = (action: RulesSwipeAction) => {
+    if (action.requiresConfirmation) {
+      setConfirmAction(action);
+    } else {
+      executeAction(action.id);
+    }
+  };
+
+  const executeAction = (actionId: string) => {
+    if (actionId === "archive") {
+      archiveInvoiceMutation.mutate();
+    } else if (actionId === "delete") {
+      deleteInvoiceMutation.mutate();
+    }
+  };
+
+  const swipeCardActions: SwipeCardAction[] = swipeActions.map(action => ({
+    id: action.id,
+    label: action.label,
+    icon: action.icon as "Archive" | "Trash2" | "X",
+    variant: action.variant,
+    onClick: () => handleSwipeAction(action),
+  }));
+
+  const isPending = archiveInvoiceMutation.isPending || deleteInvoiceMutation.isPending;
+
+  const cardContent = (
+    <Card className="group border-0 shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden" data-testid={`invoice-card-${invoice.id}`}>
+      <CardContent className="p-0">
+        <div className="flex">
+          <div className={`w-1.5 bg-gradient-to-b ${config.gradient}`} />
+          <div className="flex-1 p-3">
+            <div className="flex items-center gap-4">
+              <div className={`relative h-14 w-14 rounded-2xl ${config.bg} flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105`}>
+                <FileText className={`h-6 w-6 ${config.color}`} />
+                {invoice.status === "paid" && (
+                  <div className="absolute -bottom-1 -right-1 h-5 w-5 bg-emerald-500 rounded-full flex items-center justify-center shadow-sm">
+                    <CheckCircle className="h-3 w-3 text-white" />
                   </div>
-                  <p className="text-sm text-muted-foreground truncate font-medium">{invoice.clientName}</p>
-                  {invoiceNudges.length > 0 && (
-                    <div className="mt-1" onClick={(e) => e.preventDefault()}>
-                      <NudgeChips nudges={invoiceNudges} onNudgeClick={onNudgeClick} />
-                    </div>
-                  )}
-                  <p className="text-xs text-muted-foreground/70 mt-0.5">{formatDate(invoice.createdAt)}</p>
+                )}
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2 mb-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-foreground">
+                      #{invoice.invoiceNumber}
+                    </span>
+                    {priority && <PriorityBadge priority={priority} compact />}
+                    <Badge 
+                      variant="secondary" 
+                      className={`text-[10px] font-medium px-2 py-0.5 ${config.bg} ${config.color} border ${config.border}`}
+                    >
+                      {config.label}
+                    </Badge>
+                  </div>
                 </div>
-                
-                <div className="text-right flex-shrink-0">
-                  <p className="text-xl font-bold text-foreground">
-                    {formatCurrency(total)}
-                  </p>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground/40 ml-auto mt-1 group-hover:text-muted-foreground transition-colors" />
-                </div>
+                <p className="text-sm text-muted-foreground truncate font-medium">{invoice.clientName}</p>
+                {invoiceNudges.length > 0 && (
+                  <div className="mt-1" onClick={(e) => e.preventDefault()}>
+                    <NudgeChips nudges={invoiceNudges} onNudgeClick={onNudgeClick} />
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground/70 mt-0.5">{formatDate(invoice.createdAt)}</p>
+              </div>
+              
+              <div className="text-right flex-shrink-0">
+                <p className="text-xl font-bold text-foreground">
+                  {formatCurrency(total)}
+                </p>
+                <ChevronRight className="h-5 w-5 text-muted-foreground/40 ml-auto mt-1 group-hover:text-muted-foreground transition-colors" />
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
-    </Link>
+        </div>
+      </CardContent>
+    </Card>
+  );
+  
+  return (
+    <>
+    {isMobile && swipeCardActions.length > 0 ? (
+      <SwipeableCard 
+        actions={swipeCardActions} 
+        disabled={isPending}
+        data-testid={`swipeable-invoice-${invoice.id}`}
+      >
+        <Link href={`/invoices/${invoice.id}/view`} data-testid={`link-invoice-${invoice.id}`}>
+          {cardContent}
+        </Link>
+      </SwipeableCard>
+    ) : (
+      <Link href={`/invoices/${invoice.id}/view`} data-testid={`link-invoice-${invoice.id}`}>
+        {cardContent}
+      </Link>
+    )}
+    
+    <ActionConfirmDialog
+      open={confirmAction !== null}
+      onOpenChange={(open) => !open && setConfirmAction(null)}
+      title={confirmAction?.confirmTitle || "Confirm Action"}
+      description={confirmAction?.confirmDescription || "Are you sure?"}
+      confirmLabel={confirmAction?.label || "Confirm"}
+      variant={confirmAction?.variant === "destructive" ? "destructive" : "default"}
+      isPending={isPending}
+      onConfirm={() => confirmAction && executeAction(confirmAction.id)}
+    />
+    </>
   );
 }
 
@@ -204,6 +308,10 @@ export default function Invoices() {
 
   const { data: nudges = [] } = useQuery<AiNudge[]>({
     queryKey: ["/api/nudges"],
+  });
+
+  const { data: payments = [] } = useQuery<JobPayment[]>({
+    queryKey: ["/api/payments"],
   });
 
   const showTableView = !isMobile && viewMode === "table";
@@ -342,6 +450,7 @@ export default function Invoices() {
                 key={invoice.id} 
                 invoice={invoice}
                 nudges={nudges}
+                payments={payments}
                 onNudgeClick={(nudge) => setSelectedNudge(nudge)}
               />
             ))}
@@ -483,6 +592,7 @@ export default function Invoices() {
                 key={invoice.id} 
                 invoice={invoice}
                 nudges={nudges}
+                payments={payments}
                 onNudgeClick={(nudge) => setSelectedNudge(nudge)}
               />
             ))}
