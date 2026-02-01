@@ -1,0 +1,199 @@
+REPLIT MASTER PROMPT — DAY-1 USER BUG & SURPRISE AUDIT
+Objective
+
+Audit the entire GigAid application to identify user-facing bugs, inconsistencies, and surprises that would negatively impact first-day usage, trust, or activation.
+
+Focus on issues a real user would experience — not theoretical edge cases.
+
+SCOPE OF AUDIT (STRICT)
+
+Audit the app from the perspective of a new, non-technical user on mobile who:
+
+Signs up
+
+Configures settings
+
+Creates jobs / requests / invoices
+
+Interacts with Stripe
+
+Navigates between tabs
+
+Leaves and returns to the app
+
+STEP 1 — Identify Silent Failures (Highest Priority)
+
+Search for:
+
+Mutations without success/error feedback
+
+Forms that submit but show no confirmation
+
+Actions that succeed but do not update UI immediately
+
+Buttons with no loading / disabled state
+
+Flag any case where:
+
+“Something happened, but the user wouldn’t know.”
+
+STEP 2 — Navigation & State Consistency Audit
+
+Audit for:
+
+State resetting unexpectedly when switching tabs
+
+Data disappearing then reappearing
+
+Changes visible only after second attempt or refresh
+
+Inconsistent list ordering after actions
+
+These are trust-breaking Day-1 issues.
+
+STEP 3 — Empty States & First-Time Flows
+
+Verify for every major screen:
+
+Jobs
+
+Requests
+
+Get Paid / Invoices
+
+Settings
+
+Booking page
+
+Check that:
+
+Empty states explain what to do next
+
+CTAs are present and actionable
+
+No “dead” screens exist
+
+Flag any screen that feels confusing with zero data.
+
+STEP 4 — Permission & Plan Gating Surprises
+
+Audit all gated features:
+
+Ensure locked features explain why they’re locked
+
+Ensure no feature silently fails due to plan limits
+
+Ensure upgrade paths are visible but non-intrusive
+
+Flag any place where a user clicks something and nothing happens.
+
+STEP 5 — Mobile-Specific UX Bugs
+
+Audit mobile-only behavior:
+
+Swipe actions consistency
+
+Tap targets too small
+
+Destructive actions too easy
+
+Missing actions on mobile that exist on desktop
+
+Bottom nav state desync
+
+Day-1 users are overwhelmingly mobile.
+
+STEP 6 — Error Handling & Messaging
+
+Search for:
+
+catch (e) {} with no UI feedback
+
+Console-only error logging
+
+Generic “Something went wrong” messages
+
+Ensure:
+
+Errors are human-readable
+
+Errors explain next steps
+
+Errors do not block recovery
+
+STEP 7 — External Flow Return Bugs (Critical)
+
+Audit flows that:
+
+Open new tabs
+
+Redirect externally
+
+Rely on background processing
+
+Examples:
+
+Stripe onboarding
+
+Stripe portal
+
+OAuth
+
+Ensure:
+
+UI refreshes on return
+
+Status updates immediately
+
+No manual refresh required
+
+STEP 8 — Performance & Perceived Slowness
+
+Flag:
+
+Pages with no loading skeleton
+
+Actions that appear frozen
+
+Long API calls without feedback
+
+Perceived slowness = perceived instability.
+
+STEP 9 — Compile a “Day-1 Risk List”
+
+Return:
+
+List of user-visible bugs
+
+Severity:
+
+🔴 Critical (breaks trust or flow)
+
+🟠 Major (confusing, frustrating)
+
+🟡 Minor (polish issue)
+
+Recommended fix per item
+
+Which ones MUST be fixed before launch
+
+NON-NEGOTIABLE CONSTRAINTS
+
+❌ Do NOT refactor architecture
+❌ Do NOT change APIs
+❌ Do NOT optimize prematurely
+
+✅ Focus only on user-visible impact
+✅ Prefer small, surgical fixes
+✅ Assume users are impatient and distracted
+
+FINAL INSTRUCTION
+
+This audit should answer one question:
+
+“What would make a first-time user say
+‘Hmm… that’s weird’?”
+
+Find and eliminate those moments.
+
+Proceed methodically.

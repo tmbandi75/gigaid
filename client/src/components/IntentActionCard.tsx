@@ -200,10 +200,11 @@ export function IntentActionCard({ entityType, entityId }: IntentActionCardProps
         setLocation(`/invoices/${data.invoice.id}`);
       }
     },
-    onError: () => {
+    onError: (error: any) => {
+      const message = error?.message || "Couldn't create the invoice. Check your connection and try again.";
       toast({
-        title: "Something went wrong",
-        description: "Couldn't create the invoice. Please try again.",
+        title: "Invoice creation failed",
+        description: message,
         variant: "destructive",
       });
     },
@@ -376,10 +377,11 @@ function IntentActionCardStandalone({ action }: { action: ReadyAction }) {
         setLocation(`/invoices/${data.invoice.id}`);
       }
     },
-    onError: () => {
+    onError: (error: any) => {
+      const message = error?.message || "Couldn't create the invoice. Check your connection and try again.";
       toast({
-        title: "Something went wrong",
-        description: "Couldn't create the invoice. Please try again.",
+        title: "Invoice creation failed",
+        description: message,
         variant: "destructive",
       });
     },
