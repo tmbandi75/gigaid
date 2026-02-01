@@ -1,5 +1,4 @@
 import { apiRequest } from "./queryClient";
-import { isStripeEnabled } from "@shared/stripeEnabled";
 
 export type SubscriptionPlan = "pro" | "pro_plus" | "business";
 
@@ -16,19 +15,6 @@ export async function startStripeCheckout({
   returnTo: string;
 }): Promise<CheckoutResult> {
   console.log("[Stripe] Entered startStripeCheckout", { plan, returnTo });
-  
-  const stripeEnabledResult = isStripeEnabled();
-  console.log("[Stripe] isStripeEnabled() =", stripeEnabledResult);
-  
-  if (!stripeEnabledResult) {
-    console.warn("[Stripe] Disabled — blocking checkout");
-    return {
-      success: false,
-      error: "Payments temporarily unavailable. Please try again in a few minutes."
-    };
-  }
-
-  console.log("[Stripe] Enabled — proceeding to checkout");
 
   try {
     console.log("[Stripe] Creating checkout session");
