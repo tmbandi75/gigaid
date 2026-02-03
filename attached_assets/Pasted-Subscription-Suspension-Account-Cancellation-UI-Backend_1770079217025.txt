@@ -1,0 +1,174 @@
+Subscription Suspension & Account Cancellation — UI + Backend (GigAid)
+Objective
+
+Implement a subscription suspension and account cancellation system for GigAid that is:
+
+Accessible from the Settings → Billing area of the app
+
+Enforced entirely on the backend
+
+Safe, auditable, and reversible (for suspension only)
+
+Fully aligned with existing Stripe and entitlement logic
+
+UI LOCATION (NON-NEGOTIABLE)
+Primary Entry Point
+
+Settings → Billing
+
+Add a new section at the bottom of the Billing page titled:
+
+Manage Subscription
+
+This section must exist on:
+
+Web app
+
+Mobile/PWA (same location in Settings)
+
+UI ELEMENTS TO ADD
+1. Pause Subscription
+
+Location:
+Settings → Billing → Manage Subscription
+
+UI Type:
+Secondary button (non-destructive style)
+
+Label:
+
+Pause my subscription
+
+On Click:
+
+Show confirmation modal
+
+Modal Copy Requirements:
+
+Explain:
+
+Billing will stop
+
+Account will downgrade to Free
+
+Data will be retained
+
+No refunds are issued
+
+Buttons:
+
+Confirm Pause
+
+Cancel
+
+2. Close Account
+
+Location:
+Settings → Billing → Manage Subscription
+
+UI Type:
+Danger button (destructive style)
+
+Label:
+
+Close my account
+
+On Click:
+
+Show strong confirmation modal
+
+Modal Copy Requirements:
+
+Explain clearly:
+
+Account access will be disabled immediately
+
+Data retained for 30 days
+
+Archived for 120 days
+
+Then permanently deleted
+
+No refunds
+
+Buttons:
+
+Close Account (danger)
+
+Cancel
+
+BACKEND IMPLEMENTATION (UNCHANGED LOGIC)
+
+All backend logic from the prior prompt remains exactly the same
+This section only clarifies where it is triggered from
+
+API Endpoints
+
+POST /api/billing/suspend
+
+POST /api/account/cancel
+
+POST /api/billing/reactivate
+
+These endpoints must be called only from:
+
+Settings → Billing UI
+
+Or reactivation flows when suspended users attempt paid actions
+
+ACCESS CONTROL
+
+Only authenticated users
+
+Only users with an active paid plan may see Pause my subscription
+
+All users may see Close my account
+
+Buttons must:
+
+Respect entitlement checks
+
+Gracefully fail with backend enforcement
+
+FRONTEND SAFETY RULES
+
+❌ Do NOT show these actions in onboarding
+❌ Do NOT show in marketing pages
+❌ Do NOT expose via query params or URLs
+❌ Do NOT hide logic behind feature flags unless already used
+
+ACCEPTANCE CRITERIA (UI + BE)
+
+✅ Feature is discoverable in Settings → Billing
+✅ Users understand consequences before confirming
+✅ No accidental account loss
+✅ No hidden or ambiguous placement
+✅ Backend enforces all rules even if UI is bypassed
+
+OUTPUT REQUIRED FROM REPLIT
+
+Billing page UI update
+
+Confirmation modals
+
+API integrations
+
+Backend enforcement
+
+Retention jobs
+
+Audit logging
+
+IMPORTANT NOTE TO REPLIT
+
+This feature must feel:
+
+Calm
+
+Respectful
+
+Reversible (for suspension)
+
+Final (for cancellation)
+
+No dark patterns. No pressure copy.
