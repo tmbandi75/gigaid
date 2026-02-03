@@ -3,13 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, Zap, Shield, Users, ArrowLeft, Loader2, Star, TrendingUp } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { useCapability } from "@/hooks/useCapability";
 import { useToast } from "@/hooks/use-toast";
 import { Plan } from "@shared/plans";
 import { startStripeCheckout, SubscriptionPlan } from "@/lib/stripeCheckout";
 import { useLocation } from "wouter";
 import { useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useQuery } from "@tanstack/react-query";
 
 interface PlanFeature {
   text: string;
@@ -123,13 +123,31 @@ const PLANS: PlanInfo[] = [
 
 export default function PricingPage() {
   const { isAuthenticated } = useAuth();
-  const { getUserPlan } = useCapability();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [loadingPlan, setLoadingPlan] = useState<SubscriptionPlan | null>(null);
   const isMobile = useIsMobile();
 
-  const currentPlan = getUserPlan();
+  // Use subscription status API as single source of truth for plan
+  const { data: subscription, isLoading: isSubscriptionLoading } = useQuery<{ plan: string; hasSubscription: boolean }>({
+    queryKey: ["/api/subscription/status"],
+    retry: 1,
+    staleTime: 60000,
+  });
+
+  // Map subscription plan string to Plan enum
+  const getPlanFromSubscription = (): Plan => {
+    if (!subscription?.plan) return Plan.FREE;
+    const planMap: Record<string, Plan> = {
+      free: Plan.FREE,
+      pro: Plan.PRO,
+      pro_plus: Plan.PRO_PLUS,
+      business: Plan.BUSINESS,
+    };
+    return planMap[subscription.plan.toLowerCase()] ?? Plan.FREE;
+  };
+
+  const currentPlan = getPlanFromSubscription();
 
   // Check if target plan is an upgrade from current plan
   const isUpgrade = (targetPlan: Plan): boolean => {
@@ -262,6 +280,7 @@ export default function PricingPage() {
             const isCurrent = isCurrentPlan(plan.id);
             const isDisabled = isPlanDisabled(plan.id);
             const isLoading = loadingPlan === plan.stripeKey;
+            const isWaitingForData = isSubscriptionLoading;
 
             return (
               <Card
@@ -332,14 +351,14 @@ export default function PricingPage() {
                     className="w-full"
                     size="lg"
                     variant={plan.recommended ? "default" : isCurrent ? "outline" : "default"}
-                    disabled={isDisabled || isLoading}
+                    disabled={isDisabled || isLoading || isWaitingForData}
                     onClick={() => handlePlanAction(plan)}
                     data-testid={`button-plan-${plan.id}`}
                   >
-                    {isLoading ? (
+                    {isLoading || isWaitingForData ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Loading...
+                        {isWaitingForData ? "Loading plan..." : "Loading..."}
                       </>
                     ) : (
                       getButtonLabel(plan)
