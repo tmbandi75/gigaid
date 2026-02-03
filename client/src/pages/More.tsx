@@ -114,6 +114,12 @@ export default function More() {
     queryKey: ["/api/profile"],
   });
 
+  const { data: subscription } = useQuery<{ plan: string; hasSubscription: boolean }>({
+    queryKey: ["/api/subscription/status"],
+    retry: 1,
+    staleTime: 60000,
+  });
+
   useEffect(() => {
     const isDark = document.documentElement.classList.contains('dark');
     setDarkMode(isDark);
@@ -123,18 +129,25 @@ export default function More() {
   const displayEmail = profile?.email || "gig@example.com";
   const businessName = profile?.businessName || "Your Business";
   
-  // Format plan name for display
+  // Format plan name for display - use subscription status API for accuracy
   const getPlanDisplayName = (plan: string | null | undefined) => {
     const planMap: Record<string, string> = {
       free: "Free Plan",
       pro: "Pro Plan",
       "pro+": "Pro+ Plan",
       proplus: "Pro+ Plan",
+      pro_plus: "Pro+ Plan",
       business: "Business Plan",
     };
     return planMap[plan?.toLowerCase() || "free"] || "Free Plan";
   };
-  const planDisplayName = getPlanDisplayName(profile?.plan);
+  // Use subscription status API for accurate plan display
+  const planDisplayName = getPlanDisplayName(subscription?.plan);
+  
+  const handlePlanClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate("/settings?tab=billing");
+  };
   
   const initials = displayName
     .split(" ")
@@ -183,7 +196,12 @@ export default function More() {
           <div className="flex-1">
             <h2 className="font-semibold text-lg">{displayName}</h2>
             <p className="text-sm text-white/70">{businessName}</p>
-            <Badge variant="secondary" className="mt-1.5 text-[10px] bg-white/10 text-white border-0" data-testid="badge-user-plan">
+            <Badge 
+              variant="secondary" 
+              className="mt-1.5 text-[10px] bg-white/10 text-white border-0 cursor-pointer" 
+              data-testid="badge-user-plan"
+              onClick={handlePlanClick}
+            >
               {planDisplayName}
             </Badge>
           </div>
@@ -225,7 +243,14 @@ export default function More() {
                 <p className="font-medium text-foreground">{displayName}</p>
                 <p className="text-xs text-muted-foreground">{businessName}</p>
               </div>
-              <Badge variant="secondary" className="text-[10px]" data-testid="badge-user-plan-desktop">{planDisplayName}</Badge>
+              <Badge 
+                variant="secondary" 
+                className="text-[10px] cursor-pointer" 
+                data-testid="badge-user-plan-desktop"
+                onClick={handlePlanClick}
+              >
+                {planDisplayName}
+              </Badge>
             </div>
           </div>
         </div>

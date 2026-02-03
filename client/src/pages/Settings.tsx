@@ -98,7 +98,11 @@ export default function Settings() {
   const isMobile = useIsMobile();
   const [bookingLinkCopied, setBookingLinkCopied] = useState(false);
   const { isAuthenticated } = useAuth();
-  const [activeTab, setActiveTab] = useState("general");
+  
+  // Initialize tab from URL parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  const tabFromUrl = urlParams.get("tab");
+  const [activeTab, setActiveTab] = useState(tabFromUrl === "billing" ? "billing" : "general");
 
   const handleAuthenticatedDownload = async (url: string, filename: string) => {
     try {
