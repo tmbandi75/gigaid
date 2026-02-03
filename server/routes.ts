@@ -6424,9 +6424,22 @@ Return ONLY the message text, no JSON or formatting.`
         business: "Business",
       };
 
+      // Self-healing: sync user's plan with Stripe subscription metadata if mismatched
+      const stripePlan = subscription.metadata?.plan;
+      let effectivePlan = user.plan || "free";
+      
+      if (subscription.status === "active" && stripePlan && stripePlan !== user.plan) {
+        console.log(`[Subscription Sync] User ${user.id} plan mismatch: DB=${user.plan}, Stripe=${stripePlan}. Auto-syncing.`);
+        await storage.updateUser(user.id, { 
+          plan: stripePlan,
+          isPro: stripePlan !== "free",
+        });
+        effectivePlan = stripePlan;
+      }
+
       res.json({
-        plan: user.plan || "free",
-        planName: planNames[user.plan || "free"] || "Free",
+        plan: effectivePlan,
+        planName: planNames[effectivePlan] || "Free",
         status: subscription.status,
         hasSubscription: true,
         currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
