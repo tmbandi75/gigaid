@@ -31,6 +31,14 @@ interface PlanInfo {
   color: string;
 }
 
+// Plan order for upgrade/downgrade detection (lowest → highest)
+const PLAN_ORDER: Record<Plan, number> = {
+  [Plan.FREE]: 0,
+  [Plan.PRO]: 1,
+  [Plan.PRO_PLUS]: 2,
+  [Plan.BUSINESS]: 3,
+};
+
 const PLANS: PlanInfo[] = [
   {
     id: Plan.FREE,
@@ -123,55 +131,81 @@ export default function PricingPage() {
 
   const currentPlan = getUserPlan();
 
+  // Check if target plan is an upgrade from current plan
+  const isUpgrade = (targetPlan: Plan): boolean => {
+    return PLAN_ORDER[targetPlan] > PLAN_ORDER[currentPlan];
+  };
+
+  // Canonical click handling
   const handlePlanAction = async (plan: PlanInfo) => {
-    if (plan.id === Plan.FREE) {
-      if (isAuthenticated) {
-        navigate("/");
-      } else {
+    // Free → Free: no-op (not logged in goes to login)
+    if (currentPlan === Plan.FREE && plan.id === Plan.FREE) {
+      if (!isAuthenticated) {
         navigate("/login");
       }
       return;
     }
 
-    if (!plan.stripeKey) {
+    // Same paid plan: no-op
+    if (currentPlan !== Plan.FREE && plan.id === currentPlan) {
       return;
     }
 
-    setLoadingPlan(plan.stripeKey);
-    try {
-      const result = await startStripeCheckout({
-        plan: plan.stripeKey,
-        returnTo: "/pricing",
-      });
-      
-      if (!result.success && result.error) {
+    // Upgrade: use Stripe Checkout
+    if (isUpgrade(plan.id)) {
+      if (!plan.stripeKey) {
+        return;
+      }
+
+      setLoadingPlan(plan.stripeKey);
+      try {
+        const result = await startStripeCheckout({
+          plan: plan.stripeKey,
+          returnTo: "/pricing",
+        });
+        
+        if (!result.success && result.error) {
+          toast({
+            title: "Payments temporarily unavailable",
+            description: result.error,
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Checkout error:", error);
         toast({
-          title: "Payments temporarily unavailable",
-          description: result.error,
+          title: "Checkout failed",
+          description: "Please try again in a few minutes.",
           variant: "destructive",
         });
+      } finally {
+        setLoadingPlan(null);
       }
-    } catch (error) {
-      console.error("Checkout error:", error);
-      toast({
-        title: "Checkout failed",
-        description: "Please try again in a few minutes.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingPlan(null);
+      return;
     }
+
+    // Downgrade (paid → lower paid or free): redirect to Billing Settings
+    navigate("/settings?tab=billing");
   };
 
   const isCurrentPlan = (planId: Plan): boolean => {
     return currentPlan === planId;
   };
 
+  // Only disable the current paid plan (Free is never disabled)
   const isPlanDisabled = (planId: Plan): boolean => {
-    const planOrder = [Plan.FREE, Plan.PRO, Plan.PRO_PLUS, Plan.BUSINESS];
-    const currentIndex = planOrder.indexOf(currentPlan);
-    const targetIndex = planOrder.indexOf(planId);
-    return targetIndex <= currentIndex;
+    return currentPlan !== Plan.FREE && planId === currentPlan;
+  };
+
+  // Get button label based on plan relationship
+  const getButtonLabel = (plan: PlanInfo): string => {
+    if (plan.id === currentPlan) {
+      return "Current Plan";
+    }
+    if (isUpgrade(plan.id)) {
+      return plan.cta; // Use the plan's CTA for upgrades
+    }
+    return "Manage Subscription"; // Downgrade path
   };
 
   return (
@@ -307,10 +341,8 @@ export default function PricingPage() {
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
                         Loading...
                       </>
-                    ) : isCurrent ? (
-                      "Current Plan"
                     ) : (
-                      plan.cta
+                      getButtonLabel(plan)
                     )}
                   </Button>
                 </CardFooter>

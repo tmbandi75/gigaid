@@ -1,0 +1,123 @@
+REPLIT MASTER PROMPT
+Pricing Page Fix: Enable Downgrades + Correct Plan Button Logic
+Objective
+
+Fix the Pricing page so that plan buttons behave correctly based on the user’s current subscription:
+
+✅ Allow upgrades via Stripe Checkout
+
+✅ Allow downgrades by redirecting to Billing Settings
+
+✅ Disable only the current plan
+
+❌ Do NOT disable lower-tier plans
+
+❌ Do NOT route downgrades through Stripe Checkout
+
+This change must be minimal, explicit, and production-safe.
+
+Root Cause (Context for Replit)
+
+The current implementation disables all plans that are less than or equal to the user’s current plan.
+Because Business is the highest tier, this results in all other plans being disabled, including valid downgrade paths.
+
+Non-Negotiable Constraints
+
+❌ Do NOT refactor existing Stripe checkout logic
+❌ Do NOT remove or rename existing plans
+❌ Do NOT change pricing or entitlements
+❌ Do NOT introduce modal paywalls
+❌ Do NOT break existing upgrade flows
+
+✅ Only adjust plan-selection logic
+✅ Keep backend as the source of truth
+✅ Changes must be easy to audit
+
+Required Behavior
+Plan Button State
+
+Disable only the user’s current plan
+
+All other plans must remain clickable
+
+Click Handling
+
+Upgrade → Stripe Checkout (existing logic)
+
+Downgrade → Redirect to /settings/billing
+
+Same plan → No action
+
+Implementation Steps
+1️⃣ Update isPlanDisabled
+
+Replace any logic that disables lower or equal plans.
+
+function isPlanDisabled(targetPlan: PlanTier, currentPlan: PlanTier) {
+  return targetPlan === currentPlan
+}
+
+2️⃣ Define Plan Order (if not already defined)
+const PLAN_ORDER = {
+  free: 0,
+  pro: 1,
+  pro_plus: 2,
+  business: 3
+}
+
+3️⃣ Add Explicit Upgrade Detection
+function isUpgrade(target: PlanTier, current: PlanTier) {
+  return PLAN_ORDER[target] > PLAN_ORDER[current]
+}
+
+4️⃣ Update Plan Button Click Handler
+function handlePlanClick(targetPlan: PlanTier) {
+  if (targetPlan === currentPlan) return
+
+  if (isUpgrade(targetPlan, currentPlan)) {
+    startStripeCheckout(targetPlan)
+    return
+  }
+
+  // Downgrade path
+  router.push('/settings/billing')
+}
+
+5️⃣ Update Button Labels for Clarity
+
+Buttons should dynamically reflect intent:
+
+{targetPlan === currentPlan
+  ? 'Current Plan'
+  : isUpgrade(targetPlan, currentPlan)
+    ? 'Upgrade'
+    : 'Manage Subscription'}
+
+
+Optional subtext for downgrade plans:
+
+Downgrades are managed from Billing Settings
+
+Acceptance Criteria
+
+✅ Business users can click Pro / Pro+
+✅ Downgrades route to /settings/billing
+✅ Stripe Checkout only used for upgrades
+✅ Current plan button is disabled
+✅ No plan button appears broken or inactive incorrectly
+
+Deliverables
+
+Updated Pricing page logic
+
+No changes to backend or Stripe configuration
+
+No regressions in upgrade flow
+
+Clean, readable diff suitable for audit
+
+Final Instruction
+
+Implement this exact behavior, verify in the browser, and do not ship partial logic.
+
+Return when complete.
