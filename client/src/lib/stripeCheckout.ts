@@ -1,5 +1,6 @@
 import { apiRequest } from "./queryClient";
 
+// Cache bust: 2026-02-03T23:25:00Z
 // Single source of truth for Stripe enablement
 export const STRIPE_ENABLED = import.meta.env.VITE_STRIPE_ENABLED === 'true';
 
