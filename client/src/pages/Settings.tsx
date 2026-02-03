@@ -153,16 +153,23 @@ export default function Settings() {
     queryKey: ["/api/onboarding"],
   });
 
-  const { data: subscription } = useQuery<{ plan: string; hasSubscription: boolean }>({
+  const { data: subscription, isLoading: isSubscriptionLoading, isError: isSubscriptionError } = useQuery<{ plan: string; hasSubscription: boolean }>({
     queryKey: ["/api/subscription/status"],
     retry: 1,
     staleTime: 60000,
   });
 
+  // Derive plan display from subscription - handle loading/error explicitly
+  const getPlanLabel = (): string => {
+    if (isSubscriptionLoading) return "Loading...";
+    if (isSubscriptionError || !subscription) return "Unable to load";
+    const plan = subscription.plan;
+    if (!plan || plan === "free") return "Free";
+    return plan.charAt(0).toUpperCase() + plan.slice(1).replace("_", "+");
+  };
+  
   const isBusinessPlan = subscription !== undefined && subscription.plan === "business";
-  const currentPlanLabel = subscription?.plan 
-    ? subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1).replace("_", "+")
-    : "Free";
+  const currentPlanLabel = getPlanLabel();
 
   const isMoneyProtectionReady = onboardingStatus ? onboardingStatus.moneyProtectionReady : true;
   const needsSetup = !isOnboardingLoading && !isMoneyProtectionReady;

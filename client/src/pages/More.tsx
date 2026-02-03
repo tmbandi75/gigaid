@@ -114,7 +114,7 @@ export default function More() {
     queryKey: ["/api/profile"],
   });
 
-  const { data: subscription } = useQuery<{ plan: string; hasSubscription: boolean }>({
+  const { data: subscription, isLoading: isSubscriptionLoading, isError: isSubscriptionError } = useQuery<{ plan: string; hasSubscription: boolean }>({
     queryKey: ["/api/subscription/status"],
     retry: 1,
     staleTime: 60000,
@@ -129,8 +129,11 @@ export default function More() {
   const displayEmail = profile?.email || "gig@example.com";
   const businessName = profile?.businessName || "Your Business";
   
-  // Format plan name for display - use subscription status API for accuracy
-  const getPlanDisplayName = (plan: string | null | undefined) => {
+  // Format plan name for display - handle loading/error explicitly
+  const getPlanDisplayName = (): string => {
+    if (isSubscriptionLoading) return "Loading...";
+    if (isSubscriptionError || !subscription) return "Plan";
+    
     const planMap: Record<string, string> = {
       free: "Free Plan",
       pro: "Pro Plan",
@@ -139,10 +142,10 @@ export default function More() {
       pro_plus: "Pro+ Plan",
       business: "Business Plan",
     };
-    return planMap[plan?.toLowerCase() || "free"] || "Free Plan";
+    return planMap[subscription.plan?.toLowerCase() || "free"] || "Free Plan";
   };
   // Use subscription status API for accurate plan display
-  const planDisplayName = getPlanDisplayName(subscription?.plan);
+  const planDisplayName = getPlanDisplayName();
   
   const handlePlanClick = (e: React.MouseEvent) => {
     e.stopPropagation();
