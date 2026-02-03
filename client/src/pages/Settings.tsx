@@ -379,16 +379,28 @@ export default function Settings() {
 
       <div className={`${isMobile ? 'px-4 py-4' : 'max-w-7xl mx-auto px-6 lg:px-8 py-6'}`}>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6" data-testid="tabs-settings">
-            <TabsTrigger value="general" className="flex items-center gap-2" data-testid="tab-general">
-              <SettingsIcon className="h-4 w-4" />
-              General
-            </TabsTrigger>
-            <TabsTrigger value="billing" className="flex items-center gap-2" data-testid="tab-billing">
-              <CreditCard className="h-4 w-4" />
-              Billing
-            </TabsTrigger>
-          </TabsList>
+          <Card className="mb-6 border shadow-sm" data-testid="tabs-settings">
+            <div className="grid grid-cols-2 p-1">
+              <Button 
+                variant={activeTab === "general" ? "default" : "ghost"}
+                className="flex items-center gap-2 justify-center"
+                onClick={() => setActiveTab("general")}
+                data-testid="tab-general"
+              >
+                <SettingsIcon className="h-4 w-4" />
+                General
+              </Button>
+              <Button 
+                variant={activeTab === "billing" ? "default" : "ghost"}
+                className="flex items-center gap-2 justify-center"
+                onClick={() => setActiveTab("billing")}
+                data-testid="tab-billing"
+              >
+                <CreditCard className="h-4 w-4" />
+                Billing
+              </Button>
+            </div>
+          </Card>
 
           <TabsContent value="general" className="space-y-4">
             {/* Plan Status Banner - only shown for non-Business plans */}
