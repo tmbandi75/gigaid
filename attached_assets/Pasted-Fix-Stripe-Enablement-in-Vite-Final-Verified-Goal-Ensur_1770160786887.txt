@@ -1,0 +1,113 @@
+Fix Stripe Enablement in Vite (Final, Verified)
+
+Goal
+
+Ensure Stripe Checkout can run by correctly enabling Stripe via Vite environment variables and eliminating silent failure.
+
+1️⃣ Update Stripe enablement logic
+
+File: client/src/lib/stripeCheckout.ts
+
+Replace all Stripe enablement logic with:
+
+export const STRIPE_ENABLED =
+  import.meta.env.VITE_STRIPE_ENABLED === 'true'
+
+console.log('[Stripe env check]', {
+  VITE_STRIPE_ENABLED: import.meta.env.VITE_STRIPE_ENABLED,
+  STRIPE_ENABLED
+})
+
+export async function startStripeCheckout(plan: string) {
+  if (!STRIPE_ENABLED) {
+    console.error(
+      '[Stripe] Checkout disabled — VITE_STRIPE_ENABLED is not true'
+    )
+    alert(
+      'Stripe is disabled in this environment.\n\n' +
+      'Set VITE_STRIPE_ENABLED=true in Replit Secrets and restart the app.'
+    )
+    throw new Error('Stripe disabled by env')
+  }
+
+  // existing checkout logic continues here
+}
+
+2️⃣ Set the correct Replit Secret
+
+Go to Replit → Secrets (Environment Variables)
+Add exactly:
+
+VITE_STRIPE_ENABLED=true
+
+
+❌ Do NOT add STRIPE_ENABLED
+❌ Do NOT add quotes
+❌ Do NOT add spaces
+
+3️⃣ HARD restart (mandatory)
+
+You MUST do all three:
+
+Stop the Replit app
+
+Start it again
+
+Browser: Ctrl + Shift + R
+
+Vite does not hot-reload env vars.
+
+4️⃣ Verification (this is the pass/fail test)
+
+On app load, console must show:
+
+[Stripe env check] {
+  VITE_STRIPE_ENABLED: "true",
+  STRIPE_ENABLED: true
+}
+
+
+If you see:
+
+undefined → env var not loaded
+
+"false" → typo or wrong name
+
+No log → wrong file or not restarted
+
+5️⃣ Expected behavior after this
+
+Clicking Upgrade does NOT log “Checkout disabled”
+
+/api/subscription/checkout is called
+
+Stripe proceeds (or errors due to missing keys — which is OK)
+
+Answering your earlier question directly
+
+“Should this work even if Stripe isn’t fully set up?”
+
+✔ YES — the button click and checkout call should still happen
+❌ NO — the actual payment flow won’t complete without keys
+
+Right now you are blocked before Stripe even starts — purely by env config.
+
+Bottom line (plain English)
+
+You are one env var away from being done.
+
+Until you see this in the console:
+
+STRIPE_ENABLED: true
+
+
+Stripe will never open — by design.
+
+One last yes/no check for you
+
+After restarting, do you see this exact line?
+
+[Stripe env check] { VITE_STRIPE_ENABLED: "true", STRIPE_ENABLED: true }
+
+
+If no, the issue is still env placement/naming — nothing else.
