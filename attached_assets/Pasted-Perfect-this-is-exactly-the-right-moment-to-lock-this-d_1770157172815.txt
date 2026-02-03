@@ -1,0 +1,200 @@
+Perfect — this is exactly the right moment to **lock this down with one more clean, corrective Replit master prompt**.
+
+Below is a **single, follow-up Replit master prompt** that assumes the **previous pricing fix is already merged** and **only addresses these two new issues**.
+It’s explicit, scoped, and avoids guesswork.
+
+---
+
+# 🧠 REPLIT MASTER PROMPT
+
+## Fix Subscription Badge Inconsistencies (Settings + More Pages)
+
+### Objective
+
+Fix **subscription badge inconsistencies and interactivity issues** across the app so that:
+
+1. The **Settings page** correctly displays the user’s actual paid plan (e.g., Business), not “Free”
+2. The **More / Profile page** subscription badge is **clickable and navigates correctly**
+3. Subscription state is **read from a single authoritative source**
+4. No page silently falls back to “Free” due to missing or failed data
+
+This is a **data flow + UI interaction fix only**.
+Do not change pricing, Stripe logic, or entitlements.
+
+---
+
+### Confirmed Issues
+
+#### Issue 1: Settings Page Shows “Free Plan”
+
+* Subscription query exists
+* UI defaults to “Free” when data is undefined or query fails
+* This masks real subscription state (e.g., Business)
+
+#### Issue 2: More Page Badge Not Clickable
+
+* Badge has an `onClick`
+* Parent container also has an `onClick`
+* Parent intercepts the click, preventing badge interaction
+
+---
+
+### Non-Negotiable Constraints
+
+❌ Do NOT change Stripe integration
+❌ Do NOT change plan names or tiers
+❌ Do NOT hardcode plan labels
+❌ Do NOT duplicate subscription queries per page
+
+✅ Use a single subscription source of truth
+✅ Fail loudly (or explicitly) instead of defaulting to Free
+✅ Preserve existing navigation patterns
+
+---
+
+## REQUIRED FIXES
+
+---
+
+## 1️⃣ Subscription Source of Truth (MANDATORY)
+
+Create or confirm a **single canonical subscription hook or selector** used by:
+
+* Pricing page
+* Settings page
+* More / Profile page
+
+Example (adjust to existing structure):
+
+```ts
+const {
+  plan,
+  status,
+  isLoading,
+  isError
+} = useSubscription()
+```
+
+Rules:
+
+* `plan` must be `free | pro | pro_plus | business`
+* Do NOT default to `free` unless explicitly returned
+* Loading and error states must be handled explicitly
+
+---
+
+## 2️⃣ Fix Settings Page: Incorrect “Free Plan” Badge
+
+### Problem
+
+The Settings page is defaulting to “Free” when subscription data is missing or delayed.
+
+### Required Behavior
+
+* While loading → show skeleton or “Loading plan…”
+* On error → show “Unable to load subscription”
+* On success → show actual plan (e.g., Business)
+
+### REQUIRED CHANGE
+
+❌ Remove any logic like:
+
+```ts
+const plan = subscription?.plan ?? 'free'
+```
+
+✅ Replace with explicit handling:
+
+```ts
+if (isLoading) return <PlanSkeleton />
+if (isError || !plan) return <PlanError />
+
+return <PlanBadge plan={plan} />
+```
+
+The UI must **never silently downgrade the user to Free**.
+
+---
+
+## 3️⃣ Fix More / Profile Page: Non-Clickable Badge
+
+### Problem
+
+The badge is wrapped in a parent container that also has an `onClick`, preventing the badge click from firing.
+
+---
+
+### REQUIRED FIX (ONE OF THESE — PREFERRED ORDER)
+
+#### ✅ Option A (Preferred): Stop Event Propagation
+
+```ts
+<Badge
+  onClick={(e) => {
+    e.stopPropagation()
+    router.push('/settings/billing')
+  }}
+>
+  Business Plan
+</Badge>
+```
+
+---
+
+#### ✅ Option B: Remove Parent `onClick` and Move Navigation to Children
+
+Only if parent click is non-essential.
+
+---
+
+#### ❌ Not Allowed
+
+* Pointer-events hacks
+* CSS-only fixes
+* Making the badge non-interactive
+
+---
+
+## 4️⃣ Badge Navigation Rules (Authoritative)
+
+* Clicking **any paid plan badge** → `/settings/billing`
+* Free plan badge:
+
+  * Not clickable
+  * Displayed as status only
+
+---
+
+## 5️⃣ Validation Checklist (MUST PASS)
+
+✅ Business users see **Business** everywhere
+✅ No page defaults to “Free” on data failure
+✅ Badge click works on More page
+✅ Badge click is not intercepted by parent
+✅ Subscription logic is not duplicated
+✅ No regression to pricing page behavior
+
+---
+
+### Final Instruction
+
+Implement **only** the fixes described above.
+Do not refactor unrelated UI or billing code.
+
+Verify manually:
+
+* Free user
+* Paid user (Business)
+* Slow network / loading state
+
+Return when complete.
+
+---
+
+If you want next, I can:
+
+* Normalize subscription state into a **global store**
+* Add **runtime guards** to catch future silent Free fallbacks
+* Add **QA assertions** for plan consistency across pages
+
+This is the right cleanup step — you’re tightening the system, not patching it.

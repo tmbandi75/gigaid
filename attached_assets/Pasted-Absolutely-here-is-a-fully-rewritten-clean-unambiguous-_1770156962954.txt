@@ -1,0 +1,206 @@
+Absolutely — here is a **fully rewritten, clean, unambiguous Replit master prompt**.
+This version **explicitly handles Free correctly**, removes all ambiguity, and is safe to ship.
+
+You can paste this **as-is** into Replit.
+
+---
+
+# 🧠 REPLIT MASTER PROMPT
+
+## Pricing Page Logic Fix: Upgrades, Downgrades, and Free Plan Handling
+
+### Objective
+
+Correct the **Pricing page plan-selection logic** so that:
+
+* Upgrades work via Stripe Checkout
+* Downgrades are allowed and routed to Billing Settings
+* The Free plan is treated as a **baseline state**, not a disabled action
+* No plan button appears broken, disabled incorrectly, or misleading
+
+This is a **logic fix only**.
+Do not refactor Stripe, billing, or entitlements.
+
+---
+
+### Background (Context)
+
+The current implementation disables plans that are less than or equal to the user’s current plan.
+This causes incorrect behavior:
+
+* Business users cannot click lower plans to downgrade
+* Free appears disabled or broken when it is the current plan
+* Users are blocked from valid subscription management paths
+
+This prompt defines the **canonical behavior**.
+
+---
+
+### Canonical Plan Model
+
+Plans (lowest → highest):
+
+```ts
+free
+pro
+pro_plus
+business
+```
+
+The **Free plan is a baseline state**, not an actionable downgrade.
+
+---
+
+### Non-Negotiable Constraints
+
+❌ Do NOT refactor Stripe Checkout logic
+❌ Do NOT change pricing, plans, or entitlements
+❌ Do NOT introduce modals or paywalls
+❌ Do NOT block downgrade intent
+❌ Do NOT rely on frontend-only hiding
+
+✅ Keep backend as source of truth
+✅ Apply minimal, auditable changes
+✅ Preserve all working upgrade flows
+
+---
+
+### Required Behavior (Authoritative)
+
+#### 1️⃣ Free Plan Behavior
+
+* If the user is on **Free**:
+
+  * Free is labeled **“Current Plan”**
+  * Free is **not disabled**
+  * Clicking Free does nothing
+  * Clicking any paid plan initiates **Stripe Checkout**
+
+#### 2️⃣ Paid Plan Behavior
+
+* If the user is on a **paid plan**:
+
+  * The **current paid plan** is disabled
+  * Higher plans initiate **Stripe Checkout**
+  * Lower plans (including Free) redirect to **Billing Settings**
+
+---
+
+### Button State Rules
+
+| Current Plan | Target Plan | Disabled | Action           |
+| ------------ | ----------- | -------- | ---------------- |
+| Free         | Free        | ❌ No     | No-op            |
+| Free         | Paid        | ❌ No     | Stripe Checkout  |
+| Paid         | Same Paid   | ✅ Yes    | No-op            |
+| Paid         | Lower Paid  | ❌ No     | Billing Settings |
+| Paid         | Free        | ❌ No     | Billing Settings |
+| Paid         | Higher Paid | ❌ No     | Stripe Checkout  |
+
+---
+
+### Implementation Requirements
+
+#### 1️⃣ Define Plan Order
+
+```ts
+const PLAN_ORDER = {
+  free: 0,
+  pro: 1,
+  pro_plus: 2,
+  business: 3
+}
+```
+
+---
+
+#### 2️⃣ Disable Logic (Authoritative)
+
+Only disable the **current paid plan**.
+
+```ts
+function isPlanDisabled(targetPlan: PlanTier, currentPlan: PlanTier) {
+  return currentPlan !== 'free' && targetPlan === currentPlan
+}
+```
+
+---
+
+#### 3️⃣ Upgrade Detection
+
+```ts
+function isUpgrade(target: PlanTier, current: PlanTier) {
+  return PLAN_ORDER[target] > PLAN_ORDER[current]
+}
+```
+
+---
+
+#### 4️⃣ Click Handling (Canonical)
+
+```ts
+function handlePlanClick(targetPlan: PlanTier) {
+  // Free → Free
+  if (currentPlan === 'free' && targetPlan === 'free') return
+
+  // Same paid plan
+  if (currentPlan !== 'free' && targetPlan === currentPlan) return
+
+  // Upgrade
+  if (isUpgrade(targetPlan, currentPlan)) {
+    startStripeCheckout(targetPlan)
+    return
+  }
+
+  // Downgrade (paid → lower paid or free)
+  router.push('/settings/billing')
+}
+```
+
+---
+
+#### 5️⃣ Button Labels (Required)
+
+Buttons must clearly reflect intent:
+
+```ts
+if (targetPlan === currentPlan) {
+  label = 'Current Plan'
+} else if (isUpgrade(targetPlan, currentPlan)) {
+  label = 'Upgrade'
+} else {
+  label = 'Manage Subscription'
+}
+```
+
+Free plan should display **status**, not disabled styling.
+
+---
+
+### Acceptance Criteria
+
+✅ Free does not appear disabled or broken
+✅ Paid users can downgrade via Billing Settings
+✅ Stripe Checkout is used only for upgrades
+✅ Current paid plan is disabled
+✅ No regression in existing Stripe flows
+✅ UX clearly communicates what will happen
+
+---
+
+### Final Instruction
+
+Implement this behavior exactly.
+Verify all plan combinations manually in the browser.
+
+Return only when complete.
+
+---
+
+If you want next, I can:
+
+* Tie this into **Cancel vs Suspend** rules
+* Add **analytics on downgrade intent**
+* Align this with **entitlement enforcement patterns**
+
+This version is now **canonical** — no edge cases left.
