@@ -1,0 +1,212 @@
+FINAL REPLIT MASTER PROMPT
+Pricing Page: Eliminate Dead Upgrade Buttons & Normalize Subscription State
+Objective
+
+Fix the Pricing page so that upgrade buttons are always clickable when they should be, Stripe Checkout is reliably triggered, and no UI state silently blocks user actions.
+
+This prompt resolves:
+
+Stuck loading states
+
+Free vs paid plan confusion
+
+Multiple user/session confusion
+
+Disabled buttons that appear clickable
+
+Missing Stripe checkout calls
+
+This is the final authoritative implementation.
+
+Background (What Went Wrong)
+
+The system correctly distinguishes users:
+
+demo-user → Free plan, no Stripe subscription
+
+Paid users → Business / Pro+ with Stripe
+
+However, UI logic blocked clicks due to:
+
+isWaitingForData remaining true
+
+Buttons being disabled at render-time
+
+Click logic depending on subscription state instead of intent
+
+Result:
+
+Buttons rendered
+
+Clicks did nothing
+
+No backend calls
+
+No Stripe activity
+
+No errors
+
+This prompt fixes that permanently.
+
+Non-Negotiable Constraints
+
+❌ Do NOT refactor Stripe endpoints
+❌ Do NOT change plan tiers or pricing
+❌ Do NOT block clicks due to loading failures
+❌ Do NOT infer plan from missing Stripe IDs
+❌ Do NOT silently default to Free
+
+✅ Click intent must always be honored
+✅ Stripe checkout must be triggered on upgrade intent
+✅ Loading and error states must be explicit
+✅ UI must never “look clickable” but be disabled
+
+Canonical Plan Model
+type PlanTier = 'free' | 'pro' | 'pro_plus' | 'business'
+
+const PLAN_ORDER = {
+  free: 0,
+  pro: 1,
+  pro_plus: 2,
+  business: 3
+}
+
+REQUIRED FIXES
+1️⃣ Subscription State Handling (MANDATORY)
+
+Use one subscription hook:
+
+const {
+  plan: currentPlan,
+  hasSubscription,
+  isLoading,
+  isError,
+  userId
+} = useSubscription()
+
+
+Rules:
+
+plan must come from backend
+
+Never default to free
+
+Never block UI on error
+
+Loading state must resolve
+
+2️⃣ Loading State Rules (CRITICAL)
+❌ Forbidden
+const isWaitingForData = isLoading || !subscription
+
+✅ Correct
+const isWaitingForData = isLoading
+
+
+If loading fails, buttons must still work.
+
+3️⃣ Button Disabled Logic (Authoritative)
+
+Buttons may ONLY be disabled when:
+
+function isPlanDisabled(target: PlanTier, current: PlanTier, isLoading: boolean) {
+  if (isLoading) return true
+  if (current !== 'free' && target === current) return true
+  return false
+}
+
+
+Nothing else may disable a button.
+
+4️⃣ Upgrade Detection
+function isUpgrade(target: PlanTier, current: PlanTier) {
+  return PLAN_ORDER[target] > PLAN_ORDER[current]
+}
+
+5️⃣ Click Handling (CLICK-TIME DECISION — NOT RENDER-TIME)
+async function handlePlanClick(targetPlan: PlanTier) {
+  console.log('[pricing click]', {
+    userId,
+    currentPlan,
+    targetPlan,
+    isLoading
+  })
+
+  if (isLoading) return
+
+  if (isUpgrade(targetPlan, currentPlan)) {
+    startStripeCheckout(targetPlan)
+    return
+  }
+
+  router.push('/settings/billing')
+}
+
+
+This guarantees:
+
+Clicks always do something
+
+Stripe is called for upgrades
+
+Downgrades are routed correctly
+
+Failures are visible
+
+6️⃣ Button Labels (Required)
+function getButtonLabel(target: PlanTier, current: PlanTier) {
+  if (target === current) return 'Current Plan'
+  if (isUpgrade(target, current)) return 'Upgrade'
+  return 'Manage Subscription'
+}
+
+
+Free plan:
+
+Status only
+
+Never disabled
+
+Never routes to billing
+
+7️⃣ Debug Logging (TEMPORARY, REQUIRED)
+
+Add this log on Pricing page mount:
+
+console.log('[pricing state]', {
+  userId,
+  currentPlan,
+  hasSubscription,
+  isLoading,
+  isError
+})
+
+
+This must be removable later.
+
+8️⃣ Acceptance Criteria (MUST PASS)
+
+✅ Free user can click paid plans
+✅ Paid user can upgrade via Stripe
+✅ Paid user can downgrade via Billing
+✅ No button appears clickable but is dead
+✅ Stripe checkout POST appears in logs
+✅ No silent fallback to Free
+✅ Works across page reloads and sessions
+
+Final Instruction
+
+Implement exactly the logic above.
+Do not improvise or re-interpret.
+
+Verify manually using:
+
+demo-user (Free)
+
+Paid user (Business)
+
+Slow network
+
+Hard refresh
+
+Return only when all cases pass.

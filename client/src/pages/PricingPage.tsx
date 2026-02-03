@@ -129,18 +129,10 @@ export default function PricingPage() {
   const isMobile = useIsMobile();
 
   // Use subscription status API as single source of truth for plan
-  const { data: subscription, isLoading: isSubscriptionLoading, error: subscriptionError } = useQuery<{ plan: string; hasSubscription: boolean }>({
+  const { data: subscription, isLoading: isSubscriptionLoading, isError: isSubscriptionError } = useQuery<{ plan: string; hasSubscription: boolean }>({
     queryKey: ["/api/subscription/status"],
     retry: 1,
     staleTime: 60000,
-  });
-  
-  // Debug log subscription status
-  console.log("[Pricing] Subscription query state:", {
-    isLoading: isSubscriptionLoading,
-    hasData: !!subscription,
-    plan: subscription?.plan,
-    error: subscriptionError?.message,
   });
 
   // Map subscription plan string to Plan enum
@@ -156,21 +148,37 @@ export default function PricingPage() {
   };
 
   const currentPlan = getPlanFromSubscription();
+  const hasSubscription = subscription?.hasSubscription ?? false;
+  
+  // REQUIRED: Debug log on pricing page state (per spec)
+  console.log("[pricing state]", {
+    userId: isAuthenticated ? "authenticated" : "anonymous",
+    currentPlan,
+    hasSubscription,
+    isLoading: isSubscriptionLoading,
+    isError: isSubscriptionError,
+  });
 
   // Check if target plan is an upgrade from current plan
   const isUpgrade = (targetPlan: Plan): boolean => {
     return PLAN_ORDER[targetPlan] > PLAN_ORDER[currentPlan];
   };
 
-  // Canonical click handling
+  // CLICK-TIME DECISION — NOT RENDER-TIME (per spec)
   const handlePlanAction = async (plan: PlanInfo) => {
-    console.log("[Pricing] handlePlanAction called", {
-      targetPlan: plan.id,
+    // Required debug logging per spec
+    console.log("[pricing click]", {
+      userId: isAuthenticated ? "authenticated" : "anonymous",
       currentPlan,
-      isUpgrading: isUpgrade(plan.id),
-      hasStripeKey: !!plan.stripeKey,
+      targetPlan: plan.id,
+      isLoading: isSubscriptionLoading,
     });
-    
+
+    // Block during loading only
+    if (isSubscriptionLoading) {
+      return;
+    }
+
     // Free → Free: no-op (not logged in goes to login)
     if (currentPlan === Plan.FREE && plan.id === Plan.FREE) {
       if (!isAuthenticated) {
@@ -187,11 +195,13 @@ export default function PricingPage() {
     // Upgrade: use Stripe Checkout
     if (isUpgrade(plan.id)) {
       if (!plan.stripeKey) {
+        console.error("[pricing] No stripeKey for plan:", plan.id);
         return;
       }
 
       setLoadingPlan(plan.stripeKey);
       try {
+        console.log("[pricing] Starting Stripe checkout for:", plan.stripeKey);
         const result = await startStripeCheckout({
           plan: plan.stripeKey,
           returnTo: "/pricing",
@@ -205,7 +215,7 @@ export default function PricingPage() {
           });
         }
       } catch (error) {
-        console.error("Checkout error:", error);
+        console.error("[pricing] Checkout error:", error);
         toast({
           title: "Checkout failed",
           description: "Please try again in a few minutes.",
@@ -225,18 +235,23 @@ export default function PricingPage() {
     return currentPlan === planId;
   };
 
-  // Only disable the current paid plan (Free is never disabled)
+  // AUTHORITATIVE button disabled logic (per spec)
+  // Buttons may ONLY be disabled when:
+  // 1. isLoading is true, OR
+  // 2. current !== 'free' && target === current (same paid plan)
   const isPlanDisabled = (planId: Plan): boolean => {
-    return currentPlan !== Plan.FREE && planId === currentPlan;
+    if (isSubscriptionLoading) return true;
+    if (currentPlan !== Plan.FREE && planId === currentPlan) return true;
+    return false;
   };
 
-  // Get button label based on plan relationship
+  // Get button label based on plan relationship (per spec)
   const getButtonLabel = (plan: PlanInfo): string => {
     if (plan.id === currentPlan) {
       return "Current Plan";
     }
     if (isUpgrade(plan.id)) {
-      return plan.cta; // Use the plan's CTA for upgrades
+      return "Upgrade"; // Per spec: use "Upgrade" for upgrades
     }
     return "Manage Subscription"; // Downgrade path
   };
@@ -294,16 +309,7 @@ export default function PricingPage() {
           {PLANS.map((plan) => {
             const isCurrent = isCurrentPlan(plan.id);
             const isDisabled = isPlanDisabled(plan.id);
-            const isLoading = loadingPlan === plan.stripeKey;
-            const isWaitingForData = isSubscriptionLoading;
-            
-            // Debug button state
-            console.log(`[Pricing] Button ${plan.id}:`, { 
-              isCurrent, isDisabled, isLoading, isWaitingForData,
-              willBeDisabled: isDisabled || isLoading || isWaitingForData,
-              currentPlan,
-              subscriptionPlan: subscription?.plan
-            });
+            const isCheckoutLoading = loadingPlan === plan.stripeKey;
 
             return (
               <Card
@@ -374,14 +380,19 @@ export default function PricingPage() {
                     className="w-full"
                     size="lg"
                     variant={plan.recommended ? "default" : isCurrent ? "outline" : "default"}
-                    disabled={isDisabled || isLoading || isWaitingForData}
+                    disabled={isDisabled || isCheckoutLoading}
                     onClick={() => handlePlanAction(plan)}
                     data-testid={`button-plan-${plan.id}`}
                   >
-                    {isLoading || isWaitingForData ? (
+                    {isCheckoutLoading ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        {isWaitingForData ? "Loading plan..." : "Loading..."}
+                        Processing...
+                      </>
+                    ) : isSubscriptionLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Loading...
                       </>
                     ) : (
                       getButtonLabel(plan)
