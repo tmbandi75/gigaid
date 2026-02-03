@@ -129,10 +129,18 @@ export default function PricingPage() {
   const isMobile = useIsMobile();
 
   // Use subscription status API as single source of truth for plan
-  const { data: subscription, isLoading: isSubscriptionLoading } = useQuery<{ plan: string; hasSubscription: boolean }>({
+  const { data: subscription, isLoading: isSubscriptionLoading, error: subscriptionError } = useQuery<{ plan: string; hasSubscription: boolean }>({
     queryKey: ["/api/subscription/status"],
     retry: 1,
     staleTime: 60000,
+  });
+  
+  // Debug log subscription status
+  console.log("[Pricing] Subscription query state:", {
+    isLoading: isSubscriptionLoading,
+    hasData: !!subscription,
+    plan: subscription?.plan,
+    error: subscriptionError?.message,
   });
 
   // Map subscription plan string to Plan enum
@@ -156,6 +164,13 @@ export default function PricingPage() {
 
   // Canonical click handling
   const handlePlanAction = async (plan: PlanInfo) => {
+    console.log("[Pricing] handlePlanAction called", {
+      targetPlan: plan.id,
+      currentPlan,
+      isUpgrading: isUpgrade(plan.id),
+      hasStripeKey: !!plan.stripeKey,
+    });
+    
     // Free → Free: no-op (not logged in goes to login)
     if (currentPlan === Plan.FREE && plan.id === Plan.FREE) {
       if (!isAuthenticated) {
@@ -281,6 +296,14 @@ export default function PricingPage() {
             const isDisabled = isPlanDisabled(plan.id);
             const isLoading = loadingPlan === plan.stripeKey;
             const isWaitingForData = isSubscriptionLoading;
+            
+            // Debug button state
+            console.log(`[Pricing] Button ${plan.id}:`, { 
+              isCurrent, isDisabled, isLoading, isWaitingForData,
+              willBeDisabled: isDisabled || isLoading || isWaitingForData,
+              currentPlan,
+              subscriptionPlan: subscription?.plan
+            });
 
             return (
               <Card
