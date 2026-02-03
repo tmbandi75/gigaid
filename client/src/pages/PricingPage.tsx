@@ -236,11 +236,9 @@ export default function PricingPage() {
   };
 
   // AUTHORITATIVE button disabled logic (per spec)
-  // Buttons may ONLY be disabled when:
-  // 1. isLoading is true, OR
-  // 2. current !== 'free' && target === current (same paid plan)
+  // Buttons may ONLY be disabled when: current !== 'free' && target === current
+  // NOTE: Loading state is handled at CLICK-TIME, not render-time
   const isPlanDisabled = (planId: Plan): boolean => {
-    if (isSubscriptionLoading) return true;
     if (currentPlan !== Plan.FREE && planId === currentPlan) return true;
     return false;
   };
@@ -381,18 +379,16 @@ export default function PricingPage() {
                     size="lg"
                     variant={plan.recommended ? "default" : isCurrent ? "outline" : "default"}
                     disabled={isDisabled || isCheckoutLoading}
-                    onClick={() => handlePlanAction(plan)}
+                    onClick={() => {
+                      console.log('🔥 BUTTON CLICKED', plan.id);
+                      handlePlanAction(plan);
+                    }}
                     data-testid={`button-plan-${plan.id}`}
                   >
                     {isCheckoutLoading ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
                         Processing...
-                      </>
-                    ) : isSubscriptionLoading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Loading...
                       </>
                     ) : (
                       getButtonLabel(plan)

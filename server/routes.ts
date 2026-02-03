@@ -6295,7 +6295,7 @@ Return ONLY the message text, no JSON or formatting.`
   });
 
   // Create Pro+ subscription checkout session
-  app.post("/api/subscription/checkout", async (req, res) => {
+  app.post("/api/subscription/checkout", isAuthenticated, async (req, res) => {
     try {
       const { plan, returnTo } = req.body;
       
