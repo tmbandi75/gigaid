@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
@@ -97,6 +98,7 @@ export default function Settings() {
   const isMobile = useIsMobile();
   const [bookingLinkCopied, setBookingLinkCopied] = useState(false);
   const { isAuthenticated } = useAuth();
+  const [activeTab, setActiveTab] = useState("general");
 
   const handleAuthenticatedDownload = async (url: string, filename: string) => {
     try {
@@ -375,35 +377,47 @@ export default function Settings() {
     <div className={`min-h-screen bg-background ${isMobile ? 'pb-24' : 'pb-12'}`} data-testid="page-settings">
       {isMobile ? renderMobileHeader() : renderDesktopHeader()}
 
-      <div className={`space-y-4 ${isMobile ? 'px-4 py-4' : 'max-w-7xl mx-auto px-6 lg:px-8 py-6'}`}>
-        
-        {/* Plan Status Banner - only shown for non-Business plans */}
-        {!isBusinessPlan && subscription !== undefined && (
-          <Card className="border-0 shadow-sm" data-testid="card-plan-status">
-            <CardContent className="py-4 px-5">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shrink-0">
-                    <Crown className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">Current Plan: {currentPlanLabel}</p>
-                    <p className="text-sm text-muted-foreground">Unlock advanced automations, booking protection, and AI tools</p>
-                  </div>
-                </div>
-                <Button
-                  variant="secondary"
-                  onClick={() => navigate("/pricing")}
-                  data-testid="button-upgrade-plan"
-                >
-                  Upgrade
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+      <div className={`${isMobile ? 'px-4 py-4' : 'max-w-7xl mx-auto px-6 lg:px-8 py-6'}`}>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6" data-testid="tabs-settings">
+            <TabsTrigger value="general" className="flex items-center gap-2" data-testid="tab-general">
+              <SettingsIcon className="h-4 w-4" />
+              General
+            </TabsTrigger>
+            <TabsTrigger value="billing" className="flex items-center gap-2" data-testid="tab-billing">
+              <CreditCard className="h-4 w-4" />
+              Billing
+            </TabsTrigger>
+          </TabsList>
 
-        {/* SECTION 1: Booking & Public Profile */}
+          <TabsContent value="general" className="space-y-4">
+            {/* Plan Status Banner - only shown for non-Business plans */}
+            {!isBusinessPlan && subscription !== undefined && (
+              <Card className="border-0 shadow-sm" data-testid="card-plan-status">
+                <CardContent className="py-4 px-5">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shrink-0">
+                        <Crown className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">Current Plan: {currentPlanLabel}</p>
+                        <p className="text-sm text-muted-foreground">Unlock advanced automations, booking protection, and AI tools</p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      onClick={() => navigate("/pricing")}
+                      data-testid="button-upgrade-plan"
+                    >
+                      Upgrade
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* SECTION 1: Booking & Public Profile */}
         <SettingsSection
           title="Booking & Public Profile"
           subtitle="How clients find and book you"
@@ -918,25 +932,25 @@ export default function Settings() {
           </SettingsSection>
         )}
 
-        {/* Save Button */}
-        <Button 
-          onClick={handleSave} 
-          className="w-full h-12 text-base" 
-          disabled={updateMutation.isPending}
-          data-testid="button-save-settings"
-        >
-          {updateMutation.isPending ? (
-            <Loader2 className="h-5 w-5 animate-spin mr-2" />
-          ) : null}
-          Save Settings
-        </Button>
+            {/* Save Button */}
+            <Button 
+              onClick={handleSave} 
+              className="w-full" 
+              size="lg"
+              disabled={updateMutation.isPending}
+              data-testid="button-save-settings"
+            >
+              {updateMutation.isPending ? (
+                <Loader2 className="h-5 w-5 animate-spin mr-2" />
+              ) : null}
+              Save Settings
+            </Button>
+          </TabsContent>
 
-        {/* Subscription Settings */}
-        {isAuthenticated && (
-          <div className="mt-4">
-            <SubscriptionSettings />
-          </div>
-        )}
+          <TabsContent value="billing" className="space-y-4">
+            {isAuthenticated && <SubscriptionSettings />}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

@@ -1,0 +1,262 @@
+VM1170:8 [Coframe] Replit Enterprise watcher loaded
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+Gig-Aid:1 The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+Gig-Aid:1 The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+Gig-Aid:1 The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+1af5889ba844227e.js:2 
+      /////////////////////
+   ///////////////////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////        Curious and driven?
+  ///////////////@@@@@@@///////        Work with us!
+  ///////////////@@@@@@@///////
+  ///////////////@@@@@@@///////        https://join.replit.com/hack.with.us
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@#//////////////
+   ///////////////////////////
+      /////////////////////
+      
+1af5889ba844227e.js:2 Download the Apollo DevTools for a better development experience: https://chrome.google.com/webstore/detail/apollo-client-developer-t/jdkknkkbebbapilgoeccciglkfbmbnfm
+1af5889ba844227e.js:2 [LaunchDarkly] LaunchDarkly client initialized
+1af5889ba844227e.js:2 [ai-chat] Creating connection with chat proxy enabled
+(anonymous) @ 1af5889ba844227e.js:2
+Gig-Aid:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'ambient-light-sensor'.
+z @ 9a2446c69ceea6f9.js:2
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'battery'.
+z @ 9a2446c69ceea6f9.js:2
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'execution-while-not-rendered'.
+z @ 9a2446c69ceea6f9.js:2
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'execution-while-out-of-viewport'.
+z @ 9a2446c69ceea6f9.js:2
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'layout-animations'.
+z @ 9a2446c69ceea6f9.js:2
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'legacy-image-formats'.
+z @ 9a2446c69ceea6f9.js:2
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'navigation-override'.
+z @ 9a2446c69ceea6f9.js:2
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'oversized-images'.
+z @ 9a2446c69ceea6f9.js:2
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'publickey-credentials'.
+z @ 9a2446c69ceea6f9.js:2
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'speaker-selection'.
+z @ 9a2446c69ceea6f9.js:2
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'unoptimized-images'.
+z @ 9a2446c69ceea6f9.js:2
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'unsized-media'.
+z @ 9a2446c69ceea6f9.js:2
+9a2446c69ceea6f9.js:2 Unrecognized feature: 'pointer-lock'.
+z @ 9a2446c69ceea6f9.js:2
+9a2446c69ceea6f9.js:2 Allow attribute will take precedence over 'allowfullscreen'.
+z @ 9a2446c69ceea6f9.js:2
+9a2446c69ceea6f9.js:2 Allow attribute will take precedence over 'allowpaymentrequest'.
+z @ 9a2446c69ceea6f9.js:2
+1af5889ba844227e.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 1af5889ba844227e.js:2
+1af5889ba844227e.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 1af5889ba844227e.js:2
+1af5889ba844227e.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 1af5889ba844227e.js:2
+1af5889ba844227e.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 1af5889ba844227e.js:2
+1af5889ba844227e.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 1af5889ba844227e.js:2
+1af5889ba844227e.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 1af5889ba844227e.js:2
+1af5889ba844227e.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 1af5889ba844227e.js:2
+1af5889ba844227e.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 1af5889ba844227e.js:2
+c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Ar12v%3A:32 Unrecognized feature: 'ambient-light-sensor'.
+c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Ar12v%3A:32 Unrecognized feature: 'battery'.
+c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Ar12v%3A:32 Unrecognized feature: 'execution-while-not-rendered'.
+c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Ar12v%3A:32 Unrecognized feature: 'execution-while-out-of-viewport'.
+c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Ar12v%3A:32 Unrecognized feature: 'layout-animations'.
+c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Ar12v%3A:32 Unrecognized feature: 'legacy-image-formats'.
+c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Ar12v%3A:32 Unrecognized feature: 'navigation-override'.
+c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Ar12v%3A:32 Unrecognized feature: 'oversized-images'.
+c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Ar12v%3A:32 Unrecognized feature: 'publickey-credentials'.
+c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Ar12v%3A:32 Unrecognized feature: 'speaker-selection'.
+c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Ar12v%3A:32 Unrecognized feature: 'unoptimized-images'.
+c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Ar12v%3A:32 Unrecognized feature: 'unsized-media'.
+c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Ar12v%3A:32 Allow attribute will take precedence over 'allowfullscreen'.
+c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/__replco/workspace_iframe.html?initialPath=%2F&id=%3Ar12v%3A:32 Allow attribute will take precedence over 'allowpaymentrequest'.
+client:745 WebSocket connection to 'wss://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/vite-hmr?token=XlqJG2IopS-S' failed: 
+createConnection @ client:745
+client:755 WebSocket connection to 'wss://localhost:5173/?token=XlqJG2IopS-S' failed: 
+createConnection @ client:755
+client:745 WebSocket connection to 'wss://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/vite-hmr?token=XlqJG2IopS-S' failed: 
+createConnection @ client:745
+authToken.ts:143 [AuthToken] Found token without UID - will require fresh exchange
+App.tsx:171 [AuthenticatedApp] authLoading === true, blocking all routing
+App.tsx:172 [AuthenticatedApp] lastAuthEventTs: null callbackCount: 0
+FirebaseAuthContext.tsx:41 [FirebaseAuth] Checking token readiness for user: null ready: false
+FirebaseAuthContext.tsx:47 [FirebaseAuth] Setting up onAuthStateChanged listener, timestamp: 1770078824955
+FirebaseAuthContext.tsx:48 AUTH STATE CHANGE (initial) Object
+rrweb-plugin-console-record.js:160 [SW] Service worker registered successfully
+rrweb-plugin-console-record.js:160 [FirebaseAuth] ===== CALLBACK FIRED =====
+rrweb-plugin-console-record.js:160 [FirebaseAuth] onAuthStateChanged callback #1
+rrweb-plugin-console-record.js:160 [FirebaseAuth] user: thierrymbandi@gmail.com
+rrweb-plugin-console-record.js:160 [FirebaseAuth] uid: jYLjgQd3gTSfdHt3Yd7SflARjdg2
+rrweb-plugin-console-record.js:160 [FirebaseAuth] previousUid: null
+rrweb-plugin-console-record.js:160 [FirebaseAuth] timestamp: 1770078825313
+rrweb-plugin-console-record.js:160 [FirebaseAuth] time since setup: 358 ms
+rrweb-plugin-console-record.js:160 [FirebaseAuth] User changed from null to jYLjgQd3gTSfdHt3Yd7SflARjdg2 - resetting token readiness
+rrweb-plugin-console-record.js:160 [AuthToken] Token readiness reset (user change)
+rrweb-plugin-console-record.js:160 AUTH STATE CHANGE Object
+rrweb-plugin-console-record.js:160 [FirebaseAuth] State updated: authLoading=false, firebaseUser=present
+rrweb-plugin-console-record.js:160 [AuthenticatedApp] authLoading === false, firebaseUser: thierrymbandi@gmail.com
+rrweb-plugin-console-record.js:160 [AuthToken] Token not ready - UID mismatch: Object
+rrweb-plugin-console-record.js:160 [FirebaseAuth] Checking token readiness for user: jYLjgQd3gTSfdHt3Yd7SflARjdg2 ready: false
+rrweb-plugin-console-record.js:160 Warning: Function components cannot be given refs. Attempts to access this ref will fail. Did you mean to use React.forwardRef()?
+
+Check the render method of `Primitive.button.SlotClone`.
+    at SidebarMenuButton (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:737:3)
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=124c5138:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=124c5138:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=124c5138:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=124c5138:79:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PRALEZRL.js?v=124c5138:56:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-SVUUWUBB.js?v=124c5138:42:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=124c5138:1929:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=124c5138:146:13
+    at https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=124c5138:931:13
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=124c5138:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=124c5138:37:15)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=124c5138:37:15)
+    at Popper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RIESOTCA.js?v=124c5138:1921:11)
+    at Menu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=124c5138:100:11)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=124c5138:37:15)
+    at DropdownMenu (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dropdown-menu.js?v=124c5138:897:5)
+    at div
+    at SidebarFooter (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:489:26)
+    at div
+    at div
+    at div
+    at Sidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:151:3)
+    at AppSidebar (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/AppSidebar.tsx:95:32)
+    at div
+    at div
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=124c5138:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=124c5138:64:5)
+    at SidebarProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/ui/sidebar.tsx:59:3)
+    at ResponsiveLayout (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/layout/ResponsiveLayout.tsx:588:36)
+    at OnboardingWrapper (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/onboarding/OnboardingWrapper.tsx:38:37)
+    at DriveModeProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/drivemode/DriveModeProvider.tsx:38:37)
+    at AuthenticatedApp (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/App.tsx:370:35)
+    at Route (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=124c5138:264:16)
+    at Switch (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=124c5138:320:17)
+    at Provider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-6BRII5CC.js?v=124c5138:37:15)
+    at TooltipProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=124c5138:64:5)
+    at OptimisticCapabilityProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/contexts/OptimisticCapabilityContext.tsx:20:48)
+    at PostHogProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/components/PostHogProvider.tsx:22:35)
+    at FirebaseAuthProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/src/contexts/FirebaseAuthContext.tsx:22:40)
+    at QueryClientProvider (https://c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=124c5138:2747:3)
+    at App
+(anonymous) @ rrweb-plugin-console-record.js:160
+client:755 WebSocket connection to 'wss://localhost:5173/?token=XlqJG2IopS-S' failed: 
+createConnection @ client:755
+rrweb-plugin-console-record.js:160 [vite] failed to connect to websocket.
+your current setup:
+  (browser) c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev/ <--[HTTP]--> localhost:5173/ (server)
+  (browser) c75570b2-eeac-42e2-9d96-ba9201ae6809-00-2l8a289w5shgk.kirk.replit.dev:/vite-hmr <--[WebSocket (failing)]--> localhost:5173/ (server)
+Check out your Vite / network configuration and https://vite.dev/config/server-options.html#server-hmr .
+(anonymous) @ rrweb-plugin-console-record.js:160
+1af5889ba844227e.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 1af5889ba844227e.js:2
+1af5889ba844227e.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 1af5889ba844227e.js:2
+1af5889ba844227e.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 1af5889ba844227e.js:2
+rrweb-plugin-console-record.js:160 [AuthenticatedApp] authLoading === false, firebaseUser: thierrymbandi@gmail.com
+rrweb-plugin-console-record.js:160 [AuthenticatedApp] authLoading === false, firebaseUser: thierrymbandi@gmail.com
+1af5889ba844227e.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 1af5889ba844227e.js:2
+1af5889ba844227e.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 1af5889ba844227e.js:2
+1af5889ba844227e.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 1af5889ba844227e.js:2
+rrweb-plugin-console-record.js:160 [AuthenticatedApp] authLoading === false, firebaseUser: thierrymbandi@gmail.com
+rrweb-plugin-console-record.js:160 [AuthenticatedApp] authLoading === false, firebaseUser: thierrymbandi@gmail.com
+1af5889ba844227e.js:2 [Coframe] Mutation callback infinite loop protection triggered, disconnecting mutation observer Object
+(anonymous) @ 1af5889ba844227e.js:2
+rrweb-plugin-console-record.js:160 [AuthenticatedApp] authLoading === false, firebaseUser: thierrymbandi@gmail.com
+rrweb-plugin-console-record.js:160 [AuthenticatedApp] authLoading === false, firebaseUser: thierrymbandi@gmail.com
+rrweb-plugin-console-record.js:160 [AuthenticatedApp] authLoading === false, firebaseUser: thierrymbandi@gmail.com
+1af5889ba844227e.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 1af5889ba844227e.js:2
+1af5889ba844227e.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 1af5889ba844227e.js:2
+1af5889ba844227e.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 1af5889ba844227e.js:2
+1af5889ba844227e.js:2 If you do not provide a visible label, you must specify an aria-label or aria-labelledby attribute for accessibility
+(anonymous) @ 1af5889ba844227e.js:2
+stallwart.build.js:1 stallwart: failed ping 1

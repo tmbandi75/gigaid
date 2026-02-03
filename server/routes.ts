@@ -6644,6 +6644,58 @@ Return ONLY the message text, no JSON or formatting.`
     }
   });
 
+  // Get billing invoice history from Stripe
+  app.get("/api/billing/invoices", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const { STRIPE_ENABLED } = await import("@shared/stripeConfig");
+
+      if (!STRIPE_ENABLED) {
+        return res.json({ invoices: [] });
+      }
+
+      if (!user.stripeCustomerId) {
+        return res.json({ invoices: [] });
+      }
+
+      try {
+        const stripe = await getUncachableStripeClient();
+        const invoices = await stripe.invoices.list({
+          customer: user.stripeCustomerId,
+          limit: 24, // Last 2 years of monthly invoices
+        });
+
+        const formattedInvoices = invoices.data.map((inv) => ({
+          id: inv.id,
+          number: inv.number,
+          status: inv.status,
+          amount: inv.status === "paid" ? inv.amount_paid : (inv.amount_due || inv.total || 0),
+          currency: inv.currency,
+          created: inv.created,
+          periodStart: inv.period_start,
+          periodEnd: inv.period_end,
+          pdfUrl: inv.invoice_pdf,
+          hostedUrl: inv.hosted_invoice_url,
+          description: inv.lines?.data?.[0]?.description || "Subscription",
+        }));
+
+        res.json({ invoices: formattedInvoices });
+      } catch (stripeError: any) {
+        console.error("[Billing] Stripe invoice fetch error:", stripeError);
+        res.json({ invoices: [] });
+      }
+    } catch (error: any) {
+      console.error("[Billing] Invoice history error:", error);
+      res.status(500).json({ error: "Failed to fetch invoice history" });
+    }
+  });
+
   // Cancel account - initiates deletion process with retention schedule
   // 30 days: soft delete (data hidden but recoverable)
   // 120 days: archived (minimal data retained)

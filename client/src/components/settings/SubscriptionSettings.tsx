@@ -18,6 +18,9 @@ import {
   Pause,
   XCircle,
   RotateCcw,
+  Download,
+  FileText,
+  Receipt,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -47,6 +50,20 @@ interface AccountStatus {
   scheduledDeletionAt: string | null;
 }
 
+interface StripeInvoice {
+  id: string;
+  number: string | null;
+  status: string | null;
+  amount: number;
+  currency: string;
+  created: number;
+  periodStart: number;
+  periodEnd: number;
+  pdfUrl: string | null;
+  hostedUrl: string | null;
+  description: string;
+}
+
 const PLAN_PRICES: Record<string, number> = {
   pro: 19,
   pro_plus: 28,
@@ -68,6 +85,11 @@ export function SubscriptionSettings() {
 
   const { data: profile } = useQuery<{ accountStatus?: string; suspendedAt?: string; scheduledDeletionAt?: string }>({
     queryKey: ["/api/profile"],
+  });
+
+  const { data: invoiceData, isLoading: invoicesLoading } = useQuery<{ invoices: StripeInvoice[] }>({
+    queryKey: ["/api/billing/invoices"],
+    enabled: true,
   });
 
   // Default subscription status when API fails or returns no data
@@ -256,6 +278,7 @@ export function SubscriptionSettings() {
   };
 
   return (
+    <>
     <Card className="border-0 shadow-md" data-testid="card-subscription-settings">
       <CardContent className="p-4">
         <h3 className="font-semibold mb-4 flex items-center gap-2">
@@ -557,5 +580,98 @@ export function SubscriptionSettings() {
         </div>
       </CardContent>
     </Card>
+
+    {/* Invoice History */}
+    <Card className="border-0 shadow-md mt-4" data-testid="card-invoice-history">
+      <CardContent className="p-4">
+        <h3 className="font-semibold mb-4 flex items-center gap-2">
+          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
+            <Receipt className="h-4 w-4 text-white" />
+          </div>
+          Invoice History
+        </h3>
+        <Separator className="my-4" />
+
+        {invoicesLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : !invoiceData?.invoices || invoiceData.invoices.length === 0 ? (
+          <div className="text-center py-8">
+            <FileText className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+            <p className="text-sm text-muted-foreground">No invoices yet</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Your billing history will appear here after your first payment
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {invoiceData.invoices.map((invoice) => (
+              <div
+                key={invoice.id}
+                className="flex items-center justify-between p-3 rounded-lg border bg-card"
+                data-testid={`invoice-row-${invoice.id}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">
+                      {invoice.number || `Invoice #${invoice.id.slice(-8)}`}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(invoice.created * 1000).toLocaleDateString(undefined, {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <p className="text-sm font-medium">
+                      ${(invoice.amount / 100).toFixed(2)}
+                    </p>
+                    <Badge
+                      variant={invoice.status === "paid" ? "secondary" : "outline"}
+                      className="text-xs"
+                    >
+                      {invoice.status === "paid" ? "Paid" : invoice.status}
+                    </Badge>
+                  </div>
+                  <div className="flex gap-1">
+                    {invoice.hostedUrl && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => window.open(invoice.hostedUrl!, "_blank")}
+                        title="View invoice"
+                        data-testid={`button-view-invoice-${invoice.id}`}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {invoice.pdfUrl && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => window.open(invoice.pdfUrl!, "_blank")}
+                        title="Download PDF"
+                        data-testid={`button-download-invoice-${invoice.id}`}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+    </>
   );
 }
