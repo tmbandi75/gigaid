@@ -406,6 +406,7 @@ export async function registerRoutes(
         showReviewsOnBooking: user.showReviewsOnBooking,
         publicEstimationEnabled: user.publicEstimationEnabled,
         noShowProtectionEnabled: user.noShowProtectionEnabled,
+        plan: user.plan || "free",
       });
     } catch (error) {
       console.error("[Profile] Error fetching profile:", error);

@@ -42,6 +42,7 @@ interface UserProfile {
   phone: string | null;
   photo: string | null;
   businessName?: string | null;
+  plan?: string | null;
 }
 
 const menuSections = [
@@ -121,6 +122,20 @@ export default function More() {
   const displayName = profile?.name || "Gig Worker";
   const displayEmail = profile?.email || "gig@example.com";
   const businessName = profile?.businessName || "Your Business";
+  
+  // Format plan name for display
+  const getPlanDisplayName = (plan: string | null | undefined) => {
+    const planMap: Record<string, string> = {
+      free: "Free Plan",
+      pro: "Pro Plan",
+      "pro+": "Pro+ Plan",
+      proplus: "Pro+ Plan",
+      business: "Business Plan",
+    };
+    return planMap[plan?.toLowerCase() || "free"] || "Free Plan";
+  };
+  const planDisplayName = getPlanDisplayName(profile?.plan);
+  
   const initials = displayName
     .split(" ")
     .map((n) => n[0])
@@ -168,8 +183,8 @@ export default function More() {
           <div className="flex-1">
             <h2 className="font-semibold text-lg">{displayName}</h2>
             <p className="text-sm text-white/70">{businessName}</p>
-            <Badge variant="secondary" className="mt-1.5 text-[10px] bg-white/10 text-white border-0">
-              Free Plan
+            <Badge variant="secondary" className="mt-1.5 text-[10px] bg-white/10 text-white border-0" data-testid="badge-user-plan">
+              {planDisplayName}
             </Badge>
           </div>
           <ChevronRight className="h-5 w-5 text-white/50" />
@@ -210,7 +225,7 @@ export default function More() {
                 <p className="font-medium text-foreground">{displayName}</p>
                 <p className="text-xs text-muted-foreground">{businessName}</p>
               </div>
-              <Badge variant="secondary" className="text-[10px]">Free Plan</Badge>
+              <Badge variant="secondary" className="text-[10px]" data-testid="badge-user-plan-desktop">{planDisplayName}</Badge>
             </div>
           </div>
         </div>
