@@ -1,0 +1,152 @@
+FINAL REPLIT MASTER PROMPT
+Enable Stripe Checkout + Add Hard Guardrails (No Silent Failures)
+Objective
+
+Fix the issue where upgrade buttons appear clickable but Stripe Checkout does not open due to STRIPE_ENABLED being false.
+
+This prompt will:
+
+Ensure Stripe Checkout is actually enabled in the app
+
+Fail loudly and visibly if Stripe is disabled
+
+Prevent silent early returns that look like broken UI
+
+Add a single source of truth for Stripe enablement
+
+Make future debugging trivial
+
+This is a configuration + guardrail fix, not a pricing or subscription refactor.
+
+Root Cause (Confirmed)
+
+Stripe Checkout is explicitly disabled by a feature flag:
+
+[Stripe] Checkout disabled - STRIPE_ENABLED is false
+
+
+The click handler fires correctly, but startStripeCheckout exits early by design.
+
+Non-Negotiable Constraints
+
+❌ Do NOT change pricing logic
+❌ Do NOT change plan logic
+❌ Do NOT change subscription logic
+❌ Do NOT remove Stripe guards entirely
+
+✅ Stripe must be enabled explicitly via env
+✅ If Stripe is disabled, the UI must say so
+✅ No silent failures
+
+REQUIRED IMPLEMENTATION
+1️⃣ Normalize Stripe Enablement (Single Source of Truth)
+
+In client/src/lib/stripeCheckout.ts (or equivalent), define:
+
+export const STRIPE_ENABLED =
+  import.meta.env.VITE_STRIPE_ENABLED === 'true'
+
+
+⚠️ Do not inline this elsewhere.
+
+2️⃣ Harden startStripeCheckout (MANDATORY)
+
+Replace any silent return logic.
+
+❌ Remove this pattern
+if (!STRIPE_ENABLED) {
+  console.warn('[Stripe] Checkout disabled')
+  return
+}
+
+✅ Replace with this
+if (!STRIPE_ENABLED) {
+  console.error('[Stripe] Checkout disabled - STRIPE_ENABLED=false')
+
+  alert(
+    'Payments are disabled in this environment.\n\n' +
+    'Set VITE_STRIPE_ENABLED=true in Replit Secrets and restart the app.'
+  )
+
+  throw new Error('Stripe Checkout attempted while STRIPE_ENABLED=false')
+}
+
+
+This guarantees:
+
+Developers see the issue immediately
+
+No more “button does nothing” confusion
+
+Errors surface during testing, not later
+
+3️⃣ Add Environment Guard (One-Time, App Init)
+
+At app startup (e.g. main.tsx or App.tsx), add:
+
+if (import.meta.env.DEV) {
+  console.log('[env]', {
+    VITE_STRIPE_ENABLED: import.meta.env.VITE_STRIPE_ENABLED
+  })
+}
+
+
+This confirms env vars are actually loaded.
+
+4️⃣ Update Replit Environment (CRITICAL)
+
+Ensure the following exists in Replit Secrets:
+
+VITE_STRIPE_ENABLED=true
+
+
+⚠️ Exact casing required
+⚠️ App must be restarted after setting this
+
+5️⃣ Restart Requirements (MANDATORY)
+
+After implementing code changes and setting secrets:
+
+Stop the Replit app
+
+Start it again
+
+Hard refresh browser (Ctrl + Shift + R)
+
+Environment variables do not hot-reload.
+
+6️⃣ Validation Checklist (MUST PASS)
+
+After restart:
+
+Clicking “Upgrade” logs no Stripe disabled warning
+
+/api/subscription/checkout is called
+
+Stripe Checkout opens or redirects
+
+If Stripe is disabled, a visible alert appears
+
+No silent failures remain
+
+Final Instruction
+
+Implement exactly the above steps.
+
+If Stripe is still disabled after this:
+
+The env var is misnamed
+
+Or the app was not restarted
+
+Do not debug pricing or subscription logic again — this fix is orthogonal and final.
+
+Optional (After This Works)
+
+Add /health/payments endpoint
+
+Centralize all env guards (env.guard.ts)
+
+Disable Stripe automatically in preview builds
+
+But those are optional.

@@ -1,5 +1,8 @@
 import { apiRequest } from "./queryClient";
 
+// Single source of truth for Stripe enablement
+export const STRIPE_ENABLED = import.meta.env.VITE_STRIPE_ENABLED === 'true';
+
 export type SubscriptionPlan = "pro" | "pro_plus" | "business";
 
 export interface CheckoutResult {
@@ -14,7 +17,19 @@ export async function startStripeCheckout({
   plan: SubscriptionPlan;
   returnTo: string;
 }): Promise<CheckoutResult> {
-  console.log("[Stripe] GUARDED CODE REMOVED — entering checkout", { plan, returnTo });
+  console.log("[Stripe] startStripeCheckout called", { plan, returnTo, STRIPE_ENABLED });
+
+  // Hard guard: fail loudly if Stripe is disabled
+  if (!STRIPE_ENABLED) {
+    console.error('[Stripe] Checkout disabled - STRIPE_ENABLED=false');
+    
+    alert(
+      'Payments are disabled in this environment.\n\n' +
+      'Set VITE_STRIPE_ENABLED=true in Replit Secrets and restart the app.'
+    );
+    
+    throw new Error('Stripe Checkout attempted while STRIPE_ENABLED=false');
+  }
 
   try {
     console.log("[Stripe] Creating checkout session");
