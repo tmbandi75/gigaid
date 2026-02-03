@@ -41,7 +41,7 @@ const PLANS: PlanInfo[] = [
     cta: "Get Started",
     description: "Perfect for getting started",
     icon: <Zap className="h-5 w-5" />,
-    color: "text-slate-600",
+    color: "text-muted-foreground",
     features: [
       { text: "Up to 5 jobs per month" },
       { text: "Basic invoicing" },
@@ -59,7 +59,7 @@ const PLANS: PlanInfo[] = [
     description: "For growing professionals",
     stripeKey: "pro",
     icon: <TrendingUp className="h-5 w-5" />,
-    color: "text-blue-600",
+    color: "text-primary",
     features: [
       { text: "Unlimited jobs", highlight: true },
       { text: "Auto follow-ups" },
@@ -101,7 +101,7 @@ const PLANS: PlanInfo[] = [
     description: "Scale your operation",
     stripeKey: "business",
     icon: <Users className="h-5 w-5" />,
-    color: "text-purple-600",
+    color: "text-foreground",
     features: [
       { text: "Everything in Pro+", highlight: true },
       { text: "Multi-provider support" },
@@ -177,7 +177,7 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30" data-testid="page-pricing">
       {/* Header with back button */}
-      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b">
+      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-sm border-b">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center">
           <Button 
             variant="ghost" 
@@ -208,17 +208,17 @@ export default function PricingPage() {
 
         {/* Trust Indicators */}
         <div className="flex flex-wrap justify-center gap-6 mb-12 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Check className="h-4 w-4 text-green-600" />
-            <span>No credit card required</span>
+          <div className="flex items-center gap-2" data-testid="trust-no-card">
+            <Check className="h-4 w-4 text-primary" />
+            <span data-testid="text-trust-no-card">No credit card required</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Check className="h-4 w-4 text-green-600" />
-            <span>Cancel anytime</span>
+          <div className="flex items-center gap-2" data-testid="trust-cancel">
+            <Check className="h-4 w-4 text-primary" />
+            <span data-testid="text-trust-cancel">Cancel anytime</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Check className="h-4 w-4 text-green-600" />
-            <span>14-day money back guarantee</span>
+          <div className="flex items-center gap-2" data-testid="trust-guarantee">
+            <Check className="h-4 w-4 text-primary" />
+            <span data-testid="text-trust-guarantee">14-day money back guarantee</span>
           </div>
         </div>
 
@@ -232,19 +232,19 @@ export default function PricingPage() {
             return (
               <Card
                 key={plan.id}
-                className={`relative flex flex-col transition-all duration-200 ${
+                className={`relative flex flex-col overflow-visible ${
                   plan.recommended 
-                    ? "border-primary border-2 shadow-lg scale-[1.02]" 
+                    ? "border-primary border-2 shadow-lg" 
                     : isCurrent 
                       ? "border-primary/50 border-2" 
-                      : "hover:shadow-md"
+                      : "hover-elevate"
                 }`}
                 data-testid={`card-plan-${plan.id}`}
               >
                 {/* Recommended Badge */}
                 {plan.recommended && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-primary text-primary-foreground shadow-sm gap-1">
+                    <Badge className="bg-primary text-primary-foreground shadow-sm gap-1" data-testid={`badge-recommended-${plan.id}`}>
                       <Star className="h-3 w-3 fill-current" />
                       Most Popular
                     </Badge>
@@ -254,7 +254,7 @@ export default function PricingPage() {
                 {/* Current Plan Badge */}
                 {isCurrent && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge variant="secondary" className="shadow-sm">
+                    <Badge variant="secondary" className="shadow-sm" data-testid={`badge-current-${plan.id}`}>
                       Current Plan
                     </Badge>
                   </div>
@@ -269,23 +269,23 @@ export default function PricingPage() {
                       {plan.name}
                     </h3>
                   </div>
-                  <p className="text-sm text-muted-foreground">{plan.description}</p>
+                  <p className="text-sm text-muted-foreground" data-testid={`text-plan-desc-${plan.id}`}>{plan.description}</p>
                   <div className="mt-4">
                     <span className="text-4xl font-bold" data-testid={`text-plan-price-${plan.id}`}>
                       {plan.priceLabel}
                     </span>
-                    <span className="text-muted-foreground ml-1">{plan.monthlyPrice}</span>
+                    <span className="text-muted-foreground ml-1" data-testid={`text-plan-period-${plan.id}`}>{plan.monthlyPrice}</span>
                   </div>
                 </CardHeader>
 
                 <CardContent className="flex-1 pb-4">
-                  <ul className="space-y-3">
+                  <ul className="space-y-3" data-testid={`list-features-${plan.id}`}>
                     {plan.features.map((feature, index) => (
-                      <li key={index} className="flex items-start gap-3">
+                      <li key={index} className="flex items-start gap-3" data-testid={`row-feature-${plan.id}-${index}`}>
                         <div className={`rounded-full p-0.5 ${feature.highlight ? 'bg-primary/10' : 'bg-muted'}`}>
                           <Check className={`h-4 w-4 ${feature.highlight ? 'text-primary' : 'text-muted-foreground'}`} />
                         </div>
-                        <span className={`text-sm ${feature.highlight ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                        <span className={`text-sm ${feature.highlight ? 'text-foreground font-medium' : 'text-muted-foreground'}`} data-testid={`text-feature-${plan.id}-${index}`}>
                           {feature.text}
                         </span>
                       </li>
@@ -297,7 +297,7 @@ export default function PricingPage() {
                   <Button
                     className="w-full"
                     size="lg"
-                    variant={plan.recommended ? "default" : isCurrent ? "outline" : "secondary"}
+                    variant={plan.recommended ? "default" : isCurrent ? "outline" : "default"}
                     disabled={isDisabled || isLoading}
                     onClick={() => handlePlanAction(plan)}
                     data-testid={`button-plan-${plan.id}`}
@@ -320,12 +320,12 @@ export default function PricingPage() {
         </div>
 
         {/* Bottom Section */}
-        <div className="mt-16 text-center space-y-8">
+        <div className="mt-16 text-center space-y-8" data-testid="section-bottom">
           {/* FAQ Teaser */}
-          <Card className="max-w-2xl mx-auto">
+          <Card className="max-w-2xl mx-auto" data-testid="card-faq">
             <CardContent className="py-6">
-              <h3 className="font-semibold mb-2">Have questions?</h3>
-              <p className="text-sm text-muted-foreground mb-4">
+              <h3 className="font-semibold mb-2" data-testid="text-faq-title">Have questions?</h3>
+              <p className="text-sm text-muted-foreground mb-4" data-testid="text-faq-body">
                 Our team is here to help you find the right plan for your business.
               </p>
               <Button 
@@ -339,7 +339,7 @@ export default function PricingPage() {
           </Card>
 
           {/* Fine Print */}
-          <p className="text-xs text-muted-foreground max-w-xl mx-auto">
+          <p className="text-xs text-muted-foreground max-w-xl mx-auto" data-testid="text-fine-print">
             All prices in USD. Subscriptions renew automatically. You can cancel or change your plan anytime from Settings.
           </p>
         </div>
