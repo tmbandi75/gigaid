@@ -16,6 +16,14 @@ async function clearOldCaches() {
 
 clearOldCaches();
 
+// Environment guard - log critical env vars at startup
+if (import.meta.env.DEV) {
+  console.log('[env] Startup check:', {
+    VITE_STRIPE_ENABLED: import.meta.env.VITE_STRIPE_ENABLED,
+    MODE: import.meta.env.MODE
+  });
+}
+
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) {
     return;
