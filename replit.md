@@ -90,3 +90,8 @@ Systematic review across 9 categories to identify and fix Day-1 user experience 
 - **Jobs**: Cancel (scheduled), Archive (completed/cancelled), Delete (drafts only)
 - **Invoices**: Archive (always), Delete (drafts only)
 - **Leads**: Archive/Delete (always with confirmation)
+
+### Billing Management UI
+- **Settings Page Structure**: Tabbed navigation with "General" (profile/automation settings) and "Billing" (subscription/invoices) tabs
+- **Invoice History**: Fetched from Stripe via GET /api/billing/invoices, displays invoice number, date, amount, status with view/download buttons
+- **Invoice Amounts**: Uses amount_paid for paid invoices, amount_due for open/void invoices
