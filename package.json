@@ -84,6 +84,7 @@
     "idb": "^8.0.3",
     "input-otp": "^1.4.2",
     "jsonwebtoken": "^9.0.3",
+    "lottie-react": "^2.4.1",
     "lucide-react": "^0.453.0",
     "memoizee": "^0.4.17",
     "memorystore": "^1.6.7",
