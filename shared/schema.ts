@@ -118,6 +118,13 @@ export const users = pgTable("users", {
   disabledReason: text("disabled_reason"),
   enabledAt: text("enabled_at"),
   enabledBy: varchar("enabled_by"),
+  
+  // Account lifecycle status (user-initiated suspension/cancellation)
+  accountStatus: text("account_status").default("active"), // active, suspended, pending_deletion, deleted
+  suspendedAt: text("suspended_at"), // When subscription was paused by user
+  scheduledDeletionAt: text("scheduled_deletion_at"), // When account is scheduled for permanent deletion
+  cancellationRequestedAt: text("cancellation_requested_at"), // When user requested account closure
+  cancellationReason: text("cancellation_reason"), // Optional reason provided by user
 });
 
 // Availability type for frontend use

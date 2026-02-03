@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,9 @@ import {
   Calendar,
   CreditCard,
   RefreshCcw,
+  Pause,
+  XCircle,
+  RotateCcw,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -37,6 +41,12 @@ interface SubscriptionStatus {
   cancelAt: string | null;
 }
 
+interface AccountStatus {
+  accountStatus: string;
+  suspendedAt: string | null;
+  scheduledDeletionAt: string | null;
+}
+
 const PLAN_PRICES: Record<string, number> = {
   pro: 19,
   pro_plus: 28,
@@ -45,12 +55,19 @@ const PLAN_PRICES: Record<string, number> = {
 
 export function SubscriptionSettings() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showPauseDialog, setShowPauseDialog] = useState(false);
+  const [showCloseAccountDialog, setShowCloseAccountDialog] = useState(false);
 
   const { data: subscription, isLoading, isError } = useQuery<SubscriptionStatus>({
     queryKey: ["/api/subscription/status"],
     retry: 1,
     refetchOnWindowFocus: true,
+  });
+
+  const { data: profile } = useQuery<{ accountStatus?: string; suspendedAt?: string; scheduledDeletionAt?: string }>({
+    queryKey: ["/api/profile"],
   });
 
   // Default subscription status when API fails or returns no data
@@ -118,6 +135,97 @@ export function SubscriptionSettings() {
       toast({
         title: "Error",
         description: "Failed to open billing portal. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const suspendMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/billing/suspend");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({
+        title: "Subscription paused",
+        description: "Your subscription has been paused. You can reactivate anytime.",
+      });
+      setShowPauseDialog(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to pause subscription. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const reactivateAccountMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/billing/reactivate");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({
+        title: "Account reactivated",
+        description: "Your account is active again. Visit pricing to subscribe.",
+      });
+      navigate("/pricing");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reactivate account. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const closeAccountMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/account/cancel");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({
+        title: "Account scheduled for deletion",
+        description: "Your account will be deleted in 30 days. You can undo this before then.",
+      });
+      setShowCloseAccountDialog(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to close account. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const undoCancelMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/account/undo-cancel");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({
+        title: "Account restored",
+        description: "Your account has been restored. Welcome back!",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to restore account. Please try again.",
         variant: "destructive",
       });
     },
@@ -284,6 +392,166 @@ export function SubscriptionSettings() {
                   </AlertDialogContent>
                 </AlertDialog>
               )}
+            </div>
+          )}
+        </div>
+
+        {/* Manage Subscription Section */}
+        <Separator className="my-6" />
+        
+        <div className="space-y-4">
+          <h4 className="font-medium text-sm text-muted-foreground">Manage Subscription</h4>
+          
+          {/* Show different UI based on account status */}
+          {profile?.accountStatus === "suspended" ? (
+            <div className="space-y-3">
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md">
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  Your subscription is paused. Your data is safe and you can reactivate anytime.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => reactivateAccountMutation.mutate()}
+                disabled={reactivateAccountMutation.isPending}
+                className="w-full"
+                data-testid="button-reactivate-account"
+              >
+                {reactivateAccountMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                )}
+                Reactivate My Account
+              </Button>
+            </div>
+          ) : profile?.accountStatus === "pending_deletion" ? (
+            <div className="space-y-3">
+              <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md">
+                <p className="text-sm text-red-800 dark:text-red-200">
+                  Your account is scheduled for deletion
+                  {profile.scheduledDeletionAt && (
+                    <> on {new Date(profile.scheduledDeletionAt).toLocaleDateString()}</>
+                  )}
+                  . You can undo this before then.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => undoCancelMutation.mutate()}
+                disabled={undoCancelMutation.isPending}
+                className="w-full"
+                data-testid="button-undo-close-account"
+              >
+                {undoCancelMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                )}
+                Keep My Account
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {/* Pause Subscription - only for paid plans */}
+              {!isFree && !effectiveSubscription.cancelAtPeriodEnd && (
+                <AlertDialog open={showPauseDialog} onOpenChange={setShowPauseDialog}>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      data-testid="button-pause-subscription"
+                    >
+                      <Pause className="h-4 w-4 mr-2" />
+                      Pause my subscription
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent data-testid="dialog-pause-subscription">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Pause your subscription?</AlertDialogTitle>
+                      <AlertDialogDescription asChild>
+                        <div className="space-y-3 text-sm">
+                          <p>If you pause your subscription:</p>
+                          <ul className="list-disc pl-5 space-y-1">
+                            <li>Billing will stop immediately</li>
+                            <li>Your account will be downgraded to the Free plan</li>
+                            <li>All your data will be safely retained</li>
+                            <li>You can reactivate and subscribe again anytime</li>
+                          </ul>
+                          <p className="text-muted-foreground">
+                            No refunds are issued for unused time in your current billing period.
+                          </p>
+                        </div>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel data-testid="button-cancel-pause">
+                        Cancel
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => suspendMutation.mutate()}
+                        disabled={suspendMutation.isPending}
+                        data-testid="button-confirm-pause"
+                      >
+                        {suspendMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : null}
+                        Confirm Pause
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+
+              {/* Close Account - available to everyone */}
+              <AlertDialog open={showCloseAccountDialog} onOpenChange={setShowCloseAccountDialog}>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="w-full text-destructive"
+                    data-testid="button-close-account"
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Close my account
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent data-testid="dialog-close-account">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Close your account?</AlertDialogTitle>
+                    <AlertDialogDescription asChild>
+                      <div className="space-y-3 text-sm">
+                        <p>This is a significant action. Please understand what happens:</p>
+                        <ul className="list-disc pl-5 space-y-1">
+                          <li>Your account access will be disabled immediately</li>
+                          <li>Your data will be retained for 30 days (you can undo during this time)</li>
+                          <li>After 30 days, data is archived for 120 days</li>
+                          <li>After 150 days total, all data is permanently deleted</li>
+                          <li>Any active subscription will be cancelled immediately</li>
+                        </ul>
+                        <p className="text-muted-foreground">
+                          No refunds are issued for unused subscription time.
+                        </p>
+                      </div>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel data-testid="button-cancel-close">
+                      Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => closeAccountMutation.mutate()}
+                      disabled={closeAccountMutation.isPending}
+                      className="bg-destructive text-destructive-foreground"
+                      data-testid="button-confirm-close"
+                    >
+                      {closeAccountMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : null}
+                      Close Account
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           )}
         </div>

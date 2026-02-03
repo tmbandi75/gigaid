@@ -6547,6 +6547,215 @@ Return ONLY the message text, no JSON or formatting.`
     }
   });
 
+  // Suspend subscription - immediately cancels Stripe subscription, downgrades to Free
+  // User data is retained, they can reactivate anytime
+  app.post("/api/billing/suspend", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Only allow suspension for users with active paid plans
+      if (!user.plan || user.plan === "free") {
+        return res.status(400).json({ error: "No active subscription to pause" });
+      }
+
+      if (user.accountStatus === "suspended") {
+        return res.status(400).json({ error: "Subscription is already paused" });
+      }
+
+      if (user.accountStatus === "pending_deletion") {
+        return res.status(400).json({ error: "Account is pending deletion and cannot be paused" });
+      }
+
+      // Cancel Stripe subscription immediately (not at period end)
+      if (user.stripeSubscriptionId) {
+        const { getUncachableStripeClient } = await import("./stripeClient");
+        const { STRIPE_ENABLED } = await import("@shared/stripeConfig");
+        
+        if (STRIPE_ENABLED) {
+          try {
+            const stripe = await getUncachableStripeClient();
+            await stripe.subscriptions.cancel(user.stripeSubscriptionId);
+            console.log(`[Billing] Cancelled Stripe subscription ${user.stripeSubscriptionId} for user ${userId}`);
+          } catch (stripeError: any) {
+            console.error("[Billing] Stripe cancellation error:", stripeError);
+            // Continue even if Stripe call fails - we still want to update local state
+          }
+        }
+      }
+
+      // Update user to suspended state, downgrade to free
+      const now = new Date().toISOString();
+      await storage.updateUser(userId, {
+        accountStatus: "suspended",
+        suspendedAt: now,
+        plan: "free",
+        isPro: false,
+        stripeSubscriptionId: null,
+      });
+
+      console.log(`[Billing] User ${userId} suspended their subscription. Previous plan: ${user.plan}`);
+
+      res.json({
+        success: true,
+        message: "Your subscription has been paused. You can reactivate anytime.",
+        accountStatus: "suspended",
+      });
+    } catch (error: any) {
+      console.error("[Billing] Suspend error:", error);
+      res.status(500).json({ error: "Failed to pause subscription. Please try again." });
+    }
+  });
+
+  // Reactivate suspended account - redirects to pricing to re-subscribe
+  app.post("/api/billing/reactivate", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (user.accountStatus !== "suspended") {
+        return res.status(400).json({ error: "Account is not suspended" });
+      }
+
+      // Update account status back to active
+      const now = new Date().toISOString();
+      await storage.updateUser(userId, {
+        accountStatus: "active",
+        suspendedAt: null,
+      });
+
+      console.log(`[Billing] User ${userId} reactivated their account. Was suspended at: ${user.suspendedAt}`);
+
+      res.json({
+        success: true,
+        message: "Your account has been reactivated. Visit the pricing page to subscribe to a plan.",
+        accountStatus: "active",
+        redirectTo: "/pricing",
+      });
+    } catch (error: any) {
+      console.error("[Billing] Reactivate error:", error);
+      res.status(500).json({ error: "Failed to reactivate account. Please try again." });
+    }
+  });
+
+  // Cancel account - initiates deletion process with retention schedule
+  // 30 days: soft delete (data hidden but recoverable)
+  // 120 days: archived (minimal data retained)
+  // After 120 days: permanent deletion
+  app.post("/api/account/cancel", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { reason } = req.body;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (user.accountStatus === "pending_deletion" || user.accountStatus === "deleted") {
+        return res.status(400).json({ error: "Account is already scheduled for deletion" });
+      }
+
+      // Cancel any active Stripe subscription immediately
+      if (user.stripeSubscriptionId) {
+        const { getUncachableStripeClient } = await import("./stripeClient");
+        const { STRIPE_ENABLED } = await import("@shared/stripeConfig");
+        
+        if (STRIPE_ENABLED) {
+          try {
+            const stripe = await getUncachableStripeClient();
+            await stripe.subscriptions.cancel(user.stripeSubscriptionId);
+            console.log(`[Account] Cancelled Stripe subscription ${user.stripeSubscriptionId} for user ${userId}`);
+          } catch (stripeError: any) {
+            console.error("[Account] Stripe cancellation error:", stripeError);
+          }
+        }
+      }
+
+      // Calculate deletion schedule
+      const now = new Date();
+      const scheduledDeletionAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days
+
+      // Update user to pending deletion state
+      await storage.updateUser(userId, {
+        accountStatus: "pending_deletion",
+        cancellationRequestedAt: now.toISOString(),
+        cancellationReason: reason || null,
+        scheduledDeletionAt,
+        plan: "free",
+        isPro: false,
+        stripeSubscriptionId: null,
+        isDisabled: true,
+        disabledAt: now.toISOString(),
+        disabledReason: "Account closure requested by user",
+      });
+
+      console.log(`[Account] User ${userId} requested account cancellation. Reason: ${reason || "none"}. Previous plan: ${user.plan}. Scheduled deletion: ${scheduledDeletionAt}`);
+
+      res.json({
+        success: true,
+        message: "Your account has been scheduled for deletion. You have 30 days to change your mind.",
+        accountStatus: "pending_deletion",
+        scheduledDeletionAt,
+      });
+    } catch (error: any) {
+      console.error("[Account] Cancel error:", error);
+      res.status(500).json({ error: "Failed to close account. Please try again." });
+    }
+  });
+
+  // Undo account cancellation - allows users to recover their account within 30 days
+  app.post("/api/account/undo-cancel", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (user.accountStatus !== "pending_deletion") {
+        return res.status(400).json({ error: "Account is not pending deletion" });
+      }
+
+      // Check if still within 30-day window
+      if (user.scheduledDeletionAt) {
+        const scheduledDate = new Date(user.scheduledDeletionAt);
+        if (new Date() > scheduledDate) {
+          return res.status(400).json({ error: "Recovery window has expired. Please contact support." });
+        }
+      }
+
+      // Restore account to active state
+      const now = new Date().toISOString();
+      await storage.updateUser(userId, {
+        accountStatus: "active",
+        cancellationRequestedAt: null,
+        cancellationReason: null,
+        scheduledDeletionAt: null,
+        isDisabled: false,
+        disabledAt: null,
+        disabledReason: null,
+        enabledAt: now,
+      });
+
+      console.log(`[Account] User ${userId} undid account cancellation. Was scheduled for: ${user.scheduledDeletionAt}`);
+
+      res.json({
+        success: true,
+        message: "Your account has been restored. Welcome back!",
+        accountStatus: "active",
+      });
+    } catch (error: any) {
+      console.error("[Account] Undo cancel error:", error);
+      res.status(500).json({ error: "Failed to restore account. Please try again." });
+    }
+  });
+
   // Create Stripe checkout session for an invoice
   app.post("/api/invoices/:id/stripe-checkout", async (req, res) => {
     try {
