@@ -3,6 +3,11 @@ import { apiRequest } from "./queryClient";
 // Single source of truth for Stripe enablement
 export const STRIPE_ENABLED = import.meta.env.VITE_STRIPE_ENABLED === 'true';
 
+console.log('[Stripe env check]', {
+  VITE_STRIPE_ENABLED: import.meta.env.VITE_STRIPE_ENABLED,
+  STRIPE_ENABLED
+});
+
 export type SubscriptionPlan = "pro" | "pro_plus" | "business";
 
 export interface CheckoutResult {
@@ -21,14 +26,14 @@ export async function startStripeCheckout({
 
   // Hard guard: fail loudly if Stripe is disabled
   if (!STRIPE_ENABLED) {
-    console.error('[Stripe] Checkout disabled - STRIPE_ENABLED=false');
+    console.error('[Stripe] Checkout disabled — VITE_STRIPE_ENABLED=false');
     
     alert(
       'Payments are disabled in this environment.\n\n' +
       'Set VITE_STRIPE_ENABLED=true in Replit Secrets and restart the app.'
     );
     
-    throw new Error('Stripe Checkout attempted while STRIPE_ENABLED=false');
+    throw new Error('Stripe Checkout attempted while VITE_STRIPE_ENABLED=false');
   }
 
   try {

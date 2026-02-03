@@ -1,0 +1,207 @@
+Yes — here is the **exact single Replit master prompt** you can run.
+This one is **laser-focused** on the *actual* root cause and includes **self-verifying guards** so this can’t silently break again.
+
+You can paste this **verbatim** into Replit.
+
+---
+
+# 🧠 REPLIT MASTER PROMPT
+
+## Enable Stripe Checkout via Vite Env + Eliminate Silent Failures
+
+### Objective
+
+Fix the issue where **Stripe Checkout does not open** even though upgrade buttons are clickable.
+
+This prompt will:
+
+1. Correctly wire Stripe enablement for a **Vite + React app**
+2. Ensure the correct env variable is used (`VITE_STRIPE_ENABLED`)
+3. Add **hard, visible guards** so Stripe can never fail silently again
+4. Add startup logging to confirm env loading
+5. Require zero changes to pricing or subscription logic
+
+---
+
+## Root Cause (Confirmed)
+
+Stripe Checkout is intentionally disabled because:
+
+```
+STRIPE_ENABLED === false
+```
+
+This is due to either:
+
+* Using `STRIPE_ENABLED` instead of `VITE_STRIPE_ENABLED`
+* Or the app not being restarted after setting env vars
+
+In Vite apps, **only env vars prefixed with `VITE_` are available to the client**.
+
+---
+
+## Non-Negotiable Constraints
+
+❌ Do NOT modify pricing logic
+❌ Do NOT modify subscription logic
+❌ Do NOT remove Stripe guards
+❌ Do NOT assume env vars are loaded
+
+✅ Use Vite-compatible env access
+✅ Fail loudly if Stripe is disabled
+✅ Make the fix auditable and permanent
+
+---
+
+## REQUIRED IMPLEMENTATION
+
+---
+
+## 1️⃣ Normalize Stripe Enablement (Single Source of Truth)
+
+Open:
+
+```
+client/src/lib/stripeCheckout.ts
+```
+
+Replace any existing Stripe enablement logic with **exactly this**:
+
+```ts
+export const STRIPE_ENABLED =
+  import.meta.env.VITE_STRIPE_ENABLED === 'true'
+
+console.log('[Stripe env check]', {
+  VITE_STRIPE_ENABLED: import.meta.env.VITE_STRIPE_ENABLED,
+  STRIPE_ENABLED
+})
+```
+
+---
+
+## 2️⃣ Harden `startStripeCheckout` (MANDATORY)
+
+Replace any silent early return.
+
+### ❌ Remove
+
+```ts
+if (!STRIPE_ENABLED) {
+  console.warn('[Stripe] Checkout disabled')
+  return
+}
+```
+
+### ✅ Replace with
+
+```ts
+if (!STRIPE_ENABLED) {
+  console.error('[Stripe] Checkout disabled — VITE_STRIPE_ENABLED=false')
+
+  alert(
+    'Payments are disabled in this environment.\n\n' +
+    'Set VITE_STRIPE_ENABLED=true in Replit Secrets and restart the app.'
+  )
+
+  throw new Error(
+    'Stripe Checkout attempted while VITE_STRIPE_ENABLED=false'
+  )
+}
+```
+
+This guarantees:
+
+* No more “button does nothing”
+* Immediate visibility when Stripe is disabled
+* Faster future debugging
+
+---
+
+## 3️⃣ Add Startup Env Verification (One-Time)
+
+In `App.tsx` (or `main.tsx`), add:
+
+```ts
+if (import.meta.env.DEV) {
+  console.log('[App env]', {
+    VITE_STRIPE_ENABLED: import.meta.env.VITE_STRIPE_ENABLED
+  })
+}
+```
+
+This confirms env vars are actually loaded at runtime.
+
+---
+
+## 4️⃣ Replit Environment Configuration (CRITICAL)
+
+In **Replit → Secrets**, add **exactly**:
+
+```
+VITE_STRIPE_ENABLED=true
+```
+
+⚠️ Case-sensitive
+⚠️ No quotes
+⚠️ No spaces
+
+Do **not** use `STRIPE_ENABLED` — it will not work in Vite.
+
+---
+
+## 5️⃣ Mandatory Restart Sequence
+
+After code + secrets changes:
+
+1. **Stop** the Replit app
+2. **Start** the app again
+3. Browser: **Ctrl + Shift + R**
+
+Environment variables do **not** hot-reload.
+
+---
+
+## 6️⃣ Verification Checklist (MUST PASS)
+
+On app load, browser console must show:
+
+```
+[Stripe env check] { VITE_STRIPE_ENABLED: "true", STRIPE_ENABLED: true }
+```
+
+Then:
+
+* Click **Upgrade**
+* No “Checkout disabled” warning
+* Network call to `/api/subscription/checkout`
+* Stripe Checkout opens or redirects
+
+---
+
+## Final Instruction
+
+Implement **exactly** the above steps.
+
+If Stripe is still disabled after this:
+
+* The env var name is wrong
+* Or the app was not restarted
+
+Do **not** debug pricing, plans, or subscriptions again — they are already correct.
+
+---
+
+### Optional (After This Works)
+
+* Add `/health/payments` endpoint
+* Centralize env guards in `env.guard.ts`
+* Disable Stripe automatically in preview builds
+
+---
+
+If you want next, I can give you:
+
+* A **1-minute prod-readiness checklist**
+* Or a **Stripe test-mode smoke test script**
+
+This prompt closes the loop — for real this time.
