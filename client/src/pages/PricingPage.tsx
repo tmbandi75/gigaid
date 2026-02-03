@@ -255,7 +255,13 @@ export default function PricingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30" data-testid="page-pricing">
+    <div 
+      className="min-h-screen bg-gradient-to-b from-background to-muted/30" 
+      data-testid="page-pricing"
+      onClickCapture={(e) => {
+        console.log('🟦 CAPTURE: pricing root clicked', (e.target as HTMLElement).tagName, (e.target as HTMLElement).className?.slice(0, 50));
+      }}
+    >
       {/* Header with back button */}
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-sm border-b">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center">
@@ -379,8 +385,9 @@ export default function PricingPage() {
                     size="lg"
                     variant={plan.recommended ? "default" : isCurrent ? "outline" : "default"}
                     disabled={isDisabled || isCheckoutLoading}
-                    onClick={() => {
-                      console.log('🔥 BUTTON CLICKED', plan.id);
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('🔥 BUTTON CLICKED', plan.id, 'disabled:', isDisabled, 'checkoutLoading:', isCheckoutLoading);
                       handlePlanAction(plan);
                     }}
                     data-testid={`button-plan-${plan.id}`}
