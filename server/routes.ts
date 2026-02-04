@@ -3194,6 +3194,43 @@ export async function registerRoutes(
     }
   });
 
+  // Helper: Check and reset SMS usage if billing cycle has changed
+  // For paying users: uses Stripe billing period as source of truth
+  // For FREE users: resets monthly on the 1st
+  async function checkAndResetSmsUsageForBillingCycle(userId: string, user: any): Promise<void> {
+    const smsUsageRecord = await storage.getCapabilityUsage(userId, 'sms.two_way');
+    if (!smsUsageRecord?.windowStart) return;
+    
+    const usageWindowStart = new Date(smsUsageRecord.windowStart);
+    const now = new Date();
+    
+    // For paying users with Stripe subscription
+    if (user?.stripeSubscriptionId && STRIPE_ENABLED) {
+      try {
+        const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+        if (subscription.status === 'active') {
+          const currentPeriodStart = new Date(subscription.current_period_start * 1000);
+          // Reset if current billing period started after usage window
+          if (currentPeriodStart > usageWindowStart) {
+            await storage.resetCapabilityUsage(userId, 'sms.two_way');
+            console.log(`[SMS Usage] Reset for user ${userId} - new Stripe billing cycle started ${currentPeriodStart.toISOString()}`);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('[SMS Usage] Could not check Stripe billing cycle:', err);
+        // Fall through to calendar month check as fallback
+      }
+    }
+    
+    // For FREE users or Stripe unavailable: reset on calendar month boundary
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    if (currentMonthStart > usageWindowStart) {
+      await storage.resetCapabilityUsage(userId, 'sms.two_way');
+      console.log(`[SMS Usage] Reset for user ${userId} - new calendar month started ${currentMonthStart.toISOString()}`);
+    }
+  }
+
   // SMS Send Endpoint - logs outgoing messages to database
   app.post("/api/sms/send", isAuthenticated, async (req, res) => {
     try {
@@ -3205,6 +3242,9 @@ export async function registerRoutes(
       const userId = (req as any).userId;
       const user = await storage.getUser(userId);
       const userPlan = (user?.plan as CapPlan) || 'free';
+      
+      // Check and reset usage if Stripe billing cycle has changed
+      await checkAndResetSmsUsageForBillingCycle(userId, user);
       
       // Check SMS capability using new system
       if (!isDeveloper(user)) {
@@ -3468,6 +3508,41 @@ export async function registerRoutes(
     }
   });
 
+  // Helper: Check and reset message usage (inbound forwarded) if billing cycle has changed
+  async function checkAndResetMessageUsageForBillingCycle(userId: string, user: any): Promise<void> {
+    const usage = await storage.getMessageUsage(userId);
+    if (!usage?.periodStart) return;
+    
+    const usagePeriodStart = new Date(usage.periodStart);
+    const now = new Date();
+    
+    // For paying users with Stripe subscription
+    if (user?.stripeSubscriptionId && STRIPE_ENABLED) {
+      try {
+        const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+        if (subscription.status === 'active') {
+          const currentPeriodStart = new Date(subscription.current_period_start * 1000);
+          const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
+          if (currentPeriodStart > usagePeriodStart) {
+            await storage.resetMessageUsage(userId, currentPeriodStart.toISOString(), currentPeriodEnd.toISOString());
+            console.log(`[Message Usage] Reset for user ${userId} - new Stripe billing cycle started ${currentPeriodStart.toISOString()}`);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('[Message Usage] Could not check Stripe billing cycle:', err);
+      }
+    }
+    
+    // For FREE users or Stripe unavailable: reset on calendar month boundary
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    if (currentMonthStart > usagePeriodStart) {
+      await storage.resetMessageUsage(userId, currentMonthStart.toISOString(), currentMonthEnd.toISOString());
+      console.log(`[Message Usage] Reset for user ${userId} - new calendar month started ${currentMonthStart.toISOString()}`);
+    }
+  }
+
   // Twilio inbound webhook (receives replies)
   app.post("/api/twilio/inbound", async (req, res) => {
     try {
@@ -3500,6 +3575,9 @@ export async function registerRoutes(
       const userPlan = (user.plan as CapPlan) || 'free';
       const isProPlusOrHigher = userPlan === 'pro_plus' || userPlan === 'business';
       const useInbox = isProPlusOrHigher && user.inAppInboxEnabled;
+
+      // Reset message usage counters if billing cycle has changed
+      await checkAndResetMessageUsageForBillingCycle(userId, user);
 
       // Find client info
       const clientInfo = await storage.findClientByPhone(userId, From);
