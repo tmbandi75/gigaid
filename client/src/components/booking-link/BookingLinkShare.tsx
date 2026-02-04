@@ -20,13 +20,15 @@ export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
-  const { data } = useQuery<{ bookingLink: string | null }>({
+  const { data } = useQuery<{ bookingLink: string | null; servicesCount: number }>({
     queryKey: ["/api/booking/link"],
   });
 
   const bookingLink = data?.bookingLink;
+  const hasServices = (data?.servicesCount || 0) > 0;
 
-  if (!bookingLink) return null;
+  // Only show booking link if user has services set up and a booking link
+  if (!hasServices || !bookingLink) return null;
 
   const handleCopy = async () => {
     if (!bookingLink) return;

@@ -426,7 +426,13 @@ export async function registerRoutes(
         ? `https://gigaid.ai/book/${user.publicProfileSlug}`
         : null;
       
-      res.json({ bookingLink });
+      // Get services count - check both provider_services table and user.services array
+      const providerServices = await storage.getProviderServices(user.id);
+      const servicesCount = providerServices.length > 0 
+        ? providerServices.length 
+        : (user.services?.length || 0);
+      
+      res.json({ bookingLink, servicesCount });
     } catch (error) {
       console.error("[BookingLink] Error fetching booking link:", error);
       res.status(500).json({ error: "Failed to fetch booking link" });
