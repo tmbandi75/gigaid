@@ -1,13 +1,13 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { X, PartyPopper, DollarSign } from "lucide-react";
+import { X, PartyPopper, DollarSign, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Lottie from "lottie-react";
-import celebrationAnimation from "@/assets/celebration-lottie.json";
+import celebrationAnimation from "@/assets/animations/celebration.json";
 
 interface CelebrationOverlayProps {
   isVisible: boolean;
   message: string;
-  type: "job_booked" | "payment_received" | null;
+  type: "job_booked" | "payment_received" | "onboarding_complete" | null;
   onDismiss: () => void;
 }
 
@@ -21,8 +21,8 @@ export function CelebrationOverlay({
     <AnimatePresence>
       {isVisible && (
         <>
-          {/* Full-screen Lottie animation overlay - only for payments */}
-          {type === "payment_received" && (
+          {/* Full-screen Lottie animation overlay - for payments and onboarding */}
+          {(type === "payment_received" || type === "onboarding_complete") && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -61,13 +61,19 @@ export function CelebrationOverlay({
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-foreground/20">
                   {type === "job_booked" ? (
                     <PartyPopper className="h-6 w-6 text-primary-foreground" />
+                  ) : type === "onboarding_complete" ? (
+                    <CheckCircle2 className="h-6 w-6 text-primary-foreground" />
                   ) : (
                     <DollarSign className="h-6 w-6 text-primary-foreground" />
                   )}
                 </div>
                 <div className="flex-1 pr-6">
                   <h3 className="text-lg font-semibold text-primary-foreground">
-                    {type === "job_booked" ? "Job Booked!" : "Payment Received!"}
+                    {type === "job_booked" 
+                      ? "Job Booked!" 
+                      : type === "onboarding_complete" 
+                        ? "You're All Set!" 
+                        : "Payment Received!"}
                   </h3>
                   <p className="mt-1 text-sm text-primary-foreground/90" data-testid="text-celebration-message">
                     {message}
@@ -75,7 +81,9 @@ export function CelebrationOverlay({
                   <p className="mt-2 text-xs text-primary-foreground/70 italic" data-testid="text-gigaid-helped">
                     {type === "payment_received" 
                       ? "GigAid helped you collect this faster." 
-                      : "GigAid helped you secure this opportunity."}
+                      : type === "onboarding_complete"
+                        ? "GigAid is ready to help you succeed."
+                        : "GigAid helped you secure this opportunity."}
                   </p>
                 </div>
               </div>
