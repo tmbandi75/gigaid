@@ -44,6 +44,7 @@ import {
   AlertCircle,
   CheckCircle,
   Pencil,
+  MessageCircle,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -62,6 +63,7 @@ import { StripeConnectSettings } from "@/components/settings/StripeConnectSettin
 import { EmailSignatureSettings } from "@/components/settings/EmailSignatureSettings";
 import { AccountLinking } from "@/components/mobile-auth/AccountLinking";
 import { AutomationSettings } from "@/components/settings/AutomationSettings";
+import { MessagingSettings } from "@/components/settings/MessagingSettings";
 import { ChangePasswordDialog } from "@/components/settings/ChangePasswordDialog";
 import { SubscriptionSettings } from "@/components/settings/SubscriptionSettings";
 import { SettingsSection } from "@/components/settings/SettingsSection";
@@ -753,7 +755,20 @@ export default function Settings() {
           <AutomationSettings />
         </SettingsSection>
 
-        {/* SECTION 5: Preferences & Account */}
+        {/* SECTION 5: Messaging */}
+        <SettingsSection
+          title="Messaging"
+          subtitle="Send texts through GigAid and manage replies"
+          icon={<MessageCircle className="h-4 w-4 text-white" />}
+          iconGradient="from-blue-500 to-cyan-500"
+          testId="card-messaging"
+          defaultExpanded={false}
+          collapsible={true}
+        >
+          <MessagingSettings />
+        </SettingsSection>
+
+        {/* SECTION 6: Preferences & Account */}
         <SettingsSection
           title="Preferences & Account"
           subtitle="App preferences and sign-in options"

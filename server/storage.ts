@@ -32,6 +32,7 @@ import {
   type PhotoSourceType,
   type EstimationRequest, type InsertEstimationRequest,
   type SmsMessage, type InsertSmsMessage,
+  type MessageUsage, type InsertMessageUsage,
   type StallDetection, type InsertStallDetection,
   type NextAction, type InsertNextAction,
   type AutoExecutionLog, type InsertAutoExecutionLog,
@@ -275,6 +276,14 @@ export interface IStorage {
     relatedJobId: string | null;
     relatedLeadId: string | null;
   } | undefined>;
+
+  // Message Usage (Twilio limits tracking)
+  getMessageUsage(userId: string): Promise<MessageUsage | undefined>;
+  getOrCreateMessageUsage(userId: string): Promise<MessageUsage>;
+  incrementOutboundSent(userId: string): Promise<MessageUsage>;
+  incrementInboundForwarded(userId: string): Promise<MessageUsage>;
+  incrementInboundStored(userId: string): Promise<MessageUsage>;
+  resetMessageUsage(userId: string, periodStart: string, periodEnd: string): Promise<MessageUsage>;
 
   // Stall Detections (Next Best Action Engine)
   getStallDetections(userId: string, entityType?: string): Promise<StallDetection[]>;
@@ -2333,6 +2342,78 @@ export class MemStorage implements IStorage {
 
   private normalizePhone(phone: string): string {
     return phone.replace(/\D/g, '');
+  }
+
+  // ============================================================
+  // Message Usage (Twilio limits tracking)
+  // ============================================================
+
+  private messageUsageMap: Map<string, MessageUsage> = new Map();
+
+  async getMessageUsage(userId: string): Promise<MessageUsage | undefined> {
+    return Array.from(this.messageUsageMap.values()).find(u => u.userId === userId);
+  }
+
+  async getOrCreateMessageUsage(userId: string): Promise<MessageUsage> {
+    let usage = await this.getMessageUsage(userId);
+    if (!usage) {
+      const now = new Date();
+      const periodStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
+      const id = randomUUID();
+      usage = {
+        id,
+        userId,
+        outboundSent: 0,
+        inboundForwarded: 0,
+        inboundStored: 0,
+        periodStart,
+        periodEnd,
+        createdAt: now.toISOString(),
+        updatedAt: null,
+      };
+      this.messageUsageMap.set(id, usage);
+    }
+    return usage;
+  }
+
+  async incrementOutboundSent(userId: string): Promise<MessageUsage> {
+    const usage = await this.getOrCreateMessageUsage(userId);
+    const updated = { ...usage, outboundSent: usage.outboundSent + 1, updatedAt: new Date().toISOString() };
+    this.messageUsageMap.set(usage.id, updated);
+    return updated;
+  }
+
+  async incrementInboundForwarded(userId: string): Promise<MessageUsage> {
+    const usage = await this.getOrCreateMessageUsage(userId);
+    const updated = { ...usage, inboundForwarded: usage.inboundForwarded + 1, updatedAt: new Date().toISOString() };
+    this.messageUsageMap.set(usage.id, updated);
+    return updated;
+  }
+
+  async incrementInboundStored(userId: string): Promise<MessageUsage> {
+    const usage = await this.getOrCreateMessageUsage(userId);
+    const updated = { ...usage, inboundStored: usage.inboundStored + 1, updatedAt: new Date().toISOString() };
+    this.messageUsageMap.set(usage.id, updated);
+    return updated;
+  }
+
+  async resetMessageUsage(userId: string, periodStart: string, periodEnd: string): Promise<MessageUsage> {
+    const existing = await this.getMessageUsage(userId);
+    const id = existing?.id || randomUUID();
+    const usage: MessageUsage = {
+      id,
+      userId,
+      outboundSent: 0,
+      inboundForwarded: 0,
+      inboundStored: 0,
+      periodStart,
+      periodEnd,
+      createdAt: existing?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.messageUsageMap.set(id, usage);
+    return usage;
   }
 
   // ============================================================

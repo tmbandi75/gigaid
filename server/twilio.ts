@@ -78,3 +78,40 @@ export async function sendSMS(to: string, message: string): Promise<boolean> {
     return false;
   }
 }
+
+// Enhanced version that returns message SID for tracking
+export async function sendSMSWithTracking(to: string, message: string): Promise<{ success: boolean; sid?: string; error?: string }> {
+  try {
+    const client = await getTwilioClient();
+    const fromNumber = await getTwilioFromPhoneNumber();
+    
+    if (!fromNumber) {
+      return { success: false, error: 'No Twilio phone number configured' };
+    }
+
+    // Clean the phone number - ensure it has country code
+    let cleanTo = to.replace(/\D/g, '');
+    if (cleanTo.length === 10) {
+      cleanTo = '1' + cleanTo; // Add US country code
+    }
+    cleanTo = '+' + cleanTo;
+
+    const result = await client.messages.create({
+      body: message,
+      from: fromNumber,
+      to: cleanTo
+    });
+
+    console.log(`[Twilio] SMS sent to ${cleanTo}, SID: ${result.sid}`);
+    return { success: true, sid: result.sid };
+  } catch (error: any) {
+    console.error('[Twilio] Failed to send SMS:', error);
+    return { success: false, error: error.message || 'Failed to send SMS' };
+  }
+}
+
+// Forward an inbound message to the provider's personal phone
+export async function forwardSMSToProvider(providerPhone: string, fromPhone: string, body: string): Promise<{ success: boolean; sid?: string; error?: string }> {
+  const forwardMessage = `Reply from ${fromPhone}:\n${body}`;
+  return sendSMSWithTracking(providerPhone, forwardMessage);
+}

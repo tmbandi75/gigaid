@@ -13,7 +13,8 @@ import {
   User,
   Loader2,
   Check,
-  CheckCheck
+  CheckCheck,
+  AlertCircle
 } from "lucide-react";
 import { PriorityBadge, inferMessagePriority } from "@/components/priority/PriorityBadge";
 import { useToast } from "@/hooks/use-toast";
@@ -144,6 +145,13 @@ function ConversationList({
   );
 }
 
+interface MessageUsage {
+  outboundSent: number;
+  outboundLimit: number | null;
+  outboundRemaining: number | null;
+  plan: string;
+}
+
 function MessageThread({ 
   phone, 
   clientName,
@@ -161,6 +169,14 @@ function MessageThread({
     refetchInterval: 5000,
   });
 
+  const { data: usage } = useQuery<MessageUsage>({
+    queryKey: ["/api/messages/usage"],
+    staleTime: 30000,
+  });
+
+  const isNearLimit = !!(usage?.outboundLimit && usage.outboundRemaining !== null && usage.outboundRemaining <= 5);
+  const isAtLimit = !!(usage?.outboundLimit && usage.outboundRemaining !== null && usage.outboundRemaining <= 0);
+
   const sendMutation = useMutation({
     mutationFn: async (message: string) => {
       await apiRequest("POST", "/api/sms/send", {
@@ -174,15 +190,25 @@ function MessageThread({
       queryClient.invalidateQueries({ queryKey: ["/api/sms/conversation", phone] });
       queryClient.invalidateQueries({ queryKey: ["/api/sms/conversations"] });
       queryClient.invalidateQueries({ queryKey: ["/api/sms/unread-count"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/messages/usage"] });
       toast({ title: "Message sent" });
     },
-    onError: () => {
-      toast({ title: "Failed to send message", variant: "destructive" });
+    onError: (error: any) => {
+      const errorData = error?.response?.data || error?.data || {};
+      if (errorData.code === "SMS_LIMIT_EXCEEDED") {
+        toast({ 
+          title: "Message limit reached", 
+          description: errorData.message || "Upgrade to send more messages.",
+          variant: "destructive" 
+        });
+      } else {
+        toast({ title: "Failed to send message", variant: "destructive" });
+      }
     },
   });
 
   const handleSend = () => {
-    if (!reply.trim()) return;
+    if (!reply.trim() || isAtLimit) return;
     sendMutation.mutate(reply.trim());
   };
 
@@ -252,14 +278,27 @@ function MessageThread({
         )}
       </ScrollArea>
 
-      <div className="p-4 border-t">
+      <div className="p-4 border-t space-y-2">
+        {isAtLimit && (
+          <div className="flex items-center gap-2 px-3 py-2 bg-destructive/10 text-destructive rounded-md text-sm" data-testid="warning-limit-reached">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <span>Monthly message limit reached. Upgrade to send more messages.</span>
+          </div>
+        )}
+        {isNearLimit && !isAtLimit && (
+          <div className="flex items-center gap-2 px-3 py-2 bg-amber-100 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 rounded-md text-sm" data-testid="warning-near-limit">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <span>{usage?.outboundRemaining} messages remaining this month</span>
+          </div>
+        )}
         <div className="flex gap-2">
           <Textarea
             value={reply}
             onChange={(e) => setReply(e.target.value)}
-            placeholder="Type a message..."
+            placeholder={isAtLimit ? "Message limit reached" : "Type a message..."}
             className="resize-none min-h-[44px] max-h-32"
             rows={1}
+            disabled={isAtLimit}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -270,7 +309,7 @@ function MessageThread({
           />
           <Button
             onClick={handleSend}
-            disabled={!reply.trim() || sendMutation.isPending}
+            disabled={!reply.trim() || sendMutation.isPending || isAtLimit}
             size="icon"
             data-testid="button-send-reply"
           >

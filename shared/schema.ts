@@ -125,6 +125,11 @@ export const users = pgTable("users", {
   scheduledDeletionAt: text("scheduled_deletion_at"), // When account is scheduled for permanent deletion
   cancellationRequestedAt: text("cancellation_requested_at"), // When user requested account closure
   cancellationReason: text("cancellation_reason"), // Optional reason provided by user
+  
+  // Twilio messaging settings
+  personalPhone: text("personal_phone"), // User's personal phone for forwarding inbound SMS
+  inAppInboxEnabled: boolean("in_app_inbox_enabled").default(false), // If true, store replies in app instead of forwarding
+  firstGigaidMessageSentAt: text("first_gigaid_message_sent_at"), // Track first message for tooltip
 });
 
 // Availability type for frontend use
@@ -1303,6 +1308,37 @@ export const insertSmsMessageSchema = createInsertSchema(smsMessages).omit({
 
 export type InsertSmsMessage = z.infer<typeof insertSmsMessageSchema>;
 export type SmsMessage = typeof smsMessages.$inferSelect;
+
+// ============================================================
+// MESSAGE USAGE - Track monthly message limits per plan
+// ============================================================
+export const messageUsage = pgTable("message_usage", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique(),
+  outboundSent: integer("outbound_sent").notNull().default(0), // Messages sent via GigAid this period
+  inboundForwarded: integer("inbound_forwarded").notNull().default(0), // Replies forwarded to phone
+  inboundStored: integer("inbound_stored").notNull().default(0), // Replies stored in-app
+  periodStart: text("period_start").notNull(), // Start of billing period (ISO date)
+  periodEnd: text("period_end").notNull(), // End of billing period (ISO date)
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at"),
+});
+
+export const insertMessageUsageSchema = createInsertSchema(messageUsage).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertMessageUsage = z.infer<typeof insertMessageUsageSchema>;
+export type MessageUsage = typeof messageUsage.$inferSelect;
+
+// Message limits per plan
+export const MESSAGE_LIMITS = {
+  free: { outbound: 25, inboundForward: 50 },
+  pro: { outbound: 100, inboundForward: 200 },
+  pro_plus: { outbound: 500, inboundForward: -1 }, // -1 = unlimited
+  business: { outbound: -1, inboundForward: -1 }, // -1 = unlimited
+} as const;
 
 // ============================================================
 // CO-PILOT / ADMIN COCKPIT - Founder analytics and guidance

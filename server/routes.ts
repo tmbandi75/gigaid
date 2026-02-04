@@ -409,6 +409,9 @@ export async function registerRoutes(
         publicEstimationEnabled: user.publicEstimationEnabled,
         noShowProtectionEnabled: user.noShowProtectionEnabled,
         plan: user.plan || "free",
+        // Messaging fields
+        personalPhone: user.personalPhone,
+        inAppInboxEnabled: user.inAppInboxEnabled,
       });
     } catch (error) {
       console.error("[Profile] Error fetching profile:", error);
@@ -448,7 +451,9 @@ export async function registerRoutes(
         firstName, lastName, services,
         // Onboarding/money protection fields
         defaultServiceType, defaultPrice, depositPolicySet, aiExpectationShown,
-        depositEnabled, depositValue, slotDuration
+        depositEnabled, depositValue, slotDuration,
+        // Messaging fields
+        personalPhone, inAppInboxEnabled
       } = req.body;
       let user = await storage.getUser((req as any).userId);
       
@@ -487,6 +492,10 @@ export async function registerRoutes(
       if (depositEnabled !== undefined) updates.depositEnabled = depositEnabled;
       if (depositValue !== undefined) updates.depositValue = depositValue;
       if (slotDuration !== undefined) updates.slotDuration = slotDuration;
+      
+      // Messaging fields
+      if (personalPhone !== undefined) updates.personalPhone = personalPhone;
+      if (inAppInboxEnabled !== undefined) updates.inAppInboxEnabled = inAppInboxEnabled;
       
       const updatedUser = await storage.updateUser((req as any).userId, updates);
       
@@ -3412,6 +3421,119 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Lead SMS messages fetch error:", error);
       res.status(500).json({ error: "Failed to fetch SMS messages" });
+    }
+  });
+
+  // ============================================================
+  // Messaging (GigAid SMS usage display)
+  // ============================================================
+
+  // Get message usage for current billing period (uses capability system for consistency)
+  app.get("/api/messages/usage", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const user = await storage.getUser(userId);
+      const userPlan = (user?.plan as CapPlan) || 'free';
+      
+      // Get SMS usage from capability system
+      const smsUsageRecord = await storage.getCapabilityUsage(userId, 'sms.two_way');
+      const outboundSent = smsUsageRecord?.usageCount ?? 0;
+      
+      // Get limit from capability system
+      const capResult = canPerform(userPlan, 'sms.two_way', outboundSent);
+      const outboundLimit = capResult.limit === Infinity ? null : capResult.limit;
+      const outboundRemaining = capResult.limit === Infinity ? null : (capResult.remaining ?? 0);
+      
+      // Inbox is available for pro+ and business
+      const isProPlusOrHigher = userPlan === 'pro_plus' || userPlan === 'business';
+      
+      res.json({
+        outboundSent,
+        outboundLimit,
+        outboundRemaining,
+        inboxEnabled: isProPlusOrHigher && user?.inAppInboxEnabled,
+        plan: userPlan,
+      });
+    } catch (error) {
+      console.error("Message usage fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch message usage" });
+    }
+  });
+
+  // Twilio inbound webhook (receives replies)
+  app.post("/api/twilio/inbound", async (req, res) => {
+    try {
+      const { From, Body, MessageSid } = req.body;
+      
+      if (!From || !Body) {
+        console.log("[Twilio Inbound] Missing From or Body");
+        return res.status(400).send("Missing required fields");
+      }
+
+      console.log(`[Twilio Inbound] SMS from ${From}: ${Body.substring(0, 50)}...`);
+
+      // Find the last outbound message to this phone to identify the provider
+      const lastOutbound = await storage.getLastOutboundMessageByPhone(From);
+      
+      if (!lastOutbound) {
+        console.log(`[Twilio Inbound] No matching provider found for ${From}`);
+        return res.status(200).send("OK");
+      }
+
+      const userId = lastOutbound.userId;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        console.log(`[Twilio Inbound] User not found: ${userId}`);
+        return res.status(200).send("OK");
+      }
+
+      // Check if user has in-app inbox enabled (Pro+/Business only via capability system)
+      const userPlan = (user.plan as CapPlan) || 'free';
+      const isProPlusOrHigher = userPlan === 'pro_plus' || userPlan === 'business';
+      const useInbox = isProPlusOrHigher && user.inAppInboxEnabled;
+
+      // Find client info
+      const clientInfo = await storage.findClientByPhone(userId, From);
+
+      // Store the inbound message
+      const smsMessage = await storage.createSmsMessage({
+        userId,
+        clientPhone: From,
+        clientName: clientInfo?.clientName || null,
+        body: Body,
+        direction: "inbound",
+        twilioSid: MessageSid,
+        relatedLeadId: clientInfo?.relatedLeadId || lastOutbound.relatedLeadId,
+        relatedJobId: clientInfo?.relatedJobId || lastOutbound.relatedJobId,
+        isRead: false,
+      });
+
+      if (useInbox) {
+        // Store for in-app inbox
+        await storage.incrementInboundStored(userId);
+        console.log(`[Twilio Inbound] Stored message ${smsMessage.id} in inbox for user ${userId}`);
+      } else {
+        // Forward to personal phone
+        if (user.personalPhone) {
+          const { forwardSMSToProvider } = await import("./twilio");
+          const fwdResult = await forwardSMSToProvider(user.personalPhone, From, Body);
+          if (fwdResult.success) {
+            await storage.incrementInboundForwarded(userId);
+            console.log(`[Twilio Inbound] Forwarded to ${user.personalPhone}`);
+          } else {
+            console.error(`[Twilio Inbound] Forward failed: ${fwdResult.error}`);
+          }
+        } else {
+          console.log(`[Twilio Inbound] No personal phone set for user ${userId}, message stored only`);
+        }
+      }
+
+      // Return TwiML response (empty is fine for now)
+      res.type("text/xml").send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
+    } catch (error) {
+      console.error("[Twilio Inbound] Error:", error);
+      res.status(500).send("Internal error");
     }
   });
 
