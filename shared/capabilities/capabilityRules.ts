@@ -62,14 +62,16 @@ export const CAPABILITY_RULES: Record<Plan, PlanCapabilityRules> = {
     'ai.campaign_suggestions': { unlimited: true },
     'notifications.event_driven': { unlimited: true },
     'offline.photos': { unlimited: true },
-    'analytics.advanced': { mode: 'active' }
+    'analytics.advanced': { mode: 'active' },
+    'sms.two_way': { limit: 300 }
   },
 
   business: {
     '*': { unlimited: true },
     'crew.manage': { unlimited: true },
     'admin.controls': { unlimited: true },
-    'analytics.advanced': { unlimited: true }
+    'analytics.advanced': { unlimited: true },
+    'sms.two_way': { limit: 1500 }
   }
 };
 
