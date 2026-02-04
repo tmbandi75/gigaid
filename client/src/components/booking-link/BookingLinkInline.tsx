@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Share2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface BookingLinkInlineProps {
@@ -39,6 +39,30 @@ export function BookingLinkInline({ bookingLink, servicesCount }: BookingLinkInl
     }
   };
 
+  const handleShare = async () => {
+    if (!bookingLink) return;
+    
+    trackEvent('booking_link_shared', { screen: 'leads' });
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Book with me",
+          text: "Book a job with me using this link",
+          url: bookingLink,
+        });
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          handleCopy();
+        }
+      }
+    } else {
+      handleCopy();
+    }
+  };
+
+  const supportsShare = typeof navigator !== 'undefined' && !!navigator.share;
+
   return (
     <div 
       className="flex items-center justify-between gap-3 px-4 py-3 bg-muted/50 rounded-lg mb-4"
@@ -47,25 +71,37 @@ export function BookingLinkInline({ bookingLink, servicesCount }: BookingLinkInl
       <span className="text-sm text-muted-foreground">
         Turn interest into scheduled jobs faster.
       </span>
-      <Button 
-        size="sm" 
-        variant="ghost"
-        onClick={handleCopy}
-        className="flex-shrink-0"
-        data-testid="button-copy-booking-link-leads"
-      >
-        {copied ? (
-          <>
-            <Check className="h-4 w-4 mr-1" />
-            Copied
-          </>
-        ) : (
-          <>
-            <Copy className="h-4 w-4 mr-1" />
-            Copy Booking Link
-          </>
+      <div className="flex gap-2 flex-shrink-0">
+        <Button 
+          size="sm" 
+          variant="ghost"
+          onClick={handleCopy}
+          data-testid="button-copy-booking-link-leads"
+        >
+          {copied ? (
+            <>
+              <Check className="h-4 w-4 mr-1" />
+              Copied
+            </>
+          ) : (
+            <>
+              <Copy className="h-4 w-4 mr-1" />
+              Copy
+            </>
+          )}
+        </Button>
+        {supportsShare && (
+          <Button 
+            size="sm" 
+            variant="ghost"
+            onClick={handleShare}
+            data-testid="button-share-booking-link-leads"
+          >
+            <Share2 className="h-4 w-4 mr-1" />
+            Share
+          </Button>
         )}
-      </Button>
+      </div>
     </div>
   );
 }

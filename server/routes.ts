@@ -414,6 +414,25 @@ export async function registerRoutes(
     }
   });
 
+  // GET /api/booking/link - Get user's booking link for sharing
+  app.get("/api/booking/link", isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      const bookingLink = user.publicProfileSlug 
+        ? `https://gigaid.ai/book/${user.publicProfileSlug}`
+        : null;
+      
+      res.json({ bookingLink });
+    } catch (error) {
+      console.error("[BookingLink] Error fetching booking link:", error);
+      res.status(500).json({ error: "Failed to fetch booking link" });
+    }
+  });
+
   app.patch("/api/profile", isAuthenticated, async (req, res) => {
     try {
       const { 
