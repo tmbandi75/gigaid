@@ -381,9 +381,11 @@ export async function registerRoutes(
         ? `https://gigaid.ai/book/${user.publicProfileSlug}`
         : null;
       
-      // Get actual services count from provider_services table
+      // Get services count - check both provider_services table and user.services array
       const providerServices = await storage.getProviderServices(user.id);
-      const servicesCount = providerServices.length;
+      const servicesCount = providerServices.length > 0 
+        ? providerServices.length 
+        : (user.services?.length || 0);
       
       res.json({
         id: user.id,
