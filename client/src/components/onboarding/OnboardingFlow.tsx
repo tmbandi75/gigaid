@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import confetti from "canvas-confetti";
+import { CelebrationOverlay } from "@/components/CelebrationOverlay";
 import {
   Wrench,
   Droplets,
@@ -113,6 +114,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
   const [showSkipModal, setShowSkipModal] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
   
   // Form data
   const [identity, setIdentity] = useState({
@@ -382,6 +384,9 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
     
     queryClient.invalidateQueries({ queryKey: ["/api/onboarding"] });
     setStep(8);
+    
+    // Show Lottie celebration animation
+    setShowCelebration(true);
     
     // Celebration confetti
     setTimeout(() => {
@@ -1081,6 +1086,14 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
           )}
         </div>
       </div>
+
+      {/* Celebration overlay for onboarding completion */}
+      <CelebrationOverlay
+        isVisible={showCelebration}
+        message="GigAid is ready to help you get paid faster and protect your time."
+        type="onboarding_complete"
+        onDismiss={() => setShowCelebration(false)}
+      />
     </div>
   );
 }
