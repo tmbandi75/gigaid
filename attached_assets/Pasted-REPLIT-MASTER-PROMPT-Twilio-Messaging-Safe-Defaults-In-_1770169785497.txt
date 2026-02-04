@@ -1,0 +1,257 @@
+REPLIT MASTER PROMPT
+Twilio Messaging + Safe Defaults + In-App Inbox + Usage Limits (GigAid)
+OBJECTIVE
+
+Enhance GigAid’s existing Send Text Message feature to support Twilio-based messaging while:
+
+Preserving current copy-to-SMS behavior
+
+Preventing missed client replies
+
+Supporting a future-proof in-app inbox
+
+Enforcing plan-based usage limits
+
+Avoiding user confusion or trust loss
+
+NON-NEGOTIABLE CONSTRAINTS
+
+❌ Do NOT remove or alter existing copy-to-SMS flow
+❌ Do NOT expose Twilio credentials to frontend
+❌ Do NOT intercept or hide inbound replies by default
+❌ Do NOT introduce “modes” language in UI
+❌ Do NOT auto-upgrade users
+❌ Do NOT silently drop messages
+
+✅ Replies must reach the user’s phone unless explicitly opted out
+✅ All enforcement happens server-side
+✅ Free users must never miss replies
+
+CORE DESIGN PRINCIPLE
+
+If a user has to think about where replies go, the design has failed.
+
+Default behavior must feel identical to native SMS.
+
+DATA MODEL CHANGES
+User Fields
+users.personal_phone
+users.in_app_inbox_enabled (boolean, default false)
+
+
+This flag is internal. Never referred to as a “mode” in UI.
+
+Message Table
+messages:
+- id
+- user_id
+- lead_id
+- direction (inbound | outbound)
+- body
+- created_at
+
+Usage Tracking
+message_usage:
+- user_id
+- outbound_sent
+- inbound_forwarded
+- inbound_stored
+- reset_at (billing cycle)
+
+
+Counters reset monthly based on Stripe billing period.
+
+PLAN-BASED USAGE LIMITS
+🆓 FREE
+
+Outbound via GigAid: limited (e.g. 25/month)
+
+Inbound replies:
+
+Always forwarded to phone
+
+Limited forwarding count
+
+In-app inbox: ❌ not available
+
+💼 PRO+
+
+Outbound via GigAid: higher limit (e.g. 500/month)
+
+Inbound replies:
+
+Stored in app if inbox enabled
+
+Otherwise forwarded to phone
+
+In-app inbox: ✅ available
+
+Soft warnings at 80% usage
+
+🏢 BUSINESS
+
+Outbound via GigAid: high or unlimited
+
+Inbound replies: unlimited
+
+In-app inbox: ✅ available
+
+Team inbox (future-safe)
+
+OUTBOUND MESSAGE FLOW
+API
+POST /api/messages/send
+
+Logic
+
+Authenticate user
+
+Verify entitlement + outbound limit
+
+Send SMS via Twilio number
+
+Log outbound message
+
+Increment usage counter
+
+Never block inbound due to outbound limits
+
+INBOUND MESSAGE FLOW (TWILIO WEBHOOK)
+API
+POST /api/twilio/inbound
+
+Logic
+lookup user by twilio_number
+
+if users.in_app_inbox_enabled AND plan >= Pro+:
+  store message
+  increment inbound_stored
+else:
+  forward message to users.personal_phone
+  increment inbound_forwarded
+
+
+Always return HTTP 200 to Twilio.
+
+FRONTEND IMPLEMENTATION
+Message Composer (Existing Screen)
+
+Keep:
+
+“Copy & send via phone”
+
+Add:
+
+“Send from GigAid”
+
+No routing language exposed.
+
+Settings → Messaging (NEW)
+
+Location: Settings menu
+
+Advanced Section (Pro+ / Business only)
+
+Toggle:
+
+Keep replies inside GigAid
+
+Description:
+
+Replies will appear in GigAid instead of your phone.
+
+Confirmation modal:
+
+Replies will no longer go to your phone.
+You must open GigAid to respond.
+
+Free users:
+
+Toggle visible but locked
+
+Tooltip:
+
+Upgrade to manage replies in GigAid
+
+In-App Inbox (Pro+ / Business)
+
+Threaded by lead
+
+Header:
+
+Messages here stay in GigAid
+
+UX SAFETY COPY (REQUIRED)
+First GigAid-sent message (one-time tooltip)
+
+Replies will go to your phone.
+Upgrade to manage replies in GigAid.
+
+Usage Limit Reached (Free)
+
+You’ve reached your Free message limit.
+Upgrade to keep messaging and manage replies in GigAid.
+
+ENFORCEMENT RULES
+
+❌ Never drop inbound messages
+❌ Never hide replies
+❌ Never block Twilio webhooks
+❌ Never introduce surprise behavior
+
+✅ Enforce outbound limits before sending
+✅ Allow inbound delivery regardless of limits
+✅ Reset usage monthly
+
+ACCEPTANCE CRITERIA
+
+✅ Free users never miss replies
+✅ Default behavior matches native SMS expectations
+✅ Advanced users can centralize messaging
+✅ Usage limits enforced server-side
+✅ No confusion introduced
+✅ Existing functionality preserved
+
+OUTPUT REQUIRED FROM REPLIT
+
+Database migrations
+
+Twilio inbound/outbound logic
+
+Message usage counters
+
+Settings UI updates
+
+In-app inbox UI
+
+Entitlement enforcement
+
+Audit logging
+
+IMPORTANT NOTE
+
+This feature must feel:
+
+Safe
+
+Predictable
+
+Optional
+
+Revenue-aligned
+
+GigAid must never be the reason a customer message is missed.
+
+FINAL CONFIRMATION
+
+This master prompt:
+
+✅ Handles Twilio correctly
+
+✅ Prevents churn
+
+✅ Supports future monetization
+
+✅ Avoids cognitive overload
+
+✅ Is ready for Replit execution
