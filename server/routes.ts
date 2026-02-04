@@ -3214,9 +3214,8 @@ export async function registerRoutes(
         
         if (!capResult.allowed) {
           return res.status(403).json({
-            error: "SMS limit reached",
-            code: "SMS_LIMIT_EXCEEDED",
-            message: capResult.reason || "You've reached your SMS limit. Upgrade for more.",
+            error: "message_limit_reached",
+            message: capResult.reason || "You've reached your monthly message limit. Upgrade to keep messaging and manage replies in GigAid.",
             currentCount: smsUsage,
             limit: capResult.limit,
             remaining: capResult.remaining,
@@ -3519,17 +3518,28 @@ export async function registerRoutes(
       });
 
       if (useInbox) {
-        // Store for in-app inbox
+        // Store for in-app inbox (Pro+/Business - unlimited inbound)
         await storage.incrementInboundStored(userId);
         console.log(`[Twilio Inbound] Stored message ${smsMessage.id} in inbox for user ${userId}`);
       } else {
-        // Forward to personal phone
+        // Forward to personal phone (FREE users have 20/mo limit but we never drop messages)
         if (user.personalPhone) {
           const { forwardSMSToProvider } = await import("./twilio");
+          
+          // Check inbound forwarding limit for FREE users
+          const usage = await storage.getOrCreateMessageUsage(userId);
+          const FREE_INBOUND_LIMIT = 20;
+          const usageExceeded = userPlan === 'free' && usage.inboundForwarded >= FREE_INBOUND_LIMIT;
+          
+          // Always forward - never drop messages (spec: inbound messages are never blocked)
           const fwdResult = await forwardSMSToProvider(user.personalPhone, From, Body);
           if (fwdResult.success) {
             await storage.incrementInboundForwarded(userId);
-            console.log(`[Twilio Inbound] Forwarded to ${user.personalPhone}`);
+            if (usageExceeded) {
+              console.log(`[Twilio Inbound] Forwarded to ${user.personalPhone} (usage_exceeded=true, count=${usage.inboundForwarded + 1})`);
+            } else {
+              console.log(`[Twilio Inbound] Forwarded to ${user.personalPhone}`);
+            }
           } else {
             console.error(`[Twilio Inbound] Forward failed: ${fwdResult.error}`);
           }
