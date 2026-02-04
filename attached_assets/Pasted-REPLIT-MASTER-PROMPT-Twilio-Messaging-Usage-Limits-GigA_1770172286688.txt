@@ -1,0 +1,177 @@
+REPLIT MASTER PROMPT
+Twilio Messaging Usage Limits (GigAid)
+OBJECTIVE
+
+Implement plan-based monthly usage limits for Twilio messaging in GigAid that:
+
+Protect Twilio costs
+
+Never cause missed client replies
+
+Create natural upgrade moments
+
+Preserve all existing messaging behavior
+
+Are enforced only on the backend
+
+NON-NEGOTIABLE CONSTRAINTS
+
+❌ Do NOT drop inbound messages
+❌ Do NOT block Twilio webhooks
+❌ Do NOT change existing routing logic
+❌ Do NOT expose limits aggressively in UI
+❌ Do NOT auto-upgrade users
+
+✅ Inbound messages must always be delivered
+✅ Limits apply only to outbound sending
+✅ Counters reset monthly based on Stripe billing cycle
+
+PLAN LIMITS (LOCK THESE VALUES)
+🆓 FREE
+
+Outbound via GigAid: 20 / month
+
+Inbound forwarded to phone: 20 / month
+
+In-app inbox: ❌
+
+💼 PRO+
+
+Outbound via GigAid: 300 / month
+
+Inbound: Unlimited
+
+In-app inbox: ✅
+
+🏢 BUSINESS
+
+Outbound via GigAid: 1500 / month
+
+Inbound: Unlimited
+
+In-app inbox: ✅
+
+DATABASE CHANGES
+Create or extend message_usage table
+message_usage:
+- user_id (PK)
+- outbound_count
+- inbound_forwarded_count
+- reset_at (timestamp)
+
+
+Initialize counters on first message send.
+
+BILLING CYCLE RESET
+
+On every send attempt:
+
+Compare reset_at to current Stripe billing period
+
+If new cycle → reset counters
+
+Stripe remains source of truth for billing cycle dates
+
+OUTBOUND MESSAGE ENFORCEMENT
+Endpoint
+POST /api/messages/send
+
+Logic
+1. Authenticate user
+2. Load plan tier
+3. Load message_usage
+4. If outbound_count >= plan limit:
+     return 403 with:
+       { error: "message_limit_reached" }
+5. Send SMS via Twilio
+6. Increment outbound_count
+7. Persist message
+
+
+Outbound limits are hard stops.
+
+INBOUND MESSAGE HANDLING (TWILIO WEBHOOK)
+Endpoint
+POST /api/twilio/inbound
+
+Logic
+1. Identify user by Twilio number
+2. Always accept message
+3. If user plan === FREE:
+     if inbound_forwarded_count < 20:
+        forward message to user's phone
+        increment inbound_forwarded_count
+     else:
+        forward message anyway
+        flag usage_exceeded = true
+4. If user plan >= PRO+:
+     store message (inbox)
+5. Always return HTTP 200
+
+
+⚠️ Inbound messages are never blocked, even if limits exceeded.
+
+FRONTEND BEHAVIOR (MINIMAL)
+When outbound limit reached
+
+Show banner or modal:
+
+You’ve reached your monthly message limit.
+Upgrade to keep messaging and manage replies in GigAid.
+
+Buttons:
+
+Upgrade
+
+Cancel
+
+No other UI changes required.
+
+LOGGING & SAFETY
+
+Log every blocked outbound attempt
+
+Log every inbound over-limit event
+
+Never surface internal counters to users directly
+
+ACCEPTANCE CRITERIA
+
+✅ Outbound limits enforced per plan
+✅ Inbound messages never dropped
+✅ Counters reset monthly
+✅ No behavioral change unless limit reached
+✅ Twilio always receives HTTP 200
+
+OUTPUT REQUIRED FROM REPLIT
+
+Database migration
+
+Backend limit enforcement
+
+Stripe billing cycle integration
+
+Safe error handling
+
+Minimal frontend messaging
+
+IMPORTANT NOTE
+
+Limits must feel like capacity, not punishment.
+No scary modals. No surprise behavior. No broken trust.
+
+GigAid must never be the reason a customer is missed.
+
+✅ FINAL CONFIRMATION
+
+This prompt:
+
+Protects margins
+
+Preserves trust
+
+Is safe to ship now
+
+Does not over-engineer
+
+If you want, next I can:
