@@ -282,7 +282,7 @@ function MessageThread({
         {isAtLimit && (
           <div className="flex items-center gap-2 px-3 py-2 bg-destructive/10 text-destructive rounded-md text-sm" data-testid="warning-limit-reached">
             <AlertCircle className="h-4 w-4 flex-shrink-0" />
-            <span>Monthly message limit reached. Upgrade to send more messages.</span>
+            <span>You've reached your Free message limit. Upgrade to keep messaging and manage replies in GigAid.</span>
           </div>
         )}
         {isNearLimit && !isAtLimit && (
@@ -347,8 +347,9 @@ export default function Messages() {
   };
 
   const renderMobileHeader = () => (
-    <div className="flex items-center justify-between gap-2 px-4 py-3 border-b">
+    <div className="px-4 py-3 border-b">
       <h1 className="text-xl font-semibold">Messages</h1>
+      <p className="text-xs text-muted-foreground">Messages here stay in GigAid</p>
     </div>
   );
 
@@ -361,7 +362,7 @@ export default function Messages() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground" data-testid="page-title">Messages</h1>
-            <p className="text-sm text-muted-foreground">Client conversations</p>
+            <p className="text-sm text-muted-foreground">Messages here stay in GigAid</p>
           </div>
         </div>
       </div>
