@@ -1,0 +1,165 @@
+Consolidate Booking Link Sharing Into Single Component (No UX Changes)
+Objective
+
+Refactor the existing booking link sharing implementation into a single reusable component for long-term maintainability, without changing any user-visible behavior, layout, or copy.
+
+This is a cleanup and consolidation pass only, not a feature change.
+
+Absolute Constraints (Do Not Violate)
+
+❌ Do NOT change any existing UI layout, spacing, copy, icons, or styling
+❌ Do NOT change when or where booking link sharing appears
+❌ Do NOT change copy vs share behavior per page
+❌ Do NOT add loading states, modals, tooltips, or analytics
+❌ Do NOT refactor unrelated components or pages
+❌ Do NOT change backend behavior or routes
+
+✅ Preserve all existing functionality exactly
+✅ Refactor for maintainability only
+✅ Replace multiple components with a single variant-based component
+✅ Fetch booking link internally from /api/booking/link
+
+Current State (Given)
+
+Three components exist:
+
+BookingLinkCard
+
+BookingLinkInline
+
+BookingLinkSecondary
+
+Booking link is currently passed as a prop from /api/profile
+
+Copy works everywhere
+
+Native share works on Plan and Leads pages only
+
+Jobs page is copy-only
+
+Target End State
+
+Create a single reusable component:
+
+components/BookingLinkShare.tsx
+
+Props:
+
+type BookingLinkShareProps = {
+  variant: "primary" | "inline" | "compact";
+  context: "plan" | "leads" | "jobs";
+};
+
+
+Responsibilities:
+
+Internally fetch booking link from GET /api/booking/link
+
+Encapsulate copy + share logic
+
+Render UI based on variant
+
+Preserve all existing behavior exactly
+
+Step 1: Create Unified Component
+
+Create BookingLinkShare.tsx by merging the three existing components.
+
+Rules:
+
+Extract shared logic (copy, share, success state)
+
+Variant controls layout only
+
+compact variant must remain copy-only
+
+primary and inline must retain native share support
+
+Native share logic (unchanged):
+
+if (navigator.share) {
+  navigator.share({
+    title: "Book with me",
+    text: "Book a job with me using this link",
+    url: bookingLink
+  });
+}
+
+
+Fallback:
+
+Always allow copy-to-clipboard
+
+Step 2: Move Booking Link Fetching Into Component
+
+Inside BookingLinkShare.tsx:
+
+Fetch booking link from /api/booking/link
+
+Handle loading silently (no spinner)
+
+Fail silently if unavailable
+
+Remove bookingLink prop usage from:
+
+Plan page
+
+Leads page
+
+Jobs page
+
+Step 3: Replace Existing Components In-Place
+
+Replace:
+
+BookingLinkCard → BookingLinkShare variant="primary"
+
+BookingLinkInline → BookingLinkShare variant="inline"
+
+BookingLinkSecondary → BookingLinkShare variant="compact"
+
+Rules:
+
+File structure and page placement must remain the same
+
+No page layout refactors
+
+No wrapper changes
+
+Step 4: Delete Old Components
+
+After replacement:
+
+Remove the three old components
+
+Ensure no unused imports remain
+
+Ensure build passes without warnings
+
+Acceptance Criteria
+
+✅ No visible UI or behavior changes
+✅ Booking link still appears on Plan, Leads, and Jobs pages
+✅ Copy works everywhere
+✅ Native share still works only on Plan and Leads
+✅ Jobs page remains copy-only
+✅ Single component owns booking link sharing logic
+✅ Booking link sourced only from /api/booking/link
+
+Explicitly Out of Scope
+
+🚫 Feature additions
+🚫 UI tweaks
+🚫 Analytics
+🚫 Share text changes
+🚫 API changes
+
+Deliverable
+
+One BookingLinkShare.tsx component
+
+Three pages updated to use variants
+
+Three old components removed
+
+Zero functional regressions

@@ -1,12 +1,8 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-interface BookingLinkSecondaryProps {
-  bookingLink: string | null;
-  servicesCount: number;
-}
 
 function trackEvent(eventName: string, properties?: Record<string, unknown>) {
   if (typeof window !== 'undefined' && (window as { posthog?: { capture: (event: string, props?: Record<string, unknown>) => void } }).posthog) {
@@ -14,18 +10,24 @@ function trackEvent(eventName: string, properties?: Record<string, unknown>) {
   }
 }
 
-export function BookingLinkSecondary({ bookingLink, servicesCount }: BookingLinkSecondaryProps) {
+export function BookingLinkEmptyState() {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
-  if (servicesCount === 0 || !bookingLink) return null;
+  const { data } = useQuery<{ bookingLink: string | null }>({
+    queryKey: ["/api/booking/link"],
+  });
+
+  const bookingLink = data?.bookingLink;
+
+  if (!bookingLink) return null;
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(bookingLink);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      trackEvent('booking_link_copied', { screen: 'jobs' });
+      trackEvent('booking_link_copied', { screen: 'leads_empty' });
       toast({
         title: "Link copied",
         description: "Your booking link is ready to share",
@@ -40,24 +42,28 @@ export function BookingLinkSecondary({ bookingLink, servicesCount }: BookingLink
   };
 
   return (
-    <Button 
-      size="sm" 
-      variant="ghost"
-      onClick={handleCopy}
-      className="text-primary"
-      data-testid="button-share-booking-link-jobs"
-    >
-      {copied ? (
-        <>
-          <Check className="h-4 w-4 mr-1" />
-          Copied
-        </>
-      ) : (
-        <>
-          <Copy className="h-4 w-4 mr-1" />
-          Share booking link
-        </>
-      )}
-    </Button>
+    <div className="text-center mt-4">
+      <p className="text-sm text-muted-foreground mb-3">
+        New leads often come from sharing your booking link.
+      </p>
+      <Button 
+        size="sm" 
+        variant="outline"
+        onClick={handleCopy}
+        data-testid="button-copy-booking-link-empty"
+      >
+        {copied ? (
+          <>
+            <Check className="h-4 w-4 mr-1" />
+            Copied
+          </>
+        ) : (
+          <>
+            <Copy className="h-4 w-4 mr-1" />
+            Copy Booking Link
+          </>
+        )}
+      </Button>
+    </div>
   );
 }

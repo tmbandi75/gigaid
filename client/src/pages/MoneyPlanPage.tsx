@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InlineInfoCard } from "@/components/ui/inline-info-card";
-import { BookingLinkCard } from "@/components/booking-link";
+import { BookingLinkShare } from "@/components/booking-link";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useCapability } from "@/hooks/useCapability";
@@ -83,12 +83,6 @@ export default function MoneyPlanPage() {
     queryKey: ["/api/action-queue"],
     enabled: flag?.enabled === true,
   });
-
-  const { data: profile } = useQuery<{ servicesCount: number; bookingLink: string | null }>({
-    queryKey: ["/api/profile"],
-  });
-  const servicesCount = profile?.servicesCount || 0;
-  const bookingLink = profile?.bookingLink || null;
 
   // Log capability attempt for analytics (soft gating - never blocks)
   const hasMoneyPlanCapability = checkCapability("todays_money_plan");
@@ -374,7 +368,7 @@ export default function MoneyPlanPage() {
         </div>
       )}
 
-      <BookingLinkCard bookingLink={bookingLink} servicesCount={servicesCount} />
+      <BookingLinkShare variant="primary" context="plan" />
       
       <div className={isMobile ? "h-6" : ""} />
     </div>

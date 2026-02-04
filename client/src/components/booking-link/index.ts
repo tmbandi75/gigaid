@@ -1,3 +1,2 @@
-export { BookingLinkCard } from './BookingLinkCard';
-export { BookingLinkInline, BookingLinkEmptyState } from './BookingLinkInline';
-export { BookingLinkSecondary } from './BookingLinkSecondary';
+export { BookingLinkShare } from './BookingLinkShare';
+export { BookingLinkEmptyState } from './BookingLinkEmptyState';

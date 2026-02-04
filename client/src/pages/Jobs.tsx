@@ -36,7 +36,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { JobResolutionModal } from "@/components/jobs/JobResolutionModal";
 import { JobsCalendar } from "@/components/calendar/JobsCalendar";
-import { BookingLinkSecondary } from "@/components/booking-link";
+import { BookingLinkShare } from "@/components/booking-link";
 import { SwipeableCard, type SwipeAction as SwipeCardAction } from "@/components/ui/swipeable-card";
 import { ActionConfirmDialog } from "@/components/ui/action-confirm-dialog";
 import { getJobActionEligibility, getSwipeActions, type SwipeAction as RulesSwipeAction } from "@shared/archive-delete-rules";
@@ -472,12 +472,9 @@ export default function Jobs() {
     queryKey: ["/api/invoices"],
   });
 
-  const { data: profile } = useQuery<{ services: string[] | null; servicesCount: number; bookingLink: string | null }>({
+  const { data: profile } = useQuery<{ services: string[] | null }>({
     queryKey: ["/api/profile"],
   });
-
-  const servicesCount = profile?.servicesCount || 0;
-  const bookingLink = profile?.bookingLink || null;
 
   const handleNudgeClick = (nudge: AiNudge) => {
     setSelectedNudge(nudge);
@@ -598,7 +595,7 @@ export default function Jobs() {
                 Add New Job
               </Button>
             </Link>
-            <BookingLinkSecondary bookingLink={bookingLink} servicesCount={servicesCount} />
+            <BookingLinkShare variant="compact" context="jobs" />
           </div>
         </div>
 

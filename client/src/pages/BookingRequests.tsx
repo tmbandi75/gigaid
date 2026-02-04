@@ -54,7 +54,7 @@ import {
   Inbox,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { BookingLinkInline } from "@/components/booking-link";
+import { BookingLinkShare } from "@/components/booking-link";
 
 interface BookingRequest {
   id: number;
@@ -146,13 +146,6 @@ export default function BookingRequests() {
   const { data: bookings, isLoading } = useQuery<BookingRequest[]>({
     queryKey: ["/api/booking-requests"],
   });
-
-  const { data: profile } = useQuery<{ services: string[] | null; servicesCount: number; bookingLink: string | null }>({
-    queryKey: ["/api/profile"],
-  });
-
-  const servicesCount = profile?.servicesCount || 0;
-  const bookingLink = profile?.bookingLink || null;
 
   const recordRemainderPaymentMutation = useMutation({
     mutationFn: async ({ bookingId, paymentMethod, notes }: { bookingId: number; paymentMethod: string; notes: string }) => {
@@ -346,7 +339,7 @@ export default function BookingRequests() {
           </CardContent>
         </Card>
 
-        <BookingLinkInline bookingLink={bookingLink} servicesCount={servicesCount} />
+        <BookingLinkShare variant="inline" context="bookings" />
 
         {filteredBookings.length === 0 ? (
           <Card className="border-0 shadow-md">

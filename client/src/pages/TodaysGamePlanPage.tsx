@@ -33,7 +33,7 @@ import {
 import { AddServiceDialog } from "@/components/settings/AddServiceDialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
-import { BookingLinkCard } from "@/components/booking-link";
+import { BookingLinkShare } from "@/components/booking-link";
 
 interface ActionItem {
   id: string;
@@ -201,7 +201,7 @@ export default function TodaysGamePlanPage() {
     refetchOnWindowFocus: true,
   });
 
-  const { data: profile } = useQuery<{ services: string[] | null; servicesCount: number; bookingLink: string | null }>({
+  const { data: profile } = useQuery<{ services: string[] | null; servicesCount: number }>({
     queryKey: ["/api/profile"],
   });
 
@@ -302,10 +302,7 @@ export default function TodaysGamePlanPage() {
         <CampaignSuggestionBanner />
 
         <motion.div variants={itemVariants}>
-          <BookingLinkCard 
-            bookingLink={profile?.bookingLink ?? null} 
-            servicesCount={servicesCount} 
-          />
+          <BookingLinkShare variant="primary" context="plan" />
         </motion.div>
 
         <motion.section variants={itemVariants} aria-labelledby="do-this-first">

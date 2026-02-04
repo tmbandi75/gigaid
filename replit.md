@@ -95,3 +95,11 @@ Systematic review across 9 categories to identify and fix Day-1 user experience 
 - **Settings Page Structure**: Tabbed navigation with "General" (profile/automation settings) and "Billing" (subscription/invoices) tabs
 - **Invoice History**: Fetched from Stripe via GET /api/billing/invoices, displays invoice number, date, amount, status with view/download buttons
 - **Invoice Amounts**: Uses amount_paid for paid invoices, amount_due for open/void invoices
+
+### Booking Link Sharing
+- **Unified Component**: `BookingLinkShare` component with three variants (primary/inline/compact) consolidates all booking link sharing UI
+- **API Endpoint**: GET `/api/booking/link` returns the user's booking link
+- **Usage Locations**: Plan page (primary card), Leads page (inline banner), Jobs page (compact button), Booking Requests page (inline)
+- **Native Share Support**: Uses `navigator.share` when available, falls back to clipboard copy on unsupported devices
+- **Empty State**: `BookingLinkEmptyState` component for Leads empty state with copy functionality
+- **Components**: Located in `client/src/components/booking-link/` (BookingLinkShare.tsx, BookingLinkEmptyState.tsx, index.ts)

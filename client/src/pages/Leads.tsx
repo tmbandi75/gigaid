@@ -52,7 +52,7 @@ import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
 import { LeadsTableView } from "@/components/leads/LeadsTableView";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
-import { BookingLinkInline, BookingLinkEmptyState } from "@/components/booking-link";
+import { BookingLinkShare, BookingLinkEmptyState } from "@/components/booking-link";
 import { SwipeableCard, type SwipeAction as SwipeCardAction } from "@/components/ui/swipeable-card";
 import { ActionConfirmDialog } from "@/components/ui/action-confirm-dialog";
 import { 
@@ -334,7 +334,7 @@ function LeadCard({ lead, nudges, onGenerateFollowUp, onSendText, onNudgeClick }
   );
 }
 
-function EmptyState({ bookingLink, servicesCount }: { bookingLink: string | null; servicesCount: number }) {
+function EmptyState() {
   return (
     <div className="flex flex-col items-center py-12 text-center px-4">
       <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center mb-6">
@@ -351,7 +351,7 @@ function EmptyState({ bookingLink, servicesCount }: { bookingLink: string | null
           Add Your First Lead
         </Button>
       </Link>
-      <BookingLinkEmptyState bookingLink={bookingLink} servicesCount={servicesCount} />
+      <BookingLinkEmptyState />
     </div>
   );
 }
@@ -387,12 +387,9 @@ export default function Leads() {
     queryKey: ["/api/nudges"],
   });
 
-  const { data: profile } = useQuery<{ services: string[] | null; servicesCount: number; bookingLink: string | null }>({
+  const { data: profile } = useQuery<{ services: string[] | null }>({
     queryKey: ["/api/profile"],
   });
-
-  const servicesCount = profile?.servicesCount || 0;
-  const bookingLink = profile?.bookingLink || null;
 
   const showTableView = !isMobile && viewMode === "table";
 
@@ -525,7 +522,7 @@ export default function Leads() {
           </Link>
         </div>
 
-        <BookingLinkInline bookingLink={bookingLink} servicesCount={servicesCount} />
+        <BookingLinkShare variant="inline" context="leads" />
 
         <FollowUpCheckIn />
 
@@ -547,7 +544,7 @@ export default function Leads() {
             ))}
           </div>
         ) : filteredLeads.length === 0 ? (
-          <EmptyState bookingLink={bookingLink} servicesCount={servicesCount} />
+          <EmptyState />
         ) : (
           <div className="space-y-3">
             {filteredLeads.map((lead) => (
@@ -656,7 +653,7 @@ export default function Leads() {
           </div>
         </div>
 
-        <BookingLinkInline bookingLink={bookingLink} servicesCount={servicesCount} />
+        <BookingLinkShare variant="inline" context="leads" />
 
         <FollowUpCheckIn />
 
@@ -682,7 +679,7 @@ export default function Leads() {
             </div>
           )
         ) : filteredLeads.length === 0 ? (
-          <EmptyState bookingLink={bookingLink} servicesCount={servicesCount} />
+          <EmptyState />
         ) : showTableView ? (
           <LeadsTableView leads={filteredLeads} />
         ) : (

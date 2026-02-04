@@ -1,0 +1,224 @@
+Locked. Here’s the **clean, final Replit master prompt**, rewritten to **include native sharing** the *right* way — no social-icon clutter, no UX noise, no refactors.
+
+You can paste this **as-is** into Replit.
+
+---
+
+# 🚀 REPLIT MASTER PROMPT
+
+## Context-Aware Booking Link Sharing (Copy + Native Share)
+
+### Objective
+
+Surface the user’s **booking link** in high-intent areas of the app so users can quickly **copy or natively share** it via SMS, WhatsApp, Messenger, Instagram DMs, email, and other channels.
+
+The booking link must be treated as a **revenue action**, not a settings artifact.
+
+This is a **new feature**, but it must reuse existing data and patterns where possible.
+
+---
+
+### Non-Negotiotiable Constraints
+
+❌ Do NOT refactor existing booking, routing, or link generation logic
+❌ Do NOT introduce platform-specific social buttons (Facebook, Instagram, etc.)
+❌ Do NOT add modal paywalls or blocking UX
+❌ Do NOT hardcode URLs, usernames, or IDs in the frontend
+
+✅ Use native OS share sheets when supported
+✅ Always provide copy-to-clipboard fallback
+✅ Build one reusable component with contextual variants
+✅ Use authenticated backend endpoints as the source of truth
+✅ Safe for Free, Pro, Pro+, and Business plans
+
+---
+
+### Step 1: Centralize Booking Link Access (Backend)
+
+Ensure there is a **single backend source of truth** for the booking link.
+
+If not already present, add:
+
+**GET `/api/booking/link`**
+
+```json
+{
+  "bookingLink": "https://gigaid.ai/book/{username}"
+}
+```
+
+Rules:
+
+* Requires authenticated user
+* Returns the canonical booking link
+* No plan gating
+* No frontend string construction
+
+---
+
+### Step 2: Create Reusable Component
+
+Create a reusable React component:
+
+**`components/BookingLinkShare.tsx`**
+
+Props:
+
+```ts
+type BookingLinkShareProps = {
+  variant: "primary" | "inline" | "compact";
+  context: "plan" | "leads" | "jobs";
+};
+```
+
+Behavior:
+
+* Fetch booking link from `/api/booking/link`
+* Display booking link (truncate visually if needed)
+* Provide **Copy** button (clipboard API with fallback)
+* Provide **Share** button when `navigator.share` is supported
+* Fallback to copy when native sharing is unavailable
+* Show brief, non-blocking success state (“Copied” / “Shared”)
+
+Native Share behavior:
+
+```ts
+navigator.share({
+  title: "Book with me",
+  text: "Book a job with me using this link",
+  url: bookingLink
+});
+```
+
+Rules:
+
+* Do NOT use external share SDKs
+* Do NOT add platform-specific social icons
+* Do NOT block UI if share fails
+
+---
+
+### Step 3: Visual Variants
+
+**primary**
+
+* Full card presentation
+* Copy + Share buttons visible
+* Used for revenue-focused contexts
+
+**inline**
+
+* Single-row presentation
+* Copy + Share buttons
+* Used inside workflow pages
+
+**compact**
+
+* Minimal icon or text button
+* Copy only (no Share button)
+* Used for secondary utility areas
+
+---
+
+### Step 4: Plan Page Integration (Today’s Money Plan)
+
+Location:
+
+* Plan / Dashboard page near “Today’s Money Plan” or daily focus area
+
+Implementation:
+
+```tsx
+<BookingLinkShare variant="primary" context="plan" />
+```
+
+Intent:
+
+* Frame as a daily revenue action
+* Clear, actionable, non-configurational
+
+---
+
+### Step 5: Leads / Requests Page Integration
+
+Location:
+
+* Top of Leads / Requests page OR empty-state helper area
+
+Implementation:
+
+```tsx
+<BookingLinkShare variant="inline" context="leads" />
+```
+
+Rules:
+
+* Render once per page
+* Do NOT repeat per lead
+
+---
+
+### Step 6: Jobs Page Integration
+
+Location:
+
+* Header utility area or overflow menu
+
+Implementation:
+
+```tsx
+<BookingLinkShare variant="compact" context="jobs" />
+```
+
+Rules:
+
+* Must not distract from job management
+* Copy-only utility
+
+---
+
+### Step 7: UX & Guardrails
+
+* Clipboard and Share APIs must fail silently
+* No blocking loaders or modals
+* Booking link must never appear in page source without auth
+* Component must be reusable for future placements
+
+---
+
+### Acceptance Criteria
+
+✅ Booking link is accessible from Plan, Leads, and Jobs pages
+✅ Users can copy or natively share the booking link
+✅ Native share opens OS share sheet when supported
+✅ Copy fallback always works
+✅ No social-icon clutter
+✅ No regression to existing booking flows
+
+---
+
+### Explicitly Out of Scope (Do NOT Implement)
+
+🚫 Platform-specific social buttons
+🚫 Analytics or event tracking
+🚫 Plan-based gating
+🚫 Upsell modals
+
+---
+
+### Deliverable
+
+* One reusable BookingLinkShare component
+* One backend endpoint (if needed)
+* Three intentional placements
+* Clean, revenue-oriented UX
+
+---
+
+If you want next steps, the *right* follow-ons are:
+
+* Track **copy vs share usage**
+* Add **contextual nudges** (“Most pros share from messages”)
+* Trigger **Customer.io** activation flows
+
+But this prompt is **ship-ready**.
