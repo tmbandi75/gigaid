@@ -3232,6 +3232,14 @@ export async function registerRoutes(
           await storage.incrementCapabilityUsage(userId, 'sms.two_way');
         }
         
+        // Track first GigAid message for tooltip (one-time)
+        const isFirstSend = !user?.firstGigaidMessageSentAt;
+        if (isFirstSend) {
+          await storage.updateUser(userId, { 
+            firstGigaidMessageSentAt: new Date().toISOString() 
+          });
+        }
+        
         // Log the outgoing message to the database
         await storage.createSmsMessage({
           userId,
@@ -3242,7 +3250,7 @@ export async function registerRoutes(
           relatedJobId: relatedJobId || null,
           relatedLeadId: relatedLeadId || null,
         });
-        res.json({ success: true, message: "SMS sent successfully" });
+        res.json({ success: true, message: "SMS sent successfully", isFirstSend });
       } else {
         res.status(500).json({ error: "Failed to send SMS" });
       }
@@ -3453,6 +3461,7 @@ export async function registerRoutes(
         outboundRemaining,
         inboxEnabled: isProPlusOrHigher && user?.inAppInboxEnabled,
         plan: userPlan,
+        isFirstSend: !user?.firstGigaidMessageSentAt,
       });
     } catch (error) {
       console.error("Message usage fetch error:", error);

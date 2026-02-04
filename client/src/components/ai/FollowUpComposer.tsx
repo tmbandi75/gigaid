@@ -1,15 +1,25 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { MessageSquare, Loader2, Sparkles, Copy, Send, Check, Phone, User } from "lucide-react";
+import { MessageSquare, Loader2, Sparkles, Copy, Send, Check, Phone, User, Info } from "lucide-react";
 import type { Job, Lead } from "@shared/schema";
+
+interface MessageUsage {
+  outboundSent: number;
+  outboundLimit: number | null;
+  outboundRemaining: number | null;
+  inboxEnabled: boolean;
+  plan: string;
+  isFirstSend?: boolean;
+}
 
 interface FollowUpMessage {
   message: string;
@@ -27,12 +37,14 @@ interface ClientOption {
 
 export function FollowUpComposer() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [message, setMessage] = useState("");
   const [tone, setTone] = useState<"friendly" | "professional" | "casual">("friendly");
   const [context, setContext] = useState<"job_completed" | "quote_sent" | "new_lead" | "no_response">("job_completed");
   const [copied, setCopied] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [showFirstSendTooltip, setShowFirstSendTooltip] = useState(false);
 
   const { data: jobs = [] } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
@@ -40,6 +52,10 @@ export function FollowUpComposer() {
 
   const { data: leads = [] } = useQuery<Lead[]>({
     queryKey: ["/api/leads"],
+  });
+
+  const { data: usage } = useQuery<MessageUsage>({
+    queryKey: ["/api/messages/usage"],
   });
 
   const clientOptions: ClientOption[] = [
@@ -111,18 +127,36 @@ export function FollowUpComposer() {
     
     setIsSending(true);
     try {
-      await apiRequest("POST", "/api/sms/send", {
+      const response = await apiRequest("POST", "/api/sms/send", {
         to: selectedClient.phone,
         message: message,
         clientName: selectedClient.name,
         relatedJobId: selectedClient.type === "job" ? selectedClient.id : null,
         relatedLeadId: selectedClient.type === "lead" ? selectedClient.id : null,
       });
-      toast({ title: "Message sent successfully!" });
+      const data = await response.json();
+      
+      // Show first-send tooltip only once (server tracks this)
+      if (data.isFirstSend) {
+        setShowFirstSendTooltip(true);
+        setTimeout(() => setShowFirstSendTooltip(false), 8000);
+      }
+      
+      toast({ title: "Message sent via GigAid!" });
       setMessage("");
+      queryClient.invalidateQueries({ queryKey: ["/api/messages/usage"] });
       trackRespondTap();
-    } catch (error) {
-      toast({ title: "Failed to send message", variant: "destructive" });
+    } catch (error: any) {
+      const errorMessage = error?.message || "Failed to send message";
+      if (errorMessage.includes("SMS_LIMIT_EXCEEDED")) {
+        toast({ 
+          title: "Message limit reached", 
+          description: "Upgrade to send more messages this month.",
+          variant: "destructive" 
+        });
+      } else {
+        toast({ title: "Failed to send message", variant: "destructive" });
+      }
     } finally {
       setIsSending(false);
     }
@@ -258,11 +292,11 @@ export function FollowUpComposer() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2">
               <Button
                 variant="outline"
                 onClick={handleCopy}
-                className="flex-1"
+                className="w-full"
                 data-testid="button-copy-message"
               >
                 {copied ? (
@@ -270,21 +304,36 @@ export function FollowUpComposer() {
                 ) : (
                   <Copy className="h-4 w-4 mr-2" />
                 )}
-                {copied ? "Copied!" : "Copy"}
+                {copied ? "Copied!" : "Copy & send via phone"}
               </Button>
-              <Button 
-                onClick={handleSend} 
-                className="flex-1" 
-                disabled={isSending || !selectedClient?.phone}
-                data-testid="button-send-followup"
-              >
-                {isSending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4 mr-2" />
-                )}
-                Send SMS
-              </Button>
+              <Tooltip open={showFirstSendTooltip}>
+                <TooltipTrigger asChild>
+                  <Button 
+                    onClick={handleSend} 
+                    className="w-full" 
+                    disabled={isSending || !selectedClient?.phone}
+                    data-testid="button-send-followup"
+                  >
+                    {isSending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4 mr-2" />
+                    )}
+                    Send from GigAid
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs p-3" data-testid="tooltip-first-send">
+                  <div className="flex items-start gap-2">
+                    <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-medium">Replies will go to your phone</p>
+                      <p className="text-muted-foreground mt-1">
+                        Upgrade to Pro+ to manage replies directly in GigAid.
+                      </p>
+                    </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </>
         )}

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -5,6 +6,16 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { MessageCircle, Phone, Inbox, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
@@ -26,6 +37,7 @@ interface Profile {
 export function MessagingSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [showInboxConfirm, setShowInboxConfirm] = useState(false);
 
   const { data: profile, isLoading: profileLoading } = useQuery<Profile>({
     queryKey: ["/api/profile"],
@@ -181,15 +193,19 @@ export function MessagingSettings() {
             <>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-sm">Enable in-app inbox</p>
+                  <p className="font-medium text-sm">Keep replies inside GigAid</p>
                   <p className="text-xs text-muted-foreground">
-                    View and reply to client messages directly within GigAid instead of forwarding to your phone.
+                    Replies will appear in GigAid instead of your phone.
                   </p>
                 </div>
                 <Switch
                   checked={profile?.inAppInboxEnabled || false}
                   onCheckedChange={(checked) => {
-                    updateProfileMutation.mutate({ inAppInboxEnabled: checked });
+                    if (checked) {
+                      setShowInboxConfirm(true);
+                    } else {
+                      updateProfileMutation.mutate({ inAppInboxEnabled: false });
+                    }
                   }}
                   disabled={updateProfileMutation.isPending}
                   data-testid="switch-in-app-inbox"
@@ -210,13 +226,35 @@ export function MessagingSettings() {
           ) : (
             <div className="p-3 bg-muted/50 rounded-lg">
               <p className="text-sm text-muted-foreground">
-                Upgrade to Pro+ to access the in-app inbox and manage all client conversations without leaving GigAid.
+                Upgrade to Pro+ to manage replies in GigAid.
               </p>
             </div>
           )}
         </div>
       </div>
 
+      <AlertDialog open={showInboxConfirm} onOpenChange={setShowInboxConfirm}>
+        <AlertDialogContent data-testid="dialog-inbox-confirm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Enable in-app inbox?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Replies will no longer go to your phone. You must open GigAid to see and respond to client messages.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-inbox-cancel">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                updateProfileMutation.mutate({ inAppInboxEnabled: true });
+                setShowInboxConfirm(false);
+              }}
+              data-testid="button-inbox-confirm"
+            >
+              Enable inbox
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
