@@ -1,0 +1,126 @@
+Login Page Micro-Improvements (GigAid)
+OBJECTIVE
+
+Make small, high-leverage UX improvements to the GigAid login screen to:
+
+Clarify the app’s purpose at first glance
+
+Gently bias users toward Google sign-in
+
+Improve visual hierarchy and polish
+
+Preserve the existing design, layout, and functionality
+
+This is not a redesign.
+
+NON-NEGOTIABLE CONSTRAINTS
+
+❌ Do NOT change overall layout or structure
+❌ Do NOT add testimonials, pricing, or plan info
+❌ Do NOT add marketing copy blocks
+❌ Do NOT change authentication logic
+❌ Do NOT introduce new buttons or flows
+
+✅ Only adjust copy, spacing, and subtle visual emphasis
+✅ Google sign-in remains primary
+✅ Email/password remains available
+
+REQUIRED CHANGES
+1️⃣ Add a Single Value Clarification Line
+
+Location:
+Directly under the headline “Welcome to GigAid™”
+
+Add this one line of text:
+
+Manage leads, bookings, and follow-ups in one place
+
+Styling requirements:
+
+Smaller than headline
+
+Neutral tone (not marketing)
+
+High contrast but lower emphasis than headline
+
+No bolding
+
+One line only
+
+2️⃣ Gently De-Emphasize Email/Password Path
+
+Choose ONE of the following (preferred option included):
+
+✅ Preferred Option (A)
+
+Add helper text below the Email field:
+
+Use this if you didn’t sign up with Google
+
+Styling:
+
+Small helper text
+
+Subtle opacity
+
+Not clickable
+
+Alternative Option (B) — only if helper text doesn’t fit design
+
+Slightly reduce opacity of Email + Password fields (5–10%)
+
+Do NOT affect accessibility or contrast standards
+
+3️⃣ Reduce Visual Weight of the “OR” Divider
+
+Adjust only styling, not structure
+
+Reduce opacity of “OR” text
+
+Reduce thickness or opacity of divider lines
+
+Slightly tighten vertical spacing above and below
+
+The divider should feel informational, not focal.
+
+WHAT MUST NOT CHANGE
+
+Google sign-in button text or placement
+
+Email/password fields and validation
+
+Sign in button behavior
+
+“Forgot password?” and “Sign up” links
+
+Background, gradients, or brand colors
+
+ACCEPTANCE CRITERIA
+
+✅ Page looks visually the same at a glance
+✅ Purpose of GigAid is immediately clearer
+✅ Google sign-in feels like the default path
+✅ Email/password still feels supported
+✅ No new cognitive load introduced
+
+OUTPUT REQUIRED FROM REPLIT
+
+Updated login page component
+
+Minimal copy additions
+
+Subtle style adjustments only
+
+No backend changes
+
+IMPORTANT NOTE TO REPLIT
+
+This is a polish pass, not a redesign.
+
+If a user familiar with the current page opens it, it should feel:
+
+“Oh — this is just a bit clearer.”
+
+Not:
+
+“Something changed.”

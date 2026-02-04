@@ -277,15 +277,15 @@ export default function Login() {
                 <ArrowLeft className="h-6 w-6" />
               </button>
             )}
-            <h1 className="text-3xl font-bold text-white mb-2">
+            <h1 className="text-3xl font-bold text-white mb-1">
               {mode === "forgot" 
                 ? "Reset Password" 
                 : mode === "signup" 
                   ? "Join GigAid™" 
                   : "Welcome to GigAid™"}
             </h1>
-            <p className="text-white text-lg font-medium" data-testid="text-login-slogan">
-              Book jobs faster. Get paid upfront. Stay organized.
+            <p className="text-white/80 text-sm" data-testid="text-login-value-prop">
+              Manage leads, bookings, and follow-ups in one place
             </p>
             {mode === "forgot" && (
               <p className="text-white/70 text-sm mt-2">We'll send you a reset link</p>
@@ -310,25 +310,30 @@ export default function Login() {
               </Button>
 
               {/* OR Divider */}
-              <div className="relative flex items-center py-2">
-                <div className="flex-1 border-t border-white/30" />
-                <span className="px-4 text-white/60 text-sm font-medium">OR</span>
-                <div className="flex-1 border-t border-white/30" />
+              <div className="relative flex items-center py-1">
+                <div className="flex-1 border-t border-white/20" />
+                <span className="px-3 text-white/40 text-xs">OR</span>
+                <div className="flex-1 border-t border-white/20" />
               </div>
             </>
           )}
 
           {/* Email/Password Form */}
           <form onSubmit={handleEmailAuth} className="space-y-4">
-            <Input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isDisabled}
-              className="h-12 bg-white/90 border-0 rounded-full px-5 text-gray-700 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-white/50"
-              data-testid="input-email"
-            />
+            <div>
+              <Input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isDisabled}
+                className="h-12 bg-white/90 border-0 rounded-full px-5 text-gray-700 placeholder:text-gray-400 focus-visible:ring-2 focus-visible:ring-white/50"
+                data-testid="input-email"
+              />
+              {mode === "signin" && (
+                <p className="text-white/50 text-xs mt-1.5 px-2">Use this if you didn't sign up with Google</p>
+              )}
+            </div>
             
             {mode !== "forgot" && (
               <>
