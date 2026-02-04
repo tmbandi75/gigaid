@@ -10175,9 +10175,13 @@ Return ONLY the message text, no JSON or formatting.`
       // Use override amount if user adjusted it, otherwise use prefilled
       const finalAmount = overrideAmount ?? action.prefilledAmount ?? 0;
       
+      // Generate invoice number
+      const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`;
+      
       // Create the invoice from prefilled data with ready action tracking
       const invoice = await storage.createInvoice({
         userId,
+        invoiceNumber,
         clientName: action.prefilledClientName || "Client",
         clientEmail: action.prefilledClientEmail,
         clientPhone: action.prefilledClientPhone,
