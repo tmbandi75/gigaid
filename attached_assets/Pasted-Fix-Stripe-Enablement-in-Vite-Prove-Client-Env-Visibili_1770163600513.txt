@@ -1,0 +1,189 @@
+Fix Stripe Enablement in Vite + Prove Client Env Visibility (FINAL)
+Objective
+
+Resolve the issue where Stripe Checkout never opens because the client bundle does not see VITE_STRIPE_ENABLED.
+
+This prompt will:
+
+Prove exactly what env vars the browser receives
+
+Correct Stripe enablement logic
+
+Fail loudly instead of silently
+
+Eliminate CSP / Replit noise from the equation
+
+Guarantee Stripe can run once enabled
+
+This is the last step. No pricing or subscription logic is touched.
+
+ROOT CAUSE (CONFIRMED)
+
+The browser runtime does not have access to:
+
+import.meta.env.VITE_STRIPE_ENABLED
+
+
+Therefore:
+
+STRIPE_ENABLED === false
+
+
+This is not caused by CSP warnings, Firebase, Stripe setup, or UI logic.
+
+In Vite apps, only env vars prefixed with VITE_ and defined in Replit Secrets are exposed to the client bundle at build time.
+
+NON-NEGOTIABLE CONSTRAINTS
+
+❌ Do NOT debug CSP warnings
+❌ Do NOT modify pricing logic
+❌ Do NOT modify subscription logic
+❌ Do NOT use process.env in client code
+
+✅ Use import.meta.env only
+✅ Prove env visibility explicitly
+✅ Fail loudly if Stripe is disabled
+
+REQUIRED IMPLEMENTATION
+1️⃣ Add a Client Env Probe (MANDATORY)
+
+Create this file:
+
+client/src/debug/envProbe.ts
+
+
+With exactly this content:
+
+export function logClientEnv() {
+  console.log('🧪 CLIENT ENV PROBE', {
+    VITE_STRIPE_ENABLED: import.meta.env.VITE_STRIPE_ENABLED,
+    ENV_KEYS: Object.keys(import.meta.env)
+  })
+}
+
+2️⃣ Call the Probe at App Startup
+
+In App.tsx (or the root authenticated app component), add:
+
+import { logClientEnv } from './debug/envProbe'
+
+logClientEnv()
+
+
+This must run unconditionally on app load.
+
+3️⃣ Normalize Stripe Enablement (Single Source of Truth)
+
+Open:
+
+client/src/lib/stripeCheckout.ts
+
+
+Replace all Stripe enablement logic with:
+
+export const STRIPE_ENABLED =
+  import.meta.env.VITE_STRIPE_ENABLED === 'true'
+
+console.log('[Stripe env check]', {
+  VITE_STRIPE_ENABLED: import.meta.env.VITE_STRIPE_ENABLED,
+  STRIPE_ENABLED
+})
+
+export async function startStripeCheckout(plan: string) {
+  if (!STRIPE_ENABLED) {
+    console.error(
+      '[Stripe] Checkout disabled — VITE_STRIPE_ENABLED is missing or false'
+    )
+
+    alert(
+      'Stripe is disabled in this environment.\n\n' +
+      'Fix: Add VITE_STRIPE_ENABLED=true to Replit Secrets and restart the app.'
+    )
+
+    throw new Error('Stripe disabled by env guard')
+  }
+
+  // Existing checkout logic continues unchanged
+}
+
+
+Silent failure is no longer allowed.
+
+4️⃣ Configure Replit Secrets (CRITICAL)
+
+In Replit → Secrets, add exactly:
+
+Key:   VITE_STRIPE_ENABLED
+Value: true
+
+
+⚠️ Case-sensitive
+⚠️ No quotes
+⚠️ No spaces
+⚠️ Must be Secrets, not Shell
+
+5️⃣ HARD RESTART (MANDATORY)
+
+You MUST do all three:
+
+Stop the Replit app
+
+Start the Replit app
+
+Browser: Ctrl + Shift + R
+
+Vite does not hot-reload env vars.
+
+6️⃣ PASS / FAIL CRITERIA (AUTHORITATIVE)
+
+On page load, browser console must show:
+
+🧪 CLIENT ENV PROBE {
+  VITE_STRIPE_ENABLED: "true",
+  ENV_KEYS: [..., "VITE_STRIPE_ENABLED"]
+}
+
+
+and:
+
+[Stripe env check] { STRIPE_ENABLED: true }
+
+
+If you see:
+
+undefined → env var not loaded
+
+key missing from ENV_KEYS → wrong Replit config
+
+false → typo or casing error
+
+Stripe cannot work until this passes.
+
+7️⃣ Expected Result After Pass
+
+Clicking Upgrade no longer logs “Checkout disabled”
+
+/api/subscription/checkout is called
+
+Stripe either:
+
+opens successfully, or
+
+throws a real Stripe error (missing keys / price)
+
+Either outcome confirms the blocker is gone.
+
+FINAL INSTRUCTION
+
+Do not debug CSP warnings, Firebase logs, or Stripe setup until:
+
+🧪 CLIENT ENV PROBE shows VITE_STRIPE_ENABLED: "true"
+
+
+That is the gate. Nothing else matters until it passes.
+
+Optional Cleanup (after success)
+
+Remove envProbe.ts
+
+Keep the Stripe guard in place permanently

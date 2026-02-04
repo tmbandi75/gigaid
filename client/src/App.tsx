@@ -69,6 +69,9 @@ import OnboardingPage from "@/pages/OnboardingPage";
 import PricingPage from "@/pages/PricingPage";
 import Downloads from "@/pages/Downloads";
 import NotFound from "@/pages/not-found";
+import { logClientEnv } from "./debug/envProbe";
+
+logClientEnv();
 
 function Router() {
   return (
