@@ -152,9 +152,13 @@ export default function BookingRequests() {
       const response = await apiRequest("POST", `/api/bookings/${bookingId}/record-remainder-payment`, { paymentMethod, notes });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/booking-requests"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] }),
+      ]);
       toast({ title: "Payment recorded", description: "The remainder payment has been marked as paid." });
-      queryClient.invalidateQueries({ queryKey: ["/api/booking-requests"] });
       if (selectedBooking) {
         setSelectedBooking({ 
           ...selectedBooking, 
@@ -179,9 +183,9 @@ export default function BookingRequests() {
   const waiveFeeMutation = useMutation({
     mutationFn: (bookingId: number) =>
       apiRequest("POST", `/api/bookings/${bookingId}/waive-reschedule-fee`),
-    onSuccess: () => {
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/booking-requests"] });
       toast({ title: "Reschedule fee waived" });
-      queryClient.invalidateQueries({ queryKey: ["/api/booking-requests"] });
       if (selectedBooking) {
         setSelectedBooking({ ...selectedBooking, waiveRescheduleFee: true });
       }

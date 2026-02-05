@@ -115,9 +115,12 @@ export default function InvoiceForm() {
       };
       return apiRequest("POST", "/api/invoices", payload);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/invoices"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+      ]);
       toast({ title: "Invoice created successfully" });
       navigate("/invoices");
     },
@@ -137,9 +140,12 @@ export default function InvoiceForm() {
       };
       return apiRequest("PATCH", `/api/invoices/${id}`, payload);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices", id] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/invoices"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/invoices", id] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+      ]);
       toast({ title: "Invoice updated successfully" });
       navigate(`/invoices/${id}/view`);
     },
@@ -152,9 +158,12 @@ export default function InvoiceForm() {
     mutationFn: async ({ sendEmail, sendSms }: { sendEmail: boolean; sendSms: boolean }) => {
       return apiRequest("POST", `/api/invoices/${id}/send`, { sendEmail, sendSms });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices", id] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/invoices"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/invoices", id] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+      ]);
       setShowSendDialog(false);
       const channels = [];
       if (sendViaEmail && hasEmail) channels.push("email");
@@ -200,10 +209,15 @@ export default function InvoiceForm() {
     mutationFn: async (paymentMethod: string) => {
       return apiRequest("POST", `/api/invoices/${id}/mark-paid`, { paymentMethod });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
+    onSuccess: async () => {
+      // Force refetch to ensure UI reflects new state (staleTime: Infinity requires explicit refetch)
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["/api/invoices"] }),
+        queryClient.refetchQueries({ queryKey: ["/api/invoices", id] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] }),
+      ]);
       toast({ title: "Invoice marked as paid" });
       navigate("/invoices");
     },

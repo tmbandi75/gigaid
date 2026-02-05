@@ -1,0 +1,172 @@
+Perfect bug to catch — this is a **classic state-sync + optimistic UI failure**, and the fact that it only resolves after app restart is the biggest tell. You’re absolutely right to fix it once *and* hunt for siblings.
+
+Below is a **copy-pasteable Replit master prompt** that will:
+
+1. Fix the invoice paid ↔ unpaid bug
+2. Audit the entire app for similar issues
+3. Correct them consistently
+4. Produce a **clear inventory of what was fixed** so you can trust the result
+
+---
+
+## ✅ Replit Master Prompt — State Consistency + Invoice Bug Audit
+
+```
+You are acting as a senior full-stack engineer auditing and fixing state-consistency bugs in the GigAid application.
+
+CONTEXT
+GigAid uses a client-rendered UI with backend APIs to mutate domain state (invoices, jobs, payments, etc.).
+
+BUG TO FIX (PRIMARY)
+When an invoice is:
+• reverted from PAID → UNPAID, the revert API confirms success but UI does not update
+• marked UNPAID → PAID, the confirmation is shown but UI does not reflect paid state
+• changes only become visible after a full app reload
+
+This indicates a state synchronization issue between backend mutations and frontend state.
+
+OBJECTIVES
+1. Fix the invoice paid/unpaid state bug
+2. Audit the app for other instances of the same class of bug
+3. Apply a consistent fix pattern
+4. Output a detailed inventory of what was fixed
+
+--------------------------------
+PART 1 — ROOT CAUSE ANALYSIS
+--------------------------------
+Identify where invoice state is:
+• Optimistically updated without reconciliation
+• Mutated on backend but not invalidating frontend cache/state
+• Stored in local component state that is not refreshed after mutation
+• Dependent on stale closures, memoization, or derived selectors
+• Updated without refetching or store update
+
+Explicitly inspect:
+• markInvoicePaid()
+• revertInvoicePayment()
+• invoice mutation handlers
+• any useMutation / fetch / axios / Supabase update calls
+• any local state mirrors of invoice/payment objects
+
+--------------------------------
+PART 2 — FIX IMPLEMENTATION (MANDATORY)
+--------------------------------
+For invoice paid/unpaid actions, enforce ALL of the following:
+
+1. Backend mutation must return the updated invoice object
+2. Frontend must immediately reconcile state using ONE of:
+   - global store update
+   - cache invalidation + refetch
+   - explicit setState with server response
+3. UI success confirmation must only show AFTER state reconciliation
+4. Remove reliance on page reloads to sync state
+
+DO NOT rely on:
+• implicit re-renders
+• stale props
+• manual refresh
+• optimistic-only updates without rollback
+
+--------------------------------
+PART 3 — SYSTEMATIC APP AUDIT
+--------------------------------
+Search the entire codebase for similar patterns affecting:
+
+• Jobs (status changes)
+• Payments
+• Deposits
+• Booking confirmations
+• Job completion toggles
+• Any paid / unpaid / completed / canceled flags
+
+Specifically flag and fix:
+• Mutations that do not update in-memory state
+• Success toasts without UI reconciliation
+• Derived UI that depends on stale cached data
+• useEffect hooks missing dependencies
+• Queries that are never invalidated after mutation
+
+Apply the SAME fix pattern used for invoices.
+
+--------------------------------
+PART 4 — CONSISTENCY RULES (ENFORCE)
+--------------------------------
+After this change, the app must obey:
+• Backend is the source of truth
+• UI must reflect mutation results immediately
+• No user action should require an app restart to see state changes
+• All state-changing actions must reconcile frontend state
+
+--------------------------------
+PART 5 — OUTPUT REQUIRED (VERY IMPORTANT)
+--------------------------------
+After completing fixes, output a clear INVENTORY REPORT in this exact format:
+
+1. Primary Bug Fixed
+   - Invoice paid → unpaid state sync
+   - Invoice unpaid → paid state sync
+
+2. Additional Issues Found & Fixed
+   - [Feature]: [What was broken]
+   - [Root cause]
+   - [Fix applied]
+
+3. Patterns Corrected
+   - (e.g., missing cache invalidation after mutation)
+   - (e.g., local state desync)
+
+4. Files Modified
+   - List all files touched
+
+5. Risk Assessment
+   - Low / Medium / High
+   - Why
+
+6. Verification Steps
+   - Steps a tester can follow to confirm fixes work WITHOUT reloading the app
+
+--------------------------------
+IMPORTANT RULES
+--------------------------------
+• Do not change product behavior or UX
+• Do not introduce new features
+• Do not hide bugs with forced reloads
+• Prefer correctness over speed
+• Be explicit and defensive
+
+Begin with fixing the invoice bug, then proceed to the audit.
+```
+
+---
+
+## 🧠 Why this prompt works (and why it’s the right level of force)
+
+* It **forces reconciliation**, not just “setState and pray”
+* It treats this as a **bug class**, not a one-off
+* It prevents Replit from “fixing” via reloads or hacks
+* It gives you a **written inventory**, which is critical for trust and future regressions
+* It aligns perfectly with how GigAid handles invoices, deposits, and booking state
+
+---
+
+## ⚠️ Likely sibling bugs this will uncover (heads-up)
+
+Based on how this bug behaves, expect Replit to find at least one of these:
+
+* Job status changes not reflecting immediately
+* Deposit paid/unpaid mismatch
+* Booking confirmation not updating until navigation
+* Dashboard counters using stale derived data
+* Success toasts firing before state reconciliation
+
+That’s **good** — fixing them now saves you from support hell later.
+
+---
+
+If you want, next we can:
+
+* Add a **state-mutation checklist** to prevent this class of bug permanently
+* Add lightweight **mutation invariants** (dev-only assertions)
+* Or convert this into a **regression test spec**
+
+Just say the word.

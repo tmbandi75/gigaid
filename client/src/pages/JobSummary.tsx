@@ -182,8 +182,8 @@ export default function JobSummary() {
         depositOverridePercent: newPercent 
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/client"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/client"] });
       toast({ title: "Client deposit setting saved" });
     },
     onError: () => {
@@ -201,9 +201,12 @@ export default function JobSummary() {
     mutationFn: async () => {
       return apiRequest("POST", `/api/jobs/${id}/deposit/send-request`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs", id, "deposit-status"] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", id, "deposit-status"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+      ]);
       toast({ title: "Deposit request sent!", description: "Your client will receive an SMS with payment link." });
     },
     onError: (error: Error) => {
@@ -215,9 +218,11 @@ export default function JobSummary() {
     mutationFn: async () => {
       return apiRequest("POST", `/api/jobs/${id}/on-the-way`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }),
+      ]);
       toast({ title: "Notification sent!", description: "Your client knows you're on the way." });
     },
     onError: () => {
@@ -229,8 +234,8 @@ export default function JobSummary() {
     mutationFn: async () => {
       return apiRequest("POST", `/api/jobs/${id}/request-review`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] });
       toast({ title: "Review request sent!" });
     },
     onError: () => {
@@ -242,9 +247,13 @@ export default function JobSummary() {
     mutationFn: async () => {
       return apiRequest("PATCH", `/api/jobs/${id}`, { status: "in_progress" });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] }),
+      ]);
       toast({ title: "Job started!", description: "Good luck with this one!" });
     },
     onError: () => {
@@ -256,9 +265,13 @@ export default function JobSummary() {
     mutationFn: async () => {
       return apiRequest("PATCH", `/api/jobs/${id}`, { status: "completed" });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] }),
+      ]);
       toast({ title: "Job completed!", description: "Great work! Don't forget to get paid." });
     },
     onError: (error: Error) => {
@@ -296,8 +309,8 @@ export default function JobSummary() {
         );
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] });
       toast({ title: "Location updated!", description: "Your current location has been saved." });
     },
     onError: () => {

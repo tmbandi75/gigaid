@@ -132,8 +132,13 @@ function JobCard({ job, nudges, invoices, onNudgeClick }: JobCardProps) {
     mutationFn: async () => {
       return apiRequest("PATCH", `/api/jobs/${job.id}`, { status: "in_progress" });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", job.id] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] }),
+      ]);
       toast({ title: "Job started!", description: "Good luck!" });
     },
     onError: () => {
@@ -145,8 +150,13 @@ function JobCard({ job, nudges, invoices, onNudgeClick }: JobCardProps) {
     mutationFn: async () => {
       return apiRequest("PATCH", `/api/jobs/${job.id}`, { status: "cancelled" });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs", job.id] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] }),
+      ]);
       toast({ title: "Job cancelled" });
       setConfirmAction(null);
     },
@@ -160,8 +170,11 @@ function JobCard({ job, nudges, invoices, onNudgeClick }: JobCardProps) {
     mutationFn: async () => {
       return apiRequest("POST", `/api/jobs/${job.id}/archive`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+      ]);
       toast({ title: "Job archived" });
       setConfirmAction(null);
     },
@@ -175,8 +188,11 @@ function JobCard({ job, nudges, invoices, onNudgeClick }: JobCardProps) {
     mutationFn: async () => {
       return apiRequest("DELETE", `/api/jobs/${job.id}`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+      ]);
       toast({ title: "Job deleted" });
       setConfirmAction(null);
     },

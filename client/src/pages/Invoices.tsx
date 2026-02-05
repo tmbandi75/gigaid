@@ -119,8 +119,11 @@ function InvoiceCard({ invoice, nudges, payments, onNudgeClick }: InvoiceCardPro
     mutationFn: async () => {
       return apiRequest("POST", `/api/invoices/${invoice.id}/archive`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/invoices"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+      ]);
       toast({ title: "Invoice archived" });
       setConfirmAction(null);
     },
@@ -134,8 +137,11 @@ function InvoiceCard({ invoice, nudges, payments, onNudgeClick }: InvoiceCardPro
     mutationFn: async () => {
       return apiRequest("DELETE", `/api/invoices/${invoice.id}`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/invoices"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+      ]);
       toast({ title: "Invoice deleted" });
       setConfirmAction(null);
     },

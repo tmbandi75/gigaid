@@ -79,8 +79,11 @@ function InvoiceTableRow({ invoice }: { invoice: Invoice }) {
     mutationFn: async () => {
       return apiRequest("POST", `/api/invoices/${invoice.id}/send`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/invoices"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+      ]);
       toast({ title: "Invoice sent!", description: "Your client has been notified." });
     },
     onError: () => {
@@ -92,8 +95,14 @@ function InvoiceTableRow({ invoice }: { invoice: Invoice }) {
     mutationFn: async () => {
       return apiRequest("PATCH", `/api/invoices/${invoice.id}`, { status: "paid" });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+    onSuccess: async () => {
+      // Force refetch to ensure UI reflects new state (staleTime: Infinity requires explicit refetch)
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["/api/invoices"] }),
+        queryClient.refetchQueries({ queryKey: ["/api/invoices", invoice.id] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] }),
+      ]);
       toast({ title: "Invoice marked as paid" });
     },
   });

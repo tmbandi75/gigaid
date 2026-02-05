@@ -114,10 +114,15 @@ export function PaymentConfirmation({
       const response = await apiRequest("POST", `/api/payments/${paymentId}/confirm`, { notes });
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices", invoice.id, "payments"] });
+    onSuccess: async () => {
+      // Force refetch to ensure UI reflects new state (staleTime: Infinity requires explicit refetch)
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["/api/invoices"] }),
+        queryClient.refetchQueries({ queryKey: ["/api/payments"] }),
+        queryClient.refetchQueries({ queryKey: ["/api/invoices", invoice.id, "payments"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] }),
+      ]);
       toast({
         title: "Payment confirmed",
         description: "The payment has been marked as confirmed.",
@@ -141,9 +146,14 @@ export function PaymentConfirmation({
       const response = await apiRequest("POST", `/api/payments/${paymentId}/mark-paid`, { notes });
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
+    onSuccess: async () => {
+      // Force refetch to ensure UI reflects new state (staleTime: Infinity requires explicit refetch)
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["/api/invoices"] }),
+        queryClient.refetchQueries({ queryKey: ["/api/payments"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] }),
+      ]);
       toast({
         title: "Payment marked as paid",
         description: "The payment status has been updated.",

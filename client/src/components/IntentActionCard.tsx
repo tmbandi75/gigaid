@@ -214,8 +214,11 @@ export function IntentActionCard({ entityType, entityId }: IntentActionCardProps
     mutationFn: async (actionId: string) => {
       return apiRequest("POST", `/api/ready-actions/${actionId}/dismiss`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/ready-actions"] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/ready-actions"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+      ]);
     },
   });
   
@@ -391,8 +394,11 @@ function IntentActionCardStandalone({ action }: { action: ReadyAction }) {
     mutationFn: async (actionId: string) => {
       return apiRequest("POST", `/api/ready-actions/${actionId}/dismiss`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/ready-actions"] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/ready-actions"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+      ]);
     },
   });
   

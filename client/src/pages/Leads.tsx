@@ -136,8 +136,11 @@ function LeadCard({ lead, nudges, onGenerateFollowUp, onSendText, onNudgeClick }
     mutationFn: async () => {
       return apiRequest("POST", `/api/leads/${lead.id}/archive`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/leads"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+      ]);
       toast({ title: "Request archived" });
       setConfirmAction(null);
     },
@@ -151,8 +154,11 @@ function LeadCard({ lead, nudges, onGenerateFollowUp, onSendText, onNudgeClick }
     mutationFn: async () => {
       return apiRequest("DELETE", `/api/leads/${lead.id}`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/leads"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+      ]);
       toast({ title: "Request deleted" });
       setConfirmAction(null);
     },

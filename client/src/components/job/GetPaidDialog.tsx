@@ -55,10 +55,15 @@ export function GetPaidDialog({ open, onClose, jobId, jobTitle, amount, clientNa
         paidAt: new Date().toISOString(),
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
+    onSuccess: async () => {
+      // Force refetch to ensure UI reflects new state (staleTime: Infinity requires explicit refetch)
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["/api/jobs"] }),
+        queryClient.refetchQueries({ queryKey: ["/api/jobs", jobId] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] }),
+      ]);
       setStep("success");
     },
     onError: () => {

@@ -216,11 +216,15 @@ export default function InvoiceView() {
       return apiRequest("POST", `/api/invoices/${id}/mark-paid`, { paymentMethod });
     },
     onSuccess: async () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices", id] });
-      queryClient.invalidateQueries({ queryKey: [`/api/invoices/${id}/payments`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] });
+      // Force refetch to ensure UI reflects new state (staleTime: Infinity requires explicit refetch)
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["/api/invoices"] }),
+        queryClient.refetchQueries({ queryKey: ["/api/invoices", id] }),
+        queryClient.refetchQueries({ queryKey: [`/api/invoices/${id}/payments`] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] }),
+      ]);
       
       await celebrate({
         type: "payment_received",
@@ -255,12 +259,16 @@ export default function InvoiceView() {
     mutationFn: async () => {
       return apiRequest("POST", `/api/invoices/${id}/revert-paid`, {});
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices", id] });
-      queryClient.invalidateQueries({ queryKey: [`/api/invoices/${id}/payments`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] });
+    onSuccess: async () => {
+      // Force refetch to ensure UI reflects new state (staleTime: Infinity requires explicit refetch)
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["/api/invoices"] }),
+        queryClient.refetchQueries({ queryKey: ["/api/invoices", id] }),
+        queryClient.refetchQueries({ queryKey: [`/api/invoices/${id}/payments`] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] }),
+      ]);
       toast({ title: "Payment reverted - invoice is now pending" });
       setShowRevertDialog(false);
     },
