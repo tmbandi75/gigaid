@@ -189,28 +189,30 @@ export default function TodaysGamePlanPage() {
 
   const { data, isLoading } = useQuery<GamePlanData>({
     queryKey: ["/api/dashboard/game-plan"],
-    refetchOnMount: "always",
+    staleTime: 30000, // Cache for 30 seconds - fast page loads, still reasonably fresh
     refetchOnWindowFocus: true,
-    staleTime: 0,
   });
 
   const { data: nextActions = [] } = useQuery<NextAction[]>({
     queryKey: ["/api/next-actions"],
+    staleTime: 60000, // Cache for 1 minute
     refetchInterval: 60000,
-    refetchOnMount: "always",
     refetchOnWindowFocus: true,
   });
 
   const { data: profile } = useQuery<{ services: string[] | null; servicesCount: number }>({
     queryKey: ["/api/profile"],
+    staleTime: 300000, // Cache for 5 minutes - rarely changes
   });
 
   const { data: dashboardSummary } = useQuery<{ totalJobs: number; completedJobs: number }>({
     queryKey: ["/api/dashboard/summary"],
+    staleTime: 30000, // Cache for 30 seconds
   });
 
   const { data: invoices } = useQuery<{ id: string }[]>({
     queryKey: ["/api/invoices"],
+    staleTime: 30000, // Cache for 30 seconds
   });
 
   const actMutation = useMutation({
