@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { HelpCircle, X, Loader2, Send, Sparkles } from "lucide-react";
 
 interface FAQAssistantProps {
@@ -22,15 +22,20 @@ export function FAQAssistant({ slug, providerName }: FAQAssistantProps) {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<string | null>(null);
 
-  const askMutation = useMutation({
-    mutationFn: async (q: string) => {
-      const res = await apiRequest("POST", "/api/public/ai/faq", { question: q, slug });
-      return res.json() as Promise<{ answer: string }>;
+  const askMutation = useApiMutation(
+    async (q: string) => {
+      return apiFetch<{ answer: string }>("/api/public/ai/faq", {
+        method: "POST",
+        body: JSON.stringify({ question: q, slug }),
+      });
     },
-    onSuccess: (data) => {
-      setAnswer(data.answer);
-    },
-  });
+    [],
+    {
+      onSuccess: (data) => {
+        setAnswer(data.answer);
+      },
+    }
+  );
 
   const handleAsk = (q: string) => {
     setQuestion(q);

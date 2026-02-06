@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,9 @@ import {
   Plus,
   Send,
 } from "lucide-react";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { 
@@ -159,40 +161,43 @@ export default function NotifyClientsPage() {
     enabled: step === "compose" || step === "review",
   });
 
-  const validateMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/notification-campaigns/validate", data);
-      return response.json();
+  const validateMutation = useApiMutation(
+    async (data: any) => {
+      return apiFetch("/api/notification-campaigns/validate", { method: "POST", body: JSON.stringify(data) });
     },
-    onSuccess: (result) => {
-      setValidationResult(result);
-      if (result.suggestedMessage && !messageContent) {
-        setMessageContent(result.suggestedMessage);
-      }
-    },
-  });
+    [],
+    {
+      onSuccess: (result: any) => {
+        setValidationResult(result);
+        if (result.suggestedMessage && !messageContent) {
+          setMessageContent(result.suggestedMessage);
+        }
+      },
+    }
+  );
 
-  const sendMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await apiRequest("POST", "/api/notification-campaigns", data);
-      return response.json();
+  const sendMutation = useApiMutation(
+    async (data: any) => {
+      return apiFetch("/api/notification-campaigns", { method: "POST", body: JSON.stringify(data) });
     },
-    onSuccess: (result) => {
-      toast({
-        title: "Notifications Sent",
-        description: `Successfully notified ${result.sent} clients.`,
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/notification-campaigns"] });
-      setLocation("/dashboard");
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Failed to Send",
-        description: error.message || "Could not send notifications. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+    [QUERY_KEYS.campaigns()],
+    {
+      onSuccess: (result: any) => {
+        toast({
+          title: "Notifications Sent",
+          description: `Successfully notified ${result.sent} clients.`,
+        });
+        setLocation("/dashboard");
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Failed to Send",
+          description: error.message || "Could not send notifications. Please try again.",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
   const handleServiceSelect = (serviceId: string, category: ServiceCategory) => {
     setSelectedServiceId(serviceId);

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRoute } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -36,8 +37,8 @@ export default function QuickBookConfirm() {
     enabled: !!params?.token,
   });
 
-  const confirmMutation = useMutation({
-    mutationFn: async () => {
+  const confirmMutation = useApiMutation(
+    async () => {
       const res = await fetch(`/api/public/quickbook/${params?.token}/confirm`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -48,17 +49,20 @@ export default function QuickBookConfirm() {
       }
       return res.json();
     },
-    onSuccess: () => {
-      setConfirmed(true);
-    },
-    onError: (err: Error) => {
-      toast({
-        title: "Error",
-        description: err.message,
-        variant: "destructive",
-      });
-    },
-  });
+    [],
+    {
+      onSuccess: () => {
+        setConfirmed(true);
+      },
+      onError: (err: Error) => {
+        toast({
+          title: "Error",
+          description: err.message,
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
   const formatPrice = (cents?: number) => {
     if (!cents) return "N/A";

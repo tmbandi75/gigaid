@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +17,8 @@ import {
   RotateCcw,
   ExternalLink,
 } from "lucide-react";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -126,50 +127,47 @@ export default function AdminStripeMonitoring() {
     queryKey: ["/api/admin/stripe/disputes"],
   });
 
-  const retryWebhookMutation = useMutation({
-    mutationFn: async (eventId: string) => {
-      return apiRequest("POST", `/api/admin/stripe/webhooks/${eventId}/retry`);
-    },
-    onSuccess: () => {
-      toast({ title: "Webhook retry initiated" });
-      refetchWebhooks();
-      refetchStats();
-    },
-    onError: (error: any) => {
-      toast({ title: "Retry failed", description: error.message, variant: "destructive" });
-    },
-  });
+  const retryWebhookMutation = useApiMutation(
+    async (eventId: string) => apiFetch(`/api/admin/stripe/webhooks/${eventId}/retry`, { method: "POST" }),
+    [["/api/admin/stripe/webhooks"], ["/api/admin/stripe/stats"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Webhook retry initiated" });
+      },
+      onError: (error: any) => {
+        toast({ title: "Retry failed", description: error.message, variant: "destructive" });
+      },
+    }
+  );
 
-  const reconcileMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/admin/stripe/reconcile");
-    },
-    onSuccess: (data: any) => {
-      toast({ 
-        title: "Reconciliation complete", 
-        description: `Checked: ${data.result?.checked || 0}, Fixed: ${data.result?.fixed || 0}` 
-      });
-      refetchPayments();
-      refetchStats();
-    },
-    onError: (error: any) => {
-      toast({ title: "Reconciliation failed", description: error.message, variant: "destructive" });
-    },
-  });
+  const reconcileMutation = useApiMutation(
+    async () => apiFetch("/api/admin/stripe/reconcile", { method: "POST" }),
+    [["/api/admin/stripe/payments"], ["/api/admin/stripe/stats"]],
+    {
+      onSuccess: (data: any) => {
+        toast({ 
+          title: "Reconciliation complete", 
+          description: `Checked: ${data.result?.checked || 0}, Fixed: ${data.result?.fixed || 0}` 
+        });
+      },
+      onError: (error: any) => {
+        toast({ title: "Reconciliation failed", description: error.message, variant: "destructive" });
+      },
+    }
+  );
 
-  const closeDisputeMutation = useMutation({
-    mutationFn: async (disputeId: string) => {
-      return apiRequest("POST", `/api/admin/stripe/disputes/${disputeId}/close`);
-    },
-    onSuccess: () => {
-      toast({ title: "Dispute closed (accepted loss)" });
-      refetchDisputes();
-      refetchStats();
-    },
-    onError: (error: any) => {
-      toast({ title: "Failed to close dispute", description: error.message, variant: "destructive" });
-    },
-  });
+  const closeDisputeMutation = useApiMutation(
+    async (disputeId: string) => apiFetch(`/api/admin/stripe/disputes/${disputeId}/close`, { method: "POST" }),
+    [["/api/admin/stripe/disputes"], ["/api/admin/stripe/stats"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Dispute closed (accepted loss)" });
+      },
+      onError: (error: any) => {
+        toast({ title: "Failed to close dispute", description: error.message, variant: "destructive" });
+      },
+    }
+  );
 
   const refreshAll = () => {
     refetchStats();

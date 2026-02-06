@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { LifeBuoy, CheckCircle, Loader2, AlertCircle } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 
 const supportTicketSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -36,8 +36,8 @@ export function SupportTicketForm({ context, pageUrl }: SupportTicketFormProps) 
     },
   });
 
-  const createTicket = useMutation({
-    mutationFn: async (data: SupportTicketFormData) => {
+  const createTicket = useApiMutation(
+    async (data: SupportTicketFormData) => {
       const fullDescription = [
         data.description,
         "",
@@ -46,18 +46,24 @@ export function SupportTicketForm({ context, pageUrl }: SupportTicketFormProps) 
         context ? `Context: ${context}` : "",
       ].filter(Boolean).join("\n");
 
-      return apiRequest("POST", "/api/support/tickets/public", {
-        subject: `Support Request: ${context || "Page Issue"}`,
-        description: fullDescription,
-        requesterEmail: data.email,
-        requesterName: data.name,
-        priority: "normal",
+      return apiFetch("/api/support/tickets/public", {
+        method: "POST",
+        body: JSON.stringify({
+          subject: `Support Request: ${context || "Page Issue"}`,
+          description: fullDescription,
+          requesterEmail: data.email,
+          requesterName: data.name,
+          priority: "normal",
+        }),
       });
     },
-    onSuccess: () => {
-      setSubmitted(true);
-    },
-  });
+    [],
+    {
+      onSuccess: () => {
+        setSubmitted(true);
+      },
+    }
+  );
 
   const onSubmit = (data: SupportTicketFormData) => {
     createTicket.mutate(data);

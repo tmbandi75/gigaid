@@ -1,7 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { Sparkles, X, Zap } from "lucide-react";
 
 interface NextAction {
@@ -28,8 +29,6 @@ interface NextActionBannerProps {
 }
 
 export function NextActionBanner({ entityType, entityId, onActionClick }: NextActionBannerProps) {
-  const queryClient = useQueryClient();
-
   const { data: action } = useQuery<NextAction | null>({
     queryKey: ["/api/next-actions/entity", entityType, entityId],
     queryFn: async () => {
@@ -42,21 +41,15 @@ export function NextActionBanner({ entityType, entityId, onActionClick }: NextAc
     refetchInterval: 60000,
   });
 
-  const actMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("POST", `/api/next-actions/${id}/act`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/next-actions/entity", entityType, entityId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] });
-    },
-  });
+  const actMutation = useApiMutation(
+    (id: string) => apiFetch(`/api/next-actions/${id}/act`, { method: "POST" }),
+    [["/api/next-actions/entity", entityType, entityId], ["/api/next-actions"]],
+  );
 
-  const dismissMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("POST", `/api/next-actions/${id}/dismiss`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/next-actions/entity", entityType, entityId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] });
-    },
-  });
+  const dismissMutation = useApiMutation(
+    (id: string) => apiFetch(`/api/next-actions/${id}/dismiss`, { method: "POST" }),
+    [["/api/next-actions/entity", entityType, entityId], ["/api/next-actions"]],
+  );
 
   if (!action) {
     return null;

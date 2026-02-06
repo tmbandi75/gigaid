@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +17,9 @@ import {
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { FileText, CreditCard, Ban, ChevronRight, Loader2 } from "lucide-react";
 import type { Job, JobResolutionType, WaiverReason, JobPaymentMethod } from "@shared/schema";
 
@@ -58,33 +59,31 @@ export function JobResolutionModal({
   const [paymentMethod, setPaymentMethod] = useState<JobPaymentMethod | "">("");
   const [waiverReason, setWaiverReason] = useState<WaiverReason | "">("");
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  const createResolutionMutation = useMutation({
-    mutationFn: async (data: {
+  const createResolutionMutation = useApiMutation(
+    (data: {
       resolutionType: JobResolutionType;
       paymentMethod?: string;
       waiverReason?: string;
-    }) => {
-      return apiRequest("POST", `/api/jobs/${job.id}/resolution`, data);
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs", job.id] });
-      toast({
-        title: "Job Completed",
-        description: "Payment resolution recorded successfully.",
-      });
-      onResolved(variables.resolutionType);
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to record resolution",
-        variant: "destructive",
-      });
-    },
-  });
+    }) => apiFetch(`/api/jobs/${job.id}/resolution`, { method: "POST", body: JSON.stringify(data) }),
+    [QUERY_KEYS.jobs(), QUERY_KEYS.job(job.id)],
+    {
+      onSuccess: (_: unknown, variables: { resolutionType: JobResolutionType }) => {
+        toast({
+          title: "Job Completed",
+          description: "Payment resolution recorded successfully.",
+        });
+        onResolved(variables.resolutionType);
+      },
+      onError: (error: Error) => {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to record resolution",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
   const handleSelectPath = (path: ResolutionPath) => {
     setSelectedPath(path);

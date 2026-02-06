@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -151,26 +152,30 @@ export function PaymentMethodsSettings({ onStripeToggle }: PaymentMethodsSetting
     }
   }, [savedMethods]);
 
-  const bulkUpdateMutation = useMutation({
-    mutationFn: async (methods: { type: PaymentMethodType; label: string | null; instructions: string | null; isEnabled: boolean }[]) => {
-      const response = await apiRequest("POST", "/api/payment-methods/bulk-update", { methods });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/payment-methods"] });
-      toast({
-        title: "Settings saved",
-        description: "Your payment methods have been updated.",
+  const bulkUpdateMutation = useApiMutation(
+    async (methods: { type: PaymentMethodType; label: string | null; instructions: string | null; isEnabled: boolean }[]) => {
+      return apiFetch("/api/payment-methods/bulk-update", {
+        method: "POST",
+        body: JSON.stringify({ methods }),
       });
     },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to save payment settings.",
-        variant: "destructive",
-      });
-    },
-  });
+    [["/api/payment-methods"]],
+    {
+      onSuccess: () => {
+        toast({
+          title: "Settings saved",
+          description: "Your payment methods have been updated.",
+        });
+      },
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Failed to save payment settings.",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
   const handleSave = () => {
     const methods = PAYMENT_METHODS.map((m) => ({

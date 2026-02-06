@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { Sparkles, Loader2, Check, Mic, MicOff, Edit } from "lucide-react";
 
 interface JobDraft {
@@ -32,19 +32,24 @@ export function TextToPlanInput({ onJobCreated, onSave }: TextToPlanInputProps) 
   const [isEditing, setIsEditing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
 
-  const parseMutation = useMutation({
-    mutationFn: async (message: string) => {
-      const response = await apiRequest("POST", "/api/ai/text-to-plan", { message });
-      return response.json() as Promise<JobDraft>;
+  const parseMutation = useApiMutation(
+    async (message: string) => {
+      return apiFetch<JobDraft>("/api/ai/text-to-plan", {
+        method: "POST",
+        body: JSON.stringify({ message }),
+      });
     },
-    onSuccess: (data) => {
-      setJobDraft(data);
-      toast({ title: "Job details extracted!" });
-    },
-    onError: () => {
-      toast({ title: "Failed to parse job details", variant: "destructive" });
-    },
-  });
+    [],
+    {
+      onSuccess: (data) => {
+        setJobDraft(data);
+        toast({ title: "Job details extracted!" });
+      },
+      onError: () => {
+        toast({ title: "Failed to parse job details", variant: "destructive" });
+      },
+    }
+  );
 
   const handleParse = () => {
     if (!input.trim()) {

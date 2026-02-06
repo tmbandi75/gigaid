@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +17,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { MessageCircle, Phone, Inbox, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +37,6 @@ interface Profile {
 
 export function MessagingSettings() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [showInboxConfirm, setShowInboxConfirm] = useState(false);
 
   const { data: profile, isLoading: profileLoading } = useQuery<Profile>({
@@ -47,19 +47,18 @@ export function MessagingSettings() {
     queryKey: ["/api/messages/usage"],
   });
 
-  const updateProfileMutation = useMutation({
-    mutationFn: async (updates: Partial<Profile>) => {
-      return apiRequest("PATCH", "/api/profile", updates);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/messages/usage"] });
-      toast({ title: "Settings saved" });
-    },
-    onError: () => {
-      toast({ title: "Failed to save settings", variant: "destructive" });
-    },
-  });
+  const updateProfileMutation = useApiMutation(
+    (updates: Partial<Profile>) => apiFetch("/api/profile", { method: "PATCH", body: JSON.stringify(updates) }),
+    [["/api/profile"], ["/api/messages/usage"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Settings saved" });
+      },
+      onError: () => {
+        toast({ title: "Failed to save settings", variant: "destructive" });
+      },
+    }
+  );
 
   const isProPlusOrHigher = usage?.plan === "pro_plus" || usage?.plan === "business";
   const isLoading = profileLoading || usageLoading;

@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { Sparkles, Loader2, ArrowRight } from "lucide-react";
 
 interface ServiceRecommendation {
@@ -23,15 +23,20 @@ export function SmartServiceRecommender({ slug, onSelectService }: SmartServiceR
   const [query, setQuery] = useState("");
   const [recommendations, setRecommendations] = useState<ServiceRecommendation[]>([]);
 
-  const recommendMutation = useMutation({
-    mutationFn: async (userInput: string) => {
-      const res = await apiRequest("POST", "/api/public/ai/recommend-service", { userInput, slug });
-      return res.json() as Promise<{ recommendations: ServiceRecommendation[] }>;
+  const recommendMutation = useApiMutation(
+    async (userInput: string) => {
+      return apiFetch<{ recommendations: ServiceRecommendation[] }>("/api/public/ai/recommend-service", {
+        method: "POST",
+        body: JSON.stringify({ userInput, slug }),
+      });
     },
-    onSuccess: (data) => {
-      setRecommendations(data.recommendations || []);
-    },
-  });
+    [],
+    {
+      onSuccess: (data) => {
+        setRecommendations(data.recommendations || []);
+      },
+    }
+  );
 
   const handleSearch = () => {
     if (query.trim().length < 5) return;

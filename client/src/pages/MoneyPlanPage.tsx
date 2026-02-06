@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { InlineInfoCard } from "@/components/ui/inline-info-card";
 import { BookingLinkShare } from "@/components/booking-link";
 import { useLocation } from "wouter";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { useCapability } from "@/hooks/useCapability";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -71,7 +72,6 @@ function getPriorityBadge(priority: number) {
 
 export default function MoneyPlanPage() {
   const [, navigate] = useLocation();
-  const queryClient = useQueryClient();
   const { checkCapability, checkIsDeveloper, getUserPlan } = useCapability();
   const isMobile = useIsMobile();
 
@@ -101,41 +101,33 @@ export default function MoneyPlanPage() {
     }
   }, [flag?.enabled, hasMoneyPlanCapability, items]);
 
-  const generateMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/action-queue/generate");
+  const generateMutation = useApiMutation(
+    async () => {
+      return apiFetch("/api/action-queue/generate", { method: "POST" });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/action-queue"] });
-    },
-  });
+    [["/api/action-queue"]]
+  );
 
-  const markDoneMutation = useMutation({
-    mutationFn: async (id: string) => {
-      return apiRequest("POST", `/api/action-queue/${id}/done`);
+  const markDoneMutation = useApiMutation(
+    async (id: string) => {
+      return apiFetch(`/api/action-queue/${id}/done`, { method: "POST" });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/action-queue"] });
-    },
-  });
+    [["/api/action-queue"]]
+  );
 
-  const dismissMutation = useMutation({
-    mutationFn: async (id: string) => {
-      return apiRequest("POST", `/api/action-queue/${id}/dismiss`);
+  const dismissMutation = useApiMutation(
+    async (id: string) => {
+      return apiFetch(`/api/action-queue/${id}/dismiss`, { method: "POST" });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/action-queue"] });
-    },
-  });
+    [["/api/action-queue"]]
+  );
 
-  const snoozeMutation = useMutation({
-    mutationFn: async ({ id, hours }: { id: string; hours: number }) => {
-      return apiRequest("POST", `/api/action-queue/${id}/snooze`, { hours });
+  const snoozeMutation = useApiMutation(
+    async ({ id, hours }: { id: string; hours: number }) => {
+      return apiFetch(`/api/action-queue/${id}/snooze`, { method: "POST", body: JSON.stringify({ hours }) });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/action-queue"] });
-    },
-  });
+    [["/api/action-queue"]]
+  );
 
   const openItems = items?.filter(i => i.status === "open") || [];
   const doneItems = items?.filter(i => i.status === "done") || [];

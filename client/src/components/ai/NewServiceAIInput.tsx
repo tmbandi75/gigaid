@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { Sparkles, Loader2, Plus, Check, X, Edit } from "lucide-react";
 
 interface ServiceSuggestion {
@@ -27,20 +27,25 @@ export function NewServiceAIInput({ onServicesCreated }: NewServiceAIInputProps)
   const [suggestions, setSuggestions] = useState<ServiceSuggestion[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-  const buildMutation = useMutation({
-    mutationFn: async (desc: string) => {
-      const response = await apiRequest("POST", "/api/ai/build-services", { description: desc });
-      return response.json() as Promise<{ services: ServiceSuggestion[] }>;
+  const buildMutation = useApiMutation(
+    async (desc: string) => {
+      return apiFetch<{ services: ServiceSuggestion[] }>("/api/ai/build-services", {
+        method: "POST",
+        body: JSON.stringify({ description: desc }),
+      });
     },
-    onSuccess: (data) => {
-      const services = data.services || [];
-      setSuggestions(services);
-      toast({ title: `${services.length} service(s) suggested!` });
-    },
-    onError: () => {
-      toast({ title: "Failed to build services", variant: "destructive" });
-    },
-  });
+    [],
+    {
+      onSuccess: (data) => {
+        const services = data.services || [];
+        setSuggestions(services);
+        toast({ title: `${services.length} service(s) suggested!` });
+      },
+      onError: () => {
+        toast({ title: "Failed to build services", variant: "destructive" });
+      },
+    }
+  );
 
   const handleBuild = () => {
     if (!description.trim()) {

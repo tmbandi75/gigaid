@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { Calendar, Clock, Loader2, Sparkles, Check, Plus, UserPlus, RefreshCw } from "lucide-react";
 import { useLocation } from "wouter";
 import type { Job, Lead } from "@shared/schema";
@@ -39,18 +40,23 @@ export function SmartScheduling({ jobDuration = 60, onSelectSlot }: SmartSchedul
     queryKey: ["/api/leads"],
   });
 
-  const suggestMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/ai/schedule-suggestions", {
-        duration,
-        preferredDate: preferredDate || undefined,
+  const suggestMutation = useApiMutation(
+    async () => {
+      return apiFetch<{ suggestions: ScheduleSuggestion[] }>("/api/ai/schedule-suggestions", {
+        method: "POST",
+        body: JSON.stringify({
+          duration,
+          preferredDate: preferredDate || undefined,
+        }),
       });
-      return response.json() as Promise<{ suggestions: ScheduleSuggestion[] }>;
     },
-    onError: () => {
-      toast({ title: "Failed to get schedule suggestions", variant: "destructive" });
-    },
-  });
+    [],
+    {
+      onError: () => {
+        toast({ title: "Failed to get schedule suggestions", variant: "destructive" });
+      },
+    }
+  );
 
   const handleSuggest = () => {
     suggestMutation.mutate();

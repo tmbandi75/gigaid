@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { Star, Loader2, Sparkles, Copy, Send, Check } from "lucide-react";
 
 interface ReviewDraft {
@@ -26,23 +26,28 @@ export function ReviewDraftGenerator({ clientName, jobName, onSend }: ReviewDraf
   const [message, setMessage] = useState("");
   const [copied, setCopied] = useState(false);
 
-  const generateMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/ai/review-draft", {
-        clientName,
-        jobName,
-        tone,
+  const generateMutation = useApiMutation(
+    async () => {
+      return apiFetch<ReviewDraft>("/api/ai/review-draft", {
+        method: "POST",
+        body: JSON.stringify({
+          clientName,
+          jobName,
+          tone,
+        }),
       });
-      return response.json() as Promise<ReviewDraft>;
     },
-    onSuccess: (data) => {
-      setMessage(data.review);
-      toast({ title: "Review request drafted!" });
-    },
-    onError: () => {
-      toast({ title: "Failed to generate draft", variant: "destructive" });
-    },
-  });
+    [],
+    {
+      onSuccess: (data) => {
+        setMessage(data.review);
+        toast({ title: "Review request drafted!" });
+      },
+      onError: () => {
+        toast({ title: "Failed to generate draft", variant: "destructive" });
+      },
+    }
+  );
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message);

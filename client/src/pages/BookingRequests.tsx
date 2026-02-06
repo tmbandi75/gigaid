@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,7 +32,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import {
   Calendar,
   Clock,
@@ -122,7 +124,6 @@ const paymentMethodOptions = [
 export default function BookingRequests() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedBooking, setSelectedBooking] = useState<BookingRequest | null>(null);
@@ -147,53 +148,52 @@ export default function BookingRequests() {
     queryKey: ["/api/booking-requests"],
   });
 
-  const recordRemainderPaymentMutation = useMutation({
-    mutationFn: async ({ bookingId, paymentMethod, notes }: { bookingId: number; paymentMethod: string; notes: string }) => {
-      const response = await apiRequest("POST", `/api/bookings/${bookingId}/record-remainder-payment`, { paymentMethod, notes });
-      return response.json();
+  const recordRemainderPaymentMutation = useApiMutation(
+    async ({ bookingId, paymentMethod, notes }: { bookingId: number; paymentMethod: string; notes: string }) => {
+      return apiFetch(`/api/bookings/${bookingId}/record-remainder-payment`, { method: "POST", body: JSON.stringify({ paymentMethod, notes }) });
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/booking-requests"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] }),
-      ]);
-      toast({ title: "Payment recorded", description: "The remainder payment has been marked as paid." });
-      if (selectedBooking) {
-        setSelectedBooking({ 
-          ...selectedBooking, 
-          remainderPaymentStatus: "paid",
-          remainderPaymentMethod: selectedPaymentMethod,
-          remainderPaidAt: new Date().toISOString(),
+    [QUERY_KEYS.bookingRequests(), ["/api/dashboard/game-plan"], ["/api/dashboard/summary"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Payment recorded", description: "The remainder payment has been marked as paid." });
+        if (selectedBooking) {
+          setSelectedBooking({ 
+            ...selectedBooking, 
+            remainderPaymentStatus: "paid",
+            remainderPaymentMethod: selectedPaymentMethod,
+            remainderPaidAt: new Date().toISOString(),
+          });
+        }
+        setShowRemainderPaymentDialog(false);
+        setSelectedPaymentMethod("");
+        setRemainderNotes("");
+      },
+      onError: (error: Error) => {
+        toast({ 
+          title: "Failed to record payment", 
+          description: error.message || "Please try again.",
+          variant: "destructive" 
         });
-      }
-      setShowRemainderPaymentDialog(false);
-      setSelectedPaymentMethod("");
-      setRemainderNotes("");
-    },
-    onError: (error: Error) => {
-      toast({ 
-        title: "Failed to record payment", 
-        description: error.message || "Please try again.",
-        variant: "destructive" 
-      });
-    },
-  });
+      },
+    }
+  );
 
-  const waiveFeeMutation = useMutation({
-    mutationFn: (bookingId: number) =>
-      apiRequest("POST", `/api/bookings/${bookingId}/waive-reschedule-fee`),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/booking-requests"] });
-      toast({ title: "Reschedule fee waived" });
-      if (selectedBooking) {
-        setSelectedBooking({ ...selectedBooking, waiveRescheduleFee: true });
-      }
-    },
-    onError: () => {
-      toast({ title: "Failed to waive fee", variant: "destructive" });
-    },
-  });
+  const waiveFeeMutation = useApiMutation(
+    (bookingId: number) =>
+      apiFetch(`/api/bookings/${bookingId}/waive-reschedule-fee`, { method: "POST" }),
+    [QUERY_KEYS.bookingRequests()],
+    {
+      onSuccess: () => {
+        toast({ title: "Reschedule fee waived" });
+        if (selectedBooking) {
+          setSelectedBooking({ ...selectedBooking, waiveRescheduleFee: true });
+        }
+      },
+      onError: () => {
+        toast({ title: "Failed to waive fee", variant: "destructive" });
+      },
+    }
+  );
 
   const formatCurrency = (cents: number, currency: string = "usd") => {
     return new Intl.NumberFormat("en-US", {

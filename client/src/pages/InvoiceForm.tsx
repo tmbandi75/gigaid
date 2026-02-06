@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, useParams } from "wouter";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -36,7 +36,9 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { QUERY_KEYS } from "@/lib/queryKeys";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { ArrowLeft, Loader2, Send, CheckCircle, Mail, MessageSquare, AlertTriangle, FileText } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import type { Invoice } from "@shared/schema";
@@ -64,14 +66,13 @@ export default function InvoiceForm() {
   const isEditing = id && id !== "new";
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [sendViaEmail, setSendViaEmail] = useState(true);
   const [sendViaSms, setSendViaSms] = useState(true);
 
   const { data: existingInvoice, isLoading: isLoadingInvoice } = useQuery<Invoice>({
-    queryKey: ["/api/invoices", id],
+    queryKey: QUERY_KEYS.invoice(id!),
     enabled: !!isEditing,
   });
 
@@ -100,8 +101,8 @@ export default function InvoiceForm() {
     } : undefined,
   });
 
-  const createMutation = useMutation({
-    mutationFn: async (data: InvoiceFormData) => {
+  const createMutation = useApiMutation(
+    async (data: InvoiceFormData) => {
       const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`;
       const payload = {
         clientName: `${data.clientFirstName} ${data.clientLastName}`.trim(),
@@ -113,24 +114,22 @@ export default function InvoiceForm() {
         amount: data.amount * 100,
         status: "draft",
       };
-      return apiRequest("POST", "/api/invoices", payload);
+      return apiFetch("/api/invoices", { method: "POST", body: JSON.stringify(payload) });
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/invoices"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-      ]);
-      toast({ title: "Invoice created successfully" });
-      navigate("/invoices");
-    },
-    onError: () => {
-      toast({ title: "Failed to create invoice", variant: "destructive" });
-    },
-  });
+    [QUERY_KEYS.invoices(), ["/api/dashboard/summary"], ["/api/dashboard/game-plan"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Invoice created successfully" });
+        navigate("/invoices");
+      },
+      onError: () => {
+        toast({ title: "Failed to create invoice", variant: "destructive" });
+      },
+    }
+  );
 
-  const updateMutation = useMutation({
-    mutationFn: async (data: InvoiceFormData) => {
+  const updateMutation = useApiMutation(
+    async (data: InvoiceFormData) => {
       const payload = {
         clientName: `${data.clientFirstName} ${data.clientLastName}`.trim(),
         clientPhone: data.clientPhone,
@@ -138,42 +137,38 @@ export default function InvoiceForm() {
         serviceDescription: data.serviceDescription,
         amount: data.amount * 100,
       };
-      return apiRequest("PATCH", `/api/invoices/${id}`, payload);
+      return apiFetch(`/api/invoices/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/invoices"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/invoices", id] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-      ]);
-      toast({ title: "Invoice updated successfully" });
-      navigate(`/invoices/${id}/view`);
-    },
-    onError: () => {
-      toast({ title: "Failed to update invoice", variant: "destructive" });
-    },
-  });
+    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), ["/api/dashboard/game-plan"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Invoice updated successfully" });
+        navigate(`/invoices/${id}/view`);
+      },
+      onError: () => {
+        toast({ title: "Failed to update invoice", variant: "destructive" });
+      },
+    }
+  );
 
-  const sendMutation = useMutation({
-    mutationFn: async ({ sendEmail, sendSms }: { sendEmail: boolean; sendSms: boolean }) => {
-      return apiRequest("POST", `/api/invoices/${id}/send`, { sendEmail, sendSms });
+  const sendMutation = useApiMutation(
+    async ({ sendEmail, sendSms }: { sendEmail: boolean; sendSms: boolean }) => {
+      return apiFetch(`/api/invoices/${id}/send`, { method: "POST", body: JSON.stringify({ sendEmail, sendSms }) });
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/invoices"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/invoices", id] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-      ]);
-      setShowSendDialog(false);
-      const channels = [];
-      if (sendViaEmail && hasEmail) channels.push("email");
-      if (sendViaSms && hasPhone) channels.push("text");
-      toast({ title: `Invoice sent via ${channels.join(" and ")}` });
-    },
-    onError: () => {
-      toast({ title: "Failed to send invoice", variant: "destructive" });
-    },
-  });
+    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), ["/api/dashboard/game-plan"]],
+    {
+      onSuccess: () => {
+        setShowSendDialog(false);
+        const channels = [];
+        if (sendViaEmail && hasEmail) channels.push("email");
+        if (sendViaSms && hasPhone) channels.push("text");
+        toast({ title: `Invoice sent via ${channels.join(" and ")}` });
+      },
+      onError: () => {
+        toast({ title: "Failed to send invoice", variant: "destructive" });
+      },
+    }
+  );
 
   const handleSendClick = () => {
     if (!hasAnyChannel) {
@@ -205,26 +200,21 @@ export default function InvoiceForm() {
     sendMutation.mutate({ sendEmail: sendViaEmail, sendSms: sendViaSms });
   };
 
-  const markPaidMutation = useMutation({
-    mutationFn: async (paymentMethod: string) => {
-      return apiRequest("POST", `/api/invoices/${id}/mark-paid`, { paymentMethod });
+  const markPaidMutation = useApiMutation(
+    async (paymentMethod: string) => {
+      return apiFetch(`/api/invoices/${id}/mark-paid`, { method: "POST", body: JSON.stringify({ paymentMethod }) });
     },
-    onSuccess: async () => {
-      // Force refetch to ensure UI reflects new state (staleTime: Infinity requires explicit refetch)
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["/api/invoices"] }),
-        queryClient.refetchQueries({ queryKey: ["/api/invoices", id] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] }),
-      ]);
-      toast({ title: "Invoice marked as paid" });
-      navigate("/invoices");
-    },
-    onError: () => {
-      toast({ title: "Failed to mark invoice as paid", variant: "destructive" });
-    },
-  });
+    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), ["/api/dashboard/summary"], ["/api/dashboard/game-plan"], ["/api/next-actions"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Invoice marked as paid" });
+        navigate("/invoices");
+      },
+      onError: () => {
+        toast({ title: "Failed to mark invoice as paid", variant: "destructive" });
+      },
+    }
+  );
 
   const onSubmit = (data: InvoiceFormData) => {
     if (isEditing) {

@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { QUERY_KEYS } from "@/lib/queryKeys";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -109,64 +110,53 @@ export function PaymentConfirmation({
   const [selectedPayment, setSelectedPayment] = useState<JobPayment | null>(null);
   const [confirmNotes, setConfirmNotes] = useState("");
 
-  const confirmMutation = useMutation({
-    mutationFn: async ({ paymentId, notes }: { paymentId: string; notes?: string }) => {
-      const response = await apiRequest("POST", `/api/payments/${paymentId}/confirm`, { notes });
-      return response.json();
+  const confirmMutation = useApiMutation(
+    async ({ paymentId, notes }: { paymentId: string; notes?: string }) => {
+      return apiFetch(`/api/payments/${paymentId}/confirm`, { method: "POST", body: JSON.stringify({ notes }) });
     },
-    onSuccess: async () => {
-      // Force refetch to ensure UI reflects new state (staleTime: Infinity requires explicit refetch)
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["/api/invoices"] }),
-        queryClient.refetchQueries({ queryKey: ["/api/payments"] }),
-        queryClient.refetchQueries({ queryKey: ["/api/invoices", invoice.id, "payments"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] }),
-      ]);
-      toast({
-        title: "Payment confirmed",
-        description: "The payment has been marked as confirmed.",
-      });
-      setShowConfirmDialog(false);
-      setSelectedPayment(null);
-      setConfirmNotes("");
-      onPaymentConfirmed?.();
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to confirm payment.",
-        variant: "destructive",
-      });
-    },
-  });
+    [QUERY_KEYS.invoices(), QUERY_KEYS.payments(), ["/api/invoices", invoice.id, "payments"], ["/api/dashboard/game-plan"], ["/api/dashboard/summary"]],
+    {
+      onSuccess: () => {
+        toast({
+          title: "Payment confirmed",
+          description: "The payment has been marked as confirmed.",
+        });
+        setShowConfirmDialog(false);
+        setSelectedPayment(null);
+        setConfirmNotes("");
+        onPaymentConfirmed?.();
+      },
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Failed to confirm payment.",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
-  const markPaidMutation = useMutation({
-    mutationFn: async ({ paymentId, notes }: { paymentId: string; notes?: string }) => {
-      const response = await apiRequest("POST", `/api/payments/${paymentId}/mark-paid`, { notes });
-      return response.json();
+  const markPaidMutation = useApiMutation(
+    async ({ paymentId, notes }: { paymentId: string; notes?: string }) => {
+      return apiFetch(`/api/payments/${paymentId}/mark-paid`, { method: "POST", body: JSON.stringify({ notes }) });
     },
-    onSuccess: async () => {
-      // Force refetch to ensure UI reflects new state (staleTime: Infinity requires explicit refetch)
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["/api/invoices"] }),
-        queryClient.refetchQueries({ queryKey: ["/api/payments"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] }),
-      ]);
-      toast({
-        title: "Payment marked as paid",
-        description: "The payment status has been updated.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update payment status.",
-        variant: "destructive",
-      });
-    },
-  });
+    [QUERY_KEYS.invoices(), QUERY_KEYS.payments(), ["/api/dashboard/game-plan"], ["/api/dashboard/summary"]],
+    {
+      onSuccess: () => {
+        toast({
+          title: "Payment marked as paid",
+          description: "The payment status has been updated.",
+        });
+      },
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Failed to update payment status.",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
   const handleConfirmPayment = () => {
     if (selectedPayment) {

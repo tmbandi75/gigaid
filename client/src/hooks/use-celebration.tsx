@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import confetti from "canvas-confetti";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
 
 type CelebrationType = "job_booked" | "payment_received";
 
@@ -58,8 +58,7 @@ export function useCelebration() {
       triggerConfetti();
 
       try {
-        const response = await apiRequest("POST", "/api/celebrate", context);
-        const data = await response.json();
+        const data = await apiFetch<{ message: string }>("/api/celebrate", { method: "POST", body: JSON.stringify(context) });
         
         setCelebration({
           isVisible: true,

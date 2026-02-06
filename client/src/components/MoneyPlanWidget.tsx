@@ -1,10 +1,11 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useLocation } from "wouter";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import {
   DollarSign,
   ChevronRight,
@@ -50,7 +51,6 @@ function getPriorityBadge(priority: number) {
 
 export function MoneyPlanWidget() {
   const [, navigate] = useLocation();
-  const queryClient = useQueryClient();
 
   const { data: flag } = useQuery<FeatureFlag>({
     queryKey: ["/api/feature-flags", "today_money_plan"],
@@ -61,30 +61,26 @@ export function MoneyPlanWidget() {
     enabled: flag?.enabled === true,
   });
 
-  const generateMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/action-queue/generate");
+  const generateMutation = useApiMutation(
+    async () => {
+      return apiFetch("/api/action-queue/generate", { method: "POST" });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/action-queue"] });
-    },
-  });
+    [["/api/action-queue"]],
+  );
 
-  const markDoneMutation = useMutation({
-    mutationFn: async (id: string) => {
-      return apiRequest("POST", `/api/action-queue/${id}/done`);
+  const markDoneMutation = useApiMutation(
+    async (id: string) => {
+      return apiFetch(`/api/action-queue/${id}/done`, { method: "POST" });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/action-queue"] });
-    },
-  });
+    [["/api/action-queue"]],
+  );
 
   if (!flag?.enabled) {
     return null;
   }
 
   const openItems = items?.filter(i => i.status === "open") || [];
-  const topItems = openItems.slice(0, 5); // Show up to 5 items on dashboard
+  const topItems = openItems.slice(0, 5);
   const totalCount = openItems.length;
 
   const handleAction = (item: ActionQueueItem) => {

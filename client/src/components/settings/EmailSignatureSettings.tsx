@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { Mail, Loader2, ImageIcon, Save } from "lucide-react";
 
 interface EmailSignature {
@@ -18,7 +19,6 @@ interface EmailSignature {
 
 export function EmailSignatureSettings() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   
   const [signatureText, setSignatureText] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
@@ -37,19 +37,19 @@ export function EmailSignatureSettings() {
     }
   }, [signature]);
 
-  const updateMutation = useMutation({
-    mutationFn: async (data: Partial<EmailSignature>) => {
-      return apiRequest("PUT", "/api/user/email-signature", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user/email-signature"] });
-      toast({ title: "Email signature saved" });
-      setHasChanges(false);
-    },
-    onError: () => {
-      toast({ title: "Failed to save email signature", variant: "destructive" });
-    },
-  });
+  const updateMutation = useApiMutation(
+    (data: Partial<EmailSignature>) => apiFetch("/api/user/email-signature", { method: "PUT", body: JSON.stringify(data) }),
+    [["/api/user/email-signature"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Email signature saved" });
+        setHasChanges(false);
+      },
+      onError: () => {
+        toast({ title: "Failed to save email signature", variant: "destructive" });
+      },
+    }
+  );
 
   const handleSave = () => {
     updateMutation.mutate({

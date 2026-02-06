@@ -1,12 +1,14 @@
 import { useLocation, useParams } from "wouter";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import {
   ArrowLeft,
   Edit,
@@ -85,7 +87,6 @@ export default function JobSummary() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [showGetPaid, setShowGetPaid] = useState(false);
   const [showPostJobMomentum, setShowPostJobMomentum] = useState(false);
@@ -175,21 +176,24 @@ export default function JobSummary() {
     }
   }, [clientData]);
 
-  const updateClientDepositMutation = useMutation({
-    mutationFn: async (newPercent: number | null) => {
+  const updateClientDepositMutation = useApiMutation(
+    async (newPercent: number | null) => {
       if (!clientData?.client?.id) throw new Error("No client found");
-      return apiRequest("PATCH", `/api/client/${clientData.client.id}/deposit`, { 
-        depositOverridePercent: newPercent 
+      return apiFetch(`/api/client/${clientData.client.id}/deposit`, {
+        method: "PATCH",
+        body: JSON.stringify({ depositOverridePercent: newPercent }),
       });
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/client"] });
-      toast({ title: "Client deposit setting saved" });
-    },
-    onError: () => {
-      toast({ title: "Failed to update deposit setting", variant: "destructive" });
-    },
-  });
+    [["/api/client"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Client deposit setting saved" });
+      },
+      onError: () => {
+        toast({ title: "Failed to update deposit setting", variant: "destructive" });
+      },
+    }
+  );
 
   const handleDepositOverrideChange = (value: string) => {
     setDepositOverride(value);
@@ -197,98 +201,97 @@ export default function JobSummary() {
     updateClientDepositMutation.mutate(newPercent);
   };
 
-  const sendDepositRequestMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", `/api/jobs/${id}/deposit/send-request`);
+  const sendDepositRequestMutation = useApiMutation(
+    async () => {
+      return apiFetch(`/api/jobs/${id}/deposit/send-request`, { method: "POST" });
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs", id, "deposit-status"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-      ]);
-      toast({ title: "Deposit request sent!", description: "Your client will receive an SMS with payment link." });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Failed to send deposit request", description: error.message, variant: "destructive" });
-    },
-  });
+    [QUERY_KEYS.job(id!), ["/api/jobs", id, "deposit-status"], ["/api/dashboard/game-plan"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Deposit request sent!", description: "Your client will receive an SMS with payment link." });
+      },
+      onError: (error: Error) => {
+        toast({ title: "Failed to send deposit request", description: error.message, variant: "destructive" });
+      },
+    }
+  );
 
-  const onTheWayMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", `/api/jobs/${id}/on-the-way`);
+  const onTheWayMutation = useApiMutation(
+    async () => {
+      return apiFetch(`/api/jobs/${id}/on-the-way`, { method: "POST" });
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }),
-      ]);
-      toast({ title: "Notification sent!", description: "Your client knows you're on the way." });
-    },
-    onError: () => {
-      toast({ title: "Failed to send notification", variant: "destructive" });
-    },
-  });
+    [QUERY_KEYS.job(id!), QUERY_KEYS.jobs()],
+    {
+      onSuccess: () => {
+        toast({ title: "Notification sent!", description: "Your client knows you're on the way." });
+      },
+      onError: () => {
+        toast({ title: "Failed to send notification", variant: "destructive" });
+      },
+    }
+  );
 
-  const requestReviewMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", `/api/jobs/${id}/request-review`);
+  const requestReviewMutation = useApiMutation(
+    async () => {
+      return apiFetch(`/api/jobs/${id}/request-review`, { method: "POST" });
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] });
-      toast({ title: "Review request sent!" });
-    },
-    onError: () => {
-      toast({ title: "Failed to send review request", variant: "destructive" });
-    },
-  });
+    [QUERY_KEYS.job(id!)],
+    {
+      onSuccess: () => {
+        toast({ title: "Review request sent!" });
+      },
+      onError: () => {
+        toast({ title: "Failed to send review request", variant: "destructive" });
+      },
+    }
+  );
 
-  const startJobMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("PATCH", `/api/jobs/${id}`, { status: "in_progress" });
+  const startJobMutation = useApiMutation(
+    async () => {
+      return apiFetch(`/api/jobs/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "in_progress" }),
+      });
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] }),
-      ]);
-      toast({ title: "Job started!", description: "Good luck with this one!" });
-    },
-    onError: () => {
-      toast({ title: "Failed to start job", variant: "destructive" });
-    },
-  });
+    [QUERY_KEYS.job(id!), QUERY_KEYS.jobs(), ["/api/dashboard/game-plan"], ["/api/next-actions"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Job started!", description: "Good luck with this one!" });
+      },
+      onError: () => {
+        toast({ title: "Failed to start job", variant: "destructive" });
+      },
+    }
+  );
 
-  const completeJobMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("PATCH", `/api/jobs/${id}`, { status: "completed" });
+  const completeJobMutation = useApiMutation(
+    async () => {
+      return apiFetch(`/api/jobs/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "completed" }),
+      });
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] }),
-      ]);
-      toast({ title: "Job completed!", description: "Great work! Don't forget to get paid." });
-    },
-    onError: (error: Error) => {
-      if (error.message?.includes("RESOLUTION_REQUIRED")) {
-        setShowGetPaid(true);
-        toast({ 
-          title: "Choose how to get paid first", 
-          description: "Before marking complete, decide how to handle payment.",
-        });
-      } else {
-        toast({ title: "Failed to complete job", variant: "destructive" });
-      }
-    },
-  });
+    [QUERY_KEYS.job(id!), QUERY_KEYS.jobs(), ["/api/dashboard/game-plan"], ["/api/next-actions"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Job completed!", description: "Great work! Don't forget to get paid." });
+      },
+      onError: (error: Error) => {
+        if (error.message?.includes("RESOLUTION_REQUIRED")) {
+          setShowGetPaid(true);
+          toast({ 
+            title: "Choose how to get paid first", 
+            description: "Before marking complete, decide how to handle payment.",
+          });
+        } else {
+          toast({ title: "Failed to complete job", variant: "destructive" });
+        }
+      },
+    }
+  );
 
-  const updateLocationMutation = useMutation({
-    mutationFn: async () => {
+  const updateLocationMutation = useApiMutation(
+    async () => {
       return new Promise<{ lat: number; lng: number }>((resolve, reject) => {
         if (!navigator.geolocation) {
           reject(new Error("Geolocation not supported"));
@@ -297,10 +300,13 @@ export default function JobSummary() {
         navigator.geolocation.getCurrentPosition(
           async (position) => {
             const { latitude, longitude } = position.coords;
-            await apiRequest("PATCH", `/api/jobs/${id}`, {
-              providerLat: latitude,
-              providerLng: longitude,
-              providerLocationUpdatedAt: new Date().toISOString(),
+            await apiFetch(`/api/jobs/${id}`, {
+              method: "PATCH",
+              body: JSON.stringify({
+                providerLat: latitude,
+                providerLng: longitude,
+                providerLocationUpdatedAt: new Date().toISOString(),
+              }),
             });
             resolve({ lat: latitude, lng: longitude });
           },
@@ -309,14 +315,16 @@ export default function JobSummary() {
         );
       });
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] });
-      toast({ title: "Location updated!", description: "Your current location has been saved." });
-    },
-    onError: () => {
-      toast({ title: "Failed to get location", description: "Please allow location access and try again.", variant: "destructive" });
-    },
-  });
+    [QUERY_KEYS.job(id!)],
+    {
+      onSuccess: () => {
+        toast({ title: "Location updated!", description: "Your current location has been saved." });
+      },
+      onError: () => {
+        toast({ title: "Failed to get location", description: "Please allow location access and try again.", variant: "destructive" });
+      },
+    }
+  );
 
   if (isLoading) {
     return (

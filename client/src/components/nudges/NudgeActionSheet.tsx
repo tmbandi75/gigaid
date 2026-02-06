@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { X, Send, Clock, FileText, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,7 +11,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
 import type { AiNudge } from "@shared/schema";
 
 interface NudgeActionSheetProps {
@@ -30,7 +30,6 @@ export function NudgeActionSheet({
   onCreateInvoice,
 }: NudgeActionSheetProps) {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [message, setMessage] = useState("");
   
   useEffect(() => {
@@ -93,64 +92,62 @@ export function NudgeActionSheet({
     return signals[nudgeType] || { title: "Done", description: "Action completed." };
   };
 
-  const dismissMutation = useMutation({
-    mutationFn: async () => {
-      await apiRequest("POST", `/api/ai/nudges/${nudge?.id}/dismiss`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/ai/nudges"] });
-      toast({ 
-        title: "Got it", 
-        description: "I'll trust your judgment on this one." 
-      });
-      onClose();
-    },
-  });
-
-  const snoozeMutation = useMutation({
-    mutationFn: async (hours: number) => {
-      await apiRequest("POST", `/api/ai/nudges/${nudge?.id}/snooze`, { hours });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/ai/nudges"] });
-      toast({ 
-        title: "I'll keep watching", 
-        description: "I'll remind you tomorrow. This stays on my radar." 
-      });
-      onClose();
-    },
-  });
-
-  const actMutation = useMutation({
-    mutationFn: async (actionType: string) => {
-      const res = await apiRequest("POST", `/api/ai/nudges/${nudge?.id}/act`, {
-        action_type: actionType,
-        payload: { message },
-      });
-      return res.json();
-    },
-    onSuccess: (data, actionType) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/ai/nudges"] });
-      
-      const trustSignal = getTrustSignal(nudge?.nudgeType || "", actionType);
-      
-      if (actionType === "create_job" && data.jobPrefill) {
-        onCreateJob?.(data.jobPrefill);
-        toast({ title: trustSignal.title, description: trustSignal.description });
-      } else if (actionType === "create_invoice" && data.invoicePrefill) {
-        onCreateInvoice?.(data.invoicePrefill);
-        toast({ title: trustSignal.title, description: trustSignal.description });
-      } else if (actionType === "send_message") {
+  const dismissMutation = useApiMutation(
+    () => apiFetch(`/api/ai/nudges/${nudge?.id}/dismiss`, { method: "POST" }),
+    [["/api/ai/nudges"]],
+    {
+      onSuccess: () => {
         toast({ 
-          title: trustSignal.title, 
-          description: trustSignal.description 
+          title: "Got it", 
+          description: "I'll trust your judgment on this one." 
         });
-        navigator.clipboard.writeText(message);
-      }
-      
-      onClose();
-    },
-  });
+        onClose();
+      },
+    }
+  );
+
+  const snoozeMutation = useApiMutation(
+    (hours: number) => apiFetch(`/api/ai/nudges/${nudge?.id}/snooze`, { method: "POST", body: JSON.stringify({ hours }) }),
+    [["/api/ai/nudges"]],
+    {
+      onSuccess: () => {
+        toast({ 
+          title: "I'll keep watching", 
+          description: "I'll remind you tomorrow. This stays on my radar." 
+        });
+        onClose();
+      },
+    }
+  );
+
+  const actMutation = useApiMutation(
+    (actionType: string) => apiFetch<any>(`/api/ai/nudges/${nudge?.id}/act`, {
+      method: "POST",
+      body: JSON.stringify({ action_type: actionType, payload: { message } }),
+    }),
+    [["/api/ai/nudges"]],
+    {
+      onSuccess: (data: any, actionType: string) => {
+        const trustSignal = getTrustSignal(nudge?.nudgeType || "", actionType);
+        
+        if (actionType === "create_job" && data?.jobPrefill) {
+          onCreateJob?.(data.jobPrefill);
+          toast({ title: trustSignal.title, description: trustSignal.description });
+        } else if (actionType === "create_invoice" && data?.invoicePrefill) {
+          onCreateInvoice?.(data.invoicePrefill);
+          toast({ title: trustSignal.title, description: trustSignal.description });
+        } else if (actionType === "send_message") {
+          toast({ 
+            title: trustSignal.title, 
+            description: trustSignal.description 
+          });
+          navigator.clipboard.writeText(message);
+        }
+        
+        onClose();
+      },
+    }
+  );
 
   if (!nudge) return null;
 

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -108,7 +109,6 @@ const TOTAL_STEPS = 8;
 export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps) {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   
   const [step, setStep] = useState(initialStep || 1);
   const [showSkipModal, setShowSkipModal] = useState(false);
@@ -207,23 +207,17 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
     }
   }, [user]);
 
-  const updateOnboardingMutation = useMutation({
-    mutationFn: async (data: { step?: number; state?: string; completed?: boolean }) => {
-      return apiRequest("PATCH", "/api/onboarding", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/onboarding"] });
-    },
-  });
+  const updateOnboardingMutation = useApiMutation(
+    (data: { step?: number; state?: string; completed?: boolean }) =>
+      apiFetch("/api/onboarding", { method: "PATCH", body: JSON.stringify(data) }),
+    [["/api/onboarding"]]
+  );
 
-  const updateProfileMutation = useMutation({
-    mutationFn: async (data: Record<string, any>) => {
-      return apiRequest("PATCH", "/api/profile", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-    },
-  });
+  const updateProfileMutation = useApiMutation(
+    (data: Record<string, any>) =>
+      apiFetch("/api/profile", { method: "PATCH", body: JSON.stringify(data) }),
+    [["/api/auth/user"]]
+  );
 
   const handleSkipClick = () => {
     setShowSkipModal(true);
@@ -234,7 +228,6 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
       state: "skipped_explore",
       completed: true 
     });
-    queryClient.invalidateQueries({ queryKey: ["/api/onboarding"] });
     setShowSkipModal(false);
     onComplete();
     navigate("/");
@@ -382,7 +375,6 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
       step: 8 
     });
     
-    queryClient.invalidateQueries({ queryKey: ["/api/onboarding"] });
     setStep(8);
     
     // Show Lottie celebration animation

@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { useParams } from "wouter";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { SupportTicketForm } from "@/components/SupportTicketForm";
@@ -311,7 +312,6 @@ function DepositPaymentSection({ token, booking, onPaymentSuccess }: DepositPaym
 export default function CustomerBookingDetail() {
   const { token } = useParams<{ token: string }>();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [showIssueDialog, setShowIssueDialog] = useState(false);
   const [issueDescription, setIssueDescription] = useState("");
@@ -336,29 +336,36 @@ export default function CustomerBookingDetail() {
     enabled: !!token,
   });
 
-  const confirmMutation = useMutation({
-    mutationFn: () => apiRequest("POST", `/api/bookings/by-token/${token}/confirm-completion`),
-    onSuccess: () => {
-      toast({ title: "Job confirmed complete!", description: "The deposit has been released to the provider." });
-      queryClient.invalidateQueries({ queryKey: ["/api/bookings/by-token", token] });
-    },
-    onError: () => {
-      toast({ title: "Failed to confirm completion", variant: "destructive" });
-    },
-  });
+  const confirmMutation = useApiMutation(
+    () => apiFetch(`/api/bookings/by-token/${token}/confirm-completion`, { method: "POST" }),
+    [["/api/bookings/by-token", token]],
+    {
+      onSuccess: () => {
+        toast({ title: "Job confirmed complete!", description: "The deposit has been released to the provider." });
+      },
+      onError: () => {
+        toast({ title: "Failed to confirm completion", variant: "destructive" });
+      },
+    }
+  );
 
-  const flagIssueMutation = useMutation({
-    mutationFn: (reason: string) => 
-      apiRequest("POST", `/api/bookings/by-token/${token}/flag-issue`, { reason }),
-    onSuccess: () => {
-      toast({ title: "Issue reported", description: "The deposit is on hold. We'll review your case." });
-      setShowIssueDialog(false);
-      queryClient.invalidateQueries({ queryKey: ["/api/bookings/by-token", token] });
-    },
-    onError: () => {
-      toast({ title: "Failed to report issue", variant: "destructive" });
-    },
-  });
+  const flagIssueMutation = useApiMutation(
+    (reason: string) => 
+      apiFetch(`/api/bookings/by-token/${token}/flag-issue`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      }),
+    [["/api/bookings/by-token", token]],
+    {
+      onSuccess: () => {
+        toast({ title: "Issue reported", description: "The deposit is on hold. We'll review your case." });
+        setShowIssueDialog(false);
+      },
+      onError: () => {
+        toast({ title: "Failed to report issue", variant: "destructive" });
+      },
+    }
+  );
 
   const formatCurrency = (cents: number | null | undefined, currency: string = "usd") => {
     if (cents == null) return "$0.00";

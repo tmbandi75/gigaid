@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { Loader2, Plus, Wrench, Check } from "lucide-react";
 
 const COMMON_SERVICES = [
@@ -42,7 +43,6 @@ export function AddServiceDialog({ open, onOpenChange }: AddServiceDialogProps) 
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [customService, setCustomService] = useState("");
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   const { data: profile, isLoading: profileLoading } = useQuery<Profile>({
     queryKey: ["/api/profile"],
@@ -62,30 +62,30 @@ export function AddServiceDialog({ open, onOpenChange }: AddServiceDialogProps) 
     onOpenChange(isOpen);
   };
 
-  const saveMutation = useMutation({
-    mutationFn: async (services: string[]) => {
+  const saveMutation = useApiMutation(
+    (services: string[]) => {
       const allServices = Array.from(new Set([...existingServices, ...services]));
-      return apiRequest("PATCH", "/api/profile", { services: allServices });
+      return apiFetch("/api/profile", { method: "PATCH", body: JSON.stringify({ services: allServices }) });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/onboarding"] });
-      toast({
-        title: "Services added",
-        description: `Added ${selectedServices.length} service${selectedServices.length > 1 ? "s" : ""} to your profile.`,
-      });
-      resetForm();
-      onOpenChange(false);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to save services. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+    [["/api/profile"], ["/api/dashboard/game-plan"], ["/api/onboarding"]],
+    {
+      onSuccess: () => {
+        toast({
+          title: "Services added",
+          description: `Added ${selectedServices.length} service${selectedServices.length > 1 ? "s" : ""} to your profile.`,
+        });
+        resetForm();
+        onOpenChange(false);
+      },
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Failed to save services. Please try again.",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
   const toggleService = (service: string) => {
     if (selectedServices.includes(service)) {

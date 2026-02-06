@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DollarSign, X, Loader2 } from "lucide-react";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import type { ReadyAction } from "@shared/schema";
@@ -183,44 +184,41 @@ export function IntentActionCard({ entityType, entityId }: IntentActionCardProps
     staleTime: 30000,
   });
   
-  const actMutation = useMutation({
-    mutationFn: async (params: { actionId: string; overrideAmount?: number }) => {
-      return apiRequest("POST", `/api/ready-actions/${params.actionId}/act`, {
-        overrideAmount: params.overrideAmount,
+  const actMutation = useApiMutation(
+    async (params: { actionId: string; overrideAmount?: number }) => {
+      return apiFetch(`/api/ready-actions/${params.actionId}/act`, {
+        method: "POST",
+        body: JSON.stringify({ overrideAmount: params.overrideAmount }),
       });
     },
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/ready-actions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-      toast({
-        title: "Invoice created!",
-        description: "Your invoice is ready. Tap to send it.",
-      });
-      if (data.invoice?.id) {
-        setLocation(`/invoices/${data.invoice.id}`);
-      }
-    },
-    onError: (error: any) => {
-      const message = error?.message || "Couldn't create the invoice. Check your connection and try again.";
-      toast({
-        title: "Invoice creation failed",
-        description: message,
-        variant: "destructive",
-      });
-    },
-  });
+    [["/api/ready-actions"], ["/api/invoices"]],
+    {
+      onSuccess: (data: any) => {
+        toast({
+          title: "Invoice created!",
+          description: "Your invoice is ready. Tap to send it.",
+        });
+        if (data.invoice?.id) {
+          setLocation(`/invoices/${data.invoice.id}`);
+        }
+      },
+      onError: (error: any) => {
+        const message = error?.message || "Couldn't create the invoice. Check your connection and try again.";
+        toast({
+          title: "Invoice creation failed",
+          description: message,
+          variant: "destructive",
+        });
+      },
+    }
+  );
   
-  const dismissMutation = useMutation({
-    mutationFn: async (actionId: string) => {
-      return apiRequest("POST", `/api/ready-actions/${actionId}/dismiss`);
+  const dismissMutation = useApiMutation(
+    async (actionId: string) => {
+      return apiFetch(`/api/ready-actions/${actionId}/dismiss`, { method: "POST" });
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/ready-actions"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-      ]);
-    },
-  });
+    [["/api/ready-actions"], ["/api/dashboard/game-plan"]],
+  );
   
   if (isLoading || !action) {
     return null;
@@ -363,44 +361,41 @@ function IntentActionCardStandalone({ action }: { action: ReadyAction }) {
   const [, setLocation] = useLocation();
   const [overrideAmount, setOverrideAmount] = useState<number | null>(null);
   
-  const actMutation = useMutation({
-    mutationFn: async (params: { actionId: string; overrideAmount?: number }) => {
-      return apiRequest("POST", `/api/ready-actions/${params.actionId}/act`, {
-        overrideAmount: params.overrideAmount,
+  const actMutation = useApiMutation(
+    async (params: { actionId: string; overrideAmount?: number }) => {
+      return apiFetch(`/api/ready-actions/${params.actionId}/act`, {
+        method: "POST",
+        body: JSON.stringify({ overrideAmount: params.overrideAmount }),
       });
     },
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/ready-actions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-      toast({
-        title: "Invoice created!",
-        description: "Your invoice is ready. Tap to send it.",
-      });
-      if (data.invoice?.id) {
-        setLocation(`/invoices/${data.invoice.id}`);
-      }
-    },
-    onError: (error: any) => {
-      const message = error?.message || "Couldn't create the invoice. Check your connection and try again.";
-      toast({
-        title: "Invoice creation failed",
-        description: message,
-        variant: "destructive",
-      });
-    },
-  });
+    [["/api/ready-actions"], ["/api/invoices"]],
+    {
+      onSuccess: (data: any) => {
+        toast({
+          title: "Invoice created!",
+          description: "Your invoice is ready. Tap to send it.",
+        });
+        if (data.invoice?.id) {
+          setLocation(`/invoices/${data.invoice.id}`);
+        }
+      },
+      onError: (error: any) => {
+        const message = error?.message || "Couldn't create the invoice. Check your connection and try again.";
+        toast({
+          title: "Invoice creation failed",
+          description: message,
+          variant: "destructive",
+        });
+      },
+    }
+  );
   
-  const dismissMutation = useMutation({
-    mutationFn: async (actionId: string) => {
-      return apiRequest("POST", `/api/ready-actions/${actionId}/dismiss`);
+  const dismissMutation = useApiMutation(
+    async (actionId: string) => {
+      return apiFetch(`/api/ready-actions/${actionId}/dismiss`, { method: "POST" });
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/ready-actions"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-      ]);
-    },
-  });
+    [["/api/ready-actions"], ["/api/dashboard/game-plan"]],
+  );
   
   const currentAmount = overrideAmount ?? action.prefilledAmount ?? 0;
   

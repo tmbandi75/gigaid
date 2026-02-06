@@ -1,11 +1,12 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { 
   FileText, 
   Trash2, 
@@ -30,18 +31,20 @@ export function VoiceNotesHistory({ onSelectNote }: VoiceNotesHistoryProps) {
     queryKey: ["/api/jobs"],
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/voice-notes/${id}`, {});
+  const deleteMutation = useApiMutation(
+    async (id: string) => {
+      await apiFetch(`/api/voice-notes/${id}`, { method: "DELETE" });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/voice-notes"] });
-      toast({ title: "Voice note deleted" });
-    },
-    onError: () => {
-      toast({ title: "Failed to delete note", variant: "destructive" });
-    },
-  });
+    [["/api/voice-notes"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Voice note deleted" });
+      },
+      onError: () => {
+        toast({ title: "Failed to delete note", variant: "destructive" });
+      },
+    }
+  );
 
   const typeLabels: Record<string, string> = {
     job: "Job Related",

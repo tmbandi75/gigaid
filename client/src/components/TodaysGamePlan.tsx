@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,8 @@ import {
   Flame,
   Lock
 } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
 import type { AiNudge } from "@shared/schema";
 
@@ -201,15 +202,12 @@ interface OnboardingStatus {
 export function TodaysGamePlan() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [snoozingId, setSnoozingId] = useState<string | null>(null);
 
-  // Check onboarding status for Explore Mode
   const { data: onboardingStatus, isLoading: isOnboardingLoading } = useQuery<OnboardingStatus>({
     queryKey: ["/api/onboarding"],
   });
 
-  // Only apply gating once onboarding status is known - default to ready during loading
   const isExploreMode = onboardingStatus?.state === "skipped_explore";
   const isMoneyProtectionReady = onboardingStatus ? onboardingStatus.moneyProtectionReady : true;
   const needsSetup = !isOnboardingLoading && (isExploreMode || !isMoneyProtectionReady);
@@ -225,21 +223,26 @@ export function TodaysGamePlan() {
     enabled: !needsSetup,
   });
 
-  const snoozeMutation = useMutation({
-    mutationFn: async (nudgeId: string) => {
+  const snoozeMutation = useApiMutation(
+    async (nudgeId: string) => {
       setSnoozingId(nudgeId);
-      await apiRequest("POST", `/api/ai/nudges/${nudgeId}/snooze`, { hours: 24 });
+      return apiFetch(`/api/ai/nudges/${nudgeId}/snooze`, {
+        method: "POST",
+        body: JSON.stringify({ hours: 24 }),
+      });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/ai/nudges"] });
-      toast({ title: "Snoozed for today", description: "We'll remind you tomorrow" });
-      setSnoozingId(null);
-    },
-    onError: () => {
-      toast({ title: "Failed to snooze", variant: "destructive" });
-      setSnoozingId(null);
-    },
-  });
+    [["/api/ai/nudges"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Snoozed for today", description: "We'll remind you tomorrow" });
+        setSnoozingId(null);
+      },
+      onError: () => {
+        toast({ title: "Failed to snooze", variant: "destructive" });
+        setSnoozingId(null);
+      },
+    }
+  );
 
   const handleNavigate = (nudge: AiNudge) => {
     const config = nudgeConfig[nudge.nudgeType];
@@ -248,7 +251,6 @@ export function TodaysGamePlan() {
     }
   };
 
-  // Show Explore Mode read-only state when money protection not ready (only after status is loaded)
   if (needsSetup) {
     return (
       <div className="space-y-2" data-testid="todays-game-plan-explore">
@@ -319,7 +321,6 @@ export function TodaysGamePlan() {
     );
   }
 
-  // Deduplicate nudges - group by nudgeType and show count
   const groupedNudges = nudges.reduce((acc, nudge) => {
     const existing = acc.find(g => g.nudgeType === nudge.nudgeType);
     if (existing) {
@@ -353,7 +354,6 @@ export function TodaysGamePlan() {
           );
         }
 
-        // Grouped card for multiple items of same type
         const config = nudgeConfig[group.nudgeType] || {
           icon: Sparkles,
           actionLabel: "View",

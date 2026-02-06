@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, Link } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { 
   HelpCircle, 
   MessageCircle, 
@@ -605,23 +606,28 @@ export default function HelpSupport() {
     enabled: showTickets,
   });
 
-  const createTicketMutation = useMutation({
-    mutationFn: async (data: { subject: string; description: string; category: string; priority: string }) => {
-      return apiRequest("POST", "/api/support/tickets", data);
-    },
-    onSuccess: () => {
-      toast({ title: "Support ticket created! We'll respond as soon as possible." });
-      setContactForm({ subject: "", message: "", category: "general", priority: "normal" });
-      queryClient.invalidateQueries({ queryKey: ["/api/support/tickets"] });
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: "Failed to create ticket", 
-        description: error.message || "Please try again or email us directly.",
-        variant: "destructive" 
+  const createTicketMutation = useApiMutation(
+    async (data: { subject: string; description: string; category: string; priority: string }) => {
+      return apiFetch("/api/support/tickets", {
+        method: "POST",
+        body: JSON.stringify(data),
       });
     },
-  });
+    [["/api/support/tickets"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Support ticket created! We'll respond as soon as possible." });
+        setContactForm({ subject: "", message: "", category: "general", priority: "normal" });
+      },
+      onError: (error: Error) => {
+        toast({ 
+          title: "Failed to create ticket", 
+          description: error.message || "Please try again or email us directly.",
+          variant: "destructive" 
+        });
+      },
+    }
+  );
 
   const filteredFaqs = faqs.map(category => ({
     ...category,

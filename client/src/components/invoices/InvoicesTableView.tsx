@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,7 +22,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import type { Invoice } from "@shared/schema";
 
 interface InvoicesTableViewProps {
@@ -67,7 +68,6 @@ const statusConfig: Record<string, { color: string; bg: string; label: string; i
 
 function InvoiceTableRow({ invoice }: { invoice: Invoice }) {
   const [, navigate] = useLocation();
-  const queryClient = useQueryClient();
   const { toast } = useToast();
   
   const isInvoiceOverdue = isOverdue(invoice.createdAt, invoice.status);
@@ -75,37 +75,28 @@ function InvoiceTableRow({ invoice }: { invoice: Invoice }) {
   const effectiveStatus = isInvoiceOverdue ? "overdue" : invoice.status;
   const config = statusConfig[effectiveStatus] || statusConfig.draft;
 
-  const sendInvoiceMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", `/api/invoices/${invoice.id}/send`);
-    },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/invoices"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-      ]);
-      toast({ title: "Invoice sent!", description: "Your client has been notified." });
-    },
-    onError: () => {
-      toast({ title: "Failed to send invoice", variant: "destructive" });
-    },
-  });
+  const sendInvoiceMutation = useApiMutation(
+    () => apiFetch(`/api/invoices/${invoice.id}/send`, { method: "POST" }),
+    [QUERY_KEYS.invoices(), ["/api/dashboard/game-plan"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Invoice sent!", description: "Your client has been notified." });
+      },
+      onError: () => {
+        toast({ title: "Failed to send invoice", variant: "destructive" });
+      },
+    }
+  );
 
-  const markPaidMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("PATCH", `/api/invoices/${invoice.id}`, { status: "paid" });
-    },
-    onSuccess: async () => {
-      // Force refetch to ensure UI reflects new state (staleTime: Infinity requires explicit refetch)
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["/api/invoices"] }),
-        queryClient.refetchQueries({ queryKey: ["/api/invoices", invoice.id] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] }),
-      ]);
-      toast({ title: "Invoice marked as paid" });
-    },
-  });
+  const markPaidMutation = useApiMutation(
+    () => apiFetch(`/api/invoices/${invoice.id}`, { method: "PATCH", body: JSON.stringify({ status: "paid" }) }),
+    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(invoice.id), ["/api/dashboard/game-plan"], ["/api/dashboard/summary"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Invoice marked as paid" });
+      },
+    }
+  );
 
   return (
     <tr

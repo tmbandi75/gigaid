@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +22,8 @@ import {
   Zap,
   Radio,
 } from "lucide-react";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
 
 interface CustomerIOStatus {
@@ -59,58 +60,61 @@ export default function AdminCustomerIO() {
     queryKey: ["/api/admin/customerio/delivery-metrics"],
   });
 
-  const syncUserMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      return apiRequest("POST", `/api/admin/customerio/sync-user/${userId}`);
-    },
-    onSuccess: () => {
-      toast({ title: "User synced to Customer.io" });
-      setSyncUserId("");
-    },
-    onError: (error: Error) => {
-      toast({ title: "Sync failed", description: error.message, variant: "destructive" });
-    },
-  });
+  const syncUserMutation = useApiMutation(
+    async (userId: string) => apiFetch(`/api/admin/customerio/sync-user/${userId}`, { method: "POST" }),
+    [],
+    {
+      onSuccess: () => {
+        toast({ title: "User synced to Customer.io" });
+        setSyncUserId("");
+      },
+      onError: (error: Error) => {
+        toast({ title: "Sync failed", description: error.message, variant: "destructive" });
+      },
+    }
+  );
 
-  const trackEventMutation = useMutation({
-    mutationFn: async ({ userId, eventName }: { userId: string; eventName: string }) => {
-      return apiRequest("POST", `/api/admin/customerio/track-event/${userId}`, { eventName });
-    },
-    onSuccess: () => {
-      toast({ title: "Event tracked" });
-      setEventUserId("");
-      setEventName("");
-    },
-    onError: (error: Error) => {
-      toast({ title: "Track failed", description: error.message, variant: "destructive" });
-    },
-  });
+  const trackEventMutation = useApiMutation(
+    async ({ userId, eventName }: { userId: string; eventName: string }) =>
+      apiFetch(`/api/admin/customerio/track-event/${userId}`, { method: "POST", body: JSON.stringify({ eventName }) }),
+    [],
+    {
+      onSuccess: () => {
+        toast({ title: "Event tracked" });
+        setEventUserId("");
+        setEventName("");
+      },
+      onError: (error: Error) => {
+        toast({ title: "Track failed", description: error.message, variant: "destructive" });
+      },
+    }
+  );
 
-  const pauseCampaignMutation = useMutation({
-    mutationFn: async (campaignId: string) => {
-      return apiRequest("POST", `/api/admin/customerio/campaigns/${campaignId}/pause`);
-    },
-    onSuccess: () => {
-      toast({ title: "Campaign paused" });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/customerio/campaigns"] });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Pause failed", description: error.message, variant: "destructive" });
-    },
-  });
+  const pauseCampaignMutation = useApiMutation(
+    async (campaignId: string) => apiFetch(`/api/admin/customerio/campaigns/${campaignId}/pause`, { method: "POST" }),
+    [["/api/admin/customerio/campaigns"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Campaign paused" });
+      },
+      onError: (error: Error) => {
+        toast({ title: "Pause failed", description: error.message, variant: "destructive" });
+      },
+    }
+  );
 
-  const resumeCampaignMutation = useMutation({
-    mutationFn: async (campaignId: string) => {
-      return apiRequest("POST", `/api/admin/customerio/campaigns/${campaignId}/resume`);
-    },
-    onSuccess: () => {
-      toast({ title: "Campaign resumed" });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/customerio/campaigns"] });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Resume failed", description: error.message, variant: "destructive" });
-    },
-  });
+  const resumeCampaignMutation = useApiMutation(
+    async (campaignId: string) => apiFetch(`/api/admin/customerio/campaigns/${campaignId}/resume`, { method: "POST" }),
+    [["/api/admin/customerio/campaigns"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Campaign resumed" });
+      },
+      onError: (error: Error) => {
+        toast({ title: "Resume failed", description: error.message, variant: "destructive" });
+      },
+    }
+  );
 
   if (statusLoading) {
     return (

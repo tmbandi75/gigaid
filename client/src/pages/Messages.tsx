@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,7 +19,8 @@ import {
 import { PriorityBadge, inferMessagePriority } from "@/components/priority/PriorityBadge";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 
 interface Conversation {
   clientPhone: string;
@@ -177,35 +178,34 @@ function MessageThread({
   const isNearLimit = !!(usage?.outboundLimit && usage.outboundRemaining !== null && usage.outboundRemaining <= 5);
   const isAtLimit = !!(usage?.outboundLimit && usage.outboundRemaining !== null && usage.outboundRemaining <= 0);
 
-  const sendMutation = useMutation({
-    mutationFn: async (message: string) => {
-      await apiRequest("POST", "/api/sms/send", {
+  const sendMutation = useApiMutation(
+    async (message: string) => {
+      await apiFetch("/api/sms/send", { method: "POST", body: JSON.stringify({
         to: phone,
         message,
         clientName,
-      });
+      }) });
     },
-    onSuccess: () => {
-      setReply("");
-      queryClient.invalidateQueries({ queryKey: ["/api/sms/conversation", phone] });
-      queryClient.invalidateQueries({ queryKey: ["/api/sms/conversations"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/sms/unread-count"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/messages/usage"] });
-      toast({ title: "Message sent" });
-    },
-    onError: (error: any) => {
-      const errorData = error?.response?.data || error?.data || {};
-      if (errorData.code === "SMS_LIMIT_EXCEEDED") {
-        toast({ 
-          title: "Message limit reached", 
-          description: errorData.message || "Upgrade to send more messages.",
-          variant: "destructive" 
-        });
-      } else {
-        toast({ title: "Failed to send message", variant: "destructive" });
-      }
-    },
-  });
+    [["/api/sms/conversation", phone], ["/api/sms/conversations"], ["/api/sms/unread-count"], ["/api/messages/usage"]],
+    {
+      onSuccess: () => {
+        setReply("");
+        toast({ title: "Message sent" });
+      },
+      onError: (error: any) => {
+        const errorData = error?.response?.data || error?.data || {};
+        if (errorData.code === "SMS_LIMIT_EXCEEDED") {
+          toast({ 
+            title: "Message limit reached", 
+            description: errorData.message || "Upgrade to send more messages.",
+            variant: "destructive" 
+          });
+        } else {
+          toast({ title: "Failed to send message", variant: "destructive" });
+        }
+      },
+    }
+  );
 
   const handleSend = () => {
     if (!reply.trim() || isAtLimit) return;
@@ -335,6 +335,7 @@ export default function Messages() {
     refetchInterval: 10000,
   });
 
+  const queryClient = useQueryClient();
   const handleSelectConversation = (phone: string, name: string | null) => {
     setSelectedPhone(phone);
     setSelectedName(name);

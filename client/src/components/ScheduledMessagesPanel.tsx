@@ -1,8 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { 
   Clock, 
   MessageSquare, 
@@ -28,7 +29,6 @@ interface ScheduledMessagesPanelProps {
 
 export function ScheduledMessagesPanel({ jobId }: ScheduledMessagesPanelProps) {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   
   const { data: messages = [], isLoading } = useQuery<OutboundMessage[]>({
     queryKey: ["/api/jobs", jobId, "scheduled-messages"],
@@ -39,18 +39,20 @@ export function ScheduledMessagesPanel({ jobId }: ScheduledMessagesPanelProps) {
     },
   });
   
-  const cancelMutation = useMutation({
-    mutationFn: async (messageId: string) => {
-      return apiRequest("POST", `/api/outbound-messages/${messageId}/cancel`);
+  const cancelMutation = useApiMutation(
+    async (messageId: string) => {
+      return apiFetch(`/api/outbound-messages/${messageId}/cancel`, { method: "POST" });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "scheduled-messages"] });
-      toast({ title: "Message canceled", description: "The scheduled message has been canceled." });
-    },
-    onError: () => {
-      toast({ title: "Failed to cancel", variant: "destructive" });
-    },
-  });
+    [["/api/jobs", jobId, "scheduled-messages"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Message canceled", description: "The scheduled message has been canceled." });
+      },
+      onError: () => {
+        toast({ title: "Failed to cancel", variant: "destructive" });
+      },
+    }
+  );
   
   if (isLoading || messages.length === 0) {
     return null;

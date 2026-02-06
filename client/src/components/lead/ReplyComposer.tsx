@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { 
   MessageSquare, 
   Loader2, 
@@ -38,29 +38,34 @@ export function ReplyComposer({ lead }: ReplyComposerProps) {
   const [editedReply, setEditedReply] = useState("");
   const [copied, setCopied] = useState(false);
 
-  const generateReplyMutation = useMutation({
-    mutationFn: async (scenario: string) => {
-      const response = await apiRequest("POST", "/api/ai/generate-negotiation-reply", {
-        leadId: lead.id,
-        scenario,
-        clientName: lead.clientName,
-        serviceType: lead.serviceType,
-        description: lead.description,
-      });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setGeneratedReply(data.reply);
-      setEditedReply(data.reply);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to generate reply. Please try again.",
-        variant: "destructive",
+  const generateReplyMutation = useApiMutation(
+    async (scenario: string) => {
+      return apiFetch("/api/ai/generate-negotiation-reply", {
+        method: "POST",
+        body: JSON.stringify({
+          leadId: lead.id,
+          scenario,
+          clientName: lead.clientName,
+          serviceType: lead.serviceType,
+          description: lead.description,
+        }),
       });
     },
-  });
+    [],
+    {
+      onSuccess: (data: any) => {
+        setGeneratedReply(data.reply);
+        setEditedReply(data.reply);
+      },
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Failed to generate reply. Please try again.",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
   const handleScenarioSelect = (scenario: string) => {
     setSelectedScenario(scenario);
@@ -72,7 +77,7 @@ export function ReplyComposer({ lead }: ReplyComposerProps) {
   // Track respond tap for intent detection
   const trackRespondTap = async () => {
     try {
-      await apiRequest("POST", `/api/leads/${lead.id}/respond-tap`);
+      await apiFetch(`/api/leads/${lead.id}/respond-tap`, { method: "POST" });
     } catch (err) {
       // Silent fail - tracking is non-critical
       console.debug("[RespondTap] Failed to track:", err);

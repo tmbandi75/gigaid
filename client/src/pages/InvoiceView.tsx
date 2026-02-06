@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useLocation } from "wouter";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,7 +27,9 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useSendText } from "@/hooks/use-send-text";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { QUERY_KEYS } from "@/lib/queryKeys";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { PaymentConfirmation } from "@/components/PaymentConfirmation";
 import { 
   ArrowLeft, 
@@ -162,7 +164,7 @@ export default function InvoiceView() {
   const { celebration, celebrate, dismiss: dismissCelebration } = useCelebration();
 
   const { data: invoice, isLoading } = useQuery<Invoice>({
-    queryKey: ["/api/invoices", id],
+    queryKey: QUERY_KEYS.invoice(id!),
     enabled: !!id,
   });
 
@@ -181,101 +183,90 @@ export default function InvoiceView() {
     setNudgeSheetOpen(true);
   };
 
-  const sendMutation = useMutation({
-    mutationFn: async ({ sendEmail, sendSms }: { sendEmail: boolean; sendSms: boolean }) => {
-      const response = await apiRequest("POST", `/api/invoices/${id}/send`, { sendEmail, sendSms });
-      return response.json();
+  const sendMutation = useApiMutation(
+    async ({ sendEmail, sendSms }: { sendEmail: boolean; sendSms: boolean }) => {
+      return apiFetch<{ emailSent?: boolean; smsSent?: boolean; invoiceUrl?: string }>(
+        `/api/invoices/${id}/send`, { method: "POST", body: JSON.stringify({ sendEmail, sendSms }) }
+      );
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] });
-      setShowSendDialog(false);
-      
-      const sentMethods: string[] = [];
-      if (data.emailSent) sentMethods.push("email");
-      if (data.smsSent) sentMethods.push("SMS");
-      
-      if (sentMethods.length > 0) {
-        toast({ title: `Invoice sent via ${sentMethods.join(" and ")}!` });
-      } else {
-        toast({ title: "Invoice status updated!" });
-      }
-      
-      if (data.invoiceUrl) {
-        setInvoiceUrl(data.invoiceUrl);
-      }
-    },
-    onError: () => {
-      toast({ title: "Failed to send invoice", variant: "destructive" });
-    },
-  });
+    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), ["/api/dashboard/game-plan"]],
+    {
+      onSuccess: (data) => {
+        setShowSendDialog(false);
+        
+        const sentMethods: string[] = [];
+        if (data?.emailSent) sentMethods.push("email");
+        if (data?.smsSent) sentMethods.push("SMS");
+        
+        if (sentMethods.length > 0) {
+          toast({ title: `Invoice sent via ${sentMethods.join(" and ")}!` });
+        } else {
+          toast({ title: "Invoice status updated!" });
+        }
+        
+        if (data?.invoiceUrl) {
+          setInvoiceUrl(data.invoiceUrl);
+        }
+      },
+      onError: () => {
+        toast({ title: "Failed to send invoice", variant: "destructive" });
+      },
+    }
+  );
 
-  const markPaidMutation = useMutation({
-    mutationFn: async (paymentMethod: string) => {
-      return apiRequest("POST", `/api/invoices/${id}/mark-paid`, { paymentMethod });
+  const markPaidMutation = useApiMutation(
+    async (paymentMethod: string) => {
+      return apiFetch(`/api/invoices/${id}/mark-paid`, { method: "POST", body: JSON.stringify({ paymentMethod }) });
     },
-    onSuccess: async () => {
-      // Force refetch to ensure UI reflects new state (staleTime: Infinity requires explicit refetch)
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["/api/invoices"] }),
-        queryClient.refetchQueries({ queryKey: ["/api/invoices", id] }),
-        queryClient.refetchQueries({ queryKey: [`/api/invoices/${id}/payments`] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] }),
-      ]);
-      
-      await celebrate({
-        type: "payment_received",
-        amount: invoice?.amount,
-        clientName: invoice?.clientName || undefined,
-      });
-      
-      toast({ title: "Invoice marked as paid!" });
-      setShowPaymentDialog(false);
-    },
-    onError: () => {
-      toast({ title: "Failed to mark invoice as paid", variant: "destructive" });
-    },
-  });
+    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), [`/api/invoices/${id}/payments`], ["/api/dashboard/summary"], ["/api/dashboard/game-plan"], ["/api/next-actions"]],
+    {
+      onSuccess: async () => {
+        await celebrate({
+          type: "payment_received",
+          amount: invoice?.amount,
+          clientName: invoice?.clientName || undefined,
+        });
+        
+        toast({ title: "Invoice marked as paid!" });
+        setShowPaymentDialog(false);
+      },
+      onError: () => {
+        toast({ title: "Failed to mark invoice as paid", variant: "destructive" });
+      },
+    }
+  );
 
-  const deleteMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("DELETE", `/api/invoices/${id}`, {});
+  const deleteMutation = useApiMutation(
+    async () => {
+      return apiFetch(`/api/invoices/${id}`, { method: "DELETE" });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] });
-      toast({ title: "Invoice deleted" });
-      navigate("/invoices");
-    },
-    onError: () => {
-      toast({ title: "Failed to delete invoice", variant: "destructive" });
-    },
-  });
+    [QUERY_KEYS.invoices(), ["/api/dashboard/game-plan"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Invoice deleted" });
+        navigate("/invoices");
+      },
+      onError: () => {
+        toast({ title: "Failed to delete invoice", variant: "destructive" });
+      },
+    }
+  );
 
-  const revertMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", `/api/invoices/${id}/revert-paid`, {});
+  const revertMutation = useApiMutation(
+    async () => {
+      return apiFetch(`/api/invoices/${id}/revert-paid`, { method: "POST" });
     },
-    onSuccess: async () => {
-      // Force refetch to ensure UI reflects new state (staleTime: Infinity requires explicit refetch)
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["/api/invoices"] }),
-        queryClient.refetchQueries({ queryKey: ["/api/invoices", id] }),
-        queryClient.refetchQueries({ queryKey: [`/api/invoices/${id}/payments`] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] }),
-      ]);
-      toast({ title: "Payment reverted - invoice is now pending" });
-      setShowRevertDialog(false);
-    },
-    onError: () => {
-      toast({ title: "Failed to revert payment", variant: "destructive" });
-    },
-  });
+    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), [`/api/invoices/${id}/payments`], ["/api/dashboard/summary"], ["/api/dashboard/game-plan"], ["/api/next-actions"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Payment reverted - invoice is now pending" });
+        setShowRevertDialog(false);
+      },
+      onError: () => {
+        toast({ title: "Failed to revert payment", variant: "destructive" });
+      },
+    }
+  );
 
   const copyShareLink = () => {
     if (invoice?.shareLink) {
@@ -585,7 +576,7 @@ export default function InvoiceView() {
           invoice={invoice} 
           payments={payments}
           onPaymentConfirmed={() => {
-            queryClient.invalidateQueries({ queryKey: ["/api/invoices", id] });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.invoice(id!) });
             queryClient.invalidateQueries({ queryKey: [`/api/invoices/${id}/payments`] });
           }}
         />

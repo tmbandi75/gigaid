@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import {
   MapPin,
   Calendar,
@@ -101,63 +102,75 @@ export default function CrewPortal() {
     retry: false,
   });
 
-  const confirmMutation = useMutation({
-    mutationFn: () => apiRequest("POST", `/api/public/crew-portal/${token}/confirm`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: portalQueryKey });
-      toast({
-        title: "Confirmed!",
-        description: "You've confirmed your attendance for this job.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to confirm attendance. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  const confirmMutation = useApiMutation(
+    () => apiFetch(`/api/public/crew-portal/${token}/confirm`, { method: "POST" }),
+    [portalQueryKey],
+    {
+      onSuccess: () => {
+        toast({
+          title: "Confirmed!",
+          description: "You've confirmed your attendance for this job.",
+        });
+      },
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Failed to confirm attendance. Please try again.",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
-  const declineMutation = useMutation({
-    mutationFn: (reason: string) =>
-      apiRequest("POST", `/api/public/crew-portal/${token}/decline`, { reason }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: portalQueryKey });
-      setShowDeclineForm(false);
-      toast({
-        title: "Declined",
-        description: "You've declined this job assignment.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to decline. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  const declineMutation = useApiMutation(
+    (reason: string) =>
+      apiFetch(`/api/public/crew-portal/${token}/decline`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      }),
+    [portalQueryKey],
+    {
+      onSuccess: () => {
+        setShowDeclineForm(false);
+        toast({
+          title: "Declined",
+          description: "You've declined this job assignment.",
+        });
+      },
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Failed to decline. Please try again.",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
-  const messageMutation = useMutation({
-    mutationFn: (message: string) =>
-      apiRequest("POST", `/api/public/crew-portal/${token}/message`, { message }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: portalQueryKey });
-      setMessageText("");
-      toast({
-        title: "Message Sent",
-        description: "Your message has been sent to the team lead.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to send message. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  const messageMutation = useApiMutation(
+    (message: string) =>
+      apiFetch(`/api/public/crew-portal/${token}/message`, {
+        method: "POST",
+        body: JSON.stringify({ message }),
+      }),
+    [portalQueryKey],
+    {
+      onSuccess: () => {
+        setMessageText("");
+        toast({
+          title: "Message Sent",
+          description: "Your message has been sent to the team lead.",
+        });
+      },
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Failed to send message. Please try again.",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
   const handlePhotoUpload = async (file: File) => {
     if (!file) return;
@@ -190,9 +203,12 @@ export default function CrewPortal() {
         throw new Error("Failed to upload file");
       }
 
-      await apiRequest("POST", `/api/public/crew-portal/${token}/photo`, {
-        photoUrl: objectPath,
-        caption: photoCaption || null,
+      await apiFetch(`/api/public/crew-portal/${token}/photo`, {
+        method: "POST",
+        body: JSON.stringify({
+          photoUrl: objectPath,
+          caption: photoCaption || null,
+        }),
       });
 
       queryClient.invalidateQueries({ queryKey: portalQueryKey });

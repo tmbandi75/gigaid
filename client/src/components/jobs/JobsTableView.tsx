@@ -1,5 +1,4 @@
 import { Link, useLocation } from "wouter";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,7 +26,9 @@ import {
   Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import type { Job } from "@shared/schema";
 
 interface JobsTableViewProps {
@@ -86,35 +87,34 @@ const statusConfig: Record<string, { color: string; bg: string; label: string }>
 
 function JobTableRow({ job }: { job: Job }) {
   const [, navigate] = useLocation();
-  const queryClient = useQueryClient();
   const { toast } = useToast();
   const config = statusConfig[job.status] || statusConfig.scheduled;
 
-  const startJobMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("PATCH", `/api/jobs/${job.id}`, { status: "in_progress" });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      toast({ title: "Job started!", description: "Good luck!" });
-    },
-    onError: () => {
-      toast({ title: "Failed to start job", variant: "destructive" });
-    },
-  });
+  const startJobMutation = useApiMutation(
+    () => apiFetch(`/api/jobs/${job.id}`, { method: "PATCH", body: JSON.stringify({ status: "in_progress" }) }),
+    [QUERY_KEYS.jobs()],
+    {
+      onSuccess: () => {
+        toast({ title: "Job started!", description: "Good luck!" });
+      },
+      onError: () => {
+        toast({ title: "Failed to start job", variant: "destructive" });
+      },
+    }
+  );
 
-  const completeJobMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("PATCH", `/api/jobs/${job.id}`, { status: "completed" });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      toast({ title: "Job completed!", description: "Don't forget to get paid." });
-    },
-    onError: () => {
-      toast({ title: "Failed to complete job", variant: "destructive" });
-    },
-  });
+  const completeJobMutation = useApiMutation(
+    () => apiFetch(`/api/jobs/${job.id}`, { method: "PATCH", body: JSON.stringify({ status: "completed" }) }),
+    [QUERY_KEYS.jobs()],
+    {
+      onSuccess: () => {
+        toast({ title: "Job completed!", description: "Don't forget to get paid." });
+      },
+      onError: () => {
+        toast({ title: "Failed to complete job", variant: "destructive" });
+      },
+    }
+  );
 
   const handleNavigate = () => {
     if (job.location) {

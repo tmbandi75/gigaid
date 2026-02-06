@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +27,8 @@ import {
   UserCheck,
   BarChart3,
 } from "lucide-react";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -239,21 +240,25 @@ export default function AdminCockpit() {
     );
   }
 
-  const refreshMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/admin/cockpit/refresh"),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/cockpit/summary"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/cockpit/focus"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/cockpit/alerts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/cockpit/risk-leakage"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/cockpit/revenue-payments"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/cockpit/activation-funnel"] });
-      toast({ title: "Data refreshed" });
-    },
-    onError: () => {
-      toast({ title: "Failed to refresh", variant: "destructive" });
-    },
-  });
+  const refreshMutation = useApiMutation(
+    () => apiFetch("/api/admin/cockpit/refresh", { method: "POST" }),
+    [
+      ["/api/admin/cockpit/summary"],
+      ["/api/admin/cockpit/focus"],
+      ["/api/admin/cockpit/alerts"],
+      ["/api/admin/cockpit/risk-leakage"],
+      ["/api/admin/cockpit/revenue-payments"],
+      ["/api/admin/cockpit/activation-funnel"],
+    ],
+    {
+      onSuccess: () => {
+        toast({ title: "Data refreshed" });
+      },
+      onError: () => {
+        toast({ title: "Failed to refresh", variant: "destructive" });
+      },
+    }
+  );
 
   if (summaryLoading || focusLoading) {
     return (

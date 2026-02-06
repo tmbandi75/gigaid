@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,7 +13,8 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { getAuthToken } from "@/lib/authToken";
 import { 
   Bell, 
@@ -96,7 +97,6 @@ interface OnboardingStatus {
 export default function Settings() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [bookingLinkCopied, setBookingLinkCopied] = useState(false);
   const { isAuthenticated } = useAuth();
@@ -237,16 +237,18 @@ export default function Settings() {
     }
   }, [profile]);
 
-  const updateMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("PATCH", "/api/settings", data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
-      toast({ title: "Settings saved" });
-    },
-    onError: () => {
-      toast({ title: "Failed to save settings", variant: "destructive" });
-    },
-  });
+  const updateMutation = useApiMutation(
+    (data: any) => apiFetch("/api/settings", { method: "PATCH", body: JSON.stringify(data) }),
+    [["/api/profile"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Settings saved" });
+      },
+      onError: () => {
+        toast({ title: "Failed to save settings", variant: "destructive" });
+      },
+    }
+  );
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -255,7 +257,7 @@ export default function Settings() {
     setIsDeleting(true);
     setDeleteError(null);
     try {
-      await apiRequest("POST", "/api/account/delete", {});
+      await apiFetch("/api/account/delete", { method: "POST", body: JSON.stringify({}) });
       window.location.href = "/";
     } catch (error) {
       setDeleteError("We couldn't delete your account. Please try again.");
@@ -263,27 +265,28 @@ export default function Settings() {
     }
   };
 
-  const quickSetupMutation = useMutation({
-    mutationFn: async (price: number) => {
-      await apiRequest("PATCH", "/api/onboarding", {
+  const quickSetupMutation = useApiMutation(
+    async (price: number) => {
+      await apiFetch("/api/onboarding", { method: "PATCH", body: JSON.stringify({
         defaultPrice: price,
         depositPolicySet: true,
         completed: true,
         state: "completed",
         step: 8
-      });
+      }) });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/onboarding"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
-      setShowQuickSetup(false);
-      setQuickSetupPrice("");
-      toast({ title: "Deposit protection enabled" });
-    },
-    onError: () => {
-      toast({ title: "Failed to save settings", variant: "destructive" });
-    },
-  });
+    [["/api/onboarding"], ["/api/profile"]],
+    {
+      onSuccess: () => {
+        setShowQuickSetup(false);
+        setQuickSetupPrice("");
+        toast({ title: "Deposit protection enabled" });
+      },
+      onError: () => {
+        toast({ title: "Failed to save settings", variant: "destructive" });
+      },
+    }
+  );
 
   const handleQuickSetup = () => {
     const priceInCents = Math.round(parseFloat(quickSetupPrice) * 100);

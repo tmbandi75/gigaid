@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { Tags, Loader2, Sparkles, Lightbulb } from "lucide-react";
 
 interface ClientTagsResult {
@@ -33,20 +33,25 @@ export function ClientTags({ clientHistory, onTagsGenerated }: ClientTagsProps) 
   const { toast } = useToast();
   const [result, setResult] = useState<ClientTagsResult | null>(null);
 
-  const tagMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/ai/tag-client", { clientHistory });
-      return response.json() as Promise<ClientTagsResult>;
+  const tagMutation = useApiMutation(
+    async () => {
+      return apiFetch<ClientTagsResult>("/api/ai/tag-client", {
+        method: "POST",
+        body: JSON.stringify({ clientHistory }),
+      });
     },
-    onSuccess: (data) => {
-      setResult(data);
-      onTagsGenerated?.(data.tags, data.insights);
-      toast({ title: "Client tagged!" });
-    },
-    onError: () => {
-      toast({ title: "Failed to tag client", variant: "destructive" });
-    },
-  });
+    [],
+    {
+      onSuccess: (data) => {
+        setResult(data);
+        onTagsGenerated?.(data.tags, data.insights);
+        toast({ title: "Client tagged!" });
+      },
+      onError: () => {
+        toast({ title: "Failed to tag client", variant: "destructive" });
+      },
+    }
+  );
 
   const tagColors: Record<string, string> = {
     "VIP": "bg-purple-500/10 text-purple-600 border-purple-500/20",

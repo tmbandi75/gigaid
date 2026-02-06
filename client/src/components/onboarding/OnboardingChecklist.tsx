@@ -2,8 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Check, Link2, Briefcase, Clock, Bell, ChevronRight, Copy, PartyPopper } from "lucide-react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useRef, useState } from "react";
 import confetti from "canvas-confetti";
@@ -102,13 +103,15 @@ export function OnboardingChecklist({ currentStep, onStepClick, onComplete, book
     prevStepRef.current = currentStep;
   }, [isComplete, currentStep]);
 
-  const completeMutation = useMutation({
-    mutationFn: () => apiRequest("PATCH", "/api/onboarding", { completed: true, step: steps.length }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/onboarding"] });
-      onComplete();
-    },
-  });
+  const completeMutation = useApiMutation(
+    () => apiFetch("/api/onboarding", { method: "PATCH", body: JSON.stringify({ completed: true, step: steps.length }) }),
+    [["/api/onboarding"]],
+    {
+      onSuccess: () => {
+        onComplete();
+      },
+    }
+  );
 
   const handleCopyBookingLink = async () => {
     if (bookingSlug) {

@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { Share2, Loader2, Sparkles, Copy, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -34,25 +34,30 @@ export function ReferralMessageAI({
   const [hashtags, setHashtags] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
 
-  const generateMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/ai/referral-message", {
-        tone,
-        link,
-        providerName,
-        serviceCategory,
+  const generateMutation = useApiMutation(
+    async () => {
+      return apiFetch<ReferralMessage>("/api/ai/referral-message", {
+        method: "POST",
+        body: JSON.stringify({
+          tone,
+          link,
+          providerName,
+          serviceCategory,
+        }),
       });
-      return response.json() as Promise<ReferralMessage>;
     },
-    onSuccess: (data) => {
-      setMessage(data.message);
-      setHashtags(data.hashtags || []);
-      toast({ title: "Referral message generated!" });
-    },
-    onError: () => {
-      toast({ title: "Failed to generate message", variant: "destructive" });
-    },
-  });
+    [],
+    {
+      onSuccess: (data) => {
+        setMessage(data.message);
+        setHashtags(data.hashtags || []);
+        toast({ title: "Referral message generated!" });
+      },
+      onError: () => {
+        toast({ title: "Failed to generate message", variant: "destructive" });
+      },
+    }
+  );
 
   const handleCopy = async () => {
     const fullMessage = hashtags.length > 0 

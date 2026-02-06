@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,8 +26,10 @@ import {
 import { Link, useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import type { Job, AiNudge, Invoice } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { NudgeChips } from "@/components/nudges/NudgeChip";
 import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
 import { JobsTableView } from "@/components/jobs/JobsTableView";
@@ -114,7 +116,6 @@ interface JobCardProps {
 function JobCard({ job, nudges, invoices, onNudgeClick }: JobCardProps) {
   const config = statusConfig[job.status] || statusConfig.scheduled;
   const StatusIcon = config.icon;
-  const queryClient = useQueryClient();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [showResolutionModal, setShowResolutionModal] = useState(false);
@@ -128,83 +129,67 @@ function JobCard({ job, nudges, invoices, onNudgeClick }: JobCardProps) {
   const eligibility = getJobActionEligibility(job, hasInvoice);
   const swipeActions = getSwipeActions("job", eligibility);
 
-  const startJobMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("PATCH", `/api/jobs/${job.id}`, { status: "in_progress" });
-    },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs", job.id] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] }),
-      ]);
-      toast({ title: "Job started!", description: "Good luck!" });
-    },
-    onError: () => {
-      toast({ title: "Failed to start job", variant: "destructive" });
-    },
-  });
+  const startJobMutation = useApiMutation(
+    () => apiFetch(`/api/jobs/${job.id}`, { method: "PATCH", body: JSON.stringify({ status: "in_progress" }) }),
+    [QUERY_KEYS.jobs(), QUERY_KEYS.job(job.id), ["/api/dashboard/game-plan"], ["/api/next-actions"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Job started!", description: "Good luck!" });
+      },
+      onError: () => {
+        toast({ title: "Failed to start job", variant: "destructive" });
+      },
+    }
+  );
 
-  const cancelJobMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("PATCH", `/api/jobs/${job.id}`, { status: "cancelled" });
-    },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs", job.id] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] }),
-      ]);
-      toast({ title: "Job cancelled" });
-      setConfirmAction(null);
-    },
-    onError: () => {
-      toast({ title: "Failed to cancel job", variant: "destructive" });
-      setConfirmAction(null);
-    },
-  });
+  const cancelJobMutation = useApiMutation(
+    () => apiFetch(`/api/jobs/${job.id}`, { method: "PATCH", body: JSON.stringify({ status: "cancelled" }) }),
+    [QUERY_KEYS.jobs(), QUERY_KEYS.job(job.id), ["/api/dashboard/game-plan"], ["/api/next-actions"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Job cancelled" });
+        setConfirmAction(null);
+      },
+      onError: () => {
+        toast({ title: "Failed to cancel job", variant: "destructive" });
+        setConfirmAction(null);
+      },
+    }
+  );
 
-  const archiveJobMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", `/api/jobs/${job.id}/archive`);
-    },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-      ]);
-      toast({ title: "Job archived" });
-      setConfirmAction(null);
-    },
-    onError: () => {
-      toast({ title: "Failed to archive job", variant: "destructive" });
-      setConfirmAction(null);
-    },
-  });
+  const archiveJobMutation = useApiMutation(
+    () => apiFetch(`/api/jobs/${job.id}/archive`, { method: "POST" }),
+    [QUERY_KEYS.jobs(), ["/api/dashboard/game-plan"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Job archived" });
+        setConfirmAction(null);
+      },
+      onError: () => {
+        toast({ title: "Failed to archive job", variant: "destructive" });
+        setConfirmAction(null);
+      },
+    }
+  );
 
-  const deleteJobMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("DELETE", `/api/jobs/${job.id}`);
-    },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/jobs"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-      ]);
-      toast({ title: "Job deleted" });
-      setConfirmAction(null);
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: "Cannot delete job", 
-        description: error?.message || "Try archiving instead.",
-        variant: "destructive" 
-      });
-      setConfirmAction(null);
-    },
-  });
+  const deleteJobMutation = useApiMutation(
+    () => apiFetch(`/api/jobs/${job.id}`, { method: "DELETE" }),
+    [QUERY_KEYS.jobs(), ["/api/dashboard/game-plan"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Job deleted" });
+        setConfirmAction(null);
+      },
+      onError: (error: any) => {
+        toast({ 
+          title: "Cannot delete job", 
+          description: error?.message || "Try archiving instead.",
+          variant: "destructive" 
+        });
+        setConfirmAction(null);
+      },
+    }
+  );
 
   const handleSwipeAction = (action: RulesSwipeAction) => {
     if (action.requiresConfirmation) {
@@ -477,15 +462,15 @@ export default function Jobs() {
   }, []);
   
   const { data: jobs = [], isLoading } = useQuery<Job[]>({
-    queryKey: ["/api/jobs"],
+    queryKey: QUERY_KEYS.jobs(),
   });
 
   const { data: nudges = [] } = useQuery<AiNudge[]>({
-    queryKey: ["/api/ai/nudges"],
+    queryKey: QUERY_KEYS.nudges(),
   });
 
   const { data: invoices = [] } = useQuery<Invoice[]>({
-    queryKey: ["/api/invoices"],
+    queryKey: QUERY_KEYS.invoices(),
   });
 
   const { data: profile } = useQuery<{ services: string[] | null }>({

@@ -1,5 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import type { AiNudge } from "@shared/schema";
 
 export function useNudges(entityType?: string, entityId?: string) {
@@ -23,17 +24,10 @@ export function useNudges(entityType?: string, entityId?: string) {
 }
 
 export function useGenerateNudges() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/ai/nudges/generate");
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/ai/nudges"] });
-    },
-  });
+  return useApiMutation(
+    async () => apiFetch("/api/ai/nudges/generate", { method: "POST" }),
+    [["/api/ai/nudges"]]
+  );
 }
 
 export function useFeatureFlag(key: string) {
@@ -49,15 +43,9 @@ export function useFeatureFlag(key: string) {
 }
 
 export function useUpdateFeatureFlag() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ key, enabled }: { key: string; enabled: boolean }) => {
-      const res = await apiRequest("PATCH", `/api/feature-flags/${key}`, { enabled });
-      return res.json();
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/feature-flags", variables.key] });
-    },
-  });
+  return useApiMutation(
+    async ({ key, enabled }: { key: string; enabled: boolean }) =>
+      apiFetch(`/api/feature-flags/${key}`, { method: "PATCH", body: JSON.stringify({ enabled }) }),
+    [["/api/feature-flags"]]
+  );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { 
   CreditCard, 
   ExternalLink, 
@@ -40,7 +41,6 @@ interface DepositSettings {
 
 export function StripeConnectSettings() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [depositSettings, setDepositSettings] = useState<DepositSettings>({
     depositEnabled: false,
     depositType: "percent",
@@ -75,60 +75,62 @@ export function StripeConnectSettings() {
     }
   }, [profile]);
 
-  const onboardMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/stripe/connect/onboard"),
-    onSuccess: (data: any) => {
-      if (data.url) {
-        // Open Stripe onboarding in new tab to avoid navigation issues
-        window.open(data.url, "_blank");
+  const onboardMutation = useApiMutation(
+    () => apiFetch<any>("/api/stripe/connect/onboard", { method: "POST" }),
+    [["/api/stripe/connect/status"]],
+    {
+      onSuccess: (data: any) => {
+        if (data?.url) {
+          window.open(data.url, "_blank");
+          toast({ 
+            title: "Stripe Setup", 
+            description: "Complete your Stripe setup in the new tab. Return here when finished." 
+          });
+        } else {
+          toast({ title: "Failed to get onboarding URL", variant: "destructive" });
+        }
+      },
+      onError: (error: any) => {
+        console.error("Onboarding error:", error);
+        toast({ title: "Failed to start onboarding", variant: "destructive" });
+      },
+    }
+  );
+
+  const dashboardMutation = useApiMutation(
+    () => apiFetch<any>("/api/stripe/connect/dashboard", { method: "POST" }),
+    [["/api/stripe/connect/status"]],
+    {
+      onSuccess: (data: any) => {
+        if (data?.url) {
+          window.open(data.url, "_blank");
+        } else {
+          toast({ title: "Failed to get dashboard URL", variant: "destructive" });
+        }
+      },
+      onError: (error: any) => {
+        console.error("Dashboard error:", error);
         toast({ 
-          title: "Stripe Setup", 
-          description: "Complete your Stripe setup in the new tab. Return here when finished." 
+          title: "Cannot open dashboard", 
+          description: "Please complete your Stripe setup first.",
+          variant: "destructive" 
         });
-        // Invalidate to refresh status when user returns
-        queryClient.invalidateQueries({ queryKey: ["/api/stripe/connect/status"] });
-      } else {
-        toast({ title: "Failed to get onboarding URL", variant: "destructive" });
-      }
-    },
-    onError: (error: any) => {
-      console.error("Onboarding error:", error);
-      toast({ title: "Failed to start onboarding", variant: "destructive" });
-    },
-  });
+      },
+    }
+  );
 
-  const dashboardMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/stripe/connect/dashboard"),
-    onSuccess: (data: any) => {
-      if (data.url) {
-        window.open(data.url, "_blank");
-        // Invalidate to refresh status when user returns from Stripe dashboard
-        queryClient.invalidateQueries({ queryKey: ["/api/stripe/connect/status"] });
-      } else {
-        toast({ title: "Failed to get dashboard URL", variant: "destructive" });
-      }
-    },
-    onError: (error: any) => {
-      console.error("Dashboard error:", error);
-      toast({ 
-        title: "Cannot open dashboard", 
-        description: "Please complete your Stripe setup first.",
-        variant: "destructive" 
-      });
-    },
-  });
-
-  const saveDepositMutation = useMutation({
-    mutationFn: (data: DepositSettings) => 
-      apiRequest("PATCH", "/api/stripe/connect/deposit-settings", data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
-      toast({ title: "Deposit settings saved" });
-    },
-    onError: () => {
-      toast({ title: "Failed to save deposit settings", variant: "destructive" });
-    },
-  });
+  const saveDepositMutation = useApiMutation(
+    (data: DepositSettings) => apiFetch("/api/stripe/connect/deposit-settings", { method: "PATCH", body: JSON.stringify(data) }),
+    [["/api/profile"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Deposit settings saved" });
+      },
+      onError: () => {
+        toast({ title: "Failed to save deposit settings", variant: "destructive" });
+      },
+    }
+  );
 
   const handleSaveDepositSettings = () => {
     saveDepositMutation.mutate(depositSettings);

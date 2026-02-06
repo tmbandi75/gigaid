@@ -6,8 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { serviceCategories, type ServiceCategory } from "@shared/service-categories";
 import { CATEGORY_ESTIMATION_PROFILES, type EstimationProfile } from "@shared/estimation-profiles";
 import { 
@@ -43,29 +43,36 @@ export function EstimationTool({ onEstimateComplete }: EstimationToolProps) {
   const [result, setResult] = useState<EstimateResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const estimateMutation = useMutation({
-    mutationFn: async (data: { category: string; description: string; squareFootage?: number; photos?: string[] }) => {
+  const estimateMutation = useApiMutation(
+    async (data: { category: string; description: string; squareFootage?: number; photos?: string[] }) => {
       const payloadSize = JSON.stringify(data).length;
       console.log(`[Estimation] Sending request, payload size: ${Math.round(payloadSize / 1024)}KB, photos: ${data.photos?.length || 0}`);
       
       if (payloadSize > 4 * 1024 * 1024) {
         console.warn("[Estimation] Payload too large, attempting without photos");
         const { photos, ...dataWithoutPhotos } = data;
-        const response = await apiRequest("POST", "/api/estimation/in-app", dataWithoutPhotos);
-        return response.json();
+        return apiFetch<EstimateResult>("/api/estimation/in-app", {
+          method: "POST",
+          body: JSON.stringify(dataWithoutPhotos),
+        });
       }
       
-      const response = await apiRequest("POST", "/api/estimation/in-app", data);
-      return response.json();
+      return apiFetch<EstimateResult>("/api/estimation/in-app", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
     },
-    onSuccess: (data) => {
-      setResult(data);
-      onEstimateComplete?.(data);
-    },
-    onError: (error) => {
-      console.error("[Estimation] Error:", error);
-    },
-  });
+    [],
+    {
+      onSuccess: (data) => {
+        setResult(data);
+        onEstimateComplete?.(data);
+      },
+      onError: (error) => {
+        console.error("[Estimation] Error:", error);
+      },
+    }
+  );
 
   const selectedProfile: EstimationProfile | null = category ? CATEGORY_ESTIMATION_PROFILES[category] : null;
 

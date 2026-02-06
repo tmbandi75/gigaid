@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { Textarea } from "@/components/ui/textarea";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { Sparkles, Loader2 } from "lucide-react";
 
 interface JobNotesAutocompleteProps {
@@ -21,18 +21,23 @@ export function JobNotesAutocomplete({
   const [showSuggestion, setShowSuggestion] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  const autocompleteMutation = useMutation({
-    mutationFn: async (partialText: string) => {
-      const res = await apiRequest("POST", "/api/public/ai/autocomplete-notes", { partialText, serviceName });
-      return res.json() as Promise<{ suggestion: string | null }>;
+  const autocompleteMutation = useApiMutation(
+    async (partialText: string) => {
+      return apiFetch<{ suggestion: string | null }>("/api/public/ai/autocomplete-notes", {
+        method: "POST",
+        body: JSON.stringify({ partialText, serviceName }),
+      });
     },
-    onSuccess: (data) => {
-      if (data.suggestion && data.suggestion !== value) {
-        setSuggestion(data.suggestion);
-        setShowSuggestion(true);
-      }
-    },
-  });
+    [],
+    {
+      onSuccess: (data) => {
+        if (data.suggestion && data.suggestion !== value) {
+          setSuggestion(data.suggestion);
+          setShowSuggestion(true);
+        }
+      },
+    }
+  );
 
   const debouncedAutocomplete = useCallback((text: string) => {
     if (debounceRef.current) {

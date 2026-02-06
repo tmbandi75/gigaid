@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageSpinner } from "@/components/ui/spinner";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Dialog,
@@ -215,15 +216,15 @@ export default function TodaysGamePlanPage() {
     staleTime: 30000, // Cache for 30 seconds
   });
 
-  const actMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("POST", `/api/next-actions/${id}/act`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] }),
-  });
+  const actMutation = useApiMutation(
+    (id: string) => apiFetch(`/api/next-actions/${id}/act`, { method: "POST" }),
+    [["/api/next-actions"]]
+  );
 
-  const dismissMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("POST", `/api/next-actions/${id}/dismiss`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] }),
-  });
+  const dismissMutation = useApiMutation(
+    (id: string) => apiFetch(`/api/next-actions/${id}/dismiss`, { method: "POST" }),
+    [["/api/next-actions"]]
+  );
 
   if (isLoading) {
     return (

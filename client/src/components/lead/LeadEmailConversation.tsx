@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { Mail, Send, Loader2, Inbox, ArrowUpRight, ArrowDownLeft, ChevronDown, ChevronUp, Sparkles, RefreshCw } from "lucide-react";
 import type { LeadEmail } from "@shared/schema";
 
@@ -103,7 +105,6 @@ function EmailMessage({ email, isExpanded, onToggle }: { email: LeadEmail; isExp
 
 export function LeadEmailConversation({ leadId, clientEmail, clientName, serviceType, description }: LeadEmailConversationProps) {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [showCompose, setShowCompose] = useState(false);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -121,54 +122,63 @@ export function LeadEmailConversation({ leadId, clientEmail, clientName, service
   const visibleEmails = showAllEmails ? emails : emails.slice(0, 3);
   const hiddenCount = emails.length - 3;
 
-  const generateReplyMutation = useMutation({
-    mutationFn: async (scenario: string) => {
-      const response = await apiRequest("POST", "/api/ai/generate-negotiation-reply", {
-        leadId,
-        scenario,
-        clientName,
-        serviceType: serviceType || "service",
-        description: description || "",
-      });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setBody(data.reply);
-      if (!subject) {
-        setSubject(`Re: ${serviceType || "Your inquiry"}`);
-      }
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to generate reply. Please try again.",
-        variant: "destructive",
+  const generateReplyMutation = useApiMutation(
+    async (scenario: string) => {
+      return apiFetch("/api/ai/generate-negotiation-reply", {
+        method: "POST",
+        body: JSON.stringify({
+          leadId,
+          scenario,
+          clientName,
+          serviceType: serviceType || "service",
+          description: description || "",
+        }),
       });
     },
-  });
+    [],
+    {
+      onSuccess: (data: any) => {
+        setBody(data.reply);
+        if (!subject) {
+          setSubject(`Re: ${serviceType || "Your inquiry"}`);
+        }
+      },
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Failed to generate reply. Please try again.",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
   const handleScenarioSelect = (scenario: string) => {
     setSelectedScenario(scenario);
     generateReplyMutation.mutate(scenario);
   };
 
-  const sendEmailMutation = useMutation({
-    mutationFn: async (data: { subject: string; body: string; includeSignature: boolean }) => {
-      return apiRequest("POST", `/api/leads/${leadId}/emails`, data);
+  const sendEmailMutation = useApiMutation(
+    async (data: { subject: string; body: string; includeSignature: boolean }) => {
+      return apiFetch(`/api/leads/${leadId}/emails`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
     },
-    onSuccess: () => {
-      toast({ title: "Email sent successfully" });
-      queryClient.invalidateQueries({ queryKey: ["/api/leads", leadId, "emails"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/leads", leadId] });
-      setSubject("");
-      setBody("");
-      setSelectedScenario(null);
-      setShowCompose(false);
-    },
-    onError: () => {
-      toast({ title: "Failed to send email", variant: "destructive" });
-    },
-  });
+    [["/api/leads", leadId, "emails"], QUERY_KEYS.lead(leadId)],
+    {
+      onSuccess: () => {
+        toast({ title: "Email sent successfully" });
+        setSubject("");
+        setBody("");
+        setSelectedScenario(null);
+        setShowCompose(false);
+      },
+      onError: () => {
+        toast({ title: "Failed to send email", variant: "destructive" });
+      },
+    }
+  );
 
   const handleSend = () => {
     if (!subject.trim() || !body.trim()) {

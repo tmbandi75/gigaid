@@ -1,5 +1,4 @@
 import { useLocation } from "wouter";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -23,7 +22,9 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import type { Lead } from "@shared/schema";
 
 interface LeadsTableViewProps {
@@ -59,19 +60,23 @@ const statusConfig: Record<string, { color: string; bg: string; label: string }>
 
 function LeadTableRow({ lead }: { lead: Lead }) {
   const [, navigate] = useLocation();
-  const queryClient = useQueryClient();
   const { toast } = useToast();
   const config = statusConfig[lead.status] || statusConfig.new;
 
-  const updateStatusMutation = useMutation({
-    mutationFn: async (status: string) => {
-      return apiRequest("PATCH", `/api/leads/${lead.id}`, { status });
+  const updateStatusMutation = useApiMutation(
+    async (status: string) => {
+      return apiFetch(`/api/leads/${lead.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
-      toast({ title: "Lead status updated" });
-    },
-  });
+    [QUERY_KEYS.leads()],
+    {
+      onSuccess: () => {
+        toast({ title: "Lead status updated" });
+      },
+    }
+  );
 
   return (
     <tr

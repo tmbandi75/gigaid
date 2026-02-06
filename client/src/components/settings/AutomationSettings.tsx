@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { 
   Clock, 
   MessageSquare, 
@@ -40,7 +41,6 @@ interface AutomationSettings {
 
 export function AutomationSettings() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   
   const { data: settings, isLoading } = useQuery<AutomationSettings>({
     queryKey: ["/api/automation-settings"],
@@ -70,9 +70,10 @@ export function AutomationSettings() {
     }
   }, [settings]);
   
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("PUT", "/api/automation-settings", {
+  const saveMutation = useApiMutation(
+    () => apiFetch("/api/automation-settings", {
+      method: "PUT",
+      body: JSON.stringify({
         postJobFollowupEnabled: followupEnabled,
         followupDelayHours: parseInt(followupDelay),
         followupTemplate,
@@ -82,20 +83,22 @@ export function AutomationSettings() {
         reviewLinkUrl: reviewLink || null,
         autoConfirmEnabled: confirmEnabled,
         confirmationTemplate: confirmTemplate || null,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/automation-settings"] });
-      toast({ title: "Settings saved", description: "Your automation settings have been updated." });
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: "Failed to save", 
-        description: error.message || "Please try again.", 
-        variant: "destructive" 
-      });
-    },
-  });
+      }),
+    }),
+    [["/api/automation-settings"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Settings saved", description: "Your automation settings have been updated." });
+      },
+      onError: (error: any) => {
+        toast({ 
+          title: "Failed to save", 
+          description: error.message || "Please try again.", 
+          variant: "destructive" 
+        });
+      },
+    }
+  );
   
   if (isLoading) {
     return (

@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { 
   DollarSign, 
   Loader2, 
@@ -84,27 +84,32 @@ export function CategoryEstimator({
   const allowedMeasurements = getAllowedMeasurements(categoryId);
   const allowsPhotos = supportsPhotoEstimation(categoryId);
 
-  const estimateMutation = useMutation({
-    mutationFn: async (data: { 
+  const estimateMutation = useApiMutation(
+    async (data: { 
       description: string; 
       measurementArea?: number;
       measurementLinear?: number;
     }) => {
-      const res = await apiRequest("POST", "/api/public/ai/category-estimate", { 
-        ...data,
-        slug,
-        categoryId,
-        serviceType,
+      return apiFetch<AIEstimateResult>("/api/public/ai/category-estimate", {
+        method: "POST",
+        body: JSON.stringify({ 
+          ...data,
+          slug,
+          categoryId,
+          serviceType,
+        }),
       });
-      return res.json() as Promise<AIEstimateResult>;
     },
-    onSuccess: (data) => {
-      setEstimate(data);
-    },
-  });
+    [],
+    {
+      onSuccess: (data) => {
+        setEstimate(data);
+      },
+    }
+  );
 
-  const estimationRequestMutation = useMutation({
-    mutationFn: async (data: {
+  const estimationRequestMutation = useApiMutation(
+    async (data: {
       clientName: string;
       clientPhone?: string;
       clientEmail?: string;
@@ -114,18 +119,23 @@ export function CategoryEstimator({
       measurementLinear?: number;
       location?: string;
     }) => {
-      const res = await apiRequest("POST", "/api/public/estimation-request", {
-        slug,
-        categoryId,
-        serviceType,
-        ...data,
+      return apiFetch("/api/public/estimation-request", {
+        method: "POST",
+        body: JSON.stringify({
+          slug,
+          categoryId,
+          serviceType,
+          ...data,
+        }),
       });
-      return res.json();
     },
-    onSuccess: () => {
-      setRequestSubmitted(true);
-    },
-  });
+    [],
+    {
+      onSuccess: () => {
+        setRequestSubmitted(true);
+      },
+    }
+  );
 
   const handleGetEstimate = () => {
     if (description.trim().length < 10) return;

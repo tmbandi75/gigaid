@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import {
   Gift,
   Copy,
@@ -49,24 +51,25 @@ export default function Referrals() {
     0
   );
 
-  const redeemMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/referrals/redeem"),
-    onSuccess: async (response) => {
-      const data = await response.json();
-      toast({
-        title: "Rewards redeemed!",
-        description: data.message,
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/referrals"] });
-    },
-    onError: () => {
-      toast({
-        title: "Failed to redeem",
-        description: "Please try again later",
-        variant: "destructive",
-      });
-    },
-  });
+  const redeemMutation = useApiMutation(
+    () => apiFetch<{ message: string }>("/api/referrals/redeem", { method: "POST" }),
+    [QUERY_KEYS.referrals()],
+    {
+      onSuccess: (data) => {
+        toast({
+          title: "Rewards redeemed!",
+          description: data.message,
+        });
+      },
+      onError: () => {
+        toast({
+          title: "Failed to redeem",
+          description: "Please try again later",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
   const copyReferralLink = () => {
     const link = `${window.location.origin}/join?ref=${referralData?.referralCode || ""}`;

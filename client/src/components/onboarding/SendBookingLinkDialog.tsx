@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Loader2, Send, CheckCircle2, Smartphone, Link2 } from "lucide-react";
@@ -18,22 +18,23 @@ export function SendBookingLinkDialog({ open, onClose, onSuccess }: SendBookingL
   const [step, setStep] = useState<"input" | "success">("input");
   const { toast } = useToast();
 
-  const sendMutation = useMutation({
-    mutationFn: async (phone: string) => {
-      return apiRequest("POST", "/api/onboarding/send-booking-link", { phoneNumber: phone });
-    },
-    onSuccess: () => {
-      setStep("success");
-      onSuccess?.();
-    },
-    onError: () => {
-      toast({
-        title: "Couldn't send the link",
-        description: "Please check your phone number and try again",
-        variant: "destructive",
-      });
-    },
-  });
+  const sendMutation = useApiMutation(
+    (phone: string) => apiFetch("/api/onboarding/send-booking-link", { method: "POST", body: JSON.stringify({ phoneNumber: phone }) }),
+    [],
+    {
+      onSuccess: () => {
+        setStep("success");
+        onSuccess?.();
+      },
+      onError: () => {
+        toast({
+          title: "Couldn't send the link",
+          description: "Please check your phone number and try again",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
   const handleSend = () => {
     if (!phoneNumber || phoneNumber.length < 10) {

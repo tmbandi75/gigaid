@@ -1,10 +1,11 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bell, X, Users, ArrowRight } from "lucide-react";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 
 interface CampaignSuggestion {
   id: string;
@@ -34,18 +35,14 @@ export function CampaignSuggestionBanner() {
     refetchInterval: 60000,
   });
   
-  const dismissMutation = useMutation({
-    mutationFn: async (suggestionId: string) => {
-      const response = await apiRequest(
-        "POST", 
-        `/api/notification-campaigns/suggestions/${suggestionId}/dismiss`
-      );
-      return response.json();
+  const dismissMutation = useApiMutation(
+    async (suggestionId: string) => {
+      return apiFetch<unknown>(`/api/notification-campaigns/suggestions/${suggestionId}/dismiss`, {
+        method: "POST",
+      });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/notification-campaigns/suggestions"] });
-    },
-  });
+    [["/api/notification-campaigns/suggestions"]],
+  );
 
   if (isLoading || !suggestions || suggestions.length === 0) {
     return null;

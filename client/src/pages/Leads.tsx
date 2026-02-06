@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +43,9 @@ import { Link, useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useSendText } from "@/hooks/use-send-text";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import type { Lead, AiNudge } from "@shared/schema";
 import FollowUpCheckIn from "@/components/FollowUpCheckIn";
 import { NudgeChips } from "@/components/nudges/NudgeChip";
@@ -127,50 +129,47 @@ function LeadCard({ lead, nudges, onGenerateFollowUp, onSendText, onNudgeClick }
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [confirmAction, setConfirmAction] = useState<RulesSwipeAction | null>(null);
-  const queryClient = useQueryClient();
 
   const eligibility = getLeadActionEligibility(lead);
   const swipeActions = getSwipeActions("lead", eligibility);
 
-  const archiveLeadMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", `/api/leads/${lead.id}/archive`);
+  const archiveLeadMutation = useApiMutation(
+    async () => {
+      return apiFetch(`/api/leads/${lead.id}/archive`, { method: "POST" });
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/leads"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-      ]);
-      toast({ title: "Request archived" });
-      setConfirmAction(null);
-    },
-    onError: () => {
-      toast({ title: "Failed to archive request", variant: "destructive" });
-      setConfirmAction(null);
-    },
-  });
+    [QUERY_KEYS.leads(), ["/api/dashboard/game-plan"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Request archived" });
+        setConfirmAction(null);
+      },
+      onError: () => {
+        toast({ title: "Failed to archive request", variant: "destructive" });
+        setConfirmAction(null);
+      },
+    }
+  );
 
-  const deleteLeadMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("DELETE", `/api/leads/${lead.id}`);
+  const deleteLeadMutation = useApiMutation(
+    async () => {
+      return apiFetch(`/api/leads/${lead.id}`, { method: "DELETE" });
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/leads"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-      ]);
-      toast({ title: "Request deleted" });
-      setConfirmAction(null);
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: "Cannot delete request", 
-        description: error?.message || "Try archiving instead.",
-        variant: "destructive" 
-      });
-      setConfirmAction(null);
-    },
-  });
+    [QUERY_KEYS.leads(), ["/api/dashboard/game-plan"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Request deleted" });
+        setConfirmAction(null);
+      },
+      onError: (error: any) => {
+        toast({ 
+          title: "Cannot delete request", 
+          description: error?.message || "Try archiving instead.",
+          variant: "destructive" 
+        });
+        setConfirmAction(null);
+      },
+    }
+  );
 
   const handleSwipeAction = (action: RulesSwipeAction) => {
     if (action.requiresConfirmation) {
@@ -399,23 +398,28 @@ export default function Leads() {
 
   const showTableView = !isMobile && viewMode === "table";
 
-  const followUpMutation = useMutation({
-    mutationFn: async (params: {
+  const followUpMutation = useApiMutation(
+    async (params: {
       clientName: string;
       context: "new_lead" | "no_response";
       daysSinceInteraction: number;
       tone: "friendly" | "professional" | "casual";
     }) => {
-      const response = await apiRequest("POST", "/api/ai/follow-up", params);
-      return response.json() as Promise<FollowUpMessage>;
+      return apiFetch("/api/ai/follow-up", {
+        method: "POST",
+        body: JSON.stringify(params),
+      }) as Promise<FollowUpMessage>;
     },
-    onSuccess: (data) => {
-      setFollowUpMessage(data.message);
-    },
-    onError: () => {
-      toast({ title: "Failed to generate message", variant: "destructive" });
-    },
-  });
+    [],
+    {
+      onSuccess: (data: FollowUpMessage) => {
+        setFollowUpMessage(data.message);
+      },
+      onError: () => {
+        toast({ title: "Failed to generate message", variant: "destructive" });
+      },
+    }
+  );
 
   const handleGenerateFollowUp = (lead: Lead) => {
     setSelectedLead(lead);

@@ -1,8 +1,9 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Plan, Capability, PLAN_CAPABILITIES, PLAN_NAMES } from "@shared/plans";
 import { hasCapability, isDeveloper, getUserCapabilities } from "@shared/entitlements";
 import { useOptimisticCapability } from "@/contexts/OptimisticCapabilityContext";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 
 interface UserProfile {
   id: string;
@@ -137,14 +138,10 @@ export function useCanPerform(capability: NewCapability) {
 }
 
 export function useIncrementCapability() {
-  return useMutation({
-    mutationFn: async (capability: NewCapability) => {
-      return apiRequest("POST", `/api/capabilities/${capability}/increment`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/capabilities"] });
-    }
-  });
+  return useApiMutation(
+    async (capability: NewCapability) => apiFetch(`/api/capabilities/${capability}/increment`, { method: "POST" }),
+    [["/api/capabilities"]]
+  );
 }
 
 export function formatLimitMessage(capability: CapabilityStatus): string {

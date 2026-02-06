@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -50,67 +51,80 @@ export default function QuickBook() {
     // Track page view when component mounts
   }, []);
 
-  const parseMutation = useMutation({
-    mutationFn: async (text: string) => {
+  const parseMutation = useApiMutation(
+    async (text: string) => {
       // TODO: Analytics - quickbook_parse_submitted
-      const res = await apiRequest("POST", "/api/quickbook/parse", { messageText: text });
-      return res.json() as Promise<ParseResponse>;
-    },
-    onSuccess: (data) => {
-      setDraftId(data.draftId);
-      setFields(data.fields);
-      setConfidence(data.confidence);
-      setIsEditing(data.confidence.overall < 0.6);
-      setStep("preview");
-      // TODO: Analytics - quickbook_preview_shown (with confidence: data.confidence.overall)
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to parse message",
-        variant: "destructive",
+      return apiFetch<ParseResponse>("/api/quickbook/parse", {
+        method: "POST",
+        body: JSON.stringify({ messageText: text }),
       });
     },
-  });
+    [],
+    {
+      onSuccess: (data) => {
+        setDraftId(data.draftId);
+        setFields(data.fields);
+        setConfidence(data.confidence);
+        setIsEditing(data.confidence.overall < 0.6);
+        setStep("preview");
+        // TODO: Analytics - quickbook_preview_shown (with confidence: data.confidence.overall)
+      },
+      onError: (error: Error) => {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to parse message",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
-  const updateDraftMutation = useMutation({
-    mutationFn: async (updatedFields: Partial<ParsedJobFields>) => {
-      const res = await apiRequest("PATCH", `/api/quickbook/draft/${draftId}`, { fields: updatedFields });
-      return res.json();
+  const updateDraftMutation = useApiMutation(
+    async (updatedFields: Partial<ParsedJobFields>) => {
+      return apiFetch(`/api/quickbook/draft/${draftId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ fields: updatedFields }),
+      });
     },
-    onSuccess: () => {
-      toast({ title: "Changes saved" });
-    },
-    onError: () => {
-      toast({ title: "Failed to save changes", variant: "destructive" });
-    },
-  });
+    [],
+    {
+      onSuccess: () => {
+        toast({ title: "Changes saved" });
+      },
+      onError: () => {
+        toast({ title: "Failed to save changes", variant: "destructive" });
+      },
+    }
+  );
 
-  const sendLinkMutation = useMutation({
-    mutationFn: async () => {
+  const sendLinkMutation = useApiMutation(
+    async () => {
       // TODO: Analytics - quickbook_send_link_clicked
       const paymentConfig: PaymentConfig = {
         type: paymentType,
         depositAmount: paymentType === "deposit" ? depositAmount * 100 : undefined,
       };
-      const res = await apiRequest("POST", `/api/quickbook/draft/${draftId}/send-link`, {
-        paymentIntentConfig: paymentConfig,
-      });
-      return res.json() as Promise<SendLinkResponse>;
-    },
-    onSuccess: (data) => {
-      setBookingLinkUrl(data.bookingLinkUrl);
-      setStep("sent");
-      // TODO: Analytics - quickbook_completed
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send booking link",
-        variant: "destructive",
+      return apiFetch<SendLinkResponse>(`/api/quickbook/draft/${draftId}/send-link`, {
+        method: "POST",
+        body: JSON.stringify({ paymentIntentConfig: paymentConfig }),
       });
     },
-  });
+    [],
+    {
+      onSuccess: (data) => {
+        setBookingLinkUrl(data.bookingLinkUrl);
+        setStep("sent");
+        // TODO: Analytics - quickbook_completed
+      },
+      onError: (error: Error) => {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to send booking link",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
   const handleParse = () => {
     if (messageText.trim().length < 10) {

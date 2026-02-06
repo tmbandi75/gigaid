@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { 
   Mic, 
   MicOff, 
@@ -55,52 +56,64 @@ export function VoiceNoteSummarizer({ onSummaryComplete, onNoteSaved }: VoiceNot
 
   const activeJobs = jobs.filter(j => j.status !== "completed" && j.status !== "cancelled");
 
-  const summarizeMutation = useMutation({
-    mutationFn: async (text: string) => {
-      const response = await apiRequest("POST", "/api/ai/summarize-voice-note", { transcript: text });
-      return response.json() as Promise<VoiceNoteSummary>;
+  const summarizeMutation = useApiMutation(
+    async (text: string) => {
+      return apiFetch<VoiceNoteSummary>("/api/ai/summarize-voice-note", {
+        method: "POST",
+        body: JSON.stringify({ transcript: text }),
+      });
     },
-    onSuccess: (data) => {
-      setSummary(data);
-      onSummaryComplete?.(data);
-      toast({ title: "Voice note summarized!" });
-    },
-    onError: () => {
-      toast({ title: "Failed to summarize", variant: "destructive" });
-    },
-  });
+    [],
+    {
+      onSuccess: (data) => {
+        setSummary(data);
+        onSummaryComplete?.(data);
+        toast({ title: "Voice note summarized!" });
+      },
+      onError: () => {
+        toast({ title: "Failed to summarize", variant: "destructive" });
+      },
+    }
+  );
 
-  const saveMutation = useMutation({
-    mutationFn: async (data: { transcript: string; summary: string; keyPoints: string[]; type: string; jobId?: string }) => {
-      const response = await apiRequest("POST", "/api/voice-notes", data);
-      return response.json();
+  const saveMutation = useApiMutation(
+    async (data: { transcript: string; summary: string; keyPoints: string[]; type: string; jobId?: string }) => {
+      return apiFetch<{ id: string }>("/api/voice-notes", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
     },
-    onSuccess: (data) => {
-      setSavedNoteId(data.id);
-      onNoteSaved?.(data.id);
-      queryClient.invalidateQueries({ queryKey: ["/api/voice-notes"] });
-      toast({ title: "Voice note saved!" });
-    },
-    onError: () => {
-      toast({ title: "Failed to save note", variant: "destructive" });
-    },
-  });
+    [["/api/voice-notes"]],
+    {
+      onSuccess: (data) => {
+        setSavedNoteId(data.id);
+        onNoteSaved?.(data.id);
+        toast({ title: "Voice note saved!" });
+      },
+      onError: () => {
+        toast({ title: "Failed to save note", variant: "destructive" });
+      },
+    }
+  );
 
-  const attachToJobMutation = useMutation({
-    mutationFn: async ({ noteId, jobId }: { noteId: string; jobId: string }) => {
-      const response = await apiRequest("PATCH", `/api/voice-notes/${noteId}`, { jobId });
-      return response.json();
+  const attachToJobMutation = useApiMutation(
+    async ({ noteId, jobId }: { noteId: string; jobId: string }) => {
+      return apiFetch(`/api/voice-notes/${noteId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ jobId }),
+      });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/voice-notes"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      setShowJobSelector(false);
-      toast({ title: "Note attached to job!" });
-    },
-    onError: () => {
-      toast({ title: "Failed to attach note", variant: "destructive" });
-    },
-  });
+    [["/api/voice-notes"], ["/api/jobs"]],
+    {
+      onSuccess: () => {
+        setShowJobSelector(false);
+        toast({ title: "Note attached to job!" });
+      },
+      onError: () => {
+        toast({ title: "Failed to attach note", variant: "destructive" });
+      },
+    }
+  );
 
   const startRecording = () => {
     if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
@@ -171,11 +184,9 @@ export function VoiceNoteSummarizer({ onSummaryComplete, onNoteSaved }: VoiceNot
   const handleCreateJob = () => {
     if (summary) {
       const params = new URLSearchParams();
-      // Use serviceTitle as the job title if available
       if (summary.serviceTitle) {
         params.set("title", summary.serviceTitle);
       }
-      // Use clientName if extracted from the voice note
       if (summary.clientName) {
         params.set("clientName", summary.clientName);
       }

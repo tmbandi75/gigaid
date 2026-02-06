@@ -1,4 +1,4 @@
-import { apiRequest } from "./queryClient";
+import { apiFetch } from "./apiFetch";
 
 // Cache bust: 2026-02-03T23:25:00Z
 // Single source of truth for Stripe enablement
@@ -39,13 +39,10 @@ export async function startStripeCheckout({
 
   try {
     console.log("[Stripe] Creating checkout session");
-    const response = await apiRequest("POST", "/api/subscription/checkout", {
-      plan,
-      returnTo
+    const data = await apiFetch<{ url?: string; error?: string }>("/api/subscription/checkout", {
+      method: "POST",
+      body: JSON.stringify({ plan, returnTo }),
     });
-    console.log("[Stripe] Checkout session response received", response.status);
-    
-    const data = await response.json();
     console.log("[Stripe] Checkout session data", data);
     
     if (data.url) {

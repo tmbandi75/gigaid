@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { MessageSquare, Loader2, Sparkles, Copy, Send, Check, Phone, User, Info } from "lucide-react";
 import type { Job, Lead } from "@shared/schema";
 
@@ -37,7 +38,6 @@ interface ClientOption {
 
 export function FollowUpComposer() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [message, setMessage] = useState("");
   const [tone, setTone] = useState<"friendly" | "professional" | "casual">("friendly");
@@ -83,32 +83,36 @@ export function FollowUpComposer() {
 
   const selectedClient = clientOptions.find(c => c.id === selectedClientId);
 
-  const generateMutation = useMutation({
-    mutationFn: async () => {
+  const generateMutation = useApiMutation(
+    async () => {
       if (!selectedClient) throw new Error("No client selected");
-      const response = await apiRequest("POST", "/api/ai/follow-up", {
-        clientName: selectedClient.name,
-        context,
-        lastService: selectedClient.serviceType,
-        tone,
+      return apiFetch<FollowUpMessage>("/api/ai/follow-up", {
+        method: "POST",
+        body: JSON.stringify({
+          clientName: selectedClient.name,
+          context,
+          lastService: selectedClient.serviceType,
+          tone,
+        }),
       });
-      return response.json() as Promise<FollowUpMessage>;
     },
-    onSuccess: (data) => {
-      setMessage(data.message);
-      toast({ title: "Follow-up message generated!" });
-    },
-    onError: () => {
-      toast({ title: "Failed to generate message", variant: "destructive" });
-    },
-  });
+    [],
+    {
+      onSuccess: (data) => {
+        setMessage(data.message);
+        toast({ title: "Follow-up message generated!" });
+      },
+      onError: () => {
+        toast({ title: "Failed to generate message", variant: "destructive" });
+      },
+    }
+  );
 
-  // Track respond tap for intent detection (only for leads)
   const trackRespondTap = async () => {
     if (!selectedClient || selectedClient.type !== "lead") return;
     const leadId = selectedClient.id.replace("lead-", "");
     try {
-      await apiRequest("POST", `/api/leads/${leadId}/respond-tap`);
+      await apiFetch(`/api/leads/${leadId}/respond-tap`, { method: "POST" });
     } catch (err) {
       console.debug("[RespondTap] Failed to track:", err);
     }
@@ -122,44 +126,48 @@ export function FollowUpComposer() {
     trackRespondTap();
   };
 
+  const sendMutation = useApiMutation(
+    async (payload: { to: string; message: string; clientName: string; relatedJobId: string | null; relatedLeadId: string | null }) => {
+      return apiFetch<{ isFirstSend?: boolean }>("/api/sms/send", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    },
+    [["/api/messages/usage"]],
+    {
+      onSuccess: (data) => {
+        if (data.isFirstSend) {
+          setShowFirstSendTooltip(true);
+          setTimeout(() => setShowFirstSendTooltip(false), 8000);
+        }
+        toast({ title: "Message sent via GigAid!" });
+        setMessage("");
+        trackRespondTap();
+      },
+      onError: (error: any) => {
+        const errorMessage = error?.message || "Failed to send message";
+        if (errorMessage.includes("SMS_LIMIT_EXCEEDED")) {
+          toast({ 
+            title: "Message limit reached", 
+            description: "Upgrade to send more messages this month.",
+            variant: "destructive" 
+          });
+        } else {
+          toast({ title: "Failed to send message", variant: "destructive" });
+        }
+      },
+    }
+  );
+
   const handleSend = async () => {
     if (!message || !selectedClient?.phone) return;
-    
-    setIsSending(true);
-    try {
-      const response = await apiRequest("POST", "/api/sms/send", {
-        to: selectedClient.phone,
-        message: message,
-        clientName: selectedClient.name,
-        relatedJobId: selectedClient.type === "job" ? selectedClient.id : null,
-        relatedLeadId: selectedClient.type === "lead" ? selectedClient.id : null,
-      });
-      const data = await response.json();
-      
-      // Show first-send tooltip only once (server tracks this)
-      if (data.isFirstSend) {
-        setShowFirstSendTooltip(true);
-        setTimeout(() => setShowFirstSendTooltip(false), 8000);
-      }
-      
-      toast({ title: "Message sent via GigAid!" });
-      setMessage("");
-      queryClient.invalidateQueries({ queryKey: ["/api/messages/usage"] });
-      trackRespondTap();
-    } catch (error: any) {
-      const errorMessage = error?.message || "Failed to send message";
-      if (errorMessage.includes("SMS_LIMIT_EXCEEDED")) {
-        toast({ 
-          title: "Message limit reached", 
-          description: "Upgrade to send more messages this month.",
-          variant: "destructive" 
-        });
-      } else {
-        toast({ title: "Failed to send message", variant: "destructive" });
-      }
-    } finally {
-      setIsSending(false);
-    }
+    sendMutation.mutate({
+      to: selectedClient.phone,
+      message: message,
+      clientName: selectedClient.name,
+      relatedJobId: selectedClient.type === "job" ? selectedClient.id : null,
+      relatedLeadId: selectedClient.type === "lead" ? selectedClient.id : null,
+    });
   };
 
   const contextLabels = {
@@ -311,10 +319,10 @@ export function FollowUpComposer() {
                   <Button 
                     onClick={handleSend} 
                     className="w-full" 
-                    disabled={isSending || !selectedClient?.phone}
+                    disabled={sendMutation.isPending || !selectedClient?.phone}
                     data-testid="button-send-followup"
                   >
-                    {isSending ? (
+                    {sendMutation.isPending ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
                       <Send className="h-4 w-4 mr-2" />

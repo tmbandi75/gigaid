@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { 
   DollarSign, 
   Banknote, 
@@ -44,61 +45,56 @@ export function GetPaidDialog({ open, onClose, jobId, jobTitle, amount, clientNa
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [step, setStep] = useState<"ask" | "method" | "success" | "review_sent" | "invoice_created">("ask");
   const [, navigate] = useLocation();
-  const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const markPaidMutation = useMutation({
-    mutationFn: async (method: string) => {
-      return apiRequest("PATCH", `/api/jobs/${jobId}/payment`, {
+  const markPaidMutation = useApiMutation(
+    (method: string) => apiFetch(`/api/jobs/${jobId}/payment`, {
+      method: "PATCH",
+      body: JSON.stringify({
         paymentStatus: "paid",
         paymentMethod: method,
         paidAt: new Date().toISOString(),
-      });
-    },
-    onSuccess: async () => {
-      // Force refetch to ensure UI reflects new state (staleTime: Infinity requires explicit refetch)
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["/api/jobs"] }),
-        queryClient.refetchQueries({ queryKey: ["/api/jobs", jobId] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/next-actions"] }),
-      ]);
-      setStep("success");
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to record payment. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const requestReviewMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", `/api/jobs/${jobId}/request-review`);
-      return response.json();
-    },
-    onSuccess: (data) => {
-      if (data.smsSent || data.emailSent) {
-        setStep("review_sent");
-      } else {
+      }),
+    }),
+    [QUERY_KEYS.jobs(), QUERY_KEYS.job(jobId), ["/api/dashboard/summary"], ["/api/dashboard/game-plan"], ["/api/next-actions"]],
+    {
+      onSuccess: () => {
+        setStep("success");
+      },
+      onError: () => {
         toast({
-          title: "No contact info",
-          description: "Customer has no phone or email on file for review request.",
+          title: "Error",
+          description: "Failed to record payment. Please try again.",
           variant: "destructive",
         });
-      }
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to send review request. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+      },
+    }
+  );
+
+  const requestReviewMutation = useApiMutation(
+    () => apiFetch<{ smsSent?: boolean; emailSent?: boolean }>(`/api/jobs/${jobId}/request-review`, { method: "POST" }),
+    [],
+    {
+      onSuccess: (data: { smsSent?: boolean; emailSent?: boolean }) => {
+        if (data.smsSent || data.emailSent) {
+          setStep("review_sent");
+        } else {
+          toast({
+            title: "No contact info",
+            description: "Customer has no phone or email on file for review request.",
+            variant: "destructive",
+          });
+        }
+      },
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Failed to send review request. Please try again.",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
   const handleYesPaid = () => {
     setStep("method");
@@ -109,32 +105,32 @@ export function GetPaidDialog({ open, onClose, jobId, jobTitle, amount, clientNa
     markPaidMutation.mutate(method);
   };
 
-  const sendPaymentLinkMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", `/api/jobs/${jobId}/send-payment-link`);
-      return response.json();
-    },
-    onSuccess: (data) => {
-      const sentVia = [];
-      if (data.smsSent) sentVia.push("SMS");
-      if (data.emailSent) sentVia.push("Email");
-      
-      toast({
-        title: "Payment link sent!",
-        description: sentVia.length > 0 
-          ? `Sent via ${sentVia.join(" and ")}` 
-          : "Link created - share with your client",
-      });
-      onClose();
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send payment link. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  const sendPaymentLinkMutation = useApiMutation(
+    () => apiFetch<{ smsSent?: boolean; emailSent?: boolean }>(`/api/jobs/${jobId}/send-payment-link`, { method: "POST" }),
+    [],
+    {
+      onSuccess: (data: { smsSent?: boolean; emailSent?: boolean }) => {
+        const sentVia = [];
+        if (data.smsSent) sentVia.push("SMS");
+        if (data.emailSent) sentVia.push("Email");
+        
+        toast({
+          title: "Payment link sent!",
+          description: sentVia.length > 0 
+            ? `Sent via ${sentVia.join(" and ")}` 
+            : "Link created - share with your client",
+        });
+        onClose();
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to send payment link. Please try again.",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
   const handleRequestPayment = () => {
     sendPaymentLinkMutation.mutate();
@@ -144,33 +140,37 @@ export function GetPaidDialog({ open, onClose, jobId, jobTitle, amount, clientNa
     requestReviewMutation.mutate();
   };
 
-  const createInvoiceMutation = useMutation({
-    mutationFn: async () => {
+  const createInvoiceMutation = useApiMutation(
+    () => {
       const invoiceAmount = totalAmountCents || amount || 0;
       const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`;
-      const response = await apiRequest("POST", `/api/invoices`, {
-        userId: "demo-user",
-        jobId,
-        clientName: clientName || "Customer",
-        serviceDescription: jobTitle,
-        amount: invoiceAmount,
-        invoiceNumber,
-        status: "draft",
-      });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-      setStep("invoice_created");
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to create invoice. Please try again.",
-        variant: "destructive",
+      return apiFetch(`/api/invoices`, {
+        method: "POST",
+        body: JSON.stringify({
+          userId: "demo-user",
+          jobId,
+          clientName: clientName || "Customer",
+          serviceDescription: jobTitle,
+          amount: invoiceAmount,
+          invoiceNumber,
+          status: "draft",
+        }),
       });
     },
-  });
+    [QUERY_KEYS.invoices()],
+    {
+      onSuccess: () => {
+        setStep("invoice_created");
+      },
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Failed to create invoice. Please try again.",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
   const handleCreateInvoice = () => {
     createInvoiceMutation.mutate();

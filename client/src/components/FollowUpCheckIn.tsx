@@ -1,5 +1,7 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -26,28 +28,30 @@ export default function FollowUpCheckIn({ onActionComplete }: FollowUpCheckInPro
     refetchInterval: 60000,
   });
 
-  const followUpMutation = useMutation({
-    mutationFn: async ({ leadId, response }: { leadId: string; response: string }) => {
-      const res = await apiRequest("POST", `/api/leads/${leadId}/follow-up-response`, { response });
-      return res.json();
-    },
-    onSuccess: (_, { response }) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/leads/follow-up-needed"] });
-      
-      const messages = {
-        replied: "Great! Lead marked as engaged",
-        waiting: "We'll check again in 24 hours",
-        no_response: "Lead archived as cold",
-      };
-      
-      toast({
-        title: messages[response as keyof typeof messages] || "Updated",
+  const followUpMutation = useApiMutation(
+    async ({ leadId, response }: { leadId: string; response: string }) => {
+      return apiFetch(`/api/leads/${leadId}/follow-up-response`, {
+        method: "POST",
+        body: JSON.stringify({ response }),
       });
-      
-      onActionComplete?.();
     },
-  });
+    [QUERY_KEYS.leads(), ["/api/leads/follow-up-needed"]],
+    {
+      onSuccess: (_, { response }) => {
+        const messages = {
+          replied: "Great! Lead marked as engaged",
+          waiting: "We'll check again in 24 hours",
+          no_response: "Lead archived as cold",
+        };
+        
+        toast({
+          title: messages[response as keyof typeof messages] || "Updated",
+        });
+        
+        onActionComplete?.();
+      },
+    }
+  );
 
   if (isLoading || leadsNeedingFollowUp.length === 0) {
     return null;

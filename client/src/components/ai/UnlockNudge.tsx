@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { Sparkles, Loader2, X, ChevronRight } from "lucide-react";
 
 interface FeatureNudge {
@@ -28,21 +28,26 @@ export function UnlockNudge({
   const [dismissed, setDismissed] = useState(false);
   const [nudge, setNudge] = useState<FeatureNudge | null>(null);
 
-  const nudgeMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/ai/feature-nudge", {
-        completedFeatures,
-        incompleteFeatures,
+  const nudgeMutation = useApiMutation(
+    async () => {
+      return apiFetch<FeatureNudge>("/api/ai/feature-nudge", {
+        method: "POST",
+        body: JSON.stringify({
+          completedFeatures,
+          incompleteFeatures,
+        }),
       });
-      return response.json() as Promise<FeatureNudge>;
     },
-    onSuccess: (data) => {
-      setNudge(data);
-    },
-    onError: () => {
-      toast({ title: "Failed to get suggestion", variant: "destructive" });
-    },
-  });
+    [],
+    {
+      onSuccess: (data) => {
+        setNudge(data);
+      },
+      onError: () => {
+        toast({ title: "Failed to get suggestion", variant: "destructive" });
+      },
+    }
+  );
 
   const priorityColors = {
     high: "border-primary bg-primary/5",

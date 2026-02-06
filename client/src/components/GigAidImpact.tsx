@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { 
   TrendingUp, 
   DollarSign, 
@@ -68,7 +69,6 @@ function formatCurrency(cents: number): string {
 
 export function GigAidImpact() {
   const [showCalculationModal, setShowCalculationModal] = useState(false);
-  const queryClient = useQueryClient();
 
   const { data: impact, isLoading } = useQuery<ImpactStats>({
     queryKey: ["/api/ai/impact"],
@@ -84,14 +84,12 @@ export function GigAidImpact() {
     enabled: outcomeFlag?.enabled === true,
   });
 
-  const computeMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/outcomes/compute");
+  const computeMutation = useApiMutation(
+    async () => {
+      return apiFetch("/api/outcomes/compute", { method: "POST" });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/outcomes"] });
-    },
-  });
+    [["/api/outcomes"]],
+  );
 
   const hasImpact = impact && (
     impact.moneyCollectedViaReminders > 0 || 

@@ -1,12 +1,14 @@
 import { useLocation, useParams } from "wouter";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import {
   ArrowLeft,
   Edit,
@@ -72,7 +74,6 @@ export default function LeadSummary() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const isMobile = useIsMobile();
 
   const { data: lead, isLoading } = useQuery<Lead>({
@@ -83,13 +84,12 @@ export default function LeadSummary() {
   const { data: activePriceConfirmation } = useQuery<PriceConfirmation | null>({
     queryKey: ["/api/leads", id, "active-price-confirmation"],
     queryFn: async () => {
-      const res = await fetch(`/api/leads/${id}/active-price-confirmation`);
-      if (!res.ok) {
-        if (res.status === 404) return null;
-        throw new Error("Failed to fetch");
+      try {
+        return await apiFetch(`/api/leads/${id}/active-price-confirmation`);
+      } catch (e: any) {
+        if (e?.statusCode === 404) return null;
+        throw e;
       }
-      const data = await res.json();
-      return data || null;
     },
     enabled: !!id,
   });
@@ -120,21 +120,21 @@ export default function LeadSummary() {
     }
   }, [lead]);
 
-  const convertToJobMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", `/api/leads/${id}/convert`);
-      return response.json();
+  const convertToJobMutation = useApiMutation(
+    async () => {
+      return apiFetch(`/api/leads/${id}/convert`, { method: "POST" });
     },
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      toast({ title: "Lead converted to job!" });
-      navigate(`/jobs/${data.jobId}`);
-    },
-    onError: () => {
-      toast({ title: "Failed to convert lead", variant: "destructive" });
-    },
-  });
+    [QUERY_KEYS.leads(), QUERY_KEYS.jobs()],
+    {
+      onSuccess: (data: any) => {
+        toast({ title: "Lead converted to job!" });
+        navigate(`/jobs/${data.jobId}`);
+      },
+      onError: () => {
+        toast({ title: "Failed to convert lead", variant: "destructive" });
+      },
+    }
+  );
 
   if (isLoading) {
     return (

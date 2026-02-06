@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { apiFetch } from "@/lib/apiFetch";
 
 interface JobDraft {
   service: string;
@@ -25,15 +25,15 @@ export function VoiceFAB() {
   const [inputText, setInputText] = useState("");
   const [jobDraft, setJobDraft] = useState<JobDraft | null>(null);
 
-  const parseMutation = useMutation({
-    mutationFn: async (message: string) => {
-      const response = await apiRequest("POST", "/api/ai/text-to-plan", { message });
-      return response.json() as Promise<JobDraft>;
-    },
-    onSuccess: (data) => {
-      setJobDraft(data);
-    },
-  });
+  const parseMutation = useApiMutation(
+    async (message: string) => apiFetch<JobDraft>("/api/ai/text-to-plan", { method: "POST", body: JSON.stringify({ message }) }),
+    [],
+    {
+      onSuccess: (data) => {
+        setJobDraft(data);
+      },
+    }
+  );
 
   const handleOpen = () => {
     setIsOpen(true);

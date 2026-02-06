@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,8 @@ import {
   Sparkles
 } from "lucide-react";
 import { Link } from "wouter";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
 
 interface UserProfile {
@@ -612,32 +613,30 @@ function ActionsSection({ userId, profile }: { userId: string; profile: UserProf
   const [pushMessage, setPushMessage] = useState("");
   const [suppressHours, setSuppressHours] = useState("24");
 
-  const actionMutation = useMutation({
-    mutationFn: async ({ action_key, payload }: { action_key: string; payload?: any }) => {
-      const res = await apiRequest("POST", `/api/admin/users/${userId}/actions`, {
-        action_key,
-        reason: reason.trim(),
-        payload,
-      });
-      return res;
-    },
-    onSuccess: () => {
-      toast({ title: "Action completed and logged" });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users", userId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users", userId, "audit"] });
-      setActionDialog(null);
-      setReason("");
-      setNoteText("");
-      setPushMessage("");
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: "Action failed", 
-        description: error.message || "Please try again",
-        variant: "destructive" 
-      });
-    },
-  });
+  const actionMutation = useApiMutation(
+    async ({ action_key, payload }: { action_key: string; payload?: any }) =>
+      apiFetch(`/api/admin/users/${userId}/actions`, {
+        method: "POST",
+        body: JSON.stringify({ action_key, reason: reason.trim(), payload }),
+      }),
+    [["/api/admin/users", userId], ["/api/admin/users", userId, "audit"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Action completed and logged" });
+        setActionDialog(null);
+        setReason("");
+        setNoteText("");
+        setPushMessage("");
+      },
+      onError: (error: any) => {
+        toast({ 
+          title: "Action failed", 
+          description: error.message || "Please try again",
+          variant: "destructive" 
+        });
+      },
+    }
+  );
 
   const handleAction = (action_key: string, payload?: any) => {
     if (!reason.trim()) {
@@ -841,33 +840,31 @@ function BillingActionsSection({ userId, profile }: { userId: string; profile: U
   const [creditAmount, setCreditAmount] = useState("");
   const [cancelImmediate, setCancelImmediate] = useState(false);
 
-  const actionMutation = useMutation({
-    mutationFn: async ({ action_key, payload }: { action_key: string; payload?: any }) => {
-      const res = await apiRequest("POST", `/api/admin/users/${userId}/actions`, {
-        action_key,
-        reason: reason.trim(),
-        payload,
-      });
-      return res;
-    },
-    onSuccess: () => {
-      toast({ title: "Billing action completed and logged" });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users", userId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users", userId, "audit"] });
-      setActionDialog(null);
-      setReason("");
-      setCompMonths("1");
-      setCreditAmount("");
-      setCancelImmediate(false);
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: "Billing action failed", 
-        description: error.message || "Please try again",
-        variant: "destructive" 
-      });
-    },
-  });
+  const actionMutation = useApiMutation(
+    async ({ action_key, payload }: { action_key: string; payload?: any }) =>
+      apiFetch(`/api/admin/users/${userId}/actions`, {
+        method: "POST",
+        body: JSON.stringify({ action_key, reason: reason.trim(), payload }),
+      }),
+    [["/api/admin/users", userId], ["/api/admin/users", userId, "audit"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Billing action completed and logged" });
+        setActionDialog(null);
+        setReason("");
+        setCompMonths("1");
+        setCreditAmount("");
+        setCancelImmediate(false);
+      },
+      onError: (error: any) => {
+        toast({ 
+          title: "Billing action failed", 
+          description: error.message || "Please try again",
+          variant: "destructive" 
+        });
+      },
+    }
+  );
 
   const handleAction = (action_key: string, payload?: any) => {
     if (!reason.trim()) {

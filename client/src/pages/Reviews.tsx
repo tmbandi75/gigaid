@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { 
   Star, 
   MessageSquare, 
@@ -33,7 +35,6 @@ interface ReviewStats {
 export default function Reviews() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
   const [responseText, setResponseText] = useState("");
@@ -43,19 +44,24 @@ export default function Reviews() {
     queryKey: ["/api/reviews"],
   });
 
-  const respondMutation = useMutation({
-    mutationFn: ({ id, response }: { id: string; response: string }) =>
-      apiRequest("POST", `/api/reviews/${id}/respond`, { response }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/reviews"] });
-      setSelectedReview(null);
-      setResponseText("");
-      toast({ title: "Response sent" });
-    },
-    onError: () => {
-      toast({ title: "Failed to send response", variant: "destructive" });
-    },
-  });
+  const respondMutation = useApiMutation(
+    ({ id, response }: { id: string; response: string }) =>
+      apiFetch(`/api/reviews/${id}/respond`, {
+        method: "POST",
+        body: JSON.stringify({ response }),
+      }),
+    [QUERY_KEYS.reviews()],
+    {
+      onSuccess: () => {
+        setSelectedReview(null);
+        setResponseText("");
+        toast({ title: "Response sent" });
+      },
+      onError: () => {
+        toast({ title: "Failed to send response", variant: "destructive" });
+      },
+    }
+  );
 
   const stats: ReviewStats = {
     averageRating: reviews.length > 0 

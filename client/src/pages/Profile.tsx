@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -21,7 +21,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useUpload } from "@/hooks/use-upload";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { 
   ArrowLeft, 
   Camera, 
@@ -91,7 +92,6 @@ function ProfileInfoRow({ icon: Icon, label, value }: { icon: typeof Mail; label
 export default function Profile() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -158,19 +158,21 @@ export default function Profile() {
     } : undefined,
   });
 
-  const updateMutation = useMutation({
-    mutationFn: async (data: Partial<{ name: string; email: string; phone: string; photo: string; businessName: string; bio: string; serviceArea: string; services: string[] }>) => {
-      return apiRequest("PATCH", "/api/profile", data);
+  const updateMutation = useApiMutation(
+    async (data: Partial<{ name: string; email: string; phone: string; photo: string; businessName: string; bio: string; serviceArea: string; services: string[] }>) => {
+      return apiFetch("/api/profile", { method: "PATCH", body: JSON.stringify(data) });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
-      toast({ title: "Profile updated successfully" });
-      setIsEditing(false);
-    },
-    onError: () => {
-      toast({ title: "Failed to update profile", variant: "destructive" });
-    },
-  });
+    [["/api/profile"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Profile updated successfully" });
+        setIsEditing(false);
+      },
+      onError: () => {
+        toast({ title: "Failed to update profile", variant: "destructive" });
+      },
+    }
+  );
 
   const onSubmit = (data: ProfileFormData) => {
     const fullName = `${data.firstName} ${data.lastName}`.trim();

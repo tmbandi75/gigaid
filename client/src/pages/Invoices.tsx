@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,9 @@ import {
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import type { Invoice, AiNudge, JobPayment } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { QUERY_KEYS } from "@/lib/queryKeys";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
 import { NudgeChips } from "@/components/nudges/NudgeChip";
 import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
@@ -106,7 +108,6 @@ function InvoiceCard({ invoice, nudges, payments, onNudgeClick }: InvoiceCardPro
   const total = invoice.amount + (invoice.tax || 0) - (invoice.discount || 0);
   const invoiceNudges = nudges.filter(n => n.entityType === "invoice" && n.entityId === invoice.id && n.status === "active");
   const priority = inferInvoicePriority({ status: invoice.status, createdAt: invoice.createdAt, amount: invoice.amount });
-  const queryClient = useQueryClient();
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [confirmAction, setConfirmAction] = useState<RulesSwipeAction | null>(null);
@@ -115,45 +116,39 @@ function InvoiceCard({ invoice, nudges, payments, onNudgeClick }: InvoiceCardPro
   const eligibility = getInvoiceActionEligibility(invoice, hasStripePayment);
   const swipeActions = getSwipeActions("invoice", eligibility);
 
-  const archiveInvoiceMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", `/api/invoices/${invoice.id}/archive`);
-    },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/invoices"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-      ]);
-      toast({ title: "Invoice archived" });
-      setConfirmAction(null);
-    },
-    onError: () => {
-      toast({ title: "Failed to archive invoice", variant: "destructive" });
-      setConfirmAction(null);
-    },
-  });
+  const archiveInvoiceMutation = useApiMutation(
+    () => apiFetch(`/api/invoices/${invoice.id}/archive`, { method: "POST" }),
+    [QUERY_KEYS.invoices(), ["/api/dashboard/game-plan"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Invoice archived" });
+        setConfirmAction(null);
+      },
+      onError: () => {
+        toast({ title: "Failed to archive invoice", variant: "destructive" });
+        setConfirmAction(null);
+      },
+    }
+  );
 
-  const deleteInvoiceMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("DELETE", `/api/invoices/${invoice.id}`);
-    },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/invoices"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] }),
-      ]);
-      toast({ title: "Invoice deleted" });
-      setConfirmAction(null);
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: "Cannot delete invoice", 
-        description: error?.message || "Try archiving instead.",
-        variant: "destructive" 
-      });
-      setConfirmAction(null);
-    },
-  });
+  const deleteInvoiceMutation = useApiMutation(
+    () => apiFetch(`/api/invoices/${invoice.id}`, { method: "DELETE" }),
+    [QUERY_KEYS.invoices(), ["/api/dashboard/game-plan"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Invoice deleted" });
+        setConfirmAction(null);
+      },
+      onError: (error: Error) => {
+        toast({ 
+          title: "Cannot delete invoice", 
+          description: error?.message || "Try archiving instead.",
+          variant: "destructive" 
+        });
+        setConfirmAction(null);
+      },
+    }
+  );
 
   const handleSwipeAction = (action: RulesSwipeAction) => {
     if (action.requiresConfirmation) {
@@ -309,15 +304,15 @@ export default function Invoices() {
   const isMobile = useIsMobile();
   
   const { data: invoices = [], isLoading } = useQuery<Invoice[]>({
-    queryKey: ["/api/invoices"],
+    queryKey: QUERY_KEYS.invoices(),
   });
 
   const { data: nudges = [] } = useQuery<AiNudge[]>({
-    queryKey: ["/api/nudges"],
+    queryKey: QUERY_KEYS.nudges(),
   });
 
   const { data: payments = [] } = useQuery<JobPayment[]>({
-    queryKey: ["/api/payments"],
+    queryKey: QUERY_KEYS.payments(),
   });
 
   const showTableView = !isMobile && viewMode === "table";

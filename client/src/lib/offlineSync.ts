@@ -7,7 +7,7 @@ import {
   OfflineAction,
   OfflineAsset,
 } from './offlineDb';
-import { apiRequest } from './queryClient';
+import { apiFetch } from './apiFetch';
 
 let isSyncing = false;
 let networkStatus: 'online' | 'offline' = navigator.onLine ? 'online' : 'offline';
@@ -63,7 +63,10 @@ async function executeAction(action: OfflineAction): Promise<boolean> {
     const endpoint = getEndpointForAction(action);
     const method = getMethodForAction(action);
     
-    await apiRequest(method, endpoint, action.payload);
+    await apiFetch(endpoint, {
+      method,
+      body: action.payload ? JSON.stringify(action.payload) : undefined,
+    });
     await markActionSynced(action.id);
     return true;
   } catch {

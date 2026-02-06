@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, useParams } from "wouter";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -35,7 +35,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { ArrowLeft, Loader2, DollarSign, Send, Check, Clock, Eye, ExternalLink, UserPlus } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { ServiceTypeSelect } from "@/components/ui/service-type-select";
@@ -69,7 +71,6 @@ export default function LeadForm() {
   const isEditing = id && id !== "new";
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [priceDialogOpen, setPriceDialogOpen] = useState(false);
   const [priceAmount, setPriceAmount] = useState("");
@@ -80,17 +81,15 @@ export default function LeadForm() {
     enabled: !!isEditing,
   });
 
-  // Query for existing price confirmation
   const { data: activePriceConfirmation, isLoading: isLoadingPC } = useQuery<PriceConfirmation | null>({
     queryKey: ["/api/leads", id, "active-price-confirmation"],
     queryFn: async () => {
-      const res = await fetch(`/api/leads/${id}/active-price-confirmation`);
-      if (!res.ok) {
-        if (res.status === 404) return null;
-        throw new Error("Failed to fetch");
+      try {
+        return await apiFetch(`/api/leads/${id}/active-price-confirmation`);
+      } catch (e: any) {
+        if (e?.statusCode === 404) return null;
+        throw e;
       }
-      const data = await res.json();
-      return data || null;
     },
     enabled: !!isEditing,
   });
@@ -117,8 +116,8 @@ export default function LeadForm() {
     } : undefined,
   });
 
-  const createMutation = useMutation({
-    mutationFn: async (data: LeadFormData) => {
+  const createMutation = useApiMutation(
+    async (data: LeadFormData) => {
       const payload = {
         clientName: `${data.clientFirstName} ${data.clientLastName}`.trim(),
         clientPhone: data.clientPhone,
@@ -129,21 +128,25 @@ export default function LeadForm() {
         userId: "demo-user",
         source: "manual",
       };
-      return apiRequest("POST", "/api/leads", payload);
+      return apiFetch("/api/leads", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
-      toast({ title: "Lead created successfully" });
-      navigate("/leads");
-    },
-    onError: () => {
-      toast({ title: "Failed to create lead", variant: "destructive" });
-    },
-  });
+    [QUERY_KEYS.leads(), ["/api/dashboard/summary"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Lead created successfully" });
+        navigate("/leads");
+      },
+      onError: () => {
+        toast({ title: "Failed to create lead", variant: "destructive" });
+      },
+    }
+  );
 
-  const updateMutation = useMutation({
-    mutationFn: async (data: LeadFormData) => {
+  const updateMutation = useApiMutation(
+    async (data: LeadFormData) => {
       const payload = {
         clientName: `${data.clientFirstName} ${data.clientLastName}`.trim(),
         clientPhone: data.clientPhone,
@@ -152,89 +155,94 @@ export default function LeadForm() {
         description: data.description,
         status: data.status,
       };
-      return apiRequest("PATCH", `/api/leads/${id}`, payload);
+      return apiFetch(`/api/leads/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/leads", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
-      toast({ title: "Lead updated successfully" });
-      navigate(`/leads/${id}`);
-    },
-    onError: () => {
-      toast({ title: "Failed to update lead", variant: "destructive" });
-    },
-  });
+    [QUERY_KEYS.leads(), QUERY_KEYS.lead(id!), ["/api/dashboard/summary"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Lead updated successfully" });
+        navigate(`/leads/${id}`);
+      },
+      onError: () => {
+        toast({ title: "Failed to update lead", variant: "destructive" });
+      },
+    }
+  );
 
-  // Create and send price confirmation
-  const sendPriceConfirmationMutation = useMutation({
-    mutationFn: async () => {
-      // Validate and convert dollars to cents
+  const sendPriceConfirmationMutation = useApiMutation(
+    async () => {
       const parsedAmount = parseFloat(priceAmount);
       if (isNaN(parsedAmount) || parsedAmount <= 0) {
         throw new Error("Please enter a valid price greater than $0");
       }
       const priceInCents = Math.round(parsedAmount * 100);
       
-      // Create the price confirmation
-      const createResponse = await apiRequest("POST", "/api/price-confirmations", {
-        leadId: id,
-        serviceType: existingLead?.serviceType,
-        agreedPrice: priceInCents,
-        notes: priceNotes || null,
+      const confirmation = await apiFetch("/api/price-confirmations", {
+        method: "POST",
+        body: JSON.stringify({
+          leadId: id,
+          serviceType: existingLead?.serviceType,
+          agreedPrice: priceInCents,
+          notes: priceNotes || null,
+        }),
       });
       
-      const confirmation = await createResponse.json();
-      
-      // Send it immediately
-      const sendResponse = await apiRequest("POST", `/api/price-confirmations/${confirmation.id}/send`);
-      return sendResponse.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/leads", id, "active-price-confirmation"] });
-      setPriceDialogOpen(false);
-      setPriceAmount("");
-      setPriceNotes("");
-      
-      const sentVia = [];
-      if (data.smsSent) sentVia.push("SMS");
-      if (data.emailSent) sentVia.push("Email");
-      
-      toast({ 
-        title: "Price Confirmation Sent",
-        description: sentVia.length > 0 
-          ? `Sent via ${sentVia.join(" and ")}`
-          : "Link created - share it with your client",
+      return apiFetch(`/api/price-confirmations/${confirmation.id}/send`, {
+        method: "POST",
       });
     },
-    onError: () => {
-      toast({ title: "Failed to send price confirmation", variant: "destructive" });
-    },
-  });
+    [["/api/leads", id, "active-price-confirmation"]],
+    {
+      onSuccess: (data: any) => {
+        setPriceDialogOpen(false);
+        setPriceAmount("");
+        setPriceNotes("");
+        
+        const sentVia = [];
+        if (data.smsSent) sentVia.push("SMS");
+        if (data.emailSent) sentVia.push("Email");
+        
+        toast({ 
+          title: "Price Confirmation Sent",
+          description: sentVia.length > 0 
+            ? `Sent via ${sentVia.join(" and ")}`
+            : "Link created - share it with your client",
+        });
+      },
+      onError: () => {
+        toast({ title: "Failed to send price confirmation", variant: "destructive" });
+      },
+    }
+  );
 
-  // Resend existing confirmation
-  const resendConfirmationMutation = useMutation({
-    mutationFn: async () => {
+  const resendConfirmationMutation = useApiMutation(
+    async () => {
       if (!activePriceConfirmation) throw new Error("No confirmation to resend");
-      const response = await apiRequest("POST", `/api/price-confirmations/${activePriceConfirmation.id}/send`);
-      return response.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/leads", id, "active-price-confirmation"] });
-      const sentVia = [];
-      if (data.smsSent) sentVia.push("SMS");
-      if (data.emailSent) sentVia.push("Email");
-      toast({ 
-        title: "Price Confirmation Resent",
-        description: sentVia.length > 0 
-          ? `Sent via ${sentVia.join(" and ")}`
-          : "Link refreshed",
+      return apiFetch(`/api/price-confirmations/${activePriceConfirmation.id}/send`, {
+        method: "POST",
       });
     },
-    onError: () => {
-      toast({ title: "Failed to resend confirmation", variant: "destructive" });
-    },
-  });
+    [["/api/leads", id, "active-price-confirmation"]],
+    {
+      onSuccess: (data: any) => {
+        const sentVia = [];
+        if (data.smsSent) sentVia.push("SMS");
+        if (data.emailSent) sentVia.push("Email");
+        toast({ 
+          title: "Price Confirmation Resent",
+          description: sentVia.length > 0 
+            ? `Sent via ${sentVia.join(" and ")}`
+            : "Link refreshed",
+        });
+      },
+      onError: () => {
+        toast({ title: "Failed to resend confirmation", variant: "destructive" });
+      },
+    }
+  );
 
   const onSubmit = (data: LeadFormData) => {
     if (isEditing) {

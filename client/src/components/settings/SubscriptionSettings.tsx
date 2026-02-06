@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import {
   Crown,
   Loader2,
@@ -103,155 +104,148 @@ export function SubscriptionSettings() {
     cancelAt: null,
   };
 
-  const cancelMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/subscription/cancel");
-    },
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
-      toast({
-        title: "Subscription cancelled",
-        description: data.message || "Your subscription will end at the current billing period",
-      });
-      setShowCancelDialog(false);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to cancel subscription. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  const cancelMutation = useApiMutation(
+    () => apiFetch<any>("/api/subscription/cancel", { method: "POST" }),
+    [["/api/subscription/status"]],
+    {
+      onSuccess: (data: any) => {
+        toast({
+          title: "Subscription cancelled",
+          description: data?.message || "Your subscription will end at the current billing period",
+        });
+        setShowCancelDialog(false);
+      },
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Failed to cancel subscription. Please try again.",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
-  const reactivateMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/subscription/reactivate");
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
-      toast({
-        title: "Subscription reactivated",
-        description: "Your subscription has been reactivated",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to reactivate subscription. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  const reactivateMutation = useApiMutation(
+    () => apiFetch("/api/subscription/reactivate", { method: "POST" }),
+    [["/api/subscription/status"]],
+    {
+      onSuccess: () => {
+        toast({
+          title: "Subscription reactivated",
+          description: "Your subscription has been reactivated",
+        });
+      },
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Failed to reactivate subscription. Please try again.",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
-  const portalMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/subscription/portal", { returnUrl: "/settings" });
-    },
-    onSuccess: (data: any) => {
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to open billing portal. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  const portalMutation = useApiMutation(
+    () => apiFetch<any>("/api/subscription/portal", { method: "POST", body: JSON.stringify({ returnUrl: "/settings" }) }),
+    [],
+    {
+      onSuccess: (data: any) => {
+        if (data?.url) {
+          window.location.href = data.url;
+        }
+      },
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Failed to open billing portal. Please try again.",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
-  const suspendMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/billing/suspend");
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      toast({
-        title: "Subscription paused",
-        description: "Your subscription has been paused. You can reactivate anytime.",
-      });
-      setShowPauseDialog(false);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to pause subscription. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  const suspendMutation = useApiMutation(
+    () => apiFetch("/api/billing/suspend", { method: "POST" }),
+    [["/api/subscription/status"], ["/api/profile"], ["/api/auth/user"]],
+    {
+      onSuccess: () => {
+        toast({
+          title: "Subscription paused",
+          description: "Your subscription has been paused. You can reactivate anytime.",
+        });
+        setShowPauseDialog(false);
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to pause subscription. Please try again.",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
-  const reactivateAccountMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/billing/reactivate");
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      toast({
-        title: "Account reactivated",
-        description: "Your account is active again. Visit pricing to subscribe.",
-      });
-      navigate("/pricing");
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to reactivate account. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  const reactivateAccountMutation = useApiMutation(
+    () => apiFetch("/api/billing/reactivate", { method: "POST" }),
+    [["/api/subscription/status"], ["/api/profile"], ["/api/auth/user"]],
+    {
+      onSuccess: () => {
+        toast({
+          title: "Account reactivated",
+          description: "Your account is active again. Visit pricing to subscribe.",
+        });
+        navigate("/pricing");
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to reactivate account. Please try again.",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
-  const closeAccountMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/account/cancel");
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      toast({
-        title: "Account scheduled for deletion",
-        description: "Your account will be deleted in 30 days. You can undo this before then.",
-      });
-      setShowCloseAccountDialog(false);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to close account. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  const closeAccountMutation = useApiMutation(
+    () => apiFetch("/api/account/cancel", { method: "POST" }),
+    [["/api/subscription/status"], ["/api/profile"], ["/api/auth/user"]],
+    {
+      onSuccess: () => {
+        toast({
+          title: "Account scheduled for deletion",
+          description: "Your account will be deleted in 30 days. You can undo this before then.",
+        });
+        setShowCloseAccountDialog(false);
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to close account. Please try again.",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
-  const undoCancelMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/account/undo-cancel");
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      toast({
-        title: "Account restored",
-        description: "Your account has been restored. Welcome back!",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to restore account. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  const undoCancelMutation = useApiMutation(
+    () => apiFetch("/api/account/undo-cancel", { method: "POST" }),
+    [["/api/subscription/status"], ["/api/profile"], ["/api/auth/user"]],
+    {
+      onSuccess: () => {
+        toast({
+          title: "Account restored",
+          description: "Your account has been restored. Welcome back!",
+        });
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to restore account. Please try again.",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
   if (isLoading) {
     return (

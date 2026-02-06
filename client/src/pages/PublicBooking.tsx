@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { Star, Calendar, CheckCircle, Loader2, ChevronLeft, ChevronRight, Clock, History, RotateCcw, MapPin, Zap, Navigation, Shield, RefreshCw, CreditCard } from "lucide-react";
 import { SmartServiceRecommender } from "@/components/booking/SmartServiceRecommender";
 import { JobNotesAutocomplete } from "@/components/booking/JobNotesAutocomplete";
@@ -209,25 +210,31 @@ export default function PublicBooking() {
     enabled: !!slug && !!selectedDateStr && zipConfirmed && clientZipCode.length === 5,
   });
 
-  const submitMutation = useMutation({
-    mutationFn: (data: { clientName: string; clientPhone: string; clientEmail: string; serviceType: string; location: string; description: string; preferredDate: string; preferredTime: string; photos?: string[]; policyAcknowledged?: boolean }) =>
-      apiRequest("POST", `/api/public/book/${slug}`, data),
-    onSuccess: () => {
-      saveToBookingHistory({
-        serviceType: formData.serviceType,
-        description: formData.description,
-        date: selectedDateStr || "",
-        time: selectedTime || "",
-        bookedAt: new Date().toISOString(),
-      });
-      setShowConfetti(true);
-      setSubmitted(true);
-      toast({ title: "Booking request sent!" });
-    },
-    onError: () => {
-      toast({ title: "Failed to submit booking", variant: "destructive" });
-    },
-  });
+  const submitMutation = useApiMutation(
+    (data: { clientName: string; clientPhone: string; clientEmail: string; serviceType: string; location: string; description: string; preferredDate: string; preferredTime: string; photos?: string[]; policyAcknowledged?: boolean }) =>
+      apiFetch(`/api/public/book/${slug}`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    [],
+    {
+      onSuccess: () => {
+        saveToBookingHistory({
+          serviceType: formData.serviceType,
+          description: formData.description,
+          date: selectedDateStr || "",
+          time: selectedTime || "",
+          bookedAt: new Date().toISOString(),
+        });
+        setShowConfetti(true);
+        setSubmitted(true);
+        toast({ title: "Booking request sent!" });
+      },
+      onError: () => {
+        toast({ title: "Failed to submit booking", variant: "destructive" });
+      },
+    }
+  );
 
   const handleCheckHistory = () => {
     const history = loadBookingHistory();

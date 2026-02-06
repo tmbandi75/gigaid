@@ -1,0 +1,285 @@
+🔹 SYSTEM ROLE
+
+You are a principal full-stack engineer responsible for stabilizing and hardening the GigAid application’s entire data layer.
+
+Your task is to refactor the app so that all server data is managed consistently, predictably, and correctly using React Query.
+
+Eliminate stale UI, cache conflicts, and ad-hoc state hacks.
+
+This is a one-pass, production-grade refactor.
+
+🔹 OBJECTIVE
+
+Fix systemic UI desynchronization by:
+
+Centralizing API access
+
+Normalizing query keys
+
+Standardizing mutations
+
+Fixing QueryClient defaults
+
+Removing cache hacks
+
+Enforcing consistent invalidation
+
+After completion, all CRUD operations must immediately reflect in the UI.
+
+🔹 STEP 1 — HARDEN QUERY CLIENT
+
+Locate QueryClient initialization.
+
+Replace with:
+
+new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 0,
+      cacheTime: 5 * 60 * 1000,
+      refetchOnMount: "always",
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      retry: 1,
+    },
+  },
+});
+
+
+Remove any:
+
+staleTime: Infinity
+
+custom cache overrides
+
+global disable flags
+
+Ensure only ONE QueryClient instance exists.
+
+🔹 STEP 2 — CREATE CENTRAL API FETCHER
+
+If not present, create:
+
+/src/lib/apiFetch.ts
+
+
+with:
+
+export async function apiFetch<T>(
+  url: string,
+  options?: RequestInit
+): Promise<T> {
+  const res = await fetch(url, {
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    ...options,
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "API error");
+  }
+
+  return res.json();
+}
+
+🔹 STEP 3 — REMOVE ALL FETCH CACHE HACKS
+
+Search entire codebase.
+
+Remove:
+
+cache: "no-store"
+next: { revalidate: 0 }
+revalidate: 0
+force-cache
+
+
+from all fetch calls.
+
+Replace all raw fetch calls with apiFetch.
+
+🔹 STEP 4 — CENTRALIZE QUERY KEYS
+
+Create:
+
+/src/lib/queryKeys.ts
+
+export const QUERY_KEYS = {
+  crew: () => ["/api/crew"],
+  jobs: () => ["/api/jobs"],
+  leads: () => ["/api/leads"],
+  invoices: () => ["/api/invoices"],
+  payments: () => ["/api/payments"],
+  settings: () => ["/api/settings"],
+  user: () => ["/api/user"],
+};
+
+
+Add additional keys as needed.
+
+No inline strings allowed.
+
+🔹 STEP 5 — NORMALIZE ALL QUERIES
+
+Refactor every useQuery to:
+
+useQuery({
+  queryKey: QUERY_KEYS.xxx(),
+  queryFn: () => apiFetch("/api/xxx"),
+});
+
+
+Rules:
+
+No dynamic strings
+
+No version params
+
+No manual state sync
+
+No conditional hacks
+
+🔹 STEP 6 — STANDARDIZE MUTATIONS
+
+Create:
+
+/src/hooks/useApiMutation.ts
+
+export function useApiMutation<TData, TVars>(
+  fn: (vars: TVars) => Promise<TData>,
+  invalidate: readonly unknown[][]
+) {
+  const qc = useQueryClient();
+
+  return useMutation(fn, {
+    onSuccess: () => {
+      invalidate.forEach((key) => {
+        qc.invalidateQueries({ queryKey: key });
+      });
+    },
+  });
+}
+
+🔹 STEP 7 — MIGRATE ALL MUTATIONS
+
+Replace all direct useMutation usage.
+
+Example:
+
+Before:
+
+useMutation(addCrew, {
+  onSuccess: refetch,
+});
+
+
+After:
+
+useApiMutation(addCrew, [QUERY_KEYS.crew()]);
+
+
+All mutations must invalidate via keys.
+
+🔹 STEP 8 — REMOVE LOCAL MIRROR STATE
+
+Find patterns like:
+
+const [items, setItems] = useState([]);
+useEffect(() => setItems(data), [data]);
+
+
+Remove them.
+
+Use query data directly.
+
+No shadow state.
+
+🔹 STEP 9 — ADD DEV DEBUG VISIBILITY
+
+In root layout/provider:
+
+if (process.env.NODE_ENV === "development") {
+  (window as any).__RQ__ = queryClient;
+}
+
+
+Keep enabled.
+
+🔹 STEP 10 — VERIFY APP-WIDE CONSISTENCY
+
+Ensure all major domains follow standard:
+
+Domain	Query Key	Invalidated On
+Crew	QUERY_KEYS.crew	create/update/delete
+Jobs	QUERY_KEYS.jobs	create/update/delete
+Leads	QUERY_KEYS.leads	create/update/delete
+Invoices	QUERY_KEYS.invoices	paid/void
+Payments	QUERY_KEYS.payments	success/refund
+Settings	QUERY_KEYS.settings	save
+
+Add missing ones.
+
+🔹 CLEANUP
+
+Delete:
+
+version counters
+
+cache bust params
+
+commented hacks
+
+stale TODOs
+
+No dead code allowed.
+
+🔹 CONSTRAINTS
+
+Do NOT change backend APIs
+
+Do NOT add new libraries
+
+Do NOT change routing
+
+Do NOT redesign UI
+
+Do NOT break auth
+
+Only data layer.
+
+🔹 ACCEPTANCE CRITERIA
+
+All must pass:
+
+No stale UI anywhere
+
+invalidateQueries works everywhere
+
+No duplicate fetch logic
+
+No cache hacks
+
+No shadow state
+
+All data flows through apiFetch
+
+Query keys centralized
+
+No manual refetch calls
+
+🔹 OUTPUT FORMAT
+
+After finishing, output:
+
+Files Created
+Files Modified
+Patterns Removed
+Domains Verified
+Remaining Risks
+
+No explanations.
+
+END TASK

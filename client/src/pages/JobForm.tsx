@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useLocation, useParams, useSearch, Link } from "wouter";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -28,7 +28,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { 
   ArrowLeft, 
   Loader2, 
@@ -385,7 +387,7 @@ export default function JobForm() {
   };
 
   const { data: existingJob, isLoading: isLoadingJob } = useQuery<Job>({
-    queryKey: ["/api/jobs", id],
+    queryKey: QUERY_KEYS.job(id!),
     enabled: !!isEditing,
   });
   
@@ -416,9 +418,11 @@ export default function JobForm() {
   const { data: crewInvites = [] } = useQuery<CrewInvite[]>({
     queryKey: ["/api/jobs", id, "crew-invites"],
     queryFn: async () => {
-      const res = await fetch(`/api/jobs/${id}/crew-invites`);
-      if (!res.ok) return [];
-      return res.json();
+      try {
+        return await apiFetch(`/api/jobs/${id}/crew-invites`);
+      } catch {
+        return [];
+      }
     },
     enabled: !!isEditing,
   });
@@ -426,9 +430,11 @@ export default function JobForm() {
   const { data: crewPhotos = [] } = useQuery<CrewPhoto[]>({
     queryKey: ["/api/jobs", id, "crew-photos"],
     queryFn: async () => {
-      const res = await fetch(`/api/jobs/${id}/crew-photos`);
-      if (!res.ok) return [];
-      return res.json();
+      try {
+        return await apiFetch(`/api/jobs/${id}/crew-photos`);
+      } catch {
+        return [];
+      }
     },
     enabled: !!isEditing,
   });
@@ -442,9 +448,11 @@ export default function JobForm() {
   const { data: existingJobPhotos = [] } = useQuery<PhotoAsset[]>({
     queryKey: ["/api/photo-assets", "job", id],
     queryFn: async () => {
-      const res = await fetch(`/api/photo-assets?sourceType=job&sourceId=${id}`);
-      if (!res.ok) return [];
-      return res.json();
+      try {
+        return await apiFetch(`/api/photo-assets?sourceType=job&sourceId=${id}`);
+      } catch {
+        return [];
+      }
     },
     enabled: !!isEditing,
   });
@@ -458,48 +466,56 @@ export default function JobForm() {
   }
 
   const { data: crewMembers = [] } = useQuery<CrewMember[]>({
-    queryKey: ["/api/crew"],
+    queryKey: QUERY_KEYS.crew(),
     enabled: !!isEditing,
   });
 
   const [selectedCrewId, setSelectedCrewId] = useState<string>("");
 
-  const assignCrewMutation = useMutation({
-    mutationFn: async (crewMemberId: string) => {
+  const assignCrewMutation = useApiMutation(
+    (crewMemberId: string) => {
       const member = crewMembers.find(m => m.id === crewMemberId);
-      return apiRequest("POST", "/api/crew-invites", {
-        jobId: id,
-        crewMemberId,
-        crewFirstName: member?.name || "",
-        crewEmail: member?.email || null,
-        crewPhone: member?.phone || null,
-        message: `You've been assigned to a job`,
-        sendSms: !!member?.phone,
-        sendEmail: !!member?.email,
+      return apiFetch("/api/crew-invites", {
+        method: "POST",
+        body: JSON.stringify({
+          jobId: id,
+          crewMemberId,
+          crewFirstName: member?.name || "",
+          crewEmail: member?.email || null,
+          crewPhone: member?.phone || null,
+          message: `You've been assigned to a job`,
+          sendSms: !!member?.phone,
+          sendEmail: !!member?.email,
+        }),
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs", id, "crew-invites"] });
-      setSelectedCrewId("");
-      toast({ title: "Crew member assigned successfully" });
-    },
-    onError: () => {
-      toast({ title: "Failed to assign crew member", variant: "destructive" });
-    },
-  });
+    [["/api/jobs", id, "crew-invites"]],
+    {
+      onSuccess: () => {
+        setSelectedCrewId("");
+        toast({ title: "Crew member assigned successfully" });
+      },
+      onError: () => {
+        toast({ title: "Failed to assign crew member", variant: "destructive" });
+      },
+    }
+  );
 
-  const updateLocationMutation = useMutation({
-    mutationFn: async ({ lat, lng }: { lat: number; lng: number }) => {
-      return apiRequest("PATCH", `/api/jobs/${id}/provider-location`, { lat, lng });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] });
-      toast({ title: "Location updated" });
-    },
-    onError: () => {
-      toast({ title: "Failed to update location", variant: "destructive" });
-    },
-  });
+  const updateLocationMutation = useApiMutation(
+    ({ lat, lng }: { lat: number; lng: number }) => apiFetch(`/api/jobs/${id}/provider-location`, {
+      method: "PATCH",
+      body: JSON.stringify({ lat, lng }),
+    }),
+    [QUERY_KEYS.job(id!)],
+    {
+      onSuccess: () => {
+        toast({ title: "Location updated" });
+      },
+      onError: () => {
+        toast({ title: "Failed to update location", variant: "destructive" });
+      },
+    }
+  );
 
   const handleUpdateMyLocation = useCallback(() => {
     if (!navigator.geolocation) {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { 
   Bell, 
   Plus, 
@@ -44,7 +46,6 @@ function formatPhoneNumber(value: string): string {
 
 export default function Reminders() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
@@ -63,28 +64,35 @@ export default function Reminders() {
     queryKey: ["/api/reminders"],
   });
 
-  const createMutation = useMutation({
-    mutationFn: (data: typeof formData) => apiRequest("POST", "/api/reminders", data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/reminders"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] });
-      setIsDialogOpen(false);
-      resetForm();
-      toast({ title: "Reminder scheduled successfully" });
-    },
-    onError: () => {
-      toast({ title: "Failed to create reminder", variant: "destructive" });
-    },
-  });
+  const createMutation = useApiMutation(
+    (data: typeof formData) =>
+      apiFetch("/api/reminders", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    [QUERY_KEYS.reminders(), ["/api/dashboard/game-plan"]],
+    {
+      onSuccess: () => {
+        setIsDialogOpen(false);
+        resetForm();
+        toast({ title: "Reminder scheduled successfully" });
+      },
+      onError: () => {
+        toast({ title: "Failed to create reminder", variant: "destructive" });
+      },
+    }
+  );
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("DELETE", `/api/reminders/${id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/reminders"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] });
-      toast({ title: "Reminder deleted" });
-    },
-  });
+  const deleteMutation = useApiMutation(
+    (id: string) =>
+      apiFetch(`/api/reminders/${id}`, { method: "DELETE" }),
+    [QUERY_KEYS.reminders(), ["/api/dashboard/game-plan"]],
+    {
+      onSuccess: () => {
+        toast({ title: "Reminder deleted" });
+      },
+    }
+  );
 
   const resetForm = () => {
     setFormData({

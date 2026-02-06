@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { DollarSign, Loader2, Sparkles } from "lucide-react";
 
 interface PriceEstimate {
@@ -19,18 +19,23 @@ export function PriceEstimator({ slug }: PriceEstimatorProps) {
   const [description, setDescription] = useState("");
   const [estimate, setEstimate] = useState<PriceEstimate | null>(null);
 
-  const estimateMutation = useMutation({
-    mutationFn: async (desc: string) => {
-      const res = await apiRequest("POST", "/api/public/ai/estimate-price", { 
-        description: desc, 
-        slug 
+  const estimateMutation = useApiMutation(
+    async (desc: string) => {
+      return apiFetch<PriceEstimate>("/api/public/ai/estimate-price", {
+        method: "POST",
+        body: JSON.stringify({ 
+          description: desc, 
+          slug 
+        }),
       });
-      return res.json() as Promise<PriceEstimate>;
     },
-    onSuccess: (data) => {
-      setEstimate(data);
-    },
-  });
+    [],
+    {
+      onSuccess: (data) => {
+        setEstimate(data);
+      },
+    }
+  );
 
   const handleEstimate = () => {
     if (description.trim().length < 10) return;

@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { Sparkles, Loader2, RotateCcw } from "lucide-react";
 
 interface BioEditorProps {
@@ -18,22 +18,21 @@ export function BioEditor({ value, onChange, businessName, services }: BioEditor
   const [isTyping, setIsTyping] = useState(false);
   const [originalBio, setOriginalBio] = useState<string | null>(null);
 
-  const rewriteMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/ai/rewrite-bio", {
-        bio: value,
-        businessName,
-        services,
-      });
-      return res.json() as Promise<{ rewrittenBio: string }>;
-    },
-    onSuccess: (data) => {
-      if (!originalBio) {
-        setOriginalBio(value);
-      }
-      onChange(data.rewrittenBio);
-    },
-  });
+  const rewriteMutation = useApiMutation(
+    () => apiFetch<{ rewrittenBio: string }>("/api/ai/rewrite-bio", {
+      method: "POST",
+      body: JSON.stringify({ bio: value, businessName, services }),
+    }),
+    [],
+    {
+      onSuccess: (data) => {
+        if (!originalBio) {
+          setOriginalBio(value);
+        }
+        onChange(data.rewrittenBio);
+      },
+    }
+  );
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;

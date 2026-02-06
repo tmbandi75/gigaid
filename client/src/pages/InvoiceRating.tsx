@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useRoute } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiFetch } from "@/lib/apiFetch";
+import { QUERY_KEYS } from "@/lib/queryKeys";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { Star, CheckCircle2, Loader2, Heart } from "lucide-react";
 import type { Invoice } from "@shared/schema";
 
@@ -19,20 +21,23 @@ export default function InvoiceRating() {
   const [submitted, setSubmitted] = useState(false);
 
   const { data: invoice, isLoading, error } = useQuery<Invoice>({
-    queryKey: ["/api/invoices", invoiceId],
+    queryKey: QUERY_KEYS.invoice(invoiceId!),
     enabled: !!invoiceId,
   });
 
-  const submitMutation = useMutation({
-    mutationFn: (data: { rating: number; comment: string }) =>
-      apiRequest("POST", `/api/invoices/${invoiceId}/review`, data),
-    onSuccess: () => {
-      setSubmitted(true);
-    },
-    onError: () => {
-      toast({ title: "Failed to submit review", variant: "destructive" });
-    },
-  });
+  const submitMutation = useApiMutation(
+    (data: { rating: number; comment: string }) =>
+      apiFetch(`/api/invoices/${invoiceId}/review`, { method: "POST", body: JSON.stringify(data) }),
+    [QUERY_KEYS.invoice(invoiceId!), QUERY_KEYS.reviews()],
+    {
+      onSuccess: () => {
+        setSubmitted(true);
+      },
+      onError: () => {
+        toast({ title: "Failed to submit review", variant: "destructive" });
+      },
+    }
+  );
 
   const handleSubmit = () => {
     if (rating === 0) {

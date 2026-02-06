@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/apiFetch";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -168,94 +170,107 @@ export default function ShareCapture() {
     }
   }, []);
 
-  const parseMutation = useMutation({
-    mutationFn: async (data: { text: string; url?: string }) => {
-      const res = await apiRequest("POST", "/api/share/parse", data);
-      return res.json();
-    },
-    onSuccess: (data: ParsedLead) => {
-      setParsedLead(data);
-      setEditedLead({
-        clientName: data.clientName || "",
-        clientPhone: data.clientPhone || "",
-        clientEmail: data.clientEmail || "",
-        serviceType: data.serviceType || "",
-        description: data.description || "",
-        source: data.source || "manual",
-        sourceUrl: data.sourceUrl || "",
-        location: data.extractedDetails?.location || "",
-        locationLat: undefined,
-        locationLng: undefined,
-      });
-      setSelectedReply(data.suggestedReply || "");
-      setStep("review");
-    },
-    onError: () => {
-      toast({
-        title: "Couldn't parse content",
-        description: "Try entering the lead details manually",
-        variant: "destructive",
+  const parseMutation = useApiMutation(
+    async (data: { text: string; url?: string }) => {
+      return apiFetch<ParsedLead>("/api/share/parse", {
+        method: "POST",
+        body: JSON.stringify(data),
       });
     },
-  });
+    [],
+    {
+      onSuccess: (data: ParsedLead) => {
+        setParsedLead(data);
+        setEditedLead({
+          clientName: data.clientName || "",
+          clientPhone: data.clientPhone || "",
+          clientEmail: data.clientEmail || "",
+          serviceType: data.serviceType || "",
+          description: data.description || "",
+          source: data.source || "manual",
+          sourceUrl: data.sourceUrl || "",
+          location: data.extractedDetails?.location || "",
+          locationLat: undefined,
+          locationLng: undefined,
+        });
+        setSelectedReply(data.suggestedReply || "");
+        setStep("review");
+      },
+      onError: () => {
+        toast({
+          title: "Couldn't parse content",
+          description: "Try entering the lead details manually",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
-  const replyMutation = useMutation({
-    mutationFn: async (data: { text: string; context: string }) => {
-      const res = await apiRequest("POST", "/api/share/replies", data);
-      return res.json();
+  const replyMutation = useApiMutation(
+    async (data: { text: string; context: string }) => {
+      return apiFetch<{ replies: QuickReply[] }>("/api/share/replies", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
     },
-    onSuccess: (data: { replies: QuickReply[] }) => {
-      setQuickReplies(data.replies || []);
-    },
-  });
+    [],
+    {
+      onSuccess: (data: { replies: QuickReply[] }) => {
+        setQuickReplies(data.replies || []);
+      },
+    }
+  );
 
-  const createLeadMutation = useMutation({
-    mutationFn: async (data: typeof editedLead) => {
-      const res = await apiRequest("POST", "/api/leads", {
-        clientName: data.clientName || "Unknown",
-        clientPhone: data.clientPhone || "",
-        clientEmail: data.clientEmail || "",
-        serviceType: data.serviceType || "other",
-        description: data.description || "",
-        source: data.source || "manual",
-        sourceType: data.source || "manual",
-        sourceUrl: data.sourceUrl || null,
-        status: "new",
-        notes: data.location ? `Location: ${data.location}` : null,
-      });
-      return res.json();
-    },
-    onSuccess: (lead) => {
-      setCreatedLeadId(lead.id);
-      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
-      toast({
-        title: "Lead saved!",
-        description: `${lead.clientName} added to your leads`,
-      });
-      setStep("reply");
-      replyMutation.mutate({
-        text: sharedText || editedLead.description,
-        context: editedLead.serviceType || "general inquiry",
+  const createLeadMutation = useApiMutation(
+    async (data: typeof editedLead) => {
+      return apiFetch("/api/leads", {
+        method: "POST",
+        body: JSON.stringify({
+          clientName: data.clientName || "Unknown",
+          clientPhone: data.clientPhone || "",
+          clientEmail: data.clientEmail || "",
+          serviceType: data.serviceType || "other",
+          description: data.description || "",
+          source: data.source || "manual",
+          sourceType: data.source || "manual",
+          sourceUrl: data.sourceUrl || null,
+          status: "new",
+          notes: data.location ? `Location: ${data.location}` : null,
+        }),
       });
     },
-    onError: () => {
-      toast({
-        title: "Error creating lead",
-        description: "Please try again",
-        variant: "destructive",
-      });
-    },
-  });
+    [QUERY_KEYS.leads()],
+    {
+      onSuccess: (lead: any) => {
+        setCreatedLeadId(lead.id);
+        toast({
+          title: "Lead saved!",
+          description: `${lead.clientName} added to your leads`,
+        });
+        setStep("reply");
+        replyMutation.mutate({
+          text: sharedText || editedLead.description,
+          context: editedLead.serviceType || "general inquiry",
+        });
+      },
+      onError: () => {
+        toast({
+          title: "Error creating lead",
+          description: "Please try again",
+          variant: "destructive",
+        });
+      },
+    }
+  );
 
-  const markResponseCopiedMutation = useMutation({
-    mutationFn: async (leadId: string) => {
-      const res = await apiRequest("POST", `/api/leads/${leadId}/response-copied`);
-      return res.json();
+  const markResponseCopiedMutation = useApiMutation(
+    async (leadId: string) => {
+      return apiFetch(`/api/leads/${leadId}/response-copied`, {
+        method: "POST",
+      });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
-    },
-  });
+    [QUERY_KEYS.leads()],
+  );
 
   const handleParse = () => {
     if (!sharedText.trim()) {
