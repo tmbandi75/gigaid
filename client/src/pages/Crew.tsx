@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest } from "@/lib/queryClient";
+import { getAuthToken } from "@/lib/authToken";
 import { 
   Users, 
   Plus, 
@@ -69,41 +70,36 @@ export default function Crew() {
     customRole: "",
   });
 
+  const [crewVersion, setCrewVersion] = useState(0);
   const { data: crew = [], isLoading } = useQuery<CrewMember[]>({
-    queryKey: ["/api/crew"],
+    queryKey: ["/api/crew", crewVersion],
+    queryFn: async () => {
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch("/api/crew", {
+        credentials: "include",
+        headers,
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error("Failed to fetch crew");
+      return res.json();
+    },
+    staleTime: 0,
   });
-
-  console.log("[Crew] render, crew count:", crew.length, "crew names:", crew.map(c => c.name));
 
   const createMutation = useMutation({
     mutationFn: async (data: { name: string; phone: string; email: string; role: string }) => {
-      console.log("[Crew] mutation starting, data:", data);
       const res = await apiRequest("POST", "/api/crew", data);
-      const newMember = await res.json() as CrewMember;
-      console.log("[Crew] mutation response:", newMember);
-      return newMember;
+      return await res.json() as CrewMember;
     },
-    onSuccess: async (newMember) => {
-      console.log("[Crew] onSuccess called, newMember:", newMember.name);
-      const before = queryClient.getQueryData<CrewMember[]>(["/api/crew"]);
-      console.log("[Crew] cache before setQueryData:", before?.length);
-      queryClient.setQueryData<CrewMember[]>(["/api/crew"], (old) => {
-        const current = old ?? [];
-        const updated = [...current, newMember];
-        console.log("[Crew] setQueryData: old count:", current.length, "new count:", updated.length);
-        return updated;
-      });
-      const after = queryClient.getQueryData<CrewMember[]>(["/api/crew"]);
-      console.log("[Crew] cache after setQueryData:", after?.length);
-      await queryClient.refetchQueries({ queryKey: ["/api/crew"], exact: true });
-      const afterRefetch = queryClient.getQueryData<CrewMember[]>(["/api/crew"]);
-      console.log("[Crew] cache after refetch:", afterRefetch?.length);
+    onSuccess: () => {
+      setCrewVersion(v => v + 1);
       setIsDialogOpen(false);
       resetForm();
       toast({ title: "Crew member added successfully" });
     },
-    onError: (err) => {
-      console.error("[Crew] mutation error:", err);
+    onError: () => {
       toast({ title: "Failed to add crew member", variant: "destructive" });
     },
   });
@@ -111,16 +107,16 @@ export default function Crew() {
   const updateMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       apiRequest("PATCH", `/api/crew/${id}`, { status }),
-    onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: ["/api/crew"], exact: true });
+    onSuccess: () => {
+      setCrewVersion(v => v + 1);
       toast({ title: "Status updated" });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => apiRequest("DELETE", `/api/crew/${id}`),
-    onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: ["/api/crew"], exact: true });
+    onSuccess: () => {
+      setCrewVersion(v => v + 1);
       toast({ title: "Crew member removed" });
     },
   });
