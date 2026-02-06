@@ -74,8 +74,14 @@ export default function Crew() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: { name: string; phone: string; email: string; role: string }) => apiRequest("POST", "/api/crew", data),
-    onSuccess: () => {
+    mutationFn: async (data: { name: string; phone: string; email: string; role: string }) => {
+      const res = await apiRequest("POST", "/api/crew", data);
+      return await res.json() as CrewMember;
+    },
+    onSuccess: (newMember) => {
+      queryClient.setQueryData<CrewMember[]>(["/api/crew"], (old) =>
+        old ? [...old, newMember] : [newMember]
+      );
       queryClient.invalidateQueries({ queryKey: ["/api/crew"] });
       setIsDialogOpen(false);
       resetForm();
