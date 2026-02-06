@@ -4,7 +4,6 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["glib", "nspr", "nss", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "xorg.libxcb", "pango", "cairo", "cups", "dbus", "at-spi2-atk", "expat", "libdrm", "mesa", "alsa-lib", "libxkbcommon", "xorg.libXcursor", "xorg.libXi", "xorg.libXrender", "xorg.libXtst", "at-spi2-core", "gtk3", "imagemagick"]
 
 [[ports]]
 localPort = 5000
@@ -40,20 +39,8 @@ args = "npm run dev"
 waitForPort = 5000
 
 [agent]
-integrations = ["javascript_object_storage:2.0.0", "stripe:2.0.0", "twilio:1.0.0", "sendgrid:1.0.0", "javascript_database:1.0.0", "javascript_openai_ai_integrations:2.0.0", "zendesk:1.0.0", "github:1.0.0", "javascript_log_in_with_replit:2.0.0"]
+integrations = ["javascript_object_storage:2.0.0"]
 
 [userenv]
 
 [userenv.shared]
-FRONTEND_URL = "https://account.gigaid.ai"
-FIREBASE_PROJECT_ID = "gigaid-9c982"
-FIREBASE_CLIENT_EMAIL = "firebase-adminsdk-fbsvc@gigaid-9c982.iam.gserviceaccount.com"
-VITE_FIREBASE_API_KEY = "AIzaSyBdyS79wNb_GBqARmJmzrBr2ZsdsC_51l8"
-VITE_FIREBASE_AUTH_DOMAIN = "gigaid-9c982.firebaseapp.com"
-VITE_FIREBASE_PROJECT_ID = "gigaid-9c982"
-VITE_FIREBASE_STORAGE_BUCKET = "gigaid-9c982.firebasestorage.app"
-VITE_FIREBASE_MESSAGING_SENDER_ID = "1091854959908"
-VITE_FIREBASE_APP_ID = "1:1091854959908:web:8c56f7c0a8e3d5f7a1b2c3"
-STRIPE_ENABLED = "true"
-VITE_STRIPE_ENABLED = "true"
-GIGAID_ADMIN_API_KEY = "866022372d3b5607f1a73cc68e259e2e2bc82f6734b5c4b5364909e8cfe675a6"
