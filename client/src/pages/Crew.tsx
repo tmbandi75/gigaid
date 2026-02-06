@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { apiRequest } from "@/lib/queryClient";
-import { getAuthToken } from "@/lib/authToken";
+import { apiFetch } from "@/lib/apiFetch";
+import { QUERY_KEYS } from "@/lib/queryKeys";
+import { useApiMutation } from "@/hooks/useApiMutation";
 import { 
   Users, 
   Plus, 
@@ -57,7 +58,6 @@ interface CrewInvite {
 
 export default function Crew() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [expandedMember, setExpandedMember] = useState<string | null>(null);
@@ -70,78 +70,79 @@ export default function Crew() {
     customRole: "",
   });
 
-  const [crewVersion, setCrewVersion] = useState(0);
   const { data: crew = [], isLoading } = useQuery<CrewMember[]>({
-    queryKey: ["/api/crew", crewVersion],
-    queryFn: async () => {
-      const token = getAuthToken();
-      const headers: Record<string, string> = {};
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-      const res = await fetch("/api/crew", {
-        credentials: "include",
-        headers,
-        cache: "no-store",
-      });
-      if (!res.ok) throw new Error("Failed to fetch crew");
-      return res.json();
-    },
-    staleTime: 0,
+    queryKey: QUERY_KEYS.crew(),
+    queryFn: () => apiFetch<CrewMember[]>("/api/crew"),
   });
 
-  const createMutation = useMutation({
-    mutationFn: async (data: { name: string; phone: string; email: string; role: string }) => {
-      const res = await apiRequest("POST", "/api/crew", data);
-      return await res.json() as CrewMember;
-    },
-    onSuccess: () => {
-      setCrewVersion(v => v + 1);
-      setIsDialogOpen(false);
-      resetForm();
-      toast({ title: "Crew member added successfully" });
-    },
-    onError: () => {
-      toast({ title: "Failed to add crew member", variant: "destructive" });
-    },
-  });
+  const createMutation = useApiMutation(
+    (data: { name: string; phone: string; email: string; role: string }) =>
+      apiFetch<CrewMember>("/api/crew", { method: "POST", body: JSON.stringify(data) }),
+    [QUERY_KEYS.crew()],
+    {
+      onSuccess: () => {
+        setIsDialogOpen(false);
+        resetForm();
+        toast({ title: "Crew member added successfully" });
+      },
+      onError: (error: Error) => {
+        let msg = "Failed to add crew member";
+        try {
+          const jsonPart = error.message?.substring(error.message.indexOf("{"));
+          if (jsonPart) {
+            const parsed = JSON.parse(jsonPart);
+            if (parsed.error) msg = parsed.error;
+          }
+        } catch {
+          if (error.message?.includes("already exists")) {
+            msg = error.message;
+          }
+        }
+        toast({ title: msg, variant: "destructive" });
+      },
+    }
+  );
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      apiRequest("PATCH", `/api/crew/${id}`, { status }),
-    onSuccess: () => {
-      setCrewVersion(v => v + 1);
-      toast({ title: "Status updated" });
-    },
-  });
+  const updateMutation = useApiMutation(
+    ({ id, status }: { id: string; status: string }) =>
+      apiFetch(`/api/crew/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
+    [QUERY_KEYS.crew()],
+    {
+      onSuccess: () => {
+        toast({ title: "Status updated" });
+      },
+    }
+  );
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("DELETE", `/api/crew/${id}`),
-    onSuccess: () => {
-      setCrewVersion(v => v + 1);
-      toast({ title: "Crew member removed" });
-    },
-  });
+  const deleteMutation = useApiMutation(
+    (id: string) => apiFetch(`/api/crew/${id}`, { method: "DELETE" }),
+    [QUERY_KEYS.crew()],
+    {
+      onSuccess: () => {
+        toast({ title: "Crew member removed" });
+      },
+    }
+  );
 
   const { data: crewInvites = [] } = useQuery<CrewInvite[]>({
-    queryKey: ["/api/crew", expandedMember, "invites"],
-    queryFn: async () => {
-      if (!expandedMember) return [];
-      const res = await fetch(`/api/crew/${expandedMember}/invites`);
-      if (!res.ok) return [];
-      return res.json();
-    },
+    queryKey: QUERY_KEYS.crewMemberInvites(expandedMember || ""),
+    queryFn: () => apiFetch<CrewInvite[]>(`/api/crew/${expandedMember}/invites`),
     enabled: !!expandedMember,
   });
 
-  const revokeMutation = useMutation({
-    mutationFn: (inviteId: string) => apiRequest("POST", `/api/crew-invites/${inviteId}/revoke`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crew", expandedMember, "invites"] });
-      toast({ title: "Invite revoked" });
-    },
-    onError: () => {
-      toast({ title: "Failed to revoke invite", variant: "destructive" });
-    },
-  });
+  const revokeMutation = useApiMutation(
+    (inviteId: string) =>
+      apiFetch(`/api/crew-invites/${inviteId}/revoke`, { method: "POST" }),
+    [QUERY_KEYS.crewMemberInvites(expandedMember || ""), QUERY_KEYS.crewInvites()],
+    {
+      onSuccess: () => {
+        toast({ title: "Invite revoked" });
+      },
+      onError: () => {
+        toast({ title: "Failed to revoke invite", variant: "destructive" });
+      },
+    }
+  );
 
   const resetForm = () => {
     setFormData({ firstName: "", lastName: "", phone: "", email: "", role: "helper", customRole: "" });

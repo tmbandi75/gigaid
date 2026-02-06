@@ -101,13 +101,19 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
-      refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      staleTime: 0,
+      gcTime: 5 * 60 * 1000,
+      refetchOnMount: "always",
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      retry: 1,
     },
     mutations: {
       retry: false,
     },
   },
 });
+
+if (import.meta.env.DEV) {
+  (window as any).__RQ__ = queryClient;
+}

@@ -3712,7 +3712,56 @@ export async function registerRoutes(
         ...req.body,
         userId: (req as any).userId,
       });
+
+      const existingMembers = await storage.getCrewMembers((req as any).userId);
+      const normalizePhone = (p: string) => p.replace(/\D/g, "");
+      const normalizeEmail = (e: string) => e.trim().toLowerCase();
+
+      for (const existing of existingMembers) {
+        if (validated.email && existing.email &&
+            normalizeEmail(validated.email) === normalizeEmail(existing.email)) {
+          return res.status(409).json({ error: `A crew member with email ${validated.email} already exists` });
+        }
+        if (validated.phone && existing.phone &&
+            normalizePhone(validated.phone) === normalizePhone(existing.phone)) {
+          return res.status(409).json({ error: `A crew member with phone ${validated.phone} already exists` });
+        }
+      }
+
       const member = await storage.createCrewMember(validated);
+
+      const owner = await storage.getUser((req as any).userId);
+      const ownerName = owner?.name || owner?.businessName || "Your team";
+      try {
+        if (validated.phone) {
+          const { sendSMS } = await import("./twilio.js");
+          await sendSMS(
+            validated.phone,
+            `Hi ${validated.name.split(" ")[0]}! You've been added to ${ownerName}'s crew on GigAid. You'll receive job assignments and updates here. Welcome aboard!`
+          );
+        }
+        if (validated.email) {
+          const { sendEmail } = await import("./sendgrid.js");
+          await sendEmail({
+            to: validated.email,
+            subject: `Welcome to ${ownerName}'s crew on GigAid`,
+            text: `Hi ${validated.name.split(" ")[0]},\n\nYou've been added to ${ownerName}'s crew on GigAid. You'll receive job assignments, updates, and scheduling details through this platform.\n\nWelcome aboard!\n\n- ${ownerName}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #2563eb;">Welcome to the Crew!</h2>
+                <p>Hi ${validated.name.split(" ")[0]},</p>
+                <p>You've been added to <strong>${ownerName}'s</strong> crew on GigAid.</p>
+                <p>You'll receive job assignments, updates, and scheduling details through this platform.</p>
+                <p>Welcome aboard!</p>
+                <p style="color: #6b7280;">- ${ownerName}</p>
+              </div>
+            `,
+          });
+        }
+      } catch (notifError) {
+        console.error("Failed to send crew welcome notification:", notifError);
+      }
+
       res.status(201).json(member);
     } catch (error) {
       if (error instanceof z.ZodError) {

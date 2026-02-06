@@ -96,6 +96,14 @@ Systematic review across 9 categories to identify and fix Day-1 user experience 
 - **Invoice History**: Fetched from Stripe via GET /api/billing/invoices, displays invoice number, date, amount, status with view/download buttons
 - **Invoice Amounts**: Uses amount_paid for paid invoices, amount_due for open/void invoices
 
+### Data Layer Architecture (February 2026 Refactor)
+- **QueryClient**: staleTime: 0, gcTime: 5min, refetchOnMount: "always", refetchOnWindowFocus: true, retry: 1
+- **Central API Fetcher**: `client/src/lib/apiFetch.ts` — typed fetcher with auth token injection and token-readiness guard for mutations
+- **Query Keys**: `client/src/lib/queryKeys.ts` — centralized QUERY_KEYS constant for all domains
+- **Mutation Hook**: `client/src/hooks/useApiMutation.ts` — standardized mutation with automatic cache invalidation via query keys
+- **Crew Duplicate Prevention**: POST /api/crew checks for existing members by normalized email/phone before creating
+- **Crew Welcome Notifications**: SMS (Twilio) and email (SendGrid) sent automatically when a crew member is created
+
 ### Booking Link Sharing
 - **Unified Component**: `BookingLinkShare` component with three variants (primary/inline/compact) consolidates all booking link sharing UI
 - **API Endpoint**: GET `/api/booking/link` returns the user's booking link
