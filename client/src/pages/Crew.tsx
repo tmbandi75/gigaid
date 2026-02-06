@@ -73,22 +73,37 @@ export default function Crew() {
     queryKey: ["/api/crew"],
   });
 
+  console.log("[Crew] render, crew count:", crew.length, "crew names:", crew.map(c => c.name));
+
   const createMutation = useMutation({
     mutationFn: async (data: { name: string; phone: string; email: string; role: string }) => {
+      console.log("[Crew] mutation starting, data:", data);
       const res = await apiRequest("POST", "/api/crew", data);
-      return await res.json() as CrewMember;
+      const newMember = await res.json() as CrewMember;
+      console.log("[Crew] mutation response:", newMember);
+      return newMember;
     },
     onSuccess: async (newMember) => {
+      console.log("[Crew] onSuccess called, newMember:", newMember.name);
+      const before = queryClient.getQueryData<CrewMember[]>(["/api/crew"]);
+      console.log("[Crew] cache before setQueryData:", before?.length);
       queryClient.setQueryData<CrewMember[]>(["/api/crew"], (old) => {
         const current = old ?? [];
-        return [...current, newMember];
+        const updated = [...current, newMember];
+        console.log("[Crew] setQueryData: old count:", current.length, "new count:", updated.length);
+        return updated;
       });
+      const after = queryClient.getQueryData<CrewMember[]>(["/api/crew"]);
+      console.log("[Crew] cache after setQueryData:", after?.length);
       await queryClient.refetchQueries({ queryKey: ["/api/crew"], exact: true });
+      const afterRefetch = queryClient.getQueryData<CrewMember[]>(["/api/crew"]);
+      console.log("[Crew] cache after refetch:", afterRefetch?.length);
       setIsDialogOpen(false);
       resetForm();
       toast({ title: "Crew member added successfully" });
     },
-    onError: () => {
+    onError: (err) => {
+      console.error("[Crew] mutation error:", err);
       toast({ title: "Failed to add crew member", variant: "destructive" });
     },
   });
