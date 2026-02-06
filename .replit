@@ -44,3 +44,4 @@ integrations = ["javascript_object_storage:2.0.0", "stripe:2.0.0", "twilio:1.0.0
 [userenv]
 
 [userenv.shared]
+FIREBASE_PROJECT_ID = "gigaid-9c982"
