@@ -78,11 +78,12 @@ export default function Crew() {
       const res = await apiRequest("POST", "/api/crew", data);
       return await res.json() as CrewMember;
     },
-    onSuccess: (newMember) => {
-      queryClient.setQueryData<CrewMember[]>(["/api/crew"], (old) =>
-        old ? [...old, newMember] : [newMember]
-      );
-      queryClient.invalidateQueries({ queryKey: ["/api/crew"] });
+    onSuccess: async (newMember) => {
+      queryClient.setQueryData<CrewMember[]>(["/api/crew"], (old) => {
+        const current = old ?? [];
+        return [...current, newMember];
+      });
+      await queryClient.refetchQueries({ queryKey: ["/api/crew"], exact: true });
       setIsDialogOpen(false);
       resetForm();
       toast({ title: "Crew member added successfully" });
@@ -95,16 +96,16 @@ export default function Crew() {
   const updateMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       apiRequest("PATCH", `/api/crew/${id}`, { status }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crew"] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["/api/crew"], exact: true });
       toast({ title: "Status updated" });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => apiRequest("DELETE", `/api/crew/${id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crew"] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["/api/crew"], exact: true });
       toast({ title: "Crew member removed" });
     },
   });
