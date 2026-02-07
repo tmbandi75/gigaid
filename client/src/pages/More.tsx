@@ -27,6 +27,7 @@ import {
   Navigation,
   Send,
   Menu,
+  Download,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
@@ -73,6 +74,7 @@ const menuSections = [
     items: [
       { icon: User, label: "Profile", description: "Your info", href: "/profile", gradient: "from-slate-500 to-gray-500" },
       { icon: Settings, label: "Settings", description: "App preferences", href: "/settings", gradient: "from-slate-500 to-gray-500" },
+      { icon: Download, label: "Downloads", description: "Architecture files", href: "/downloads", gradient: "from-slate-500 to-gray-500" },
       { icon: HelpCircle, label: "Help & Support", description: "FAQs and contact", href: "/help", gradient: "from-slate-500 to-gray-500" },
     ]
   },
