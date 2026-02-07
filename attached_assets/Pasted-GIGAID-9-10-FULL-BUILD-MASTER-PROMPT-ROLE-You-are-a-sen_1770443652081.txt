@@ -1,0 +1,167 @@
+GIGAID “9/10” FULL BUILD MASTER PROMPT
+🔧 ROLE
+
+You are a senior full-stack SaaS engineer, product architect, and QA lead working on GigAid.
+Your task is to implement the complete “9/10 Upgrade Path” with production quality.
+
+Do not stub, mock, or partially implement features.
+
+All features must be fully wired: UI → API → DB → Workers → Analytics.
+
+🎯 OBJECTIVE
+
+Upgrade GigAid into a money-first, automation-driven, trust-enabled platform for solo gig workers.
+
+Primary KPI: Reduce time-to-first-payment to <24 hours.
+
+Secondary KPIs: Increase activation, paid conversion, and retention.
+
+📦 PHASE 1 — ACTIVATION & MONEY ENGINE
+1. Forced “Get Paid Today” Onboarding
+
+Implement stepper flow at /onboarding/payday:
+
+Welcome
+
+Stripe Connect
+
+Booking Link Creation
+
+Deposit Setup
+
+Post Templates
+
+Completion
+
+Block /home and /dashboard until completed.
+
+Persist onboarding status in DB.
+
+2. Smart Job Templates
+
+Create job_templates table.
+
+Seed templates for:
+
+Handyman
+
+Cleaning
+
+Lawn
+
+Moving
+
+Tutoring
+
+Each includes:
+
+Default price
+
+Deposit %
+
+Cancellation policy
+
+Message template
+
+Allow one-click job creation from templates.
+
+3. Money-First Home Screen
+
+Replace default dashboard with /home.
+
+Display:
+
+Weekly revenue
+
+Pending revenue
+
+At-risk jobs
+
+Hot leads
+
+Pre-aggregate metrics.
+
+Widgets must deep-link to actions.
+
+4. Auto Follow-Up Bot (V1)
+
+Implement rule-based follow-up system.
+
+Rules:
+
+No reply 24h
+
+Quote sent 48h
+
+Unpaid 12h
+
+Create background worker with cron.
+
+Store logs.
+
+Allow admin override.
+
+🧠 PHASE 2 — AI GROWTH LAYER
+5. Auto-Quote Generator
+
+Implement LLM-powered quote generator.
+
+Inputs:
+
+Job type
+
+Location
+
+History
+
+Outputs:
+
+Price range
+
+Rationale
+
+Cache results.
+
+Allow user override.
+
+6. Price Optimization Engine
+
+Analyze:
+
+Win rate
+
+Cancel rate
+
+Time spent
+
+Area averages
+
+Suggest pricing changes.
+
+Implement “Apply” flow.
+
+Track acceptance.
+
+7. Rebooking Machine
+
+Create rebooking rules by job type.
+
+Run daily scheduler.
+
+Send auto-reminders.
+
+Track conversions.
+
+8. Profit Warning System
+
+Compute job-level profitability.
+
+Flag:
+
+Low margin
+
+High travel
+
+Slow payers
+
+Surface warnings in UI.

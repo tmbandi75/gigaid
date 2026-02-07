@@ -1,0 +1,250 @@
+You are a senior SaaS monetization engineer. Implement a complete “9.5/10 upgrade orchestration system” on top of the existing centralized capability + limits engine.
+
+Context (already exists in this codebase):
+- Plan types: Free / Pro / Pro+ / Business (shared/capabilities/plans.ts)
+- Capability rules matrix w/ modes: active, read_only, suggest_only, partial (shared/capabilities/capabilityRules.ts)
+- Plan limits (shared/planLimits.ts)
+- canPerform() and usage checks (shared/capabilities/canPerform.ts)
+- hasCapability / entitlements (shared/entitlements.ts)
+- CapabilityGate component (client/src/components/CapabilityGate.tsx)
+- useCanPerform() hook (client/src/hooks/useCapability.ts)
+- useCapabilityEnforce() + PostHog tracking on block
+- BlockingIntercept modal exists (client/src/components/ui/blocking-intercept.tsx)
+- Stripe checkout exists (PricingPage.tsx with startStripeCheckout())
+- capability_usage table exists and server endpoints exist: /api/capabilities/*
+- stall detection table exists in schema (if present in DB model), but prompts not wired
+
+Goal:
+Move from ~8.3/10 to 9.5/10 by adding:
+1) “Approaching limit” warnings (pre-wall)
+2) Post-success monetization nudges (dopamine capture)
+3) Stall/friction-based upsell engine (helpful, targeted prompts)
+4) A/B variants for upgrade prompts (ROI/time/social)
+5) Centralize all prompt triggering so it’s consistent and measurable
+
+Hard requirements:
+- Do NOT refactor the existing capability engine.
+- Add new files + minimal integrations into key screens.
+- All prompts must be capability-aware and plan-aware.
+- No random nagging: only show at high-intent moments.
+- Instrument everything with PostHog.
+- Add a global “cooldown” so prompts don’t spam (per user, per prompt-type).
+- Keep UI consistent with the current design system.
+
+Deliverables:
+A) New shared + client modules (hooks, services, UI)
+B) Integrations into 4 core flows: Jobs, Messages/SMS, Booking/Deposits, Invoicing
+C) Server endpoints needed for stall events + prompt state (if missing)
+D) PostHog events + properties
+E) Short summary of what you changed and where
+
+======================================================================
+STEP 1 — CREATE A SINGLE SOURCE OF TRUTH FOR UPSELL ORCHESTRATION
+======================================================================
+
+Create these new client files:
+
+1) client/src/upgrade/upgradeTypes.ts
+- Types for: UpgradeTriggerType, UpgradeVariant, UpgradePromptPayload, CooldownState
+- Trigger types: approaching_limit, hit_limit, post_success, stall_detected, feature_locked
+- Variants: roi, time, social
+
+2) client/src/upgrade/upgradeConfig.ts
+- Central configuration for thresholds, cooldowns, and rules
+- Thresholds:
+  - approaching_limit_info = 0.60
+  - approaching_limit_warn = 0.80
+  - approaching_limit_critical = 0.95
+- Cooldowns:
+  - per-trigger type: 24h
+  - global: max 2 prompts per 24h
+- Rules for which capabilities are “monetizable moments” and what the upgrade offer should be
+  Example mapping:
+  - jobs.create -> “Unlimited jobs + automation”
+  - sms.send -> “Unlimited texts + auto follow-up”
+  - booking.deposits -> “Secure bookings with deposits”
+  - invoices.auto_remind -> “Get paid faster with reminders”
+
+3) client/src/upgrade/upgradeState.ts
+- Persistent prompt state using localStorage (and optionally server if already exists)
+- Store:
+  - lastShownAt per trigger type and capability
+  - dailyPromptCount with window reset
+  - userVariant assignment (sticky)
+- Provide functions:
+  - canShowPrompt(userId, triggerType, capabilityKey)
+  - markPromptShown(userId, triggerType, capabilityKey)
+  - getOrAssignVariant(userId)
+
+4) client/src/upgrade/useUpgradeOrchestrator.ts
+- Main hook that other screens call
+- Inputs: user, capabilityKey, optional context {remaining, limit, plan, actionName}
+- Expose:
+  - maybeShowApproachingLimit()
+  - maybeShowPostSuccess()
+  - maybeShowStallPrompt(stallType, count, moneyAtRisk?)
+  - showFeatureLocked() (wrap around existing blocking-intercept)
+- This hook must:
+  - consult useCanPerform() + limits (remaining/limit)
+  - apply thresholds + cooldown
+  - pick variant
+  - call UI prompt functions
+  - track PostHog events
+
+5) client/src/upgrade/upgradeCopy.ts
+- Copy generation by variant and capability
+- Must produce:
+  - title
+  - subtitle
+  - bullets (3 max)
+  - primary CTA label
+  - secondary CTA label
+- Variant guidance:
+  - roi: talk dollars and revenue
+  - time: talk hours saved
+  - social: talk trust/serious clients
+
+6) client/src/upgrade/UpgradeBanner.tsx
+- A light banner component used for 60% and 80% thresholds
+- Props: capabilityKey, remaining, limit, variant, onUpgrade
+- Must be dismissible (dismiss stored in state for 24h)
+
+7) client/src/upgrade/UpgradeNudgeModal.tsx
+- A modal used for 95% and post-success prompts
+- Must reuse existing modal styling patterns
+- Primary CTA routes to Pricing/Stripe checkout
+- Secondary CTA dismiss
+
+======================================================================
+STEP 2 — WIRE “APPROACHING LIMIT” WARNINGS (60/80/95)
+======================================================================
+
+Implement in the 4 core flows using the orchestrator:
+
+A) Jobs
+- File: client/src/.../JobForm.tsx (or wherever job creation occurs)
+- On render:
+  - call maybeShowApproachingLimit() for the jobs capability used for creation
+  - Show banner at 60% and 80%
+- When user hits limit (blocked by CapabilityGate):
+  - ensure showFeatureLocked() triggers and tracks properly
+
+B) Messages/SMS
+- Files: Messages.tsx, FollowUpComposer.tsx (or equivalent)
+- On render:
+  - show approaching-limit banner based on SMS capability
+- On blocked:
+  - showFeatureLocked()
+
+C) Booking/Deposits
+- File: BookingRequests.tsx (or equivalent)
+- Deposits capability:
+  - Show banner at 60/80 if user is using booking but cannot enable deposits soon
+  - If deposits are locked, showFeatureLocked() with deposit-specific copy
+
+D) Invoicing
+- Identify invoice send / reminder capability usage
+- Add approaching-limit banners for whichever capability has a limit on free plan
+
+======================================================================
+STEP 3 — ADD POST-SUCCESS NUDGES (DOPAMINE CAPTURE)
+======================================================================
+
+In the same 4 flows, after a successful action:
+
+- After job created: call maybeShowPostSuccess() with jobs capability
+- After SMS sent: call maybeShowPostSuccess() with sms capability
+- After booking confirmed: call maybeShowPostSuccess() with deposits or booking capability
+- After invoice sent/paid: call maybeShowPostSuccess() with invoice capability
+
+Post-success nudges should only show if:
+- User is Free (or below required plan)
+- User is >= 70% of limit OR the success action is tied to a premium optimization feature (e.g., “auto follow-up”, “auto reminders”)
+- Cooldown allows it
+
+======================================================================
+STEP 4 — STALL / FRICTION → UPSELL ENGINE
+======================================================================
+
+Implement stall detection wiring as follows:
+
+A) Define stall triggers (client):
+- manual_followup_repeat: user sends 3 manual followups within 48h
+- missed_deposit: user has >=2 bookings without deposits in 7d
+- unpaid_invoice: invoice sent but unpaid after X days (if data exists)
+- message_thread_overflow: user handles many threads manually (if data exists)
+
+B) Server support:
+If no endpoints exist, add minimal endpoints:
+- POST /api/stalls (create stall event)
+- GET /api/stalls/summary (counts per type for user, last 30d)
+Store in existing stall table if present; otherwise create a simple table.
+
+C) Client orchestration:
+- Create client/src/upgrade/useStallSignals.ts:
+  - derives stalls either from server summary or from local client counters if server data not available
+- When a stall threshold is hit, call maybeShowStallPrompt()
+
+======================================================================
+STEP 5 — A/B VARIANTS + ANALYTICS (POSTHOG)
+======================================================================
+
+A) Sticky variant assignment
+- In upgradeState.ts, assign variant per user (random once, then persist)
+
+B) PostHog events
+Track these with consistent properties:
+- upgrade_prompt_shown
+- upgrade_prompt_dismissed
+- upgrade_cta_clicked
+- upgrade_checkout_started
+- upgrade_checkout_completed (if detectable)
+Properties:
+- triggerType
+- capabilityKey
+- plan
+- remaining
+- limit
+- percentUsed
+- variant
+- surface (Jobs/Messages/Booking/Invoicing)
+- reason (copy key)
+
+Also ensure existing “blocked” tracking is not duplicated; dedupe where needed.
+
+======================================================================
+STEP 6 — INTEGRATE WITH EXISTING CHECKOUT
+======================================================================
+
+When primary CTA is clicked:
+- Route to existing PricingPage OR call existing startStripeCheckout() directly if available
+- Pass plan recommendation if your checkout supports it:
+  - If capability is deposits or automation-heavy, recommend Pro
+  - If analytics/export, recommend Business
+
+======================================================================
+STEP 7 — QUALITY + SAFETY
+======================================================================
+
+- Add unit-safe guards: if limit/remaining undefined, do nothing
+- Respect read_only/suggest_only modes: banner can still show; modal only if user attempted action or post-success qualifies
+- Add global “max prompts per day” limiter
+- Ensure banners and modals do not appear on every navigation; respect cooldowns
+- Ensure TypeScript types are correct; no any
+- Keep changes minimal and localized to new modules + targeted integrations
+
+======================================================================
+OUTPUT
+======================================================================
+
+After implementation, output:
+1) List of new files created
+2) List of modified files + what changed
+3) A short “How to test” checklist:
+- Free user near job limit -> sees banners at 60/80 and modal at 95
+- Create job -> post-success nudge (if conditions met)
+- Send SMS repeatedly -> stall prompt fires
+- Click CTA -> checkout starts
+- PostHog events fire with correct props
+
+Proceed now and implement everything above.
