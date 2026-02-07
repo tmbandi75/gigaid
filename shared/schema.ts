@@ -2440,13 +2440,31 @@ export const rebookingLogs = pgTable("rebooking_logs", {
   clientName: text("client_name"),
   clientPhone: text("client_phone"),
   clientEmail: text("client_email"),
-  status: text("status").notNull().default("sent"), // sent, booked, ignored, failed
+  status: text("status").notNull().default("sent"), // sent, booked, ignored, failed, converted
   sentAt: text("sent_at").notNull().default(sql`now()`),
   rebookedAt: text("rebooked_at"),
   newJobId: varchar("new_job_id"),
+  convertedJobId: varchar("converted_job_id"),
+  convertedAt: text("converted_at"),
 });
 
 export type RebookingLog = typeof rebookingLogs.$inferSelect;
+
+export const priceAdjustments = pgTable("price_adjustments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  serviceType: text("service_type").notNull(),
+  previousPriceCents: integer("previous_price_cents"),
+  newPriceCents: integer("new_price_cents"),
+  changePercent: integer("change_percent").notNull(),
+  source: text("source").default("price_optimization"),
+  status: text("status").default("applied"),
+  createdAt: text("created_at").notNull().default(sql`now()`),
+});
+
+export const insertPriceAdjustmentSchema = createInsertSchema(priceAdjustments).omit({ id: true, createdAt: true });
+export type InsertPriceAdjustment = z.infer<typeof insertPriceAdjustmentSchema>;
+export type PriceAdjustment = typeof priceAdjustments.$inferSelect;
 
 export * from "./models/chat";
 export * from "./models/auth";

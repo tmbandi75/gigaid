@@ -69,6 +69,7 @@ import OnboardingPage from "@/pages/OnboardingPage";
 import PaydayOnboarding from "@/pages/PaydayOnboarding";
 import PricingPage from "@/pages/PricingPage";
 import Downloads from "@/pages/Downloads";
+import FollowUpSettingsPage from "@/pages/FollowUpSettingsPage";
 import AutoQuotePage from "@/pages/AutoQuotePage";
 import PriceOptimizationPage from "@/pages/PriceOptimizationPage";
 import ProfitWarningsPage from "@/pages/ProfitWarningsPage";
@@ -104,6 +105,7 @@ function Router() {
       <Route path="/help" component={HelpSupport} />
       <Route path="/guides" component={UserGuides} />
       <Route path="/ai-tools" component={AITools} />
+      <Route path="/follow-up-settings" component={FollowUpSettingsPage} />
       <Route path="/auto-quote" component={AutoQuotePage} />
       <Route path="/price-optimization" component={PriceOptimizationPage} />
       <Route path="/profit-warnings" component={ProfitWarningsPage} />
@@ -220,46 +222,80 @@ function AuthenticatedApp() {
             <Router />
           </AdminLayout>
         ) : (
-          <>
+          <PaydayOnboardingGuard>
             <ResponsiveLayout>
               <Router />
             </ResponsiveLayout>
             <VoiceFAB />
-          </>
+          </PaydayOnboardingGuard>
         )}
       </OnboardingWrapper>
     </DriveModeProvider>
   );
 }
 
-function RedirectToDashboard() {
-  const [, setLocation] = useLocation();
+function usePaydayOnboardingRequired() {
   const { data: profile, isLoading: profileLoading } = useQuery<{ paydayOnboardingCompleted?: boolean }>({
     queryKey: ['/api/profile'],
   });
+  const needsCheck = !!profile && !profile.paydayOnboardingCompleted;
   const { data: jobsData, isLoading: jobsLoading } = useQuery<any[]>({
     queryKey: ['/api/jobs'],
-    enabled: !!profile && !profile.paydayOnboardingCompleted,
+    enabled: needsCheck,
   });
   const { data: invoicesData, isLoading: invoicesLoading } = useQuery<any[]>({
     queryKey: ['/api/invoices'],
-    enabled: !!profile && !profile.paydayOnboardingCompleted,
+    enabled: needsCheck,
   });
 
+  if (profileLoading) return { loading: true, required: false };
+  if (!profile || profile.paydayOnboardingCompleted) return { loading: false, required: false };
+  if (jobsLoading || invoicesLoading) return { loading: true, required: false };
+  const hasExistingData = (jobsData && jobsData.length > 0) || (invoicesData && invoicesData.length > 0);
+  return { loading: false, required: !hasExistingData };
+}
+
+function PaydayOnboardingGuard({ children }: { children: React.ReactNode }) {
+  const [, setLocation] = useLocation();
+  const { loading, required } = usePaydayOnboardingRequired();
+
   useEffect(() => {
-    if (profileLoading) return;
-    if (!profile || profile.paydayOnboardingCompleted) {
-      setLocation("/dashboard");
-      return;
-    }
-    if (jobsLoading || invoicesLoading) return;
-    const hasExistingData = (jobsData && jobsData.length > 0) || (invoicesData && invoicesData.length > 0);
-    if (hasExistingData) {
-      setLocation("/dashboard");
-    } else {
+    if (!loading && required) {
       setLocation("/payday-onboarding");
     }
-  }, [setLocation, profile, profileLoading, jobsData, jobsLoading, invoicesData, invoicesLoading]);
+  }, [loading, required, setLocation]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (required) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
+function RedirectToDashboard() {
+  const [, setLocation] = useLocation();
+  const { loading, required } = usePaydayOnboardingRequired();
+
+  useEffect(() => {
+    if (loading) return;
+    if (required) {
+      setLocation("/payday-onboarding");
+    } else {
+      setLocation("/dashboard");
+    }
+  }, [setLocation, loading, required]);
 
   return (
     <div className="min-h-screen flex items-center justify-center">

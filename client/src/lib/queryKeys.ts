@@ -149,5 +149,6 @@ export const QUERY_KEYS = {
   moneyDashboard: () => ["/api/money-dashboard"] as const,
   quoteEstimate: () => ["/api/quote-estimate"] as const,
   priceOptimization: () => ["/api/price-optimization"] as const,
+  priceAdjustments: () => ["/api/price-adjustments"] as const,
   profitWarnings: () => ["/api/profit-warnings"] as const,
 };

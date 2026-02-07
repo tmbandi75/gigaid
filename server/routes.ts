@@ -73,6 +73,20 @@ import mobileAuthRoutes from "./mobileAuthRoutes";
 import { verifyAppJwt } from "./appJwt";
 import { registerStripeWebhookRoutes, processRetryableWebhooks, reconcileStuckPayments, startWebhookRetryScheduler } from "./stripeWebhookRoutes";
 
+const quoteCache = new Map<string, { result: any; timestamp: number }>();
+const QUOTE_CACHE_TTL = 3600000;
+const QUOTE_CACHE_MAX = 500;
+const QUOTE_CACHE_PRUNE = 250;
+
+function pruneQuoteCache() {
+  if (quoteCache.size <= QUOTE_CACHE_MAX) return;
+  const entries = Array.from(quoteCache.entries())
+    .sort((a, b) => a[1].timestamp - b[1].timestamp);
+  for (let i = 0; i < QUOTE_CACHE_PRUNE; i++) {
+    quoteCache.delete(entries[i][0]);
+  }
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -12208,9 +12222,44 @@ Return ONLY the message text, no JSON or formatting.`
       const { followUpRules } = await import("@shared/schema");
       const { eq } = await import("drizzle-orm");
       const rules = await db.select().from(followUpRules).where(eq(followUpRules.userId, userId));
-      res.json(rules);
+      if (rules.length > 0) {
+        return res.json(rules);
+      }
+      const defaults = [
+        { ruleType: "no_reply", enabled: true, delayHours: 24, messageTemplate: "Hi {{client_first_name}}, just following up on my message. Let me know if you have any questions!" },
+        { ruleType: "quote_pending", enabled: true, delayHours: 48, messageTemplate: "Hi {{client_first_name}}, wanted to check if you had a chance to review the quote I sent. Happy to answer any questions!" },
+        { ruleType: "unpaid_invoice", enabled: true, delayHours: 12, messageTemplate: "Hi {{client_first_name}}, quick reminder about the outstanding invoice. Let me know if you need anything!" },
+      ];
+      res.json(defaults);
     } catch (error: any) {
       res.status(500).json({ error: "Failed to fetch follow-up rules" });
+    }
+  });
+
+  app.put("/api/follow-up-rules", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { db } = await import("./db");
+      const { followUpRules } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const { rules } = req.body;
+      if (!Array.isArray(rules)) return res.status(400).json({ error: "rules array required" });
+      await db.delete(followUpRules).where(eq(followUpRules.userId, userId));
+      const inserted = [];
+      for (const rule of rules) {
+        const [row] = await db.insert(followUpRules).values({
+          userId,
+          ruleType: rule.ruleType,
+          delayHours: rule.delayHours,
+          enabled: rule.enabled ?? true,
+          messageTemplate: rule.messageTemplate || null,
+          channel: rule.channel || "sms",
+        }).returning();
+        inserted.push(row);
+      }
+      res.json(inserted);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to update follow-up rules" });
     }
   });
 
@@ -12339,6 +12388,40 @@ Return ONLY the message text, no JSON or formatting.`
     }
   });
 
+  app.post("/api/rebooking-conversions", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { rebookingLogId, newJobId } = req.body;
+      if (!rebookingLogId || !newJobId) return res.status(400).json({ error: "rebookingLogId and newJobId are required" });
+      const { db } = await import("./db");
+      const { rebookingLogs } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      await db.update(rebookingLogs)
+        .set({ convertedJobId: newJobId, convertedAt: new Date().toISOString(), status: "converted" })
+        .where(and(eq(rebookingLogs.id, rebookingLogId), eq(rebookingLogs.userId, userId)));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to track rebooking conversion" });
+    }
+  });
+
+  app.get("/api/rebooking-stats", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { db } = await import("./db");
+      const { rebookingLogs } = await import("@shared/schema");
+      const { eq, and, count } = await import("drizzle-orm");
+      const [sentResult] = await db.select({ value: count() }).from(rebookingLogs).where(and(eq(rebookingLogs.userId, userId), eq(rebookingLogs.status, "sent")));
+      const [convertedResult] = await db.select({ value: count() }).from(rebookingLogs).where(and(eq(rebookingLogs.userId, userId), eq(rebookingLogs.status, "converted")));
+      const totalSent = sentResult?.value || 0;
+      const totalConverted = convertedResult?.value || 0;
+      const conversionRate = totalSent > 0 ? totalConverted / totalSent : 0;
+      res.json({ totalSent, totalConverted, conversionRate });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch rebooking stats" });
+    }
+  });
+
   // ============ AUTO-QUOTE GENERATOR ============
   app.post("/api/quote-estimate", requireAuth, async (req, res) => {
     try {
@@ -12346,6 +12429,12 @@ Return ONLY the message text, no JSON or formatting.`
       const { jobType, location, description } = req.body;
       
       if (!jobType) return res.status(400).json({ error: "jobType is required" });
+      
+      const cacheKey = `${userId}:${jobType}:${location?.toLowerCase().trim() || 'none'}`;
+      const cached = quoteCache.get(cacheKey);
+      if (cached && (Date.now() - cached.timestamp) < QUOTE_CACHE_TTL) {
+        return res.json({ ...cached.result, source: 'cached' });
+      }
       
       const { db } = await import("./db");
       const { jobs } = await import("@shared/schema");
@@ -12358,13 +12447,15 @@ Return ONLY the message text, no JSON or formatting.`
       const completedJobs = historicalJobs.filter(j => j.status === "completed" && j.price);
       const prices = completedJobs.map(j => j.price!).sort((a, b) => a - b);
       
+      let quoteResult: any;
+      
       if (prices.length >= 3) {
         const median = prices[Math.floor(prices.length / 2)];
         const low = prices[Math.floor(prices.length * 0.25)];
         const high = prices[Math.floor(prices.length * 0.75)];
         const avgDuration = completedJobs.reduce((sum, j) => sum + (j.duration || 60), 0) / completedJobs.length;
         
-        res.json({
+        quoteResult = {
           source: "historical",
           suggestedPriceLow: low,
           suggestedPriceHigh: high,
@@ -12372,7 +12463,7 @@ Return ONLY the message text, no JSON or formatting.`
           rationale: `Based on ${completedJobs.length} similar ${jobType} jobs you've completed. Your typical price range is $${(low/100).toFixed(0)}-$${(high/100).toFixed(0)} with a median of $${(median/100).toFixed(0)}.`,
           avgDurationMinutes: Math.round(avgDuration),
           sampleSize: completedJobs.length,
-        });
+        };
       } else {
         try {
           const { getOpenAI } = await import("./ai/openaiClient");
@@ -12395,7 +12486,7 @@ Respond in JSON format only:
           
           const result = JSON.parse(response.choices[0].message.content || "{}");
           
-          res.json({
+          quoteResult = {
             source: "ai",
             suggestedPriceLow: result.low || 5000,
             suggestedPriceHigh: result.high || 20000,
@@ -12403,10 +12494,10 @@ Respond in JSON format only:
             rationale: result.rationale || "AI estimate based on industry averages.",
             avgDurationMinutes: result.duration_minutes || 60,
             sampleSize: 0,
-          });
+          };
         } catch (aiError) {
           console.error("AI quote error:", aiError);
-          res.json({
+          quoteResult = {
             source: "default",
             suggestedPriceLow: 5000,
             suggestedPriceHigh: 20000,
@@ -12414,9 +12505,14 @@ Respond in JSON format only:
             rationale: "Default estimate. Complete more jobs to get personalized pricing.",
             avgDurationMinutes: 60,
             sampleSize: 0,
-          });
+          };
         }
       }
+      
+      quoteCache.set(cacheKey, { result: quoteResult, timestamp: Date.now() });
+      pruneQuoteCache();
+      
+      res.json(quoteResult);
     } catch (error: any) {
       console.error("Error generating quote estimate:", error);
       res.status(500).json({ error: "Failed to generate quote estimate" });
@@ -12483,6 +12579,48 @@ Respond in JSON format only:
     } catch (error: any) {
       console.error("Error fetching price optimization:", error);
       res.status(500).json({ error: "Failed to fetch price optimization" });
+    }
+  });
+
+  app.post("/api/price-adjustments", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { serviceType, changePercent, previousPriceCents, newPriceCents } = req.body;
+
+      if (!serviceType || changePercent == null) {
+        return res.status(400).json({ error: "serviceType and changePercent are required" });
+      }
+
+      const { db } = await import("./db");
+      const { priceAdjustments, jobTemplates } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+
+      const [adjustment] = await db.insert(priceAdjustments).values({
+        userId,
+        serviceType,
+        previousPriceCents,
+        newPriceCents,
+        changePercent,
+      }).returning();
+
+      const templates = await db.select().from(jobTemplates).where(
+        and(
+          eq(jobTemplates.category, serviceType),
+          eq(jobTemplates.userId, userId)
+        )
+      );
+
+      for (const tpl of templates) {
+        const updatedPrice = Math.round(tpl.defaultPriceCents * (1 + changePercent / 100));
+        await db.update(jobTemplates)
+          .set({ defaultPriceCents: updatedPrice })
+          .where(eq(jobTemplates.id, tpl.id));
+      }
+
+      res.json({ success: true, adjustment });
+    } catch (error: any) {
+      console.error("Error applying price adjustment:", error);
+      res.status(500).json({ error: "Failed to apply price adjustment" });
     }
   });
 

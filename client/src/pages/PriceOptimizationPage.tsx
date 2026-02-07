@@ -1,10 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useToast } from "@/hooks/use-toast";
+import { apiFetch } from "@/lib/apiFetch";
+import { queryClient } from "@/lib/queryClient";
 import {
   TrendingUp,
   TrendingDown,
@@ -14,6 +17,7 @@ import {
   DollarSign,
   Percent,
   Loader2,
+  CheckCircle,
 } from "lucide-react";
 
 interface PriceInsight {
@@ -50,6 +54,7 @@ function capitalize(s: string): string {
 
 export default function PriceOptimizationPage() {
   const { toast } = useToast();
+  const [appliedServices, setAppliedServices] = useState<Set<string>>(new Set());
 
   const { data, isLoading } = useQuery<PriceOptimizationResponse>({
     queryKey: QUERY_KEYS.priceOptimization(),
@@ -57,12 +62,33 @@ export default function PriceOptimizationPage() {
 
   const insights = data?.insights || [];
 
-  const handleApplySuggestion = (insight: PriceInsight) => {
-    toast({
-      title: "Price suggestion noted",
-      description: `Suggestion for ${capitalize(insight.serviceType)} has been noted.`,
-    });
-  };
+  const applyMutation = useMutation({
+    mutationFn: (insight: PriceInsight) =>
+      apiFetch("/api/price-adjustments", {
+        method: "POST",
+        body: JSON.stringify({
+          serviceType: insight.serviceType,
+          changePercent: insight.suggestedChange,
+          previousPriceCents: insight.avgPrice,
+          newPriceCents: Math.round(insight.avgPrice * (1 + insight.suggestedChange / 100)),
+        }),
+      }),
+    onSuccess: (_data, insight) => {
+      setAppliedServices((prev) => new Set(prev).add(insight.serviceType));
+      toast({
+        title: "Price adjustment applied",
+        description: `Price adjustment applied for ${capitalize(insight.serviceType)}!`,
+      });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.priceOptimization() });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to apply price adjustment",
+        variant: "destructive",
+      });
+    },
+  });
 
   return (
     <div className="flex flex-col min-h-full bg-background" data-testid="page-price-optimization">
@@ -103,102 +129,113 @@ export default function PriceOptimizationPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {insights.map((insight) => (
-              <Card key={insight.serviceType} data-testid={`card-insight-${insight.serviceType}`}>
-                <CardContent className="p-4 sm:p-6 space-y-4">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <h2 className="text-lg font-semibold" data-testid={`text-service-type-${insight.serviceType}`}>
-                      {capitalize(insight.serviceType)}
-                    </h2>
-                    <Badge variant="secondary" data-testid={`badge-total-jobs-${insight.serviceType}`}>
-                      {insight.totalJobs} jobs
-                    </Badge>
-                  </div>
+            {insights.map((insight) => {
+              const isApplied = appliedServices.has(insight.serviceType);
+              const isPending = applyMutation.isPending && applyMutation.variables?.serviceType === insight.serviceType;
 
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                    <div className="rounded-lg bg-muted/40 p-3" data-testid={`stat-total-jobs-${insight.serviceType}`}>
-                      <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                        <BarChart3 className="h-3.5 w-3.5" />
-                        <span className="text-xs">Total Jobs</span>
-                      </div>
-                      <p className="text-lg font-semibold">{insight.totalJobs}</p>
+              return (
+                <Card key={insight.serviceType} data-testid={`card-insight-${insight.serviceType}`}>
+                  <CardContent className="p-4 sm:p-6 space-y-4">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <h2 className="text-lg font-semibold" data-testid={`text-service-type-${insight.serviceType}`}>
+                        {capitalize(insight.serviceType)}
+                      </h2>
+                      <Badge variant="secondary" data-testid={`badge-total-jobs-${insight.serviceType}`}>
+                        {insight.totalJobs} jobs
+                      </Badge>
                     </div>
-                    <div className="rounded-lg bg-muted/40 p-3" data-testid={`stat-win-rate-${insight.serviceType}`}>
-                      <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                        <Percent className="h-3.5 w-3.5" />
-                        <span className="text-xs">Win Rate</span>
-                      </div>
-                      <p className="text-lg font-semibold">{insight.winRate}%</p>
-                    </div>
-                    <div className="rounded-lg bg-muted/40 p-3" data-testid={`stat-cancel-rate-${insight.serviceType}`}>
-                      <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                        <Percent className="h-3.5 w-3.5" />
-                        <span className="text-xs">Cancel Rate</span>
-                      </div>
-                      <p className="text-lg font-semibold">{insight.cancelRate}%</p>
-                    </div>
-                    <div className="rounded-lg bg-muted/40 p-3" data-testid={`stat-avg-price-${insight.serviceType}`}>
-                      <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                        <DollarSign className="h-3.5 w-3.5" />
-                        <span className="text-xs">Avg Price</span>
-                      </div>
-                      <p className="text-lg font-semibold">{formatPrice(insight.avgPrice)}</p>
-                    </div>
-                    <div className="rounded-lg bg-muted/40 p-3 col-span-2 sm:col-span-1" data-testid={`stat-hourly-rate-${insight.serviceType}`}>
-                      <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-                        <DollarSign className="h-3.5 w-3.5" />
-                        <span className="text-xs">Hourly Rate</span>
-                      </div>
-                      <p className="text-lg font-semibold">{formatPrice(insight.hourlyRate)}/hr</p>
-                    </div>
-                  </div>
 
-                  {insight.suggestedChange !== 0 ? (
-                    <div
-                      className={`rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-3 ${
-                        insight.suggestedChange > 0
-                          ? "bg-emerald-500/10 border border-emerald-500/20"
-                          : "bg-destructive/10 border border-destructive/20"
-                      }`}
-                      data-testid={`suggestion-card-${insight.serviceType}`}
-                    >
-                      <div className="flex items-start gap-3 flex-1 min-w-0">
-                        {insight.suggestedChange > 0 ? (
-                          <ArrowUpRight className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
-                        ) : (
-                          <ArrowDownRight className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-                        )}
-                        <p className="text-sm" data-testid={`text-suggestion-${insight.serviceType}`}>
-                          {insight.suggestion}
-                        </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                      <div className="rounded-lg bg-muted/40 p-3" data-testid={`stat-total-jobs-${insight.serviceType}`}>
+                        <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                          <BarChart3 className="h-3.5 w-3.5" />
+                          <span className="text-xs">Total Jobs</span>
+                        </div>
+                        <p className="text-lg font-semibold">{insight.totalJobs}</p>
                       </div>
-                      <Button
-                        size="sm"
-                        variant={insight.suggestedChange > 0 ? "default" : "outline"}
-                        className="shrink-0"
-                        onClick={() => handleApplySuggestion(insight)}
-                        data-testid={`button-apply-suggestion-${insight.serviceType}`}
+                      <div className="rounded-lg bg-muted/40 p-3" data-testid={`stat-win-rate-${insight.serviceType}`}>
+                        <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                          <Percent className="h-3.5 w-3.5" />
+                          <span className="text-xs">Win Rate</span>
+                        </div>
+                        <p className="text-lg font-semibold">{insight.winRate}%</p>
+                      </div>
+                      <div className="rounded-lg bg-muted/40 p-3" data-testid={`stat-cancel-rate-${insight.serviceType}`}>
+                        <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                          <Percent className="h-3.5 w-3.5" />
+                          <span className="text-xs">Cancel Rate</span>
+                        </div>
+                        <p className="text-lg font-semibold">{insight.cancelRate}%</p>
+                      </div>
+                      <div className="rounded-lg bg-muted/40 p-3" data-testid={`stat-avg-price-${insight.serviceType}`}>
+                        <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                          <DollarSign className="h-3.5 w-3.5" />
+                          <span className="text-xs">Avg Price</span>
+                        </div>
+                        <p className="text-lg font-semibold">{formatPrice(insight.avgPrice)}</p>
+                      </div>
+                      <div className="rounded-lg bg-muted/40 p-3 col-span-2 sm:col-span-1" data-testid={`stat-hourly-rate-${insight.serviceType}`}>
+                        <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+                          <DollarSign className="h-3.5 w-3.5" />
+                          <span className="text-xs">Hourly Rate</span>
+                        </div>
+                        <p className="text-lg font-semibold">{formatPrice(insight.hourlyRate)}/hr</p>
+                      </div>
+                    </div>
+
+                    {insight.suggestedChange !== 0 ? (
+                      <div
+                        className={`rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-3 ${
+                          insight.suggestedChange > 0
+                            ? "bg-emerald-500/10 border border-emerald-500/20"
+                            : "bg-destructive/10 border border-destructive/20"
+                        }`}
+                        data-testid={`suggestion-card-${insight.serviceType}`}
                       >
-                        {insight.suggestedChange > 0 ? (
-                          <TrendingUp className="h-4 w-4 mr-1.5" />
-                        ) : (
-                          <TrendingDown className="h-4 w-4 mr-1.5" />
-                        )}
-                        Apply {Math.abs(insight.suggestedChange)}%{" "}
-                        {insight.suggestedChange > 0 ? "Increase" : "Decrease"}
-                      </Button>
-                    </div>
-                  ) : (
-                    <p
-                      className="text-sm text-muted-foreground"
-                      data-testid={`text-no-suggestion-${insight.serviceType}`}
-                    >
-                      No changes suggested
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          {insight.suggestedChange > 0 ? (
+                            <ArrowUpRight className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+                          ) : (
+                            <ArrowDownRight className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                          )}
+                          <p className="text-sm" data-testid={`text-suggestion-${insight.serviceType}`}>
+                            {insight.suggestion}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant={isApplied ? "outline" : insight.suggestedChange > 0 ? "default" : "outline"}
+                          className="shrink-0"
+                          disabled={isApplied || isPending}
+                          onClick={() => applyMutation.mutate(insight)}
+                          data-testid={`button-apply-suggestion-${insight.serviceType}`}
+                        >
+                          {isPending ? (
+                            <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                          ) : isApplied ? (
+                            <CheckCircle className="h-4 w-4 mr-1.5" />
+                          ) : insight.suggestedChange > 0 ? (
+                            <TrendingUp className="h-4 w-4 mr-1.5" />
+                          ) : (
+                            <TrendingDown className="h-4 w-4 mr-1.5" />
+                          )}
+                          {isApplied
+                            ? "Applied"
+                            : `Apply ${Math.abs(insight.suggestedChange)}% ${insight.suggestedChange > 0 ? "Increase" : "Decrease"}`}
+                        </Button>
+                      </div>
+                    ) : (
+                      <p
+                        className="text-sm text-muted-foreground"
+                        data-testid={`text-no-suggestion-${insight.serviceType}`}
+                      >
+                        No changes suggested
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

@@ -39,8 +39,55 @@ function renderTemplate(template: string, clientName: string): string {
   return template.replace(/\{\{client_first_name\}\}/g, firstName);
 }
 
+async function detectConversions() {
+  try {
+    const { db } = await import("./db");
+    const { rebookingLogs, jobs } = await import("@shared/schema");
+    const { eq, and, gt, or } = await import("drizzle-orm");
+
+    const sentLogs = await db.select().from(rebookingLogs).where(eq(rebookingLogs.status, "sent"));
+
+    for (const log of sentLogs) {
+      try {
+        const originalJob = await db.select().from(jobs).where(eq(jobs.id, log.jobId)).limit(1);
+        if (originalJob.length === 0) continue;
+
+        const serviceType = originalJob[0].serviceType;
+        const sentAt = log.sentAt;
+
+        const allJobs = await db.select().from(jobs).where(
+          and(
+            eq(jobs.userId, log.userId),
+            eq(jobs.serviceType, serviceType),
+            gt(jobs.createdAt, sentAt)
+          )
+        );
+
+        const matchingJob = allJobs.find((j) => {
+          if (log.clientPhone && j.clientPhone && j.clientPhone === log.clientPhone) return true;
+          if (log.clientName && j.clientName && j.clientName === log.clientName) return true;
+          return false;
+        });
+
+        if (matchingJob) {
+          await db.update(rebookingLogs)
+            .set({ status: "converted", convertedJobId: matchingJob.id, convertedAt: new Date().toISOString() })
+            .where(eq(rebookingLogs.id, log.id));
+          console.log(`[RebookingScheduler] Detected conversion for rebooking log ${log.id}`);
+        }
+      } catch (logError) {
+        console.error(`[RebookingScheduler] Error detecting conversion for log ${log.id}:`, logError);
+      }
+    }
+  } catch (error) {
+    console.error("[RebookingScheduler] Error in detectConversions:", error);
+  }
+}
+
 async function checkRebookings() {
   try {
+    await detectConversions();
+
     const { db } = await import("./db");
     const { rebookingRules, rebookingLogs, jobs, users } = await import("@shared/schema");
     const { eq, and, lt } = await import("drizzle-orm");

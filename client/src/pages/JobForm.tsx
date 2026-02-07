@@ -79,10 +79,12 @@ interface JobTemplate {
   id: string;
   name: string;
   category: string;
-  serviceType: string;
   description: string;
   defaultPriceCents: number;
-  defaultDurationMinutes: number;
+  estimatedDurationMinutes: number;
+  depositPercent: number;
+  cancellationPolicy: string;
+  messageTemplate: string;
 }
 
 const templateCategories = [
@@ -393,6 +395,29 @@ export default function JobForm() {
   const [addressCoords, setAddressCoords] = useState<{ lat?: number; lng?: number }>({});
   const [templateCategory, setTemplateCategory] = useState<string>("all");
   const [templateOpen, setTemplateOpen] = useState(true);
+
+  const quickCreateMutation = useMutation({
+    mutationFn: async (template: JobTemplate) => {
+      const today = new Date().toISOString().split("T")[0];
+      return apiFetch<Job>("/api/job-templates/create-job", {
+        method: "POST",
+        body: JSON.stringify({
+          templateId: template.id,
+          clientName: "New Client",
+          scheduledDate: today,
+          scheduledTime: "09:00",
+        }),
+      });
+    },
+    onSuccess: (result) => {
+      toast({ title: "Job created from template!" });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jobs() });
+      navigate(`/jobs/${result.id}`);
+    },
+    onError: () => {
+      toast({ title: "Failed to create job from template", variant: "destructive" });
+    },
+  });
   
   // Revenue Protection: Resolution modal state
   const [showResolutionModal, setShowResolutionModal] = useState(false);
@@ -1005,15 +1030,7 @@ export default function JobForm() {
                               .map((template) => (
                                 <div
                                   key={template.id}
-                                  className="flex items-center justify-between p-3 rounded-lg border cursor-pointer hover-elevate active-elevate-2"
-                                  onClick={() => {
-                                    form.setValue("title", template.name);
-                                    form.setValue("description", template.description || "");
-                                    form.setValue("serviceType", template.serviceType);
-                                    form.setValue("price", template.defaultPriceCents / 100);
-                                    form.setValue("duration", template.defaultDurationMinutes);
-                                    setTemplateOpen(false);
-                                  }}
+                                  className="flex flex-col p-3 rounded-lg border"
                                   data-testid={`card-template-${template.id}`}
                                 >
                                   <div className="min-w-0 flex-1">
@@ -1021,8 +1038,38 @@ export default function JobForm() {
                                     <div className="flex items-center gap-2 mt-0.5">
                                       <span className="text-xs text-muted-foreground">${(template.defaultPriceCents / 100).toFixed(0)}</span>
                                       <span className="text-xs text-muted-foreground/50">|</span>
-                                      <span className="text-xs text-muted-foreground">{template.defaultDurationMinutes}min</span>
+                                      <span className="text-xs text-muted-foreground">{template.estimatedDurationMinutes}min</span>
                                     </div>
+                                  </div>
+                                  <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t">
+                                    <button
+                                      type="button"
+                                      className="text-xs text-muted-foreground hover-elevate active-elevate-2 rounded px-2 py-1 cursor-pointer"
+                                      onClick={() => {
+                                        form.setValue("title", template.name);
+                                        form.setValue("description", template.description || "");
+                                        form.setValue("serviceType", template.category);
+                                        form.setValue("price", template.defaultPriceCents / 100);
+                                        form.setValue("duration", template.estimatedDurationMinutes);
+                                        setTemplateOpen(false);
+                                      }}
+                                      data-testid={`button-fill-form-${template.id}`}
+                                    >
+                                      Fill Form
+                                    </button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      disabled={quickCreateMutation.isPending}
+                                      onClick={() => quickCreateMutation.mutate(template)}
+                                      data-testid={`button-quick-create-${template.id}`}
+                                    >
+                                      {quickCreateMutation.isPending ? (
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                      ) : (
+                                        "Quick Create"
+                                      )}
+                                    </Button>
                                   </div>
                                 </div>
                               ))}
