@@ -410,6 +410,19 @@ export async function registerRoutes(
           photo: null,
         });
       }
+
+      if (!user.publicProfileSlug) {
+        const autoSlug = `user-${user.id.slice(0, 8).toLowerCase()}`;
+        await storage.updateUser(user.id, {
+          publicProfileSlug: autoSlug,
+          publicProfileEnabled: user.publicProfileEnabled ?? true,
+        });
+        user.publicProfileSlug = autoSlug;
+        if (user.publicProfileEnabled === null || user.publicProfileEnabled === undefined) {
+          user.publicProfileEnabled = true;
+        }
+      }
+
       const bookingLink = user.publicProfileSlug 
         ? `https://gigaid.ai/book/${user.publicProfileSlug}`
         : null;

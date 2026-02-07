@@ -148,18 +148,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByPublicSlug(slug: string): Promise<User | undefined> {
-    // First try to find by publicProfileSlug
     const [userBySlug] = await db.select().from(users).where(eq(users.publicProfileSlug, slug));
     if (userBySlug) {
       return userBySlug;
     }
     
-    // If slug looks like a UUID, also try to find by user ID
-    // This supports booking links that use user ID as fallback during onboarding
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (uuidRegex.test(slug)) {
       const [userById] = await db.select().from(users).where(eq(users.id, slug));
       return userById || undefined;
+    }
+
+    const userPrefixMatch = slug.match(/^user-(.+)$/);
+    if (userPrefixMatch) {
+      const possibleId = userPrefixMatch[1];
+      const [userById] = await db.select().from(users).where(eq(users.id, possibleId));
+      if (userById) {
+        if (!userById.publicProfileSlug) {
+          await db.update(users).set({ publicProfileSlug: slug, publicProfileEnabled: true }).where(eq(users.id, possibleId));
+          userById.publicProfileSlug = slug;
+          userById.publicProfileEnabled = true;
+        }
+        return userById;
+      }
     }
     
     return undefined;
