@@ -295,14 +295,102 @@ const DEFAULT_COPY: CapabilityCopy = {
   },
 };
 
+const POST_SUCCESS_OVERRIDES: Partial<Record<NewCapability, Record<UpgradeVariant, Partial<CopyBlock>>>> = {
+  "jobs.create": {
+    roi: { title: "Nice! Want to do even more?", subtitle: "You just created a job. Upgrade for unlimited jobs and auto follow-ups that recover $200+ on average." },
+    time: { title: "Job created! Save even more time?", subtitle: "Upgrade to automate reminders, follow-ups, and never do manual scheduling again." },
+    social: { title: "Looking professional!", subtitle: "Upgrade to show clients you run a top-tier operation with unlimited jobs." },
+  },
+  "sms.two_way": {
+    roi: { title: "Message sent! Keep the momentum", subtitle: "Auto follow-ups recover leads that go quiet. Stop losing money to missed replies." },
+    time: { title: "Sent! Let GigAid handle the rest", subtitle: "Upgrade for auto follow-ups that reply for you while you focus on the job." },
+    social: { title: "Quick response! Stay ahead", subtitle: "Clients expect fast replies. Auto follow-ups keep you looking professional 24/7." },
+  },
+  "deposit.enforce": {
+    roi: { title: "Booking confirmed! Protect your revenue", subtitle: "Deposits reduce no-shows by 80%, keeping $500+/month in your pocket." },
+    time: { title: "Booked! Never chase a no-show again", subtitle: "Deposits mean clients show up. Zero wasted trips, zero wasted time." },
+    social: { title: "Booking secured! Level up", subtitle: "Requiring deposits tells clients you're a serious professional." },
+  },
+  "invoices.send": {
+    roi: { title: "Invoice sent! Get paid even faster", subtitle: "Auto reminders cut payment time by 60%. Stop waiting for overdue payments." },
+    time: { title: "Sent! Let reminders handle the rest", subtitle: "Upgrade for automatic payment reminders so you never manually chase invoices." },
+    social: { title: "Professional invoice sent!", subtitle: "Upgrade for branded invoices with automatic reminders that earn client respect." },
+  },
+  "price.confirmation": {
+    roi: { title: "Quote sent! Close more deals", subtitle: "Price confirmations convert 40% more quotes to paid jobs." },
+    time: { title: "Quote away! Automate the rest", subtitle: "When clients approve, jobs create automatically. No manual steps." },
+    social: { title: "Professional quote sent!", subtitle: "Clients trust clear, professional pricing. Upgrade for unlimited confirmations." },
+  },
+};
+
+const STALL_OVERRIDES: Partial<Record<NewCapability, Record<UpgradeVariant, Partial<CopyBlock>>>> = {
+  "sms.two_way": {
+    roi: { title: "You're losing money to slow follow-ups", subtitle: "Auto follow-ups recover leads before they go cold. Stop leaving revenue on the table." },
+    time: { title: "Too much time on manual follow-ups", subtitle: "You've sent several follow-ups manually. Let automation handle this for you." },
+    social: { title: "Clients notice slow responses", subtitle: "Fast, automated follow-ups show clients you're reliable and professional." },
+  },
+  "deposit.enforce": {
+    roi: { title: "Bookings at risk without deposits", subtitle: "You have bookings without deposit protection. No-shows could cost you hundreds." },
+    time: { title: "Protect your time with deposits", subtitle: "Without deposits, no-shows waste your schedule. Lock in bookings automatically." },
+    social: { title: "Serious pros require deposits", subtitle: "Clients expect professional booking policies. Deposits show you value your time." },
+  },
+  "invoices.send": {
+    roi: { title: "Unpaid invoices piling up", subtitle: "Auto reminders cut payment delays by 60%. Stop losing money to overdue invoices." },
+    time: { title: "Stop chasing unpaid invoices", subtitle: "Automatic reminders handle payment follow-ups so you don't have to." },
+    social: { title: "Get paid what you're owed", subtitle: "Professional reminder sequences get invoices paid faster and build trust." },
+  },
+};
+
+const FEATURE_LOCKED_OVERRIDES: Partial<Record<NewCapability, Record<UpgradeVariant, Partial<CopyBlock>>>> = {
+  "jobs.create": {
+    roi: { title: "Job limit reached", subtitle: "You've hit your monthly job limit. Upgrade to create unlimited jobs and keep earning." },
+    time: { title: "Job limit reached", subtitle: "No more manual limits. Upgrade for unlimited job creation and save hours." },
+    social: { title: "Job limit reached", subtitle: "Top pros never hit limits. Upgrade to run your business without restrictions." },
+  },
+  "sms.two_way": {
+    roi: { title: "Message limit reached", subtitle: "You've used all your messages this month. Upgrade to keep conversations flowing." },
+    time: { title: "Message limit reached", subtitle: "Upgrade for unlimited messaging and auto follow-ups that work while you sleep." },
+    social: { title: "Message limit reached", subtitle: "Don't let limits slow your response time. Upgrade for unlimited messaging." },
+  },
+  "deposit.enforce": {
+    roi: { title: "Deposits require an upgrade", subtitle: "Protect your bookings from no-shows. Deposits reduce cancellations by 80%." },
+    time: { title: "Deposits require an upgrade", subtitle: "Stop wasting time on no-shows. Deposits lock in committed clients." },
+    social: { title: "Deposits require an upgrade", subtitle: "Professional businesses require deposits. Upgrade to set clear booking policies." },
+  },
+  "invoices.send": {
+    roi: { title: "Invoice limit reached", subtitle: "You've sent all your free invoices. Upgrade to bill without limits." },
+    time: { title: "Invoice limit reached", subtitle: "Upgrade for unlimited invoices and automatic payment reminders." },
+    social: { title: "Invoice limit reached", subtitle: "Keep billing professionally. Upgrade for unlimited invoices." },
+  },
+};
+
+function getOverrides(
+  capabilityKey: NewCapability,
+  variant: UpgradeVariant,
+  triggerType: UpgradeTriggerType
+): Partial<CopyBlock> | undefined {
+  if (triggerType === "post_success") {
+    return POST_SUCCESS_OVERRIDES[capabilityKey]?.[variant];
+  }
+  if (triggerType === "stall_detected") {
+    return STALL_OVERRIDES[capabilityKey]?.[variant];
+  }
+  if (triggerType === "feature_locked" || triggerType === "hit_limit") {
+    return FEATURE_LOCKED_OVERRIDES[capabilityKey]?.[variant];
+  }
+  return undefined;
+}
+
 export function getCopy(
   capabilityKey: NewCapability,
   variant: UpgradeVariant,
-  _triggerType: UpgradeTriggerType
+  triggerType: UpgradeTriggerType
 ): CopyBlock {
-  const capCopy = CAPABILITY_COPY[capabilityKey];
-  if (capCopy && capCopy[variant]) {
-    return capCopy[variant];
+  const baseCopy = CAPABILITY_COPY[capabilityKey]?.[variant] || DEFAULT_COPY[variant];
+  const overrides = getOverrides(capabilityKey, variant, triggerType);
+
+  if (overrides) {
+    return { ...baseCopy, ...overrides };
   }
-  return DEFAULT_COPY[variant];
+  return baseCopy;
 }

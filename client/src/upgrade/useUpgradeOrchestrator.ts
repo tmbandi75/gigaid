@@ -28,6 +28,7 @@ interface OrchestratorState {
   maybeShowApproachingLimit: () => void;
   maybeShowPostSuccess: () => void;
   maybeShowStallPrompt: (stallType: string, count: number, moneyAtRisk?: number) => void;
+  showFeatureLocked: (reason?: string) => void;
 }
 
 function getThresholdLevel(percent: number): UpgradeThresholdLevel | null {
@@ -218,6 +219,32 @@ export function useUpgradeOrchestrator({
     [userId, capabilityKey, variant, buildPayload, surface, plan, recommendedPlan]
   );
 
+  const showFeatureLocked = useCallback(
+    (reason?: string) => {
+      if (!canShowPrompt(userId, "feature_locked", capabilityKey)) return;
+
+      const payload = buildPayload("feature_locked", {
+        title: reason || getCopy(capabilityKey, variant, "feature_locked").title,
+      });
+      setModalPayload(payload);
+      setShowModal(true);
+      markPromptShown(userId, "feature_locked", capabilityKey);
+      trackEvent("upgrade_prompt_shown", {
+        triggerType: "feature_locked",
+        capabilityKey,
+        variant,
+        surface,
+        plan,
+        remaining,
+        limit,
+        percentUsed,
+        recommendedPlan,
+        reason,
+      });
+    },
+    [userId, capabilityKey, variant, buildPayload, surface, plan, remaining, limit, percentUsed, recommendedPlan]
+  );
+
   const dismissModal = useCallback(() => {
     setShowModal(false);
   }, []);
@@ -231,5 +258,6 @@ export function useUpgradeOrchestrator({
     maybeShowApproachingLimit,
     maybeShowPostSuccess,
     maybeShowStallPrompt,
+    showFeatureLocked,
   };
 }

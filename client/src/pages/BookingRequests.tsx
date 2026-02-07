@@ -57,7 +57,7 @@ import {
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { BookingLinkShare } from "@/components/booking-link";
-import { useUpgradeOrchestrator, UpgradeBanner, UpgradeNudgeModal } from "@/upgrade";
+import { useUpgradeOrchestrator, UpgradeBanner, UpgradeNudgeModal, incrementStallCounter } from "@/upgrade";
 
 interface BookingRequest {
   id: number;
@@ -145,6 +145,7 @@ export default function BookingRequests() {
   const continueWithoutDeposit = () => {
     setShowBlockingIntercept(false);
     setBlockingBookingId(null);
+    incrementStallCounter("missed_deposit");
   };
 
   const { data: bookings, isLoading } = useQuery<BookingRequest[]>({

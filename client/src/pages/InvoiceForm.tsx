@@ -42,7 +42,7 @@ import { useApiMutation } from "@/hooks/useApiMutation";
 import { ArrowLeft, Loader2, Send, CheckCircle, Mail, MessageSquare, AlertTriangle, FileText } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import type { Invoice } from "@shared/schema";
-import { useUpgradeOrchestrator, UpgradeNudgeModal } from "@/upgrade";
+import { useUpgradeOrchestrator, UpgradeBanner, UpgradeNudgeModal } from "@/upgrade";
 
 const invoiceFormSchema = z.object({
   clientFirstName: z.string().min(1, "First name is required"),
@@ -281,6 +281,22 @@ export default function InvoiceForm() {
             <ArrowLeft className="h-4 w-4 mr-1" />
             Back
           </Button>
+        )}
+
+        {!isEditing && invoiceUpgrade.bannerPayload && (
+          <div className="mb-4">
+            <UpgradeBanner
+              capabilityKey={invoiceUpgrade.bannerPayload.capabilityKey}
+              remaining={invoiceUpgrade.bannerPayload.remaining}
+              limit={invoiceUpgrade.bannerPayload.limit}
+              current={invoiceUpgrade.bannerPayload.current}
+              variant={invoiceUpgrade.variant}
+              thresholdLevel={invoiceUpgrade.bannerPayload.thresholdLevel || "warn"}
+              surface="invoicing"
+              plan={invoiceUpgrade.bannerPayload.plan}
+              recommendedPlan={invoiceUpgrade.bannerPayload.recommendedPlan}
+            />
+          </div>
         )}
 
         <Form {...form}>

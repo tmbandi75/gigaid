@@ -43,7 +43,7 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { ServiceTypeSelect } from "@/components/ui/service-type-select";
 import type { Lead, PriceConfirmation } from "@shared/schema";
 import { ReplyComposer } from "@/components/lead/ReplyComposer";
-import { useUpgradeOrchestrator, UpgradeNudgeModal } from "@/upgrade";
+import { useUpgradeOrchestrator, UpgradeBanner, UpgradeNudgeModal } from "@/upgrade";
 
 const leadFormSchema = z.object({
   clientFirstName: z.string().min(1, "First name is required"),
@@ -311,6 +311,22 @@ export default function LeadForm() {
                 </Button>
               </a>
             )}
+          </div>
+        )}
+
+        {!isEditing && priceConfirmUpgrade.bannerPayload && (
+          <div className="mb-4">
+            <UpgradeBanner
+              capabilityKey={priceConfirmUpgrade.bannerPayload.capabilityKey}
+              remaining={priceConfirmUpgrade.bannerPayload.remaining}
+              limit={priceConfirmUpgrade.bannerPayload.limit}
+              current={priceConfirmUpgrade.bannerPayload.current}
+              variant={priceConfirmUpgrade.variant}
+              thresholdLevel={priceConfirmUpgrade.bannerPayload.thresholdLevel || "warn"}
+              surface="leads"
+              plan={priceConfirmUpgrade.bannerPayload.plan}
+              recommendedPlan={priceConfirmUpgrade.bannerPayload.recommendedPlan}
+            />
           </div>
         )}
 

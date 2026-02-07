@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useSendText } from "@/hooks/use-send-text";
+import { incrementStallCounter } from "@/upgrade";
 import { apiFetch } from "@/lib/apiFetch";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useApiMutation } from "@/hooks/useApiMutation";
@@ -475,10 +476,15 @@ export default function InvoiceView() {
                     )}
                     {invoice.clientPhone && (
                       <button 
-                        onClick={() => sendText({ 
-                          phoneNumber: invoice.clientPhone!, 
-                          message: `Hi ${invoice.clientName}, this is a reminder about invoice #${invoice.invoiceNumber} for ${formatCurrency(total)}. Please let me know if you have any questions!`
-                        })}
+                        onClick={() => {
+                          sendText({ 
+                            phoneNumber: invoice.clientPhone!, 
+                            message: `Hi ${invoice.clientName}, this is a reminder about invoice #${invoice.invoiceNumber} for ${formatCurrency(total)}. Please let me know if you have any questions!`
+                          });
+                          if (invoice.status !== "paid") {
+                            incrementStallCounter("unpaid_invoice");
+                          }
+                        }}
                         className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-emerald-600 transition-colors"
                         data-testid="button-text-client"
                       >

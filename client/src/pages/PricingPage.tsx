@@ -7,10 +7,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Plan } from "@shared/plans";
 import { startStripeCheckout, SubscriptionPlan } from "@/lib/stripeCheckout";
 import { useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useQuery } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { trackEvent } from "@/components/PostHogProvider";
 
 interface PlanFeature {
   text: string;
@@ -128,6 +129,19 @@ export default function PricingPage() {
   const [, navigate] = useLocation();
   const [loadingPlan, setLoadingPlan] = useState<SubscriptionPlan | null>(null);
   const isMobile = useIsMobile();
+  const checkoutTrackedRef = useRef(false);
+
+  useEffect(() => {
+    if (checkoutTrackedRef.current) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("subscription") === "success") {
+      checkoutTrackedRef.current = true;
+      trackEvent("upgrade_checkout_completed", {
+        surface: "pricing",
+        returnedFrom: "stripe",
+      });
+    }
+  }, []);
 
   // Use subscription status API as single source of truth for plan
   const { data: subscription, isLoading: isSubscriptionLoading, isError: isSubscriptionError } = useQuery<{ plan: string; hasSubscription: boolean }>({
