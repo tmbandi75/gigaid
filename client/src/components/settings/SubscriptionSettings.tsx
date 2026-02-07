@@ -260,7 +260,7 @@ export function SubscriptionSettings() {
     );
   }
 
-  const isFree = !effectiveSubscription.hasSubscription || effectiveSubscription.plan === "free";
+  const isFree = effectiveSubscription.plan === "free" && !effectiveSubscription.hasSubscription;
   const price = PLAN_PRICES[effectiveSubscription.plan] || 0;
 
   const formatDate = (dateStr: string | null) => {
