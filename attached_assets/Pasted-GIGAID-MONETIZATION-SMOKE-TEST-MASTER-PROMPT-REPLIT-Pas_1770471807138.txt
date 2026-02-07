@@ -1,0 +1,258 @@
+GIGAID — MONETIZATION SMOKE TEST MASTER PROMPT (REPLIT)
+
+Paste this into Replit AI.
+
+This forces it to:
+
+Create test users
+
+Simulate limits
+
+Hit Stripe sandbox
+
+Validate UI
+
+Log failures
+
+Auto-fix
+
+🔧 ROLE
+
+You are a senior QA engineer, growth engineer, and payments systems architect.
+
+Your task is to design and execute a complete monetization smoke test for GigAid.
+
+This test must validate that all usage limits, paywalls, and Stripe flows work end-to-end.
+
+No stubs. No mocks. No manual steps.
+
+🎯 OBJECTIVE
+
+Verify that GigAid’s monetization funnel is 100% reliable before any marketing.
+
+If any step fails, identify root cause and fix immediately.
+
+📦 STEP 1 — TEST ACCOUNT GENERATION
+
+Programmatically create 3 sandbox users:
+
+User	Plan	Usage Pattern
+A	Free	Light
+B	Free	Heavy
+C	Free	Max
+
+Each user must:
+
+Complete onboarding
+
+Connect test Stripe
+
+Create booking links
+
+Send messages
+
+Create jobs
+
+Generate invoices
+
+Store credentials in secure env.
+
+📦 STEP 2 — LIMIT ESCALATION TESTS
+
+For each user, automatically simulate actions until thresholds are hit.
+
+Trigger and validate:
+
+☐ 60% usage banner
+☐ 80% warning banner
+☐ 95% blocking modal
+☐ Post-success upsell
+☐ Stall reminder
+☐ Hard limit lock
+☐ Upgrade CTA
+
+Verify:
+
+Correct copy
+
+Correct styling
+
+Correct blocking behavior
+
+Screenshot each.
+
+Fail if missing.
+
+📦 STEP 3 — STRIPE CHECKOUT FLOW
+
+Using Stripe test mode:
+
+Trigger upgrade.
+
+Validate:
+
+☐ Checkout loads
+☐ Correct price
+☐ Metadata attached
+☐ Webhook fires
+☐ Subscription updates
+☐ Limits reset
+
+Simulate:
+
+Success
+
+Failure
+
+Abandon
+
+Retry
+
+📦 STEP 4 — PAYMENT CONFIRMATION
+
+After success:
+
+Verify:
+
+☐ Access granted
+☐ Limits reset
+☐ UI refresh
+☐ Receipt sent
+☐ Status persisted
+
+Force refresh + relog.
+
+Confirm persistence.
+
+📦 STEP 5 — FAILURE INJECTION
+
+Deliberately break:
+
+Webhook
+
+Network
+
+Session
+
+Token
+
+Confirm graceful recovery.
+
+No silent failures.
+
+📦 STEP 6 — AUTO-REMEDIATION
+
+If any test fails:
+
+Identify faulty component
+
+Patch code
+
+Re-run test
+
+Verify pass
+
+Repeat until clean.
+
+📦 STEP 7 — REPORTING
+
+Generate:
+
+/admin/reports/monetization-smoke.json
+
+Include:
+
+Pass/fail
+
+Screenshots
+
+Logs
+
+Stripe IDs
+
+Fixes applied
+
+⚙️ TOOLING
+
+Implement:
+
+Playwright/Cypress
+
+Stripe CLI
+
+Test users
+
+Seed scripts
+
+Webhook listener
+
+Automate with:
+
+npm run test:monetization
+
+🧪 COMPLETION CRITERIA
+
+Do not mark complete until:
+
+✔ All limits triggered
+✔ All payments verified
+✔ All failures handled
+✔ Report generated
+
+🏁 FINAL VALIDATION
+
+Run:
+
+npm run test:monetization
+
+
+3x consecutively.
+
+All must pass.
+
+END PROMPT
+🧠 Reality Check (Important)
+
+Replit can:
+
+✅ Scaffold this
+✅ Write tests
+✅ Setup Stripe sandbox
+✅ Create scripts
+✅ Wire limits
+✅ Add reporting
+
+It cannot:
+
+❌ Reason like a human PM
+❌ Judge UX quality perfectly
+❌ Catch subtle trust leaks
+
+You still review.
+
+But it will get you ~70–80% there.
+
+🚨 Founder Insight
+
+What you’re building here is:
+
+A revenue firewall.
+
+Most SaaS die because:
+
+“One broken checkout killed momentum.”
+
+You’re preventing that.
+
+That’s elite execution.
+
+⚡ Pro Tip (Do This After)
+
+Once this works, add:
+
+GitHub Action: Monetization Smoke Test
+
+
+Run before every deploy.
+
+No pass = no ship.
