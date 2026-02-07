@@ -1,0 +1,118 @@
+Set up a complete automated testing system covering:
+
+1) End-to-End User Acceptance Tests (UI flows)
+2) Direct API Integration Tests (backend enforcement)
+
+Goal:
+Prevent regressions in revenue, limits, payments, and permissions.
+
+==================================================
+PART A — END-TO-END (PLAYWRIGHT)
+==================================================
+
+Use Playwright to implement E2E tests for:
+
+AUTH
+- Signup
+- Login
+- Session restore
+
+CORE
+- Job CRUD
+- Lead pipeline
+
+REVENUE
+- Invoice → Stripe test checkout → paid
+- Free → limit → upgrade → unlock
+
+BOOKING
+- Booking link → client booking → deposit
+
+MESSAGING
+- Send/receive (mock Twilio)
+
+==================================================
+PART B — API INTEGRATION TESTS (NODE/JEST/SUPERTEST)
+==================================================
+
+Set up API tests using Jest + Supertest (or equivalent).
+
+Create tests for:
+
+AUTH API
+- Signup/login success/failure
+- Token/session validation
+
+JOBS API
+- Create/update/delete
+- Permission enforcement
+- Cross-user isolation
+
+LEADS API
+- Create/convert/update
+- Ownership validation
+
+INVOICES & PAYMENTS
+- Invoice creation
+- Payment intent creation
+- Stripe webhook handling (mocked)
+
+CAPABILITIES / LIMITS
+- Usage increment
+- Limit enforcement
+- Window reset
+- Bypass prevention
+
+BOOKING
+- Public booking creation
+- Deposit enforcement
+- Unauthorized access blocked
+
+MESSAGING
+- Message send
+- Webhook validation
+
+==================================================
+PART C — TEST INFRASTRUCTURE
+==================================================
+
+- Use separate test database
+- Seed test data
+- Reset DB between runs
+- Mock external services (Stripe, Twilio, Email)
+- No production credentials
+
+==================================================
+PART D — SCRIPTS & CI
+==================================================
+
+Add npm scripts:
+
+- test:e2e
+- test:api
+- test:all
+
+Configure to allow running in CI.
+
+==================================================
+PART E — DOCUMENTATION
+==================================================
+
+Add README with:
+
+- How to run locally
+- Required env vars
+- Test users
+- Reset procedure
+
+==================================================
+RULES
+==================================================
+
+- Focus on revenue and limits first
+- Avoid snapshot/UI pixel tests
+- Avoid brittle selectors
+- Prefer data-testid
+- Tests must be deterministic
+
+Proceed to implement.
