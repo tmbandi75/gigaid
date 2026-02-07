@@ -403,7 +403,7 @@ export function SubscriptionSettings() {
           <div className="flex flex-col gap-2">
             {isFree ? (
               <Button
-                onClick={() => window.location.href = "/pricing"}
+                onClick={() => navigate("/pricing")}
                 className="w-full"
                 data-testid="button-view-plans"
               >
