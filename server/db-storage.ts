@@ -171,6 +171,19 @@ export class DatabaseStorage implements IStorage {
         }
         return userById;
       }
+
+      if (possibleId === process.env.REPL_OWNER_ID) {
+        const [primaryUser] = await db.select().from(users)
+          .where(sql`${users.publicProfileSlug} IS NULL`)
+          .orderBy(sql`(SELECT count(*) FROM jobs WHERE jobs.user_id = users.id) DESC`)
+          .limit(1);
+        if (primaryUser) {
+          await db.update(users).set({ publicProfileSlug: slug, publicProfileEnabled: true }).where(eq(users.id, primaryUser.id));
+          primaryUser.publicProfileSlug = slug;
+          primaryUser.publicProfileEnabled = true;
+          return primaryUser;
+        }
+      }
     }
     
     return undefined;

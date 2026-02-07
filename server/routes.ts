@@ -107,6 +107,23 @@ export async function registerRoutes(
   
   registerTestRoutes(app, storage);
   
+  app.post("/api/admin/set-slug", async (req: Request, res: Response) => {
+    const adminKey = process.env.GIGAID_ADMIN_API_KEY;
+    if (!adminKey || req.headers["x-admin-api-key"] !== adminKey) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    const { userId, slug } = req.body;
+    if (!userId || !slug) {
+      return res.status(400).json({ error: "Missing userId or slug" });
+    }
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    await storage.updateUser(user.id, { publicProfileSlug: slug, publicProfileEnabled: true });
+    return res.json({ success: true, userId: user.id, slug });
+  });
+
   app.use("/api/admin/cockpit", cockpitRoutes);
   app.use("/api/admin/users", adminUsersRoutes);
   app.use("/api/admin/auth", adminAuthRoutes);
