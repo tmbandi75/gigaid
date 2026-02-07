@@ -41,6 +41,7 @@ export const QUERY_KEYS = {
   readyActionsEntity: (entityType: string, entityId: string | number) => ["/api/ready-actions/entity", entityType, entityId] as const,
   nextActionsEntity: (entityType: string, entityId: string | number) => ["/api/next-actions/entity", entityType, entityId] as const,
   nextActions: () => ["/api/next-actions"] as const,
+  stallDetections: () => ["/api/stall-detections"] as const,
 
   bookingLink: () => ["/api/booking/link"] as const,
   bookingRequests: () => ["/api/booking-requests"] as const,

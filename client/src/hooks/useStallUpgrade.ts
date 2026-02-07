@@ -51,7 +51,7 @@ export function useStallUpgrade() {
   const autoFollowup = useCanPerform('sms.auto_followups');
 
   const { data: stalls } = useQuery<StallDetection[]>({
-    queryKey: QUERY_KEYS.nextActions(),
+    queryKey: QUERY_KEYS.stallDetections(),
     staleTime: 300000,
     enabled: !autoFollowup.unlimited,
   });

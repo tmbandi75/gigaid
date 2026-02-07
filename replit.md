@@ -114,3 +114,26 @@ Systematic review across 9 categories to identify and fix Day-1 user experience 
 - **Native Share Support**: Uses `navigator.share` when available, falls back to clipboard copy on unsupported devices
 - **Empty State**: `BookingLinkEmptyState` component for Leads empty state with copy functionality
 - **Components**: Located in `client/src/components/booking-link/` (BookingLinkShare.tsx, BookingLinkEmptyState.tsx, index.ts)
+
+### Monetization Upgrade Path (February 2026)
+- **Approaching Limit Warnings**: `useApproachingLimit()` hook triggers at 80% usage threshold, renders `ApproachingLimitBanner` component
+  - Integrated in: JobForm (jobs.create), Messages (sms.two_way), BookingRequests (deposit.enforce), NotifyClientsPage (notifications.event_driven)
+- **Post-Success Nudges**: `usePostSuccessNudge()` hook triggers after successful actions when >70% of limit used, renders `PostSuccessNudgeModal`
+  - Integrated in: JobForm (job creation), InvoiceForm (invoice create/send), BookingRequests (remainder payment), LeadForm (price confirmation send)
+- **Stall-to-Upgrade Pipeline**: `useStallUpgrade()` hook queries `/api/stall-detections`, detects 3+ stalled items, shows targeted upgrade prompt
+  - Integrated in: TodaysGamePlanPage (banner + modal)
+  - Backend: GET `/api/stall-detections` returns unresolved `stall_detections` rows for authenticated user
+- **Capability Gating**: NotifyClientsPage enforces `notifications.event_driven` capability with `suggest_only` mode for Free plan (preview but not send)
+- **Analytics Events**: `approaching_limit_shown`, `post_success_nudge`, `stall_upgrade_prompt`, `upgrade_from_nudge` via PostHog
+- **Components**: Located in `client/src/components/upgrade/` and `client/src/hooks/`
+
+### Technical Debt: Dual Entitlement Systems (Low Priority Cleanup)
+- **Current State**: Two parallel systems define plan capabilities:
+  - `shared/capabilities/capabilityRules.ts`: Declarative rules with limits, modes, time windows per plan (used by canPerform/useCanPerform)
+  - `shared/plans.ts`: Feature flags and plan metadata (used by some older components)
+- **Proposed Merge Plan**:
+  1. Migrate all `plans.ts` feature checks to use `capabilityRules.ts` + `canPerform()`
+  2. Move plan display metadata (names, prices, descriptions) to a separate `planMetadata.ts`
+  3. Remove `plans.ts` once all consumers migrated
+  4. Estimated effort: ~2-3 hours, touches ~15-20 files
+- **Risk**: Low - both systems are currently functional and consistent; merge is purely for maintainability

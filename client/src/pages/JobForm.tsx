@@ -64,6 +64,7 @@ import { JobLocationMap } from "@/components/JobLocationMap";
 import { JobResolutionModal } from "@/components/jobs/JobResolutionModal";
 import { AddressAutocomplete } from "@/components/booking/AddressAutocomplete";
 import { CapabilityLimitInfo } from "@/components/CapabilityGate";
+import { ApproachingLimitBanner } from "@/components/upgrade/ApproachingLimitBanner";
 import { usePostSuccessNudge } from "@/hooks/usePostSuccessNudge";
 import { PostSuccessNudgeModal } from "@/components/upgrade/PostSuccessNudgeModal";
 
@@ -924,52 +925,7 @@ export default function JobForm() {
       <div className={`flex-1 ${isMobile ? "px-4 py-6" : "px-6 lg:px-8 lg:max-w-7xl lg:mx-auto lg:w-full"} ${isMobile ? "-mt-2" : ""}`}>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-            {/* Progressive job limit warnings for Free plan */}
-            {!isEditing && jobUsage && jobUsage.warningLevel && (
-              <Card 
-                className={`border-0 shadow-sm overflow-hidden ${
-                  jobUsage.warningLevel === "blocked" 
-                    ? "bg-destructive/10 border-destructive/20" 
-                    : jobUsage.warningLevel === "critical"
-                    ? "bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800"
-                    : "bg-muted/50"
-                }`}
-                data-testid="job-limit-warning"
-              >
-                <CardContent className="py-3 px-4">
-                  <div className="flex items-center gap-2">
-                    <HelpCircle className={`h-4 w-4 shrink-0 ${
-                      jobUsage.warningLevel === "blocked" 
-                        ? "text-destructive" 
-                        : jobUsage.warningLevel === "critical"
-                        ? "text-orange-600 dark:text-orange-400"
-                        : "text-muted-foreground"
-                    }`} />
-                    <p className={`text-sm ${
-                      jobUsage.warningLevel === "blocked" 
-                        ? "text-destructive font-medium" 
-                        : jobUsage.warningLevel === "critical"
-                        ? "text-orange-700 dark:text-orange-300"
-                        : "text-muted-foreground"
-                    }`}>
-                      {jobUsage.warningLevel === "blocked" 
-                        ? `You've reached your limit of ${jobUsage.limit} jobs. Upgrade to Pro for unlimited jobs.`
-                        : jobUsage.warningLevel === "critical"
-                        ? `You have ${jobUsage.limit - jobUsage.currentCount} job${jobUsage.limit - jobUsage.currentCount === 1 ? "" : "s"} remaining on your Free plan.`
-                        : `${jobUsage.currentCount} of ${jobUsage.limit} jobs used on your Free plan.`
-                      }
-                    </p>
-                  </div>
-                  {(jobUsage.warningLevel === "blocked" || jobUsage.warningLevel === "critical") && (
-                    <div className="mt-2 text-center">
-                      <Link href="/pricing" className="text-sm text-primary hover:underline" data-testid="link-view-all-plans">
-                        View all plans
-                      </Link>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+            {!isEditing && <ApproachingLimitBanner capability="jobs.create" />}
             
             <Card className="border-0 shadow-md overflow-hidden">
               <div className="h-1 bg-gradient-to-r from-primary to-violet-500" />

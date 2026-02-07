@@ -43,6 +43,8 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { ServiceTypeSelect } from "@/components/ui/service-type-select";
 import type { Lead, PriceConfirmation } from "@shared/schema";
 import { ReplyComposer } from "@/components/lead/ReplyComposer";
+import { usePostSuccessNudge } from "@/hooks/usePostSuccessNudge";
+import { PostSuccessNudgeModal } from "@/components/upgrade/PostSuccessNudgeModal";
 
 const leadFormSchema = z.object({
   clientFirstName: z.string().min(1, "First name is required"),
@@ -75,6 +77,7 @@ export default function LeadForm() {
   const [priceDialogOpen, setPriceDialogOpen] = useState(false);
   const [priceAmount, setPriceAmount] = useState("");
   const [priceNotes, setPriceNotes] = useState("");
+  const priceConfirmNudge = usePostSuccessNudge('price.confirmation');
 
   const { data: existingLead, isLoading: isLoadingLead } = useQuery<Lead>({
     queryKey: QUERY_KEYS.lead(id!),
@@ -180,7 +183,7 @@ export default function LeadForm() {
       }
       const priceInCents = Math.round(parsedAmount * 100);
       
-      const confirmation = await apiFetch("/api/price-confirmations", {
+      const confirmation = await apiFetch<{ id: string }>("/api/price-confirmations", {
         method: "POST",
         body: JSON.stringify({
           leadId: id,
@@ -211,6 +214,7 @@ export default function LeadForm() {
             ? `Sent via ${sentVia.join(" and ")}`
             : "Link created - share it with your client",
         });
+        priceConfirmNudge.triggerNudge();
       },
       onError: () => {
         toast({ title: "Failed to send price confirmation", variant: "destructive" });
@@ -644,6 +648,15 @@ export default function LeadForm() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      <PostSuccessNudgeModal
+        open={priceConfirmNudge.showNudge}
+        onOpenChange={priceConfirmNudge.onDismiss}
+        title={priceConfirmNudge.title}
+        description={priceConfirmNudge.description}
+        current={priceConfirmNudge.current}
+        limit={priceConfirmNudge.limit}
+        remaining={priceConfirmNudge.remaining}
+      />
       </div>
     </div>
   );

@@ -17,6 +17,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { PriorityBadge, inferMessagePriority } from "@/components/priority/PriorityBadge";
+import { ApproachingLimitBanner } from "@/components/upgrade/ApproachingLimitBanner";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiFetch } from "@/lib/apiFetch";
@@ -280,6 +281,7 @@ function MessageThread({
       </ScrollArea>
 
       <div className="p-4 border-t space-y-2">
+        <ApproachingLimitBanner capability="sms.two_way" compact />
         {isAtLimit && (
           <div className="flex items-center gap-2 px-3 py-2 bg-destructive/10 text-destructive rounded-md text-sm" data-testid="warning-limit-reached">
             <AlertCircle className="h-4 w-4 flex-shrink-0" />

@@ -58,6 +58,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { BookingLinkShare } from "@/components/booking-link";
 import { ApproachingLimitBanner } from "@/components/upgrade/ApproachingLimitBanner";
+import { usePostSuccessNudge } from "@/hooks/usePostSuccessNudge";
+import { PostSuccessNudgeModal } from "@/components/upgrade/PostSuccessNudgeModal";
 
 interface BookingRequest {
   id: number;
@@ -140,6 +142,8 @@ export default function BookingRequests() {
   const [showBlockingIntercept, setShowBlockingIntercept] = useState(false);
   const [blockingBookingId, setBlockingBookingId] = useState<number | null>(null);
   
+  const bookingNudge = usePostSuccessNudge('deposit.enforce');
+  
   const continueWithoutDeposit = () => {
     setShowBlockingIntercept(false);
     setBlockingBookingId(null);
@@ -168,6 +172,7 @@ export default function BookingRequests() {
         setShowRemainderPaymentDialog(false);
         setSelectedPaymentMethod("");
         setRemainderNotes("");
+        bookingNudge.triggerNudge();
       },
       onError: (error: Error) => {
         toast({ 
@@ -835,6 +840,16 @@ export default function BookingRequests() {
           });
         }}
         onCancel={continueWithoutDeposit}
+      />
+
+      <PostSuccessNudgeModal
+        open={bookingNudge.showNudge}
+        onOpenChange={bookingNudge.onDismiss}
+        title={bookingNudge.title}
+        description={bookingNudge.description}
+        current={bookingNudge.current}
+        limit={bookingNudge.limit}
+        remaining={bookingNudge.remaining}
       />
     </div>
   );

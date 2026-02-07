@@ -10096,6 +10096,22 @@ Return ONLY the message text, no JSON or formatting.`
     }
   });
 
+  // ==================== STALL DETECTIONS API ====================
+  app.get("/api/stall-detections", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      const entityType = req.query.entityType as string | undefined;
+      const detections = await storage.getStallDetections(userId, entityType);
+      res.json(detections);
+    } catch (error) {
+      console.error("Get stall detections error:", error);
+      res.status(500).json({ error: "Failed to get stall detections" });
+    }
+  });
+
   // ==================== NEXT BEST ACTION ENGINE ====================
   // Intelligent stall detection and one recommended action per entity
   
