@@ -17,7 +17,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { PriorityBadge, inferMessagePriority } from "@/components/priority/PriorityBadge";
-import { ApproachingLimitBanner } from "@/components/upgrade/ApproachingLimitBanner";
+import { useUpgradeOrchestrator, UpgradeBanner, UpgradeNudgeModal, incrementStallCounter } from "@/upgrade";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiFetch } from "@/lib/apiFetch";
@@ -179,6 +179,7 @@ function MessageThread({
 
   const isNearLimit = !!(usage?.outboundLimit && usage.outboundRemaining !== null && usage.outboundRemaining <= 5);
   const isAtLimit = !!(usage?.outboundLimit && usage.outboundRemaining !== null && usage.outboundRemaining <= 0);
+  const smsUpgrade = useUpgradeOrchestrator({ capabilityKey: 'sms.two_way', surface: 'messages' });
 
   const sendMutation = useApiMutation(
     async (message: string) => {
@@ -193,6 +194,8 @@ function MessageThread({
       onSuccess: () => {
         setReply("");
         toast({ title: "Message sent" });
+        smsUpgrade.maybeShowPostSuccess();
+        incrementStallCounter("manual_followup_repeat");
       },
       onError: (error: any) => {
         const errorData = error?.response?.data || error?.data || {};
@@ -281,7 +284,19 @@ function MessageThread({
       </ScrollArea>
 
       <div className="p-4 border-t space-y-2">
-        <ApproachingLimitBanner capability="sms.two_way" compact />
+        {smsUpgrade.bannerPayload && (
+          <UpgradeBanner
+            capabilityKey={smsUpgrade.bannerPayload.capabilityKey}
+            remaining={smsUpgrade.bannerPayload.remaining}
+            limit={smsUpgrade.bannerPayload.limit}
+            current={smsUpgrade.bannerPayload.current}
+            variant={smsUpgrade.variant}
+            thresholdLevel={smsUpgrade.bannerPayload.thresholdLevel || "warn"}
+            surface="messages"
+            plan={smsUpgrade.bannerPayload.plan}
+            recommendedPlan={smsUpgrade.bannerPayload.recommendedPlan}
+          />
+        )}
         {isAtLimit && (
           <div className="flex items-center gap-2 px-3 py-2 bg-destructive/10 text-destructive rounded-md text-sm" data-testid="warning-limit-reached">
             <AlertCircle className="h-4 w-4 flex-shrink-0" />
@@ -324,6 +339,26 @@ function MessageThread({
           </Button>
         </div>
       </div>
+      {smsUpgrade.modalPayload && (
+        <UpgradeNudgeModal
+          open={smsUpgrade.showModal}
+          onOpenChange={smsUpgrade.dismissModal}
+          title={smsUpgrade.modalPayload.title}
+          subtitle={smsUpgrade.modalPayload.subtitle}
+          bullets={smsUpgrade.modalPayload.bullets}
+          primaryCta={smsUpgrade.modalPayload.primaryCta}
+          secondaryCta={smsUpgrade.modalPayload.secondaryCta}
+          variant={smsUpgrade.variant}
+          triggerType={smsUpgrade.modalPayload.triggerType}
+          capabilityKey={smsUpgrade.modalPayload.capabilityKey}
+          surface="messages"
+          plan={smsUpgrade.modalPayload.plan}
+          current={smsUpgrade.modalPayload.current}
+          limit={smsUpgrade.modalPayload.limit}
+          remaining={smsUpgrade.modalPayload.remaining}
+          recommendedPlan={smsUpgrade.modalPayload.recommendedPlan}
+        />
+      )}
     </div>
   );
 }

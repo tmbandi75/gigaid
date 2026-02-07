@@ -71,9 +71,7 @@ import { JobLocationMap } from "@/components/JobLocationMap";
 import { JobResolutionModal } from "@/components/jobs/JobResolutionModal";
 import { AddressAutocomplete } from "@/components/booking/AddressAutocomplete";
 import { CapabilityLimitInfo } from "@/components/CapabilityGate";
-import { ApproachingLimitBanner } from "@/components/upgrade/ApproachingLimitBanner";
-import { usePostSuccessNudge } from "@/hooks/usePostSuccessNudge";
-import { PostSuccessNudgeModal } from "@/components/upgrade/PostSuccessNudgeModal";
+import { useUpgradeOrchestrator, UpgradeBanner, UpgradeNudgeModal } from "@/upgrade";
 
 interface JobTemplate {
   id: string;
@@ -389,7 +387,7 @@ export default function JobForm() {
     totalAmountCents?: number;
   } | null>(null);
   const { celebration, celebrate, dismiss: dismissCelebration } = useCelebration();
-  const jobNudge = usePostSuccessNudge('jobs.create');
+  const jobUpgrade = useUpgradeOrchestrator({ capabilityKey: 'jobs.create', surface: 'jobs' });
   
   // Coordinates from address autocomplete
   const [addressCoords, setAddressCoords] = useState<{ lat?: number; lng?: number }>({});
@@ -710,7 +708,7 @@ export default function JobForm() {
       });
       
       if (!isEditing) {
-        jobNudge.triggerNudge();
+        jobUpgrade.maybeShowPostSuccess();
       }
       toast({ title: "Job created successfully" });
       setTimeout(() => navigate("/jobs"), 2000);
@@ -983,7 +981,19 @@ export default function JobForm() {
       <div className={`flex-1 ${isMobile ? "px-4 py-6" : "px-6 lg:px-8 lg:max-w-7xl lg:mx-auto lg:w-full"} ${isMobile ? "-mt-2" : ""}`}>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-            {!isEditing && <ApproachingLimitBanner capability="jobs.create" />}
+            {!isEditing && jobUpgrade.bannerPayload && (
+              <UpgradeBanner
+                capabilityKey={jobUpgrade.bannerPayload.capabilityKey}
+                remaining={jobUpgrade.bannerPayload.remaining}
+                limit={jobUpgrade.bannerPayload.limit}
+                current={jobUpgrade.bannerPayload.current}
+                variant={jobUpgrade.variant}
+                thresholdLevel={jobUpgrade.bannerPayload.thresholdLevel || "warn"}
+                surface="jobs"
+                plan={jobUpgrade.bannerPayload.plan}
+                recommendedPlan={jobUpgrade.bannerPayload.recommendedPlan}
+              />
+            )}
 
             {!isEditing && (
               <>
@@ -1709,15 +1719,26 @@ export default function JobForm() {
         onDismiss={dismissCelebration}
       />
 
-      <PostSuccessNudgeModal 
-        open={jobNudge.showNudge}
-        onOpenChange={jobNudge.onDismiss}
-        title={jobNudge.title}
-        description={jobNudge.description}
-        current={jobNudge.current}
-        limit={jobNudge.limit}
-        remaining={jobNudge.remaining}
-      />
+      {jobUpgrade.modalPayload && (
+        <UpgradeNudgeModal
+          open={jobUpgrade.showModal}
+          onOpenChange={jobUpgrade.dismissModal}
+          title={jobUpgrade.modalPayload.title}
+          subtitle={jobUpgrade.modalPayload.subtitle}
+          bullets={jobUpgrade.modalPayload.bullets}
+          primaryCta={jobUpgrade.modalPayload.primaryCta}
+          secondaryCta={jobUpgrade.modalPayload.secondaryCta}
+          variant={jobUpgrade.variant}
+          triggerType={jobUpgrade.modalPayload.triggerType}
+          capabilityKey={jobUpgrade.modalPayload.capabilityKey}
+          surface="jobs"
+          plan={jobUpgrade.modalPayload.plan}
+          current={jobUpgrade.modalPayload.current}
+          limit={jobUpgrade.modalPayload.limit}
+          remaining={jobUpgrade.modalPayload.remaining}
+          recommendedPlan={jobUpgrade.modalPayload.recommendedPlan}
+        />
+      )}
     </div>
   );
 }

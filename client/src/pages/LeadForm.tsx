@@ -43,8 +43,7 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { ServiceTypeSelect } from "@/components/ui/service-type-select";
 import type { Lead, PriceConfirmation } from "@shared/schema";
 import { ReplyComposer } from "@/components/lead/ReplyComposer";
-import { usePostSuccessNudge } from "@/hooks/usePostSuccessNudge";
-import { PostSuccessNudgeModal } from "@/components/upgrade/PostSuccessNudgeModal";
+import { useUpgradeOrchestrator, UpgradeNudgeModal } from "@/upgrade";
 
 const leadFormSchema = z.object({
   clientFirstName: z.string().min(1, "First name is required"),
@@ -77,7 +76,7 @@ export default function LeadForm() {
   const [priceDialogOpen, setPriceDialogOpen] = useState(false);
   const [priceAmount, setPriceAmount] = useState("");
   const [priceNotes, setPriceNotes] = useState("");
-  const priceConfirmNudge = usePostSuccessNudge('price.confirmation');
+  const priceConfirmUpgrade = useUpgradeOrchestrator({ capabilityKey: 'price.confirmation', surface: 'leads' });
 
   const { data: existingLead, isLoading: isLoadingLead } = useQuery<Lead>({
     queryKey: QUERY_KEYS.lead(id!),
@@ -214,7 +213,7 @@ export default function LeadForm() {
             ? `Sent via ${sentVia.join(" and ")}`
             : "Link created - share it with your client",
         });
-        priceConfirmNudge.triggerNudge();
+        priceConfirmUpgrade.maybeShowPostSuccess();
       },
       onError: () => {
         toast({ title: "Failed to send price confirmation", variant: "destructive" });
@@ -648,15 +647,26 @@ export default function LeadForm() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      <PostSuccessNudgeModal
-        open={priceConfirmNudge.showNudge}
-        onOpenChange={priceConfirmNudge.onDismiss}
-        title={priceConfirmNudge.title}
-        description={priceConfirmNudge.description}
-        current={priceConfirmNudge.current}
-        limit={priceConfirmNudge.limit}
-        remaining={priceConfirmNudge.remaining}
-      />
+      {priceConfirmUpgrade.modalPayload && (
+        <UpgradeNudgeModal
+          open={priceConfirmUpgrade.showModal}
+          onOpenChange={priceConfirmUpgrade.dismissModal}
+          title={priceConfirmUpgrade.modalPayload.title}
+          subtitle={priceConfirmUpgrade.modalPayload.subtitle}
+          bullets={priceConfirmUpgrade.modalPayload.bullets}
+          primaryCta={priceConfirmUpgrade.modalPayload.primaryCta}
+          secondaryCta={priceConfirmUpgrade.modalPayload.secondaryCta}
+          variant={priceConfirmUpgrade.variant}
+          triggerType={priceConfirmUpgrade.modalPayload.triggerType}
+          capabilityKey={priceConfirmUpgrade.modalPayload.capabilityKey}
+          surface="leads"
+          plan={priceConfirmUpgrade.modalPayload.plan}
+          current={priceConfirmUpgrade.modalPayload.current}
+          limit={priceConfirmUpgrade.modalPayload.limit}
+          remaining={priceConfirmUpgrade.modalPayload.remaining}
+          recommendedPlan={priceConfirmUpgrade.modalPayload.recommendedPlan}
+        />
+      )}
       </div>
     </div>
   );

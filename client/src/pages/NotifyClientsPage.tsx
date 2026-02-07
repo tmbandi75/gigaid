@@ -30,7 +30,7 @@ import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CapabilityGate } from "@/components/CapabilityGate";
-import { ApproachingLimitBanner } from "@/components/upgrade/ApproachingLimitBanner";
+import { useUpgradeOrchestrator, UpgradeBanner } from "@/upgrade";
 import { useCanPerform } from "@/hooks/useCapability";
 import { 
   categoryEventMapping, 
@@ -120,6 +120,7 @@ export default function NotifyClientsPage() {
   const isMobile = useIsMobile();
   
   const notificationCap = useCanPerform('notifications.event_driven');
+  const notifyUpgrade = useUpgradeOrchestrator({ capabilityKey: 'notifications.event_driven', surface: 'notifications' });
 
   const [step, setStep] = useState<"service" | "event" | "compose" | "review">("service");
   const [selectedServiceId, setSelectedServiceId] = useState<string>("");
@@ -328,7 +329,19 @@ export default function NotifyClientsPage() {
         
         <div className={`flex-1 px-4 py-6 -mt-4 ${isMobile ? "pb-20" : ""}`}>
           <div className="space-y-4">
-            <ApproachingLimitBanner capability="notifications.event_driven" />
+            {notifyUpgrade.bannerPayload && (
+              <UpgradeBanner
+                capabilityKey={notifyUpgrade.bannerPayload.capabilityKey}
+                remaining={notifyUpgrade.bannerPayload.remaining}
+                limit={notifyUpgrade.bannerPayload.limit}
+                current={notifyUpgrade.bannerPayload.current}
+                variant={notifyUpgrade.variant}
+                thresholdLevel={notifyUpgrade.bannerPayload.thresholdLevel || "warn"}
+                surface="notifications"
+                plan={notifyUpgrade.bannerPayload.plan}
+                recommendedPlan={notifyUpgrade.bannerPayload.recommendedPlan}
+              />
+            )}
 
       {step === "service" && (
         <Card>
@@ -668,7 +681,19 @@ export default function NotifyClientsPage() {
       
       <div className={`flex-1 max-w-7xl mx-auto w-full px-6 lg:px-8 py-8 ${!isMobile ? "" : ""}`}>
         <div className="space-y-4">
-          <ApproachingLimitBanner capability="notifications.event_driven" />
+          {notifyUpgrade.bannerPayload && (
+              <UpgradeBanner
+                capabilityKey={notifyUpgrade.bannerPayload.capabilityKey}
+                remaining={notifyUpgrade.bannerPayload.remaining}
+                limit={notifyUpgrade.bannerPayload.limit}
+                current={notifyUpgrade.bannerPayload.current}
+                variant={notifyUpgrade.variant}
+                thresholdLevel={notifyUpgrade.bannerPayload.thresholdLevel || "warn"}
+                surface="notifications"
+                plan={notifyUpgrade.bannerPayload.plan}
+                recommendedPlan={notifyUpgrade.bannerPayload.recommendedPlan}
+              />
+            )}
 
       {step === "service" && (
         <Card>

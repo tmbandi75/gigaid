@@ -10126,6 +10126,62 @@ Return ONLY the message text, no JSON or formatting.`
     }
   });
 
+  app.post("/api/stalls", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { stallType, entityType, entityId, moneyAtRisk, confidence } = req.body;
+      if (!stallType || !entityType || !entityId) {
+        return res.status(400).json({ error: "stallType, entityType, entityId are required" });
+      }
+      const { db } = await import("./db");
+      const { stallDetections } = await import("@shared/schema");
+      const now = new Date().toISOString();
+      const [stall] = await db.insert(stallDetections).values({
+        userId,
+        entityType,
+        entityId,
+        stallType,
+        moneyAtRisk: moneyAtRisk || 0,
+        confidence: confidence || 0.5,
+        detectedAt: now,
+        createdAt: now,
+      }).returning();
+      res.json(stall);
+    } catch (error) {
+      console.error("Create stall error:", error);
+      res.status(500).json({ error: "Failed to create stall event" });
+    }
+  });
+
+  app.get("/api/stalls/summary", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { db } = await import("./db");
+      const { stallDetections } = await import("@shared/schema");
+      const { eq, and, isNull, gte, sql } = await import("drizzle-orm");
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const rows = await db
+        .select({
+          stallType: stallDetections.stallType,
+          count: sql<number>`count(*)::int`,
+          totalMoneyAtRisk: sql<number>`coalesce(sum(${stallDetections.moneyAtRisk}), 0)::int`,
+        })
+        .from(stallDetections)
+        .where(
+          and(
+            eq(stallDetections.userId, userId),
+            isNull(stallDetections.resolvedAt),
+            gte(stallDetections.createdAt, thirtyDaysAgo)
+          )
+        )
+        .groupBy(stallDetections.stallType);
+      res.json(rows);
+    } catch (error) {
+      console.error("Stall summary error:", error);
+      res.status(500).json({ error: "Failed to get stall summary" });
+    }
+  });
+
   // ==================== NEXT BEST ACTION ENGINE ====================
   // Intelligent stall detection and one recommended action per entity
   

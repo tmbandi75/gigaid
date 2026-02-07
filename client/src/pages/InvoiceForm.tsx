@@ -42,8 +42,7 @@ import { useApiMutation } from "@/hooks/useApiMutation";
 import { ArrowLeft, Loader2, Send, CheckCircle, Mail, MessageSquare, AlertTriangle, FileText } from "lucide-react";
 import { PhoneInput } from "@/components/ui/phone-input";
 import type { Invoice } from "@shared/schema";
-import { usePostSuccessNudge } from "@/hooks/usePostSuccessNudge";
-import { PostSuccessNudgeModal } from "@/components/upgrade/PostSuccessNudgeModal";
+import { useUpgradeOrchestrator, UpgradeNudgeModal } from "@/upgrade";
 
 const invoiceFormSchema = z.object({
   clientFirstName: z.string().min(1, "First name is required"),
@@ -72,7 +71,7 @@ export default function InvoiceForm() {
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [sendViaEmail, setSendViaEmail] = useState(true);
   const [sendViaSms, setSendViaSms] = useState(true);
-  const invoiceNudge = usePostSuccessNudge('invoices.send');
+  const invoiceUpgrade = useUpgradeOrchestrator({ capabilityKey: 'invoices.send', surface: 'invoicing' });
 
   const { data: existingInvoice, isLoading: isLoadingInvoice } = useQuery<Invoice>({
     queryKey: QUERY_KEYS.invoice(id!),
@@ -123,7 +122,7 @@ export default function InvoiceForm() {
     {
       onSuccess: () => {
         toast({ title: "Invoice created successfully" });
-        invoiceNudge.triggerNudge();
+        invoiceUpgrade.maybeShowPostSuccess();
         navigate("/invoices");
       },
       onError: () => {
@@ -167,7 +166,7 @@ export default function InvoiceForm() {
         if (sendViaEmail && hasEmail) channels.push("email");
         if (sendViaSms && hasPhone) channels.push("text");
         toast({ title: `Invoice sent via ${channels.join(" and ")}` });
-        invoiceNudge.triggerNudge();
+        invoiceUpgrade.maybeShowPostSuccess();
       },
       onError: () => {
         toast({ title: "Failed to send invoice", variant: "destructive" });
@@ -549,15 +548,26 @@ export default function InvoiceForm() {
         </DialogContent>
       </Dialog>
 
-      <PostSuccessNudgeModal 
-        open={invoiceNudge.showNudge}
-        onOpenChange={invoiceNudge.onDismiss}
-        title={invoiceNudge.title}
-        description={invoiceNudge.description}
-        current={invoiceNudge.current}
-        limit={invoiceNudge.limit}
-        remaining={invoiceNudge.remaining}
-      />
+      {invoiceUpgrade.modalPayload && (
+        <UpgradeNudgeModal
+          open={invoiceUpgrade.showModal}
+          onOpenChange={invoiceUpgrade.dismissModal}
+          title={invoiceUpgrade.modalPayload.title}
+          subtitle={invoiceUpgrade.modalPayload.subtitle}
+          bullets={invoiceUpgrade.modalPayload.bullets}
+          primaryCta={invoiceUpgrade.modalPayload.primaryCta}
+          secondaryCta={invoiceUpgrade.modalPayload.secondaryCta}
+          variant={invoiceUpgrade.variant}
+          triggerType={invoiceUpgrade.modalPayload.triggerType}
+          capabilityKey={invoiceUpgrade.modalPayload.capabilityKey}
+          surface="invoicing"
+          plan={invoiceUpgrade.modalPayload.plan}
+          current={invoiceUpgrade.modalPayload.current}
+          limit={invoiceUpgrade.modalPayload.limit}
+          remaining={invoiceUpgrade.modalPayload.remaining}
+          recommendedPlan={invoiceUpgrade.modalPayload.recommendedPlan}
+        />
+      )}
     </div>
   );
 }

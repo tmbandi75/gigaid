@@ -57,9 +57,7 @@ import {
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { BookingLinkShare } from "@/components/booking-link";
-import { ApproachingLimitBanner } from "@/components/upgrade/ApproachingLimitBanner";
-import { usePostSuccessNudge } from "@/hooks/usePostSuccessNudge";
-import { PostSuccessNudgeModal } from "@/components/upgrade/PostSuccessNudgeModal";
+import { useUpgradeOrchestrator, UpgradeBanner, UpgradeNudgeModal } from "@/upgrade";
 
 interface BookingRequest {
   id: number;
@@ -142,7 +140,7 @@ export default function BookingRequests() {
   const [showBlockingIntercept, setShowBlockingIntercept] = useState(false);
   const [blockingBookingId, setBlockingBookingId] = useState<number | null>(null);
   
-  const bookingNudge = usePostSuccessNudge('deposit.enforce');
+  const bookingUpgrade = useUpgradeOrchestrator({ capabilityKey: 'deposit.enforce', surface: 'booking' });
   
   const continueWithoutDeposit = () => {
     setShowBlockingIntercept(false);
@@ -172,7 +170,7 @@ export default function BookingRequests() {
         setShowRemainderPaymentDialog(false);
         setSelectedPaymentMethod("");
         setRemainderNotes("");
-        bookingNudge.triggerNudge();
+        bookingUpgrade.maybeShowPostSuccess();
       },
       onError: (error: Error) => {
         toast({ 
@@ -351,7 +349,19 @@ export default function BookingRequests() {
 
         <BookingLinkShare variant="inline" context="bookings" />
 
-        <ApproachingLimitBanner capability="deposit.enforce" compact />
+        {bookingUpgrade.bannerPayload && (
+          <UpgradeBanner
+            capabilityKey={bookingUpgrade.bannerPayload.capabilityKey}
+            remaining={bookingUpgrade.bannerPayload.remaining}
+            limit={bookingUpgrade.bannerPayload.limit}
+            current={bookingUpgrade.bannerPayload.current}
+            variant={bookingUpgrade.variant}
+            thresholdLevel={bookingUpgrade.bannerPayload.thresholdLevel || "warn"}
+            surface="booking"
+            plan={bookingUpgrade.bannerPayload.plan}
+            recommendedPlan={bookingUpgrade.bannerPayload.recommendedPlan}
+          />
+        )}
 
         {filteredBookings.length === 0 ? (
           <Card className="border-0 shadow-md">
@@ -842,15 +852,26 @@ export default function BookingRequests() {
         onCancel={continueWithoutDeposit}
       />
 
-      <PostSuccessNudgeModal
-        open={bookingNudge.showNudge}
-        onOpenChange={bookingNudge.onDismiss}
-        title={bookingNudge.title}
-        description={bookingNudge.description}
-        current={bookingNudge.current}
-        limit={bookingNudge.limit}
-        remaining={bookingNudge.remaining}
-      />
+      {bookingUpgrade.modalPayload && (
+        <UpgradeNudgeModal
+          open={bookingUpgrade.showModal}
+          onOpenChange={bookingUpgrade.dismissModal}
+          title={bookingUpgrade.modalPayload.title}
+          subtitle={bookingUpgrade.modalPayload.subtitle}
+          bullets={bookingUpgrade.modalPayload.bullets}
+          primaryCta={bookingUpgrade.modalPayload.primaryCta}
+          secondaryCta={bookingUpgrade.modalPayload.secondaryCta}
+          variant={bookingUpgrade.variant}
+          triggerType={bookingUpgrade.modalPayload.triggerType}
+          capabilityKey={bookingUpgrade.modalPayload.capabilityKey}
+          surface="booking"
+          plan={bookingUpgrade.modalPayload.plan}
+          current={bookingUpgrade.modalPayload.current}
+          limit={bookingUpgrade.modalPayload.limit}
+          remaining={bookingUpgrade.modalPayload.remaining}
+          recommendedPlan={bookingUpgrade.modalPayload.recommendedPlan}
+        />
+      )}
     </div>
   );
 }
