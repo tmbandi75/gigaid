@@ -1,0 +1,332 @@
+You are a senior full-stack engineer + QA lead working on GigAid.
+
+Task: Implement a production-ready V1 churn prediction + retention trigger system, plus admin dashboard (“Copilot/Cockpit”) updates to monitor and act on churn risk.
+
+Do NOT stub. Do NOT partially implement. Everything must be wired end-to-end: DB → APIs → cron/worker → UI → admin Copilot → logging.
+
+========================
+GOALS / SUCCESS CRITERIA
+========================
+1) Every user gets a nightly churn risk score computed from real product data.
+2) Users are placed into tiers: Healthy, Drifting, At Risk, Critical.
+3) Tier-based retention actions trigger automatically with idempotency and logging.
+4) Admin Copilot dashboard shows:
+   - Overall churn risk distribution
+   - “At Risk” and “Critical” user lists
+   - Each user’s signals, score breakdown, and action history
+   - Buttons to trigger manual interventions (send nudge, grant trial, grant credit, mark contacted)
+5) A JSON report endpoint exists for auditing the system health.
+6) Must include tests for scoring and trigger logic.
+
+========================
+STEP 1 — DATABASE / MIGRATIONS
+========================
+Create the following tables (or Supabase equivalents). Add indexes for user_id and updated_at.
+
+1) churn_metrics
+- id (pk)
+- user_id (fk)
+- last_login_days int
+- jobs_7d int
+- msgs_7d int
+- rev_30d numeric
+- rev_delta numeric
+- no_pay_14d boolean
+- failed_payments int
+- errors_7d int
+- blocks_7d int
+- limit_95_hits int
+- downgrade_views int
+- cancel_hover int
+- score int
+- tier text (Healthy|Drifting|AtRisk|Critical)
+- computed_at timestamp
+- created_at timestamp
+- updated_at timestamp
+
+2) retention_actions
+- id (pk)
+- user_id (fk)
+- tier text
+- action_type text (Nudge|Trial|Credit|FounderSave|LiteModeEnable|FollowUpWizard|Other)
+- channel text (InApp|Email|SMS)
+- payload jsonb (message template used, offer, etc.)
+- status text (Queued|Sent|Failed|Skipped)
+- idempotency_key text UNIQUE
+- error text nullable
+- sent_at timestamp nullable
+- created_at timestamp
+
+3) retention_playbooks
+- id (pk)
+- tier text
+- priority int
+- action_type text
+- channel text
+- template_key text
+- delay_hours int
+- enabled boolean
+Seed defaults:
+- Drifting: InApp Nudge → “Payday flow”
+- AtRisk: InApp + Email → “7-day Pro trial”
+- Critical: Email + InApp → “Founder save offer”
+
+If there is already a notifications/messaging table, integrate instead of duplicating.
+
+========================
+STEP 2 — SIGNAL EXTRACTION (REAL DATA)
+========================
+Implement functions that compute the signals from existing tables:
+- last_login_days: from user.lastLoginAt or auth/session table
+- jobs_7d: count jobs created in last 7 days
+- msgs_7d: count outbound messages in last 7 days
+- rev_30d: sum payments received in last 30 days (Stripe + internal)
+- rev_delta: rev_30d - prior_30d (previous 30 day window)
+- no_pay_14d: true if no payments received in last 14 days
+- failed_payments: count failed Stripe events or failed invoice payments in last 30 days
+- errors_7d: count app errors/events if you have an events table; otherwise implement a lightweight server error logging table and start populating it
+- blocks_7d: count paywall/limit blocks events
+- limit_95_hits: count times user hit 95% warning in last 14 days
+- downgrade_views: count visits to pricing/downgrade page (track in events)
+- cancel_hover: count “cancel intent” events (open cancel modal, click cancel button but not confirm)
+
+If an “events” or analytics log does not exist, create a minimal events table:
+events(id, user_id, event_name, meta jsonb, created_at)
+Instrument key events mentioned above.
+
+========================
+STEP 3 — SCORING FUNCTION (V1 RULE-BASED)
+========================
+Implement computeChurnScore(signals) exactly as below.
+
+Activity (max 50):
+- last_login_days:
+  0–1 days => 0
+  2–3 => 5
+  4–6 => 12
+  7–10 => 18
+  11–14 => 22
+  15+ => 25
+- jobs_7d:
+  >=3 => 0
+  2 => 5
+  1 => 10
+  0 => 15
+- msgs_7d:
+  >=10 => 0
+  5–9 => 3
+  1–4 => 7
+  0 => 10
+
+Revenue (max 30):
+- rev_delta (negative only):
+  >=0 => 0
+  -1 to -50 => 5
+  -51 to -200 => 10
+  -201+ => 15
+- no_pay_14d:
+  false => 0
+  true => 10
+- failed_payments:
+  0 => 0
+  1 => 2
+  2 => 4
+  3+ => 5
+
+Friction (max 20):
+- errors_7d:
+  0 => 0
+  1–2 => 3
+  3–5 => 6
+  6+ => 8
+- support tickets (if exists) else use “contact support” event:
+  0 => 0
+  1 => 3
+  2 => 5
+  3+ => 6
+- blocks_7d:
+  0 => 0
+  1 => 2
+  2–3 => 4
+  4+ => 6
+
+Intent (max 10):
+- limit_95_hits:
+  0 => 0
+  1 => 2
+  2+ => 4
+- downgrade_views:
+  0 => 0
+  1 => 2
+  2+ => 3
+- cancel_hover:
+  0 => 0
+  1 => 2
+  2+ => 3
+
+TOTAL SCORE range 0–110.
+
+Tier mapping:
+- 0–30 Healthy
+- 31–50 Drifting
+- 51–70 AtRisk
+- 71+ Critical
+
+Persist score + tier into churn_metrics nightly.
+
+========================
+STEP 4 — NIGHTLY CRON / WORKER
+========================
+Create a scheduled job (cron) that runs nightly (e.g., 2am local).
+For each active user:
+1) compute signals
+2) compute score + tier
+3) upsert churn_metrics (computed_at)
+4) trigger retention actions if tier >= Drifting
+
+Must be idempotent:
+- Do not spam the same user daily with the same action.
+- Use idempotency_key = `${user_id}:${tier}:${action_type}:${YYYY-MM-DD}` or similar.
+- Only send 1 action per user per day.
+
+Include a backfill command:
+`npm run churn:backfill --days=30`
+
+========================
+STEP 5 — RETENTION ACTIONS (PLAYBOOK EXECUTION)
+========================
+Implement a retention engine that:
+- selects enabled playbooks for that tier ordered by priority
+- evaluates eligibility (e.g., user hasn’t received this action in last X days)
+- enqueues the action (retention_actions row status=Queued)
+- sends via appropriate channel (InApp/Email/SMS) using existing messaging infrastructure
+- updates retention_actions to Sent/Failed
+
+Default actions:
+Drifting:
+- InApp Nudge: “Want more bookings this week? Start the Get Paid Today flow.”
+- CTA deep link to /onboarding/payday
+
+AtRisk:
+- InApp + Email: “Let’s get you booked this week”
+- Offer: 7-day Pro trial (implement entitlement override with expiry)
+- CTA to Lite Mode and Templates
+
+Critical:
+- InApp + Email: “We’ll help you get set up”
+- Offer: 1 free month credit OR 14-day Pro trial
+- Flag user for “Founder Save” list in admin
+
+Implement entitlement overrides table if needed:
+plan_overrides(user_id, override_type, expires_at, created_at)
+
+========================
+STEP 6 — ADMIN DASHBOARD (“COPILOT/COCKPIT”) UPDATES
+========================
+Add a new admin section: “Retention / Churn”
+
+Pages:
+A) Overview
+- Risk distribution chart (# Healthy/Drifting/AtRisk/Critical)
+- Trend: last 14 days of % AtRisk/Critical
+- Top churn drivers (aggregate of which signals contribute most)
+
+B) At Risk Users (table)
+Columns:
+- User
+- Score
+- Tier
+- Last login (days)
+- Jobs_7d
+- Revenue_30d
+- NoPay14d
+- Failed payments
+- Blocks_7d
+- Last action sent
+Filters:
+- Tier
+- Score range
+- Last login days
+- No pay 14d
+Actions:
+- View details
+- Send nudge now
+- Grant 7-day trial
+- Grant 1-month credit
+- Enable Lite Mode
+- Mark contacted (notes)
+
+C) User Detail drawer/page
+Show:
+- Full signal breakdown with points per factor
+- Action history timeline
+- Buttons to trigger manual actions
+- Notes field + status (contacted, awaiting reply, resolved)
+- Link to user account
+
+D) Playbooks Admin
+CRUD for retention_playbooks:
+- enable/disable
+- priority
+- template selection
+- delay_hours
+
+Add audit logs for admin actions.
+
+========================
+STEP 7 — REPORTING ENDPOINTS
+========================
+Create admin-only endpoints:
+- GET /api/admin/churn/overview
+- GET /api/admin/churn/users?tier=AtRisk&minScore=...
+- GET /api/admin/churn/user/:id
+- POST /api/admin/churn/action (manual send)
+- GET /api/admin/churn/report.json (daily report)
+
+Report should include:
+- Counts per tier
+- Actions sent (counts)
+- Failures
+- Top drivers
+- Sample of Critical users with signals
+
+========================
+STEP 8 — TESTS
+========================
+Add tests for:
+- computeChurnScore() with a matrix of cases
+- tier assignment boundaries
+- idempotency behavior (no duplicates per day)
+- playbook selection and eligibility rules
+
+Create a CLI:
+`npm run test:churn`
+
+========================
+STEP 9 — QA CHECKLIST
+========================
+Manually verify:
+- New users start Healthy
+- Inactive users move to Drifting/AtRisk
+- Actions send once per day only
+- Admin dashboard loads quickly and filters work
+- Manual actions apply entitlements immediately
+
+========================
+IMPLEMENTATION NOTES
+========================
+- Prefer using existing data tables and messaging systems.
+- Do NOT add Playwright/Cypress.
+- Focus on reliability and correctness.
+- Keep UI clean and “Copilot” style: actionable, not noisy.
+- Ensure RBAC: admin-only access.
+
+Deliverables:
+- migrations
+- new server code
+- new admin UI pages
+- cron job
+- tests
+- docs: /docs/retention-churn-v1.md
+
+END.
