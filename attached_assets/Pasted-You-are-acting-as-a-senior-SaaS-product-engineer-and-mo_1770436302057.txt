@@ -1,0 +1,88 @@
+You are acting as a senior SaaS product engineer and monetization architect.
+
+Audit the entire codebase to determine whether a structured “9/10 upgrade path” monetization system is already implemented.
+
+Definition:
+A “9/10 upgrade path” means:
+- Free users can complete core workflows
+- Optimization/automation steps are gated by plan
+- Feature entitlements are centralized
+- Upgrade prompts appear at high-intent moments
+- Usage limits and counters trigger upsells
+- Premium features are visible but locked
+- Monetization logic is not scattered
+
+Your tasks:
+
+1. ENTITLEMENTS
+Identify whether there is:
+- A centralized plan/feature access layer
+- A feature matrix or entitlement file
+- Consistent plan checking utilities
+
+List file paths and examples.
+
+2. FEATURE GATING
+Find all locations where:
+- Paid features are restricted
+- Upgrade modals/banners appear
+- Soft-lock patterns exist
+
+Assess if these follow a 9/10 pattern or ad-hoc blocking.
+
+3. UX / UPGRADE MOMENTS
+Check whether upgrade prompts are triggered by:
+- Successful task completion
+- Repeated manual actions
+- Usage thresholds
+- High-friction points
+
+Document where this exists or is missing.
+
+4. USAGE TRACKING
+Verify whether the app tracks:
+- Manual actions
+- Feature usage counts
+- Stall events
+- Limit hits
+
+Identify analytics or counters.
+
+5. SHADOW FEATURES
+Determine whether locked premium features are:
+- Visible in UI
+- Greyed out
+- Marked as Pro/Business
+
+Or completely hidden.
+
+6. CONSISTENCY REVIEW
+Evaluate whether monetization logic is:
+- Centralized
+- Repeatable
+- Scalable
+
+Or fragmented.
+
+7. GAP ANALYSIS
+If incomplete, list:
+- Missing components
+- Architectural risks
+- Revenue leakage points
+
+8. RECOMMENDATION
+Provide:
+- A concrete upgrade-path architecture
+- Refactor plan
+- File structure proposal
+- Priority order
+
+Output format:
+
+Sectioned report with:
+- Findings
+- Evidence (file paths)
+- Severity (Low/Med/High)
+- Recommendation
+
+Be brutally honest. Do not assume intent. Base conclusions only on code.

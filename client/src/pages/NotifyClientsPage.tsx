@@ -29,6 +29,9 @@ import { useApiMutation } from "@/hooks/useApiMutation";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { CapabilityGate } from "@/components/CapabilityGate";
+import { ApproachingLimitBanner } from "@/components/upgrade/ApproachingLimitBanner";
+import { useCanPerform } from "@/hooks/useCapability";
 import { 
   categoryEventMapping, 
   serviceCategories, 
@@ -116,6 +119,8 @@ export default function NotifyClientsPage() {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   
+  const notificationCap = useCanPerform('notifications.event_driven');
+
   const [step, setStep] = useState<"service" | "event" | "compose" | "review">("service");
   const [selectedServiceId, setSelectedServiceId] = useState<string>("");
   const [selectedServiceCategory, setSelectedServiceCategory] = useState<ServiceCategory | "">("");
@@ -227,6 +232,7 @@ export default function NotifyClientsPage() {
 
   const handleSend = () => {
     if (!validationResult?.valid) return;
+    if (notificationCap.mode === 'suggest_only' || !notificationCap.allowed) return;
     
     sendMutation.mutate({
       serviceId: selectedServiceId,
@@ -322,6 +328,7 @@ export default function NotifyClientsPage() {
         
         <div className={`flex-1 px-4 py-6 -mt-4 ${isMobile ? "pb-20" : ""}`}>
           <div className="space-y-4">
+            <ApproachingLimitBanner capability="notifications.event_driven" />
 
       {step === "service" && (
         <Card>
@@ -604,16 +611,22 @@ export default function NotifyClientsPage() {
                     <span className="font-medium text-right max-w-[60%]">{eventReason}</span>
                   </div>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="flex-col gap-2">
                   <Button 
                     className="w-full" 
                     onClick={handleSend}
-                    disabled={sendMutation.isPending}
+                    disabled={sendMutation.isPending || notificationCap.mode === 'suggest_only' || !notificationCap.allowed}
                     data-testid="button-send-notifications"
                   >
                     <Send className="h-4 w-4 mr-2" />
                     {sendMutation.isPending ? "Sending..." : "Send Notifications"}
                   </Button>
+                  {notificationCap.mode === 'suggest_only' && notificationCap.reason && (
+                    <p className="text-sm text-muted-foreground text-center" data-testid="text-suggest-only-reason">{notificationCap.reason}</p>
+                  )}
+                  {!notificationCap.allowed && notificationCap.mode !== 'suggest_only' && notificationCap.reason && (
+                    <p className="text-sm text-destructive text-center" data-testid="text-capability-blocked-reason">{notificationCap.reason}</p>
+                  )}
                 </CardFooter>
               </Card>
             </>
@@ -655,6 +668,7 @@ export default function NotifyClientsPage() {
       
       <div className={`flex-1 max-w-7xl mx-auto w-full px-6 lg:px-8 py-8 ${!isMobile ? "" : ""}`}>
         <div className="space-y-4">
+          <ApproachingLimitBanner capability="notifications.event_driven" />
 
       {step === "service" && (
         <Card>
@@ -937,16 +951,22 @@ export default function NotifyClientsPage() {
                     <span className="font-medium text-right max-w-[60%]">{eventReason}</span>
                   </div>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="flex-col gap-2">
                   <Button 
                     className="w-full" 
                     onClick={handleSend}
-                    disabled={sendMutation.isPending}
+                    disabled={sendMutation.isPending || notificationCap.mode === 'suggest_only' || !notificationCap.allowed}
                     data-testid="button-send-notifications"
                   >
                     <Send className="h-4 w-4 mr-2" />
                     {sendMutation.isPending ? "Sending..." : "Send Notifications"}
                   </Button>
+                  {notificationCap.mode === 'suggest_only' && notificationCap.reason && (
+                    <p className="text-sm text-muted-foreground text-center" data-testid="text-suggest-only-reason">{notificationCap.reason}</p>
+                  )}
+                  {!notificationCap.allowed && notificationCap.mode !== 'suggest_only' && notificationCap.reason && (
+                    <p className="text-sm text-destructive text-center" data-testid="text-capability-blocked-reason">{notificationCap.reason}</p>
+                  )}
                 </CardFooter>
               </Card>
             </>

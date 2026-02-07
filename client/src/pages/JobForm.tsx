@@ -64,6 +64,8 @@ import { JobLocationMap } from "@/components/JobLocationMap";
 import { JobResolutionModal } from "@/components/jobs/JobResolutionModal";
 import { AddressAutocomplete } from "@/components/booking/AddressAutocomplete";
 import { CapabilityLimitInfo } from "@/components/CapabilityGate";
+import { usePostSuccessNudge } from "@/hooks/usePostSuccessNudge";
+import { PostSuccessNudgeModal } from "@/components/upgrade/PostSuccessNudgeModal";
 
 interface ScheduleSuggestion {
   date: string;
@@ -358,6 +360,7 @@ export default function JobForm() {
     totalAmountCents?: number;
   } | null>(null);
   const { celebration, celebrate, dismiss: dismissCelebration } = useCelebration();
+  const jobNudge = usePostSuccessNudge('jobs.create');
   
   // Coordinates from address autocomplete
   const [addressCoords, setAddressCoords] = useState<{ lat?: number; lng?: number }>({});
@@ -647,6 +650,9 @@ export default function JobForm() {
         serviceName: variables.serviceType || undefined,
       });
       
+      if (!isEditing) {
+        jobNudge.triggerNudge();
+      }
       toast({ title: "Job created successfully" });
       setTimeout(() => navigate("/jobs"), 2000);
     },
@@ -1579,6 +1585,16 @@ export default function JobForm() {
         message={celebration.message}
         type={celebration.type}
         onDismiss={dismissCelebration}
+      />
+
+      <PostSuccessNudgeModal 
+        open={jobNudge.showNudge}
+        onOpenChange={jobNudge.onDismiss}
+        title={jobNudge.title}
+        description={jobNudge.description}
+        current={jobNudge.current}
+        limit={jobNudge.limit}
+        remaining={jobNudge.remaining}
       />
     </div>
   );

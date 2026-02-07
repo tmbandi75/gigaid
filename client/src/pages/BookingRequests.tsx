@@ -57,6 +57,7 @@ import {
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { BookingLinkShare } from "@/components/booking-link";
+import { ApproachingLimitBanner } from "@/components/upgrade/ApproachingLimitBanner";
 
 interface BookingRequest {
   id: number;
@@ -344,6 +345,8 @@ export default function BookingRequests() {
         </Card>
 
         <BookingLinkShare variant="inline" context="bookings" />
+
+        <ApproachingLimitBanner capability="deposit.enforce" compact />
 
         {filteredBookings.length === 0 ? (
           <Card className="border-0 shadow-md">

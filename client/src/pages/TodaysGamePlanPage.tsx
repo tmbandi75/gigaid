@@ -31,11 +31,14 @@ import {
   Zap,
   Target,
   Wrench,
+  AlertTriangle,
 } from "lucide-react";
 import { AddServiceDialog } from "@/components/settings/AddServiceDialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { BookingLinkShare } from "@/components/booking-link";
+import { useStallUpgrade } from "@/hooks/useStallUpgrade";
+import { PostSuccessNudgeModal } from "@/components/upgrade/PostSuccessNudgeModal";
 
 interface ActionItem {
   id: string;
@@ -188,6 +191,7 @@ export default function TodaysGamePlanPage() {
   const [showVoiceNotes, setShowVoiceNotes] = useState(false);
   const [showAddService, setShowAddService] = useState(false);
   const isMobile = useIsMobile();
+  const stallUpgrade = useStallUpgrade();
 
   const { data, isLoading } = useQuery<GamePlanData>({
     queryKey: QUERY_KEYS.dashboardGamePlan(),
@@ -302,6 +306,21 @@ export default function TodaysGamePlanPage() {
         animate="visible"
         className={`space-y-6 ${isMobile ? "px-4 py-6 pb-24" : "max-w-7xl mx-auto px-6 lg:px-8 py-6"}`}
       >
+
+        {stallUpgrade.hasStallPrompt && stallUpgrade.prompt && (
+          <Card className="border-amber-500/20 bg-amber-500/5 cursor-pointer hover-elevate" onClick={stallUpgrade.showStallPrompt} data-testid="card-stall-upgrade-banner">
+            <CardContent className="py-3 px-4">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">{stallUpgrade.prompt.title}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Tap to see how upgrading can help</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <CampaignSuggestionBanner />
 
@@ -783,6 +802,15 @@ export default function TodaysGamePlanPage() {
         open={showAddService} 
         onOpenChange={setShowAddService} 
       />
+
+      {stallUpgrade.prompt && (
+        <PostSuccessNudgeModal 
+          open={stallUpgrade.showPrompt}
+          onOpenChange={stallUpgrade.dismissPrompt}
+          title={stallUpgrade.prompt.title}
+          description={stallUpgrade.prompt.description}
+        />
+      )}
     </div>
   );
 }
