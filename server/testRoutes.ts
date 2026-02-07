@@ -95,6 +95,25 @@ export function registerTestRoutes(app: any, storage: IStorage) {
     }
   });
 
+  router.post("/set-slug", async (req: Request, res: Response) => {
+    try {
+      const { userId, slug } = req.body;
+      if (!userId || !slug) {
+        return res.status(400).json({ error: "Missing required fields: userId, slug" });
+      }
+
+      const user = await storage.getUserByUsername(userId) || await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      await storage.updateUser(user.id, { publicProfileSlug: slug, publicProfileEnabled: true });
+      return res.json({ success: true, userId: user.id, slug });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
   router.get("/smoke-report", async (_req: Request, res: Response) => {
     try {
       const reportPath = path.resolve("tests/monetization/reports/latest.json");
