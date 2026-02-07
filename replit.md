@@ -56,3 +56,43 @@ Preferred communication style: Simple, everyday language.
 - **Communication Services**: Twilio (SMS), SendGrid (Email)
 - **AI**: OpenAI (gpt-4o-mini for auto-quoting)
 - **Analytics**: PostHog
+- **Testing**: Jest + ts-jest (API), Playwright (E2E)
+
+## Testing
+
+### Test Architecture
+- **API Tests**: Jest + fetch against running server at localhost:5000. Located in `tests/api/`.
+- **E2E Tests**: Playwright with Chromium. Located in `e2e/`.
+- **Test Infrastructure**: `server/testRoutes.ts` provides test-only endpoints for user creation, data seeding, auth token generation, and data reset.
+- **Auth for Tests**: JWT Bearer tokens via `signAppJwt` (requires `APP_JWT_SECRET` env var).
+
+### Test Users
+- `api-test-user-a` / `api-test-user-b`: API test isolation users
+- `e2e-test-user` (free plan) / `e2e-test-pro` (pro plan): E2E test users
+
+### Running Tests
+```bash
+# API tests (requires server running on :5000)
+npx jest --forceExit --runInBand
+
+# Single API test suite
+npx jest --forceExit --runInBand tests/api/jobs.test.ts
+
+# E2E tests (auto-starts server if not running)
+npx playwright test
+
+# Single E2E test
+npx playwright test e2e/auth.spec.ts
+
+# E2E with UI mode
+npx playwright test --ui
+```
+
+### Test Coverage Summary (47 API + 6 E2E suites)
+- **Auth**: Token validation, unauthenticated access blocking, profile retrieval
+- **Jobs**: CRUD, cross-user isolation, capability usage tracking
+- **Leads**: CRUD, archive/unarchive, cross-user isolation
+- **Invoices**: CRUD, public invoice view
+- **Capabilities**: Free plan limits (jobs=10, SMS=20), pro plan unlimited, usage enforcement
+- **Booking**: Public booking creation, invalid slug handling, auth-protected request listing
+- **Messaging**: SMS send validation, conversation listing, usage reporting

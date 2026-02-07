@@ -105,7 +105,9 @@ export async function registerRoutes(
 
   registerObjectStorageRoutes(app);
   
-  registerTestRoutes(app, storage);
+  if (process.env.NODE_ENV !== 'production') {
+    registerTestRoutes(app, storage);
+  }
   
   app.use("/api/admin/cockpit", cockpitRoutes);
   app.use("/api/admin/users", adminUsersRoutes);

@@ -1,7 +1,6 @@
 import type { Config } from 'jest';
 
 const config: Config = {
-  preset: 'ts-jest/presets/default-esm',
   testEnvironment: 'node',
   testMatch: ['<rootDir>/tests/api/**/*.test.ts'],
   moduleNameMapper: {
@@ -9,13 +8,12 @@ const config: Config = {
   },
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
-      useESM: true,
       tsconfig: 'tsconfig.json',
+      diagnostics: false,
     }],
   },
-  extensionsToTreatAsEsm: ['.ts'],
-  setupFilesAfterEnv: [],
   testTimeout: 30000,
+  modulePathIgnorePatterns: ['<rootDir>/.cache/'],
 };
 
 export default config;
