@@ -128,7 +128,7 @@ function DepositSection({ job }: { job: Job }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs", job.id, "deposit-status"] });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.JOBS });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jobs() });
       setShowSetDeposit(false);
       toast({ title: "Deposit requirement set" });
     },
@@ -629,11 +629,10 @@ export default function JobForm() {
       });
     },
     onSuccess: async (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.JOBS });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD_SUMMARY });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jobs() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboardSummary() });
       if (leadId) {
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.LEADS });
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.LEADS });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.leads() });
       }
       
       const clientName = [variables.clientFirstName, variables.clientLastName]
@@ -690,8 +689,8 @@ export default function JobForm() {
       return { data, clientName, response };
     },
     onSuccess: ({ data, clientName }) => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.JOBS });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD_SUMMARY });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jobs() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboardSummary() });
       
       if (data.status === "completed" && existingJob?.status !== "completed") {
         const totalCents = data.price ? data.price * 100 : (existingJob?.price || 0);
