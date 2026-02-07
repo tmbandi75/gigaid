@@ -210,6 +210,10 @@ export default function Settings() {
   });
   const [showQuickSetup, setShowQuickSetup] = useState(false);
   const [quickSetupPrice, setQuickSetupPrice] = useState("");
+  const [slugError, setSlugError] = useState<string | null>(null);
+  const [slugChecking, setSlugChecking] = useState(false);
+  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
+  const originalSlug = profile?.publicProfileSlug || "";
 
   useEffect(() => {
     if (profile) {
@@ -237,6 +241,64 @@ export default function Settings() {
       });
     }
   }, [profile]);
+
+  const RESERVED_SLUGS = new Set([
+    "admin", "api", "login", "signup", "register", "settings", "profile",
+    "dashboard", "help", "support", "about", "terms", "privacy", "contact",
+    "pricing", "billing", "account", "app", "book", "booking", "onboarding",
+    "downloads", "home", "test", "demo", "status", "health",
+  ]);
+
+  const handleSlugChange = (value: string) => {
+    const cleaned = value.toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/--+/g, "-").replace(/^-|-$/g, "");
+    setSettings({ ...settings, publicProfileSlug: cleaned });
+    setSlugAvailable(null);
+
+    if (!cleaned || cleaned.length < 3) {
+      setSlugError(cleaned ? "URL must be at least 3 characters" : null);
+      return;
+    }
+    if (cleaned.length > 48) {
+      setSlugError("URL must be 48 characters or less");
+      return;
+    }
+    if (RESERVED_SLUGS.has(cleaned)) {
+      setSlugError("This URL is reserved. Please choose a different one.");
+      return;
+    }
+    setSlugError(null);
+
+    if (cleaned === originalSlug) {
+      setSlugAvailable(null);
+      return;
+    }
+    setSlugChecking(true);
+  };
+
+  useEffect(() => {
+    const slug = settings.publicProfileSlug;
+    if (!slug || slug.length < 3 || slug === originalSlug || slugError) {
+      setSlugChecking(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await apiFetch(`/api/slug/check/${slug}`);
+        const data = typeof res === 'string' ? JSON.parse(res) : res;
+        if (data.available) {
+          setSlugAvailable(true);
+          setSlugError(null);
+        } else {
+          setSlugAvailable(false);
+          setSlugError(data.reason || "This URL is not available");
+        }
+      } catch {
+        setSlugAvailable(null);
+      }
+      setSlugChecking(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [settings.publicProfileSlug, originalSlug, slugError]);
 
   const updateMutation = useApiMutation(
     (data: any) => apiFetch("/api/settings", { method: "PATCH", body: JSON.stringify(data) }),
@@ -299,6 +361,10 @@ export default function Settings() {
   };
 
   const handleSave = () => {
+    if (slugError) {
+      toast({ title: "Please fix the booking URL before saving", variant: "destructive" });
+      return;
+    }
     const dataToSave = {
       publicProfileEnabled: settings.publicProfileEnabled,
       publicProfileSlug: settings.publicProfileSlug,
@@ -476,18 +542,28 @@ export default function Settings() {
                   <div className="flex gap-2">
                     <Input
                       value={settings.publicProfileSlug}
-                      onChange={(e) => setSettings({ ...settings, publicProfileSlug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })}
+                      onChange={(e) => handleSlugChange(e.target.value)}
                       placeholder="your-name"
-                      className="h-10"
                       data-testid="input-profile-slug"
                     />
                     <Button variant="outline" size="icon" onClick={copyBookingLink} data-testid="button-copy-booking">
                       {bookingLinkCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {window.location.origin}/book/{settings.publicProfileSlug || "your-name"}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-muted-foreground">
+                      {window.location.origin}/book/{settings.publicProfileSlug || "your-name"}
+                    </p>
+                    {slugChecking && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                    {slugAvailable === true && !slugChecking && (
+                      <span className="text-xs text-green-600 flex items-center gap-1">
+                        <Check className="h-3 w-3" /> Available
+                      </span>
+                    )}
+                  </div>
+                  {slugError && (
+                    <p className="text-xs text-destructive">{slugError}</p>
+                  )}
                 </div>
                 
                 {needsSetup && (

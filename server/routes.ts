@@ -74,6 +74,7 @@ import mobileAuthRoutes from "./mobileAuthRoutes";
 import { verifyAppJwt } from "./appJwt";
 import { registerStripeWebhookRoutes, processRetryableWebhooks, reconcileStuckPayments, startWebhookRetryScheduler } from "./stripeWebhookRoutes";
 import { registerTestRoutes } from "./testRoutes";
+import { generateBookingSlug, ensureUniqueSlug, validateSlug } from "./lib/bookingSlug";
 
 const quoteCache = new Map<string, { result: any; timestamp: number }>();
 const QUOTE_CACHE_TTL = 3600000;
@@ -116,9 +117,17 @@ export async function registerRoutes(
     if (!userId || !slug) {
       return res.status(400).json({ error: "Missing userId or slug" });
     }
+    const slugValidation = validateSlug(slug);
+    if (!slugValidation.valid) {
+      return res.status(400).json({ error: slugValidation.reason });
+    }
     const user = await storage.getUser(userId);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
+    }
+    const taken = await storage.slugExists(slug, userId);
+    if (taken) {
+      return res.status(409).json({ error: "Slug already taken" });
     }
     await storage.updateUser(user.id, { publicProfileSlug: slug, publicProfileEnabled: true });
     return res.json({ success: true, userId: user.id, slug });
@@ -426,13 +435,17 @@ export async function registerRoutes(
         });
       }
 
-      if (!user.publicProfileSlug) {
-        const autoSlug = `user-${user.id.slice(0, 8).toLowerCase()}`;
+      if (!user.publicProfileSlug || /^user-\d+$/.test(user.publicProfileSlug)) {
+        const baseSlug = generateBookingSlug(user);
+        const newSlug = await ensureUniqueSlug(
+          baseSlug,
+          (s) => storage.slugExists(s, user.id)
+        );
         await storage.updateUser(user.id, {
-          publicProfileSlug: autoSlug,
+          publicProfileSlug: newSlug,
           publicProfileEnabled: user.publicProfileEnabled ?? true,
         });
-        user.publicProfileSlug = autoSlug;
+        user.publicProfileSlug = newSlug;
         if (user.publicProfileEnabled === null || user.publicProfileEnabled === undefined) {
           user.publicProfileEnabled = true;
         }
@@ -514,7 +527,9 @@ export async function registerRoutes(
         defaultServiceType, defaultPrice, depositPolicySet, aiExpectationShown,
         depositEnabled, depositValue, slotDuration,
         // Messaging fields
-        personalPhone, inAppInboxEnabled
+        personalPhone, inAppInboxEnabled,
+        // Booking slug
+        publicProfileSlug
       } = req.body;
       let user = await storage.getUser((req as any).userId);
       
@@ -532,8 +547,19 @@ export async function registerRoutes(
         });
       }
       
-      // Only update fields that are explicitly provided (not undefined)
+      if (publicProfileSlug !== undefined) {
+        const slugValidation = validateSlug(publicProfileSlug);
+        if (!slugValidation.valid) {
+          return res.status(400).json({ error: slugValidation.reason });
+        }
+        const taken = await storage.slugExists(publicProfileSlug, (req as any).userId);
+        if (taken) {
+          return res.status(409).json({ error: "This booking URL is already taken. Please choose a different one." });
+        }
+      }
+
       const updates: Record<string, any> = {};
+      if (publicProfileSlug !== undefined) updates.publicProfileSlug = publicProfileSlug;
       if (name !== undefined) updates.name = name;
       if (firstName !== undefined) updates.firstName = firstName;
       if (lastName !== undefined) updates.lastName = lastName;
@@ -5176,15 +5202,35 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/slug/check/:slug", isAuthenticated, async (req, res) => {
+    try {
+      const slug = req.params.slug;
+      const validation = validateSlug(slug);
+      if (!validation.valid) {
+        return res.json({ available: false, reason: validation.reason });
+      }
+      const taken = await storage.slugExists(slug, (req as any).userId);
+      return res.json({ available: !taken, reason: taken ? "This URL is already taken" : null });
+    } catch (error) {
+      res.status(500).json({ available: false, reason: "Check failed" });
+    }
+  });
+
   // Public Profile Endpoints
   app.get("/api/public/profile/:slug", async (req, res) => {
     try {
       const slug = req.params.slug;
-      const user = await storage.getUserByPublicSlug(slug);
+      let user = await storage.getUserByPublicSlug(slug);
       
       // Check if slug is a UUID (user ID) - this is used for onboarding flow
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const isUserIdLookup = uuidRegex.test(slug) && user?.id === slug;
+
+      // Redirect if user was found via fallback (legacy user-* pattern) but has a new slug
+      // Don't redirect UUID lookups since those are used by onboarding flow
+      if (user && user.publicProfileSlug && user.publicProfileSlug !== slug && !isUserIdLookup) {
+        return res.json({ redirect: user.publicProfileSlug });
+      }
       
       // For publicProfileSlug lookups, require publicProfileEnabled
       // For user ID lookups (onboarding), allow access even if not enabled
@@ -5254,7 +5300,17 @@ export async function registerRoutes(
         noShowProtectionDepositPercent,
       } = req.body;
       
-      // Check if this is the first time enabling public profile (booking link created)
+      if (publicProfileSlug !== undefined && publicProfileSlug !== null) {
+        const slugValidation = validateSlug(publicProfileSlug);
+        if (!slugValidation.valid) {
+          return res.status(400).json({ error: slugValidation.reason });
+        }
+        const taken = await storage.slugExists(publicProfileSlug, (req as any).userId);
+        if (taken) {
+          return res.status(409).json({ error: "This booking URL is already taken. Please choose a different one." });
+        }
+      }
+
       const existingUser = await storage.getUser((req as any).userId);
       const updates: Record<string, any> = {
         publicProfileEnabled,

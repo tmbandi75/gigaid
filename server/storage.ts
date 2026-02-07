@@ -58,6 +58,7 @@ export interface IStorage {
   getUserByPhone(phone: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByPublicSlug(slug: string): Promise<User | undefined>;
+  slugExists(slug: string, excludeUserId?: string): Promise<boolean>;
   getUserByReferralCode(code: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
@@ -972,6 +973,12 @@ export class MemStorage implements IStorage {
     }
     
     return undefined;
+  }
+
+  async slugExists(slug: string, excludeUserId?: string): Promise<boolean> {
+    return Array.from(this.users.values()).some(
+      u => u.publicProfileSlug === slug && (!excludeUserId || u.id !== excludeUserId)
+    );
   }
 
   async getUserByReferralCode(code: string): Promise<User | undefined> {

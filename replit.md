@@ -25,6 +25,9 @@ Preferred communication style: Simple, everyday language.
 - **Storage**: In-memory for development, PostgreSQL for production
 - **Key Entities**: Users, Jobs, Leads, Invoices
 
+### Recent Changes (Feb 2026)
+- **Human-Readable Booking Slugs**: Replaced `user-{id}` booking URLs with human-readable slugs (e.g., `gigaid.ai/book/curtis-plumbing`). Slug utility at `server/lib/bookingSlug.ts` handles generation from businessName/name, reserved word blocking, profanity filter, and collision resolution. Auto-assigns on profile access. Legacy URLs redirect to new slugs. Settings page includes real-time availability checking via `/api/slug/check/:slug`.
+
 ### Core Features
 - **Payment Processing**: Stripe Connect for secure payments, dispute resolution, and reschedule policies.
 - **Price Confirmation Workflow**: Automates job creation upon client approval.

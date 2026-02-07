@@ -164,29 +164,23 @@ export class DatabaseStorage implements IStorage {
       const possibleId = userPrefixMatch[1];
       const [userById] = await db.select().from(users).where(eq(users.id, possibleId));
       if (userById) {
-        if (!userById.publicProfileSlug) {
-          await db.update(users).set({ publicProfileSlug: slug, publicProfileEnabled: true }).where(eq(users.id, possibleId));
-          userById.publicProfileSlug = slug;
-          userById.publicProfileEnabled = true;
-        }
         return userById;
-      }
-
-      if (possibleId === process.env.REPL_OWNER_ID) {
-        const [primaryUser] = await db.select().from(users)
-          .where(sql`${users.publicProfileSlug} IS NULL`)
-          .orderBy(sql`(SELECT count(*) FROM jobs WHERE jobs.user_id = users.id) DESC`)
-          .limit(1);
-        if (primaryUser) {
-          await db.update(users).set({ publicProfileSlug: slug, publicProfileEnabled: true }).where(eq(users.id, primaryUser.id));
-          primaryUser.publicProfileSlug = slug;
-          primaryUser.publicProfileEnabled = true;
-          return primaryUser;
-        }
       }
     }
     
     return undefined;
+  }
+
+  async slugExists(slug: string, excludeUserId?: string): Promise<boolean> {
+    const conditions = [eq(users.publicProfileSlug, slug)];
+    if (excludeUserId) {
+      const result = await db.select({ id: users.id }).from(users).where(
+        and(eq(users.publicProfileSlug, slug), sql`${users.id} != ${excludeUserId}`)
+      );
+      return result.length > 0;
+    }
+    const result = await db.select({ id: users.id }).from(users).where(eq(users.publicProfileSlug, slug));
+    return result.length > 0;
   }
 
   async getUserByReferralCode(code: string): Promise<User | undefined> {

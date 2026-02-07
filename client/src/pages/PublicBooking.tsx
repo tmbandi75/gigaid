@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams } from "wouter";
+import { useState, useEffect } from "react";
+import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -173,14 +173,23 @@ export default function PublicBooking() {
     }
   };
 
+  const [, navigate] = useLocation();
+  const [isRedirecting, setIsRedirecting] = useState(false);
+
   const { data: profile, isLoading, error } = useQuery<PublicProfile>({
     queryKey: QUERY_KEYS.publicProfile(slug),
     queryFn: async () => {
       const res = await fetch(`/api/public/profile/${slug}`);
       if (!res.ok) throw new Error("Profile not found");
-      return res.json();
+      const data = await res.json();
+      if (data.redirect) {
+        setIsRedirecting(true);
+        navigate(`/book/${data.redirect}`, { replace: true });
+        return null as unknown as PublicProfile;
+      }
+      return data;
     },
-    enabled: !!slug,
+    enabled: !!slug && !isRedirecting,
   });
 
   const selectedDateStr = selectedDate 
@@ -337,7 +346,7 @@ export default function PublicBooking() {
 
   const monthYear = currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
-  if (isLoading) {
+  if (isLoading || isRedirecting) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
