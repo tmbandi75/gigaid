@@ -115,17 +115,23 @@ Systematic review across 9 categories to identify and fix Day-1 user experience 
 - **Empty State**: `BookingLinkEmptyState` component for Leads empty state with copy functionality
 - **Components**: Located in `client/src/components/booking-link/` (BookingLinkShare.tsx, BookingLinkEmptyState.tsx, index.ts)
 
-### Monetization Upgrade Path (February 2026)
-- **Approaching Limit Warnings**: `useApproachingLimit()` hook triggers at 80% usage threshold, renders `ApproachingLimitBanner` component
-  - Integrated in: JobForm (jobs.create), Messages (sms.two_way), BookingRequests (deposit.enforce), NotifyClientsPage (notifications.event_driven)
-- **Post-Success Nudges**: `usePostSuccessNudge()` hook triggers after successful actions when >70% of limit used, renders `PostSuccessNudgeModal`
-  - Integrated in: JobForm (job creation), InvoiceForm (invoice create/send), BookingRequests (remainder payment), LeadForm (price confirmation send)
-- **Stall-to-Upgrade Pipeline**: `useStallUpgrade()` hook queries `/api/stall-detections`, detects 3+ stalled items, shows targeted upgrade prompt
-  - Integrated in: TodaysGamePlanPage (banner + modal)
-  - Backend: GET `/api/stall-detections` returns unresolved `stall_detections` rows for authenticated user
-- **Capability Gating**: NotifyClientsPage enforces `notifications.event_driven` capability with `suggest_only` mode for Free plan (preview but not send)
-- **Analytics Events**: `approaching_limit_shown`, `post_success_nudge`, `stall_upgrade_prompt`, `upgrade_from_nudge` via PostHog
-- **Components**: Located in `client/src/components/upgrade/` and `client/src/hooks/`
+### Centralized Upgrade Orchestration (February 2026)
+- **Orchestrator Module**: `client/src/upgrade/` — single source of truth for all upgrade prompts, replacing scattered hooks
+  - `upgradeTypes.ts`: Type definitions (UpgradeTriggerType, UpgradeVariant, UpgradePromptPayload, etc.)
+  - `upgradeConfig.ts`: Thresholds (60/80/95%), cooldowns (24h per-trigger, 2/day global), monetizable moments per capability
+  - `upgradeState.ts`: Per-user localStorage state (cooldowns, A/B variant, dismiss tracking) scoped by userId
+  - `upgradeCopy.ts`: A/B variant messaging (roi/time/social) with capability-specific copy for each trigger type
+  - `useUpgradeOrchestrator.ts`: Central hook with maybeShowApproachingLimit, maybeShowPostSuccess, maybeShowStallPrompt
+  - `useStallSignals.ts`: Client-side stall counters + server API aggregation
+  - `UpgradeBanner.tsx`: Dismissible banner for 60/80% thresholds with progress bar
+  - `UpgradeNudgeModal.tsx`: Full modal for 95% critical, post-success, and stall prompts
+- **Threshold System**: Info banner at 60%, Warn banner at 80%, Critical modal at 95%
+- **A/B Variants**: Sticky per-user assignment (roi/time/social), each with tailored messaging per capability
+- **Cooldown System**: Per-trigger 24h cooldown + global 2-prompts-per-24h limiter, all scoped per userId in localStorage
+- **Stall Detection**: Client-side counters (manual_followup_repeat, missed_deposit, unpaid_invoice) + POST/GET `/api/stalls` server endpoints
+- **Integration Points**: JobForm, Messages, BookingRequests, InvoiceForm, LeadForm, TodaysGamePlanPage, NotifyClientsPage
+- **Analytics Events**: `upgrade_prompt_shown`, `upgrade_prompt_dismissed`, `upgrade_cta_clicked`, `upgrade_checkout_started` via PostHog with full properties
+- **Legacy Hooks**: Old `useApproachingLimit`, `usePostSuccessNudge`, `useStallUpgrade` remain in `client/src/hooks/` for backward compatibility
 
 ### Get Paid Today Product Roadmap (February 2026)
 - **Payday Onboarding**: Forced 6-step stepper for new users (Stripe Connect, booking link, deposits, templates, services, completion). Only triggers for users with no existing jobs/invoices. Route: `/payday-onboarding`.
