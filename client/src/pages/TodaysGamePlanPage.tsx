@@ -214,14 +214,8 @@ export default function TodaysGamePlanPage() {
 
   const gamePlanLoaded = !isLoading && !!data;
 
-  const { data: dashboardSummary } = useQuery<{ totalJobs: number; completedJobs: number }>({
+  const { data: dashboardSummary } = useQuery<{ totalJobs: number; completedJobs: number; totalInvoices: number }>({
     queryKey: QUERY_KEYS.dashboardSummary(),
-    staleTime: 60000,
-    enabled: gamePlanLoaded,
-  });
-
-  const { data: invoices } = useQuery<{ id: string }[]>({
-    queryKey: QUERY_KEYS.invoices(),
     staleTime: 60000,
     enabled: gamePlanLoaded,
   });
@@ -253,7 +247,7 @@ export default function TodaysGamePlanPage() {
 
   const servicesCount = profile?.servicesCount || 0;
   const totalJobs = dashboardSummary?.totalJobs || 0;
-  const totalInvoices = invoices?.length || 0;
+  const totalInvoices = dashboardSummary?.totalInvoices || 0;
 
   type FirstTimeUserState = "no_services" | "no_jobs" | "no_invoices" | "normal";
   
@@ -792,28 +786,30 @@ export default function TodaysGamePlanPage() {
         )}
       </motion.div>
 
-      <Dialog open={showVoiceNotes} onOpenChange={setShowVoiceNotes}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <div className="flex items-center justify-between gap-2">
-              <DialogTitle className="flex items-center gap-2">
-                <Mic className="h-5 w-5" />
-                Talk It In
-              </DialogTitle>
-              <Button 
-                variant="ghost" 
-                onClick={() => { setShowVoiceNotes(false); navigate("/voice-notes"); }}
-                data-testid="link-view-voice-history"
-              >
-                View History
-              </Button>
-            </div>
-          </DialogHeader>
-          <VoiceNoteSummarizer 
-            onNoteSaved={() => setShowVoiceNotes(false)}
-          />
-        </DialogContent>
-      </Dialog>
+      {showVoiceNotes && (
+        <Dialog open={showVoiceNotes} onOpenChange={setShowVoiceNotes}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <div className="flex items-center justify-between gap-2">
+                <DialogTitle className="flex items-center gap-2">
+                  <Mic className="h-5 w-5" />
+                  Talk It In
+                </DialogTitle>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => { setShowVoiceNotes(false); navigate("/voice-notes"); }}
+                  data-testid="link-view-voice-history"
+                >
+                  View History
+                </Button>
+              </div>
+            </DialogHeader>
+            <VoiceNoteSummarizer 
+              onNoteSaved={() => setShowVoiceNotes(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
 
       <AddServiceDialog 
         open={showAddService} 

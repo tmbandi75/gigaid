@@ -18,7 +18,10 @@ interface CoachingRendererProps {
 interface DashboardSummary {
   totalLeads: number;
   totalJobs: number;
+  completedJobs: number;
   totalEarnings: number;
+  totalInvoices: number;
+  sentInvoices: number;
 }
 
 interface Profile {
@@ -39,36 +42,31 @@ export function CoachingRenderer({ screen, placement = 'header' }: CoachingRende
 
   const { data: dashboard, isLoading: dashboardLoading } = useQuery<DashboardSummary>({
     queryKey: ['/api/dashboard/summary'],
+    staleTime: 60000,
   });
 
   const { data: profile, isLoading: profileLoading } = useQuery<Profile>({
     queryKey: ['/api/profile'],
+    staleTime: 300000,
   });
 
   const { data: onboarding } = useQuery<OnboardingStatus>({
     queryKey: ['/api/onboarding'],
+    staleTime: 300000,
   });
 
-  const { data: jobs, isLoading: jobsLoading } = useQuery<{ status: string }[]>({
-    queryKey: ['/api/jobs'],
-  });
-
-  const { data: invoices, isLoading: invoicesLoading } = useQuery<{ status: string }[]>({
-    queryKey: ['/api/invoices'],
-  });
-
-  const isLoading = dashboardLoading || profileLoading || jobsLoading || invoicesLoading;
+  const isLoading = dashboardLoading || profileLoading;
 
   const appState: AppState = {
     services: { count: profile?.services?.length ?? 0 },
     jobs: { 
       count: dashboard?.totalJobs ?? 0,
-      completedCount: jobs?.filter(j => j.status === 'completed').length ?? 0
+      completedCount: dashboard?.completedJobs ?? 0
     },
     leads: { count: dashboard?.totalLeads ?? 0 },
     invoices: { 
-      count: invoices?.length ?? 0,
-      sentCount: invoices?.filter(i => i.status === 'sent' || i.status === 'paid').length ?? 0
+      count: dashboard?.totalInvoices ?? 0,
+      sentCount: dashboard?.sentInvoices ?? 0
     },
     messages: { count: 0 },
     bookingLinkShared: profile?.bookingLinkShared ?? (onboarding?.step ?? 0) >= 3

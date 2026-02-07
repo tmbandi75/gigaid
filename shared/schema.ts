@@ -873,6 +873,8 @@ export interface DashboardSummary {
   totalLeads: number;
   newLeads: number;
   totalEarnings: number;
+  totalInvoices: number;
+  sentInvoices: number;
   upcomingJobs: Job[];
   recentLeads: Lead[];
   pendingReminders?: number;

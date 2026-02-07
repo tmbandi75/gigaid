@@ -101,11 +101,13 @@ const routeLabels: Record<string, { label: string; parent?: string }> = {
 function MobileHeader() {
   const { data: summary } = useQuery<DashboardSummary>({
     queryKey: QUERY_KEYS.dashboardSummary(),
+    staleTime: 60000,
   });
 
   const { data: unreadSms } = useQuery<UnreadCount>({
     queryKey: QUERY_KEYS.smsUnreadCount(),
-    refetchInterval: 10000,
+    refetchInterval: 30000,
+    staleTime: 15000,
   });
 
   return (
@@ -180,15 +182,18 @@ function DesktopHeader() {
 
   const { data: summary } = useQuery<DashboardSummary>({
     queryKey: QUERY_KEYS.dashboardSummary(),
+    staleTime: 60000,
   });
 
   const { data: profile } = useQuery<UserProfile>({
     queryKey: QUERY_KEYS.profile(),
+    staleTime: 300000,
   });
 
   const { data: unreadSms } = useQuery<UnreadCount>({
     queryKey: QUERY_KEYS.smsUnreadCount(),
-    refetchInterval: 10000,
+    refetchInterval: 30000,
+    staleTime: 15000,
   });
 
   const currentRoute = routeLabels[location] || { label: "Page" };

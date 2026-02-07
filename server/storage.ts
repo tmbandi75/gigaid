@@ -1652,6 +1652,8 @@ export class MemStorage implements IStorage {
       totalLeads: leads.length,
       newLeads: leads.filter(l => l.status === "new").length,
       totalEarnings,
+      totalInvoices: invoices.length,
+      sentInvoices: invoices.filter(i => i.status === "sent" || i.status === "paid").length,
       upcomingJobs,
       recentLeads,
       pendingReminders,

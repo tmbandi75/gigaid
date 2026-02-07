@@ -239,21 +239,19 @@ function AuthenticatedApp() {
 function usePaydayOnboardingRequired() {
   const { data: profile, isLoading: profileLoading } = useQuery<{ paydayOnboardingCompleted?: boolean }>({
     queryKey: ['/api/profile'],
+    staleTime: 300000,
   });
   const needsCheck = !!profile && !profile.paydayOnboardingCompleted;
-  const { data: jobsData, isLoading: jobsLoading } = useQuery<any[]>({
-    queryKey: ['/api/jobs'],
+  const { data: hasData, isLoading: hasDataLoading } = useQuery<{ hasJobs: boolean; hasInvoices: boolean }>({
+    queryKey: ['/api/has-data'],
     enabled: needsCheck,
-  });
-  const { data: invoicesData, isLoading: invoicesLoading } = useQuery<any[]>({
-    queryKey: ['/api/invoices'],
-    enabled: needsCheck,
+    staleTime: 300000,
   });
 
   if (profileLoading) return { loading: true, required: false };
   if (!profile || profile.paydayOnboardingCompleted) return { loading: false, required: false };
-  if (jobsLoading || invoicesLoading) return { loading: true, required: false };
-  const hasExistingData = (jobsData && jobsData.length > 0) || (invoicesData && invoicesData.length > 0);
+  if (hasDataLoading) return { loading: true, required: false };
+  const hasExistingData = hasData?.hasJobs || hasData?.hasInvoices || false;
   return { loading: false, required: !hasExistingData };
 }
 

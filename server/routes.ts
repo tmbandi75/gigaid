@@ -607,6 +607,18 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/has-data", isAuthenticated, async (req, res) => {
+    try {
+      const [jobs, invoices] = await Promise.all([
+        storage.getJobs((req as any).userId),
+        storage.getInvoices((req as any).userId),
+      ]);
+      res.json({ hasJobs: jobs.length > 0, hasInvoices: invoices.length > 0 });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to check data" });
+    }
+  });
+
   app.get("/api/dashboard/summary", isAuthenticated, async (req, res) => {
     try {
       const summary = await storage.getDashboardSummary((req as any).userId);

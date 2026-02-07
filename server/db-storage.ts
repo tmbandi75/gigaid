@@ -650,6 +650,8 @@ export class DatabaseStorage implements IStorage {
       totalLeads: allLeads.length,
       newLeads: allLeads.filter(l => l.status === "new").length,
       totalEarnings,
+      totalInvoices: allInvoices.length,
+      sentInvoices: allInvoices.filter(i => i.status === "sent" || i.status === "paid").length,
       upcomingJobs,
       recentLeads,
       pendingReminders,

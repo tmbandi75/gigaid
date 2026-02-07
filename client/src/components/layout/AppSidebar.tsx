@@ -95,11 +95,13 @@ export function AppSidebar() {
 
   const { data: profile } = useQuery<UserProfile>({
     queryKey: QUERY_KEYS.profile(),
+    staleTime: 300000,
   });
 
   const { data: unreadSmsData } = useQuery<{ count: number }>({
     queryKey: QUERY_KEYS.smsUnreadCount(),
     refetchInterval: 30000,
+    staleTime: 15000,
   });
 
   const { data: adminStatus } = useQuery<{ isAdmin: boolean; role?: string }>({
