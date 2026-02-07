@@ -41,6 +41,7 @@ import {
 import { PhoneInput } from "@/components/ui/phone-input";
 import { BioEditor } from "@/components/settings/BioEditor";
 import { ServicesMultiSelect } from "@/components/ui/services-multi-select";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 interface UserProfile {
   id: string;
@@ -108,11 +109,11 @@ export default function Profile() {
   }, []);
 
   const { data: profile, isLoading } = useQuery<UserProfile>({
-    queryKey: ["/api/profile"],
+    queryKey: QUERY_KEYS.profile(),
   });
 
   const { data: subscription } = useQuery<{ plan: string; hasSubscription: boolean }>({
-    queryKey: ["/api/subscription/status"],
+    queryKey: QUERY_KEYS.subscriptionStatus(),
     retry: 1,
     staleTime: 60000,
   });
@@ -162,7 +163,7 @@ export default function Profile() {
     async (data: Partial<{ name: string; email: string; phone: string; photo: string; businessName: string; bio: string; serviceArea: string; services: string[] }>) => {
       return apiFetch("/api/profile", { method: "PATCH", body: JSON.stringify(data) });
     },
-    [["/api/profile"]],
+    [QUERY_KEYS.profile()],
     {
       onSuccess: () => {
         toast({ title: "Profile updated successfully" });

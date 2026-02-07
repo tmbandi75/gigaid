@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 function trackEvent(eventName: string, properties?: Record<string, unknown>) {
   if (typeof window !== 'undefined' && (window as { posthog?: { capture: (event: string, props?: Record<string, unknown>) => void } }).posthog) {
@@ -15,7 +16,7 @@ export function BookingLinkEmptyState() {
   const [copied, setCopied] = useState(false);
 
   const { data } = useQuery<{ bookingLink: string | null }>({
-    queryKey: ["/api/booking/link"],
+    queryKey: QUERY_KEYS.bookingLink(),
   });
 
   const bookingLink = data?.bookingLink;

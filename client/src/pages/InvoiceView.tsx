@@ -169,7 +169,7 @@ export default function InvoiceView() {
   });
 
   const { data: payments = [] } = useQuery<JobPayment[]>({
-    queryKey: [`/api/invoices/${id}/payments`],
+    queryKey: QUERY_KEYS.invoicePayments(id!),
     enabled: !!id,
   });
 
@@ -189,7 +189,7 @@ export default function InvoiceView() {
         `/api/invoices/${id}/send`, { method: "POST", body: JSON.stringify({ sendEmail, sendSms }) }
       );
     },
-    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), ["/api/dashboard/game-plan"]],
+    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), QUERY_KEYS.dashboardGamePlan()],
     {
       onSuccess: (data) => {
         setShowSendDialog(false);
@@ -218,7 +218,7 @@ export default function InvoiceView() {
     async (paymentMethod: string) => {
       return apiFetch(`/api/invoices/${id}/mark-paid`, { method: "POST", body: JSON.stringify({ paymentMethod }) });
     },
-    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), [`/api/invoices/${id}/payments`], ["/api/dashboard/summary"], ["/api/dashboard/game-plan"], ["/api/next-actions"]],
+    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), [`/api/invoices/${id}/payments`], QUERY_KEYS.dashboardSummary(), QUERY_KEYS.dashboardGamePlan(), QUERY_KEYS.nextActions()],
     {
       onSuccess: async () => {
         await celebrate({
@@ -240,7 +240,7 @@ export default function InvoiceView() {
     async () => {
       return apiFetch(`/api/invoices/${id}`, { method: "DELETE" });
     },
-    [QUERY_KEYS.invoices(), ["/api/dashboard/game-plan"]],
+    [QUERY_KEYS.invoices(), QUERY_KEYS.dashboardGamePlan()],
     {
       onSuccess: () => {
         toast({ title: "Invoice deleted" });
@@ -256,7 +256,7 @@ export default function InvoiceView() {
     async () => {
       return apiFetch(`/api/invoices/${id}/revert-paid`, { method: "POST" });
     },
-    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), [`/api/invoices/${id}/payments`], ["/api/dashboard/summary"], ["/api/dashboard/game-plan"], ["/api/next-actions"]],
+    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), [`/api/invoices/${id}/payments`], QUERY_KEYS.dashboardSummary(), QUERY_KEYS.dashboardGamePlan(), QUERY_KEYS.nextActions()],
     {
       onSuccess: () => {
         toast({ title: "Payment reverted - invoice is now pending" });
@@ -577,7 +577,7 @@ export default function InvoiceView() {
           payments={payments}
           onPaymentConfirmed={() => {
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.invoice(id!) });
-            queryClient.invalidateQueries({ queryKey: [`/api/invoices/${id}/payments`] });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.invoicePayments(id!) });
           }}
         />
 

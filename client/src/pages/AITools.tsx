@@ -20,6 +20,7 @@ import { ReviewDraftGenerator } from "@/components/ai/ReviewDraftGenerator";
 import { ClientTags } from "@/components/ai/ClientTags";
 import { EstimationTool } from "@/components/ai/EstimationTool";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { 
   Sparkles, 
   Calendar, 
@@ -55,7 +56,7 @@ export default function AITools() {
   const isMobile = useIsMobile();
 
   const { data: summary } = useQuery<DashboardSummary>({
-    queryKey: ["/api/dashboard/summary"],
+    queryKey: QUERY_KEYS.dashboardSummary(),
   });
 
   // Advanced features unlock after first completed job, invoice sent, or payment collected

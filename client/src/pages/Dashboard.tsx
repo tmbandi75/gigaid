@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import type { DashboardSummary, Job, Lead } from "@shared/schema";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 interface OnboardingStatus {
   completed: boolean;
@@ -97,15 +98,15 @@ export default function Dashboard() {
   useRecentActivityFeedback();
 
   const { data: summary, isLoading } = useQuery<DashboardSummary>({
-    queryKey: ["/api/dashboard/summary"],
+    queryKey: QUERY_KEYS.dashboardSummary(),
   });
 
   const { data: onboarding } = useQuery<OnboardingStatus>({
-    queryKey: ["/api/onboarding"],
+    queryKey: QUERY_KEYS.onboarding(),
   });
 
   const { data: profile } = useQuery<UserProfile>({
-    queryKey: ["/api/profile"],
+    queryKey: QUERY_KEYS.profile(),
   });
 
   useEffect(() => {

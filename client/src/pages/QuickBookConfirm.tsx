@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Calendar, MapPin, DollarSign, Clock, User, Shield, CheckCircle, Loader2, ArrowRight } from "lucide-react";
 import { SupportTicketForm } from "@/components/SupportTicketForm";
 import type { ParsedJobFields } from "@shared/schema";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 interface DraftPublicData {
   id: string;
@@ -25,7 +26,7 @@ export default function QuickBookConfirm() {
   const [confirmed, setConfirmed] = useState(false);
 
   const { data: draft, isLoading, error } = useQuery<DraftPublicData>({
-    queryKey: ["/api/public/quickbook", params?.token],
+    queryKey: QUERY_KEYS.publicQuickbook(params?.token),
     queryFn: async () => {
       const res = await fetch(`/api/public/quickbook/${params?.token}`);
       if (!res.ok) {

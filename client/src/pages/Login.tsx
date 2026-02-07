@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { isNativePlatform } from "@/lib/platform";
 import { queryClient } from "@/lib/queryClient";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 
 type AuthMode = "signin" | "signup" | "forgot";
@@ -79,7 +80,7 @@ export default function Login() {
     
     if (isExplicitNavigation()) {
       clearAuthToken();
-      queryClient.setQueryData(["/api/auth/user"], null);
+      queryClient.setQueryData(QUERY_KEYS.authUser(), null);
     }
   }, []);
 

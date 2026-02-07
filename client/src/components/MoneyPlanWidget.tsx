@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useLocation } from "wouter";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import {
   DollarSign,
   ChevronRight,
@@ -53,11 +54,11 @@ export function MoneyPlanWidget() {
   const [, navigate] = useLocation();
 
   const { data: flag } = useQuery<FeatureFlag>({
-    queryKey: ["/api/feature-flags", "today_money_plan"],
+    queryKey: QUERY_KEYS.featureFlags("today_money_plan"),
   });
 
   const { data: items, isLoading, refetch } = useQuery<ActionQueueItem[]>({
-    queryKey: ["/api/action-queue"],
+    queryKey: QUERY_KEYS.actionQueue(),
     enabled: flag?.enabled === true,
   });
 
@@ -65,14 +66,14 @@ export function MoneyPlanWidget() {
     async () => {
       return apiFetch("/api/action-queue/generate", { method: "POST" });
     },
-    [["/api/action-queue"]],
+    [QUERY_KEYS.actionQueue()],
   );
 
   const markDoneMutation = useApiMutation(
     async (id: string) => {
       return apiFetch(`/api/action-queue/${id}/done`, { method: "POST" });
     },
-    [["/api/action-queue"]],
+    [QUERY_KEYS.actionQueue()],
   );
 
   if (!flag?.enabled) {

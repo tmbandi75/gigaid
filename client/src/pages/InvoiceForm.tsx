@@ -116,7 +116,7 @@ export default function InvoiceForm() {
       };
       return apiFetch("/api/invoices", { method: "POST", body: JSON.stringify(payload) });
     },
-    [QUERY_KEYS.invoices(), ["/api/dashboard/summary"], ["/api/dashboard/game-plan"]],
+    [QUERY_KEYS.invoices(), QUERY_KEYS.dashboardSummary(), QUERY_KEYS.dashboardGamePlan()],
     {
       onSuccess: () => {
         toast({ title: "Invoice created successfully" });
@@ -139,7 +139,7 @@ export default function InvoiceForm() {
       };
       return apiFetch(`/api/invoices/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
     },
-    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), ["/api/dashboard/game-plan"]],
+    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), QUERY_KEYS.dashboardGamePlan()],
     {
       onSuccess: () => {
         toast({ title: "Invoice updated successfully" });
@@ -155,7 +155,7 @@ export default function InvoiceForm() {
     async ({ sendEmail, sendSms }: { sendEmail: boolean; sendSms: boolean }) => {
       return apiFetch(`/api/invoices/${id}/send`, { method: "POST", body: JSON.stringify({ sendEmail, sendSms }) });
     },
-    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), ["/api/dashboard/game-plan"]],
+    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), QUERY_KEYS.dashboardGamePlan()],
     {
       onSuccess: () => {
         setShowSendDialog(false);
@@ -204,7 +204,7 @@ export default function InvoiceForm() {
     async (paymentMethod: string) => {
       return apiFetch(`/api/invoices/${id}/mark-paid`, { method: "POST", body: JSON.stringify({ paymentMethod }) });
     },
-    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), ["/api/dashboard/summary"], ["/api/dashboard/game-plan"], ["/api/next-actions"]],
+    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), QUERY_KEYS.dashboardSummary(), QUERY_KEYS.dashboardGamePlan(), QUERY_KEYS.nextActions()],
     {
       onSuccess: () => {
         toast({ title: "Invoice marked as paid" });

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
 
-export function useApiMutation<TData = unknown, TVars = unknown>(
+export function useApiMutation<TData = unknown, TVars = void>(
   fn: (vars: TVars) => Promise<TData>,
   invalidate: readonly (readonly unknown[])[],
   options?: Omit<UseMutationOptions<TData, Error, TVars>, "mutationFn">

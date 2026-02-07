@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { 
   HelpCircle, 
   MessageCircle, 
@@ -602,7 +603,7 @@ export default function HelpSupport() {
   const [showTickets, setShowTickets] = useState(false);
 
   const { data: ticketsData, isLoading: ticketsLoading } = useQuery<{ tickets: SupportTicket[] }>({
-    queryKey: ["/api/support/tickets"],
+    queryKey: QUERY_KEYS.supportTickets(),
     enabled: showTickets,
   });
 
@@ -613,7 +614,7 @@ export default function HelpSupport() {
         body: JSON.stringify(data),
       });
     },
-    [["/api/support/tickets"]],
+    [QUERY_KEYS.supportTickets()],
     {
       onSuccess: () => {
         toast({ title: "Support ticket created! We'll respond as soon as possible." });

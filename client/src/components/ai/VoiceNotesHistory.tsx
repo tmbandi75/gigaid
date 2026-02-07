@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,18 +25,18 @@ export function VoiceNotesHistory({ onSelectNote }: VoiceNotesHistoryProps) {
   const { toast } = useToast();
 
   const { data: notes = [], isLoading } = useQuery<VoiceNote[]>({
-    queryKey: ["/api/voice-notes"],
+    queryKey: QUERY_KEYS.voiceNotes(),
   });
 
   const { data: jobs = [] } = useQuery<Job[]>({
-    queryKey: ["/api/jobs"],
+    queryKey: QUERY_KEYS.jobs(),
   });
 
   const deleteMutation = useApiMutation(
     async (id: string) => {
       await apiFetch(`/api/voice-notes/${id}`, { method: "DELETE" });
     },
-    [["/api/voice-notes"]],
+    [QUERY_KEYS.voiceNotes()],
     {
       onSuccess: () => {
         toast({ title: "Voice note deleted" });

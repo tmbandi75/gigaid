@@ -41,7 +41,7 @@ export default function Reviews() {
   const [filter, setFilter] = useState<"all" | "pending" | "responded">("all");
 
   const { data: reviews = [], isLoading } = useQuery<Review[]>({
-    queryKey: ["/api/reviews"],
+    queryKey: QUERY_KEYS.reviews(),
   });
 
   const respondMutation = useApiMutation(

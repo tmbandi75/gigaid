@@ -10,6 +10,7 @@ import { useLocation } from "wouter";
 import { useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useQuery } from "@tanstack/react-query";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 interface PlanFeature {
   text: string;
@@ -130,7 +131,7 @@ export default function PricingPage() {
 
   // Use subscription status API as single source of truth for plan
   const { data: subscription, isLoading: isSubscriptionLoading, isError: isSubscriptionError } = useQuery<{ plan: string; hasSubscription: boolean }>({
-    queryKey: ["/api/subscription/status"],
+    queryKey: QUERY_KEYS.subscriptionStatus(),
     retry: 1,
     staleTime: 60000,
   });

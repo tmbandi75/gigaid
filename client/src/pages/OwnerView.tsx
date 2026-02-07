@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import {
   DollarSign,
   Briefcase,
@@ -182,7 +183,7 @@ export default function OwnerView() {
   const isMobile = useIsMobile();
 
   const { data: metrics, isLoading, error } = useQuery<OwnerMetrics>({
-    queryKey: ["/api/owner/metrics"],
+    queryKey: QUERY_KEYS.ownerMetrics(),
   });
 
   if (isLoading) {

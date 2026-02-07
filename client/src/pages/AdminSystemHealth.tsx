@@ -20,6 +20,7 @@ import {
   Server,
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 interface HealthCheck {
   status: "healthy" | "degraded" | "down";
@@ -88,17 +89,17 @@ function ServiceIcon({ service }: { service: string }) {
 
 export default function AdminSystemHealth() {
   const { data: status, isLoading: statusLoading, refetch: refetchStatus } = useQuery<SystemStatus>({
-    queryKey: ["/api/admin/system/status"],
+    queryKey: QUERY_KEYS.adminSystemStatus(),
     refetchInterval: 30000,
   });
 
   const { data: jobs, isLoading: jobsLoading, refetch: refetchJobs } = useQuery<JobsStatus>({
-    queryKey: ["/api/admin/system/jobs"],
+    queryKey: QUERY_KEYS.adminSystemJobs(),
     refetchInterval: 60000,
   });
 
   const { data: errors, isLoading: errorsLoading, refetch: refetchErrors } = useQuery<ErrorRates>({
-    queryKey: ["/api/admin/system/errors"],
+    queryKey: QUERY_KEYS.adminSystemErrors(),
     refetchInterval: 60000,
   });
 
@@ -106,7 +107,7 @@ export default function AdminSystemHealth() {
     refetchStatus();
     refetchJobs();
     refetchErrors();
-    queryClient.invalidateQueries({ queryKey: ["/api/admin/system"] });
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.adminSystem() });
   };
 
   return (

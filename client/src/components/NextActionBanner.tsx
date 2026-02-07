@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { Sparkles, X, Zap } from "lucide-react";
 
 interface NextAction {
@@ -30,7 +31,7 @@ interface NextActionBannerProps {
 
 export function NextActionBanner({ entityType, entityId, onActionClick }: NextActionBannerProps) {
   const { data: action } = useQuery<NextAction | null>({
-    queryKey: ["/api/next-actions/entity", entityType, entityId],
+    queryKey: QUERY_KEYS.nextActionsEntity(entityType, entityId),
     queryFn: async () => {
       const res = await fetch(`/api/next-actions/entity/${entityType}/${entityId}`, {
         credentials: "include",
@@ -43,12 +44,12 @@ export function NextActionBanner({ entityType, entityId, onActionClick }: NextAc
 
   const actMutation = useApiMutation(
     (id: string) => apiFetch(`/api/next-actions/${id}/act`, { method: "POST" }),
-    [["/api/next-actions/entity", entityType, entityId], ["/api/next-actions"]],
+    [QUERY_KEYS.nextActionsEntity(entityType, entityId), QUERY_KEYS.nextActions()],
   );
 
   const dismissMutation = useApiMutation(
     (id: string) => apiFetch(`/api/next-actions/${id}/dismiss`, { method: "POST" }),
-    [["/api/next-actions/entity", entityType, entityId], ["/api/next-actions"]],
+    [QUERY_KEYS.nextActionsEntity(entityType, entityId), QUERY_KEYS.nextActions()],
   );
 
   if (!action) {

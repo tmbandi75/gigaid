@@ -71,6 +71,7 @@ import { SettingsSection } from "@/components/settings/SettingsSection";
 import { isEmailPasswordUser } from "@/lib/firebase";
 import type { Referral, WeeklyAvailability, FeatureFlag } from "@shared/schema";
 import { useFeatureFlag, useUpdateFeatureFlag } from "@/hooks/use-nudges";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 interface ReferralData {
   referralCode: string;
@@ -148,15 +149,15 @@ export default function Settings() {
   const updateFeatureFlag = useUpdateFeatureFlag();
 
   const { data: profile } = useQuery<any>({
-    queryKey: ["/api/profile"],
+    queryKey: QUERY_KEYS.profile(),
   });
 
   const { data: onboardingStatus, isLoading: isOnboardingLoading } = useQuery<OnboardingStatus>({
-    queryKey: ["/api/onboarding"],
+    queryKey: QUERY_KEYS.onboarding(),
   });
 
   const { data: subscription, isLoading: isSubscriptionLoading, isError: isSubscriptionError } = useQuery<{ plan: string; hasSubscription: boolean }>({
-    queryKey: ["/api/subscription/status"],
+    queryKey: QUERY_KEYS.subscriptionStatus(),
     retry: 1,
     staleTime: 60000,
   });
@@ -177,7 +178,7 @@ export default function Settings() {
   const needsSetup = !isOnboardingLoading && !isMoneyProtectionReady;
 
   const { data: paymentMethods } = useQuery<PaymentMethod[]>({
-    queryKey: ["/api/payment-methods"],
+    queryKey: QUERY_KEYS.paymentMethods(),
   });
 
   const savedStripeEnabled = paymentMethods?.some(
@@ -191,7 +192,7 @@ export default function Settings() {
   }, [savedStripeEnabled]);
 
   const { data: stripeStatus } = useQuery<{ connected: boolean; accountId?: string }>({
-    queryKey: ["/api/stripe/connect/status"],
+    queryKey: QUERY_KEYS.stripeConnectStatus(),
     enabled: stripeEnabled,
   });
 
@@ -239,7 +240,7 @@ export default function Settings() {
 
   const updateMutation = useApiMutation(
     (data: any) => apiFetch("/api/settings", { method: "PATCH", body: JSON.stringify(data) }),
-    [["/api/profile"]],
+    [QUERY_KEYS.profile()],
     {
       onSuccess: () => {
         toast({ title: "Settings saved" });
@@ -275,7 +276,7 @@ export default function Settings() {
         step: 8
       }) });
     },
-    [["/api/onboarding"], ["/api/profile"]],
+    [QUERY_KEYS.onboarding(), QUERY_KEYS.profile()],
     {
       onSuccess: () => {
         setShowQuickSetup(false);

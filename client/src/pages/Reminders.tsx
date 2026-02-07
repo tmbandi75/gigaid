@@ -61,7 +61,7 @@ export default function Reminders() {
   });
 
   const { data: reminders = [], isLoading } = useQuery<Reminder[]>({
-    queryKey: ["/api/reminders"],
+    queryKey: QUERY_KEYS.reminders(),
   });
 
   const createMutation = useApiMutation(
@@ -70,7 +70,7 @@ export default function Reminders() {
         method: "POST",
         body: JSON.stringify(data),
       }),
-    [QUERY_KEYS.reminders(), ["/api/dashboard/game-plan"]],
+    [QUERY_KEYS.reminders(), QUERY_KEYS.dashboardGamePlan()],
     {
       onSuccess: () => {
         setIsDialogOpen(false);
@@ -86,7 +86,7 @@ export default function Reminders() {
   const deleteMutation = useApiMutation(
     (id: string) =>
       apiFetch(`/api/reminders/${id}`, { method: "DELETE" }),
-    [QUERY_KEYS.reminders(), ["/api/dashboard/game-plan"]],
+    [QUERY_KEYS.reminders(), QUERY_KEYS.dashboardGamePlan()],
     {
       onSuccess: () => {
         toast({ title: "Reminder deleted" });

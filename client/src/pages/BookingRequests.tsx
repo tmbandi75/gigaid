@@ -145,14 +145,14 @@ export default function BookingRequests() {
   };
 
   const { data: bookings, isLoading } = useQuery<BookingRequest[]>({
-    queryKey: ["/api/booking-requests"],
+    queryKey: QUERY_KEYS.bookingRequests(),
   });
 
   const recordRemainderPaymentMutation = useApiMutation(
     async ({ bookingId, paymentMethod, notes }: { bookingId: number; paymentMethod: string; notes: string }) => {
       return apiFetch(`/api/bookings/${bookingId}/record-remainder-payment`, { method: "POST", body: JSON.stringify({ paymentMethod, notes }) });
     },
-    [QUERY_KEYS.bookingRequests(), ["/api/dashboard/game-plan"], ["/api/dashboard/summary"]],
+    [QUERY_KEYS.bookingRequests(), QUERY_KEYS.dashboardGamePlan(), QUERY_KEYS.dashboardSummary()],
     {
       onSuccess: () => {
         toast({ title: "Payment recorded", description: "The remainder payment has been marked as paid." });

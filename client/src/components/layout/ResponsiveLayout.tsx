@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -99,11 +100,11 @@ const routeLabels: Record<string, { label: string; parent?: string }> = {
 
 function MobileHeader() {
   const { data: summary } = useQuery<DashboardSummary>({
-    queryKey: ["/api/dashboard/summary"],
+    queryKey: QUERY_KEYS.dashboardSummary(),
   });
 
   const { data: unreadSms } = useQuery<UnreadCount>({
-    queryKey: ["/api/sms/unread-count"],
+    queryKey: QUERY_KEYS.smsUnreadCount(),
     refetchInterval: 10000,
   });
 
@@ -178,15 +179,15 @@ function DesktopHeader() {
   const { logout } = useAuth();
 
   const { data: summary } = useQuery<DashboardSummary>({
-    queryKey: ["/api/dashboard/summary"],
+    queryKey: QUERY_KEYS.dashboardSummary(),
   });
 
   const { data: profile } = useQuery<UserProfile>({
-    queryKey: ["/api/profile"],
+    queryKey: QUERY_KEYS.profile(),
   });
 
   const { data: unreadSms } = useQuery<UnreadCount>({
-    queryKey: ["/api/sms/unread-count"],
+    queryKey: QUERY_KEYS.smsUnreadCount(),
     refetchInterval: 10000,
   });
 

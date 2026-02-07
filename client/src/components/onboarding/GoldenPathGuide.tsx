@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { X, ArrowRight, Briefcase, FileText, Shield } from "lucide-react";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 interface UserProfile {
   firstPaidBookingAt: string | null;
@@ -54,11 +55,11 @@ export function GoldenPathGuide({ onNavigate }: GoldenPathGuideProps) {
   const [currentStep, setCurrentStep] = useState(0);
   
   const { data: profile } = useQuery<UserProfile>({
-    queryKey: ["/api/auth/user"],
+    queryKey: QUERY_KEYS.authUser(),
   });
   
   const { data: onboarding } = useQuery<OnboardingStatus>({
-    queryKey: ["/api/onboarding"],
+    queryKey: QUERY_KEYS.onboarding(),
   });
   
   useEffect(() => {

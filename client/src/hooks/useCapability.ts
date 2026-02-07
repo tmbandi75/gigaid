@@ -4,6 +4,7 @@ import { hasCapability, isDeveloper, getUserCapabilities } from "@shared/entitle
 import { useOptimisticCapability } from "@/contexts/OptimisticCapabilityContext";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 interface UserProfile {
   id: string;
@@ -38,7 +39,7 @@ export type NewCapability = 'jobs.create' | 'invoices.send' | 'leads.manage' | '
 
 export function useCapability() {
   const { data: user } = useQuery<UserProfile>({
-    queryKey: ["/api/profile"],
+    queryKey: QUERY_KEYS.profile(),
   });
   
   const { hasOptimisticCapability } = useOptimisticCapability();
@@ -97,7 +98,7 @@ export function useCapability() {
 
 export function useCapabilities() {
   return useQuery<CapabilitiesResponse>({
-    queryKey: ["/api/capabilities"],
+    queryKey: QUERY_KEYS.capabilities(),
     staleTime: 60000,
   });
 }
@@ -140,7 +141,7 @@ export function useCanPerform(capability: NewCapability) {
 export function useIncrementCapability() {
   return useApiMutation(
     async (capability: NewCapability) => apiFetch(`/api/capabilities/${capability}/increment`, { method: "POST" }),
-    [["/api/capabilities"]]
+    [QUERY_KEYS.capabilities()]
   );
 }
 

@@ -34,6 +34,7 @@ import { Button } from "@/components/ui/button";
 import { useDriveModeContext } from "@/components/drivemode/DriveModeProvider";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 interface UserProfile {
   id: string;
@@ -111,11 +112,11 @@ export default function More() {
   const isMobile = useIsMobile();
 
   const { data: profile } = useQuery<UserProfile>({
-    queryKey: ["/api/profile"],
+    queryKey: QUERY_KEYS.profile(),
   });
 
   const { data: subscription, isLoading: isSubscriptionLoading, isError: isSubscriptionError } = useQuery<{ plan: string; hasSubscription: boolean }>({
-    queryKey: ["/api/subscription/status"],
+    queryKey: QUERY_KEYS.subscriptionStatus(),
     retry: 1,
     staleTime: 60000,
   });

@@ -6,6 +6,7 @@ import { DollarSign, X, Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useLocation } from "wouter";
 import type { ReadyAction } from "@shared/schema";
 
@@ -175,7 +176,7 @@ export function IntentActionCard({ entityType, entityId }: IntentActionCardProps
   const [overrideAmount, setOverrideAmount] = useState<number | null>(null);
   
   const { data: action, isLoading } = useQuery<ReadyAction | null>({
-    queryKey: ["/api/ready-actions/entity", entityType, entityId],
+    queryKey: QUERY_KEYS.readyActionsEntity(entityType, entityId),
     queryFn: async () => {
       const res = await fetch(`/api/ready-actions/entity/${entityType}/${entityId}`);
       if (!res.ok) return null;
@@ -191,7 +192,7 @@ export function IntentActionCard({ entityType, entityId }: IntentActionCardProps
         body: JSON.stringify({ overrideAmount: params.overrideAmount }),
       });
     },
-    [["/api/ready-actions"], ["/api/invoices"]],
+    [QUERY_KEYS.readyActions(), QUERY_KEYS.invoices()],
     {
       onSuccess: (data: any) => {
         toast({
@@ -217,7 +218,7 @@ export function IntentActionCard({ entityType, entityId }: IntentActionCardProps
     async (actionId: string) => {
       return apiFetch(`/api/ready-actions/${actionId}/dismiss`, { method: "POST" });
     },
-    [["/api/ready-actions"], ["/api/dashboard/game-plan"]],
+    [QUERY_KEYS.readyActions(), QUERY_KEYS.dashboardGamePlan()],
   );
   
   if (isLoading || !action) {
@@ -340,7 +341,7 @@ export function IntentActionCard({ entityType, entityId }: IntentActionCardProps
 
 export function IntentActionsList() {
   const { data: actions, isLoading } = useQuery<ReadyAction[]>({
-    queryKey: ["/api/ready-actions"],
+    queryKey: QUERY_KEYS.readyActions(),
   });
   
   if (isLoading || !actions?.length) {
@@ -368,7 +369,7 @@ function IntentActionCardStandalone({ action }: { action: ReadyAction }) {
         body: JSON.stringify({ overrideAmount: params.overrideAmount }),
       });
     },
-    [["/api/ready-actions"], ["/api/invoices"]],
+    [QUERY_KEYS.readyActions(), QUERY_KEYS.invoices()],
     {
       onSuccess: (data: any) => {
         toast({
@@ -394,7 +395,7 @@ function IntentActionCardStandalone({ action }: { action: ReadyAction }) {
     async (actionId: string) => {
       return apiFetch(`/api/ready-actions/${actionId}/dismiss`, { method: "POST" });
     },
-    [["/api/ready-actions"], ["/api/dashboard/game-plan"]],
+    [QUERY_KEYS.readyActions(), QUERY_KEYS.dashboardGamePlan()],
   );
   
   const currentAmount = overrideAmount ?? action.prefilledAmount ?? 0;

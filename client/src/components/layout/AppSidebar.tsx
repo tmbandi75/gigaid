@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -93,23 +94,23 @@ export function AppSidebar() {
   const { logout } = useAuth();
 
   const { data: profile } = useQuery<UserProfile>({
-    queryKey: ["/api/profile"],
+    queryKey: QUERY_KEYS.profile(),
   });
 
   const { data: unreadSmsData } = useQuery<{ count: number }>({
-    queryKey: ["/api/sms/unread-count"],
+    queryKey: QUERY_KEYS.smsUnreadCount(),
     refetchInterval: 30000,
   });
 
   const { data: adminStatus } = useQuery<{ isAdmin: boolean; role?: string }>({
-    queryKey: ["/api/admin/status"],
+    queryKey: QUERY_KEYS.adminStatus(),
     retry: false,
     staleTime: 60000, // Re-check every minute
     refetchOnWindowFocus: true,
   });
 
   const { data: subscription } = useQuery<{ plan: string; hasSubscription: boolean }>({
-    queryKey: ["/api/subscription/status"],
+    queryKey: QUERY_KEYS.subscriptionStatus(),
     retry: 1,
     staleTime: 60000,
   });

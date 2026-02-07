@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { MessageSquare, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import type { SmsMessage } from "@shared/schema";
 
 interface LeadSmsConversationProps {
@@ -55,7 +56,7 @@ function SmsMessageBubble({ message }: { message: SmsMessage }) {
 
 export function LeadSmsConversation({ leadId, clientPhone, clientName }: LeadSmsConversationProps) {
   const { data: messages = [], isLoading } = useQuery<SmsMessage[]>({
-    queryKey: ["/api/leads", leadId, "sms-messages"],
+    queryKey: QUERY_KEYS.leadSmsMessages(leadId),
     enabled: !!clientPhone,
   });
 

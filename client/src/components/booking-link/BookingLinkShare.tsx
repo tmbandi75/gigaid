@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Copy, Share2, Link2, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 type BookingLinkShareProps = {
   variant: "primary" | "inline" | "compact";
@@ -21,7 +22,7 @@ export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
   const [copied, setCopied] = useState(false);
 
   const { data } = useQuery<{ bookingLink: string | null; servicesCount: number }>({
-    queryKey: ["/api/booking/link"],
+    queryKey: QUERY_KEYS.bookingLink(),
   });
 
   const bookingLink = data?.bookingLink;

@@ -77,12 +77,12 @@ export default function LeadSummary() {
   const isMobile = useIsMobile();
 
   const { data: lead, isLoading } = useQuery<Lead>({
-    queryKey: ["/api/leads", id],
+    queryKey: QUERY_KEYS.lead(id!),
     enabled: !!id,
   });
 
   const { data: activePriceConfirmation } = useQuery<PriceConfirmation | null>({
-    queryKey: ["/api/leads", id, "active-price-confirmation"],
+    queryKey: QUERY_KEYS.leadPriceConfirmation(id!),
     queryFn: async () => {
       try {
         return await apiFetch(`/api/leads/${id}/active-price-confirmation`);

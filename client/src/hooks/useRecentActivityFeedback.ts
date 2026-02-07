@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 interface RecentMessage {
   id: string;
@@ -46,7 +47,7 @@ export function useRecentActivityFeedback() {
   const shownPaymentsRef = useRef<Set<string>>(getStoredSet(STORAGE_KEY_PAYMENTS));
   
   const { data: activity } = useQuery<RecentActivity>({
-    queryKey: ["/api/recent-activity"],
+    queryKey: QUERY_KEYS.recentActivity(),
     refetchInterval: 30000,
     staleTime: 10000,
   });

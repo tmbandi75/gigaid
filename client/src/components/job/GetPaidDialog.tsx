@@ -56,7 +56,7 @@ export function GetPaidDialog({ open, onClose, jobId, jobTitle, amount, clientNa
         paidAt: new Date().toISOString(),
       }),
     }),
-    [QUERY_KEYS.jobs(), QUERY_KEYS.job(jobId), ["/api/dashboard/summary"], ["/api/dashboard/game-plan"], ["/api/next-actions"]],
+    [QUERY_KEYS.jobs(), QUERY_KEYS.job(jobId), QUERY_KEYS.dashboardSummary(), QUERY_KEYS.dashboardGamePlan(), QUERY_KEYS.nextActions()],
     {
       onSuccess: () => {
         setStep("success");

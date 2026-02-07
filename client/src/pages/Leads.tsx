@@ -137,7 +137,7 @@ function LeadCard({ lead, nudges, onGenerateFollowUp, onSendText, onNudgeClick }
     async () => {
       return apiFetch(`/api/leads/${lead.id}/archive`, { method: "POST" });
     },
-    [QUERY_KEYS.leads(), ["/api/dashboard/game-plan"]],
+    [QUERY_KEYS.leads(), QUERY_KEYS.dashboardGamePlan()],
     {
       onSuccess: () => {
         toast({ title: "Request archived" });
@@ -154,7 +154,7 @@ function LeadCard({ lead, nudges, onGenerateFollowUp, onSendText, onNudgeClick }
     async () => {
       return apiFetch(`/api/leads/${lead.id}`, { method: "DELETE" });
     },
-    [QUERY_KEYS.leads(), ["/api/dashboard/game-plan"]],
+    [QUERY_KEYS.leads(), QUERY_KEYS.dashboardGamePlan()],
     {
       onSuccess: () => {
         toast({ title: "Request deleted" });
@@ -385,15 +385,15 @@ export default function Leads() {
   }, []);
   
   const { data: leads = [], isLoading } = useQuery<Lead[]>({
-    queryKey: ["/api/leads"],
+    queryKey: QUERY_KEYS.leads(),
   });
 
   const { data: nudges = [] } = useQuery<AiNudge[]>({
-    queryKey: ["/api/nudges"],
+    queryKey: QUERY_KEYS.nudges(),
   });
 
   const { data: profile } = useQuery<{ services: string[] | null }>({
-    queryKey: ["/api/profile"],
+    queryKey: QUERY_KEYS.profile(),
   });
 
   const showTableView = !isMobile && viewMode === "table";

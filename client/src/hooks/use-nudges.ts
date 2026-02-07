@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import type { AiNudge } from "@shared/schema";
 
 export function useNudges(entityType?: string, entityId?: string) {
@@ -32,7 +33,7 @@ export function useGenerateNudges() {
 
 export function useFeatureFlag(key: string) {
   return useQuery<{ key: string; enabled: boolean }>({
-    queryKey: ["/api/feature-flags", key],
+    queryKey: QUERY_KEYS.featureFlags(key),
     queryFn: async () => {
       const res = await fetch(`/api/feature-flags/${key}`);
       if (!res.ok) throw new Error("Failed to fetch feature flag");
@@ -46,6 +47,6 @@ export function useUpdateFeatureFlag() {
   return useApiMutation(
     async ({ key, enabled }: { key: string; enabled: boolean }) =>
       apiFetch(`/api/feature-flags/${key}`, { method: "PATCH", body: JSON.stringify({ enabled }) }),
-    [["/api/feature-flags"]]
+    [QUERY_KEYS.featureFlags("")]
   );
 }

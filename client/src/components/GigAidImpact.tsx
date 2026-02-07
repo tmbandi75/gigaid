@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { 
   TrendingUp, 
   DollarSign, 
@@ -71,16 +72,16 @@ export function GigAidImpact() {
   const [showCalculationModal, setShowCalculationModal] = useState(false);
 
   const { data: impact, isLoading } = useQuery<ImpactStats>({
-    queryKey: ["/api/ai/impact"],
+    queryKey: QUERY_KEYS.aiImpact(),
     refetchInterval: 60000,
   });
 
   const { data: outcomeFlag } = useQuery<FeatureFlag>({
-    queryKey: ["/api/feature-flags", "outcome_attribution"],
+    queryKey: QUERY_KEYS.featureFlags("outcome_attribution"),
   });
 
   const { data: outcomes } = useQuery<OutcomesSummary>({
-    queryKey: ["/api/outcomes"],
+    queryKey: QUERY_KEYS.outcomes(),
     enabled: outcomeFlag?.enabled === true,
   });
 
@@ -88,7 +89,7 @@ export function GigAidImpact() {
     async () => {
       return apiFetch("/api/outcomes/compute", { method: "POST" });
     },
-    [["/api/outcomes"]],
+    [QUERY_KEYS.outcomes()],
   );
 
   const hasImpact = impact && (

@@ -39,7 +39,7 @@ export default function Referrals() {
   const isMobile = useIsMobile();
 
   const { data: referralData, isLoading } = useQuery<ReferralData>({
-    queryKey: ["/api/referrals"],
+    queryKey: QUERY_KEYS.referrals(),
   });
 
   // Calculate redeemable rewards (rewarded but not yet redeemed)

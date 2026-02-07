@@ -21,6 +21,7 @@ import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { MessageCircle, Phone, Inbox, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 interface MessageUsage {
   outboundSent: number;
@@ -40,16 +41,16 @@ export function MessagingSettings() {
   const [showInboxConfirm, setShowInboxConfirm] = useState(false);
 
   const { data: profile, isLoading: profileLoading } = useQuery<Profile>({
-    queryKey: ["/api/profile"],
+    queryKey: QUERY_KEYS.profile(),
   });
 
   const { data: usage, isLoading: usageLoading } = useQuery<MessageUsage>({
-    queryKey: ["/api/messages/usage"],
+    queryKey: QUERY_KEYS.messagesUsage(),
   });
 
   const updateProfileMutation = useApiMutation(
     (updates: Partial<Profile>) => apiFetch("/api/profile", { method: "PATCH", body: JSON.stringify(updates) }),
-    [["/api/profile"], ["/api/messages/usage"]],
+    [QUERY_KEYS.profile(), QUERY_KEYS.messagesUsage()],
     {
       onSuccess: () => {
         toast({ title: "Settings saved" });

@@ -114,7 +114,7 @@ export function PaymentConfirmation({
     async ({ paymentId, notes }: { paymentId: string; notes?: string }) => {
       return apiFetch(`/api/payments/${paymentId}/confirm`, { method: "POST", body: JSON.stringify({ notes }) });
     },
-    [QUERY_KEYS.invoices(), QUERY_KEYS.payments(), ["/api/invoices", invoice.id, "payments"], ["/api/dashboard/game-plan"], ["/api/dashboard/summary"]],
+    [QUERY_KEYS.invoices(), QUERY_KEYS.payments(), QUERY_KEYS.invoicePayments(invoice.id), QUERY_KEYS.dashboardGamePlan(), QUERY_KEYS.dashboardSummary()],
     {
       onSuccess: () => {
         toast({
@@ -140,7 +140,7 @@ export function PaymentConfirmation({
     async ({ paymentId, notes }: { paymentId: string; notes?: string }) => {
       return apiFetch(`/api/payments/${paymentId}/mark-paid`, { method: "POST", body: JSON.stringify({ notes }) });
     },
-    [QUERY_KEYS.invoices(), QUERY_KEYS.payments(), ["/api/dashboard/game-plan"], ["/api/dashboard/summary"]],
+    [QUERY_KEYS.invoices(), QUERY_KEYS.payments(), QUERY_KEYS.dashboardGamePlan(), QUERY_KEYS.dashboardSummary()],
     {
       onSuccess: () => {
         toast({

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -41,7 +42,7 @@ export function OnboardingWrapper({ children }: { children: React.ReactNode }) {
 
   // Only enable query when token is ready - prevents 401 errors
   const { data: onboarding, isLoading, isError } = useQuery<OnboardingStatus>({
-    queryKey: ["/api/onboarding"],
+    queryKey: QUERY_KEYS.onboarding(),
     retry: 1,
     enabled: isTokenReady,
   });

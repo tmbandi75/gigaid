@@ -114,7 +114,7 @@ export function LeadEmailConversation({ leadId, clientEmail, clientName, service
   const [showAllEmails, setShowAllEmails] = useState(false);
 
   const { data: emails = [], isLoading } = useQuery<LeadEmail[]>({
-    queryKey: ["/api/leads", leadId, "emails"],
+    queryKey: QUERY_KEYS.leadEmails(leadId),
     enabled: !!leadId,
   });
 
@@ -165,7 +165,7 @@ export function LeadEmailConversation({ leadId, clientEmail, clientName, service
         body: JSON.stringify(data),
       });
     },
-    [["/api/leads", leadId, "emails"], QUERY_KEYS.lead(leadId)],
+    [QUERY_KEYS.leadEmails(leadId), QUERY_KEYS.lead(leadId)],
     {
       onSuccess: () => {
         toast({ title: "Email sent successfully" });

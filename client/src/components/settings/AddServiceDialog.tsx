@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { Loader2, Plus, Wrench, Check } from "lucide-react";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 const COMMON_SERVICES = [
   "plumbing",
@@ -45,7 +46,7 @@ export function AddServiceDialog({ open, onOpenChange }: AddServiceDialogProps) 
   const { toast } = useToast();
 
   const { data: profile, isLoading: profileLoading } = useQuery<Profile>({
-    queryKey: ["/api/profile"],
+    queryKey: QUERY_KEYS.profile(),
   });
 
   const existingServices = profile?.services || [];
@@ -67,7 +68,7 @@ export function AddServiceDialog({ open, onOpenChange }: AddServiceDialogProps) 
       const allServices = Array.from(new Set([...existingServices, ...services]));
       return apiFetch("/api/profile", { method: "PATCH", body: JSON.stringify({ services: allServices }) });
     },
-    [["/api/profile"], ["/api/dashboard/game-plan"], ["/api/onboarding"]],
+    [QUERY_KEYS.profile(), QUERY_KEYS.dashboardGamePlan(), QUERY_KEYS.onboarding()],
     {
       onSuccess: () => {
         toast({

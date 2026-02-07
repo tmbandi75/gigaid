@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { 
   DollarSign, 
   TrendingUp,
@@ -91,15 +92,15 @@ export default function AdminBilling() {
   const [searchUserId, setSearchUserId] = useState("");
 
   const { data: revenueData, isLoading: revenueLoading } = useQuery<RevenueData>({
-    queryKey: ["/api/admin/analytics/revenue"],
+    queryKey: QUERY_KEYS.adminAnalyticsRevenue(),
   });
 
   const { data: cohortData, isLoading: cohortLoading } = useQuery<CohortData>({
-    queryKey: ["/api/admin/analytics/cohorts"],
+    queryKey: QUERY_KEYS.adminAnalyticsCohorts(),
   });
 
   const { data: ltvData, isLoading: ltvLoading } = useQuery<LTVData>({
-    queryKey: ["/api/admin/analytics/ltv"],
+    queryKey: QUERY_KEYS.adminAnalyticsLtv(),
   });
 
   const formatCurrency = (cents: number) => {

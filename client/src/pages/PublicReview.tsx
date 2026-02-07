@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,7 +29,7 @@ export default function PublicReview() {
   const [photosPublic, setPhotosPublic] = useState(true);
 
   const { data, isLoading, error } = useQuery<ReviewData>({
-    queryKey: [`/api/public/review/${token}`],
+    queryKey: QUERY_KEYS.publicReview(token!),
     enabled: !!token,
   });
 

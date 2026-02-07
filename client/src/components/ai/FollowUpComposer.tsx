@@ -12,6 +12,7 @@ import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { MessageSquare, Loader2, Sparkles, Copy, Send, Check, Phone, User, Info } from "lucide-react";
 import type { Job, Lead } from "@shared/schema";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 interface MessageUsage {
   outboundSent: number;
@@ -47,15 +48,15 @@ export function FollowUpComposer() {
   const [showFirstSendTooltip, setShowFirstSendTooltip] = useState(false);
 
   const { data: jobs = [] } = useQuery<Job[]>({
-    queryKey: ["/api/jobs"],
+    queryKey: QUERY_KEYS.jobs(),
   });
 
   const { data: leads = [] } = useQuery<Lead[]>({
-    queryKey: ["/api/leads"],
+    queryKey: QUERY_KEYS.leads(),
   });
 
   const { data: usage } = useQuery<MessageUsage>({
-    queryKey: ["/api/messages/usage"],
+    queryKey: QUERY_KEYS.messagesUsage(),
   });
 
   const clientOptions: ClientOption[] = [
@@ -133,7 +134,7 @@ export function FollowUpComposer() {
         body: JSON.stringify(payload),
       });
     },
-    [["/api/messages/usage"]],
+    [QUERY_KEYS.messagesUsage()],
     {
       onSuccess: (data) => {
         if (data.isFirstSend) {

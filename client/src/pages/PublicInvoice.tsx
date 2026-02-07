@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { SupportTicketForm } from "@/components/SupportTicketForm";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { 
   FileText, 
   CheckCircle, 
@@ -110,7 +111,7 @@ export default function PublicInvoice() {
   const hasShownConfetti = useRef(false);
 
   const { data, isLoading, error } = useQuery<PublicInvoiceData>({
-    queryKey: ["/api/public/invoice", token],
+    queryKey: QUERY_KEYS.publicInvoice(token),
     queryFn: async () => {
       const res = await fetch(`/api/public/invoice/${token}`);
       if (!res.ok) {

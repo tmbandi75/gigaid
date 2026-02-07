@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Download, FileJson, FileCode, Loader2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 interface DownloadFile {
   id: string;
@@ -17,7 +18,7 @@ interface DownloadFile {
 export default function Downloads() {
   const isMobile = useIsMobile();
   const { data, isLoading } = useQuery<{ files: DownloadFile[] }>({
-    queryKey: ["/api/downloads"],
+    queryKey: QUERY_KEYS.downloads(),
   });
 
   const handleDownload = (file: DownloadFile) => {

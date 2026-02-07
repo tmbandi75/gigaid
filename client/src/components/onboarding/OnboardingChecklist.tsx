@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useEffect, useRef, useState } from "react";
 import confetti from "canvas-confetti";
 import { SendBookingLinkDialog } from "./SendBookingLinkDialog";
@@ -105,7 +106,7 @@ export function OnboardingChecklist({ currentStep, onStepClick, onComplete, book
 
   const completeMutation = useApiMutation(
     () => apiFetch("/api/onboarding", { method: "PATCH", body: JSON.stringify({ completed: true, step: steps.length }) }),
-    [["/api/onboarding"]],
+    [QUERY_KEYS.onboarding()],
     {
       onSuccess: () => {
         onComplete();
@@ -237,7 +238,7 @@ export function OnboardingChecklist({ currentStep, onStepClick, onComplete, book
         open={showSendLinkDialog}
         onClose={() => setShowSendLinkDialog(false)}
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ["/api/onboarding"] });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.onboarding() });
         }}
       />
 

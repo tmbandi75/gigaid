@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,7 +52,7 @@ export function VoiceNoteSummarizer({ onSummaryComplete, onNoteSaved }: VoiceNot
   const recognitionRef = useRef<any>(null);
 
   const { data: jobs = [] } = useQuery<Job[]>({
-    queryKey: ["/api/jobs"],
+    queryKey: QUERY_KEYS.jobs(),
   });
 
   const activeJobs = jobs.filter(j => j.status !== "completed" && j.status !== "cancelled");
@@ -83,7 +84,7 @@ export function VoiceNoteSummarizer({ onSummaryComplete, onNoteSaved }: VoiceNot
         body: JSON.stringify(data),
       });
     },
-    [["/api/voice-notes"]],
+    [QUERY_KEYS.voiceNotes()],
     {
       onSuccess: (data) => {
         setSavedNoteId(data.id);
@@ -103,7 +104,7 @@ export function VoiceNoteSummarizer({ onSummaryComplete, onNoteSaved }: VoiceNot
         body: JSON.stringify({ jobId }),
       });
     },
-    [["/api/voice-notes"], ["/api/jobs"]],
+    [QUERY_KEYS.voiceNotes(), QUERY_KEYS.jobs()],
     {
       onSuccess: () => {
         setShowJobSelector(false);

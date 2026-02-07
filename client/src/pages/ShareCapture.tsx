@@ -152,7 +152,7 @@ export default function ShareCapture() {
   });
 
   const { data: profile } = useQuery<{ name: string; services: string[] }>({
-    queryKey: ["/api/profile"],
+    queryKey: QUERY_KEYS.profile(),
   });
 
   useEffect(() => {

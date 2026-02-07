@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,11 +34,11 @@ export function SmartScheduling({ jobDuration = 60, onSelectSlot }: SmartSchedul
   const [showLeadSelector, setShowLeadSelector] = useState(false);
 
   const { data: jobs = [] } = useQuery<Job[]>({
-    queryKey: ["/api/jobs"],
+    queryKey: QUERY_KEYS.jobs(),
   });
 
   const { data: leads = [] } = useQuery<Lead[]>({
-    queryKey: ["/api/leads"],
+    queryKey: QUERY_KEYS.leads(),
   });
 
   const suggestMutation = useApiMutation(

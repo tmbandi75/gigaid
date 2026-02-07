@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Navigation, Clock, AlertCircle, Loader2, ExternalLink, Car } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 interface JobLocationMapProps {
   customerLat: number;
@@ -117,7 +118,7 @@ export function JobLocationMap({
     durationText: string;
     durationSeconds: number;
   }>({
-    queryKey: ["/api/driving-distance", providerLat, providerLng, customerLat, customerLng],
+    queryKey: QUERY_KEYS.drivingDistance(providerLat, providerLng, customerLat, customerLng),
     queryFn: async () => {
       if (!hasProviderLocation) return null;
       const res = await fetch(

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -119,7 +120,7 @@ export function PaymentMethodsSettings({ onStripeToggle }: PaymentMethodsSetting
   });
 
   const { data: savedMethods, isLoading } = useQuery<UserPaymentMethod[]>({
-    queryKey: ["/api/payment-methods"],
+    queryKey: QUERY_KEYS.paymentMethods(),
     refetchOnMount: true,
   });
 
@@ -159,7 +160,7 @@ export function PaymentMethodsSettings({ onStripeToggle }: PaymentMethodsSetting
         body: JSON.stringify({ methods }),
       });
     },
-    [["/api/payment-methods"]],
+    [QUERY_KEYS.paymentMethods()],
     {
       onSuccess: () => {
         toast({

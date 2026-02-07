@@ -8,6 +8,8 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiFetch } from "@/lib/apiFetch";
+import { QUERY_KEYS } from "@/lib/queryKeys";
+import { queryClient } from "@/lib/queryClient";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -317,7 +319,7 @@ export default function CustomerBookingDetail() {
   const [issueDescription, setIssueDescription] = useState("");
 
   const { data: booking, isLoading, error } = useQuery<BookingDetail>({
-    queryKey: ["/api/bookings/by-token", token, "detail"],
+    queryKey: QUERY_KEYS.bookingDetail(token),
     queryFn: async () => {
       const res = await fetch(`/api/bookings/by-token/${token}/detail`);
       if (!res.ok) throw new Error("Booking not found");
@@ -327,7 +329,7 @@ export default function CustomerBookingDetail() {
   });
 
   const { data: paymentMethods } = useQuery<PaymentMethodsResponse>({
-    queryKey: ["/api/bookings/by-token", token, "payment-methods"],
+    queryKey: QUERY_KEYS.bookingPaymentMethods(token),
     queryFn: async () => {
       const res = await fetch(`/api/bookings/by-token/${token}/payment-methods`);
       if (!res.ok) throw new Error("Failed to load payment methods");
@@ -338,7 +340,7 @@ export default function CustomerBookingDetail() {
 
   const confirmMutation = useApiMutation(
     () => apiFetch(`/api/bookings/by-token/${token}/confirm-completion`, { method: "POST" }),
-    [["/api/bookings/by-token", token]],
+    [QUERY_KEYS.bookingsByToken(token)],
     {
       onSuccess: () => {
         toast({ title: "Job confirmed complete!", description: "The deposit has been released to the provider." });
@@ -355,7 +357,7 @@ export default function CustomerBookingDetail() {
         method: "POST",
         body: JSON.stringify({ reason }),
       }),
-    [["/api/bookings/by-token", token]],
+    [QUERY_KEYS.bookingsByToken(token)],
     {
       onSuccess: () => {
         toast({ title: "Issue reported", description: "The deposit is on hold. We'll review your case." });
@@ -579,7 +581,7 @@ export default function CustomerBookingDetail() {
                     token={token!}
                     booking={booking}
                     onPaymentSuccess={() => {
-                      queryClient.invalidateQueries({ queryKey: ["/api/bookings/by-token", token] });
+                      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bookingsByToken(token) });
                     }}
                   />
                   <Separator />

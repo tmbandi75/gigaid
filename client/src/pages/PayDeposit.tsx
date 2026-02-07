@@ -25,6 +25,7 @@ import {
   Banknote,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 interface DepositData {
   job: {
@@ -234,7 +235,7 @@ export default function PayDeposit() {
   const { toast } = useToast();
 
   const { data, isLoading, error, refetch } = useQuery<DepositData>({
-    queryKey: ["/api/public/deposit", token],
+    queryKey: QUERY_KEYS.publicDeposit(token),
     queryFn: async () => {
       const res = await fetch(`/api/public/deposit/${token}`);
       if (!res.ok) {

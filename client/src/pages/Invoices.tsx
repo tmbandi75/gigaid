@@ -118,7 +118,7 @@ function InvoiceCard({ invoice, nudges, payments, onNudgeClick }: InvoiceCardPro
 
   const archiveInvoiceMutation = useApiMutation(
     () => apiFetch(`/api/invoices/${invoice.id}/archive`, { method: "POST" }),
-    [QUERY_KEYS.invoices(), ["/api/dashboard/game-plan"]],
+    [QUERY_KEYS.invoices(), QUERY_KEYS.dashboardGamePlan()],
     {
       onSuccess: () => {
         toast({ title: "Invoice archived" });
@@ -133,7 +133,7 @@ function InvoiceCard({ invoice, nudges, payments, onNudgeClick }: InvoiceCardPro
 
   const deleteInvoiceMutation = useApiMutation(
     () => apiFetch(`/api/invoices/${invoice.id}`, { method: "DELETE" }),
-    [QUERY_KEYS.invoices(), ["/api/dashboard/game-plan"]],
+    [QUERY_KEYS.invoices(), QUERY_KEYS.dashboardGamePlan()],
     {
       onSuccess: () => {
         toast({ title: "Invoice deleted" });

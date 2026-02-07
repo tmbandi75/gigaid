@@ -5,6 +5,7 @@ import { getAuthToken, clearAuthToken } from "@/lib/authToken";
 import { firebaseSignOut } from "@/lib/firebase";
 import { setGlobalLoggingOut, getGlobalLoggingOut } from "@/lib/queryClient";
 import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 async function fetchUser(): Promise<User | null> {
   // Don't fetch user if we're in the middle of logging out
@@ -71,7 +72,7 @@ export function useAuth() {
   const canFetchUser = !getGlobalLoggingOut() && isTokenReady;
   
   const { data: user, status, isFetching, refetch } = useQuery<User | null>({
-    queryKey: ["/api/auth/user"],
+    queryKey: QUERY_KEYS.authUser(),
     queryFn: fetchUser,
     retry: false,
     staleTime: 1000 * 30,
@@ -100,7 +101,7 @@ export function useAuth() {
       
       // Step 3: Clear React Query cache COMPLETELY
       console.log("[Auth] Step 3: Clearing React Query cache");
-      queryClient.setQueryData(["/api/auth/user"], null);
+      queryClient.setQueryData(QUERY_KEYS.authUser(), null);
       queryClient.clear();
       
       // Step 4: Await Firebase signOut
@@ -162,7 +163,7 @@ export function useAuth() {
     mutationFn: performLogout,
     onMutate: () => {
       // Immediately mark as logged out in cache
-      queryClient.setQueryData(["/api/auth/user"], null);
+      queryClient.setQueryData(QUERY_KEYS.authUser(), null);
     },
   });
 

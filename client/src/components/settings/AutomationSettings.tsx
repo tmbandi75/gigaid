@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { 
   Clock, 
   MessageSquare, 
@@ -43,7 +44,7 @@ export function AutomationSettings() {
   const { toast } = useToast();
   
   const { data: settings, isLoading } = useQuery<AutomationSettings>({
-    queryKey: ["/api/automation-settings"],
+    queryKey: QUERY_KEYS.automationSettings(),
   });
   
   const [followupEnabled, setFollowupEnabled] = useState(true);
@@ -85,7 +86,7 @@ export function AutomationSettings() {
         confirmationTemplate: confirmTemplate || null,
       }),
     }),
-    [["/api/automation-settings"]],
+    [QUERY_KEYS.automationSettings()],
     {
       onSuccess: () => {
         toast({ title: "Settings saved", description: "Your automation settings have been updated." });

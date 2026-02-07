@@ -24,7 +24,7 @@ export default function FollowUpCheckIn({ onActionComplete }: FollowUpCheckInPro
   const { toast } = useToast();
 
   const { data: leadsNeedingFollowUp = [], isLoading } = useQuery<Lead[]>({
-    queryKey: ["/api/leads/follow-up-needed"],
+    queryKey: QUERY_KEYS.leadsFollowUp(),
     refetchInterval: 60000,
   });
 
@@ -35,7 +35,7 @@ export default function FollowUpCheckIn({ onActionComplete }: FollowUpCheckInPro
         body: JSON.stringify({ response }),
       });
     },
-    [QUERY_KEYS.leads(), ["/api/leads/follow-up-needed"]],
+    [QUERY_KEYS.leads(), QUERY_KEYS.leadsFollowUp()],
     {
       onSuccess: (_, { response }) => {
         const messages = {

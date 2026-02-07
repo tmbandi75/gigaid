@@ -8,6 +8,7 @@ import { InlineInfoCard } from "@/components/ui/inline-info-card";
 import { BookingLinkShare } from "@/components/booking-link";
 import { useLocation } from "wouter";
 import { apiFetch } from "@/lib/apiFetch";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useCapability } from "@/hooks/useCapability";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -76,11 +77,11 @@ export default function MoneyPlanPage() {
   const isMobile = useIsMobile();
 
   const { data: flag } = useQuery<FeatureFlag>({
-    queryKey: ["/api/feature-flags", "today_money_plan"],
+    queryKey: QUERY_KEYS.featureFlags("today_money_plan"),
   });
 
   const { data: items, isLoading, refetch } = useQuery<ActionQueueItem[]>({
-    queryKey: ["/api/action-queue"],
+    queryKey: QUERY_KEYS.actionQueue(),
     enabled: flag?.enabled === true,
   });
 
@@ -105,28 +106,28 @@ export default function MoneyPlanPage() {
     async () => {
       return apiFetch("/api/action-queue/generate", { method: "POST" });
     },
-    [["/api/action-queue"]]
+    [QUERY_KEYS.actionQueue()]
   );
 
   const markDoneMutation = useApiMutation(
     async (id: string) => {
       return apiFetch(`/api/action-queue/${id}/done`, { method: "POST" });
     },
-    [["/api/action-queue"]]
+    [QUERY_KEYS.actionQueue()]
   );
 
   const dismissMutation = useApiMutation(
     async (id: string) => {
       return apiFetch(`/api/action-queue/${id}/dismiss`, { method: "POST" });
     },
-    [["/api/action-queue"]]
+    [QUERY_KEYS.actionQueue()]
   );
 
   const snoozeMutation = useApiMutation(
     async ({ id, hours }: { id: string; hours: number }) => {
       return apiFetch(`/api/action-queue/${id}/snooze`, { method: "POST", body: JSON.stringify({ hours }) });
     },
-    [["/api/action-queue"]]
+    [QUERY_KEYS.actionQueue()]
   );
 
   const openItems = items?.filter(i => i.status === "open") || [];

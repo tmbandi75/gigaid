@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { X, Send, Clock, FileText, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -94,7 +95,7 @@ export function NudgeActionSheet({
 
   const dismissMutation = useApiMutation(
     () => apiFetch(`/api/ai/nudges/${nudge?.id}/dismiss`, { method: "POST" }),
-    [["/api/ai/nudges"]],
+    [QUERY_KEYS.aiNudges()],
     {
       onSuccess: () => {
         toast({ 
@@ -108,7 +109,7 @@ export function NudgeActionSheet({
 
   const snoozeMutation = useApiMutation(
     (hours: number) => apiFetch(`/api/ai/nudges/${nudge?.id}/snooze`, { method: "POST", body: JSON.stringify({ hours }) }),
-    [["/api/ai/nudges"]],
+    [QUERY_KEYS.aiNudges()],
     {
       onSuccess: () => {
         toast({ 
@@ -125,7 +126,7 @@ export function NudgeActionSheet({
       method: "POST",
       body: JSON.stringify({ action_type: actionType, payload: { message } }),
     }),
-    [["/api/ai/nudges"]],
+    [QUERY_KEYS.aiNudges()],
     {
       onSuccess: (data: any, actionType: string) => {
         const trustSignal = getTrustSignal(nudge?.nudgeType || "", actionType);

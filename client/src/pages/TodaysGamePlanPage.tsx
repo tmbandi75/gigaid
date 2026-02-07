@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageSpinner } from "@/components/ui/spinner";
 import { apiFetch } from "@/lib/apiFetch";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -189,41 +190,41 @@ export default function TodaysGamePlanPage() {
   const isMobile = useIsMobile();
 
   const { data, isLoading } = useQuery<GamePlanData>({
-    queryKey: ["/api/dashboard/game-plan"],
+    queryKey: QUERY_KEYS.dashboardGamePlan(),
     staleTime: 30000, // Cache for 30 seconds - fast page loads, still reasonably fresh
     refetchOnWindowFocus: true,
   });
 
   const { data: nextActions = [] } = useQuery<NextAction[]>({
-    queryKey: ["/api/next-actions"],
+    queryKey: QUERY_KEYS.nextActions(),
     staleTime: 60000, // Cache for 1 minute
     refetchInterval: 60000,
     refetchOnWindowFocus: true,
   });
 
   const { data: profile } = useQuery<{ services: string[] | null; servicesCount: number }>({
-    queryKey: ["/api/profile"],
+    queryKey: QUERY_KEYS.profile(),
     staleTime: 300000, // Cache for 5 minutes - rarely changes
   });
 
   const { data: dashboardSummary } = useQuery<{ totalJobs: number; completedJobs: number }>({
-    queryKey: ["/api/dashboard/summary"],
+    queryKey: QUERY_KEYS.dashboardSummary(),
     staleTime: 30000, // Cache for 30 seconds
   });
 
   const { data: invoices } = useQuery<{ id: string }[]>({
-    queryKey: ["/api/invoices"],
+    queryKey: QUERY_KEYS.invoices(),
     staleTime: 30000, // Cache for 30 seconds
   });
 
   const actMutation = useApiMutation(
     (id: string) => apiFetch(`/api/next-actions/${id}/act`, { method: "POST" }),
-    [["/api/next-actions"]]
+    [QUERY_KEYS.nextActions()]
   );
 
   const dismissMutation = useApiMutation(
     (id: string) => apiFetch(`/api/next-actions/${id}/dismiss`, { method: "POST" }),
-    [["/api/next-actions"]]
+    [QUERY_KEYS.nextActions()]
   );
 
   if (isLoading) {
@@ -458,7 +459,7 @@ export default function TodaysGamePlanPage() {
                         <Button
                           className="mt-4"
                           onClick={() => {
-                            queryClient.invalidateQueries({ queryKey: ["/api/dashboard/game-plan"] });
+                            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboardGamePlan() });
                             navigate(priorityItem.actionRoute);
                           }}
                           data-testid="button-priority-action"

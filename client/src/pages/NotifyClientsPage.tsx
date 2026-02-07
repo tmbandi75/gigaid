@@ -133,7 +133,7 @@ export default function NotifyClientsPage() {
   } | null>(null);
 
   const { data: profile, isLoading: profileLoading } = useQuery<any>({
-    queryKey: ["/api/profile"],
+    queryKey: QUERY_KEYS.profile(),
   });
 
   // Transform profile services (string array) into objects with id, name, and category
@@ -157,7 +157,7 @@ export default function NotifyClientsPage() {
   }, [profile?.publicProfileSlug]);
 
   const { data: eligibleClients, isLoading: clientsLoading } = useQuery<{ count: number; clients: any[] }>({
-    queryKey: ["/api/notification-campaigns/eligible-clients", channel],
+    queryKey: QUERY_KEYS.eligibleClients(channel),
     enabled: step === "compose" || step === "review",
   });
 

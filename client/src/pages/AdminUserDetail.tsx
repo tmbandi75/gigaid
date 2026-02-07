@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { apiFetch } from "@/lib/apiFetch";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
 
@@ -253,7 +254,7 @@ function FunnelSection({ funnel }: { funnel: FunnelState }) {
 
 function TimelineSection({ userId }: { userId: string }) {
   const { data, isLoading } = useQuery<{ events: TimelineEvent[] }>({
-    queryKey: ["/api/admin/users", userId, "timeline"],
+    queryKey: QUERY_KEYS.adminUserTimeline(userId),
     queryFn: async () => {
       const token = getAuthToken();
       const headers: Record<string, string> = {};
@@ -340,7 +341,7 @@ function NotesSection({ notes, userId }: { notes: UserNote[]; userId: string }) 
 
 function AuditSection({ userId }: { userId: string }) {
   const { data, isLoading } = useQuery<{ actions: AuditAction[] }>({
-    queryKey: ["/api/admin/users", userId, "audit"],
+    queryKey: QUERY_KEYS.adminUserAudit(userId),
     queryFn: async () => {
       const token = getAuthToken();
       const headers: Record<string, string> = {};
@@ -398,7 +399,7 @@ function AuditSection({ userId }: { userId: string }) {
 
 function ExternalLinksSection({ userId }: { userId: string }) {
   const { data } = useQuery<any>({
-    queryKey: ["/api/admin/users/links/external"],
+    queryKey: QUERY_KEYS.adminExternalLinks(),
   });
 
   const links = [
@@ -469,7 +470,7 @@ interface PaymentsData {
 
 function MessagingSection({ userId }: { userId: string }) {
   const { data, isLoading } = useQuery<MessagingData>({
-    queryKey: ["/api/admin/users", userId, "messaging"],
+    queryKey: QUERY_KEYS.adminUserMessaging(userId),
     queryFn: async () => {
       const token = getAuthToken();
       const headers: Record<string, string> = {};
@@ -539,7 +540,7 @@ function MessagingSection({ userId }: { userId: string }) {
 
 function PaymentsSection({ userId }: { userId: string }) {
   const { data, isLoading } = useQuery<PaymentsData>({
-    queryKey: ["/api/admin/users", userId, "payments"],
+    queryKey: QUERY_KEYS.adminUserPayments(userId),
     queryFn: async () => {
       const token = getAuthToken();
       const headers: Record<string, string> = {};
@@ -619,7 +620,7 @@ function ActionsSection({ userId, profile }: { userId: string; profile: UserProf
         method: "POST",
         body: JSON.stringify({ action_key, reason: reason.trim(), payload }),
       }),
-    [["/api/admin/users", userId], ["/api/admin/users", userId, "audit"]],
+    [QUERY_KEYS.adminUser(userId), QUERY_KEYS.adminUserAudit(userId)],
     {
       onSuccess: () => {
         toast({ title: "Action completed and logged" });
@@ -846,7 +847,7 @@ function BillingActionsSection({ userId, profile }: { userId: string; profile: U
         method: "POST",
         body: JSON.stringify({ action_key, reason: reason.trim(), payload }),
       }),
-    [["/api/admin/users", userId], ["/api/admin/users", userId, "audit"]],
+    [QUERY_KEYS.adminUser(userId), QUERY_KEYS.adminUserAudit(userId)],
     {
       onSuccess: () => {
         toast({ title: "Billing action completed and logged" });
@@ -1117,7 +1118,7 @@ export default function AdminUserDetail() {
   const view = searchParams.get("view");
 
   const { data, isLoading, error } = useQuery<UserDetailResponse>({
-    queryKey: ["/api/admin/users", userId],
+    queryKey: QUERY_KEYS.adminUser(userId),
     queryFn: async () => {
       const token = getAuthToken();
       const headers: Record<string, string> = {};

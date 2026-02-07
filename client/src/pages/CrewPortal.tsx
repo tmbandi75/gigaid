@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import {
   MapPin,
   Calendar,
@@ -86,7 +87,7 @@ export default function CrewPortal() {
   const [photoCaption, setPhotoCaption] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const portalQueryKey = ["/api/public/crew-portal", token];
+  const portalQueryKey = QUERY_KEYS.publicCrewPortal(token);
   
   const { data, isLoading, error } = useQuery<CrewPortalData>({
     queryKey: portalQueryKey,

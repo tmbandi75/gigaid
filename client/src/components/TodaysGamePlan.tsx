@@ -20,6 +20,7 @@ import {
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import type { AiNudge } from "@shared/schema";
 
 const nudgeConfig: Record<string, { 
@@ -205,7 +206,7 @@ export function TodaysGamePlan() {
   const [snoozingId, setSnoozingId] = useState<string | null>(null);
 
   const { data: onboardingStatus, isLoading: isOnboardingLoading } = useQuery<OnboardingStatus>({
-    queryKey: ["/api/onboarding"],
+    queryKey: QUERY_KEYS.onboarding(),
   });
 
   const isExploreMode = onboardingStatus?.state === "skipped_explore";
@@ -213,7 +214,7 @@ export function TodaysGamePlan() {
   const needsSetup = !isOnboardingLoading && (isExploreMode || !isMoneyProtectionReady);
 
   const { data: nudges = [], isLoading } = useQuery<AiNudge[]>({
-    queryKey: ["/api/ai/nudges", "daily"],
+    queryKey: QUERY_KEYS.aiNudgesDaily(),
     queryFn: async () => {
       const res = await fetch("/api/ai/nudges?mode=daily");
       if (!res.ok) throw new Error("Failed to fetch daily nudges");
@@ -231,7 +232,7 @@ export function TodaysGamePlan() {
         body: JSON.stringify({ hours: 24 }),
       });
     },
-    [["/api/ai/nudges"]],
+    [QUERY_KEYS.nudges()],
     {
       onSuccess: () => {
         toast({ title: "Snoozed for today", description: "We'll remind you tomorrow" });

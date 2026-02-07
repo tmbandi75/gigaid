@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { Star, Calendar, CheckCircle, Loader2, ChevronLeft, ChevronRight, Clock, History, RotateCcw, MapPin, Zap, Navigation, Shield, RefreshCw, CreditCard } from "lucide-react";
 import { SmartServiceRecommender } from "@/components/booking/SmartServiceRecommender";
@@ -173,7 +174,7 @@ export default function PublicBooking() {
   };
 
   const { data: profile, isLoading, error } = useQuery<PublicProfile>({
-    queryKey: ["/api/public/profile", slug],
+    queryKey: QUERY_KEYS.publicProfile(slug),
     queryFn: async () => {
       const res = await fetch(`/api/public/profile/${slug}`);
       if (!res.ok) throw new Error("Profile not found");
@@ -187,7 +188,7 @@ export default function PublicBooking() {
     : null;
 
   const { data: slotsData, isLoading: slotsLoading } = useQuery<AvailableSlots>({
-    queryKey: ["/api/public/available-slots", slug, selectedDateStr],
+    queryKey: QUERY_KEYS.publicAvailableSlots(slug, selectedDateStr),
     queryFn: async () => {
       const res = await fetch(`/api/public/available-slots/${slug}/${selectedDateStr}`);
       if (!res.ok) throw new Error("Failed to fetch slots");
@@ -197,7 +198,7 @@ export default function PublicBooking() {
   });
 
   const { data: smartSlotsData, isLoading: smartSlotsLoading } = useQuery<SmartSlotsResponse>({
-    queryKey: ["/api/public/smart-slots", slug, selectedDateStr, clientZipCode],
+    queryKey: QUERY_KEYS.publicSmartSlots(slug, selectedDateStr, clientZipCode),
     queryFn: async () => {
       const res = await fetch(`/api/public/smart-slots/${slug}/${selectedDateStr}`, {
         method: "POST",

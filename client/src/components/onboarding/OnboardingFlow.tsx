@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -151,7 +152,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
     depositPolicySet: boolean;
     aiExpectationShown: boolean;
   }>({
-    queryKey: ["/api/onboarding"],
+    queryKey: QUERY_KEYS.onboarding(),
   });
 
   // Handle initialStep prop changes - when user navigates directly to a step
@@ -210,13 +211,13 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
   const updateOnboardingMutation = useApiMutation(
     (data: { step?: number; state?: string; completed?: boolean }) =>
       apiFetch("/api/onboarding", { method: "PATCH", body: JSON.stringify(data) }),
-    [["/api/onboarding"]]
+    [QUERY_KEYS.onboarding()]
   );
 
   const updateProfileMutation = useApiMutation(
     (data: Record<string, any>) =>
       apiFetch("/api/profile", { method: "PATCH", body: JSON.stringify(data) }),
-    [["/api/auth/user"]]
+    [QUERY_KEYS.authUser()]
   );
 
   const handleSkipClick = () => {

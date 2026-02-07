@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SupportTicketForm } from "@/components/SupportTicketForm";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { 
   Loader2, 
   DollarSign,
@@ -47,7 +48,7 @@ export default function ConfirmPrice() {
   const [confirmed, setConfirmed] = useState(false);
 
   const { data, isLoading, error, refetch } = useQuery<PriceConfirmationData>({
-    queryKey: ["/api/public/price-confirmation", token],
+    queryKey: QUERY_KEYS.publicPriceConfirmation(token),
     queryFn: async () => {
       const res = await fetch(`/api/public/price-confirmation/${token}`);
       if (!res.ok) {

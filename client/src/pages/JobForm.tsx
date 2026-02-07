@@ -116,7 +116,7 @@ function DepositSection({ job }: { job: Job }) {
   const [showSetDeposit, setShowSetDeposit] = useState(false);
 
   const { data: depositStatus } = useQuery<DepositState>({
-    queryKey: ["/api/jobs", job.id, "deposit-status"],
+    queryKey: QUERY_KEYS.jobDepositStatus(job.id),
   });
 
   const setDepositMutation = useMutation({
@@ -127,7 +127,7 @@ function DepositSection({ job }: { job: Job }) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs", job.id, "deposit-status"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jobDepositStatus(job.id) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jobs() });
       setShowSetDeposit(false);
       toast({ title: "Deposit requirement set" });
@@ -400,7 +400,7 @@ export default function JobForm() {
   }
   
   const { data: jobUsage } = useQuery<JobUsageInfo>({
-    queryKey: ["/api/jobs/usage"],
+    queryKey: QUERY_KEYS.jobsUsage(),
     enabled: !isEditing,
   });
 
@@ -410,12 +410,12 @@ export default function JobForm() {
     hasResolution: boolean;
     resolution: unknown | null;
   }>({
-    queryKey: ["/api/jobs", id, "resolution-required"],
+    queryKey: QUERY_KEYS.jobResolutionRequired(id!),
     enabled: !!isEditing,
   });
 
   const { data: crewInvites = [] } = useQuery<CrewInvite[]>({
-    queryKey: ["/api/jobs", id, "crew-invites"],
+    queryKey: QUERY_KEYS.jobCrewInvites(id!),
     queryFn: async () => {
       try {
         return await apiFetch(`/api/jobs/${id}/crew-invites`);
@@ -427,7 +427,7 @@ export default function JobForm() {
   });
 
   const { data: crewPhotos = [] } = useQuery<CrewPhoto[]>({
-    queryKey: ["/api/jobs", id, "crew-photos"],
+    queryKey: QUERY_KEYS.jobCrewPhotos(id!),
     queryFn: async () => {
       try {
         return await apiFetch(`/api/jobs/${id}/crew-photos`);
@@ -445,7 +445,7 @@ export default function JobForm() {
     visibility: string;
   }
   const { data: existingJobPhotos = [] } = useQuery<PhotoAsset[]>({
-    queryKey: ["/api/photo-assets", "job", id],
+    queryKey: QUERY_KEYS.photoAssets("job", id!),
     queryFn: async () => {
       try {
         return await apiFetch(`/api/photo-assets?sourceType=job&sourceId=${id}`);
@@ -488,7 +488,7 @@ export default function JobForm() {
         }),
       });
     },
-    [["/api/jobs", id, "crew-invites"]],
+    [QUERY_KEYS.jobCrewInvites(id!)],
     {
       onSuccess: () => {
         setSelectedCrewId("");
@@ -722,7 +722,7 @@ export default function JobForm() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/photo-assets", "job", id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.photoAssets("job", id!) });
     },
     onError: () => {
       toast({ title: "Failed to save photos", variant: "destructive" });
@@ -784,7 +784,7 @@ export default function JobForm() {
   // Handle resolution completed - proceed with job completion
   const handleResolutionComplete = (resolutionType: JobResolutionType) => {
     setShowResolutionModal(false);
-    queryClient.invalidateQueries({ queryKey: ["/api/jobs", id, "resolution-required"] });
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jobResolutionRequired(id!) });
     
     // Now complete the job since resolution exists
     if (pendingCompletionData) {

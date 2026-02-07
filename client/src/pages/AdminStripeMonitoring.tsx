@@ -18,6 +18,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { apiFetch } from "@/lib/apiFetch";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -112,24 +113,24 @@ export default function AdminStripeMonitoring() {
   const { toast } = useToast();
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useQuery<Stats>({
-    queryKey: ["/api/admin/stripe/stats"],
+    queryKey: QUERY_KEYS.adminStripeStats(),
   });
 
   const { data: webhooksData, isLoading: webhooksLoading, refetch: refetchWebhooks } = useQuery<{ events: WebhookEvent[] }>({
-    queryKey: ["/api/admin/stripe/webhooks"],
+    queryKey: QUERY_KEYS.adminStripeWebhooks(),
   });
 
   const { data: paymentsData, isLoading: paymentsLoading, refetch: refetchPayments } = useQuery<{ payments: PaymentState[] }>({
-    queryKey: ["/api/admin/stripe/payments"],
+    queryKey: QUERY_KEYS.adminStripePayments(),
   });
 
   const { data: disputesData, isLoading: disputesLoading, refetch: refetchDisputes } = useQuery<{ disputes: Dispute[] }>({
-    queryKey: ["/api/admin/stripe/disputes"],
+    queryKey: QUERY_KEYS.adminStripeDisputes(),
   });
 
   const retryWebhookMutation = useApiMutation(
     async (eventId: string) => apiFetch(`/api/admin/stripe/webhooks/${eventId}/retry`, { method: "POST" }),
-    [["/api/admin/stripe/webhooks"], ["/api/admin/stripe/stats"]],
+    [QUERY_KEYS.adminStripeWebhooks(), QUERY_KEYS.adminStripeStats()],
     {
       onSuccess: () => {
         toast({ title: "Webhook retry initiated" });
@@ -142,7 +143,7 @@ export default function AdminStripeMonitoring() {
 
   const reconcileMutation = useApiMutation(
     async () => apiFetch("/api/admin/stripe/reconcile", { method: "POST" }),
-    [["/api/admin/stripe/payments"], ["/api/admin/stripe/stats"]],
+    [QUERY_KEYS.adminStripePayments(), QUERY_KEYS.adminStripeStats()],
     {
       onSuccess: (data: any) => {
         toast({ 
@@ -158,7 +159,7 @@ export default function AdminStripeMonitoring() {
 
   const closeDisputeMutation = useApiMutation(
     async (disputeId: string) => apiFetch(`/api/admin/stripe/disputes/${disputeId}/close`, { method: "POST" }),
-    [["/api/admin/stripe/disputes"], ["/api/admin/stripe/stats"]],
+    [QUERY_KEYS.adminStripeDisputes(), QUERY_KEYS.adminStripeStats()],
     {
       onSuccess: () => {
         toast({ title: "Dispute closed (accepted loss)" });

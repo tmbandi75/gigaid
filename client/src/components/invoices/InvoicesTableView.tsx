@@ -77,7 +77,7 @@ function InvoiceTableRow({ invoice }: { invoice: Invoice }) {
 
   const sendInvoiceMutation = useApiMutation(
     () => apiFetch(`/api/invoices/${invoice.id}/send`, { method: "POST" }),
-    [QUERY_KEYS.invoices(), ["/api/dashboard/game-plan"]],
+    [QUERY_KEYS.invoices(), QUERY_KEYS.dashboardGamePlan()],
     {
       onSuccess: () => {
         toast({ title: "Invoice sent!", description: "Your client has been notified." });
@@ -90,7 +90,7 @@ function InvoiceTableRow({ invoice }: { invoice: Invoice }) {
 
   const markPaidMutation = useApiMutation(
     () => apiFetch(`/api/invoices/${invoice.id}`, { method: "PATCH", body: JSON.stringify({ status: "paid" }) }),
-    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(invoice.id), ["/api/dashboard/game-plan"], ["/api/dashboard/summary"]],
+    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(invoice.id), QUERY_KEYS.dashboardGamePlan(), QUERY_KEYS.dashboardSummary()],
     {
       onSuccess: () => {
         toast({ title: "Invoice marked as paid" });

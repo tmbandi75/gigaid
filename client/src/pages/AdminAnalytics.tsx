@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { TrendingUp, Users, DollarSign, BarChart3, Target, Loader2, Sparkles, ArrowUpRight } from "lucide-react";
 
 interface RevenueSummary {
@@ -131,19 +132,19 @@ export default function AdminAnalytics() {
   const [days, setDays] = useState("30");
 
   const { data: revenue, isLoading: revenueLoading } = useQuery<RevenueData>({
-    queryKey: [`/api/admin/analytics/revenue?days=${days}`],
+    queryKey: QUERY_KEYS.adminAnalyticsRevenue(),
   });
 
   const { data: cohorts, isLoading: cohortsLoading } = useQuery<{ cohorts: CohortRow[] }>({
-    queryKey: ["/api/admin/analytics/cohorts"],
+    queryKey: QUERY_KEYS.adminAnalyticsCohorts(),
   });
 
   const { data: funnels, isLoading: funnelsLoading } = useQuery<FunnelData>({
-    queryKey: [`/api/admin/analytics/funnels?days=${days}`],
+    queryKey: QUERY_KEYS.adminAnalyticsFunnels(days),
   });
 
   const { data: ltv, isLoading: ltvLoading } = useQuery<LtvData>({
-    queryKey: ["/api/admin/analytics/ltv"],
+    queryKey: QUERY_KEYS.adminAnalyticsLtv(),
   });
 
   const isLoading = revenueLoading || cohortsLoading || funnelsLoading || ltvLoading;

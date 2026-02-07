@@ -20,6 +20,7 @@ import {
   Clock,
   Shield,
 } from "lucide-react";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 interface ConnectStatus {
   connected: boolean;
@@ -52,13 +53,13 @@ export function StripeConnectSettings() {
   });
 
   const { data: connectStatus, isLoading: statusLoading } = useQuery<ConnectStatus>({
-    queryKey: ["/api/stripe/connect/status"],
+    queryKey: QUERY_KEYS.stripeConnectStatus(),
     refetchInterval: 30000,
     refetchOnWindowFocus: true,
   });
 
   const { data: profile } = useQuery<any>({
-    queryKey: ["/api/profile"],
+    queryKey: QUERY_KEYS.profile(),
   });
 
   useEffect(() => {
@@ -77,7 +78,7 @@ export function StripeConnectSettings() {
 
   const onboardMutation = useApiMutation(
     () => apiFetch<any>("/api/stripe/connect/onboard", { method: "POST" }),
-    [["/api/stripe/connect/status"]],
+    [QUERY_KEYS.stripeConnectStatus()],
     {
       onSuccess: (data: any) => {
         if (data?.url) {
@@ -99,7 +100,7 @@ export function StripeConnectSettings() {
 
   const dashboardMutation = useApiMutation(
     () => apiFetch<any>("/api/stripe/connect/dashboard", { method: "POST" }),
-    [["/api/stripe/connect/status"]],
+    [QUERY_KEYS.stripeConnectStatus()],
     {
       onSuccess: (data: any) => {
         if (data?.url) {
@@ -121,7 +122,7 @@ export function StripeConnectSettings() {
 
   const saveDepositMutation = useApiMutation(
     (data: DepositSettings) => apiFetch("/api/stripe/connect/deposit-settings", { method: "PATCH", body: JSON.stringify(data) }),
-    [["/api/profile"]],
+    [QUERY_KEYS.profile()],
     {
       onSuccess: () => {
         toast({ title: "Deposit settings saved" });

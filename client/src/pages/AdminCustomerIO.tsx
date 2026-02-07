@@ -23,6 +23,7 @@ import {
   Radio,
 } from "lucide-react";
 import { apiFetch } from "@/lib/apiFetch";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
 
@@ -48,16 +49,16 @@ export default function AdminCustomerIO() {
   const [eventName, setEventName] = useState("");
 
   const { data: status, isLoading: statusLoading } = useQuery<CustomerIOStatus>({
-    queryKey: ["/api/admin/customerio/status"],
+    queryKey: QUERY_KEYS.adminCustomerioStatus(),
   });
 
   const { data: campaignsData, isLoading: campaignsLoading } = useQuery<{ campaigns: Campaign[] }>({
-    queryKey: ["/api/admin/customerio/campaigns"],
+    queryKey: QUERY_KEYS.adminCustomerioCampaigns(),
     enabled: status?.appApiConfigured === true,
   });
 
   const { data: metricsData } = useQuery<{ period: string; actions: { actionKey: string; count: number }[] }>({
-    queryKey: ["/api/admin/customerio/delivery-metrics"],
+    queryKey: QUERY_KEYS.adminCustomerioDelivery(),
   });
 
   const syncUserMutation = useApiMutation(
@@ -92,7 +93,7 @@ export default function AdminCustomerIO() {
 
   const pauseCampaignMutation = useApiMutation(
     async (campaignId: string) => apiFetch(`/api/admin/customerio/campaigns/${campaignId}/pause`, { method: "POST" }),
-    [["/api/admin/customerio/campaigns"]],
+    [QUERY_KEYS.adminCustomerioCampaigns()],
     {
       onSuccess: () => {
         toast({ title: "Campaign paused" });
@@ -105,7 +106,7 @@ export default function AdminCustomerIO() {
 
   const resumeCampaignMutation = useApiMutation(
     async (campaignId: string) => apiFetch(`/api/admin/customerio/campaigns/${campaignId}/resume`, { method: "POST" }),
-    [["/api/admin/customerio/campaigns"]],
+    [QUERY_KEYS.adminCustomerioCampaigns()],
     {
       onSuccess: () => {
         toast({ title: "Campaign resumed" });

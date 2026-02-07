@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { Mail, Loader2, ImageIcon, Save } from "lucide-react";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 interface EmailSignature {
   emailSignatureText: string;
@@ -26,7 +27,7 @@ export function EmailSignatureSettings() {
   const [hasChanges, setHasChanges] = useState(false);
 
   const { data: signature, isLoading } = useQuery<EmailSignature>({
-    queryKey: ["/api/user/email-signature"],
+    queryKey: QUERY_KEYS.emailSignature(),
   });
 
   useEffect(() => {
@@ -39,7 +40,7 @@ export function EmailSignatureSettings() {
 
   const updateMutation = useApiMutation(
     (data: Partial<EmailSignature>) => apiFetch("/api/user/email-signature", { method: "PUT", body: JSON.stringify(data) }),
-    [["/api/user/email-signature"]],
+    [QUERY_KEYS.emailSignature()],
     {
       onSuccess: () => {
         toast({ title: "Email signature saved" });

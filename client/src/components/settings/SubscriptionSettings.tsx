@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import {
   Crown,
   Loader2,
@@ -79,17 +80,17 @@ export function SubscriptionSettings() {
   const [showCloseAccountDialog, setShowCloseAccountDialog] = useState(false);
 
   const { data: subscription, isLoading, isError } = useQuery<SubscriptionStatus>({
-    queryKey: ["/api/subscription/status"],
+    queryKey: QUERY_KEYS.subscriptionStatus(),
     retry: 1,
     refetchOnWindowFocus: true,
   });
 
   const { data: profile } = useQuery<{ accountStatus?: string; suspendedAt?: string; scheduledDeletionAt?: string }>({
-    queryKey: ["/api/profile"],
+    queryKey: QUERY_KEYS.profile(),
   });
 
   const { data: invoiceData, isLoading: invoicesLoading } = useQuery<{ invoices: StripeInvoice[] }>({
-    queryKey: ["/api/billing/invoices"],
+    queryKey: QUERY_KEYS.billingInvoices(),
     enabled: true,
   });
 
@@ -106,7 +107,7 @@ export function SubscriptionSettings() {
 
   const cancelMutation = useApiMutation(
     () => apiFetch<any>("/api/subscription/cancel", { method: "POST" }),
-    [["/api/subscription/status"]],
+    [QUERY_KEYS.subscriptionStatus()],
     {
       onSuccess: (data: any) => {
         toast({
@@ -127,7 +128,7 @@ export function SubscriptionSettings() {
 
   const reactivateMutation = useApiMutation(
     () => apiFetch("/api/subscription/reactivate", { method: "POST" }),
-    [["/api/subscription/status"]],
+    [QUERY_KEYS.subscriptionStatus()],
     {
       onSuccess: () => {
         toast({
@@ -166,7 +167,7 @@ export function SubscriptionSettings() {
 
   const suspendMutation = useApiMutation(
     () => apiFetch("/api/billing/suspend", { method: "POST" }),
-    [["/api/subscription/status"], ["/api/profile"], ["/api/auth/user"]],
+    [QUERY_KEYS.subscriptionStatus(), QUERY_KEYS.profile(), QUERY_KEYS.authUser()],
     {
       onSuccess: () => {
         toast({
@@ -187,7 +188,7 @@ export function SubscriptionSettings() {
 
   const reactivateAccountMutation = useApiMutation(
     () => apiFetch("/api/billing/reactivate", { method: "POST" }),
-    [["/api/subscription/status"], ["/api/profile"], ["/api/auth/user"]],
+    [QUERY_KEYS.subscriptionStatus(), QUERY_KEYS.profile(), QUERY_KEYS.authUser()],
     {
       onSuccess: () => {
         toast({
@@ -208,7 +209,7 @@ export function SubscriptionSettings() {
 
   const closeAccountMutation = useApiMutation(
     () => apiFetch("/api/account/cancel", { method: "POST" }),
-    [["/api/subscription/status"], ["/api/profile"], ["/api/auth/user"]],
+    [QUERY_KEYS.subscriptionStatus(), QUERY_KEYS.profile(), QUERY_KEYS.authUser()],
     {
       onSuccess: () => {
         toast({
@@ -229,7 +230,7 @@ export function SubscriptionSettings() {
 
   const undoCancelMutation = useApiMutation(
     () => apiFetch("/api/account/undo-cancel", { method: "POST" }),
-    [["/api/subscription/status"], ["/api/profile"], ["/api/auth/user"]],
+    [QUERY_KEYS.subscriptionStatus(), QUERY_KEYS.profile(), QUERY_KEYS.authUser()],
     {
       onSuccess: () => {
         toast({

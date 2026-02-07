@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { 
   Clock, 
   MessageSquare, 
@@ -31,7 +32,7 @@ export function ScheduledMessagesPanel({ jobId }: ScheduledMessagesPanelProps) {
   const { toast } = useToast();
   
   const { data: messages = [], isLoading } = useQuery<OutboundMessage[]>({
-    queryKey: ["/api/jobs", jobId, "scheduled-messages"],
+    queryKey: QUERY_KEYS.jobScheduledMessages(jobId),
     queryFn: async () => {
       const res = await fetch(`/api/jobs/${jobId}/scheduled-messages`);
       if (!res.ok) return [];
@@ -43,7 +44,7 @@ export function ScheduledMessagesPanel({ jobId }: ScheduledMessagesPanelProps) {
     async (messageId: string) => {
       return apiFetch(`/api/outbound-messages/${messageId}/cancel`, { method: "POST" });
     },
-    [["/api/jobs", jobId, "scheduled-messages"]],
+    [QUERY_KEYS.jobScheduledMessages(jobId)],
     {
       onSuccess: () => {
         toast({ title: "Message canceled", description: "The scheduled message has been canceled." });

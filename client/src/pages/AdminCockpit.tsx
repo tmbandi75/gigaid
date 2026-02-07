@@ -28,6 +28,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { apiFetch } from "@/lib/apiFetch";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -187,32 +188,32 @@ export default function AdminCockpit() {
   const { toast } = useToast();
 
   const { data: summary, isLoading: summaryLoading, error: summaryError } = useQuery<SummaryData>({
-    queryKey: ["/api/admin/cockpit/summary"],
+    queryKey: QUERY_KEYS.adminCockpitSummary(),
     retry: false,
   });
 
   const { data: focus, isLoading: focusLoading, error: focusError } = useQuery<FocusData>({
-    queryKey: ["/api/admin/cockpit/focus"],
+    queryKey: QUERY_KEYS.adminCockpitFocus(),
     retry: false,
   });
 
   const { data: alerts, isLoading: alertsLoading } = useQuery<{ alerts: Alert[] }>({
-    queryKey: ["/api/admin/cockpit/alerts"],
+    queryKey: QUERY_KEYS.adminCockpitAlerts(),
     retry: false,
   });
 
   const { data: riskData } = useQuery<any>({
-    queryKey: ["/api/admin/cockpit/risk-leakage"],
+    queryKey: QUERY_KEYS.adminCockpitRiskLeakage(),
     retry: false,
   });
 
   const { data: revenueData } = useQuery<any>({
-    queryKey: ["/api/admin/cockpit/revenue-payments"],
+    queryKey: QUERY_KEYS.adminCockpitRevenuePayments(),
     retry: false,
   });
 
   const { data: funnelData } = useQuery<any>({
-    queryKey: ["/api/admin/cockpit/activation-funnel"],
+    queryKey: QUERY_KEYS.adminCockpitActivationFunnel(),
     retry: false,
   });
 
@@ -221,7 +222,7 @@ export default function AdminCockpit() {
     lastRun: string | null;
     summary: { total: number; passed: number; failed: number; passRate: string };
   }>({
-    queryKey: ["/api/admin/test-summary"],
+    queryKey: QUERY_KEYS.adminTestSummary(),
     retry: false,
   });
 
@@ -243,12 +244,12 @@ export default function AdminCockpit() {
   const refreshMutation = useApiMutation(
     () => apiFetch("/api/admin/cockpit/refresh", { method: "POST" }),
     [
-      ["/api/admin/cockpit/summary"],
-      ["/api/admin/cockpit/focus"],
-      ["/api/admin/cockpit/alerts"],
-      ["/api/admin/cockpit/risk-leakage"],
-      ["/api/admin/cockpit/revenue-payments"],
-      ["/api/admin/cockpit/activation-funnel"],
+      QUERY_KEYS.adminCockpitSummary(),
+      QUERY_KEYS.adminCockpitFocus(),
+      QUERY_KEYS.adminCockpitAlerts(),
+      QUERY_KEYS.adminCockpitRiskLeakage(),
+      QUERY_KEYS.adminCockpitRevenuePayments(),
+      QUERY_KEYS.adminCockpitActivationFunnel(),
     ],
     {
       onSuccess: () => {

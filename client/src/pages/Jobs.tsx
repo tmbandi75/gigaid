@@ -131,7 +131,7 @@ function JobCard({ job, nudges, invoices, onNudgeClick }: JobCardProps) {
 
   const startJobMutation = useApiMutation(
     () => apiFetch(`/api/jobs/${job.id}`, { method: "PATCH", body: JSON.stringify({ status: "in_progress" }) }),
-    [QUERY_KEYS.jobs(), QUERY_KEYS.job(job.id), ["/api/dashboard/game-plan"], ["/api/next-actions"]],
+    [QUERY_KEYS.jobs(), QUERY_KEYS.job(job.id), QUERY_KEYS.dashboardGamePlan(), QUERY_KEYS.nextActions()],
     {
       onSuccess: () => {
         toast({ title: "Job started!", description: "Good luck!" });
@@ -144,7 +144,7 @@ function JobCard({ job, nudges, invoices, onNudgeClick }: JobCardProps) {
 
   const cancelJobMutation = useApiMutation(
     () => apiFetch(`/api/jobs/${job.id}`, { method: "PATCH", body: JSON.stringify({ status: "cancelled" }) }),
-    [QUERY_KEYS.jobs(), QUERY_KEYS.job(job.id), ["/api/dashboard/game-plan"], ["/api/next-actions"]],
+    [QUERY_KEYS.jobs(), QUERY_KEYS.job(job.id), QUERY_KEYS.dashboardGamePlan(), QUERY_KEYS.nextActions()],
     {
       onSuccess: () => {
         toast({ title: "Job cancelled" });
@@ -159,7 +159,7 @@ function JobCard({ job, nudges, invoices, onNudgeClick }: JobCardProps) {
 
   const archiveJobMutation = useApiMutation(
     () => apiFetch(`/api/jobs/${job.id}/archive`, { method: "POST" }),
-    [QUERY_KEYS.jobs(), ["/api/dashboard/game-plan"]],
+    [QUERY_KEYS.jobs(), QUERY_KEYS.dashboardGamePlan()],
     {
       onSuccess: () => {
         toast({ title: "Job archived" });
@@ -174,7 +174,7 @@ function JobCard({ job, nudges, invoices, onNudgeClick }: JobCardProps) {
 
   const deleteJobMutation = useApiMutation(
     () => apiFetch(`/api/jobs/${job.id}`, { method: "DELETE" }),
-    [QUERY_KEYS.jobs(), ["/api/dashboard/game-plan"]],
+    [QUERY_KEYS.jobs(), QUERY_KEYS.dashboardGamePlan()],
     {
       onSuccess: () => {
         toast({ title: "Job deleted" });
@@ -474,7 +474,7 @@ export default function Jobs() {
   });
 
   const { data: profile } = useQuery<{ services: string[] | null }>({
-    queryKey: ["/api/profile"],
+    queryKey: QUERY_KEYS.profile(),
   });
 
   const handleNudgeClick = (nudge: AiNudge) => {

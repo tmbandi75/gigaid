@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, TrendingUp, Calendar, Users, Clock, Lightbulb } from "lucide-react";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 interface BookingInsights {
   topDays: Array<{ day: string; count: number }>;
@@ -14,7 +15,7 @@ interface BookingInsights {
 
 export function BookingInsightsDashboard() {
   const { data: insights, isLoading, error } = useQuery<BookingInsights>({
-    queryKey: ["/api/ai/booking-insights"],
+    queryKey: QUERY_KEYS.aiBookingInsights(),
     staleTime: 5 * 60 * 1000,
   });
 

@@ -77,12 +77,12 @@ export default function LeadForm() {
   const [priceNotes, setPriceNotes] = useState("");
 
   const { data: existingLead, isLoading: isLoadingLead } = useQuery<Lead>({
-    queryKey: ["/api/leads", id],
+    queryKey: QUERY_KEYS.lead(id!),
     enabled: !!isEditing,
   });
 
   const { data: activePriceConfirmation, isLoading: isLoadingPC } = useQuery<PriceConfirmation | null>({
-    queryKey: ["/api/leads", id, "active-price-confirmation"],
+    queryKey: QUERY_KEYS.leadPriceConfirmation(id!),
     queryFn: async () => {
       try {
         return await apiFetch(`/api/leads/${id}/active-price-confirmation`);
@@ -133,7 +133,7 @@ export default function LeadForm() {
         body: JSON.stringify(payload),
       });
     },
-    [QUERY_KEYS.leads(), ["/api/dashboard/summary"]],
+    [QUERY_KEYS.leads(), QUERY_KEYS.dashboardSummary()],
     {
       onSuccess: () => {
         toast({ title: "Lead created successfully" });
@@ -160,7 +160,7 @@ export default function LeadForm() {
         body: JSON.stringify(payload),
       });
     },
-    [QUERY_KEYS.leads(), QUERY_KEYS.lead(id!), ["/api/dashboard/summary"]],
+    [QUERY_KEYS.leads(), QUERY_KEYS.lead(id!), QUERY_KEYS.dashboardSummary()],
     {
       onSuccess: () => {
         toast({ title: "Lead updated successfully" });
@@ -194,7 +194,7 @@ export default function LeadForm() {
         method: "POST",
       });
     },
-    [["/api/leads", id, "active-price-confirmation"]],
+    [QUERY_KEYS.leadPriceConfirmation(id!)],
     {
       onSuccess: (data: any) => {
         setPriceDialogOpen(false);
@@ -225,7 +225,7 @@ export default function LeadForm() {
         method: "POST",
       });
     },
-    [["/api/leads", id, "active-price-confirmation"]],
+    [QUERY_KEYS.leadPriceConfirmation(id!)],
     {
       onSuccess: (data: any) => {
         const sentVia = [];

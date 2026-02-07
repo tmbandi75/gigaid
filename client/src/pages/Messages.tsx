@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 interface Conversation {
   clientPhone: string;
@@ -166,12 +167,12 @@ function MessageThread({
   const [reply, setReply] = useState("");
 
   const { data: messages = [], isLoading } = useQuery<SmsMessage[]>({
-    queryKey: ["/api/sms/conversation", phone],
+    queryKey: QUERY_KEYS.smsConversation(phone),
     refetchInterval: 5000,
   });
 
   const { data: usage } = useQuery<MessageUsage>({
-    queryKey: ["/api/messages/usage"],
+    queryKey: QUERY_KEYS.messagesUsage(),
     staleTime: 30000,
   });
 
@@ -186,7 +187,7 @@ function MessageThread({
         clientName,
       }) });
     },
-    [["/api/sms/conversation", phone], ["/api/sms/conversations"], ["/api/sms/unread-count"], ["/api/messages/usage"]],
+    [QUERY_KEYS.smsConversation(phone), QUERY_KEYS.smsConversations(), QUERY_KEYS.smsUnreadCount(), QUERY_KEYS.messagesUsage()],
     {
       onSuccess: () => {
         setReply("");
@@ -331,7 +332,7 @@ export default function Messages() {
   const isMobile = useIsMobile();
 
   const { data: conversations = [], isLoading } = useQuery<Conversation[]>({
-    queryKey: ["/api/sms/conversations"],
+    queryKey: QUERY_KEYS.smsConversations(),
     refetchInterval: 10000,
   });
 
@@ -339,7 +340,7 @@ export default function Messages() {
   const handleSelectConversation = (phone: string, name: string | null) => {
     setSelectedPhone(phone);
     setSelectedName(name);
-    queryClient.invalidateQueries({ queryKey: ["/api/sms/unread-count"] });
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.smsUnreadCount() });
   };
 
   const handleBack = () => {

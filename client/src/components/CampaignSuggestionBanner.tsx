@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Bell, X, Users, ArrowRight } from "lucide-react";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 
 interface CampaignSuggestion {
   id: string;
@@ -31,7 +32,7 @@ export function CampaignSuggestionBanner() {
   const [, setLocation] = useLocation();
   
   const { data: suggestions, isLoading } = useQuery<CampaignSuggestion[]>({
-    queryKey: ["/api/notification-campaigns/suggestions"],
+    queryKey: QUERY_KEYS.campaignSuggestions(),
     refetchInterval: 60000,
   });
   
@@ -41,7 +42,7 @@ export function CampaignSuggestionBanner() {
         method: "POST",
       });
     },
-    [["/api/notification-campaigns/suggestions"]],
+    [QUERY_KEYS.campaignSuggestions()],
   );
 
   if (isLoading || !suggestions || suggestions.length === 0) {

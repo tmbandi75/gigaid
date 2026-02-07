@@ -94,7 +94,7 @@ export default function JobSummary() {
   const [depositOverride, setDepositOverride] = useState<string | null>(null);
 
   const { data: job, isLoading } = useQuery<Job>({
-    queryKey: ["/api/jobs", id],
+    queryKey: QUERY_KEYS.job(id!),
     enabled: !!id,
   });
 
@@ -124,7 +124,7 @@ export default function JobSummary() {
     visibility: string;
   }
   const { data: jobPhotos = [] } = useQuery<PhotoAsset[]>({
-    queryKey: ["/api/photo-assets", "job", id],
+    queryKey: QUERY_KEYS.photoAssets("job", id!),
     queryFn: async () => {
       const res = await fetch(`/api/photo-assets?sourceType=job&sourceId=${id}`);
       if (!res.ok) return [];
@@ -142,7 +142,7 @@ export default function JobSummary() {
     isDepositFullyPaid?: boolean;
   }
   const { data: depositStatus } = useQuery<DepositState>({
-    queryKey: ["/api/jobs", id, "deposit-status"],
+    queryKey: QUERY_KEYS.jobDepositStatus(id!),
     queryFn: async () => {
       const res = await fetch(`/api/jobs/${id}/deposit-status`);
       if (!res.ok) return { hasDeposit: false, depositRequestedCents: 0, depositPaidCents: 0 };
@@ -153,7 +153,7 @@ export default function JobSummary() {
 
   // Fetch client for deposit override
   const { data: clientData } = useQuery<{ client: Client | null }>({
-    queryKey: ["/api/client", job?.clientPhone, job?.clientEmail],
+    queryKey: QUERY_KEYS.clientInfo(job?.clientPhone, job?.clientEmail),
     queryFn: async () => {
       const params = new URLSearchParams();
       if (job?.clientPhone) params.append("phone", job.clientPhone);
@@ -205,7 +205,7 @@ export default function JobSummary() {
     async () => {
       return apiFetch(`/api/jobs/${id}/deposit/send-request`, { method: "POST" });
     },
-    [QUERY_KEYS.job(id!), ["/api/jobs", id, "deposit-status"], ["/api/dashboard/game-plan"]],
+    [QUERY_KEYS.job(id!), QUERY_KEYS.jobDepositStatus(id!), QUERY_KEYS.dashboardGamePlan()],
     {
       onSuccess: () => {
         toast({ title: "Deposit request sent!", description: "Your client will receive an SMS with payment link." });
@@ -253,7 +253,7 @@ export default function JobSummary() {
         body: JSON.stringify({ status: "in_progress" }),
       });
     },
-    [QUERY_KEYS.job(id!), QUERY_KEYS.jobs(), ["/api/dashboard/game-plan"], ["/api/next-actions"]],
+    [QUERY_KEYS.job(id!), QUERY_KEYS.jobs(), QUERY_KEYS.dashboardGamePlan(), QUERY_KEYS.nextActions()],
     {
       onSuccess: () => {
         toast({ title: "Job started!", description: "Good luck with this one!" });
@@ -271,7 +271,7 @@ export default function JobSummary() {
         body: JSON.stringify({ status: "completed" }),
       });
     },
-    [QUERY_KEYS.job(id!), QUERY_KEYS.jobs(), ["/api/dashboard/game-plan"], ["/api/next-actions"]],
+    [QUERY_KEYS.job(id!), QUERY_KEYS.jobs(), QUERY_KEYS.dashboardGamePlan(), QUERY_KEYS.nextActions()],
     {
       onSuccess: () => {
         toast({ title: "Job completed!", description: "Great work! Don't forget to get paid." });

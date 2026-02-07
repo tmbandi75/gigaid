@@ -6,6 +6,7 @@ import { Sparkles, ChevronRight, Loader2 } from "lucide-react";
 import { NudgeChips } from "./NudgeChip";
 import { NudgeActionSheet } from "./NudgeActionSheet";
 import { useLocation } from "wouter";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import type { AiNudge } from "@shared/schema";
 
 interface NudgeCardProps {
@@ -18,7 +19,7 @@ export function NudgeCard({ maxNudges = 3 }: NudgeCardProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const { data: nudges = [], isLoading } = useQuery<AiNudge[]>({
-    queryKey: ["/api/ai/nudges"],
+    queryKey: QUERY_KEYS.nudges(),
     staleTime: 1000 * 60 * 5,
   });
 

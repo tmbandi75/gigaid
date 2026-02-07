@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { 
   Select,
   SelectContent,
@@ -89,11 +90,11 @@ export default function AdminAuditLogs() {
   if (endDate) queryParams.set("endDate", endDate);
 
   const { data, isLoading, refetch } = useQuery<AuditLogsResponse>({
-    queryKey: [`/api/admin/audit-logs?${queryParams.toString()}`],
+    queryKey: QUERY_KEYS.adminAuditLogsQuery(queryParams.toString()),
   });
 
   const { data: actionKeys } = useQuery<{ actionKeys: string[] }>({
-    queryKey: ["/api/admin/audit-logs/action-keys"],
+    queryKey: QUERY_KEYS.adminAuditLogActionKeys(),
   });
 
   const handleExport = () => {

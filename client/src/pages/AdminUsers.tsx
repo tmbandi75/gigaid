@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getAuthToken } from "@/lib/authToken";
 import { cn } from "@/lib/utils";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { 
   Search,
   Users,
@@ -198,7 +199,7 @@ function SearchPanel() {
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
   const { data, isLoading } = useQuery<SearchResponse>({
-    queryKey: ["/api/admin/users/search", debouncedQuery],
+    queryKey: QUERY_KEYS.adminUsersSearch(debouncedQuery),
     queryFn: async () => {
       const token = getAuthToken();
       const headers: Record<string, string> = {};
@@ -286,7 +287,7 @@ function ViewPanel({ view }: { view: string }) {
   const [page, setPage] = useState(1);
 
   const { data, isLoading, error } = useQuery<ViewResponse>({
-    queryKey: ["/api/admin/users/views", view, page],
+    queryKey: QUERY_KEYS.adminUsersViews(view, page),
     queryFn: async () => {
       const token = getAuthToken();
       const headers: Record<string, string> = {};
