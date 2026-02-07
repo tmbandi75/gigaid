@@ -400,53 +400,42 @@ export function SubscriptionSettings() {
             </div>
           )}
 
-          <div className="flex flex-col gap-2">
-            {isFree ? (
+          {!isFree && (
+            <div className="flex flex-col gap-2">
               <Button
-                onClick={() => navigate("/pricing")}
+                variant="outline"
+                onClick={() => portalMutation.mutate()}
+                disabled={portalMutation.isPending}
                 className="w-full"
-                data-testid="button-view-plans"
+                data-testid="button-manage-billing"
               >
-                <Crown className="h-4 w-4 mr-2" />
-                Upgrade Your Plan
+                {portalMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <CreditCard className="h-4 w-4 mr-2" />
+                )}
+                Manage Billing
+                <ExternalLink className="h-3 w-3 ml-auto" />
               </Button>
-            ) : (
-              <>
+
+              {effectiveSubscription.cancelAtPeriodEnd && (
                 <Button
-                  variant="outline"
-                  onClick={() => portalMutation.mutate()}
-                  disabled={portalMutation.isPending}
+                  variant="default"
+                  onClick={() => reactivateMutation.mutate()}
+                  disabled={reactivateMutation.isPending}
                   className="w-full"
-                  data-testid="button-manage-billing"
+                  data-testid="button-reactivate"
                 >
-                  {portalMutation.isPending ? (
+                  {reactivateMutation.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   ) : (
-                    <CreditCard className="h-4 w-4 mr-2" />
+                    <RefreshCcw className="h-4 w-4 mr-2" />
                   )}
-                  Manage Billing
-                  <ExternalLink className="h-3 w-3 ml-auto" />
+                  Reactivate Subscription
                 </Button>
-
-                {effectiveSubscription.cancelAtPeriodEnd && (
-                  <Button
-                    variant="default"
-                    onClick={() => reactivateMutation.mutate()}
-                    disabled={reactivateMutation.isPending}
-                    className="w-full"
-                    data-testid="button-reactivate"
-                  >
-                    {reactivateMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <RefreshCcw className="h-4 w-4 mr-2" />
-                    )}
-                    Reactivate Subscription
-                  </Button>
-                )}
-              </>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
