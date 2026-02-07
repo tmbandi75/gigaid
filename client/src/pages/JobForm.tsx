@@ -1,6 +1,8 @@
 import { useState, useCallback } from "react";
 import { useLocation, useParams, useSearch, Link } from "wouter";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/apiFetch";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -122,14 +124,14 @@ function DepositSection({ job }: { job: Job }) {
 
   const setDepositMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", `/api/jobs/${job.id}/deposit`, {
-        depositType,
-        depositAmount,
+      return apiFetch(`/api/jobs/${job.id}/deposit`, {
+        method: "POST",
+        body: JSON.stringify({ depositType, depositAmount }),
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs", job.id, "deposit-status"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs", job.id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.JOBS });
       setShowSetDeposit(false);
       toast({ title: "Deposit requirement set" });
     },
@@ -575,11 +577,13 @@ export default function JobForm() {
 
   const suggestionsMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/ai/schedule-suggestions", {
-        duration: duration || 60,
-        preferredDate: scheduledDate,
+      return apiFetch<{ suggestions: ScheduleSuggestion[] }>("/api/ai/schedule-suggestions", {
+        method: "POST",
+        body: JSON.stringify({
+          duration: duration || 60,
+          preferredDate: scheduledDate,
+        }),
       });
-      return response.json() as Promise<{ suggestions: ScheduleSuggestion[] }>;
     },
     onError: () => {
       toast({ title: "Failed to get schedule suggestions", variant: "destructive" });
@@ -622,14 +626,17 @@ export default function JobForm() {
         customerLat: addressCoords.lat,
         customerLng: addressCoords.lng,
       };
-      return apiRequest("POST", "/api/jobs", payload);
+      return apiFetch("/api/jobs", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
     },
     onSuccess: async (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.JOBS });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD_SUMMARY });
       if (leadId) {
-        queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/leads", leadId] });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.LEADS });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.LEADS });
       }
       
       const clientName = [variables.clientFirstName, variables.clientLastName]
@@ -679,13 +686,15 @@ export default function JobForm() {
         payload.customerLng = addressCoords.lng;
       }
       
-      const response = await apiRequest("PATCH", `/api/jobs/${id}`, payload);
+      const response = await apiFetch(`/api/jobs/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
       return { data, clientName, response };
     },
     onSuccess: ({ data, clientName }) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs", id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/summary"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.JOBS });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD_SUMMARY });
       
       if (data.status === "completed" && existingJob?.status !== "completed") {
         const totalCents = data.price ? data.price * 100 : (existingJob?.price || 0);
@@ -711,7 +720,10 @@ export default function JobForm() {
   // Save job photos mutation
   const savePhotosMutation = useMutation({
     mutationFn: async (photos: string[]) => {
-      return apiRequest("POST", `/api/jobs/${id}/photos`, { photos });
+      return apiFetch(`/api/jobs/${id}/photos`, {
+        method: "POST",
+        body: JSON.stringify({ photos }),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/photo-assets", "job", id] });
@@ -723,7 +735,10 @@ export default function JobForm() {
 
   const onTheWayMutation = useMutation({
     mutationFn: async (eta?: string) => {
-      return apiRequest("POST", `/api/jobs/${id}/on-the-way`, { eta });
+      return apiFetch(`/api/jobs/${id}/on-the-way`, {
+        method: "POST",
+        body: JSON.stringify({ eta }),
+      });
     },
     onSuccess: (response: any) => {
       toast({ 

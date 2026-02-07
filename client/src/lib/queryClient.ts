@@ -1,5 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
-import { getAuthToken, isTokenReady } from "./authToken";
+import { getAuthToken } from "./authToken";
 
 // Global logout state - prevents any API calls during logout
 let isLoggingOutGlobal = false;
@@ -26,47 +26,6 @@ function getAuthHeaders(): Record<string, string> {
     return { Authorization: `Bearer ${token}` };
   }
   return {};
-}
-
-export async function apiRequest(
-  method: string,
-  url: string,
-  data?: unknown | undefined,
-): Promise<Response> {
-  // Block all API requests during logout to prevent rehydration
-  if (isLoggingOutGlobal) {
-    console.log("[QueryClient] API request blocked during logout:", method, url);
-    throw new Error("Logout in progress");
-  }
-
-  // For mutating requests (POST, PUT, PATCH, DELETE), verify token is ready
-  // This prevents data loss from silent 401 failures on first login attempt
-  const isMutatingRequest = method !== "GET" && method !== "HEAD";
-  const token = getAuthToken();
-  const tokenReady = isTokenReady();
-  
-  if (isMutatingRequest && (!token || !tokenReady)) {
-    console.error("[QueryClient] BLOCKED: Mutating request before token ready:", method, url, { hasToken: !!token, tokenReady });
-    throw new Error("Authentication required - please sign in again");
-  }
-
-  const headers: Record<string, string> = {};
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-  if (data) {
-    headers["Content-Type"] = "application/json";
-  }
-  
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
-
-  await throwIfResNotOk(res);
-  return res;
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
