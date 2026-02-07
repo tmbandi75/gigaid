@@ -1,0 +1,233 @@
+You are a senior SaaS growth + monetization engineer.
+
+Implement a full “user-centric upgrade orchestration system” that converts free users through contextual, earned prompts based on usage, success, and friction.
+
+This system must mirror this user journey:
+
+1) Subtle awareness at ~60% usage
+2) Yellow warning at ~80%
+3) Critical prompt at ~95%
+4) Post-success nudges after wins
+5) Helpful prompts after repeated friction
+6) Soft wall at limits
+7) No spam (cooldowns + caps)
+
+The goal is to make upgrades feel natural, helpful, and justified — never aggressive.
+
+Existing systems (already in codebase):
+- Centralized capability engine (canPerform, hasCapability, capabilityRules)
+- useCanPerform hook
+- CapabilityGate
+- PostHog analytics
+- Stripe checkout
+- capability_usage table
+- stall detection table (if present)
+- BlockingIntercept modal
+
+DO NOT replace existing gating.
+Build on top of it.
+
+==================================================
+STEP 1 — CREATE UPGRADE ORCHESTRATOR MODULE
+==================================================
+
+Create folder:
+
+client/src/upgrade/
+
+With files:
+
+A) upgradeConfig.ts
+- Thresholds:
+  info = 0.6
+  warn = 0.8
+  critical = 0.95
+- Cooldowns:
+  per-trigger = 24h
+  max-prompts-per-day = 2
+- Capability → upgrade benefit mapping
+
+B) upgradeState.ts
+- Persist in localStorage:
+  - dailyPromptCount
+  - lastPromptAt per trigger+capability
+  - assignedVariant (roi/time/social)
+- Expose:
+  canShowPrompt()
+  markPromptShown()
+  getVariant()
+
+C) useUpgradeOrchestrator.ts
+- Main hook
+- Inputs: user, capabilityKey, context
+- Expose:
+  checkUsageThresholds()
+  onPostSuccess()
+  onFrictionDetected()
+  onFeatureBlocked()
+
+- Responsibilities:
+  - Read useCanPerform()
+  - Compute percent used
+  - Apply thresholds
+  - Enforce cooldowns
+  - Pick variant
+  - Trigger UI
+  - Track PostHog
+
+D) upgradeCopy.ts
+- Generate copy by:
+  capability + variant + triggerType
+- Must return:
+  title, subtitle, bullets, primaryCTA, secondaryCTA
+
+E) UpgradeBanner.tsx
+- For 60% and 80% awareness
+- Dismissible
+- Respects cooldown
+
+F) UpgradeNudgeModal.tsx
+- For 95%, post-success, friction
+- Reuse existing modal styles
+- Primary CTA → Stripe checkout
+
+==================================================
+STEP 2 — IMPLEMENT USAGE AWARENESS (60/80/95)
+==================================================
+
+Using useUpgradeOrchestrator:
+
+Integrate into:
+
+1) Job creation flow
+2) SMS/Messaging flow
+3) Booking/Deposit flow
+4) Invoicing flow
+
+On render:
+- Call checkUsageThresholds()
+
+Behavior:
+- 60% → info banner
+- 80% → warning banner
+- 95% → modal
+
+Never show more than once per 24h per capability.
+
+==================================================
+STEP 3 — POST-SUCCESS NUDGES
+==================================================
+
+After successful actions:
+
+- Job created
+- Message sent
+- Booking confirmed
+- Invoice sent / paid
+
+Call:
+
+onPostSuccess()
+
+Conditions:
+- User is Free or below required plan
+- User is near limit OR feature has premium automation
+- Cooldown allows
+
+Message must emphasize:
+“Do this automatically next time”
+
+==================================================
+STEP 4 — FRICTION / STALL PROMPTS
+==================================================
+
+Implement stall detection for:
+
+- manual_followup_repeat >= 3
+- missed_deposit >= 2
+- unpaid_invoice >= X days
+- repeated manual messaging
+
+Use:
+- Existing stall table if present
+- Or local counters if needed
+
+Create:
+
+useStallSignals.ts
+
+When threshold hit:
+- Call onFrictionDetected()
+
+Prompt must map directly to solution:
+“Auto reminders”
+“Deposits”
+“Automation”
+
+==================================================
+STEP 5 — FEATURE BLOCK PROMPTS
+==================================================
+
+When CapabilityGate blocks an action:
+
+- Route through onFeatureBlocked()
+- Show contextual upgrade modal
+- Include remaining/limit info if available
+
+Do NOT double-trigger existing modals.
+
+==================================================
+STEP 6 — ANALYTICS
+==================================================
+
+Track in PostHog:
+
+upgrade_prompt_shown
+upgrade_prompt_dismissed
+upgrade_cta_clicked
+upgrade_checkout_started
+upgrade_checkout_completed
+
+Properties:
+- triggerType
+- capability
+- percentUsed
+- plan
+- variant
+- surface
+
+Ensure no duplicate events.
+
+==================================================
+STEP 7 — SAFETY & UX
+==================================================
+
+Rules:
+
+- Never interrupt typing
+- Never stack modals
+- Never show twice in same session
+- Respect dismissals
+- Do not degrade core workflows
+
+All prompts must feel helpful.
+
+==================================================
+OUTPUT
+==================================================
+
+After implementation, provide:
+
+1) New files created
+2) Modified files
+3) Where each journey step is wired
+4) How to test:
+
+- Create jobs to 60/80/95%
+- Trigger post-success
+- Trigger stall
+- Hit limit
+- Upgrade via CTA
+- Verify analytics
+
+Proceed now and implement.
