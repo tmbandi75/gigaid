@@ -1,5 +1,7 @@
 import { Router, Request, Response } from "express";
 import type { IStorage } from "./storage";
+import { signAppJwt } from "./appJwt";
+import { eq } from "drizzle-orm";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -101,6 +103,186 @@ export function registerTestRoutes(app: any, storage: IStorage) {
       }
       const report = JSON.parse(fs.readFileSync(reportPath, "utf-8"));
       return res.json(report);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.post("/reset-data", async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ error: "Missing required field: userId" });
+      }
+
+      const user = await storage.getUserByUsername(userId) || await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const { db } = await import("./db");
+      const schema = await import("@shared/schema");
+
+      const tables = [
+        schema.jobs,
+        schema.leads,
+        schema.invoices,
+        schema.smsMessages,
+        schema.bookingRequests,
+        schema.capabilityUsage,
+        schema.followUpLogs,
+        schema.aiNudges,
+        schema.voiceNotes,
+        schema.reminders,
+        schema.readyActions,
+        schema.aiOverrides,
+      ];
+
+      const results: Record<string, number> = {};
+      for (const table of tables) {
+        const deleted = await db.delete(table).where(eq(table.userId, user.id)).returning();
+        const tableName = Object.keys(schema).find(k => (schema as any)[k] === table) || "unknown";
+        results[tableName] = deleted.length;
+      }
+
+      return res.json({ success: true, userId: user.id, deleted: results });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.post("/create-auth-token", async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ error: "Missing required field: userId" });
+      }
+
+      const user = await storage.getUserByUsername(userId) || await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const token = signAppJwt({ sub: user.id, provider: "replit" });
+      return res.json({ token });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.post("/seed-job", async (req: Request, res: Response) => {
+    try {
+      const { userId, title, clientName, status, scheduledDate, scheduledTime, price, serviceType, location } = req.body;
+      if (!userId) {
+        return res.status(400).json({ error: "Missing required field: userId" });
+      }
+
+      const user = await storage.getUserByUsername(userId) || await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const job = await storage.createJob({
+        userId: user.id,
+        title: title || "Test Job",
+        clientName: clientName || "Test Client",
+        status: status || "scheduled",
+        scheduledDate: scheduledDate || new Date().toISOString().split("T")[0],
+        scheduledTime: scheduledTime || "10:00",
+        price: price || 5000,
+        serviceType: serviceType || "General",
+        location: location || "Test Location",
+      });
+
+      return res.json(job);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.post("/seed-lead", async (req: Request, res: Response) => {
+    try {
+      const { userId, clientName, clientPhone, clientEmail, serviceType, status, source } = req.body;
+      if (!userId) {
+        return res.status(400).json({ error: "Missing required field: userId" });
+      }
+
+      const user = await storage.getUserByUsername(userId) || await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const lead = await storage.createLead({
+        userId: user.id,
+        clientName: clientName || "Test Lead",
+        clientPhone: clientPhone || "+15551234567",
+        clientEmail: clientEmail || "lead@test.com",
+        serviceType: serviceType || "General",
+        status: status || "new",
+        source: source || "manual",
+      });
+
+      return res.json(lead);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.post("/seed-invoice", async (req: Request, res: Response) => {
+    try {
+      const { userId, invoiceNumber, clientName, clientEmail, clientPhone, amount, status, serviceDescription, publicToken } = req.body;
+      if (!userId) {
+        return res.status(400).json({ error: "Missing required field: userId" });
+      }
+
+      const user = await storage.getUserByUsername(userId) || await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const invoice = await storage.createInvoice({
+        userId: user.id,
+        invoiceNumber: invoiceNumber || `TEST-${Date.now()}`,
+        clientName: clientName || "Test Client",
+        clientEmail: clientEmail || "client@test.com",
+        clientPhone: clientPhone || "+15551234567",
+        amount: amount || 10000,
+        status: status || "draft",
+        serviceDescription: serviceDescription || "Test Service",
+        publicToken: publicToken || `pub_${Date.now()}`,
+      });
+
+      return res.json(invoice);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.post("/set-usage", async (req: Request, res: Response) => {
+    try {
+      const { userId, capability, count } = req.body;
+      if (!userId || !capability || count === undefined) {
+        return res.status(400).json({ error: "Missing required fields: userId, capability, count" });
+      }
+
+      const user = await storage.getUserByUsername(userId) || await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const { db } = await import("./db");
+      const schema = await import("@shared/schema");
+
+      await db.delete(schema.capabilityUsage)
+        .where(
+          eq(schema.capabilityUsage.userId, user.id)
+        );
+
+      for (let i = 0; i < count; i++) {
+        await storage.incrementCapabilityUsage(user.id, capability);
+      }
+
+      return res.json({ success: true, usage: count });
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
     }
