@@ -990,7 +990,7 @@ export default function Settings() {
           </TabsContent>
 
           <TabsContent value="billing" className="space-y-4">
-            {isAuthenticated && <SubscriptionSettings />}
+            <SubscriptionSettings />
           </TabsContent>
         </Tabs>
       </div>
