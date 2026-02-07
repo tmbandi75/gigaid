@@ -47,7 +47,7 @@ export async function startStripeCheckout({
     
     if (data.url) {
       console.log("[Stripe] Redirecting to Stripe Checkout", data.url);
-      window.location.href = data.url;
+      window.open(data.url, '_blank');
       return { success: true };
     } else {
       console.error("[Stripe] No checkout URL returned", data);

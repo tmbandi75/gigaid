@@ -205,7 +205,7 @@ export function SubscriptionSettings() {
     {
       onSuccess: (data: any) => {
         if (data?.url) {
-          window.location.href = data.url;
+          window.open(data.url, '_blank');
         }
       },
       onError: () => {
@@ -311,7 +311,7 @@ export function SubscriptionSettings() {
     {
       onSuccess: (data: any) => {
         if (data?.checkoutUrl) {
-          window.location.href = data.checkoutUrl;
+          window.open(data.checkoutUrl, '_blank');
           return;
         }
         toast({
