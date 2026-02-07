@@ -1,0 +1,167 @@
+Set up an automated link integrity test using Playwright to verify that all internal navigation links in the app are valid and not broken.
+
+Goal:
+Detect 404s, 500s, misrouted pages, and missing routes before they reach users.
+
+Context:
+- The project already uses (or is setting up) Playwright for E2E/UAT
+- Authentication is required for most routes
+- The app is a SPA with client-side routing
+- Some routes are destructive (delete/pay/logout) and must not be triggered
+
+==================================================
+STEP 1 — CREATE LINK CRAWLER TEST
+==================================================
+
+Create:
+
+tests/e2e/links.spec.ts
+
+This test must:
+
+1) Log in using test credentials from env vars:
+   TEST_EMAIL
+   TEST_PASSWORD
+
+2) Start crawling from:
+   /dashboard (or main landing page after login)
+
+3) Collect all internal links:
+   - <a href="...">
+   - Router links
+   - Sidebar / navbar links
+
+4) Only include:
+   - Relative paths starting with "/"
+   - Same-origin links
+
+5) Exclude dangerous links:
+   - logout
+   - delete
+   - remove
+   - cancel
+   - checkout
+   - pay
+   - stripe
+   - webhook
+   - admin
+   - reset
+
+6) Exclude API and auth routes:
+   - /api/*
+   - /auth/*
+   - /login
+   - /signup
+
+==================================================
+STEP 2 — SAFE CRAWLING LOGIC
+==================================================
+
+Implement BFS-style crawling:
+
+- Maintain visited Set<string>
+- Maintain queue<string>
+- Limit max pages (default: 200)
+- Add 200ms delay between navigations
+- Do not click buttons or submit forms
+- Only navigate via page.goto()
+
+Prevent infinite loops and session loss.
+
+==================================================
+STEP 3 — PAGE VALIDATION
+==================================================
+
+After each navigation:
+
+Assert:
+
+- Status is not 404/500
+- URL does not contain "error", "not-found", "forbidden"
+- Page body does not contain:
+  "404"
+  "Page Not Found"
+  "Something went wrong"
+
+Capture screenshot on failure.
+
+==================================================
+STEP 4 — DYNAMIC ROUTE HANDLING
+==================================================
+
+If routes contain IDs (e.g. /jobs/:id):
+
+- Only crawl if seeded data exists
+- Otherwise skip using regex filters:
+  /\/jobs\/[a-zA-Z0-9-]+/
+  /\/invoices\/[a-zA-Z0-9-]+/
+
+Document skipped patterns.
+
+==================================================
+STEP 5 — PUBLIC LINK TEST
+==================================================
+
+Create:
+
+tests/e2e/public-links.spec.ts
+
+This must test unauthenticated pages:
+
+- Booking links
+- Public landing pages
+- Help / legal
+
+Start from:
+  /
+
+Crawl without login.
+
+==================================================
+STEP 6 — CONFIG + SCRIPTS
+==================================================
+
+Add scripts to package.json:
+
+"test:links": "playwright test tests/e2e/links.spec.ts",
+"test:public-links": "playwright test tests/e2e/public-links.spec.ts"
+
+Ensure they work locally and in CI.
+
+==================================================
+STEP 7 — REPORTING
+==================================================
+
+On failure:
+
+- Print broken URL
+- Print referrer page
+- Save screenshot
+- Save HTML snapshot
+
+==================================================
+RULES
+==================================================
+
+- Do NOT trigger side effects
+- Do NOT mutate data
+- Do NOT submit forms
+- Do NOT checkout
+- Do NOT log out
+- Prefer reliability over completeness
+- Make selectors resilient
+- Use data-testid when needed
+
+==================================================
+DELIVERABLES
+==================================================
+
+After implementation, provide:
+
+1) File paths created
+2) How crawling works
+3) Exclusion rules
+4) How to run locally
+5) Expected runtime
+
+Proceed to implement.
