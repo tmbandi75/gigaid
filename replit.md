@@ -86,9 +86,19 @@ npx playwright test e2e/auth.spec.ts
 
 # E2E with UI mode
 npx playwright test --ui
+
+# Link integrity tests
+npx playwright test e2e/links.spec.ts
+npx playwright test e2e/public-links.spec.ts
 ```
 
-### Test Coverage Summary (47 API + 6 E2E suites)
+### Link Integrity Tests
+- **Authenticated** (`e2e/links.spec.ts`): Visits all 35+ known authenticated routes as a logged-in test user. Seeds a job, lead, and invoice to test dynamic `:id` routes. Validates no HTTP 4xx/5xx, no error URL patterns, no error body text. Screenshots and HTML snapshots saved on failure to `e2e/link-test-screenshots/`.
+- **Public** (`e2e/public-links.spec.ts`): Crawls public pages (`/`, `/terms`, `/privacy`, `/downloads`, `/login`, `/pricing`) without authentication. BFS discovers additional links. Validates no server errors or error content.
+- **Exclusion rules**: Skips dangerous paths (logout, delete, pay, stripe, webhook, reset), API/auth routes, admin routes, and dynamic token routes without seeded data.
+- **Expected runtime**: ~2 minutes (authenticated), ~30 seconds (public)
+
+### Test Coverage Summary (47 API + 6 E2E suites + 2 link integrity)
 - **Auth**: Token validation, unauthenticated access blocking, profile retrieval
 - **Jobs**: CRUD, cross-user isolation, capability usage tracking
 - **Leads**: CRUD, archive/unarchive, cross-user isolation
