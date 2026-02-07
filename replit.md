@@ -97,10 +97,13 @@ Systematic review across 9 categories to identify and fix Day-1 user experience 
 - **Invoice Amounts**: Uses amount_paid for paid invoices, amount_due for open/void invoices
 
 ### Data Layer Architecture (February 2026 Refactor)
+- **Migration Status**: Complete — all 80+ files migrated, `apiRequest` removed, zero legacy patterns remaining
 - **QueryClient**: staleTime: 0, gcTime: 5min, refetchOnMount: "always", refetchOnWindowFocus: true, retry: 1
 - **Central API Fetcher**: `client/src/lib/apiFetch.ts` — typed fetcher with auth token injection and token-readiness guard for mutations
 - **Query Keys**: `client/src/lib/queryKeys.ts` — centralized QUERY_KEYS constant for all domains
 - **Mutation Hook**: `client/src/hooks/useApiMutation.ts` — standardized mutation with automatic cache invalidation via query keys
+- **Offline Sync**: `client/src/lib/offlineSync.ts` uses apiFetch for background sync operations
+- **Public Endpoints**: PayDeposit.tsx, ConfirmPrice.tsx, PublicReview.tsx use raw useMutation with fetch (no auth tokens required)
 - **Crew Duplicate Prevention**: POST /api/crew checks for existing members by normalized email/phone before creating
 - **Crew Welcome Notifications**: SMS (Twilio) and email (SendGrid) sent automatically when a crew member is created
 
