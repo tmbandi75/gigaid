@@ -72,6 +72,7 @@ import {
 import mobileAuthRoutes from "./mobileAuthRoutes";
 import { verifyAppJwt } from "./appJwt";
 import { registerStripeWebhookRoutes, processRetryableWebhooks, reconcileStuckPayments, startWebhookRetryScheduler } from "./stripeWebhookRoutes";
+import { registerTestRoutes } from "./testRoutes";
 
 const quoteCache = new Map<string, { result: any; timestamp: number }>();
 const QUOTE_CACHE_TTL = 3600000;
@@ -102,6 +103,8 @@ export async function registerRoutes(
   startWebhookRetryScheduler(storage, 60000);
 
   registerObjectStorageRoutes(app);
+  
+  registerTestRoutes(app, storage);
   
   app.use("/api/admin/cockpit", cockpitRoutes);
   app.use("/api/admin/users", adminUsersRoutes);
