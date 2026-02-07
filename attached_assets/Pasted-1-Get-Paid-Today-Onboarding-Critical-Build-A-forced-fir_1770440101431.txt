@@ -1,0 +1,278 @@
+1️⃣ “Get Paid Today” Onboarding (Critical)
+Build:
+
+A forced first-run flow:
+
+Welcome →
+Connect Stripe →
+Create Booking Link →
+Enable Deposits →
+Copy/Post Template →
+Done
+
+
+No dashboard until complete.
+
+Outcome:
+
++25–40% activation
++Higher paid conversion
+
+2️⃣ Smart Job Templates
+
+Prebuilt flows:
+
+Handyman
+
+Cleaning
+
+Lawn
+
+Moving
+
+Tutoring
+
+Each includes:
+
+Default pricing
+
+Deposit %
+
+Message scripts
+
+Cancellation policy
+
+1 tap = ready.
+
+Outcome:
+
+Less thinking = more usage
+
+3️⃣ Money-First Home Screen
+
+Replace generic dashboard.
+
+Show:
+
+💰 This Week: $842
+📈 Pending: $320
+⚠️ At Risk: 1 Job
+🚀 Ready to Book: 2 Leads
+
+
+Tap → action.
+
+Outcome:
+
+Dopamine + retention
+
+4️⃣ Auto-Follow-Up Bot (V1)
+
+Rules:
+
+No reply 24h → Ping
+Quote sent 48h → Nudge
+Unpaid 12h → Reminder
+
+
+Auto-run.
+
+Outcome:
+
++15–25% close rate
+
+Phase 1 Result:
+
+From “Nice Tool” → “This Makes Me Money”
+
+PHASE 2 (31–60 Days)
+🧠 AI Growth Layer
+
+Goal: Turn data into leverage
+
+5️⃣ Auto-Quote Generator
+
+Input:
+
+Job type
+
+Photos (later)
+
+Location
+
+History
+
+Output:
+
+“Suggested price: $185–$210”
+
+With rationale.
+
+Outcome:
+
+Confidence = higher pricing
+
+6️⃣ Price Optimization Engine
+
+Background AI:
+
+Win rate
+Cancel rate
+Time spent
+Area avg
+
+
+Suggest:
+
+“Raise prices 7%”
+
+1-click apply.
+
+Outcome:
+
+Higher ARPU
+
+7️⃣ Rebooking Machine
+
+Auto triggers:
+
+Cleaning → 30 days
+Lawn → 2 weeks
+Handyman → 6 months
+
+
+Sends:
+“Time for next visit?”
+
+Outcome:
+
+Recurring revenue
+
+8️⃣ Profit Warnings
+
+Detect:
+
+Underpriced jobs
+
+High travel
+
+Slow payers
+
+Alert:
+
+“This job likely loses $22”
+
+Outcome:
+
+Trust + stickiness
+
+Phase 2 Result:
+
+From “Helpful” → “Feels Like a Partner”
+
+PHASE 3 (61–90 Days)
+🛡️ Trust + Moat Layer
+
+Goal: Lock users in + boost conversion
+
+9️⃣ Verified Pro Program
+
+Badges:
+
+✅ ID Verified
+✅ Bank Verified
+✅ 100+ Jobs
+✅ On-Time Payer
+
+Visible to clients.
+
+Outcome:
+
+Higher booking rates
+
+🔟 Deposit Protection Badge
+
+If client sees:
+
+“Protected by GigAid”
+
+Conversion jumps.
+
+Outcome:
+
+Trust moat
+
+1️⃣1️⃣ Public Profile Pages
+
+Each user gets:
+
+gigaid.com/pro/john
+
+
+With:
+
+Reviews
+
+Booking
+
+Proof
+
+Payments
+
+SEO asset.
+
+Outcome:
+
+Free acquisition
+
+1️⃣2️⃣ Lite Mode (Mass Market)
+
+Toggle:
+
+Only show:
+
+Bookings
+
+Money
+
+Messages
+
+Hide rest.
+
+Outcome:
+
+Broader market
+
+Phase 3 Result:
+
+From “App” → “Platform”
+
+📊 ROI PRIORITY ORDER (What to Build First)
+
+If limited time:
+
+Tier 1 (Do These First)
+
+Paid Today Flow
+
+Money Dashboard
+
+Auto Follow-Ups
+
+Templates
+
+Tier 2
+
+Quotes
+
+Rebooking
+
+Price Engine
+
+Tier 3
+
+Badges
+
+Profiles
+
+Lite Mode
