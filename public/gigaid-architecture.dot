@@ -1,92 +1,407 @@
 digraph GigAid {
   rankdir=TB;
-  node [shape=box, style=filled, fontname="Helvetica"];
+  node [shape=box, style="filled,rounded", fontname="Helvetica", fontsize=10];
+  edge [fontname="Helvetica", fontsize=8, color="#666666"];
   
-  // Title
   labelloc="t";
-  label="GigAid Application Architecture";
-  fontsize=20;
+  label="GigAid Application Architecture\nComplete Data Model & System Overview";
+  fontsize=18;
+  fontname="Helvetica-Bold";
+  compound=true;
+  splines=true;
   
-  // Subgraphs for organization
-  subgraph cluster_client {
-    label="Frontend (React + TypeScript)";
-    style=filled;
-    color=lightblue;
+  // ========================================================
+  // FRONTEND LAYER
+  // ========================================================
+  subgraph cluster_frontend {
+    label="Frontend (React + TypeScript + Vite)";
+    style="filled,rounded";
+    color="#E3F2FD";
+    fillcolor="#E3F2FD";
+    fontname="Helvetica-Bold";
+    fontsize=12;
     
-    App [label="App.tsx\n(Router & Providers)", fillcolor=lightyellow];
-    Pages [label="Pages\n(Dashboard, Jobs, Leads,\nInvoices, Settings)", fillcolor=lightyellow];
-    Components [label="Components\n(UI, Onboarding, Forms)", fillcolor=lightyellow];
-    Hooks [label="Hooks\n(useAuth, useToast,\nuseQuery)", fillcolor=lightyellow];
+    FE_App [label="App.tsx\nRouter & Providers", fillcolor="#BBDEFB"];
+    FE_Pages [label="Pages\nDashboard, Jobs, Leads, Invoices\nBookings, Settings, Admin\nAI Tools, Crew, Messages", fillcolor="#BBDEFB"];
+    FE_Components [label="Components\nUI, Onboarding, Forms\nNudges, Calendar, Drive Mode\nBooking, Invoice, Lead", fillcolor="#BBDEFB"];
+    FE_Hooks [label="Hooks & Context\nuseAuth, useCapability\nuseOffline, useDriveMode\nFirebaseAuth, Coaching", fillcolor="#BBDEFB"];
     
-    App -> Pages;
-    Pages -> Components;
-    Pages -> Hooks;
+    FE_App -> FE_Pages;
+    FE_Pages -> FE_Components;
+    FE_Pages -> FE_Hooks;
   }
   
-  subgraph cluster_server {
+  // ========================================================
+  // BACKEND LAYER
+  // ========================================================
+  subgraph cluster_backend {
     label="Backend (Express + Node.js)";
-    style=filled;
-    color=lightgreen;
+    style="filled,rounded";
+    color="#E8F5E9";
+    fillcolor="#E8F5E9";
+    fontname="Helvetica-Bold";
+    fontsize=12;
     
-    Routes [label="API Routes\n(/api/*)", fillcolor=lightcyan];
-    Auth [label="Authentication\n(Firebase + Replit Auth)", fillcolor=lightcyan];
-    Storage [label="Storage Layer\n(Drizzle ORM)", fillcolor=lightcyan];
-    AI [label="AI Services\n(OpenAI Integration)", fillcolor=lightcyan];
+    BE_Routes [label="API Routes\n/api/*", fillcolor="#C8E6C9"];
+    BE_Auth [label="Authentication\nFirebase + Replit Auth\nMobile Auth + OTP", fillcolor="#C8E6C9"];
+    BE_Storage [label="Storage Layer\nDrizzle ORM + PostgreSQL", fillcolor="#C8E6C9"];
+    BE_AI [label="AI Services\nNudge Generator\nIntent Detection\nNext Best Action", fillcolor="#C8E6C9"];
+    BE_Engines [label="Engines\nCopilot, Campaign\nPost-Job Momentum\nBooking Protection", fillcolor="#C8E6C9"];
+    BE_Admin [label="Admin Routes\nAnalytics, Users\nAudit, Billing\nSystem Health", fillcolor="#C8E6C9"];
     
-    Routes -> Auth;
-    Routes -> Storage;
-    Routes -> AI;
+    BE_Routes -> BE_Auth;
+    BE_Routes -> BE_Storage;
+    BE_Routes -> BE_AI;
+    BE_Routes -> BE_Engines;
+    BE_Routes -> BE_Admin;
   }
   
+  // ========================================================
+  // EXTERNAL SERVICES
+  // ========================================================
   subgraph cluster_external {
     label="External Services";
-    style=filled;
-    color=lightyellow;
+    style="filled,rounded";
+    color="#FFF3E0";
+    fillcolor="#FFF3E0";
+    fontname="Helvetica-Bold";
+    fontsize=12;
     
-    Firebase [label="Firebase Auth", fillcolor=orange];
-    Stripe [label="Stripe Connect\n(Payments)", fillcolor=orange];
-    Twilio [label="Twilio\n(SMS)", fillcolor=orange];
-    GoogleMaps [label="Google Maps\n(Geocoding)", fillcolor=orange];
-    OpenAI [label="OpenAI\n(AI Features)", fillcolor=orange];
+    EXT_Firebase [label="Firebase Auth", fillcolor="#FFE0B2"];
+    EXT_Stripe [label="Stripe Connect\nPayments & Disputes", fillcolor="#FFE0B2"];
+    EXT_Twilio [label="Twilio\nSMS & Voice", fillcolor="#FFE0B2"];
+    EXT_GoogleMaps [label="Google Maps\nGeocoding", fillcolor="#FFE0B2"];
+    EXT_OpenAI [label="OpenAI\nAI Features", fillcolor="#FFE0B2"];
+    EXT_SendGrid [label="SendGrid\nEmail", fillcolor="#FFE0B2"];
   }
   
-  subgraph cluster_data {
-    label="Data Layer";
-    style=filled;
-    color=lightpink;
+  // Frontend -> Backend
+  FE_App -> BE_Routes [label="HTTP/REST", style=dashed, penwidth=2, color="#1565C0"];
+  
+  // Backend -> External
+  BE_Auth -> EXT_Firebase [color="#E65100"];
+  BE_Routes -> EXT_Stripe [color="#E65100"];
+  BE_Routes -> EXT_Twilio [color="#E65100"];
+  BE_Routes -> EXT_GoogleMaps [color="#E65100"];
+  BE_AI -> EXT_OpenAI [color="#E65100"];
+  BE_Routes -> EXT_SendGrid [color="#E65100"];
+  
+  // ========================================================
+  // DATA LAYER - Infrastructure
+  // ========================================================
+  subgraph cluster_infra {
+    label="Data Infrastructure";
+    style="filled,rounded";
+    color="#FCE4EC";
+    fillcolor="#FCE4EC";
+    fontname="Helvetica-Bold";
+    fontsize=12;
     
-    PostgreSQL [label="PostgreSQL\n(Neon)", fillcolor=pink];
-    ObjectStorage [label="Object Storage\n(Files/Photos)", fillcolor=pink];
+    DB_PostgreSQL [label="PostgreSQL (Neon)\n55 Tables", fillcolor="#F8BBD0", shape=cylinder];
+    DB_ObjectStorage [label="Object Storage\nPhotos & Files", fillcolor="#F8BBD0", shape=cylinder];
   }
   
-  // Connections
-  App -> Routes [label="HTTP/REST", style=dashed];
-  Routes -> PostgreSQL;
-  Routes -> ObjectStorage;
-  Auth -> Firebase;
-  Routes -> Stripe;
-  Routes -> Twilio;
-  Routes -> GoogleMaps;
-  AI -> OpenAI;
+  BE_Storage -> DB_PostgreSQL [penwidth=2, color="#880E4F"];
+  BE_Storage -> DB_ObjectStorage [color="#880E4F"];
   
-  // Core entities
-  subgraph cluster_entities {
-    label="Core Data Entities";
-    style=filled;
-    color=lavender;
+  // ========================================================
+  // DATABASE TABLES - Core Business
+  // ========================================================
+  subgraph cluster_core {
+    label="Core Business";
+    style="filled,rounded";
+    color="#E8EAF6";
+    fillcolor="#E8EAF6";
+    fontname="Helvetica-Bold";
+    fontsize=11;
     
-    Users [label="Users", fillcolor=white];
-    Jobs [label="Jobs", fillcolor=white];
-    Leads [label="Leads", fillcolor=white];
-    Invoices [label="Invoices", fillcolor=white];
-    BookingRequests [label="Booking Requests", fillcolor=white];
-    Messages [label="Messages", fillcolor=white];
+    users [label="users\n(service providers)", fillcolor="#C5CAE9"];
+    jobs [label="jobs\n(scheduled appointments)", fillcolor="#C5CAE9"];
+    leads [label="leads\n(prospect inquiries)", fillcolor="#C5CAE9"];
+    invoices [label="invoices\n(payment requests)", fillcolor="#C5CAE9"];
+    reminders [label="reminders\n(client notifications)", fillcolor="#C5CAE9"];
+    reviews [label="reviews\n(client testimonials)", fillcolor="#C5CAE9"];
+    jobResolutions [label="jobResolutions\n(payment resolution)", fillcolor="#C5CAE9"];
+    referrals [label="referrals\n(user referrals)", fillcolor="#C5CAE9"];
+    voiceNotes [label="voiceNotes\n(audio recordings)", fillcolor="#C5CAE9"];
+    priceConfirmations [label="priceConfirmations\n(price agreements)", fillcolor="#C5CAE9"];
+    jobDrafts [label="jobDrafts\n(QuickBook drafts)", fillcolor="#C5CAE9"];
+    leadEmails [label="leadEmails\n(email conversations)", fillcolor="#C5CAE9"];
+    featureFlags [label="featureFlags\n(rollout toggles)", fillcolor="#C5CAE9"];
+    photoAssets [label="photoAssets\n(uploaded photos)", fillcolor="#C5CAE9"];
+    estimationRequests [label="estimationRequests\n(provider estimates)", fillcolor="#C5CAE9"];
+    providerServices [label="providerServices\n(service catalog)", fillcolor="#C5CAE9"];
   }
   
-  Storage -> Users;
-  Storage -> Jobs;
-  Storage -> Leads;
-  Storage -> Invoices;
-  Storage -> BookingRequests;
-  Storage -> Messages;
+  // Core relationships
+  jobs -> users [label="userId", color="#303F9F"];
+  leads -> users [label="userId", color="#303F9F"];
+  invoices -> users [label="userId", color="#303F9F"];
+  invoices -> jobs [label="jobId", style=dashed, color="#303F9F"];
+  invoices -> leads [label="leadId", style=dashed, color="#303F9F"];
+  reminders -> users [label="userId", color="#303F9F"];
+  reminders -> jobs [label="jobId", style=dashed, color="#303F9F"];
+  reviews -> users [label="userId", color="#303F9F"];
+  reviews -> jobs [label="jobId", style=dashed, color="#303F9F"];
+  jobResolutions -> jobs [label="jobId", color="#303F9F"];
+  referrals -> users [label="referrerId", color="#303F9F"];
+  voiceNotes -> users [label="userId", color="#303F9F"];
+  voiceNotes -> jobs [label="jobId", style=dashed, color="#303F9F"];
+  priceConfirmations -> leads [label="leadId", color="#303F9F"];
+  priceConfirmations -> users [label="userId", color="#303F9F"];
+  jobDrafts -> users [label="userId", color="#303F9F"];
+  jobDrafts -> jobs [label="jobId", style=dashed, color="#303F9F"];
+  leadEmails -> leads [label="leadId", color="#303F9F"];
+  leadEmails -> users [label="userId", color="#303F9F"];
+  photoAssets -> users [label="workspaceUserId", color="#303F9F"];
+  estimationRequests -> users [label="providerId", color="#303F9F"];
+  providerServices -> users [label="userId", color="#303F9F"];
+  
+  // ========================================================
+  // DATABASE TABLES - Payments & Billing
+  // ========================================================
+  subgraph cluster_payments {
+    label="Payments & Billing";
+    style="filled,rounded";
+    color="#FFF9C4";
+    fillcolor="#FFF9C4";
+    fontname="Helvetica-Bold";
+    fontsize=11;
+    
+    jobPayments [label="jobPayments\n(payment records)", fillcolor="#FFF59D"];
+    userPaymentMethods [label="userPaymentMethods\n(accepted methods)", fillcolor="#FFF59D"];
+    stripePaymentState [label="stripePaymentState\n(canonical status)", fillcolor="#FFF59D"];
+    stripeWebhookEvents [label="stripeWebhookEvents\n(webhook audit trail)", fillcolor="#FFF59D"];
+    stripeDisputes [label="stripeDisputes\n(chargebacks)", fillcolor="#FFF59D"];
+    stripeIdempotencyLocks [label="stripeIdempotencyLocks\n(exactly-once)", fillcolor="#FFF59D"];
+  }
+  
+  jobPayments -> users [label="userId", color="#F57F17"];
+  jobPayments -> jobs [label="jobId", style=dashed, color="#F57F17"];
+  jobPayments -> invoices [label="invoiceId", style=dashed, color="#F57F17"];
+  userPaymentMethods -> users [label="userId", color="#F57F17"];
+  stripePaymentState -> jobs [label="jobId", style=dashed, color="#F57F17"];
+  stripePaymentState -> invoices [label="invoiceId", style=dashed, color="#F57F17"];
+  stripeDisputes -> jobs [label="jobId", style=dashed, color="#F57F17"];
+  stripeDisputes -> invoices [label="invoiceId", style=dashed, color="#F57F17"];
+  stripeDisputes -> bookingRequests [label="bookingId", style=dashed, color="#F57F17"];
+  
+  // ========================================================
+  // DATABASE TABLES - Crew Management
+  // ========================================================
+  subgraph cluster_crew {
+    label="Crew Management";
+    style="filled,rounded";
+    color="#E0F2F1";
+    fillcolor="#E0F2F1";
+    fontname="Helvetica-Bold";
+    fontsize=11;
+    
+    crewMembers [label="crewMembers\n(team members)", fillcolor="#B2DFDB"];
+    crewInvites [label="crewInvites\n(magic link invites)", fillcolor="#B2DFDB"];
+    crewJobPhotos [label="crewJobPhotos\n(crew photos)", fillcolor="#B2DFDB"];
+    crewMessages [label="crewMessages\n(crew chat)", fillcolor="#B2DFDB"];
+  }
+  
+  crewMembers -> users [label="userId", color="#00695C"];
+  crewInvites -> users [label="userId", color="#00695C"];
+  crewInvites -> crewMembers [label="crewMemberId", color="#00695C"];
+  crewInvites -> jobs [label="jobId", color="#00695C"];
+  crewJobPhotos -> jobs [label="jobId", color="#00695C"];
+  crewJobPhotos -> crewMembers [label="crewMemberId", color="#00695C"];
+  crewMessages -> jobs [label="jobId", color="#00695C"];
+  crewMessages -> crewMembers [label="crewMemberId", color="#00695C"];
+  
+  // ========================================================
+  // DATABASE TABLES - Bookings
+  // ========================================================
+  subgraph cluster_bookings {
+    label="Bookings & Protection";
+    style="filled,rounded";
+    color="#F3E5F5";
+    fillcolor="#F3E5F5";
+    fontname="Helvetica-Bold";
+    fontsize=11;
+    
+    bookingRequests [label="bookingRequests\n(public bookings)", fillcolor="#E1BEE7"];
+    bookingEvents [label="bookingEvents\n(audit trail)", fillcolor="#E1BEE7"];
+    bookingProtections [label="bookingProtections\n(no-show protection)", fillcolor="#E1BEE7"];
+    clients [label="clients\n(client risk data)", fillcolor="#E1BEE7"];
+  }
+  
+  bookingRequests -> users [label="userId", color="#6A1B9A"];
+  bookingEvents -> bookingRequests [label="bookingId", color="#6A1B9A"];
+  bookingProtections -> jobs [label="jobId", color="#6A1B9A"];
+  bookingProtections -> users [label="userId", color="#6A1B9A"];
+  bookingProtections -> clients [label="clientId", style=dashed, color="#6A1B9A"];
+  clients -> users [label="userId", color="#6A1B9A"];
+  
+  // ========================================================
+  // DATABASE TABLES - AI & Nudges
+  // ========================================================
+  subgraph cluster_ai {
+    label="AI & Nudges";
+    style="filled,rounded";
+    color="#FFEBEE";
+    fillcolor="#FFEBEE";
+    fontname="Helvetica-Bold";
+    fontsize=11;
+    
+    aiNudges [label="aiNudges\n(AI suggestions)", fillcolor="#FFCDD2"];
+    aiNudgeEvents [label="aiNudgeEvents\n(nudge audit)", fillcolor="#FFCDD2"];
+    aiInterventions [label="aiInterventions\n(AI actions)", fillcolor="#FFCDD2"];
+    aiOverrides [label="aiOverrides\n(user overrides)", fillcolor="#FFCDD2"];
+    copilotSignals [label="copilotSignals\n(alerts/anomalies)", fillcolor="#FFCDD2"];
+    copilotRecommendations [label="copilotRecommendations\n(focus guidance)", fillcolor="#FFCDD2"];
+  }
+  
+  aiNudges -> users [label="userId", color="#B71C1C"];
+  aiNudgeEvents -> aiNudges [label="nudgeId", color="#B71C1C"];
+  aiNudgeEvents -> users [label="userId", color="#B71C1C"];
+  aiInterventions -> users [label="userId", color="#B71C1C"];
+  aiOverrides -> users [label="userId", color="#B71C1C"];
+  
+  // ========================================================
+  // DATABASE TABLES - Action System
+  // ========================================================
+  subgraph cluster_actions {
+    label="Action System";
+    style="filled,rounded";
+    color="#E0F7FA";
+    fillcolor="#E0F7FA";
+    fontname="Helvetica-Bold";
+    fontsize=11;
+    
+    actionQueueItems [label="actionQueueItems\n(money plan actions)", fillcolor="#B2EBF2"];
+    nextActions [label="nextActions\n(best action recs)", fillcolor="#B2EBF2"];
+    readyActions [label="readyActions\n(one-tap actions)", fillcolor="#B2EBF2"];
+    intentSignals [label="intentSignals\n(behavioral intents)", fillcolor="#B2EBF2"];
+    stallDetections [label="stallDetections\n(pipeline stalls)", fillcolor="#B2EBF2"];
+    autoExecutionLog [label="autoExecutionLog\n(auto-send log)", fillcolor="#B2EBF2"];
+  }
+  
+  actionQueueItems -> users [label="userId", color="#006064"];
+  nextActions -> users [label="userId", color="#006064"];
+  nextActions -> stallDetections [label="stallDetectionId", color="#006064"];
+  readyActions -> users [label="userId", color="#006064"];
+  readyActions -> intentSignals [label="intentSignalId", style=dashed, color="#006064"];
+  intentSignals -> users [label="userId", color="#006064"];
+  stallDetections -> users [label="userId", color="#006064"];
+  autoExecutionLog -> users [label="userId", color="#006064"];
+  autoExecutionLog -> nextActions [label="nextActionId", color="#006064"];
+  
+  // ========================================================
+  // DATABASE TABLES - Messaging
+  // ========================================================
+  subgraph cluster_messaging {
+    label="Messaging";
+    style="filled,rounded";
+    color="#F1F8E9";
+    fillcolor="#F1F8E9";
+    fontname="Helvetica-Bold";
+    fontsize=11;
+    
+    smsMessages [label="smsMessages\n(SMS records)", fillcolor="#DCEDC8"];
+    messageUsage [label="messageUsage\n(usage limits)", fillcolor="#DCEDC8"];
+    outboundMessages [label="outboundMessages\n(scheduled sends)", fillcolor="#DCEDC8"];
+    clientNotificationCampaigns [label="clientNotificationCampaigns\n(re-engagement)", fillcolor="#DCEDC8"];
+    campaignSuggestions [label="campaignSuggestions\n(AI suggestions)", fillcolor="#DCEDC8"];
+    userAutomationSettings [label="userAutomationSettings\n(follow-up config)", fillcolor="#DCEDC8"];
+  }
+  
+  smsMessages -> users [label="userId", color="#33691E"];
+  smsMessages -> jobs [label="relatedJobId", style=dashed, color="#33691E"];
+  smsMessages -> leads [label="relatedLeadId", style=dashed, color="#33691E"];
+  messageUsage -> users [label="userId", color="#33691E"];
+  outboundMessages -> users [label="userId", color="#33691E"];
+  outboundMessages -> jobs [label="jobId", color="#33691E"];
+  outboundMessages -> clients [label="clientId", style=dashed, color="#33691E"];
+  clientNotificationCampaigns -> users [label="userId", color="#33691E"];
+  clientNotificationCampaigns -> providerServices [label="serviceId", color="#33691E"];
+  campaignSuggestions -> users [label="userId", color="#33691E"];
+  campaignSuggestions -> providerServices [label="serviceId", color="#33691E"];
+  userAutomationSettings -> users [label="userId", color="#33691E"];
+  
+  // ========================================================
+  // DATABASE TABLES - Auth & Sessions
+  // ========================================================
+  subgraph cluster_auth {
+    label="Auth & Sessions";
+    style="filled,rounded";
+    color="#FBE9E7";
+    fillcolor="#FBE9E7";
+    fontname="Helvetica-Bold";
+    fontsize=11;
+    
+    otpCodes [label="otpCodes\n(verification)", fillcolor="#FFCCBC"];
+    sessions [label="sessions\n(auth tokens)", fillcolor="#FFCCBC"];
+  }
+  
+  sessions -> users [label="userId", color="#BF360C"];
+  
+  // ========================================================
+  // DATABASE TABLES - Admin
+  // ========================================================
+  subgraph cluster_admin {
+    label="Admin";
+    style="filled,rounded";
+    color="#EFEBE9";
+    fillcolor="#EFEBE9";
+    fontname="Helvetica-Bold";
+    fontsize=11;
+    
+    admins [label="admins\n(admin users)", fillcolor="#D7CCC8"];
+    adminActionAudit [label="adminActionAudit\n(action log)", fillcolor="#D7CCC8"];
+    userAdminNotes [label="userAdminNotes\n(internal notes)", fillcolor="#D7CCC8"];
+    userFlags [label="userFlags\n(flagged users)", fillcolor="#D7CCC8"];
+    messagingSuppression [label="messagingSuppression\n(msg suppression)", fillcolor="#D7CCC8"];
+  }
+  
+  admins -> users [label="userId", style=dashed, color="#4E342E"];
+  adminActionAudit -> users [label="targetUserId", style=dashed, color="#4E342E"];
+  userAdminNotes -> users [label="targetUserId", color="#4E342E"];
+  userFlags -> users [label="userId", color="#4E342E"];
+  messagingSuppression -> users [label="userId", color="#4E342E"];
+  
+  // ========================================================
+  // DATABASE TABLES - Metrics
+  // ========================================================
+  subgraph cluster_metrics {
+    label="Metrics & Analytics";
+    style="filled,rounded";
+    color="#E8EAF6";
+    fillcolor="#F5F5F5";
+    fontname="Helvetica-Bold";
+    fontsize=11;
+    
+    outcomeMetricsDaily [label="outcomeMetricsDaily\n(user outcomes)", fillcolor="#E0E0E0"];
+    metricsDaily [label="metricsDaily\n(platform rollup)", fillcolor="#E0E0E0"];
+    attributionDaily [label="attributionDaily\n(channel tracking)", fillcolor="#E0E0E0"];
+    capabilityUsage [label="capabilityUsage\n(plan limits)", fillcolor="#E0E0E0"];
+    eventsCanonical [label="eventsCanonical\n(business events)", fillcolor="#E0E0E0"];
+  }
+  
+  outcomeMetricsDaily -> users [label="userId", color="#424242"];
+  eventsCanonical -> users [label="userId", style=dashed, color="#424242"];
+  capabilityUsage -> users [label="userId", color="#424242"];
+  
+  // ========================================================
+  // DATABASE TABLES - Chat (Replit Integration)
+  // ========================================================
+  subgraph cluster_chat {
+    label="Chat (Replit Integration)";
+    style="filled,rounded";
+    color="#E1F5FE";
+    fillcolor="#E1F5FE";
+    fontname="Helvetica-Bold";
+    fontsize=11;
+    
+    conversations [label="conversations\n(AI chat threads)", fillcolor="#B3E5FC"];
+    messages [label="messages\n(chat messages)", fillcolor="#B3E5FC"];
+  }
+  
+  messages -> conversations [label="conversationId", color="#01579B"];
+  
+  // Backend -> DB connection
+  BE_Storage -> users [style=invis, lhead=cluster_core];
 }
