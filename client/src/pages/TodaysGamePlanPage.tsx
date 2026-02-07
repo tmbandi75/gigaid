@@ -201,24 +201,29 @@ export default function TodaysGamePlanPage() {
 
   const { data: nextActions = [] } = useQuery<NextAction[]>({
     queryKey: QUERY_KEYS.nextActions(),
-    staleTime: 60000, // Cache for 1 minute
+    queryFn: () => apiFetch<NextAction[]>("/api/next-actions?limit=10"),
+    staleTime: 60000,
     refetchInterval: 60000,
     refetchOnWindowFocus: true,
   });
 
   const { data: profile } = useQuery<{ services: string[] | null; servicesCount: number }>({
     queryKey: QUERY_KEYS.profile(),
-    staleTime: 300000, // Cache for 5 minutes - rarely changes
+    staleTime: 300000,
   });
+
+  const gamePlanLoaded = !isLoading && !!data;
 
   const { data: dashboardSummary } = useQuery<{ totalJobs: number; completedJobs: number }>({
     queryKey: QUERY_KEYS.dashboardSummary(),
-    staleTime: 30000, // Cache for 30 seconds
+    staleTime: 60000,
+    enabled: gamePlanLoaded,
   });
 
   const { data: invoices } = useQuery<{ id: string }[]>({
     queryKey: QUERY_KEYS.invoices(),
-    staleTime: 30000, // Cache for 30 seconds
+    staleTime: 60000,
+    enabled: gamePlanLoaded,
   });
 
   const actMutation = useApiMutation(

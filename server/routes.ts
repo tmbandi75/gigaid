@@ -10369,8 +10369,12 @@ Return ONLY the message text, no JSON or formatting.`
         return res.status(401).json({ error: "Authentication required" });
       }
       const entityType = req.query.entityType as string | undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
       
-      const actions = await storage.getNextActions(userId, entityType);
+      let actions = await storage.getNextActions(userId, entityType);
+      if (limit && limit > 0) {
+        actions = actions.slice(0, limit);
+      }
       res.json(actions);
     } catch (error) {
       console.error("Get next actions error:", error);
