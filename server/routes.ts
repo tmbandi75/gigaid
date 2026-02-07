@@ -6874,6 +6874,141 @@ Return ONLY the message text, no JSON or formatting.`
     }
   });
 
+  // Change plan (upgrade or downgrade)
+  app.post("/api/subscription/change-plan", isAuthenticated, async (req, res) => {
+    try {
+      const { newPlan } = req.body;
+      const validPlans = ["free", "pro", "pro_plus", "business"];
+      if (!newPlan || !validPlans.includes(newPlan)) {
+        return res.status(400).json({ error: "Invalid plan. Valid plans: free, pro, pro_plus, business" });
+      }
+
+      const user = await storage.getUser((req as any).userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const currentPlan = user.plan || "free";
+      if (currentPlan === newPlan) {
+        return res.status(400).json({ error: "You are already on this plan" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const { STRIPE_ENABLED } = await import("@shared/stripeConfig");
+
+      if (!STRIPE_ENABLED) {
+        return res.status(503).json({ error: "Subscription management temporarily unavailable" });
+      }
+
+      const stripe = await getUncachableStripeClient();
+
+      const planPrices: Record<string, number> = {
+        pro: 1900,
+        pro_plus: 2800,
+        business: 4900,
+      };
+
+      // Downgrade to free = cancel subscription
+      if (newPlan === "free") {
+        if (!user.stripeSubscriptionId) {
+          await storage.updateUser(user.id, { plan: "free", isPro: false });
+          return res.json({ success: true, message: "Downgraded to Free plan" });
+        }
+        await stripe.subscriptions.update(user.stripeSubscriptionId, {
+          cancel_at_period_end: true,
+        });
+        return res.json({
+          success: true,
+          message: "Your plan will change to Free at the end of your billing period",
+          effectiveAt: "period_end",
+        });
+      }
+
+      // If user has an existing subscription, modify it
+      if (user.stripeSubscriptionId) {
+        const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+
+        if (subscription.status !== "active" && subscription.status !== "trialing") {
+          // Subscription is canceled/past_due/etc — clean up stale reference and fall through to checkout
+          await storage.updateUser(user.id, { stripeSubscriptionId: null });
+        } else {
+          const currentItem = subscription.items.data[0];
+          if (!currentItem) {
+            return res.status(400).json({ error: "Unable to modify subscription - no active items found" });
+          }
+
+          const planOrder = ["free", "pro", "pro_plus", "business"];
+          const isUpgrade = planOrder.indexOf(newPlan) > planOrder.indexOf(currentPlan);
+          const newPlanName = newPlan === "pro_plus" ? "Pro+" : newPlan.charAt(0).toUpperCase() + newPlan.slice(1);
+
+          const productId = typeof currentItem.price.product === "string" ? currentItem.price.product : currentItem.price.product.id;
+
+          await stripe.subscriptions.update(user.stripeSubscriptionId, {
+            items: [
+              {
+                id: currentItem.id,
+                price_data: {
+                  currency: "usd",
+                  product: productId,
+                  unit_amount: planPrices[newPlan],
+                  recurring: { interval: "month" },
+                },
+              },
+            ],
+            proration_behavior: isUpgrade ? "create_prorations" : "none",
+            metadata: { plan: newPlan, user_id: user.id },
+            cancel_at_period_end: false,
+          });
+
+          await storage.updateUser(user.id, { plan: newPlan, isPro: true });
+
+          return res.json({
+            success: true,
+            message: isUpgrade
+              ? `Upgraded to ${newPlanName}. Prorated charges applied.`
+              : `Switched to ${newPlanName}. Your new rate of $${planPrices[newPlan] / 100}/mo starts next billing cycle.`,
+            effectiveAt: isUpgrade ? "immediate" : "immediate",
+          });
+        }
+      }
+
+      // No existing subscription - create a checkout session for the new plan
+      const planConfigs: Record<string, { name: string; description: string }> = {
+        pro: { name: "GigAid Pro", description: "Owner View dashboard, weekly summaries, advanced analytics" },
+        pro_plus: { name: "GigAid Pro+", description: "Deposit enforcement, booking protection, Today's Money Plan" },
+        business: { name: "GigAid Business", description: "Multi-provider support, team management, business analytics" },
+      };
+
+      const planConfig = planConfigs[newPlan];
+      const baseUrl = process.env.FRONTEND_URL || `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price_data: {
+              currency: "usd",
+              product_data: { name: planConfig.name, description: planConfig.description },
+              unit_amount: planPrices[newPlan],
+              recurring: { interval: "month" },
+            },
+            quantity: 1,
+          },
+        ],
+        mode: "subscription",
+        success_url: `${baseUrl}/settings?subscription=success`,
+        cancel_url: `${baseUrl}/settings?subscription=cancelled`,
+        metadata: { plan: newPlan, user_id: user.id },
+        subscription_data: { metadata: { user_id: user.id, plan: newPlan } },
+      });
+
+      return res.json({ success: true, checkoutUrl: session.url });
+    } catch (error) {
+      console.error("Change plan error:", error);
+      res.status(500).json({ error: "Failed to change plan" });
+    }
+  });
+
   // Suspend subscription - immediately cancels Stripe subscription, downgrades to Free
   // User data is retained, they can reactivate anytime
   app.post("/api/billing/suspend", isAuthenticated, async (req, res) => {

@@ -95,6 +95,9 @@ Systematic review across 9 categories to identify and fix Day-1 user experience 
 - **Settings Page Structure**: Tabbed navigation with "General" (profile/automation settings) and "Billing" (subscription/invoices) tabs
 - **Invoice History**: Fetched from Stripe via GET /api/billing/invoices, displays invoice number, date, amount, status with view/download buttons
 - **Invoice Amounts**: Uses amount_paid for paid invoices, amount_due for open/void invoices
+- **Change Plan Section**: Inline plan cards (Free/Pro/Pro+/Business) in billing settings with current plan highlighted, upgrade/downgrade buttons, and confirmation dialog for downgrades
+- **Plan Change API**: POST `/api/subscription/change-plan` — upgrades apply immediately with proration; downgrades apply immediately but new rate starts next billing cycle (no proration); downgrade to free sets cancel_at_period_end; stale subscriptions auto-cleaned
+- **Visibility Fix**: Billing management options now show for paid plans regardless of Stripe subscription presence (isFree = plan === "free" AND !hasSubscription)
 
 ### Data Layer Architecture (February 2026 Refactor)
 - **Migration Status**: Complete — all 80+ files migrated, `apiRequest` removed, zero legacy patterns remaining, zero inline query key strings remaining

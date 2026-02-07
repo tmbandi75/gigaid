@@ -23,6 +23,12 @@ import {
   Download,
   FileText,
   Receipt,
+  ArrowUp,
+  ArrowDown,
+  Check,
+  Zap,
+  Shield,
+  Users,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -78,6 +84,8 @@ export function SubscriptionSettings() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showPauseDialog, setShowPauseDialog] = useState(false);
   const [showCloseAccountDialog, setShowCloseAccountDialog] = useState(false);
+  const [showChangePlanDialog, setShowChangePlanDialog] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
   const { data: subscription, isLoading, isError } = useQuery<SubscriptionStatus>({
     queryKey: QUERY_KEYS.subscriptionStatus(),
@@ -242,6 +250,36 @@ export function SubscriptionSettings() {
         toast({
           title: "Error",
           description: error.message || "Failed to restore account. Please try again.",
+          variant: "destructive",
+        });
+      },
+    }
+  );
+
+  const changePlanMutation = useApiMutation(
+    (planToChange: string) =>
+      apiFetch<any>("/api/subscription/change-plan", {
+        method: "POST",
+        body: JSON.stringify({ newPlan: planToChange }),
+      }),
+    [QUERY_KEYS.subscriptionStatus(), QUERY_KEYS.profile(), QUERY_KEYS.authUser()],
+    {
+      onSuccess: (data: any) => {
+        if (data?.checkoutUrl) {
+          window.location.href = data.checkoutUrl;
+          return;
+        }
+        toast({
+          title: "Plan changed",
+          description: data?.message || "Your plan has been updated",
+        });
+        setShowChangePlanDialog(false);
+        setSelectedPlan(null);
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to change plan. Please try again.",
           variant: "destructive",
         });
       },
@@ -413,6 +451,176 @@ export function SubscriptionSettings() {
             </div>
           )}
         </div>
+
+        {/* Change Plan Section */}
+        <Separator className="my-6" />
+
+        <div className="space-y-4">
+          <h4 className="font-medium text-sm text-muted-foreground">Change Plan</h4>
+          <div className="grid gap-3">
+            {([
+              {
+                id: "free",
+                name: "Free",
+                price: 0,
+                icon: Zap,
+                features: ["Basic invoicing", "Up to 5 jobs"],
+              },
+              {
+                id: "pro",
+                name: "Pro",
+                price: 19,
+                icon: Crown,
+                features: ["Unlimited jobs", "Auto follow-ups", "Two-way SMS"],
+              },
+              {
+                id: "pro_plus",
+                name: "Pro+",
+                price: 28,
+                icon: Shield,
+                features: ["Deposit enforcement", "Booking protection", "Today's Money Plan"],
+              },
+              {
+                id: "business",
+                name: "Business",
+                price: 49,
+                icon: Users,
+                features: ["Crew management", "Business analytics", "Admin controls"],
+              },
+            ] as const).map((plan) => {
+              const isCurrent = effectiveSubscription.plan === plan.id;
+              const planOrder = ["free", "pro", "pro_plus", "business"];
+              const currentIdx = planOrder.indexOf(effectiveSubscription.plan);
+              const planIdx = planOrder.indexOf(plan.id);
+              const isUpgrade = planIdx > currentIdx;
+              const isDowngrade = planIdx < currentIdx;
+              const PlanIcon = plan.icon;
+
+              return (
+                <div
+                  key={plan.id}
+                  className={`p-3 rounded-lg border transition-colors ${
+                    isCurrent
+                      ? "border-primary/50 bg-primary/5"
+                      : "border-border"
+                  }`}
+                  data-testid={`plan-card-${plan.id}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${
+                        isCurrent
+                          ? "bg-primary/10"
+                          : "bg-muted"
+                      }`}>
+                        <PlanIcon className={`h-4 w-4 ${isCurrent ? "text-primary" : "text-muted-foreground"}`} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-sm">{plan.name}</span>
+                          {plan.price > 0 && (
+                            <span className="text-xs text-muted-foreground">${plan.price}/mo</span>
+                          )}
+                          {isCurrent && (
+                            <Badge variant="secondary" className="text-xs">
+                              <Check className="h-3 w-3 mr-1" />
+                              Current
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                          {plan.features.join(" · ")}
+                        </p>
+                      </div>
+                    </div>
+                    {!isCurrent && (
+                      <Button
+                        variant={isUpgrade ? "default" : "outline"}
+                        size="sm"
+                        className="shrink-0"
+                        onClick={() => {
+                          if (isDowngrade) {
+                            setSelectedPlan(plan.id);
+                            setShowChangePlanDialog(true);
+                          } else {
+                            setSelectedPlan(plan.id);
+                            changePlanMutation.mutate(plan.id);
+                          }
+                        }}
+                        disabled={changePlanMutation.isPending}
+                        data-testid={`button-${isUpgrade ? "upgrade" : "downgrade"}-${plan.id}`}
+                      >
+                        {changePlanMutation.isPending && selectedPlan === plan.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        ) : isUpgrade ? (
+                          <ArrowUp className="h-3 w-3 mr-1" />
+                        ) : (
+                          <ArrowDown className="h-3 w-3 mr-1" />
+                        )}
+                        {isUpgrade ? "Upgrade" : "Downgrade"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <AlertDialog open={showChangePlanDialog} onOpenChange={setShowChangePlanDialog}>
+          <AlertDialogContent data-testid="dialog-change-plan">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Downgrade your plan?</AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3 text-sm">
+                  <p>
+                    You're switching from <strong>{effectiveSubscription.planName}</strong> to{" "}
+                    <strong>
+                      {selectedPlan === "free"
+                        ? "Free"
+                        : selectedPlan === "pro"
+                        ? "Pro"
+                        : selectedPlan === "pro_plus"
+                        ? "Pro+"
+                        : "Business"}
+                    </strong>.
+                  </p>
+                  {selectedPlan === "free" ? (
+                    <ul className="list-disc pl-5 space-y-1">
+                      <li>Your subscription will be cancelled at the end of the billing period</li>
+                      <li>You'll keep current features until then</li>
+                      <li>After that, limits from the Free plan will apply</li>
+                    </ul>
+                  ) : (
+                    <ul className="list-disc pl-5 space-y-1">
+                      <li>Your plan changes immediately, but the new lower rate starts next billing cycle</li>
+                      <li>No extra charges or credits for the current period</li>
+                      <li>Some features from your current plan may become limited</li>
+                    </ul>
+                  )}
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                onClick={() => setSelectedPlan(null)}
+                data-testid="button-cancel-change-plan"
+              >
+                Keep Current Plan
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => selectedPlan && changePlanMutation.mutate(selectedPlan)}
+                disabled={changePlanMutation.isPending || !selectedPlan}
+                data-testid="button-confirm-change-plan"
+              >
+                {changePlanMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                Confirm Downgrade
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Manage Subscription Section */}
         <Separator className="my-6" />
