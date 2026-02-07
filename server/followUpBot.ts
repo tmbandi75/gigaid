@@ -25,14 +25,20 @@ const DEFAULT_RULES: DefaultRule[] = [
   {
     ruleType: "unpaid_invoice",
     delayHours: 12,
-    messageTemplate: "Hi {{client_first_name}}, quick reminder about the outstanding invoice. Let me know if you need anything!",
+    messageTemplate: "Hi {{client_first_name}}, quick reminder about the outstanding invoice.{{invoice_link}} Let me know if you need anything!",
     channel: "sms",
   },
 ];
 
-function renderTemplate(template: string, clientName: string): string {
+function renderTemplate(template: string, clientName: string, invoiceLink?: string): string {
   const firstName = (clientName || "").split(" ")[0] || "there";
-  return template.replace(/\{\{client_first_name\}\}/g, firstName);
+  let result = template.replace(/\{\{client_first_name\}\}/g, firstName);
+  if (invoiceLink) {
+    result = result.replace(/\{\{invoice_link\}\}/g, ` You can view and pay it here: ${invoiceLink}`);
+  } else {
+    result = result.replace(/\{\{invoice_link\}\}/g, "");
+  }
+  return result;
 }
 
 async function checkFollowUps() {
@@ -206,7 +212,14 @@ async function checkFollowUps() {
 
                 if (existingLog.length > 0) continue;
 
-                const message = renderTemplate(rule.messageTemplate, invoice.clientName);
+                const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5000";
+                const invoiceLink = invoice.publicToken
+                  ? `${frontendUrl}/pay/${invoice.publicToken}`
+                  : invoice.shareLink
+                    ? `${frontendUrl}/invoice/${invoice.shareLink}`
+                    : undefined;
+
+                const message = renderTemplate(rule.messageTemplate, invoice.clientName, invoiceLink);
                 const success = await sendSMS(invoice.clientPhone, message);
 
                 await db.insert(followUpLogs).values({

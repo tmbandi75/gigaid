@@ -477,9 +477,15 @@ export default function InvoiceView() {
                     {invoice.clientPhone && (
                       <button 
                         onClick={() => {
+                          const payLink = invoice.publicToken
+                            ? `${window.location.origin}/pay/${invoice.publicToken}`
+                            : invoice.shareLink
+                              ? `${window.location.origin}/invoice/${invoice.shareLink}`
+                              : null;
+                          const linkText = payLink ? ` You can view and pay it here: ${payLink}` : "";
                           sendText({ 
                             phoneNumber: invoice.clientPhone!, 
-                            message: `Hi ${invoice.clientName}, this is a reminder about invoice #${invoice.invoiceNumber} for ${formatCurrency(total)}. Please let me know if you have any questions!`
+                            message: `Hi ${invoice.clientName}, this is a reminder about invoice #${invoice.invoiceNumber} for ${formatCurrency(total)}.${linkText} Please let me know if you have any questions!`
                           });
                           if (invoice.status !== "paid") {
                             incrementStallCounter("unpaid_invoice");

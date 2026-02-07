@@ -12474,7 +12474,7 @@ Return ONLY the message text, no JSON or formatting.`
       const defaults = [
         { ruleType: "no_reply", enabled: true, delayHours: 24, messageTemplate: "Hi {{client_first_name}}, just following up on my message. Let me know if you have any questions!" },
         { ruleType: "quote_pending", enabled: true, delayHours: 48, messageTemplate: "Hi {{client_first_name}}, wanted to check if you had a chance to review the quote I sent. Happy to answer any questions!" },
-        { ruleType: "unpaid_invoice", enabled: true, delayHours: 12, messageTemplate: "Hi {{client_first_name}}, quick reminder about the outstanding invoice. Let me know if you need anything!" },
+        { ruleType: "unpaid_invoice", enabled: true, delayHours: 12, messageTemplate: "Hi {{client_first_name}}, quick reminder about the outstanding invoice.{{invoice_link}} Let me know if you need anything!" },
       ];
       res.json(defaults);
     } catch (error: any) {
