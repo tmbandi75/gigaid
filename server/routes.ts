@@ -6893,20 +6893,43 @@ Return ONLY the message text, no JSON or formatting.`
         return res.status(400).json({ error: "You are already on this plan" });
       }
 
-      const { getUncachableStripeClient } = await import("./stripeClient");
       const { STRIPE_ENABLED } = await import("@shared/stripeConfig");
-
-      if (!STRIPE_ENABLED) {
-        return res.status(503).json({ error: "Subscription management temporarily unavailable" });
-      }
-
-      const stripe = await getUncachableStripeClient();
 
       const planPrices: Record<string, number> = {
         pro: 1900,
         pro_plus: 2800,
         business: 4900,
       };
+
+      const planOrder = ["free", "pro", "pro_plus", "business"];
+      const isDowngrade = planOrder.indexOf(newPlan) < planOrder.indexOf(currentPlan);
+
+      // If no Stripe subscription exists, handle plan changes directly in the database
+      if (!user.stripeSubscriptionId) {
+        if (newPlan === "free" || isDowngrade) {
+          await storage.updateUser(user.id, { plan: newPlan, isPro: newPlan !== "free" });
+          const newPlanName = newPlan === "pro_plus" ? "Pro+" : newPlan === "free" ? "Free" : newPlan.charAt(0).toUpperCase() + newPlan.slice(1);
+          return res.json({ success: true, message: `Switched to ${newPlanName} plan` });
+        }
+
+        // Upgrade without existing subscription requires Stripe checkout
+        if (!STRIPE_ENABLED) {
+          return res.status(503).json({ error: "Payment processing is temporarily unavailable. Please try again later." });
+        }
+      }
+
+      if (!STRIPE_ENABLED) {
+        // Has a subscription but Stripe is disabled — allow downgrade via DB update as fallback
+        if (isDowngrade || newPlan === "free") {
+          await storage.updateUser(user.id, { plan: newPlan, isPro: newPlan !== "free", stripeSubscriptionId: null });
+          const newPlanName = newPlan === "pro_plus" ? "Pro+" : newPlan === "free" ? "Free" : newPlan.charAt(0).toUpperCase() + newPlan.slice(1);
+          return res.json({ success: true, message: `Switched to ${newPlanName} plan` });
+        }
+        return res.status(503).json({ error: "Payment processing is temporarily unavailable. Please try again later." });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
 
       // Downgrade to free = cancel subscription
       if (newPlan === "free") {
@@ -6937,7 +6960,6 @@ Return ONLY the message text, no JSON or formatting.`
             return res.status(400).json({ error: "Unable to modify subscription - no active items found" });
           }
 
-          const planOrder = ["free", "pro", "pro_plus", "business"];
           const isUpgrade = planOrder.indexOf(newPlan) > planOrder.indexOf(currentPlan);
           const newPlanName = newPlan === "pro_plus" ? "Pro+" : newPlan.charAt(0).toUpperCase() + newPlan.slice(1);
 
