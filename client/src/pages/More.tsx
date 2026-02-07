@@ -58,6 +58,7 @@ const menuSections = [
       { icon: Users, label: "Crew", description: "Manage team members", href: "/crew", gradient: "from-blue-500 to-cyan-500" },
       { icon: Bell, label: "Reminders", description: "SMS & voice alerts", href: "/reminders", gradient: "from-amber-500 to-orange-500" },
       { icon: Calendar, label: "Booking Requests", description: "Customer bookings", href: "/booking-requests", gradient: "from-green-500 to-emerald-500" },
+      { icon: Download, label: "Downloads", description: "Architecture & data model files", href: "/downloads", gradient: "from-slate-500 to-gray-500" },
     ]
   },
   {
@@ -74,7 +75,6 @@ const menuSections = [
     items: [
       { icon: User, label: "Profile", description: "Your info", href: "/profile", gradient: "from-slate-500 to-gray-500" },
       { icon: Settings, label: "Settings", description: "App preferences", href: "/settings", gradient: "from-slate-500 to-gray-500" },
-      { icon: Download, label: "Downloads", description: "Architecture files", href: "/downloads", gradient: "from-slate-500 to-gray-500" },
       { icon: HelpCircle, label: "Help & Support", description: "FAQs and contact", href: "/help", gradient: "from-slate-500 to-gray-500" },
     ]
   },
