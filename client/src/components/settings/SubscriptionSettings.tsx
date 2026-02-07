@@ -506,60 +506,58 @@ export function SubscriptionSettings() {
                   }`}
                   data-testid={`plan-card-${plan.id}`}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${
-                        isCurrent
-                          ? "bg-primary/10"
-                          : "bg-muted"
-                      }`}>
-                        <PlanIcon className={`h-4 w-4 ${isCurrent ? "text-primary" : "text-muted-foreground"}`} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium text-sm">{plan.name}</span>
-                          {plan.price > 0 && (
-                            <span className="text-xs text-muted-foreground">${plan.price}/mo</span>
-                          )}
-                          {isCurrent && (
-                            <Badge variant="secondary" className="text-xs">
-                              <Check className="h-3 w-3 mr-1" />
-                              Current
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                          {plan.features.join(" · ")}
-                        </p>
-                      </div>
+                  <div className="flex items-start gap-3">
+                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                      isCurrent
+                        ? "bg-primary/10"
+                        : "bg-muted"
+                    }`}>
+                      <PlanIcon className={`h-4 w-4 ${isCurrent ? "text-primary" : "text-muted-foreground"}`} />
                     </div>
-                    {!isCurrent && (
-                      <Button
-                        variant={isUpgrade ? "default" : "outline"}
-                        size="sm"
-                        className="shrink-0"
-                        onClick={() => {
-                          if (isDowngrade) {
-                            setSelectedPlan(plan.id);
-                            setShowChangePlanDialog(true);
-                          } else {
-                            setSelectedPlan(plan.id);
-                            changePlanMutation.mutate(plan.id);
-                          }
-                        }}
-                        disabled={changePlanMutation.isPending}
-                        data-testid={`button-${isUpgrade ? "upgrade" : "downgrade"}-${plan.id}`}
-                      >
-                        {changePlanMutation.isPending && selectedPlan === plan.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                        ) : isUpgrade ? (
-                          <ArrowUp className="h-3 w-3 mr-1" />
-                        ) : (
-                          <ArrowDown className="h-3 w-3 mr-1" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-sm">{plan.name}</span>
+                        {plan.price > 0 && (
+                          <span className="text-xs text-muted-foreground">${plan.price}/mo</span>
                         )}
-                        {isUpgrade ? "Upgrade" : "Downgrade"}
-                      </Button>
-                    )}
+                        {isCurrent && (
+                          <Badge variant="secondary" className="text-xs">
+                            <Check className="h-3 w-3 mr-1" />
+                            Current
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {plan.features.join(" · ")}
+                      </p>
+                      {!isCurrent && (
+                        <Button
+                          variant={isUpgrade ? "default" : "outline"}
+                          size="sm"
+                          className="mt-2 w-full"
+                          onClick={() => {
+                            if (isDowngrade) {
+                              setSelectedPlan(plan.id);
+                              setShowChangePlanDialog(true);
+                            } else {
+                              setSelectedPlan(plan.id);
+                              changePlanMutation.mutate(plan.id);
+                            }
+                          }}
+                          disabled={changePlanMutation.isPending}
+                          data-testid={`button-${isUpgrade ? "upgrade" : "downgrade"}-${plan.id}`}
+                        >
+                          {changePlanMutation.isPending && selectedPlan === plan.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                          ) : isUpgrade ? (
+                            <ArrowUp className="h-3 w-3 mr-1" />
+                          ) : (
+                            <ArrowDown className="h-3 w-3 mr-1" />
+                          )}
+                          {isUpgrade ? "Upgrade" : "Downgrade"}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
