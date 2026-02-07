@@ -88,14 +88,16 @@ export default function Crew() {
       onError: (error: Error) => {
         let msg = "Failed to add crew member";
         try {
-          const jsonPart = error.message?.substring(error.message.indexOf("{"));
-          if (jsonPart) {
-            const parsed = JSON.parse(jsonPart);
+          const jsonStart = error.message?.indexOf("{");
+          if (jsonStart !== undefined && jsonStart >= 0) {
+            const parsed = JSON.parse(error.message.substring(jsonStart));
             if (parsed.error) msg = parsed.error;
           }
         } catch {
           if (error.message?.includes("already exists")) {
-            msg = error.message;
+            const colonIdx = error.message.indexOf(":");
+            const body = colonIdx >= 0 ? error.message.substring(colonIdx + 1).trim() : error.message;
+            msg = body || error.message;
           }
         }
         toast({ title: msg, variant: "destructive" });
