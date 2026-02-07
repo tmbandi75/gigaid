@@ -53,6 +53,7 @@ const menuSections = [
     items: [
       { icon: Share2, label: "Quick Capture", description: "Save leads from any app", href: "/share", badge: "New", gradient: "from-emerald-500 to-teal-500" },
       { icon: Sparkles, label: "Business Co-Pilot", description: "See what works. Get paid faster.", href: "/ai-tools", gradient: "from-violet-500 to-purple-500" },
+      { icon: MapPin, label: "Smart Pricing", description: "AI-powered price estimates", href: "/auto-quote", gradient: "from-emerald-500 to-green-500" },
       { icon: MessageSquare, label: "Messages", description: "Client conversations", href: "/messages", gradient: "from-indigo-500 to-blue-500" },
       { icon: Send, label: "Notify Clients", description: "Send event-driven updates", href: "/notify-clients", gradient: "from-cyan-500 to-blue-500" },
       { icon: Users, label: "Crew", description: "Manage team members", href: "/crew", gradient: "from-blue-500 to-cyan-500" },
@@ -65,6 +66,8 @@ const menuSections = [
     title: "Business",
     items: [
       { icon: Crown, label: "Owner View", description: "Business snapshot", href: "/owner", gradient: "from-amber-500 to-yellow-500" },
+      { icon: Menu, label: "Price Optimization", description: "Pricing analytics & tips", href: "/price-optimization", gradient: "from-blue-500 to-indigo-500" },
+      { icon: Shield, label: "Profit Alerts", description: "Spot profitability issues", href: "/profit-warnings", gradient: "from-red-500 to-orange-500" },
       { icon: Share2, label: "Booking Link", description: "Share your page", href: "/settings", gradient: "from-emerald-500 to-teal-500" },
       { icon: Star, label: "Reviews", description: "Client feedback", href: "/reviews", gradient: "from-yellow-500 to-amber-500" },
       { icon: Gift, label: "Referrals", description: "Earn rewards", href: "/referrals", gradient: "from-pink-500 to-rose-500" },

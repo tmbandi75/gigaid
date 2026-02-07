@@ -12095,11 +12095,506 @@ Return ONLY the message text, no JSON or formatting.`
     }
   });
 
+  // ============ JOB TEMPLATES ============
+  app.get("/api/job-templates", async (req, res) => {
+    try {
+      const { db } = await import("./db");
+      const { jobTemplates } = await import("@shared/schema");
+      const templates = await db.select().from(jobTemplates).orderBy(jobTemplates.category, jobTemplates.name);
+      res.json(templates);
+    } catch (error: any) {
+      console.error("Error fetching job templates:", error);
+      res.status(500).json({ error: "Failed to fetch job templates" });
+    }
+  });
+
+  app.post("/api/job-templates/create-job", requireAuth, async (req, res) => {
+    try {
+      const { db } = await import("./db");
+      const { jobTemplates, jobs } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const userId = (req as any).userId;
+      const { templateId, clientName, clientPhone, clientEmail, scheduledDate, scheduledTime, location } = req.body;
+      
+      if (!templateId) return res.status(400).json({ error: "templateId is required" });
+      
+      const [template] = await db.select().from(jobTemplates).where(eq(jobTemplates.id, templateId));
+      if (!template) return res.status(404).json({ error: "Template not found" });
+      
+      const [job] = await db.insert(jobs).values({
+        userId,
+        title: template.name,
+        description: template.description || "",
+        serviceType: template.category,
+        price: template.defaultPriceCents,
+        duration: template.estimatedDurationMinutes,
+        clientName: clientName || "New Client",
+        clientPhone: clientPhone || "",
+        clientEmail: clientEmail || "",
+        scheduledDate: scheduledDate || new Date().toISOString().split("T")[0],
+        scheduledTime: scheduledTime || "09:00",
+        location: location || "",
+        status: "scheduled",
+        createdAt: new Date().toISOString(),
+      }).returning();
+      
+      res.json(job);
+    } catch (error: any) {
+      console.error("Error creating job from template:", error);
+      res.status(500).json({ error: "Failed to create job from template" });
+    }
+  });
+
+  // ============ MONEY DASHBOARD ============
+  app.get("/api/money-dashboard", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { db } = await import("./db");
+      const { jobs, invoices, leads } = await import("@shared/schema");
+      const { eq, and, gte, sql } = await import("drizzle-orm");
+      
+      const now = new Date();
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - now.getDay());
+      weekStart.setHours(0, 0, 0, 0);
+      const weekStartISO = weekStart.toISOString();
+      
+      const allJobs = await db.select().from(jobs).where(eq(jobs.userId, userId));
+      const allInvoices = await db.select().from(invoices).where(eq(invoices.userId, userId));
+      const allLeads = await db.select().from(leads).where(eq(leads.userId, userId));
+      
+      const weeklyRevenue = allInvoices
+        .filter(inv => inv.status === "paid" && inv.paidAt && inv.paidAt >= weekStartISO)
+        .reduce((sum, inv) => sum + (inv.amount || 0), 0);
+      
+      const pendingRevenue = allInvoices
+        .filter(inv => inv.status === "sent" || inv.status === "viewed")
+        .reduce((sum, inv) => sum + (inv.amount || 0), 0);
+      
+      const atRiskJobs = allJobs.filter(job => {
+        if (job.status !== "scheduled") return false;
+        const jobDate = new Date(job.scheduledDate);
+        const hoursUntil = (jobDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+        return hoursUntil > 0 && hoursUntil <= 48 && job.paymentStatus !== "paid";
+      });
+      
+      const hotLeads = allLeads.filter(lead => {
+        if (lead.status === "cold" || lead.status === "lost") return false;
+        const createdDate = lead.createdAt ? new Date(lead.createdAt) : null;
+        if (!createdDate) return false;
+        const hoursSinceCreated = (now.getTime() - createdDate.getTime()) / (1000 * 60 * 60);
+        return hoursSinceCreated <= 72 && (lead.status === "new" || lead.status === "response_sent" || lead.status === "engaged");
+      });
+      
+      res.json({
+        weeklyRevenue,
+        pendingRevenue,
+        atRiskJobs: atRiskJobs.map(j => ({ id: j.id, title: j.title, clientName: j.clientName, scheduledDate: j.scheduledDate, price: j.price })),
+        hotLeads: hotLeads.map(l => ({ id: l.id, clientName: l.clientName, serviceType: l.serviceType, status: l.status, estimatedValue: (l as any).estimatedValue || null })),
+        atRiskCount: atRiskJobs.length,
+        hotLeadCount: hotLeads.length,
+      });
+    } catch (error: any) {
+      console.error("Error fetching money dashboard:", error);
+      res.status(500).json({ error: "Failed to fetch money dashboard" });
+    }
+  });
+
+  // ============ FOLLOW-UP RULES ============
+  app.get("/api/follow-up-rules", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { db } = await import("./db");
+      const { followUpRules } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const rules = await db.select().from(followUpRules).where(eq(followUpRules.userId, userId));
+      res.json(rules);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch follow-up rules" });
+    }
+  });
+
+  app.post("/api/follow-up-rules", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { db } = await import("./db");
+      const { followUpRules } = await import("@shared/schema");
+      const { ruleType, delayHours, enabled, messageTemplate, channel } = req.body;
+      
+      if (!ruleType || !delayHours) return res.status(400).json({ error: "ruleType and delayHours required" });
+      
+      const [rule] = await db.insert(followUpRules).values({
+        userId,
+        ruleType,
+        delayHours,
+        enabled: enabled ?? true,
+        messageTemplate: messageTemplate || null,
+        channel: channel || "sms",
+      }).returning();
+      
+      res.json(rule);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to create follow-up rule" });
+    }
+  });
+
+  app.patch("/api/follow-up-rules/:id", requireAuth, async (req, res) => {
+    try {
+      const { db } = await import("./db");
+      const { followUpRules } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const userId = (req as any).userId;
+      
+      const [updated] = await db.update(followUpRules)
+        .set(req.body)
+        .where(and(eq(followUpRules.id, req.params.id), eq(followUpRules.userId, userId)))
+        .returning();
+      
+      if (!updated) return res.status(404).json({ error: "Rule not found" });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to update follow-up rule" });
+    }
+  });
+
+  app.get("/api/follow-up-logs", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { db } = await import("./db");
+      const { followUpLogs } = await import("@shared/schema");
+      const { eq, desc } = await import("drizzle-orm");
+      const logs = await db.select().from(followUpLogs).where(eq(followUpLogs.userId, userId)).orderBy(desc(followUpLogs.sentAt)).limit(50);
+      res.json(logs);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch follow-up logs" });
+    }
+  });
+
+  // ============ REBOOKING RULES ============
+  app.get("/api/rebooking-rules", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { db } = await import("./db");
+      const { rebookingRules } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const rules = await db.select().from(rebookingRules).where(eq(rebookingRules.userId, userId));
+      res.json(rules);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch rebooking rules" });
+    }
+  });
+
+  app.post("/api/rebooking-rules", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { db } = await import("./db");
+      const { rebookingRules } = await import("@shared/schema");
+      const { serviceType, intervalDays, enabled, messageTemplate } = req.body;
+      
+      if (!serviceType || !intervalDays) return res.status(400).json({ error: "serviceType and intervalDays required" });
+      
+      const [rule] = await db.insert(rebookingRules).values({
+        userId,
+        serviceType,
+        intervalDays,
+        enabled: enabled ?? true,
+        messageTemplate: messageTemplate || null,
+      }).returning();
+      
+      res.json(rule);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to create rebooking rule" });
+    }
+  });
+
+  app.patch("/api/rebooking-rules/:id", requireAuth, async (req, res) => {
+    try {
+      const { db } = await import("./db");
+      const { rebookingRules } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const userId = (req as any).userId;
+      
+      const [updated] = await db.update(rebookingRules)
+        .set(req.body)
+        .where(and(eq(rebookingRules.id, req.params.id), eq(rebookingRules.userId, userId)))
+        .returning();
+      
+      if (!updated) return res.status(404).json({ error: "Rule not found" });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to update rebooking rule" });
+    }
+  });
+
+  app.get("/api/rebooking-logs", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { db } = await import("./db");
+      const { rebookingLogs } = await import("@shared/schema");
+      const { eq, desc } = await import("drizzle-orm");
+      const logs = await db.select().from(rebookingLogs).where(eq(rebookingLogs.userId, userId)).orderBy(desc(rebookingLogs.sentAt)).limit(50);
+      res.json(logs);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch rebooking logs" });
+    }
+  });
+
+  // ============ AUTO-QUOTE GENERATOR ============
+  app.post("/api/quote-estimate", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { jobType, location, description } = req.body;
+      
+      if (!jobType) return res.status(400).json({ error: "jobType is required" });
+      
+      const { db } = await import("./db");
+      const { jobs } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      
+      const historicalJobs = await db.select().from(jobs)
+        .where(and(eq(jobs.userId, userId), eq(jobs.serviceType, jobType)))
+        .limit(50);
+      
+      const completedJobs = historicalJobs.filter(j => j.status === "completed" && j.price);
+      const prices = completedJobs.map(j => j.price!).sort((a, b) => a - b);
+      
+      if (prices.length >= 3) {
+        const median = prices[Math.floor(prices.length / 2)];
+        const low = prices[Math.floor(prices.length * 0.25)];
+        const high = prices[Math.floor(prices.length * 0.75)];
+        const avgDuration = completedJobs.reduce((sum, j) => sum + (j.duration || 60), 0) / completedJobs.length;
+        
+        res.json({
+          source: "historical",
+          suggestedPriceLow: low,
+          suggestedPriceHigh: high,
+          suggestedPriceMedian: median,
+          rationale: `Based on ${completedJobs.length} similar ${jobType} jobs you've completed. Your typical price range is $${(low/100).toFixed(0)}-$${(high/100).toFixed(0)} with a median of $${(median/100).toFixed(0)}.`,
+          avgDurationMinutes: Math.round(avgDuration),
+          sampleSize: completedJobs.length,
+        });
+      } else {
+        try {
+          const { getOpenAI } = await import("./ai/openaiClient");
+          const openai = getOpenAI();
+          
+          const prompt = `You are a pricing expert for gig workers. Estimate a fair price range for this job:
+Job type: ${jobType}
+Location: ${location || "Unknown"}
+Description: ${description || "Standard job"}
+
+Respond in JSON format only:
+{"low": <price_in_cents>, "high": <price_in_cents>, "median": <price_in_cents>, "rationale": "<2 sentence explanation>", "duration_minutes": <estimated_minutes>}`;
+          
+          const response = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [{ role: "user", content: prompt }],
+            response_format: { type: "json_object" },
+            temperature: 0.3,
+          });
+          
+          const result = JSON.parse(response.choices[0].message.content || "{}");
+          
+          res.json({
+            source: "ai",
+            suggestedPriceLow: result.low || 5000,
+            suggestedPriceHigh: result.high || 20000,
+            suggestedPriceMedian: result.median || 10000,
+            rationale: result.rationale || "AI estimate based on industry averages.",
+            avgDurationMinutes: result.duration_minutes || 60,
+            sampleSize: 0,
+          });
+        } catch (aiError) {
+          console.error("AI quote error:", aiError);
+          res.json({
+            source: "default",
+            suggestedPriceLow: 5000,
+            suggestedPriceHigh: 20000,
+            suggestedPriceMedian: 10000,
+            rationale: "Default estimate. Complete more jobs to get personalized pricing.",
+            avgDurationMinutes: 60,
+            sampleSize: 0,
+          });
+        }
+      }
+    } catch (error: any) {
+      console.error("Error generating quote estimate:", error);
+      res.status(500).json({ error: "Failed to generate quote estimate" });
+    }
+  });
+
+  // ============ PRICE OPTIMIZATION ============
+  app.get("/api/price-optimization", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { db } = await import("./db");
+      const { jobs, leads } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      const allJobs = await db.select().from(jobs).where(eq(jobs.userId, userId));
+      const allLeads = await db.select().from(leads).where(eq(leads.userId, userId));
+      
+      const serviceTypes = Array.from(new Set(allJobs.map(j => j.serviceType).filter(Boolean)));
+      
+      const insights = serviceTypes.map(serviceType => {
+        const typeJobs = allJobs.filter(j => j.serviceType === serviceType);
+        const completed = typeJobs.filter(j => j.status === "completed");
+        const cancelled = typeJobs.filter(j => j.status === "cancelled");
+        const totalQuoted = typeJobs.length;
+        
+        const winRate = totalQuoted > 0 ? Math.round((completed.length / totalQuoted) * 100) : 0;
+        const cancelRate = totalQuoted > 0 ? Math.round((cancelled.length / totalQuoted) * 100) : 0;
+        
+        const prices = completed.filter(j => j.price).map(j => j.price!);
+        const avgPrice = prices.length > 0 ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : 0;
+        
+        const avgDuration = completed.reduce((sum, j) => sum + (j.duration || 60), 0) / (completed.length || 1);
+        const hourlyRate = avgPrice > 0 && avgDuration > 0 ? Math.round((avgPrice / avgDuration) * 60) : 0;
+        
+        let suggestion = "";
+        let suggestedChange = 0;
+        
+        if (winRate > 85 && completed.length >= 5) {
+          suggestedChange = 7;
+          suggestion = `High win rate (${winRate}%) suggests room to increase prices by ~7%.`;
+        } else if (winRate > 70 && cancelRate < 10 && completed.length >= 5) {
+          suggestedChange = 5;
+          suggestion = `Solid performance. Consider a 5% price increase to test demand elasticity.`;
+        } else if (cancelRate > 25 && completed.length >= 3) {
+          suggestedChange = -5;
+          suggestion = `High cancellation rate (${cancelRate}%). Consider a small price reduction or improving your booking process.`;
+        }
+        
+        return {
+          serviceType,
+          totalJobs: totalQuoted,
+          completedJobs: completed.length,
+          cancelledJobs: cancelled.length,
+          winRate,
+          cancelRate,
+          avgPrice,
+          hourlyRate,
+          suggestedChange,
+          suggestion,
+        };
+      });
+      
+      res.json({ insights: insights.filter(i => i.totalJobs >= 2) });
+    } catch (error: any) {
+      console.error("Error fetching price optimization:", error);
+      res.status(500).json({ error: "Failed to fetch price optimization" });
+    }
+  });
+
+  // ============ PROFIT WARNINGS ============
+  app.get("/api/profit-warnings", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { db } = await import("./db");
+      const { jobs, invoices } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      
+      const allJobs = await db.select().from(jobs).where(eq(jobs.userId, userId));
+      const allInvoices = await db.select().from(invoices).where(eq(invoices.userId, userId));
+      
+      const warnings: { jobId: string; title: string; type: string; message: string; severity: string }[] = [];
+      
+      const completedJobs = allJobs.filter(j => j.status === "completed");
+      
+      for (const job of completedJobs) {
+        const jobInvoices = allInvoices.filter(inv => inv.jobId === job.id);
+        const totalInvoiced = jobInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+        const totalPaid = jobInvoices.filter(inv => inv.status === "paid").reduce((sum, inv) => sum + (inv.amount || 0), 0);
+        
+        if (job.price && job.duration) {
+          const hourlyRate = (job.price / job.duration) * 60;
+          if (hourlyRate < 2500) {
+            warnings.push({
+              jobId: job.id,
+              title: job.title,
+              type: "low_margin",
+              message: `Effective rate of $${(hourlyRate/100).toFixed(0)}/hr is below recommended minimum ($25/hr).`,
+              severity: hourlyRate < 1500 ? "high" : "medium",
+            });
+          }
+        }
+        
+        if (totalInvoiced > 0 && totalPaid === 0) {
+          const daysSinceCompletion = job.completedAt 
+            ? (Date.now() - new Date(job.completedAt).getTime()) / (1000 * 60 * 60 * 24)
+            : 0;
+          
+          if (daysSinceCompletion > 7) {
+            warnings.push({
+              jobId: job.id,
+              title: job.title,
+              type: "slow_payer",
+              message: `Unpaid for ${Math.round(daysSinceCompletion)} days. Outstanding: $${(totalInvoiced/100).toFixed(2)}.`,
+              severity: daysSinceCompletion > 14 ? "high" : "medium",
+            });
+          }
+        }
+        
+        const travelDistKm = (job as any).travelDistanceKm;
+        if (travelDistKm && travelDistKm > 30 && job.price) {
+          const travelCostEstimate = travelDistKm * 58;
+          const profitAfterTravel = job.price - travelCostEstimate;
+          if (profitAfterTravel < job.price * 0.5) {
+            warnings.push({
+              jobId: job.id,
+              title: job.title,
+              type: "high_travel",
+              message: `Estimated travel cost of $${(travelCostEstimate/100).toFixed(0)} eats ${Math.round((travelCostEstimate/job.price)*100)}% of job price.`,
+              severity: profitAfterTravel < 0 ? "high" : "medium",
+            });
+          }
+        }
+      }
+      
+      const scheduledJobs = allJobs.filter(j => j.status === "scheduled");
+      for (const job of scheduledJobs) {
+        if (job.price && job.duration) {
+          const hourlyRate = (job.price / job.duration) * 60;
+          if (hourlyRate < 2000) {
+            warnings.push({
+              jobId: job.id,
+              title: job.title,
+              type: "underpriced",
+              message: `This job may be underpriced at $${(hourlyRate/100).toFixed(0)}/hr. Consider adjusting before starting.`,
+              severity: "medium",
+            });
+          }
+        }
+      }
+      
+      res.json({ 
+        warnings: warnings.sort((a, b) => (a.severity === "high" ? 0 : 1) - (b.severity === "high" ? 0 : 1)),
+        totalWarnings: warnings.length,
+        highSeverityCount: warnings.filter(w => w.severity === "high").length,
+      });
+    } catch (error: any) {
+      console.error("Error fetching profit warnings:", error);
+      res.status(500).json({ error: "Failed to fetch profit warnings" });
+    }
+  });
+
   // Start the momentum scheduler
   import("./postJobMomentum").then(({ startMomentumScheduler }) => {
     startMomentumScheduler(60000); // Check every minute
   }).catch(err => {
     console.error("[PostJobMomentum] Failed to start scheduler:", err);
+  });
+
+  import("./followUpBot").then(({ startFollowUpBot }) => {
+    startFollowUpBot();
+  }).catch(err => {
+    console.error("[FollowUpBot] Failed to start:", err);
+  });
+
+  import("./rebookingScheduler").then(({ startRebookingScheduler }) => {
+    startRebookingScheduler();
+  }).catch(err => {
+    console.error("[RebookingScheduler] Failed to start:", err);
   });
 
   return httpServer;

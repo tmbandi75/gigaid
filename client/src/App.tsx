@@ -1,6 +1,6 @@
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
@@ -66,8 +66,12 @@ import VoiceNotesPage from "@/pages/VoiceNotesPage";
 import TermsOfService from "@/pages/terms";
 import PrivacyPolicy from "@/pages/privacy";
 import OnboardingPage from "@/pages/OnboardingPage";
+import PaydayOnboarding from "@/pages/PaydayOnboarding";
 import PricingPage from "@/pages/PricingPage";
 import Downloads from "@/pages/Downloads";
+import AutoQuotePage from "@/pages/AutoQuotePage";
+import PriceOptimizationPage from "@/pages/PriceOptimizationPage";
+import ProfitWarningsPage from "@/pages/ProfitWarningsPage";
 import NotFound from "@/pages/not-found";
 import { logClientEnv } from "./debug/envProbe";
 
@@ -100,6 +104,9 @@ function Router() {
       <Route path="/help" component={HelpSupport} />
       <Route path="/guides" component={UserGuides} />
       <Route path="/ai-tools" component={AITools} />
+      <Route path="/auto-quote" component={AutoQuotePage} />
+      <Route path="/price-optimization" component={PriceOptimizationPage} />
+      <Route path="/profit-warnings" component={ProfitWarningsPage} />
       <Route path="/voice-notes" component={VoiceNotesPage} />
       <Route path="/booking-requests" component={BookingRequests} />
       <Route path="/share" component={ShareCapture} />
@@ -122,6 +129,7 @@ function Router() {
       <Route path="/admin/stripe" component={AdminStripeMonitoring} />
       <Route path="/onboarding/:step" component={OnboardingPage} />
       <Route path="/onboarding" component={OnboardingPage} />
+      <Route path="/payday-onboarding" component={PaydayOnboarding} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -197,7 +205,7 @@ function AuthenticatedApp() {
   }
   
   // Onboarding page renders full-screen without app shell
-  const isOnboardingRoute = location.startsWith("/onboarding");
+  const isOnboardingRoute = location.startsWith("/onboarding") || location.startsWith("/payday-onboarding");
   // Admin pages have their own layout without the user sidebar
   const isAdminRoute = location.startsWith("/admin");
   
@@ -226,11 +234,33 @@ function AuthenticatedApp() {
 
 function RedirectToDashboard() {
   const [, setLocation] = useLocation();
-  
+  const { data: profile, isLoading: profileLoading } = useQuery<{ paydayOnboardingCompleted?: boolean }>({
+    queryKey: ['/api/profile'],
+  });
+  const { data: jobsData, isLoading: jobsLoading } = useQuery<any[]>({
+    queryKey: ['/api/jobs'],
+    enabled: !!profile && !profile.paydayOnboardingCompleted,
+  });
+  const { data: invoicesData, isLoading: invoicesLoading } = useQuery<any[]>({
+    queryKey: ['/api/invoices'],
+    enabled: !!profile && !profile.paydayOnboardingCompleted,
+  });
+
   useEffect(() => {
-    setLocation("/dashboard");
-  }, [setLocation]);
-  
+    if (profileLoading) return;
+    if (!profile || profile.paydayOnboardingCompleted) {
+      setLocation("/dashboard");
+      return;
+    }
+    if (jobsLoading || invoicesLoading) return;
+    const hasExistingData = (jobsData && jobsData.length > 0) || (invoicesData && invoicesData.length > 0);
+    if (hasExistingData) {
+      setLocation("/dashboard");
+    } else {
+      setLocation("/payday-onboarding");
+    }
+  }, [setLocation, profile, profileLoading, jobsData, jobsLoading, invoicesData, invoicesLoading]);
+
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="animate-pulse text-muted-foreground">Loading...</div>

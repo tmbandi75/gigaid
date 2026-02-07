@@ -127,6 +127,16 @@ Systematic review across 9 categories to identify and fix Day-1 user experience 
 - **Analytics Events**: `approaching_limit_shown`, `post_success_nudge`, `stall_upgrade_prompt`, `upgrade_from_nudge` via PostHog
 - **Components**: Located in `client/src/components/upgrade/` and `client/src/hooks/`
 
+### Get Paid Today Product Roadmap (February 2026)
+- **Payday Onboarding**: Forced 6-step stepper for new users (Stripe Connect, booking link, deposits, templates, services, completion). Only triggers for users with no existing jobs/invoices. Route: `/payday-onboarding`.
+- **Job Templates**: 15 seeded templates across 5 trades (handyman, cleaning, lawn, moving, tutoring). Template picker in JobForm pre-fills title, description, serviceType, price, duration. API: GET `/api/job-templates`, POST `/api/job-templates/seed`.
+- **Money-First Dashboard**: Revenue summary section at top of Dashboard showing weekly revenue, pending revenue, at-risk jobs (scheduled within 48h without payment), hot leads (<72h old). API: GET `/api/money-dashboard`.
+- **Auto Follow-Up Bot**: Background scheduler (`server/followUpBot.ts`) running every 5 minutes. Checks no_reply (24h), quote_pending (48h), unpaid_invoice (12h) rules and sends SMS follow-ups. Tables: `follow_up_rules`, `follow_up_logs`.
+- **Rebooking Machine**: Background scheduler (`server/rebookingScheduler.ts`) running every hour. Sends rebooking reminders for completed jobs based on per-service-type intervals. Tables: `rebooking_rules`, `rebooking_logs`.
+- **Auto-Quote Generator**: AI-powered pricing with 3-tier fallback (user history → OpenAI gpt-4o-mini → defaults). Route: `/auto-quote`, API: POST `/api/quote-estimate`.
+- **Price Optimization Engine**: Analyzes win/cancel rates per service type with pricing suggestions. Route: `/price-optimization`, API: GET `/api/price-optimization`.
+- **Profit Warning System**: Flags low-margin (<30%), slow-payer (>7 days), high-travel (>30km), and underpriced jobs. Route: `/profit-warnings`, API: GET `/api/profit-warnings`.
+
 ### Technical Debt: Dual Entitlement Systems (Low Priority Cleanup)
 - **Current State**: Two parallel systems define plan capabilities:
   - `shared/capabilities/capabilityRules.ts`: Declarative rules with limits, modes, time windows per plan (used by canPerform/useCanPerform)

@@ -34,10 +34,20 @@ import {
   CheckCircle2,
   Zap,
   ArrowUpRight,
+  AlertTriangle,
 } from "lucide-react";
 import type { DashboardSummary, Job, Lead } from "@shared/schema";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+
+interface MoneyDashboardData {
+  weeklyRevenue: number;
+  pendingRevenue: number;
+  atRiskCount: number;
+  hotLeadCount: number;
+  atRiskJobs: Array<{ id: number; title: string; scheduledDate: string }>;
+  hotLeads: Array<{ id: number; clientName: string; serviceType: string }>;
+}
 
 interface OnboardingStatus {
   completed: boolean;
@@ -107,6 +117,10 @@ export default function Dashboard() {
 
   const { data: profile } = useQuery<UserProfile>({
     queryKey: QUERY_KEYS.profile(),
+  });
+
+  const { data: moneyDashboard, isLoading: isMoneyLoading } = useQuery<MoneyDashboardData>({
+    queryKey: QUERY_KEYS.moneyDashboard(),
   });
 
   useEffect(() => {
@@ -311,6 +325,130 @@ export default function Dashboard() {
       {isMobile ? renderMobileHeader() : renderDesktopHeader()}
 
       <div className={`flex-1 px-4 md:px-6 lg:px-8 py-6 space-y-6 max-w-7xl mx-auto w-full ${isMobile ? "-mt-4" : ""}`}>
+        <div data-testid="section-money-summary">
+          {isMoneyLoading ? (
+            <div className="grid grid-cols-2 gap-3">
+              {[1, 2, 3, 4].map((i) => (
+                <Card key={i} className="border-0 shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="animate-pulse space-y-2">
+                      <div className="h-3 w-16 bg-muted rounded" />
+                      <div className="h-6 w-20 bg-muted rounded" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <Card
+                  className="border-0 shadow-sm hover-elevate cursor-pointer"
+                  onClick={() => navigate("/invoices")}
+                  data-testid="card-money-weekly"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <DollarSign className="h-4 w-4 text-emerald-500" />
+                      <span className="text-xs text-muted-foreground">This Week</span>
+                    </div>
+                    <p className="text-xl font-bold" data-testid="text-weekly-revenue">
+                      {(moneyDashboard?.weeklyRevenue ?? 0) / 100 > 0
+                        ? ((moneyDashboard?.weeklyRevenue ?? 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 })
+                        : "$0"}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card
+                  className="border-0 shadow-sm hover-elevate cursor-pointer"
+                  onClick={() => navigate("/invoices")}
+                  data-testid="card-money-pending"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Clock className="h-4 w-4 text-blue-500" />
+                      <span className="text-xs text-muted-foreground">Pending</span>
+                    </div>
+                    <p className="text-xl font-bold" data-testid="text-pending-revenue">
+                      {(moneyDashboard?.pendingRevenue ?? 0) / 100 > 0
+                        ? ((moneyDashboard?.pendingRevenue ?? 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 })
+                        : "$0"}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card
+                  className="border-0 shadow-sm hover-elevate cursor-pointer"
+                  onClick={() => navigate("/jobs")}
+                  data-testid="card-money-at-risk"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <AlertTriangle className="h-4 w-4 text-amber-500" />
+                      <span className="text-xs text-muted-foreground">At Risk</span>
+                    </div>
+                    <p className={`text-xl font-bold ${(moneyDashboard?.atRiskCount ?? 0) > 0 ? "text-amber-600 dark:text-amber-400" : ""}`} data-testid="text-at-risk-count">
+                      {moneyDashboard?.atRiskCount ?? 0}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card
+                  className="border-0 shadow-sm hover-elevate cursor-pointer"
+                  onClick={() => navigate("/leads")}
+                  data-testid="card-money-hot-leads"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Zap className="h-4 w-4 text-violet-500" />
+                      <span className="text-xs text-muted-foreground">Ready to Book</span>
+                    </div>
+                    <p className="text-xl font-bold" data-testid="text-hot-lead-count">
+                      {moneyDashboard?.hotLeadCount ?? 0}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {((moneyDashboard?.atRiskJobs?.length ?? 0) > 0 || (moneyDashboard?.hotLeads?.length ?? 0) > 0) && (
+                <div className="mt-3 space-y-2" data-testid="list-money-quick-access">
+                  {moneyDashboard?.atRiskJobs?.slice(0, 2).map((job) => (
+                    <div
+                      key={job.id}
+                      className="flex items-center gap-3 p-3 rounded-xl bg-amber-500/10 cursor-pointer hover-elevate"
+                      onClick={() => navigate(`/jobs/${job.id}`)}
+                      data-testid={`link-at-risk-job-${job.id}`}
+                    >
+                      <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{job.title}</p>
+                        <p className="text-xs text-muted-foreground">{formatDate(job.scheduledDate)}</p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
+                    </div>
+                  ))}
+                  {moneyDashboard?.hotLeads?.slice(0, 2).map((lead) => (
+                    <div
+                      key={lead.id}
+                      className="flex items-center gap-3 p-3 rounded-xl bg-violet-500/10 cursor-pointer hover-elevate"
+                      onClick={() => navigate(`/leads/${lead.id}`)}
+                      data-testid={`link-hot-lead-${lead.id}`}
+                    >
+                      <Zap className="h-4 w-4 text-violet-500 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{lead.clientName}</p>
+                        <p className="text-xs text-muted-foreground">{lead.serviceType}</p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
         {!onboarding?.completed && onboarding?.step !== undefined && (
           <OnboardingChecklist
             currentStep={onboarding.step}

@@ -140,4 +140,14 @@ export const QUERY_KEYS = {
   adminAuditLogsQuery: (queryParams: string) => [`/api/admin/audit-logs?${queryParams}`] as const,
   adminAnalyticsFunnels: (days: number | string) => [`/api/admin/analytics/funnels?days=${days}`] as const,
   publicReview: (token: string) => [`/api/public/review/${token}`] as const,
+
+  jobTemplates: () => ["/api/job-templates"] as const,
+  followUpRules: () => ["/api/follow-up-rules"] as const,
+  followUpLogs: () => ["/api/follow-up-logs"] as const,
+  rebookingRules: () => ["/api/rebooking-rules"] as const,
+  rebookingLogs: () => ["/api/rebooking-logs"] as const,
+  moneyDashboard: () => ["/api/money-dashboard"] as const,
+  quoteEstimate: () => ["/api/quote-estimate"] as const,
+  priceOptimization: () => ["/api/price-optimization"] as const,
+  profitWarnings: () => ["/api/profit-warnings"] as const,
 };

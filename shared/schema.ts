@@ -130,6 +130,10 @@ export const users = pgTable("users", {
   personalPhone: text("personal_phone"), // User's personal phone for forwarding inbound SMS
   inAppInboxEnabled: boolean("in_app_inbox_enabled").default(false), // If true, store replies in app instead of forwarding
   firstGigaidMessageSentAt: text("first_gigaid_message_sent_at"), // Track first message for tooltip
+  
+  // Payday onboarding (money-first forced flow for new users)
+  paydayOnboardingCompleted: boolean("payday_onboarding_completed").default(false),
+  paydayOnboardingStep: integer("payday_onboarding_step").default(0), // 0=welcome,1=stripe,2=booking,3=deposit,4=templates,5=done
 });
 
 // Availability type for frontend use
@@ -2345,6 +2349,104 @@ export const insertStripeDisputeSchema = createInsertSchema(stripeDisputes).omit
 
 export type InsertStripeDispute = z.infer<typeof insertStripeDisputeSchema>;
 export type StripeDispute = typeof stripeDisputes.$inferSelect;
+
+// Job Templates - prebuilt job configurations by trade
+export const jobTemplates = pgTable("job_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  category: text("category").notNull(), // handyman, cleaning, lawn, moving, tutoring
+  description: text("description"),
+  defaultPriceCents: integer("default_price_cents").notNull(),
+  depositPercent: integer("deposit_percent").default(25),
+  estimatedDurationMinutes: integer("estimated_duration_minutes").default(60),
+  cancellationPolicy: text("cancellation_policy"),
+  messageTemplate: text("message_template"),
+  isSystemTemplate: boolean("is_system_template").default(true),
+  userId: varchar("user_id"), // null for system templates, set for user-created
+  createdAt: text("created_at").notNull().default(sql`now()`),
+});
+
+export const insertJobTemplateSchema = createInsertSchema(jobTemplates).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertJobTemplate = z.infer<typeof insertJobTemplateSchema>;
+export type JobTemplate = typeof jobTemplates.$inferSelect;
+
+// Follow-up rules for Auto Follow-Up Bot
+export const followUpRules = pgTable("follow_up_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  ruleType: text("rule_type").notNull(), // no_reply, quote_pending, unpaid_invoice
+  delayHours: integer("delay_hours").notNull(), // hours to wait before triggering
+  enabled: boolean("enabled").default(true),
+  messageTemplate: text("message_template"),
+  channel: text("channel").default("sms"), // sms, email
+  createdAt: text("created_at").notNull().default(sql`now()`),
+});
+
+export const insertFollowUpRuleSchema = createInsertSchema(followUpRules).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertFollowUpRule = z.infer<typeof insertFollowUpRuleSchema>;
+export type FollowUpRule = typeof followUpRules.$inferSelect;
+
+// Follow-up logs - tracks sent auto follow-ups
+export const followUpLogs = pgTable("follow_up_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  ruleId: varchar("rule_id"),
+  ruleType: text("rule_type").notNull(),
+  entityType: text("entity_type").notNull(), // lead, job, invoice
+  entityId: varchar("entity_id").notNull(),
+  channel: text("channel").notNull(),
+  toAddress: text("to_address").notNull(),
+  message: text("message").notNull(),
+  status: text("status").notNull().default("sent"), // sent, failed, skipped
+  sentAt: text("sent_at").notNull().default(sql`now()`),
+  failureReason: text("failure_reason"),
+});
+
+export type FollowUpLog = typeof followUpLogs.$inferSelect;
+
+// Rebooking rules - per job type rebooking schedules
+export const rebookingRules = pgTable("rebooking_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  serviceType: text("service_type").notNull(),
+  intervalDays: integer("interval_days").notNull(), // days between rebookings
+  enabled: boolean("enabled").default(true),
+  messageTemplate: text("message_template"),
+  createdAt: text("created_at").notNull().default(sql`now()`),
+});
+
+export const insertRebookingRuleSchema = createInsertSchema(rebookingRules).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertRebookingRule = z.infer<typeof insertRebookingRuleSchema>;
+export type RebookingRule = typeof rebookingRules.$inferSelect;
+
+// Rebooking log - tracks sent rebooking reminders
+export const rebookingLogs = pgTable("rebooking_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  ruleId: varchar("rule_id"),
+  jobId: varchar("job_id").notNull(),
+  clientName: text("client_name"),
+  clientPhone: text("client_phone"),
+  clientEmail: text("client_email"),
+  status: text("status").notNull().default("sent"), // sent, booked, ignored, failed
+  sentAt: text("sent_at").notNull().default(sql`now()`),
+  rebookedAt: text("rebooked_at"),
+  newJobId: varchar("new_job_id"),
+});
+
+export type RebookingLog = typeof rebookingLogs.$inferSelect;
 
 export * from "./models/chat";
 export * from "./models/auth";

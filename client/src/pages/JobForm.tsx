@@ -53,8 +53,15 @@ import {
   Shield,
   Percent,
   Navigation,
-  Send
+  Send,
+  SprayCan,
+  TreePine,
+  Truck,
+  GraduationCap,
+  ChevronDown,
+  LayoutTemplate
 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { PhotoUpload } from "@/components/ui/photo-upload";
 import { ServiceTypeSelect } from "@/components/ui/service-type-select";
@@ -67,6 +74,25 @@ import { CapabilityLimitInfo } from "@/components/CapabilityGate";
 import { ApproachingLimitBanner } from "@/components/upgrade/ApproachingLimitBanner";
 import { usePostSuccessNudge } from "@/hooks/usePostSuccessNudge";
 import { PostSuccessNudgeModal } from "@/components/upgrade/PostSuccessNudgeModal";
+
+interface JobTemplate {
+  id: string;
+  name: string;
+  category: string;
+  serviceType: string;
+  description: string;
+  defaultPriceCents: number;
+  defaultDurationMinutes: number;
+}
+
+const templateCategories = [
+  { value: "all", label: "All", icon: LayoutTemplate },
+  { value: "handyman", label: "Handyman", icon: Wrench },
+  { value: "cleaning", label: "Cleaning", icon: SprayCan },
+  { value: "lawn", label: "Lawn", icon: TreePine },
+  { value: "moving", label: "Moving", icon: Truck },
+  { value: "tutoring", label: "Tutoring", icon: GraduationCap },
+] as const;
 
 interface ScheduleSuggestion {
   date: string;
@@ -365,6 +391,8 @@ export default function JobForm() {
   
   // Coordinates from address autocomplete
   const [addressCoords, setAddressCoords] = useState<{ lat?: number; lng?: number }>({});
+  const [templateCategory, setTemplateCategory] = useState<string>("all");
+  const [templateOpen, setTemplateOpen] = useState(true);
   
   // Revenue Protection: Resolution modal state
   const [showResolutionModal, setShowResolutionModal] = useState(false);
@@ -405,6 +433,11 @@ export default function JobForm() {
   
   const { data: jobUsage } = useQuery<JobUsageInfo>({
     queryKey: QUERY_KEYS.jobsUsage(),
+    enabled: !isEditing,
+  });
+
+  const { data: jobTemplates = [], isLoading: isLoadingTemplates } = useQuery<JobTemplate[]>({
+    queryKey: QUERY_KEYS.jobTemplates(),
     enabled: !isEditing,
   });
 
@@ -926,6 +959,92 @@ export default function JobForm() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             {!isEditing && <ApproachingLimitBanner capability="jobs.create" />}
+
+            {!isEditing && (
+              <>
+                <Collapsible open={templateOpen} onOpenChange={setTemplateOpen}>
+                  <Card className="border-0 shadow-md overflow-hidden" data-testid="card-template-picker">
+                    <div className="h-1 bg-gradient-to-r from-violet-500 to-fuchsia-500" />
+                    <CardContent className="pt-4 pb-3">
+                      <CollapsibleTrigger className="flex items-center justify-between w-full" data-testid="button-toggle-templates">
+                        <div className="flex items-center gap-2">
+                          <LayoutTemplate className="h-4 w-4 text-violet-500" />
+                          <h3 className="font-semibold text-sm">Quick Start from Template</h3>
+                        </div>
+                        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${templateOpen ? "rotate-180" : ""}`} />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pt-3 space-y-3">
+                        <div className="flex gap-1.5 flex-wrap">
+                          {templateCategories.map((cat) => {
+                            const Icon = cat.icon;
+                            return (
+                              <Button
+                                key={cat.value}
+                                type="button"
+                                variant={templateCategory === cat.value ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setTemplateCategory(cat.value)}
+                                data-testid={`button-template-category-${cat.value}`}
+                                className="toggle-elevate"
+                              >
+                                <Icon className="h-3.5 w-3.5 mr-1" />
+                                {cat.label}
+                              </Button>
+                            );
+                          })}
+                        </div>
+
+                        {isLoadingTemplates ? (
+                          <div className="flex items-center justify-center py-6">
+                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {jobTemplates
+                              .filter((t) => templateCategory === "all" || t.category?.toLowerCase() === templateCategory)
+                              .map((template) => (
+                                <div
+                                  key={template.id}
+                                  className="flex items-center justify-between p-3 rounded-lg border cursor-pointer hover-elevate active-elevate-2"
+                                  onClick={() => {
+                                    form.setValue("title", template.name);
+                                    form.setValue("description", template.description || "");
+                                    form.setValue("serviceType", template.serviceType);
+                                    form.setValue("price", template.defaultPriceCents / 100);
+                                    form.setValue("duration", template.defaultDurationMinutes);
+                                    setTemplateOpen(false);
+                                  }}
+                                  data-testid={`card-template-${template.id}`}
+                                >
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-medium truncate">{template.name}</p>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      <span className="text-xs text-muted-foreground">${(template.defaultPriceCents / 100).toFixed(0)}</span>
+                                      <span className="text-xs text-muted-foreground/50">|</span>
+                                      <span className="text-xs text-muted-foreground">{template.defaultDurationMinutes}min</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            {jobTemplates.filter((t) => templateCategory === "all" || t.category?.toLowerCase() === templateCategory).length === 0 && (
+                              <p className="text-sm text-muted-foreground col-span-full text-center py-3" data-testid="text-no-templates">
+                                No templates in this category
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </CollapsibleContent>
+                    </CardContent>
+                  </Card>
+                </Collapsible>
+
+                <div className="flex items-center gap-3 py-1">
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-xs text-muted-foreground">or fill in manually below</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+              </>
+            )}
             
             <Card className="border-0 shadow-md overflow-hidden">
               <div className="h-1 bg-gradient-to-r from-primary to-violet-500" />
