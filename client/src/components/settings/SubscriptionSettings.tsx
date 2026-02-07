@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
@@ -42,6 +42,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { emitChurnEvent } from "@/lib/churnEvents";
 
 interface SubscriptionStatus {
   plan: string;
@@ -122,6 +123,12 @@ export function SubscriptionSettings() {
   const [, navigate] = useLocation();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showPauseDialog, setShowPauseDialog] = useState(false);
+
+  useEffect(() => {
+    if (showCancelDialog) {
+      emitChurnEvent("cancel_hover");
+    }
+  }, [showCancelDialog]);
   const [showCloseAccountDialog, setShowCloseAccountDialog] = useState(false);
   const [showChangePlanDialog, setShowChangePlanDialog] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);

@@ -24,6 +24,7 @@ import {
   BarChart3,
   Shield,
   CreditCard,
+  HeartPulse,
   LogOut,
   Moon,
   Sun,
@@ -81,6 +82,12 @@ const adminNavItems = [
     href: "/admin/stripe", 
     icon: CreditCard,
     testId: "nav-stripe-monitoring",
+  },
+  { 
+    title: "Retention / Churn", 
+    href: "/admin/churn", 
+    icon: HeartPulse,
+    testId: "nav-churn-retention",
   },
 ];
 

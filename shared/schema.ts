@@ -2466,5 +2466,90 @@ export const insertPriceAdjustmentSchema = createInsertSchema(priceAdjustments).
 export type InsertPriceAdjustment = z.infer<typeof insertPriceAdjustmentSchema>;
 export type PriceAdjustment = typeof priceAdjustments.$inferSelect;
 
+// ============================================================
+// CHURN PREDICTION & RETENTION
+// ============================================================
+
+export const churnMetrics = pgTable("churn_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  lastLoginDays: integer("last_login_days").notNull().default(0),
+  jobs7d: integer("jobs_7d").notNull().default(0),
+  msgs7d: integer("msgs_7d").notNull().default(0),
+  rev30d: integer("rev_30d").notNull().default(0),
+  revDelta: integer("rev_delta").notNull().default(0),
+  noPay14d: boolean("no_pay_14d").notNull().default(false),
+  failedPayments: integer("failed_payments").notNull().default(0),
+  errors7d: integer("errors_7d").notNull().default(0),
+  blocks7d: integer("blocks_7d").notNull().default(0),
+  limit95Hits: integer("limit_95_hits").notNull().default(0),
+  downgradeViews: integer("downgrade_views").notNull().default(0),
+  cancelHover: integer("cancel_hover").notNull().default(0),
+  score: integer("score").notNull().default(0),
+  tier: text("tier").notNull().default("Healthy"),
+  computedAt: text("computed_at").notNull().default(sql`now()`),
+  createdAt: text("created_at").notNull().default(sql`now()`),
+  updatedAt: text("updated_at").notNull().default(sql`now()`),
+}, (table) => [
+  index("churn_metrics_user_idx").on(table.userId),
+  index("churn_metrics_updated_idx").on(table.updatedAt),
+  index("churn_metrics_tier_idx").on(table.tier),
+]);
+
+export const insertChurnMetricsSchema = createInsertSchema(churnMetrics).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertChurnMetrics = z.infer<typeof insertChurnMetricsSchema>;
+export type ChurnMetrics = typeof churnMetrics.$inferSelect;
+
+export const retentionActions = pgTable("retention_actions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  tier: text("tier").notNull(),
+  actionType: text("action_type").notNull(),
+  channel: text("channel").notNull(),
+  payload: text("payload"),
+  status: text("status").notNull().default("Queued"),
+  idempotencyKey: text("idempotency_key").notNull().unique(),
+  error: text("error"),
+  sentAt: text("sent_at"),
+  createdAt: text("created_at").notNull().default(sql`now()`),
+}, (table) => [
+  index("retention_actions_user_idx").on(table.userId),
+  index("retention_actions_status_idx").on(table.status),
+]);
+
+export const insertRetentionActionSchema = createInsertSchema(retentionActions).omit({ id: true, createdAt: true });
+export type InsertRetentionAction = z.infer<typeof insertRetentionActionSchema>;
+export type RetentionAction = typeof retentionActions.$inferSelect;
+
+export const retentionPlaybooks = pgTable("retention_playbooks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tier: text("tier").notNull(),
+  priority: integer("priority").notNull().default(0),
+  actionType: text("action_type").notNull(),
+  channel: text("channel").notNull(),
+  templateKey: text("template_key").notNull(),
+  delayHours: integer("delay_hours").notNull().default(0),
+  enabled: boolean("enabled").notNull().default(true),
+});
+
+export const insertRetentionPlaybookSchema = createInsertSchema(retentionPlaybooks).omit({ id: true });
+export type InsertRetentionPlaybook = z.infer<typeof insertRetentionPlaybookSchema>;
+export type RetentionPlaybook = typeof retentionPlaybooks.$inferSelect;
+
+export const planOverrides = pgTable("plan_overrides", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  overrideType: text("override_type").notNull(),
+  expiresAt: text("expires_at").notNull(),
+  createdAt: text("created_at").notNull().default(sql`now()`),
+  createdBy: text("created_by"),
+}, (table) => [
+  index("plan_overrides_user_idx").on(table.userId),
+]);
+
+export const insertPlanOverrideSchema = createInsertSchema(planOverrides).omit({ id: true, createdAt: true });
+export type InsertPlanOverride = z.infer<typeof insertPlanOverrideSchema>;
+export type PlanOverride = typeof planOverrides.$inferSelect;
+
 export * from "./models/chat";
 export * from "./models/auth";

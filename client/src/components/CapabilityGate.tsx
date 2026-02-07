@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { useCanPerform, type NewCapability } from "@/hooks/useCapability";
+import { emitChurnEvent } from "@/lib/churnEvents";
 
 interface CapabilityGateProps {
   capability: NewCapability;
@@ -15,7 +16,15 @@ export function CapabilityGate({
   showMessage = true 
 }: CapabilityGateProps) {
   const { allowed, reason, loading } = useCanPerform(capability);
-  
+  const emittedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!loading && !allowed && emittedRef.current !== capability) {
+      emittedRef.current = capability;
+      emitChurnEvent("paywall_block", { capability });
+    }
+  }, [loading, allowed, capability]);
+
   if (loading) {
     return null;
   }

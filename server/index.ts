@@ -11,6 +11,7 @@ import { startNextBestActionEngine } from "./nextBestActionEngine";
 import { startIntentDetectionEngine } from "./intentDetectionEngine";
 import { startIntentFollowUpScheduler } from "./intentFollowUpScheduler";
 import { startAccountDeletionScheduler } from "./accountDeletionScheduler";
+import { startChurnScheduler } from "./churn/churnScheduler";
 
 const app = express();
 const httpServer = createServer(app);
@@ -115,6 +116,7 @@ app.use((req, res, next) => {
       startIntentDetectionEngine(5); // Run every 5 minutes for intent processing
       startIntentFollowUpScheduler(); // Check for unpaid invoices and send follow-ups
       startAccountDeletionScheduler(); // Daily check for accounts to delete
+      startChurnScheduler(); // Nightly churn scoring + retention actions
     },
   );
 })();

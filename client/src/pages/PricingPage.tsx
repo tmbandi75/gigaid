@@ -12,6 +12,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useQuery } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { trackEvent } from "@/components/PostHogProvider";
+import { emitChurnEvent } from "@/lib/churnEvents";
 
 interface PlanFeature {
   text: string;
@@ -130,6 +131,12 @@ export default function PricingPage() {
   const [loadingPlan, setLoadingPlan] = useState<SubscriptionPlan | null>(null);
   const isMobile = useIsMobile();
   const checkoutTrackedRef = useRef(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      emitChurnEvent("downgrade_view");
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (checkoutTrackedRef.current) return;

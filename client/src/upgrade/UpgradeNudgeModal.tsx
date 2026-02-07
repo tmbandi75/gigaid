@@ -1,8 +1,10 @@
+import { useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, Zap, Users } from "lucide-react";
 import { useLocation } from "wouter";
 import { trackEvent } from "@/components/PostHogProvider";
+import { emitChurnEvent } from "@/lib/churnEvents";
 import type { UpgradeVariant, UpgradeTriggerType, UpgradeSurface } from "./upgradeTypes";
 import type { NewCapability } from "@/hooks/useCapability";
 import type { SubscriptionPlan } from "@/lib/stripeCheckout";
@@ -51,6 +53,13 @@ export function UpgradeNudgeModal({
   recommendedPlan,
 }: UpgradeNudgeModalProps) {
   const [, navigate] = useLocation();
+
+  useEffect(() => {
+    if (open) {
+      emitChurnEvent("limit_95_hit", { triggerType, capabilityKey, surface });
+    }
+  }, [open, triggerType, capabilityKey, surface]);
+
   const Icon = VARIANT_ICONS[variant];
   const percentUsed = limit && limit > 0 ? Math.round(((current || 0) / limit) * 100) : 0;
 

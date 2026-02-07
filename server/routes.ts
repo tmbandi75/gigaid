@@ -44,6 +44,7 @@ import adminAuditLogRoutes from "./admin/auditLogRoutes";
 import adminAnalyticsRoutes from "./admin/analyticsRoutes";
 import adminCustomerioRoutes from "./admin/customerioRoutes";
 import adminStripeRoutes from "./admin/stripeAdminRoutes";
+import adminChurnRoutes from "./churn/adminChurnRoutes";
 import leadEmailRoutes from "./leadEmailRoutes";
 import { startCopilotScheduler } from "./copilot/engine";
 import { startCampaignSuggestionScheduler } from "./campaignSuggestionEngine";
@@ -114,7 +115,20 @@ export async function registerRoutes(
   app.use("/api/admin/analytics", adminAnalyticsRoutes);
   app.use("/api/admin/customerio", adminCustomerioRoutes);
   app.use("/api/admin/stripe", adminStripeRoutes);
-  
+  app.use("/api/admin/churn", adminChurnRoutes);
+
+  app.post("/api/events/churn-signal", isAuthenticated, async (req: Request, res: Response) => {
+    const userId = (req as any).userId || (req as any).user?.claims?.sub;
+    const { eventName, context } = req.body || {};
+    const validEvents = ["downgrade_view", "cancel_hover", "limit_95_hit", "paywall_block"];
+    if (!eventName || !validEvents.includes(eventName)) {
+      return res.status(400).json({ error: "Invalid eventName" });
+    }
+    const safeContext = context && typeof context === "object" ? Object.fromEntries(Object.entries(context).slice(0, 10)) : undefined;
+    await emitCanonicalEvent({ eventName, userId, context: safeContext, source: "web" });
+    return res.status(200).json({ ok: true });
+  });
+
   // Simple admin status check (uses regular auth, no admin middleware)
   app.get("/api/admin/status", isAuthenticated, async (req: Request, res: Response) => {
     // Get user ID from JWT Bearer token (Firebase auth) or Replit Auth session

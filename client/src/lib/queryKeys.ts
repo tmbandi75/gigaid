@@ -151,4 +151,10 @@ export const QUERY_KEYS = {
   priceOptimization: () => ["/api/price-optimization"] as const,
   priceAdjustments: () => ["/api/price-adjustments"] as const,
   profitWarnings: () => ["/api/profit-warnings"] as const,
+
+  adminChurnOverview: () => ["/api/admin/churn/overview"] as const,
+  adminChurnUsers: (params?: string) => ["/api/admin/churn/users", params || ""] as const,
+  adminChurnUser: (userId: string) => ["/api/admin/churn/user", userId] as const,
+  adminChurnPlaybooks: () => ["/api/admin/churn/playbooks"] as const,
+  adminChurnReport: () => ["/api/admin/churn/report.json"] as const,
 };

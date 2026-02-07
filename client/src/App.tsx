@@ -61,6 +61,7 @@ import AdminAnalytics from "@/pages/AdminAnalytics";
 import AdminCustomerIO from "@/pages/AdminCustomerIO";
 import AdminBilling from "@/pages/AdminBilling";
 import AdminStripeMonitoring from "@/pages/AdminStripeMonitoring";
+import AdminChurnRetention from "@/pages/AdminChurnRetention";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import VoiceNotesPage from "@/pages/VoiceNotesPage";
 import TermsOfService from "@/pages/terms";
@@ -129,6 +130,7 @@ function Router() {
       <Route path="/admin/customerio" component={AdminCustomerIO} />
       <Route path="/admin/billing" component={AdminBilling} />
       <Route path="/admin/stripe" component={AdminStripeMonitoring} />
+      <Route path="/admin/churn" component={AdminChurnRetention} />
       <Route path="/onboarding/:step" component={OnboardingPage} />
       <Route path="/onboarding" component={OnboardingPage} />
       <Route path="/payday-onboarding" component={PaydayOnboarding} />
