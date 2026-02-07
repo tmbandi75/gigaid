@@ -1,0 +1,178 @@
+Implement human-readable, name-based booking URLs (Pattern A) for user booking links.
+
+Goal:
+Replace system-generated URLs like:
+
+/book/user-46350387
+
+with professional, trust-building URLs like:
+
+/book/marcus-handyman
+/book/john-plumbing
+
+while maintaining backward compatibility.
+
+==================================================
+REQUIREMENTS
+==================================================
+
+1) Every user must have a unique, stable bookingSlug
+2) bookingSlug must be human-readable
+3) bookingSlug must be collision-safe
+4) Old URLs must continue to work via redirect
+5) Slugs must auto-update when appropriate but not break shared links
+6) Slugs must be validated and sanitized
+
+==================================================
+STEP 1 — DATABASE
+==================================================
+
+Add field to users table:
+
+bookingSlug VARCHAR(64) UNIQUE NOT NULL
+
+If field exists, verify uniqueness constraint.
+
+Backfill existing users:
+- Generate slug from display name or business name
+- Fallback: username or email prefix
+- Ensure uniqueness
+
+Example generation:
+slugify(displayName || businessName)
+If collision:
+append -2, -3, etc.
+
+==================================================
+STEP 2 — SLUG GENERATION
+==================================================
+
+Create utility:
+
+/lib/bookingSlug.ts
+
+Functions:
+
+generateBookingSlug(name: string): string
+ensureUniqueSlug(baseSlug: string): string
+
+Rules:
+- lowercase
+- hyphens only
+- no special chars
+- trim to 48 chars max
+
+Example:
+"Marcus Handyman Services" → marcus-handyman-services
+
+==================================================
+STEP 3 — API
+==================================================
+
+Create/Update endpoint:
+
+GET /api/booking/slug/:slug
+
+- Resolve slug → userId
+- Return 404 if not found
+
+Update user profile API to:
+- Allow regenerating slug (optional, gated)
+- Prevent frequent changes (rate limit)
+
+==================================================
+STEP 4 — ROUTING
+==================================================
+
+Update booking route:
+
+/book/:slug
+
+Resolve slug via API → load booking page
+
+Preserve legacy route:
+
+/book/user-:id
+
+Behavior:
+- Lookup user
+- Redirect (301) to /book/:bookingSlug
+
+==================================================
+STEP 5 — LINK GENERATION
+==================================================
+
+Update all places where booking links are generated:
+
+- Dashboard
+- Jobs
+- Requests
+- Profile
+- Share buttons
+
+Use:
+
+https://gigaid.ai/book/{bookingSlug}
+
+Never expose internal IDs.
+
+==================================================
+STEP 6 — UI / SETTINGS
+==================================================
+
+In Profile / Settings:
+
+Show:
+
+Your booking link:
+https://gigaid.ai/book/{bookingSlug}
+
+Optional:
+Allow user to request slug change (with validation + cooldown).
+
+==================================================
+STEP 7 — VALIDATION & SECURITY
+==================================================
+
+- Block reserved words:
+  admin, api, login, signup, book, support
+- Prevent impersonation (no "gigaid", "official", etc.)
+- Prevent profanity
+- Enforce uniqueness
+
+==================================================
+STEP 8 — MIGRATION
+==================================================
+
+Write migration to:
+
+- Generate slugs for all existing users
+- Log conflicts
+- Resolve automatically
+- Provide rollback
+
+==================================================
+STEP 9 — TESTING
+==================================================
+
+Add tests:
+
+- Slug generation
+- Collision handling
+- Redirect from legacy URL
+- Public booking page loads via slug
+- Invalid slug returns 404
+
+==================================================
+DELIVERABLES
+==================================================
+
+After implementation, provide:
+
+1) Files changed/created
+2) Migration summary
+3) How legacy links are handled
+4) How collisions are resolved
+5) How users see/manage their slug
+
+Proceed to implement.
