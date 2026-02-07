@@ -4,7 +4,6 @@ import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
@@ -29,6 +28,8 @@ import {
   Zap,
   Shield,
   Users,
+  ChevronRight,
+  CircleDot,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -78,6 +79,44 @@ const PLAN_PRICES: Record<string, number> = {
   business: 49,
 };
 
+const PLANS = [
+  {
+    id: "free",
+    name: "Free",
+    price: 0,
+    icon: Zap,
+    tagline: "Get started",
+    features: ["Basic invoicing", "Up to 5 jobs", "Manual follow-ups"],
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    price: 19,
+    icon: Crown,
+    tagline: "Grow faster",
+    features: ["Unlimited jobs", "Auto follow-ups", "Two-way SMS", "Job templates"],
+  },
+  {
+    id: "pro_plus",
+    name: "Pro+",
+    price: 28,
+    icon: Shield,
+    tagline: "Get paid reliably",
+    popular: true,
+    features: ["Everything in Pro", "Deposit enforcement", "Booking protection", "Today's Money Plan"],
+  },
+  {
+    id: "business",
+    name: "Business",
+    price: 49,
+    icon: Users,
+    tagline: "Scale your team",
+    features: ["Everything in Pro+", "Crew management", "Business analytics", "Admin controls"],
+  },
+] as const;
+
+const PLAN_ORDER = ["free", "pro", "pro_plus", "business"];
+
 export function SubscriptionSettings() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
@@ -87,7 +126,7 @@ export function SubscriptionSettings() {
   const [showChangePlanDialog, setShowChangePlanDialog] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
-  const { data: subscription, isLoading, isError } = useQuery<SubscriptionStatus>({
+  const { data: subscription, isLoading } = useQuery<SubscriptionStatus>({
     queryKey: QUERY_KEYS.subscriptionStatus(),
     retry: 1,
     refetchOnWindowFocus: true,
@@ -102,7 +141,6 @@ export function SubscriptionSettings() {
     enabled: true,
   });
 
-  // Default subscription status when API fails or returns no data
   const effectiveSubscription: SubscriptionStatus = subscription || {
     plan: "free",
     planName: "Free",
@@ -288,18 +326,15 @@ export function SubscriptionSettings() {
 
   if (isLoading) {
     return (
-      <Card className="border-0 shadow-md" data-testid="card-subscription-loading">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center py-12" data-testid="card-subscription-loading">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 
   const isFree = effectiveSubscription.plan === "free" && !effectiveSubscription.hasSubscription;
   const price = PLAN_PRICES[effectiveSubscription.plan] || 0;
+  const currentIdx = PLAN_ORDER.indexOf(effectiveSubscription.plan);
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return null;
@@ -310,35 +345,33 @@ export function SubscriptionSettings() {
     });
   };
 
-  return (
-    <>
-    <Card className="border-0 shadow-md" data-testid="card-subscription-settings">
-      <CardContent className="p-4">
-        <h3 className="font-semibold mb-4 flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-            <Crown className="h-4 w-4 text-white" />
-          </div>
-          Subscription & Billing
-        </h3>
-        <Separator className="my-4" />
+  const currentPlanData = PLANS.find(p => p.id === effectiveSubscription.plan) || PLANS[0];
+  const CurrentPlanIcon = currentPlanData.icon;
 
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Current Plan</p>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-lg font-semibold" data-testid="text-current-plan">
+  return (
+    <div className="space-y-4" data-testid="card-subscription-settings">
+      {/* Current Plan Hero */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <CurrentPlanIcon className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Current Plan</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-lg font-bold" data-testid="text-current-plan">
                   {effectiveSubscription.planName}
                 </span>
                 {!isFree && (
-                  <Badge variant="secondary" data-testid="badge-plan-price">
+                  <span className="text-sm text-muted-foreground" data-testid="badge-plan-price">
                     ${price}/month
-                  </Badge>
+                  </span>
                 )}
               </div>
             </div>
             {effectiveSubscription.cancelAtPeriodEnd && (
-              <Badge variant="outline" className="text-amber-600 border-amber-300" data-testid="badge-cancelling">
+              <Badge variant="outline" className="ml-auto text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700 shrink-0" data-testid="badge-cancelling">
                 <AlertTriangle className="h-3 w-3 mr-1" />
                 Cancelling
               </Badge>
@@ -346,8 +379,8 @@ export function SubscriptionSettings() {
           </div>
 
           {effectiveSubscription.hasSubscription && effectiveSubscription.currentPeriodEnd && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4 px-1">
+              <Calendar className="h-3.5 w-3.5 shrink-0" />
               {effectiveSubscription.cancelAtPeriodEnd ? (
                 <span data-testid="text-cancel-date">
                   Access ends {formatDate(effectiveSubscription.currentPeriodEnd)}
@@ -360,138 +393,64 @@ export function SubscriptionSettings() {
             </div>
           )}
 
-          <Separator className="my-4" />
-
-          {isFree ? (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Upgrade to unlock more features and remove limits.
-              </p>
+          <div className="flex flex-col gap-2">
+            {isFree ? (
               <Button
                 onClick={() => window.location.href = "/pricing"}
                 className="w-full"
                 data-testid="button-view-plans"
               >
                 <Crown className="h-4 w-4 mr-2" />
-                View Plans
+                Upgrade Your Plan
               </Button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <Button
-                variant="outline"
-                onClick={() => portalMutation.mutate()}
-                disabled={portalMutation.isPending}
-                className="w-full"
-                data-testid="button-manage-billing"
-              >
-                {portalMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <CreditCard className="h-4 w-4 mr-2" />
-                )}
-                Manage Billing
-                <ExternalLink className="h-3 w-3 ml-auto" />
-              </Button>
-
-              {effectiveSubscription.cancelAtPeriodEnd ? (
+            ) : (
+              <>
                 <Button
                   variant="outline"
-                  onClick={() => reactivateMutation.mutate()}
-                  disabled={reactivateMutation.isPending}
+                  onClick={() => portalMutation.mutate()}
+                  disabled={portalMutation.isPending}
                   className="w-full"
-                  data-testid="button-reactivate"
+                  data-testid="button-manage-billing"
                 >
-                  {reactivateMutation.isPending ? (
+                  {portalMutation.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   ) : (
-                    <RefreshCcw className="h-4 w-4 mr-2" />
+                    <CreditCard className="h-4 w-4 mr-2" />
                   )}
-                  Reactivate Subscription
+                  Manage Billing
+                  <ExternalLink className="h-3 w-3 ml-auto" />
                 </Button>
-              ) : (
-                <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className="w-full text-muted-foreground"
-                      data-testid="button-cancel-subscription"
-                    >
-                      Cancel Subscription
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent data-testid="dialog-cancel-subscription">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Cancel your subscription?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        You'll keep access to {effectiveSubscription.planName} features until{" "}
-                        {formatDate(effectiveSubscription.currentPeriodEnd)}. After that,
-                        your account will be downgraded to the Free plan.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel data-testid="button-keep-subscription">
-                        Keep Subscription
-                      </AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => cancelMutation.mutate()}
-                        disabled={cancelMutation.isPending}
-                        className="bg-destructive text-destructive-foreground"
-                        data-testid="button-confirm-cancel"
-                      >
-                        {cancelMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        ) : null}
-                        Cancel Subscription
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-            </div>
-          )}
-        </div>
 
-        {/* Change Plan Section */}
-        <Separator className="my-6" />
+                {effectiveSubscription.cancelAtPeriodEnd && (
+                  <Button
+                    variant="default"
+                    onClick={() => reactivateMutation.mutate()}
+                    disabled={reactivateMutation.isPending}
+                    className="w-full"
+                    data-testid="button-reactivate"
+                  >
+                    {reactivateMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <RefreshCcw className="h-4 w-4 mr-2" />
+                    )}
+                    Reactivate Subscription
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-        <div className="space-y-4">
-          <h4 className="font-medium text-sm text-muted-foreground">Change Plan</h4>
-          <div className="grid gap-3">
-            {([
-              {
-                id: "free",
-                name: "Free",
-                price: 0,
-                icon: Zap,
-                features: ["Basic invoicing", "Up to 5 jobs"],
-              },
-              {
-                id: "pro",
-                name: "Pro",
-                price: 19,
-                icon: Crown,
-                features: ["Unlimited jobs", "Auto follow-ups", "Two-way SMS"],
-              },
-              {
-                id: "pro_plus",
-                name: "Pro+",
-                price: 28,
-                icon: Shield,
-                features: ["Deposit enforcement", "Booking protection", "Today's Money Plan"],
-              },
-              {
-                id: "business",
-                name: "Business",
-                price: 49,
-                icon: Users,
-                features: ["Crew management", "Business analytics", "Admin controls"],
-              },
-            ] as const).map((plan) => {
+      {/* Change Plan */}
+      <Card>
+        <CardContent className="p-4">
+          <h3 className="font-semibold text-sm mb-3">Change Plan</h3>
+          <div className="space-y-2">
+            {PLANS.map((plan) => {
               const isCurrent = effectiveSubscription.plan === plan.id;
-              const planOrder = ["free", "pro", "pro_plus", "business"];
-              const currentIdx = planOrder.indexOf(effectiveSubscription.plan);
-              const planIdx = planOrder.indexOf(plan.id);
+              const planIdx = PLAN_ORDER.indexOf(plan.id);
               const isUpgrade = planIdx > currentIdx;
               const isDowngrade = planIdx < currentIdx;
               const PlanIcon = plan.icon;
@@ -499,42 +458,56 @@ export function SubscriptionSettings() {
               return (
                 <div
                   key={plan.id}
-                  className={`p-3 rounded-lg border transition-colors ${
+                  className={`rounded-lg border p-3 transition-colors ${
                     isCurrent
-                      ? "border-primary/50 bg-primary/5"
+                      ? "border-primary bg-primary/5"
                       : "border-border"
                   }`}
                   data-testid={`plan-card-${plan.id}`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
-                      isCurrent
-                        ? "bg-primary/10"
-                        : "bg-muted"
+                    <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${
+                      isCurrent ? "bg-primary/15" : "bg-muted"
                     }`}>
                       <PlanIcon className={`h-4 w-4 ${isCurrent ? "text-primary" : "text-muted-foreground"}`} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-sm">{plan.name}</span>
-                        {plan.price > 0 && (
-                          <span className="text-xs text-muted-foreground">${plan.price}/mo</span>
+                        <span className="font-semibold text-sm">{plan.name}</span>
+                        {plan.price > 0 ? (
+                          <span className="text-xs text-muted-foreground font-medium">${plan.price}/mo</span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground font-medium">Free</span>
                         )}
                         {isCurrent && (
                           <Badge variant="secondary" className="text-xs">
-                            <Check className="h-3 w-3 mr-1" />
+                            <Check className="h-3 w-3 mr-0.5" />
                             Current
                           </Badge>
                         )}
+                        {"popular" in plan && plan.popular && !isCurrent && (
+                          <Badge variant="default" className="text-xs">
+                            Popular
+                          </Badge>
+                        )}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {plan.features.join(" · ")}
-                      </p>
+
+                      <p className="text-xs text-muted-foreground mt-0.5">{plan.tagline}</p>
+
+                      <ul className="mt-2 space-y-1">
+                        {plan.features.map((feature, idx) => (
+                          <li key={idx} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                            <CircleDot className="h-3 w-3 mt-0.5 shrink-0 text-muted-foreground/50" />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+
                       {!isCurrent && (
                         <Button
                           variant={isUpgrade ? "default" : "outline"}
                           size="sm"
-                          className="mt-2 w-full"
+                          className="mt-3 w-full"
                           onClick={() => {
                             if (isDowngrade) {
                               setSelectedPlan(plan.id);
@@ -563,73 +536,160 @@ export function SubscriptionSettings() {
               );
             })}
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        <AlertDialog open={showChangePlanDialog} onOpenChange={setShowChangePlanDialog}>
-          <AlertDialogContent data-testid="dialog-change-plan">
-            <AlertDialogHeader>
-              <AlertDialogTitle>Downgrade your plan?</AlertDialogTitle>
-              <AlertDialogDescription asChild>
-                <div className="space-y-3 text-sm">
-                  <p>
-                    You're switching from <strong>{effectiveSubscription.planName}</strong> to{" "}
-                    <strong>
-                      {selectedPlan === "free"
-                        ? "Free"
-                        : selectedPlan === "pro"
-                        ? "Pro"
-                        : selectedPlan === "pro_plus"
-                        ? "Pro+"
-                        : "Business"}
-                    </strong>.
-                  </p>
-                  {selectedPlan === "free" ? (
-                    <ul className="list-disc pl-5 space-y-1">
-                      <li>Your subscription will be cancelled at the end of the billing period</li>
-                      <li>You'll keep current features until then</li>
-                      <li>After that, limits from the Free plan will apply</li>
-                    </ul>
-                  ) : (
-                    <ul className="list-disc pl-5 space-y-1">
-                      <li>Your plan changes immediately, but the new lower rate starts next billing cycle</li>
-                      <li>No extra charges or credits for the current period</li>
-                      <li>Some features from your current plan may become limited</li>
-                    </ul>
-                  )}
+      {/* Change Plan Confirmation Dialog */}
+      <AlertDialog open={showChangePlanDialog} onOpenChange={setShowChangePlanDialog}>
+        <AlertDialogContent data-testid="dialog-change-plan">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Downgrade your plan?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm">
+                <p>
+                  You're switching from <strong>{effectiveSubscription.planName}</strong> to{" "}
+                  <strong>
+                    {selectedPlan === "free"
+                      ? "Free"
+                      : selectedPlan === "pro"
+                      ? "Pro"
+                      : selectedPlan === "pro_plus"
+                      ? "Pro+"
+                      : "Business"}
+                  </strong>.
+                </p>
+                {selectedPlan === "free" ? (
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Your subscription will be cancelled at the end of the billing period</li>
+                    <li>You'll keep current features until then</li>
+                    <li>After that, limits from the Free plan will apply</li>
+                  </ul>
+                ) : (
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Your plan changes immediately, but the new lower rate starts next billing cycle</li>
+                    <li>No extra charges or credits for the current period</li>
+                    <li>Some features from your current plan may become limited</li>
+                  </ul>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => setSelectedPlan(null)}
+              data-testid="button-cancel-change-plan"
+            >
+              Keep Current Plan
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => selectedPlan && changePlanMutation.mutate(selectedPlan)}
+              disabled={changePlanMutation.isPending || !selectedPlan}
+              data-testid="button-confirm-change-plan"
+            >
+              {changePlanMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Confirm Downgrade
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Invoice History */}
+      <Card data-testid="card-invoice-history">
+        <CardContent className="p-4">
+          <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+            <Receipt className="h-4 w-4 text-muted-foreground" />
+            Invoice History
+          </h3>
+
+          {invoicesLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : !invoiceData?.invoices || invoiceData.invoices.length === 0 ? (
+            <div className="text-center py-6">
+              <FileText className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
+              <p className="text-sm text-muted-foreground">No invoices yet</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Your billing history will appear here
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {invoiceData.invoices.map((invoice) => (
+                <div
+                  key={invoice.id}
+                  className="flex items-center gap-3 p-2.5 rounded-lg hover-elevate"
+                  data-testid={`invoice-row-${invoice.id}`}
+                >
+                  <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                    <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">
+                      {invoice.number || `#${invoice.id.slice(-8)}`}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(invoice.created * 1000).toLocaleDateString(undefined, {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="text-right">
+                      <p className="text-sm font-medium">
+                        ${(invoice.amount / 100).toFixed(2)}
+                      </p>
+                      <Badge
+                        variant={invoice.status === "paid" ? "secondary" : "outline"}
+                        className="text-xs"
+                      >
+                        {invoice.status === "paid" ? "Paid" : invoice.status}
+                      </Badge>
+                    </div>
+                    <div className="flex gap-0.5">
+                      {invoice.hostedUrl && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => window.open(invoice.hostedUrl!, "_blank")}
+                          title="View invoice"
+                          data-testid={`button-view-invoice-${invoice.id}`}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {invoice.pdfUrl && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => window.open(invoice.pdfUrl!, "_blank")}
+                          title="Download PDF"
+                          data-testid={`button-download-invoice-${invoice.id}`}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel
-                onClick={() => setSelectedPlan(null)}
-                data-testid="button-cancel-change-plan"
-              >
-                Keep Current Plan
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => selectedPlan && changePlanMutation.mutate(selectedPlan)}
-                disabled={changePlanMutation.isPending || !selectedPlan}
-                data-testid="button-confirm-change-plan"
-              >
-                {changePlanMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : null}
-                Confirm Downgrade
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-        {/* Manage Subscription Section */}
-        <Separator className="my-6" />
-        
-        <div className="space-y-4">
-          <h4 className="font-medium text-sm text-muted-foreground">Manage Subscription</h4>
-          
-          {/* Show different UI based on account status */}
+      {/* Account Management */}
+      <Card>
+        <CardContent className="p-4">
+          <h3 className="font-semibold text-sm mb-3 text-muted-foreground">Account</h3>
+
           {profile?.accountStatus === "suspended" ? (
             <div className="space-y-3">
-              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md">
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
                 <p className="text-sm text-amber-800 dark:text-amber-200">
                   Your subscription is paused. Your data is safe and you can reactivate anytime.
                 </p>
@@ -651,7 +711,7 @@ export function SubscriptionSettings() {
             </div>
           ) : profile?.accountStatus === "pending_deletion" ? (
             <div className="space-y-3">
-              <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md">
+              <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
                 <p className="text-sm text-red-800 dark:text-red-200">
                   Your account is scheduled for deletion
                   {profile.scheduledDeletionAt && (
@@ -676,63 +736,104 @@ export function SubscriptionSettings() {
               </Button>
             </div>
           ) : (
-            <div className="space-y-3">
-              {/* Pause Subscription - only for paid plans */}
+            <div className="space-y-2">
               {!isFree && !effectiveSubscription.cancelAtPeriodEnd && (
-                <AlertDialog open={showPauseDialog} onOpenChange={setShowPauseDialog}>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      data-testid="button-pause-subscription"
-                    >
-                      <Pause className="h-4 w-4 mr-2" />
-                      Pause my subscription
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent data-testid="dialog-pause-subscription">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Pause your subscription?</AlertDialogTitle>
-                      <AlertDialogDescription asChild>
-                        <div className="space-y-3 text-sm">
-                          <p>If you pause your subscription:</p>
-                          <ul className="list-disc pl-5 space-y-1">
-                            <li>Billing will stop immediately</li>
-                            <li>Your account will be downgraded to the Free plan</li>
-                            <li>All your data will be safely retained</li>
-                            <li>You can reactivate and subscribe again anytime</li>
-                          </ul>
-                          <p className="text-muted-foreground">
-                            No refunds are issued for unused time in your current billing period.
-                          </p>
-                        </div>
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel data-testid="button-cancel-pause">
-                        Cancel
-                      </AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => suspendMutation.mutate()}
-                        disabled={suspendMutation.isPending}
-                        data-testid="button-confirm-pause"
+                <>
+                  <AlertDialog open={showPauseDialog} onOpenChange={setShowPauseDialog}>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start text-muted-foreground"
+                        data-testid="button-pause-subscription"
                       >
-                        {suspendMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        ) : null}
-                        Confirm Pause
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                        <Pause className="h-4 w-4 mr-2" />
+                        Pause my subscription
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent data-testid="dialog-pause-subscription">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Pause your subscription?</AlertDialogTitle>
+                        <AlertDialogDescription asChild>
+                          <div className="space-y-3 text-sm">
+                            <p>If you pause your subscription:</p>
+                            <ul className="list-disc pl-5 space-y-1">
+                              <li>Billing will stop immediately</li>
+                              <li>Your account will be downgraded to the Free plan</li>
+                              <li>All your data will be safely retained</li>
+                              <li>You can reactivate and subscribe again anytime</li>
+                            </ul>
+                            <p className="text-muted-foreground">
+                              No refunds are issued for unused time in your current billing period.
+                            </p>
+                          </div>
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel data-testid="button-cancel-pause">
+                          Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => suspendMutation.mutate()}
+                          disabled={suspendMutation.isPending}
+                          data-testid="button-confirm-pause"
+                        >
+                          {suspendMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : null}
+                          Confirm Pause
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+
+                  {!effectiveSubscription.cancelAtPeriodEnd && (
+                    <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start text-muted-foreground"
+                          data-testid="button-cancel-subscription"
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Cancel subscription
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent data-testid="dialog-cancel-subscription">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Cancel your subscription?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            You'll keep access to {effectiveSubscription.planName} features until{" "}
+                            {formatDate(effectiveSubscription.currentPeriodEnd)}. After that,
+                            your account will be downgraded to the Free plan.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel data-testid="button-keep-subscription">
+                            Keep Subscription
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => cancelMutation.mutate()}
+                            disabled={cancelMutation.isPending}
+                            className="bg-destructive text-destructive-foreground"
+                            data-testid="button-confirm-cancel"
+                          >
+                            {cancelMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            ) : null}
+                            Cancel Subscription
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </>
               )}
 
-              {/* Close Account - available to everyone */}
               <AlertDialog open={showCloseAccountDialog} onOpenChange={setShowCloseAccountDialog}>
                 <AlertDialogTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="w-full text-destructive"
+                    className="w-full justify-start text-destructive"
                     data-testid="button-close-account"
                   >
                     <XCircle className="h-4 w-4 mr-2" />
@@ -778,101 +879,8 @@ export function SubscriptionSettings() {
               </AlertDialog>
             </div>
           )}
-        </div>
-      </CardContent>
-    </Card>
-
-    {/* Invoice History */}
-    <Card className="border-0 shadow-md mt-4" data-testid="card-invoice-history">
-      <CardContent className="p-4">
-        <h3 className="font-semibold mb-4 flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
-            <Receipt className="h-4 w-4 text-white" />
-          </div>
-          Invoice History
-        </h3>
-        <Separator className="my-4" />
-
-        {invoicesLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : !invoiceData?.invoices || invoiceData.invoices.length === 0 ? (
-          <div className="text-center py-8">
-            <FileText className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-            <p className="text-sm text-muted-foreground">No invoices yet</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Your billing history will appear here after your first payment
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {invoiceData.invoices.map((invoice) => (
-              <div
-                key={invoice.id}
-                className="flex items-center justify-between p-3 rounded-lg border bg-card"
-                data-testid={`invoice-row-${invoice.id}`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">
-                      {invoice.number || `Invoice #${invoice.id.slice(-8)}`}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(invoice.created * 1000).toLocaleDateString(undefined, {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <p className="text-sm font-medium">
-                      ${(invoice.amount / 100).toFixed(2)}
-                    </p>
-                    <Badge
-                      variant={invoice.status === "paid" ? "secondary" : "outline"}
-                      className="text-xs"
-                    >
-                      {invoice.status === "paid" ? "Paid" : invoice.status}
-                    </Badge>
-                  </div>
-                  <div className="flex gap-1">
-                    {invoice.hostedUrl && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => window.open(invoice.hostedUrl!, "_blank")}
-                        title="View invoice"
-                        data-testid={`button-view-invoice-${invoice.id}`}
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {invoice.pdfUrl && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => window.open(invoice.pdfUrl!, "_blank")}
-                        title="Download PDF"
-                        data-testid={`button-download-invoice-${invoice.id}`}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-    </>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
