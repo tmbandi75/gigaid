@@ -1,0 +1,306 @@
+You are working on the GigAid TypeScript/React + Node backend app.
+
+Build “Phase 2: Acquisition Engine” end-to-end with database, APIs, UI surfaces, analytics, admin cockpit, and tests.
+
+Phase 2 pillars:
+1) Free Setup Funnel (lead capture + booking call + convert to user)
+2) Viral Booking Loop (“Powered by GigAid” CTA + referral attribution + rewards)
+3) Channel Attribution Engine (UTMs + source tracking + funnel analytics)
+4) Growth Ops Layer (light CRM + outreach queue + performance dashboard)
+
+NON-NEGOTIABLES
+- Everything must be measurable (PostHog events + admin metrics)
+- Everything must be safe (no breaking existing flows)
+- Everything must be tested (API tests + at least 1 Playwright E2E for core funnel)
+- All new data models must have migrations
+- All endpoints must enforce auth where required
+- Follow existing codebase patterns (shared libs, server/routes, client hooks, admin cockpit patterns)
+
+==================================================
+A) DATABASE + MIGRATIONS
+==================================================
+
+Create/extend schema with these tables:
+
+1) growth_leads
+- id (uuid)
+- created_at
+- updated_at
+- name
+- business_name
+- email
+- phone
+- service_category (optional)
+- city (optional)
+- source (string: "booking_page", "homepage", "facebook_dm", "craigslist", "partner", etc.)
+- utm_source, utm_medium, utm_campaign, utm_content, utm_term
+- referrer_user_id (nullable)
+- status (enum: new, booked, no_show, completed, converted, disqualified)
+- booked_at (nullable)
+- onboarded_at (nullable)
+- activated_at (nullable)
+- converted_user_id (nullable)
+- notes (nullable)
+
+2) onboarding_calls
+- id (uuid)
+- created_at
+- lead_id (fk growth_leads)
+- user_id (nullable fk users)
+- scheduled_at
+- completed_at (nullable)
+- outcome (enum: scheduled, completed, no_show, rescheduled, converted, not_fit)
+- rep_user_id (nullable fk users)
+- calendaring_provider (string, optional)
+- metadata (jsonb)
+
+3) acquisition_attribution
+- id (uuid)
+- created_at
+- user_id (fk users, unique)
+- source (string)
+- landing_path (string)
+- referrer_user_id (nullable)
+- utm_source, utm_medium, utm_campaign, utm_content, utm_term
+- first_touch_at
+- last_touch_at
+- touch_count (int default 1)
+
+4) referrals
+- id (uuid)
+- created_at
+- referrer_user_id (fk users)
+- referred_user_id (nullable fk users)
+- referral_code (string unique)
+- status (enum: clicked, signed_up, activated, rewarded, expired)
+- clicked_at (nullable)
+- signed_up_at (nullable)
+- activated_at (nullable)
+- rewarded_at (nullable)
+
+5) referral_rewards
+- id (uuid)
+- created_at
+- referrer_user_id
+- referred_user_id
+- reward_type (enum: pro_days, discount, credit)
+- reward_value (int) // e.g. days=30
+- applied_at (nullable)
+- status (enum: pending, applied, failed)
+- failure_reason (nullable)
+
+6) outreach_queue (Growth Ops CRM-lite)
+- id (uuid)
+- created_at
+- updated_at
+- platform (facebook, craigslist, nextdoor, reddit, partner)
+- profile_url
+- handle_name (nullable)
+- city (nullable)
+- status (new, contacted, replied, booked, converted, dead)
+- assigned_to_user_id (nullable)
+- last_contacted_at (nullable)
+- next_followup_at (nullable)
+- notes (nullable)
+
+Add required indexes:
+- growth_leads(source, created_at)
+- acquisition_attribution(utm_campaign, created_at)
+- referrals(referrer_user_id, status)
+- outreach_queue(status, assigned_to_user_id, next_followup_at)
+
+==================================================
+B) UTM + REFERRER CAPTURE (CLIENT + SERVER)
+==================================================
+
+1) Client-side UTM capture
+- On first visit to any public page (homepage + booking pages + public invoice/review), parse URL query params.
+- Store UTM + landing_path + referrer_code in localStorage with TTL 14 days.
+- If user signs up/logs in, POST attribution to server.
+
+2) Server-side attribution persistence
+Create:
+POST /api/attribution/track
+Body: { landingPath, source?, utm_*, referrerCode? }
+
+Rules:
+- If acquisition_attribution already exists: update last_touch + increment touch_count, but do not overwrite first_touch.
+- If referrerCode is present: resolve to referrals.referrer_user_id and set referrer_user_id.
+- Enforce per-user rate limit (e.g. max 20 touches/day) to avoid spam.
+
+Analytics event:
+posthog: acquisition_touch_recorded
+
+==================================================
+C) FREE SETUP FUNNEL (PUBLIC + IN-APP)
+==================================================
+
+Public landing page:
+- /free-setup
+Headline: “Free Booking Page Setup in 10 Minutes”
+CTA: “Book Free Setup”
+Collect minimal lead info (name, phone or email, category, city) + auto-capture UTMs + referrerCode.
+
+APIs:
+1) POST /api/growth/lead
+- Create growth_lead
+- Store UTMs + source + referrer_user_id if present
+- Return leadId
+
+2) POST /api/growth/book-call
+- Body: { leadId, scheduledAt }
+- Create onboarding_call + set lead status booked + booked_at
+- Trigger PostHog growth_call_booked
+
+3) POST /api/growth/convert
+(Admin/Rep only)
+- Takes leadId, optionally userId
+- If userId not provided, create a user account (invite flow or magic link)
+- Link growth_lead.converted_user_id
+- Set lead status converted
+- Track event growth_user_converted
+- Ensure Phase 1 activation engine remains intact
+
+In-app surfaces:
+- Add “Need help? Free setup in 10 minutes” CTA in:
+  - Activation checklist stall state (if stuck > 48h or 2 steps incomplete after 24h)
+  - Empty states: Jobs, Leads, Invoices
+- CTA opens a schedule modal (simple internal scheduler) OR links to /free-setup with prefilled info
+
+==================================================
+D) VIRAL BOOKING LOOP (POWERED BY CTA + REFERRALS)
+==================================================
+
+1) Booking page CTA
+On /book/:slug pages:
+- Show small but visible footer: “Powered by GigAid — Get your own free booking page”
+- Click sends user to /free-setup?ref=<referral_code>
+
+2) Referral codes
+- Each user gets a stable referral_code (like GA-AB12CD) generated on signup.
+- Store in referrals table with referrer_user_id.
+
+3) Referral flow tracking
+- When CTA clicked: create referral “clicked” record if not exists, store clicked_at
+- When signup happens: connect referred_user_id and set signed_up
+- When activation completes (Phase 1): set activated
+- Reward only after activation AND first_quote_sent OR first_payment_received (configurable)
+
+4) Rewards
+Default reward:
+- 30 days Pro for referrer + 30 days Pro for referred (or credit)
+Implementation:
+- Add a server function applyReferralReward(referrerId, referredId)
+- Update subscription/entitlements accordingly using existing plan system
+- Log referral_rewards row
+- PostHog: referral_reward_applied
+
+Guardrails:
+- Prevent self-referral
+- Prevent abuse (device fingerprint / same email domain spam thresholds)
+- One reward per referred user
+
+==================================================
+E) GROWTH OPS LAYER (ADMIN)
+==================================================
+
+Add to Admin Cockpit:
+1) Growth Overview panel
+- Leads last 7/30 days
+- Calls booked
+- Conversions
+- Activation rate
+- Paid conversion rate
+- Referral contribution (%)
+- Top sources and top campaigns
+
+2) Growth Leads table
+- filter by status/source/rep
+- detail drawer with notes
+- actions: mark call outcome, convert user, assign rep
+
+3) Outreach Queue
+- CRUD outreach items
+- assign to rep
+- next followup date
+- status pipeline
+
+4) Channel Performance
+- UTM campaign performance: signups → activation → paid
+- show CAC placeholder field (manual input for now)
+- flags: “Low activation” and “High CAC” thresholds
+
+==================================================
+F) ANALYTICS (POSTHOG)
+==================================================
+
+Implement events (client/server where appropriate):
+- growth_lead_created
+- growth_call_booked
+- growth_call_completed
+- growth_user_converted
+- acquisition_touch_recorded
+- referral_cta_clicked
+- referral_signed_up
+- referral_activated
+- referral_reward_applied
+
+All events must include properties:
+- source
+- landing_path
+- utm_campaign
+- plan
+- trigger_surface (“booking_page”, “homepage”, “empty_state”, “activation_stall”)
+- referrer_user_id (if any)
+
+==================================================
+G) TESTING
+==================================================
+
+1) API tests (similar style to Phase 1 activation tests)
+Create tests/api/growthPhase2.test.ts covering:
+- create lead
+- book call
+- convert lead (auth required)
+- attribution tracking (first_touch vs last_touch)
+- referral click tracking and mapping
+- reward gating (no reward until activation + condition)
+- abuse prevention basics (self-referral blocked)
+
+2) Playwright E2E (minimal)
+Create tests/e2e/free-setup-flow.spec.ts:
+- visit /book/:slug page
+- click “Powered by GigAid” CTA
+- land on /free-setup with ref param
+- submit lead
+- verify success UI and that API created growth_lead
+
+==================================================
+H) IMPLEMENTATION NOTES
+==================================================
+
+- Do NOT break existing booking or onboarding behavior.
+- Reuse existing auth patterns and admin auth.
+- Keep code modular:
+  - server/lib/growth/*
+  - client/src/growth/*
+  - client/src/admin/growth/*
+- Add feature flags:
+  - growth_phase2_enabled
+  - referrals_enabled
+  - attribution_enabled
+Default enabled for new users, safe for existing.
+
+==================================================
+DELIVERABLES
+==================================================
+
+After implementation, output:
+1) All migrations + tables created
+2) Endpoints created and how to call them
+3) New UI routes/components
+4) Admin cockpit screenshots description (what panels exist)
+5) How to run tests: API + Playwright
+6) Any config/env vars added
+
+Proceed to implement Phase 2 fully.
