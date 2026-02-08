@@ -83,6 +83,25 @@ export async function setUsage(userId: string, capability: string, count: number
   return post('/api/test/set-usage', { userId, capability, count });
 }
 
+export async function setUserSlug(userId: string, slug: string) {
+  return post('/api/test/set-slug', { userId, slug });
+}
+
+export async function setReferralCode(userId: string, referralCode: string) {
+  return post('/api/test/set-referral-code', { userId, referralCode });
+}
+
+export async function getGrowthLeads() {
+  const res = await fetch(`${BASE_URL}/api/test/growth-leads`, {
+    headers: headers(),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`GET /api/test/growth-leads failed (${res.status}): ${text}`);
+  }
+  return res.json();
+}
+
 export async function authenticatedPage(browser: Browser, userId: string): Promise<Page> {
   const token = await getAuthToken(userId);
   const context = await browser.newContext();

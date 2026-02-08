@@ -1,6 +1,7 @@
 import { db } from "../../db";
 import { growthReferrals, referralRewards, users } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql, count } from "drizzle-orm";
+import { trackServerEvent } from "./analytics";
 
 const DEFAULT_REWARD_TYPE = "pro_days" as const;
 const DEFAULT_REWARD_VALUE = 30;
@@ -42,6 +43,47 @@ export async function applyReferralReward(
 
   if (!referral) {
     return { success: false, reason: "referral_not_activated" };
+  }
+
+  const [referredUser] = await db
+    .select({ firstQuoteSentAt: users.firstQuoteSentAt, firstPaymentReceivedAt: users.firstPaymentReceivedAt, email: users.email })
+    .from(users)
+    .where(eq(users.id, referredId))
+    .limit(1);
+
+  if (referredUser && !referredUser.firstQuoteSentAt && !referredUser.firstPaymentReceivedAt) {
+    return { success: false, reason: "referred_user_no_quote_or_payment" };
+  }
+
+  if (referredUser?.email) {
+    const referredDomain = referredUser.email.split("@")[1]?.toLowerCase();
+    if (referredDomain) {
+      const [referrerUser] = await db
+        .select({ email: users.email })
+        .from(users)
+        .where(eq(users.id, referrerId))
+        .limit(1);
+      if (referrerUser?.email) {
+        const referrerDomain = referrerUser.email.split("@")[1]?.toLowerCase();
+        const publicDomains = ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "icloud.com", "aol.com", "protonmail.com", "mail.com"];
+        if (referredDomain === referrerDomain && !publicDomains.includes(referredDomain)) {
+          const sameDomainsResult = await db
+            .select({ count: count() })
+            .from(referralRewards)
+            .innerJoin(users, eq(users.id, referralRewards.referredUserId))
+            .where(
+              and(
+                eq(referralRewards.referrerUserId, referrerId),
+                sql`LOWER(SPLIT_PART(${users.email}, '@', 2)) = ${referredDomain}`
+              )
+            );
+          const sameDomainCount = sameDomainsResult[0]?.count ?? 0;
+          if (sameDomainCount >= 3) {
+            return { success: false, reason: "email_domain_spam_threshold" };
+          }
+        }
+      }
+    }
   }
 
   const now = new Date().toISOString();
@@ -115,6 +157,15 @@ export async function applyReferralReward(
       .update(growthReferrals)
       .set({ status: "rewarded", rewardedAt: now })
       .where(eq(growthReferrals.id, referral.id));
+
+    trackServerEvent("referral_reward_applied", referrerId, {
+      referrer_user_id: referrerId,
+      referred_user_id: referredId,
+      reward_type: DEFAULT_REWARD_TYPE,
+      reward_value: DEFAULT_REWARD_VALUE,
+      source: "referral",
+      trigger_surface: "activation",
+    });
 
     return { success: true };
   } catch (err: any) {

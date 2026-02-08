@@ -88,6 +88,8 @@ export default function FreeSetup() {
         has_phone: !!formData.phone,
         utm_source: utmData?.utmSource,
         utm_campaign: utmData?.utmCampaign,
+        landing_path: window.location.pathname,
+        trigger_surface: "free_setup_page",
       });
 
       toast({ title: "We got your info! We'll be in touch soon." });

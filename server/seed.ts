@@ -928,6 +928,24 @@ export async function seedDatabase() {
         description: "Outcome Attribution: Show 'GigAid helped you collect $X faster' with conservative calculations",
         updatedAt: daysAgo(0),
       },
+      {
+        key: "growth_phase2_enabled",
+        enabled: true,
+        description: "Phase 2 Acquisition Engine: lead capture, free setup funnel, growth ops",
+        updatedAt: daysAgo(0),
+      },
+      {
+        key: "referrals_enabled",
+        enabled: true,
+        description: "Referral system: viral booking loop, referral codes, rewards",
+        updatedAt: daysAgo(0),
+      },
+      {
+        key: "attribution_enabled",
+        enabled: true,
+        description: "Channel attribution engine: UTM tracking, source analytics, funnel metrics",
+        updatedAt: daysAgo(0),
+      },
     ];
 
     for (const flag of featureFlagsData) {

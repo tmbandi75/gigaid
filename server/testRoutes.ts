@@ -114,6 +114,36 @@ export function registerTestRoutes(app: any, storage: IStorage) {
     }
   });
 
+  router.post("/set-referral-code", async (req: Request, res: Response) => {
+    try {
+      const { userId, referralCode } = req.body;
+      if (!userId || !referralCode) {
+        return res.status(400).json({ error: "Missing required fields: userId, referralCode" });
+      }
+
+      const user = await storage.getUserByUsername(userId) || await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      await storage.updateUser(user.id, { referralCode });
+      return res.json({ success: true, userId: user.id, referralCode });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.get("/growth-leads", async (_req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { growthLeads } = await import("@shared/schema");
+      const leads = await db.select().from(growthLeads).limit(100);
+      return res.json(leads);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
   router.get("/smoke-report", async (_req: Request, res: Response) => {
     try {
       const reportPath = path.resolve("tests/monetization/reports/latest.json");
@@ -272,6 +302,34 @@ export function registerTestRoutes(app: any, storage: IStorage) {
       });
 
       return res.json(invoice);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.post("/set-referral-code", async (req: Request, res: Response) => {
+    try {
+      const { userId, referralCode } = req.body;
+      if (!userId || !referralCode) {
+        return res.status(400).json({ error: "Missing required fields: userId, referralCode" });
+      }
+      const user = await storage.getUserByUsername(userId) || await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      await storage.updateUser(user.id, { referralCode });
+      return res.json({ success: true, referralCode });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.get("/growth-leads", async (_req: Request, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const schema = await import("@shared/schema");
+      const leads = await db.select().from(schema.growthLeads).limit(100);
+      return res.json(leads);
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
     }

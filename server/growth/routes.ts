@@ -1,14 +1,29 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { createGrowthLead, bookCall, convertLead, getLeads, getLeadById, updateLeadNotes, updateCallOutcome } from "../lib/growth/leadService";
 import { trackAttribution, getAttributionForUser } from "../lib/growth/attributionService";
 import { trackReferralClick, linkReferralSignup, ensureUserReferralCode, getReferralsForUser } from "../lib/growth/referralService";
 import { applyReferralReward } from "../lib/growth/rewardService";
 import { createOutreachItem, updateOutreachItem, getOutreachItems, deleteOutreachItem } from "../lib/growth/outreachService";
+import { trackServerEvent } from "../lib/growth/analytics";
 import { adminMiddleware } from "../copilot/adminMiddleware";
 import { db } from "../db";
 import { growthLeads, onboardingCalls, acquisitionAttribution, growthReferrals, referralRewards, outreachQueue, users } from "@shared/schema";
 import { eq, sql, desc, and, gte, count } from "drizzle-orm";
+import { storage } from "../storage";
+
+async function requireFeatureFlag(flagKey: string, req: Request, res: Response): Promise<boolean> {
+  try {
+    const flag = await storage.getFeatureFlag(flagKey);
+    if (!flag || !flag.enabled) {
+      res.status(403).json({ error: `Feature '${flagKey}' is not enabled` });
+      return false;
+    }
+    return true;
+  } catch {
+    return true;
+  }
+}
 
 const createLeadSchema = z.object({
   name: z.string().min(1),
@@ -70,6 +85,8 @@ const outreachUpdateSchema = z.object({
 export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, res: Response, next: Function) => void) {
   app.post("/api/growth/lead", async (req: Request, res: Response) => {
     try {
+      if (!(await requireFeatureFlag("growth_phase2_enabled", req, res))) return;
+
       const parsed = createLeadSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
@@ -91,6 +108,14 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
       }
 
       const call = await bookCall(parsed.data.leadId, parsed.data.scheduledAt);
+
+      trackServerEvent("growth_call_booked", parsed.data.leadId, {
+        lead_id: parsed.data.leadId,
+        scheduled_at: parsed.data.scheduledAt,
+        source: "book_call",
+        trigger_surface: "free_setup_page",
+      });
+
       res.status(201).json(call);
     } catch (err: any) {
       if (err.message === "Lead not found") {
@@ -115,6 +140,14 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
       }
 
       const result = await convertLead(parsed.data.leadId, parsed.data.userId);
+
+      trackServerEvent("growth_user_converted", parsed.data.userId || parsed.data.leadId, {
+        lead_id: parsed.data.leadId,
+        user_id: parsed.data.userId,
+        source: "admin_convert",
+        trigger_surface: "admin",
+      });
+
       res.json(result);
     } catch (err: any) {
       if (err.message === "Lead not found") {
@@ -130,6 +163,8 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
 
   app.post("/api/attribution/track", requireAuth, async (req: Request, res: Response) => {
     try {
+      if (!(await requireFeatureFlag("attribution_enabled", req, res))) return;
+
       const userId = (req as any).userId;
       if (!userId) return res.status(401).json({ error: "Not authenticated" });
 
@@ -139,6 +174,15 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
       }
 
       const result = await trackAttribution({ userId, ...parsed.data });
+
+      trackServerEvent("acquisition_touch_recorded", userId, {
+        source: parsed.data.source,
+        landing_path: parsed.data.landingPath,
+        utm_campaign: parsed.data.utmCampaign,
+        referrer_code: parsed.data.referrerCode,
+        trigger_surface: "attribution_track",
+      });
+
       res.json(result);
     } catch (err: any) {
       console.error("[Attribution] Failed to track:", err);
@@ -161,6 +205,8 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
 
   app.post("/api/referral/click", async (req: Request, res: Response) => {
     try {
+      if (!(await requireFeatureFlag("referrals_enabled", req, res))) return;
+
       const { code } = req.body;
       if (!code) return res.status(400).json({ error: "Missing referral code" });
 
@@ -307,6 +353,16 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
       if (!outcome) return res.status(400).json({ error: "Missing outcome" });
 
       const updated = await updateCallOutcome(req.params.id, outcome, completedAt);
+
+      if (outcome === "completed") {
+        trackServerEvent("growth_call_completed", req.params.id, {
+          call_id: req.params.id,
+          outcome,
+          completed_at: completedAt,
+          trigger_surface: "admin",
+        });
+      }
+
       res.json(updated);
     } catch (err: any) {
       if (err.message === "Call not found") {

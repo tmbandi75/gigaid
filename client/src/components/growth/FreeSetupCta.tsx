@@ -13,7 +13,7 @@ export function FreeSetupCta({ variant = "inline" }: { variant?: "inline" | "ban
           <p className="text-xs text-muted-foreground">Free setup in 10 minutes — we'll do it for you</p>
         </div>
         <Link href="/free-setup">
-          <Button size="sm" variant="outline" data-testid="button-free-setup-cta" onClick={() => trackEvent("free_setup_cta_clicked", { variant: "banner" })}>
+          <Button size="sm" variant="outline" data-testid="button-free-setup-cta" onClick={() => trackEvent("free_setup_cta_clicked", { variant: "banner", landing_path: window.location.pathname, trigger_surface: "banner" })}>
             Book Free Setup
           </Button>
         </Link>
@@ -24,7 +24,7 @@ export function FreeSetupCta({ variant = "inline" }: { variant?: "inline" | "ban
   return (
     <div className="text-center mt-4">
       <Link href="/free-setup">
-        <Button variant="link" size="sm" className="text-muted-foreground" data-testid="button-free-setup-cta-inline" onClick={() => trackEvent("free_setup_cta_clicked", { variant: "inline" })}>
+        <Button variant="ghost" size="sm" className="text-muted-foreground" data-testid="button-free-setup-cta-inline" onClick={() => trackEvent("free_setup_cta_clicked", { variant: "inline", landing_path: window.location.pathname, trigger_surface: "inline" })}>
           <HelpCircle className="w-3 h-3 mr-1" />
           Need help? Free setup in 10 minutes
         </Button>

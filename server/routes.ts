@@ -6581,7 +6581,8 @@ Final price confirmed onsite.`;
       }
       const { evaluateAndUpdateActivation } = await import("./lib/activationEngine");
       const status = await evaluateAndUpdateActivation(userId);
-      res.json(status);
+      const user = await storage.getUser(userId);
+      res.json({ ...status, userCreatedAt: user?.createdAt || null });
     } catch (error) {
       console.error("Failed to fetch activation status:", error);
       res.status(500).json({ error: "Failed to fetch activation status" });

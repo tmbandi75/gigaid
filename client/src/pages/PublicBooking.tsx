@@ -1257,6 +1257,8 @@ export default function PublicBooking() {
                 trackEvent("referral_cta_clicked", {
                   referral_code: profile.referralCode,
                   source_slug: slug,
+                  landing_path: window.location.pathname,
+                  trigger_surface: "booking_page",
                 });
                 fetch("/api/referral/click", {
                   method: "POST",

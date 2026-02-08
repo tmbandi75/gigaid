@@ -2,6 +2,7 @@ import { db } from "../../db";
 import { growthReferrals, users } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import crypto from "crypto";
+import { trackServerEvent } from "./analytics";
 
 export function generateReferralCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -126,6 +127,13 @@ export async function linkReferralSignup(
     });
   }
 
+  trackServerEvent("referral_signed_up", referredUserId, {
+    referrer_user_id: referrer.id,
+    referral_code: referralCode,
+    source: "referral",
+    trigger_surface: "signup",
+  });
+
   return true;
 }
 
@@ -150,6 +158,13 @@ export async function markReferralActivated(referredUserId: string): Promise<boo
       activatedAt: new Date().toISOString(),
     })
     .where(eq(growthReferrals.id, record.id));
+
+  trackServerEvent("referral_activated", referredUserId, {
+    referrer_user_id: record.referrerUserId,
+    referral_code: record.referralCode,
+    source: "referral",
+    trigger_surface: "activation",
+  });
 
   return true;
 }

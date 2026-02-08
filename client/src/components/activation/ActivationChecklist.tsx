@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useLocation } from "wouter";
 import { trackEvent } from "@/components/PostHogProvider";
+import { FreeSetupCta } from "@/components/growth/FreeSetupCta";
 import {
   Briefcase,
   DollarSign,
@@ -13,7 +14,7 @@ import {
   Check,
   ChevronRight,
 } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import confetti from "canvas-confetti";
 
 interface ActivationStatus {
@@ -28,6 +29,7 @@ interface ActivationStatus {
   percentComplete: number;
   isFullyActivated: boolean;
   disabled?: boolean;
+  userCreatedAt?: string | null;
 }
 
 const STEPS = [
@@ -144,6 +146,17 @@ export function ActivationChecklist() {
 
   const remaining = activation.totalSteps - activation.completedSteps;
 
+  const isStalled = useMemo(() => {
+    if (!activation.userCreatedAt) return false;
+    const createdAt = new Date(activation.userCreatedAt).getTime();
+    const now = Date.now();
+    const hoursSinceCreation = (now - createdAt) / (1000 * 60 * 60);
+    const incompleteSteps = activation.totalSteps - activation.completedSteps;
+    if (hoursSinceCreation >= 48) return true;
+    if (hoursSinceCreation >= 24 && incompleteSteps >= 2) return true;
+    return false;
+  }, [activation.userCreatedAt, activation.completedSteps, activation.totalSteps]);
+
   return (
     <Card className="border-0 shadow-sm" data-testid="activation-checklist">
       <CardContent className="p-4 space-y-4">
@@ -210,6 +223,12 @@ export function ActivationChecklist() {
             );
           })}
         </div>
+
+        {isStalled && (
+          <div data-testid="activation-stall-cta">
+            <FreeSetupCta variant="banner" />
+          </div>
+        )}
       </CardContent>
     </Card>
   );
