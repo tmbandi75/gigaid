@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createGrowthLead, bookCall, convertLead, getLeads, getLeadById, updateLeadNotes, updateCallOutcome } from "../lib/growth/leadService";
 import { trackAttribution, getAttributionForUser } from "../lib/growth/attributionService";
 import { trackReferralClick, linkReferralSignup, ensureUserReferralCode, getReferralsForUser } from "../lib/growth/referralService";
-import { applyReferralReward } from "../lib/growth/rewardService";
+import { applyReferralReward, getRewardsForUser } from "../lib/growth/rewardService";
 import { createOutreachItem, updateOutreachItem, getOutreachItems, deleteOutreachItem } from "../lib/growth/outreachService";
 import { trackServerEvent } from "../lib/growth/analytics";
 import { adminMiddleware } from "../copilot/adminMiddleware";
@@ -492,6 +492,39 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
     } catch (err: any) {
       console.error("[AdminGrowth] Outreach delete error:", err);
       res.status(500).json({ error: "Failed to delete outreach item" });
+    }
+  });
+
+  // ====== Referral Rewards ======
+
+  app.get("/api/referral/rewards", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).userId;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+
+      const rewards = await getRewardsForUser(userId);
+      res.json(rewards);
+    } catch (err: any) {
+      console.error("[Referral] Failed to get rewards:", err);
+      res.status(500).json({ error: "Failed to get rewards" });
+    }
+  });
+
+  app.post("/api/admin/growth/reward", adminMiddleware, async (req: Request, res: Response) => {
+    try {
+      const { referrerId, referredId } = req.body;
+      if (!referrerId || !referredId) {
+        return res.status(400).json({ error: "Missing referrerId or referredId" });
+      }
+
+      const result = await applyReferralReward(referrerId, referredId);
+      if (!result.success) {
+        return res.status(409).json({ error: result.reason });
+      }
+      res.json(result);
+    } catch (err: any) {
+      console.error("[AdminGrowth] Failed to apply reward:", err);
+      res.status(500).json({ error: "Failed to apply reward" });
     }
   });
 

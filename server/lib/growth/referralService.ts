@@ -3,6 +3,7 @@ import { growthReferrals, users } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import crypto from "crypto";
 import { trackServerEvent } from "./analytics";
+import { applyReferralReward } from "./rewardService";
 
 export function generateReferralCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -170,6 +171,10 @@ export async function markReferralActivated(referredUserId: string): Promise<boo
     landing_path: null,
     utm_campaign: null,
     plan: null,
+  });
+
+  applyReferralReward(record.referrerUserId, referredUserId).catch((err) => {
+    console.error("[Referral] Failed to apply reward after activation:", err);
   });
 
   return true;

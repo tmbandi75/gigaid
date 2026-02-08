@@ -382,4 +382,70 @@ describe('Growth Phase 2 API', () => {
       expect(data.notes).toBe('Admin test notes');
     });
   });
+
+  describe('Referral Rewards', () => {
+    it('requires auth for rewards listing', async () => {
+      const { status } = await publicRequest('GET', '/api/referral/rewards');
+      expect(status).toBe(401);
+    });
+
+    it('retrieves rewards for a user', async () => {
+      const { status, data } = await apiRequest('GET', '/api/referral/rewards', undefined, tokenA);
+      expect(status).toBe(200);
+      expect(Array.isArray(data)).toBe(true);
+    });
+  });
+
+  describe('Reward Gating (Admin)', () => {
+    it('rejects self-referral', async () => {
+      if (!ADMIN_KEY) return;
+      const res = await fetch(`${BASE_URL}/api/admin/growth/reward`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-api-key': ADMIN_KEY,
+        },
+        body: JSON.stringify({ referrerId: TEST_USER_A.id, referredId: TEST_USER_A.id }),
+      });
+      const data = await res.json();
+      expect(res.status).toBe(409);
+      expect(data.error).toBe('self_referral');
+    });
+
+    it('rejects reward when referral not activated', async () => {
+      if (!ADMIN_KEY) return;
+      const res = await fetch(`${BASE_URL}/api/admin/growth/reward`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-api-key': ADMIN_KEY,
+        },
+        body: JSON.stringify({ referrerId: TEST_USER_A.id, referredId: TEST_USER_B.id }),
+      });
+      const data = await res.json();
+      expect(res.status).toBe(409);
+      expect(data.error).toBe('referral_not_activated');
+    });
+
+    it('rejects missing referrerId or referredId', async () => {
+      if (!ADMIN_KEY) return;
+      const res = await fetch(`${BASE_URL}/api/admin/growth/reward`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-api-key': ADMIN_KEY,
+        },
+        body: JSON.stringify({ referrerId: TEST_USER_A.id }),
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('requires admin auth for reward application', async () => {
+      const { status } = await publicRequest('POST', '/api/admin/growth/reward', {
+        referrerId: TEST_USER_A.id,
+        referredId: TEST_USER_B.id,
+      });
+      expect(status).toBe(401);
+    });
+  });
 });
