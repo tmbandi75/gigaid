@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v16';
+const CACHE_VERSION = 'v17';
 const STATIC_CACHE = `gigaid-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `gigaid-dynamic-${CACHE_VERSION}`;
 const API_CACHE = `gigaid-api-${CACHE_VERSION}`;
@@ -156,8 +156,8 @@ self.addEventListener('push', (event) => {
     const data = event.data.json();
     const options = {
       body: data.body || 'New notification',
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/icon-72x72.png',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
       vibrate: [100, 50, 100],
       data: {
         url: data.url || '/'
