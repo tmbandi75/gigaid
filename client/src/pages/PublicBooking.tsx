@@ -1080,7 +1080,7 @@ export default function PublicBooking() {
                     </div>
 
                     {/* Conditional: Stripe protected vs separate collection */}
-                    {profile.stripeConnected && profile.acceptedPaymentMethods?.some(m => m.type === "stripe") ? (
+                    {profile.stripeConnected ? (
                       <>
                         {/* Deposit Safety - Stripe protected */}
                         <div className="p-4 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">

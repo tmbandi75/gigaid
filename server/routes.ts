@@ -4759,11 +4759,23 @@ export async function registerRoutes(
 
       if (depositEnabled && depositValue > 0) {
         try {
-          const providerPaymentMethods = await storage.getUserPaymentMethods(user.id);
-          const hasStripePayment = providerPaymentMethods.some(m => m.isEnabled && m.type === "stripe");
-          const stripeConnectActive = !!(user.stripeConnectAccountId && user.stripeConnectStatus === "active");
+          let stripeConnectActive = false;
+          if (user.stripeConnectAccountId) {
+            try {
+              const { getUncachableStripeClient: getStripeForConnect } = await import("./stripeClient");
+              const stripeForConnect = await getStripeForConnect();
+              const connectAccount = await stripeForConnect.accounts.retrieve(user.stripeConnectAccountId);
+              stripeConnectActive = !!(connectAccount.charges_enabled && connectAccount.payouts_enabled);
+              if (stripeConnectActive && user.stripeConnectStatus !== "active") {
+                await storage.updateUser(user.id, { stripeConnectStatus: "active" });
+              }
+            } catch (stripeErr) {
+              console.error("Failed to verify Stripe Connect status for booking deposit:", stripeErr);
+              stripeConnectActive = user.stripeConnectStatus === "active";
+            }
+          }
 
-          if (hasStripePayment && stripeConnectActive) {
+          if (stripeConnectActive) {
             let depositAmountCents: number | null = null;
 
             if (user.depositType === "fixed" || user.depositType === "flat") {
@@ -5322,15 +5334,35 @@ export async function registerRoutes(
         label: m.label,
         instructions: m.instructions,
       }));
-      const stripeConnected = !!(user.stripeConnectAccountId && user.stripeConnectStatus === "active");
-      
+
+      let stripeConnected = false;
       let stripePublishableKey: string | null = null;
-      if (stripeConnected) {
+
+      if (user.stripeConnectAccountId) {
         try {
-          const { getStripePublishableKey } = await import("./stripeClient");
-          stripePublishableKey = await getStripePublishableKey();
+          const { getUncachableStripeClient, getStripePublishableKey } = await import("./stripeClient");
+          const stripe = await getUncachableStripeClient();
+          const account = await stripe.accounts.retrieve(user.stripeConnectAccountId);
+          stripeConnected = !!(account.charges_enabled && account.payouts_enabled);
+
+          if (stripeConnected && user.stripeConnectStatus !== "active") {
+            await storage.updateUser(user.id, { stripeConnectStatus: "active" });
+          }
+
+          if (stripeConnected) {
+            stripePublishableKey = await getStripePublishableKey();
+          }
         } catch (err) {
-          console.error("Failed to get Stripe publishable key:", err);
+          console.error("Failed to check Stripe Connect status:", err);
+          stripeConnected = user.stripeConnectStatus === "active";
+          if (stripeConnected) {
+            try {
+              const { getStripePublishableKey } = await import("./stripeClient");
+              stripePublishableKey = await getStripePublishableKey();
+            } catch (err2) {
+              console.error("Failed to get Stripe publishable key:", err2);
+            }
+          }
         }
       }
       
@@ -7747,11 +7779,17 @@ Return ONLY the message text, no JSON or formatting.`
       const stripe = await getUncachableStripeClient();
       const account = await stripe.accounts.retrieve(user.stripeConnectAccountId);
 
+      const chargesEnabled = account.charges_enabled || false;
+      const payoutsEnabled = account.payouts_enabled || false;
+      if (chargesEnabled && payoutsEnabled && user.stripeConnectStatus !== "active") {
+        await storage.updateUser(user.id, { stripeConnectStatus: "active" });
+      }
+
       res.json({
         connected: true,
         onboardingComplete: account.details_submitted,
-        chargesEnabled: account.charges_enabled,
-        payoutsEnabled: account.payouts_enabled,
+        chargesEnabled,
+        payoutsEnabled,
         accountId: user.stripeConnectAccountId,
       });
     } catch (error) {
