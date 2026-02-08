@@ -1,0 +1,182 @@
+We are implementing Phase A: Core Activation Engine for GigAid.
+
+This is the highest priority conversion system and must be implemented end-to-end before moving to any other work.
+
+Do NOT partially implement.
+
+Do NOT skip schema, UX, or analytics.
+
+1️⃣ Database: Activation Tracking
+
+Add to users table:
+
+activation_services_done BOOLEAN DEFAULT false
+activation_pricing_done BOOLEAN DEFAULT false
+activation_payments_done BOOLEAN DEFAULT false
+activation_link_done BOOLEAN DEFAULT false
+activation_quote_done BOOLEAN DEFAULT false
+activation_completed_at TIMESTAMP NULL
+
+
+Add migration + backfill.
+
+Backfill logic:
+
+If user has ≥1 service → services_done = true
+
+If pricing configured → pricing_done = true
+
+If Stripe connected → payments_done = true
+
+If booking link exists → link_done = true
+
+If ≥1 quote sent → quote_done = true
+
+If all true → set activation_completed_at.
+
+2️⃣ Activation Detection Engine
+
+Create centralized logic:
+
+/lib/activationEngine.ts
+
+This module:
+
+Evaluates user state
+
+Updates activation flags
+
+Runs on:
+
+Login
+
+Dashboard load
+
+After relevant actions
+
+No scattered logic.
+
+All detection centralized.
+
+3️⃣ Activation Checklist Component
+
+Create:
+
+ActivationChecklist.tsx
+
+Checklist:
+
+☐ Add Service
+☐ Set Price
+☐ Connect Payments
+☐ Generate Booking Link
+☐ Send First Quote
+
+Requirements:
+
+Auto-check from DB flags
+
+Click navigates to target screen
+
+Persistent
+
+Not dismissible
+
+Shows % progress
+
+Mobile-first
+
+Mount on:
+
+Dashboard
+
+Home
+
+Post-signup
+
+Empty states
+
+Until activation completed.
+
+4️⃣ “First Dollar” Banner System
+
+Global banner until activated:
+
+🎯 Get Your First Paid Booking in 24 Hours
+Complete setup to unlock clients
+
+When activated:
+
+✅ You're Live — Start Getting Paid
+
+Implement as shared layout component.
+
+5️⃣ Analytics & Funnel Tracking
+
+Add events:
+
+activation_step_completed
+activation_completed
+first_quote_sent
+first_payment_received
+time_to_first_dollar
+
+
+Track timestamps.
+
+Build internal dashboard:
+
+Signup → Activated → Paid
+
+6️⃣ Migration & Safety
+
+Do not break existing onboarding
+
+Do not remove GoldenPath
+
+Integrate with it
+
+Preserve user progress
+
+Add feature flag:
+
+activation_engine_v1
+
+Default: ON for new users
+OFF for existing → enable after backfill
+
+7️⃣ Testing
+
+Automated test:
+
+Create user → complete steps → verify:
+
+Flags updated
+
+Banner removed
+
+activation_completed_at set
+
+Events fired
+
+Manual QA checklist included.
+
+OUTPUT EXPECTED
+
+After this phase:
+
+Every new user is forced through activation.
+
+No user can “wander” without setup.
+
+Activation rate must be measurable.
+
+Document:
+
+New files
+
+Migrations
+
+Metrics
+
+Do not move to Phase B until this is live.
