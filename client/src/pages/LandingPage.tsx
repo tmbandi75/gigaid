@@ -1,8 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Briefcase, Calendar, DollarSign, MessageSquare, Users, Zap } from "lucide-react";
+import { useUtmCapture } from "@/hooks/useUtmCapture";
 
 export default function LandingPage() {
+  useUtmCapture();
   const features = [
     {
       icon: Calendar,

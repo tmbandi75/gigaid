@@ -37,6 +37,7 @@ import { PriorityBadge, inferJobPriority } from "@/components/priority/PriorityB
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
+import { FreeSetupCta } from "@/components/growth/FreeSetupCta";
 import { JobResolutionModal } from "@/components/jobs/JobResolutionModal";
 import { JobsCalendar } from "@/components/calendar/JobsCalendar";
 import { BookingLinkShare } from "@/components/booking-link";
@@ -444,6 +445,7 @@ function EmptyState() {
           Add Your First Job
         </Button>
       </Link>
+      <FreeSetupCta />
     </div>
   );
 }

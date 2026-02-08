@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, doublePrecision, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, doublePrecision, index, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -2561,6 +2561,182 @@ export const planOverrides = pgTable("plan_overrides", {
 export const insertPlanOverrideSchema = createInsertSchema(planOverrides).omit({ id: true, createdAt: true });
 export type InsertPlanOverride = z.infer<typeof insertPlanOverrideSchema>;
 export type PlanOverride = typeof planOverrides.$inferSelect;
+
+// ============================================================
+// PHASE 2: ACQUISITION ENGINE
+// ============================================================
+
+export const growthLeadStatuses = ["new", "booked", "no_show", "completed", "converted", "disqualified"] as const;
+export type GrowthLeadStatus = (typeof growthLeadStatuses)[number];
+
+export const growthLeads = pgTable("growth_leads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  createdAt: text("created_at").notNull().default(sql`now()`),
+  updatedAt: text("updated_at").notNull().default(sql`now()`),
+  name: text("name").notNull(),
+  businessName: text("business_name"),
+  email: text("email"),
+  phone: text("phone"),
+  serviceCategory: text("service_category"),
+  city: text("city"),
+  source: text("source").notNull().default("homepage"),
+  utmSource: text("utm_source"),
+  utmMedium: text("utm_medium"),
+  utmCampaign: text("utm_campaign"),
+  utmContent: text("utm_content"),
+  utmTerm: text("utm_term"),
+  referrerUserId: varchar("referrer_user_id"),
+  status: text("status").notNull().default("new"),
+  bookedAt: text("booked_at"),
+  onboardedAt: text("onboarded_at"),
+  activatedAt: text("activated_at"),
+  convertedUserId: varchar("converted_user_id"),
+  notes: text("notes"),
+}, (table) => [
+  index("growth_leads_source_created_idx").on(table.source, table.createdAt),
+  index("growth_leads_status_idx").on(table.status),
+]);
+
+export const insertGrowthLeadSchema = createInsertSchema(growthLeads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertGrowthLead = z.infer<typeof insertGrowthLeadSchema>;
+export type GrowthLead = typeof growthLeads.$inferSelect;
+
+export const onboardingCallOutcomes = ["scheduled", "completed", "no_show", "rescheduled", "converted", "not_fit"] as const;
+export type OnboardingCallOutcome = (typeof onboardingCallOutcomes)[number];
+
+export const onboardingCalls = pgTable("onboarding_calls", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  createdAt: text("created_at").notNull().default(sql`now()`),
+  leadId: varchar("lead_id").notNull(),
+  userId: varchar("user_id"),
+  scheduledAt: text("scheduled_at").notNull(),
+  completedAt: text("completed_at"),
+  outcome: text("outcome").notNull().default("scheduled"),
+  repUserId: varchar("rep_user_id"),
+  calendaringProvider: text("calendaring_provider"),
+  metadata: jsonb("metadata"),
+}, (table) => [
+  index("onboarding_calls_lead_idx").on(table.leadId),
+]);
+
+export const insertOnboardingCallSchema = createInsertSchema(onboardingCalls).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertOnboardingCall = z.infer<typeof insertOnboardingCallSchema>;
+export type OnboardingCall = typeof onboardingCalls.$inferSelect;
+
+export const acquisitionAttribution = pgTable("acquisition_attribution", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  createdAt: text("created_at").notNull().default(sql`now()`),
+  userId: varchar("user_id").notNull(),
+  source: text("source"),
+  landingPath: text("landing_path"),
+  referrerUserId: varchar("referrer_user_id"),
+  utmSource: text("utm_source"),
+  utmMedium: text("utm_medium"),
+  utmCampaign: text("utm_campaign"),
+  utmContent: text("utm_content"),
+  utmTerm: text("utm_term"),
+  firstTouchAt: text("first_touch_at").notNull(),
+  lastTouchAt: text("last_touch_at").notNull(),
+  touchCount: integer("touch_count").notNull().default(1),
+}, (table) => [
+  uniqueIndex("acquisition_attribution_user_idx").on(table.userId),
+  index("acquisition_attribution_campaign_idx").on(table.utmCampaign, table.createdAt),
+]);
+
+export const insertAcquisitionAttributionSchema = createInsertSchema(acquisitionAttribution).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertAcquisitionAttribution = z.infer<typeof insertAcquisitionAttributionSchema>;
+export type AcquisitionAttribution = typeof acquisitionAttribution.$inferSelect;
+
+export const growthReferralStatuses = ["clicked", "signed_up", "activated", "rewarded", "expired"] as const;
+export type GrowthReferralStatus = (typeof growthReferralStatuses)[number];
+
+export const growthReferrals = pgTable("growth_referrals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  createdAt: text("created_at").notNull().default(sql`now()`),
+  referrerUserId: varchar("referrer_user_id").notNull(),
+  referredUserId: varchar("referred_user_id"),
+  referralCode: text("referral_code").notNull(),
+  status: text("status").notNull().default("clicked"),
+  clickedAt: text("clicked_at"),
+  signedUpAt: text("signed_up_at"),
+  activatedAt: text("activated_at"),
+  rewardedAt: text("rewarded_at"),
+}, (table) => [
+  index("growth_referrals_referrer_status_idx").on(table.referrerUserId, table.status),
+  index("growth_referrals_code_idx").on(table.referralCode),
+]);
+
+export const insertGrowthReferralSchema = createInsertSchema(growthReferrals).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertGrowthReferral = z.infer<typeof insertGrowthReferralSchema>;
+export type GrowthReferral = typeof growthReferrals.$inferSelect;
+
+export const referralRewardTypes = ["pro_days", "discount", "credit"] as const;
+export type ReferralRewardType = (typeof referralRewardTypes)[number];
+
+export const referralRewardStatuses = ["pending", "applied", "failed"] as const;
+export type ReferralRewardStatus = (typeof referralRewardStatuses)[number];
+
+export const referralRewards = pgTable("referral_rewards", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  createdAt: text("created_at").notNull().default(sql`now()`),
+  referrerUserId: varchar("referrer_user_id").notNull(),
+  referredUserId: varchar("referred_user_id").notNull(),
+  rewardType: text("reward_type").notNull().default("pro_days"),
+  rewardValue: integer("reward_value").notNull().default(30),
+  appliedAt: text("applied_at"),
+  status: text("status").notNull().default("pending"),
+  failureReason: text("failure_reason"),
+}, (table) => [
+  index("referral_rewards_referrer_idx").on(table.referrerUserId),
+]);
+
+export const insertReferralRewardSchema = createInsertSchema(referralRewards).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertReferralReward = z.infer<typeof insertReferralRewardSchema>;
+export type ReferralReward = typeof referralRewards.$inferSelect;
+
+export const outreachStatuses = ["new", "contacted", "replied", "booked", "converted", "dead"] as const;
+export type OutreachStatus = (typeof outreachStatuses)[number];
+
+export const outreachQueue = pgTable("outreach_queue", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  createdAt: text("created_at").notNull().default(sql`now()`),
+  updatedAt: text("updated_at").notNull().default(sql`now()`),
+  platform: text("platform").notNull(),
+  profileUrl: text("profile_url").notNull(),
+  handleName: text("handle_name"),
+  city: text("city"),
+  status: text("status").notNull().default("new"),
+  assignedToUserId: varchar("assigned_to_user_id"),
+  lastContactedAt: text("last_contacted_at"),
+  nextFollowupAt: text("next_followup_at"),
+  notes: text("notes"),
+}, (table) => [
+  index("outreach_queue_status_assigned_idx").on(table.status, table.assignedToUserId, table.nextFollowupAt),
+]);
+
+export const insertOutreachQueueSchema = createInsertSchema(outreachQueue).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertOutreachQueue = z.infer<typeof insertOutreachQueueSchema>;
+export type OutreachItem = typeof outreachQueue.$inferSelect;
 
 export * from "./models/chat";
 export * from "./models/auth";

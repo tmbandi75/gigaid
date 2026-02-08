@@ -36,6 +36,7 @@ import HelpSupport from "@/pages/HelpSupport";
 import UserGuides from "@/pages/UserGuides";
 import AITools from "@/pages/AITools";
 import PublicBooking from "@/pages/PublicBooking";
+import FreeSetup from "@/pages/FreeSetup";
 import InvoiceRating from "@/pages/InvoiceRating";
 import CrewPortal from "@/pages/CrewPortal";
 import CustomerBookingDetail from "@/pages/CustomerBookingDetail";
@@ -62,6 +63,7 @@ import AdminCustomerIO from "@/pages/AdminCustomerIO";
 import AdminBilling from "@/pages/AdminBilling";
 import AdminStripeMonitoring from "@/pages/AdminStripeMonitoring";
 import AdminChurnRetention from "@/pages/AdminChurnRetention";
+import AdminGrowth from "@/pages/AdminGrowth";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import VoiceNotesPage from "@/pages/VoiceNotesPage";
 import TermsOfService from "@/pages/terms";
@@ -131,6 +133,7 @@ function Router() {
       <Route path="/admin/billing" component={AdminBilling} />
       <Route path="/admin/stripe" component={AdminStripeMonitoring} />
       <Route path="/admin/churn" component={AdminChurnRetention} />
+      <Route path="/admin/growth" component={AdminGrowth} />
       <Route path="/onboarding/:step" component={OnboardingPage} />
       <Route path="/onboarding" component={OnboardingPage} />
       <Route path="/payday-onboarding" component={PaydayOnboarding} />
@@ -314,6 +317,7 @@ function App() {
               <ThemeInitializer />
               <SubscriptionHandler />
               <Switch>
+              <Route path="/free-setup" component={FreeSetup} />
               <Route path="/book/:slug" component={PublicBooking} />
               <Route path="/booking/:token" component={CustomerBookingDetail} />
               <Route path="/invoice/:token" component={PublicInvoice} />

@@ -55,6 +55,7 @@ import { LeadsTableView } from "@/components/leads/LeadsTableView";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
+import { FreeSetupCta } from "@/components/growth/FreeSetupCta";
 import { BookingLinkShare, BookingLinkEmptyState } from "@/components/booking-link";
 import { SwipeableCard, type SwipeAction as SwipeCardAction } from "@/components/ui/swipeable-card";
 import { ActionConfirmDialog } from "@/components/ui/action-confirm-dialog";
@@ -361,6 +362,7 @@ function EmptyState() {
         </Button>
       </Link>
       <BookingLinkEmptyState />
+      <FreeSetupCta />
     </div>
   );
 }

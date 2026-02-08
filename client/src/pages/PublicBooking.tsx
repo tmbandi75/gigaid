@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useApiMutation } from "@/hooks/useApiMutation";
+import { trackEvent } from "@/components/PostHogProvider";
 import { Star, Calendar, CheckCircle, Loader2, ChevronLeft, ChevronRight, Clock, History, RotateCcw, MapPin, Zap, Navigation, Shield, RefreshCw, CreditCard, AlertTriangle } from "lucide-react";
 import { SmartServiceRecommender } from "@/components/booking/SmartServiceRecommender";
 import { JobNotesAutocomplete } from "@/components/booking/JobNotesAutocomplete";
@@ -25,6 +26,7 @@ import { PhotoUpload } from "@/components/ui/photo-upload";
 import { SupportTicketForm } from "@/components/SupportTicketForm";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { useUtmCapture } from "@/hooks/useUtmCapture";
 
 interface PublicProfile {
   name: string;
@@ -53,6 +55,7 @@ interface PublicProfile {
   acceptedPaymentMethods?: Array<{ type: string; label: string | null; instructions: string | null }>;
   stripeConnected?: boolean;
   stripePublishableKey?: string;
+  referralCode?: string;
 }
 
 interface DepositPaymentInfo {
@@ -144,6 +147,7 @@ function DepositPaymentForm({ onSuccess, onError }: { onSuccess: () => void; onE
 }
 
 export default function PublicBooking() {
+  useUtmCapture();
   const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
   const [submitted, setSubmitted] = useState(false);
@@ -1244,6 +1248,26 @@ export default function PublicBooking() {
             <img src="/gigaid-logo.png" alt="GigAid" className="h-12 inline-block" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
           </a>
           <span>Powered by <a href="http://gigaid.ai" target="_blank" rel="noopener noreferrer" className="hover:underline font-medium">GigAid</a></span>
+          {profile?.referralCode && (
+            <a
+              href={`/free-setup?ref=${profile.referralCode}`}
+              className="text-xs text-primary hover:underline mt-1"
+              data-testid="link-powered-by-cta"
+              onClick={() => {
+                trackEvent("referral_cta_clicked", {
+                  referral_code: profile.referralCode,
+                  source_slug: slug,
+                });
+                fetch("/api/referral/click", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ code: profile.referralCode }),
+                }).catch(() => {});
+              }}
+            >
+              Get your own free booking page
+            </a>
+          )}
         </div>
       </div>
 

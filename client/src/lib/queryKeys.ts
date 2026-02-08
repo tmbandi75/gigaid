@@ -164,4 +164,9 @@ export const QUERY_KEYS = {
   adminChurnReport: () => ["/api/admin/churn/report.json"] as const,
 
   encouragementData: () => ["/api/encouragement/data"] as const,
+
+  adminGrowthOverview: (days: number) => ["/api/admin/growth/overview", `days=${days}`] as const,
+  adminGrowthLeads: () => ["/api/admin/growth/leads"] as const,
+  adminGrowthOutreach: () => ["/api/admin/growth/outreach"] as const,
+  adminGrowthChannels: () => ["/api/admin/growth/channels"] as const,
 };

@@ -30,6 +30,7 @@ import { PriorityBadge, inferInvoicePriority } from "@/components/priority/Prior
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
+import { FreeSetupCta } from "@/components/growth/FreeSetupCta";
 import { SwipeableCard, type SwipeAction as SwipeCardAction } from "@/components/ui/swipeable-card";
 import { ActionConfirmDialog } from "@/components/ui/action-confirm-dialog";
 import { getInvoiceActionEligibility, getSwipeActions, type SwipeAction as RulesSwipeAction } from "@shared/archive-delete-rules";
@@ -296,6 +297,7 @@ function EmptyState({ filter }: { filter: string }) {
           Create Invoice
         </Button>
       </Link>
+      <FreeSetupCta />
     </div>
   );
 }

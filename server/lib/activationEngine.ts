@@ -2,6 +2,7 @@ import { db } from "../db";
 import { users, invoices } from "@shared/schema";
 import { eq, count, inArray, and } from "drizzle-orm";
 import { storage } from "../storage";
+import { markReferralActivated } from "./growth/referralService";
 
 export interface ActivationStatus {
   servicesDone: boolean;
@@ -72,6 +73,8 @@ export async function evaluateAndUpdateActivation(userId: string): Promise<Activ
     if (isFullyActivated && !completedAt) {
       completedAt = new Date().toISOString();
       updates.activationCompletedAt = completedAt;
+
+      markReferralActivated(userId).catch(() => {});
     }
 
     await storage.updateUser(userId, updates);

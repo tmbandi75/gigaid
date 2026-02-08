@@ -552,6 +552,13 @@ export async function registerRoutes(
           context: { source: "demo_creation" },
           source: "web",
         });
+
+        try {
+          const { ensureUserReferralCode } = await import("./lib/growth/referralService");
+          await ensureUserReferralCode(user.id);
+        } catch (err) {
+          console.error("[Growth] Failed to generate referral code on signup:", err);
+        }
       }
       
       if (publicProfileSlug !== undefined) {
@@ -5525,7 +5532,14 @@ export async function registerRoutes(
         acceptedPaymentMethods,
         stripeConnected,
         stripePublishableKey,
+        referralCode: user.referralCode || undefined,
       });
+
+      if (!user.referralCode) {
+        import("./lib/growth/referralService").then(({ ensureUserReferralCode }) => {
+          ensureUserReferralCode(user!.id).catch(() => {});
+        }).catch(() => {});
+      }
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch profile" });
     }
@@ -13402,6 +13416,9 @@ Respond in JSON format only:
   }).catch(err => {
     console.error("[RebookingScheduler] Failed to start:", err);
   });
+
+  const { registerGrowthRoutes } = await import("./growth/routes");
+  registerGrowthRoutes(app, requireAuth);
 
   return httpServer;
 }

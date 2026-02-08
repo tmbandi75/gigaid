@@ -25,6 +25,7 @@ import {
   Shield,
   CreditCard,
   HeartPulse,
+  Rocket,
   LogOut,
   Moon,
   Sun,
@@ -88,6 +89,12 @@ const adminNavItems = [
     href: "/admin/churn", 
     icon: HeartPulse,
     testId: "nav-churn-retention",
+  },
+  { 
+    title: "Growth", 
+    href: "/admin/growth", 
+    icon: Rocket,
+    testId: "nav-growth",
   },
 ];
 

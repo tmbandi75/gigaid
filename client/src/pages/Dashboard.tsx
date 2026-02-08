@@ -40,6 +40,7 @@ import type { DashboardSummary, Job, Lead } from "@shared/schema";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
+import { useAttributionSync } from "@/hooks/useUtmCapture";
 
 interface MoneyDashboardData {
   weeklyRevenue: number;
@@ -107,6 +108,7 @@ export default function Dashboard() {
   const isMobile = useIsMobile();
   
   useRecentActivityFeedback();
+  useAttributionSync();
 
   const { data: summary, isLoading } = useQuery<DashboardSummary>({
     queryKey: QUERY_KEYS.dashboardSummary(),
