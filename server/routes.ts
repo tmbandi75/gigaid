@@ -394,6 +394,14 @@ export async function registerRoutes(
         type: "json",
         size: "1 KB",
         path: "/api/downloads/tsconfig.json"
+      },
+      {
+        id: "query-keys-ts",
+        name: "queryKeys.ts",
+        description: "React Query key definitions for all API endpoints",
+        type: "ts",
+        size: "6 KB",
+        path: "/api/downloads/queryKeys.ts"
       }
     ];
     res.json({ files });
@@ -406,7 +414,8 @@ export async function registerRoutes(
       "gigaid-data-model.json": path.join(process.cwd(), "public", "gigaid-data-model.json"),
       "package.json": path.join(process.cwd(), "package.json"),
       "manifest.json": path.join(process.cwd(), "client", "public", "manifest.json"),
-      "tsconfig.json": path.join(process.cwd(), "tsconfig.json")
+      "tsconfig.json": path.join(process.cwd(), "tsconfig.json"),
+      "queryKeys.ts": path.join(process.cwd(), "client", "src", "lib", "queryKeys.ts")
     };
 
     const filePath = allowedFiles[filename];
