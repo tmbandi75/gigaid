@@ -1234,17 +1234,16 @@ export default function PublicBooking() {
           </Card>
         )}
 
-        <div className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1">
-          Powered by{" "}
+        <div className="text-center text-sm text-muted-foreground flex flex-col items-center justify-center gap-2 py-4">
           <a 
-            href="https://gigaid.ai" 
+            href="http://gigaid.ai" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="hover:underline"
             data-testid="link-gigaid"
           >
-            <img src="/gigaid-logo.png" alt="GigAid" className="h-4 inline-block" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }} />
+            <img src="/gigaid-logo.png" alt="GigAid" className="h-12 inline-block" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
           </a>
+          <span>Powered by <a href="http://gigaid.ai" target="_blank" rel="noopener noreferrer" className="hover:underline font-medium">GigAid</a></span>
         </div>
       </div>
 
