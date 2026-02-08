@@ -27,6 +27,9 @@ Preferred communication style: Simple, everyday language.
 
 ### Recent Changes (Feb 2026)
 - **Human-Readable Booking Slugs**: Replaced `user-{id}` booking URLs with human-readable slugs (e.g., `gigaid.ai/book/curtis-plumbing`). Slug utility at `server/lib/bookingSlug.ts` handles generation from businessName/name, reserved word blocking, profanity filter, and collision resolution. Auto-assigns on profile access. Legacy URLs redirect to new slugs. Settings page includes real-time availability checking via `/api/slug/check/:slug`.
+- **Booking Page Deposit & Payment Integration**: Public booking page (`PublicBooking.tsx`) now respects provider settings for deposits. Shows deposit info only when `depositEnabled && depositValue > 0`. Stripe payment form (using `@stripe/react-stripe-js` PaymentElement) only appears when the provider has Stripe as an accepted payment method AND has Stripe Connect active. For non-Stripe providers with deposits, shows "provider will collect separately" with payment method badges. PaymentIntent created server-side during booking submission using provider's `defaultPrice` for percent-based deposits (not client-supplied estimates).
+- **Service Area Zip Code Check**: `/api/public/validate-zip` now accepts optional `slug` param. When provided, checks client zip against provider's `serviceArea` field (comma-separated zips/prefixes). Returns `inServiceArea` boolean. Frontend shows warning (non-blocking) when outside service area.
+- **Public Profile Payment Methods**: `/api/public/profile/:slug` now returns `acceptedPaymentMethods` (enabled methods), `stripeConnected` boolean, and `stripePublishableKey` (when Stripe is active).
 
 ### Core Features
 - **Payment Processing**: Stripe Connect for secure payments, dispute resolution, and reschedule policies.

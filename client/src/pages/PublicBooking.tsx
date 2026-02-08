@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useApiMutation } from "@/hooks/useApiMutation";
-import { Star, Calendar, CheckCircle, Loader2, ChevronLeft, ChevronRight, Clock, History, RotateCcw, MapPin, Zap, Navigation, Shield, RefreshCw, CreditCard } from "lucide-react";
+import { Star, Calendar, CheckCircle, Loader2, ChevronLeft, ChevronRight, Clock, History, RotateCcw, MapPin, Zap, Navigation, Shield, RefreshCw, CreditCard, AlertTriangle } from "lucide-react";
 import { SmartServiceRecommender } from "@/components/booking/SmartServiceRecommender";
 import { JobNotesAutocomplete } from "@/components/booking/JobNotesAutocomplete";
 import { FAQAssistant } from "@/components/booking/FAQAssistant";
@@ -23,6 +23,8 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { AddressAutocomplete } from "@/components/booking/AddressAutocomplete";
 import { PhotoUpload } from "@/components/ui/photo-upload";
 import { SupportTicketForm } from "@/components/SupportTicketForm";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
 interface PublicProfile {
   name: string;
@@ -48,6 +50,16 @@ interface PublicProfile {
   lateRescheduleWindowHours?: number;
   lateRescheduleRetainPctFirst?: number;
   publicEstimationEnabled?: boolean;
+  acceptedPaymentMethods?: Array<{ type: string; label: string | null; instructions: string | null }>;
+  stripeConnected?: boolean;
+  stripePublishableKey?: string;
+}
+
+interface DepositPaymentInfo {
+  clientSecret: string;
+  paymentIntentId: string;
+  amount: number;
+  currency: string;
 }
 
 interface BookingHistoryItem {
@@ -80,6 +92,57 @@ interface SmartSlotsResponse {
   clientZipCode: string;
 }
 
+function DepositPaymentForm({ onSuccess, onError }: { onSuccess: () => void; onError: (msg: string) => void }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [processing, setProcessing] = useState(false);
+
+  const handlePayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+
+    setProcessing(true);
+    try {
+      const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: window.location.href,
+        },
+        redirect: "if_required",
+      });
+
+      if (error) {
+        onError(error.message || "Payment failed. Please try again.");
+      } else {
+        onSuccess();
+      }
+    } catch (err: any) {
+      onError(err?.message || "An unexpected error occurred.");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handlePayment} className="space-y-4" data-testid="form-deposit-payment">
+      <PaymentElement data-testid="stripe-payment-element" />
+      <Button
+        type="submit"
+        className="w-full"
+        disabled={!stripe || processing}
+        data-testid="button-pay-deposit"
+      >
+        {processing ? (
+          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+        ) : (
+          <CreditCard className="h-4 w-4 mr-2" />
+        )}
+        {processing ? "Processing..." : "Pay Deposit"}
+      </Button>
+    </form>
+  );
+}
+
 export default function PublicBooking() {
   const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
@@ -106,6 +169,9 @@ export default function PublicBooking() {
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const [bookingHistory, setBookingHistory] = useState<BookingHistoryItem[]>([]);
   const [policyAcknowledged, setPolicyAcknowledged] = useState(false);
+  const [depositPaymentInfo, setDepositPaymentInfo] = useState<DepositPaymentInfo | null>(null);
+  const [depositPaymentComplete, setDepositPaymentComplete] = useState(false);
+  const [serviceAreaWarning, setServiceAreaWarning] = useState<string | null>(null);
 
   const getBookingHistoryKey = () => {
     const phone = formData.clientPhone.replace(/\D/g, "");
@@ -148,12 +214,13 @@ export default function PublicBooking() {
     
     setZipValidating(true);
     setZipError(null);
+    setServiceAreaWarning(null);
     
     try {
       const res = await fetch("/api/public/validate-zip", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ zipCode: clientZipCode }),
+        body: JSON.stringify({ zipCode: clientZipCode, slug }),
       });
       
       const data = await res.json();
@@ -162,6 +229,9 @@ export default function PublicBooking() {
         setZipConfirmed(true);
         if (data.locationName) {
           setClientLocationName(data.locationName);
+        }
+        if (data.inServiceArea === false) {
+          setServiceAreaWarning("This provider may not serve your area. You can still request a booking.");
         }
       } else {
         setZipError(data.error || "Please enter a valid US ZIP code");
@@ -228,7 +298,7 @@ export default function PublicBooking() {
       }),
     [],
     {
-      onSuccess: () => {
+      onSuccess: (data: any) => {
         saveToBookingHistory({
           serviceType: formData.serviceType,
           description: formData.description,
@@ -236,15 +306,27 @@ export default function PublicBooking() {
           time: selectedTime || "",
           bookedAt: new Date().toISOString(),
         });
-        setShowConfetti(true);
-        setSubmitted(true);
-        toast({ title: "Booking request sent!" });
+        if (data?.depositPayment?.clientSecret) {
+          setDepositPaymentInfo(data.depositPayment);
+          setSubmitted(true);
+        } else {
+          setShowConfetti(true);
+          setSubmitted(true);
+          toast({ title: "Booking request sent!" });
+        }
       },
       onError: () => {
         toast({ title: "Failed to submit booking", variant: "destructive" });
       },
     }
   );
+
+  const stripePromise = useMemo(() => {
+    if (profile?.stripePublishableKey) {
+      return loadStripe(profile.stripePublishableKey);
+    }
+    return null;
+  }, [profile?.stripePublishableKey]);
 
   const handleCheckHistory = () => {
     const history = loadBookingHistory();
@@ -372,6 +454,95 @@ export default function PublicBooking() {
     );
   }
 
+  if (submitted && depositPaymentInfo && !depositPaymentComplete) {
+    if (!stripePromise) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+          <div className="max-w-md w-full space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  Booking Submitted
+                </CardTitle>
+                <CardDescription>
+                  Your booking has been created. A deposit of ${(depositPaymentInfo.amount / 100).toFixed(2)} is required to confirm your time slot.
+                  The provider will contact you with payment instructions.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => { setSubmitted(false); setShowConfetti(false); setSelectedDate(null); setSelectedTime(null); setDepositPaymentInfo(null); setDepositPaymentComplete(false); }}
+                  data-testid="button-submit-another-fallback"
+                >
+                  Book Another Service
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="max-w-md w-full space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-primary" />
+                Complete Your Deposit
+              </CardTitle>
+              <CardDescription>
+                Your booking has been created. Pay the deposit to confirm your time slot.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4 p-3 rounded-lg bg-muted" data-testid="text-deposit-amount">
+                <p className="text-sm font-medium">
+                  Deposit Amount: <span className="text-primary">${(depositPaymentInfo.amount / 100).toFixed(2)}</span>
+                </p>
+              </div>
+              <Elements stripe={stripePromise} options={{ clientSecret: depositPaymentInfo.clientSecret }}>
+                <DepositPaymentForm
+                  onSuccess={() => {
+                    setDepositPaymentComplete(true);
+                    setShowConfetti(true);
+                    toast({ title: "Deposit paid successfully!" });
+                  }}
+                  onError={(msg) => {
+                    toast({ title: "Payment failed", description: msg, variant: "destructive" });
+                  }}
+                />
+              </Elements>
+              <div className="mt-4 p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                <div className="flex items-start gap-2">
+                  <Shield className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                  <p className="text-xs text-green-600 dark:text-green-400">
+                    Your payment is secure. The deposit is held safely and only released after job completion.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                className="w-full mt-3"
+                onClick={() => {
+                  setDepositPaymentInfo(null);
+                  setShowConfetti(true);
+                  toast({ title: "Booking created without deposit payment" });
+                }}
+                data-testid="button-skip-deposit"
+              >
+                Skip deposit for now
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   if (submitted) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -382,11 +553,13 @@ export default function PublicBooking() {
               <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mx-auto mb-4 animate-bounce">
                 <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
               </div>
-              <h2 className="text-xl font-semibold mb-2">Request Submitted!</h2>
+              <h2 className="text-xl font-semibold mb-2" data-testid="text-booking-success">
+                {depositPaymentComplete ? "Booking Confirmed & Deposit Paid!" : "Request Submitted!"}
+              </h2>
               <p className="text-muted-foreground mb-4">
                 {profile.name.split(" ")[0]} will get back to you shortly to confirm your booking.
               </p>
-              <Button variant="outline" onClick={() => { setSubmitted(false); setShowConfetti(false); setSelectedDate(null); setSelectedTime(null); }}>
+              <Button variant="outline" onClick={() => { setSubmitted(false); setShowConfetti(false); setSelectedDate(null); setSelectedTime(null); setDepositPaymentInfo(null); setDepositPaymentComplete(false); }} data-testid="button-submit-another">
                 Submit Another Request
               </Button>
             </CardContent>
@@ -867,6 +1040,28 @@ export default function PublicBooking() {
                   </div>
                 )}
 
+                {/* Accepted Payment Methods */}
+                {profile.acceptedPaymentMethods && profile.acceptedPaymentMethods.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2" data-testid="section-payment-methods">
+                    <span className="text-xs text-muted-foreground">Accepted:</span>
+                    {profile.acceptedPaymentMethods.map((method, idx) => (
+                      <Badge key={idx} variant="secondary" data-testid={`badge-payment-method-${idx}`}>
+                        {method.type === "stripe" ? "Credit Card" : (method.label || method.type)}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+
+                {/* Service Area Warning */}
+                {serviceAreaWarning && (
+                  <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800" data-testid="text-service-area-warning">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                      <p className="text-sm text-amber-700 dark:text-amber-400">{serviceAreaWarning}</p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Deposit Information and Cancellation Policy */}
                 {profile.depositEnabled && profile.depositValue && profile.depositValue > 0 && (
                   <div className="space-y-3" data-testid="section-deposit-info">
@@ -884,18 +1079,41 @@ export default function PublicBooking() {
                       </p>
                     </div>
 
-                    {/* Deposit Safety */}
-                    <div className="p-4 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
-                      <div className="flex items-start gap-3">
-                        <Shield className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
-                        <div>
-                          <p className="font-medium text-sm text-green-700 dark:text-green-400">Your deposit is protected</p>
-                          <p className="text-xs text-green-600/80 dark:text-green-500/80 mt-1">
-                            Deposits are held securely and only released to the provider after job completion.
-                          </p>
+                    {/* Conditional: Stripe protected vs separate collection */}
+                    {profile.stripeConnected && profile.acceptedPaymentMethods?.some(m => m.type === "stripe") ? (
+                      <>
+                        {/* Deposit Safety - Stripe protected */}
+                        <div className="p-4 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                          <div className="flex items-start gap-3">
+                            <Shield className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                            <div>
+                              <p className="font-medium text-sm text-green-700 dark:text-green-400">Your deposit is protected</p>
+                              <p className="text-xs text-green-600/80 dark:text-green-500/80 mt-1">
+                                Deposits are held securely and only released to the provider after job completion.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="p-4 rounded-lg bg-muted/30 border" data-testid="section-deposit-separate">
+                        <div className="flex items-start gap-3">
+                          <CreditCard className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                          <div>
+                            <p className="font-medium text-sm">Your provider will collect the deposit separately</p>
+                            {profile.acceptedPaymentMethods && profile.acceptedPaymentMethods.filter(m => m.type !== "stripe").length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {profile.acceptedPaymentMethods.filter(m => m.type !== "stripe").map((method, idx) => (
+                                  <Badge key={idx} variant="outline" data-testid={`badge-deposit-method-${idx}`}>
+                                    {method.label || method.type}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Reschedule Policy */}
                     <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">

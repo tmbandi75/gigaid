@@ -4749,6 +4749,73 @@ export async function registerRoutes(
         }
       }
 
+      // Attempt to create Stripe PaymentIntent for deposit collection
+      let depositPayment: {
+        clientSecret: string;
+        paymentIntentId: string;
+        amount: number;
+        currency: string;
+      } | null = null;
+
+      if (depositEnabled && depositValue > 0) {
+        try {
+          const providerPaymentMethods = await storage.getUserPaymentMethods(user.id);
+          const hasStripePayment = providerPaymentMethods.some(m => m.isEnabled && m.type === "stripe");
+          const stripeConnectActive = !!(user.stripeConnectAccountId && user.stripeConnectStatus === "active");
+
+          if (hasStripePayment && stripeConnectActive) {
+            let depositAmountCents: number | null = null;
+
+            if (user.depositType === "fixed" || user.depositType === "flat") {
+              depositAmountCents = depositValue;
+            } else {
+              const basePriceCents = (typeof user.defaultPrice === 'number' && user.defaultPrice > 0)
+                ? user.defaultPrice
+                : null;
+              if (basePriceCents) {
+                depositAmountCents = Math.round(basePriceCents * (depositValue / 100));
+              }
+            }
+
+            if (depositAmountCents && depositAmountCents >= 50) {
+              const { getUncachableStripeClient } = await import("./stripeClient");
+              const stripe = await getUncachableStripeClient();
+              const dateBucket = new Date().toISOString().slice(0, 13);
+              const idempotencyKey = `${user.id}-${request.id}-${depositAmountCents}-booking-deposit-${dateBucket}`;
+
+              const paymentIntent = await stripe.paymentIntents.create({
+                amount: depositAmountCents,
+                currency: "usd",
+                capture_method: "automatic",
+                transfer_group: `booking_${request.id}`,
+                metadata: {
+                  booking_id: request.id,
+                  provider_id: user.id,
+                  provider_connect_id: user.stripeConnectAccountId!,
+                  client_name: validated.clientName,
+                },
+                description: `Deposit for service booking - ${validated.clientName}`,
+              }, { idempotencyKey });
+
+              await storage.updateBookingRequest(request.id, {
+                stripePaymentIntentId: paymentIntent.id,
+                depositAmountCents,
+                depositStatus: "pending",
+              });
+
+              depositPayment = {
+                clientSecret: paymentIntent.client_secret!,
+                paymentIntentId: paymentIntent.id,
+                amount: depositAmountCents,
+                currency: "usd",
+              };
+            }
+          }
+        } catch (stripeErr) {
+          console.error("Failed to create deposit PaymentIntent (booking still created):", stripeErr);
+        }
+      }
+
       // Store photo assets if any photos were uploaded
       const { photos } = req.body;
       if (photos && Array.isArray(photos) && photos.length > 0) {
@@ -4839,6 +4906,7 @@ export async function registerRoutes(
       res.status(201).json({
         ...request,
         protection: bookingProtectionInfo,
+        depositPayment,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -4979,10 +5047,19 @@ export async function registerRoutes(
   // Public ZIP code validation endpoint
   app.post("/api/public/validate-zip", async (req, res) => {
     try {
-      const { zipCode } = req.body;
+      const { zipCode, slug } = req.body;
       
       if (!zipCode || !/^\d{5}$/.test(zipCode)) {
         return res.status(400).json({ valid: false, error: "Invalid ZIP code format" });
+      }
+
+      let inServiceArea = true;
+      if (slug) {
+        const provider = await storage.getUserByPublicSlug(slug);
+        if (provider && provider.serviceArea && provider.serviceArea.trim().length > 0) {
+          const entries = provider.serviceArea.split(",").map(s => s.trim()).filter(Boolean);
+          inServiceArea = entries.some(entry => zipCode.startsWith(entry) || entry === zipCode);
+        }
       }
       
       // Valid US ZIP code 3-digit prefixes by state/region
@@ -5148,7 +5225,7 @@ export async function registerRoutes(
       const prefix = zipCode.substring(0, 3);
       
       if (!validPrefixes.has(prefix)) {
-        return res.json({ valid: false, error: "Please enter a valid US ZIP code" });
+        return res.json({ valid: false, error: "Please enter a valid US ZIP code", inServiceArea: false });
       }
       
       // Try Zippopotam.us API first (free, no API key required)
@@ -5164,12 +5241,12 @@ export async function registerRoutes(
             const state = place["state abbreviation"];
             const locationName = `${city}, ${state}`;
             console.log(`[ZIPValidation] Zippopotam validated ZIP ${zipCode}: ${locationName}`);
-            return res.json({ valid: true, lat, lng, city, state, locationName });
+            return res.json({ valid: true, lat, lng, city, state, locationName, inServiceArea });
           }
         } else if (zippoResponse.status === 404) {
           // ZIP code not found - definitely invalid
           console.log(`[ZIPValidation] Zippopotam: ZIP ${zipCode} not found`);
-          return res.json({ valid: false, error: "Please enter a valid US ZIP code" });
+          return res.json({ valid: false, error: "Please enter a valid US ZIP code", inServiceArea: false });
         }
       } catch (zippoError) {
         console.warn(`[ZIPValidation] Zippopotam API error:`, zippoError);
@@ -5181,18 +5258,15 @@ export async function registerRoutes(
       const result = await geocodeAddressExtended(`${zipCode}, USA`);
       
       if (result.success && result.lat !== undefined && result.lng !== undefined) {
-        res.json({ valid: true, lat: result.lat, lng: result.lng });
+        res.json({ valid: true, lat: result.lat, lng: result.lng, inServiceArea });
       } else if (result.status === "ZERO_RESULTS") {
-        // ZIP code doesn't exist
-        res.json({ valid: false, error: "Please enter a valid US ZIP code" });
+        res.json({ valid: false, error: "Please enter a valid US ZIP code", inServiceArea: false });
       } else if (result.status === "REQUEST_DENIED" || result.status === "NO_API_KEY") {
-        // Both APIs failed - reject to be safe
         console.log(`[ZIPValidation] All APIs unavailable, rejecting ZIP ${zipCode}`);
-        res.json({ valid: false, error: "Unable to verify ZIP code. Please try again." });
+        res.json({ valid: false, error: "Unable to verify ZIP code. Please try again.", inServiceArea: false });
       } else {
-        // Other API errors
         console.log(`[ZIPValidation] API error (${result.status}), rejecting ZIP ${zipCode}`);
-        res.json({ valid: false, error: "Unable to verify ZIP code. Please try again." });
+        res.json({ valid: false, error: "Unable to verify ZIP code. Please try again.", inServiceArea: false });
       }
     } catch (error) {
       console.error("ZIP validation error:", error);
@@ -5235,10 +5309,30 @@ export async function registerRoutes(
       if (!user || (!user.publicProfileEnabled && !isUserIdLookup)) {
         return res.status(404).json({ error: "Profile not found" });
       }
-      const reviews = await storage.getPublicReviews(user.id);
+      const [reviews, allPaymentMethods] = await Promise.all([
+        storage.getPublicReviews(user.id),
+        storage.getUserPaymentMethods(user.id),
+      ]);
       const avgRating = reviews.length > 0 
         ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length 
         : 0;
+      const enabledPaymentMethods = allPaymentMethods.filter(m => m.isEnabled);
+      const acceptedPaymentMethods = enabledPaymentMethods.map(m => ({
+        type: m.type,
+        label: m.label,
+        instructions: m.instructions,
+      }));
+      const stripeConnected = !!(user.stripeConnectAccountId && user.stripeConnectStatus === "active");
+      
+      let stripePublishableKey: string | null = null;
+      if (stripeConnected) {
+        try {
+          const { getStripePublishableKey } = await import("./stripeClient");
+          stripePublishableKey = await getStripePublishableKey();
+        } catch (err) {
+          console.error("Failed to get Stripe publishable key:", err);
+        }
+      }
       
       // Get public photos for reviews
       const reviewsWithPhotos = await Promise.all(
@@ -5272,6 +5366,9 @@ export async function registerRoutes(
         lateRescheduleWindowHours: user.lateRescheduleWindowHours || 24,
         lateRescheduleRetainPctFirst: user.lateRescheduleRetainPctFirst || 40,
         publicEstimationEnabled: user.publicEstimationEnabled !== false,
+        acceptedPaymentMethods,
+        stripeConnected,
+        stripePublishableKey,
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch profile" });
