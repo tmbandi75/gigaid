@@ -6269,7 +6269,7 @@ Final price confirmed onsite.`;
         return res.status(400).json({ error: "Booking link not set up yet" });
       }
 
-      const bookingUrl = `${process.env.FRONTEND_URL || "https://account.gigaid.ai"}/book/${user.publicProfileSlug}`;
+      const bookingUrl = `https://gigaid.ai/book/${user.publicProfileSlug}`;
       
       const message = `Here's your GigAid booking link! Share it with your next customer: ${bookingUrl}`;
 
