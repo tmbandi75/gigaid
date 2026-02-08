@@ -77,6 +77,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Test Users
 - `api-test-user-a` / `api-test-user-b`: API test isolation users
+- `activation-test-user`: Activation engine test user
 - `e2e-test-user` (free plan) / `e2e-test-pro` (pro plan): E2E test users
 
 ### Running Tests
