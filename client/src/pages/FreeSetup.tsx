@@ -23,6 +23,24 @@ const serviceCategories = [
   "Other",
 ];
 
+const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+const timeSlots = [
+  "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM",
+  "11:00 AM", "11:30 AM", "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM",
+  "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM",
+  "5:00 PM", "5:30 PM", "6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM",
+  "8:00 PM",
+];
+
+function formatPhoneNumber(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 10);
+  if (digits.length === 0) return "";
+  if (digits.length <= 3) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
 export default function FreeSetup() {
   useUtmCapture();
   const { toast } = useToast();
@@ -36,6 +54,26 @@ export default function FreeSetup() {
     serviceCategory: "",
     city: "",
   });
+  const [preferredDays, setPreferredDays] = useState<string[]>([]);
+  const [preferredTimeFrom, setPreferredTimeFrom] = useState("9:00 AM");
+  const [preferredTimeTo, setPreferredTimeTo] = useState("5:00 PM");
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setFormData({ ...formData, phone: formatted });
+  };
+
+  const toggleDay = (day: string) => {
+    setPreferredDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
+  };
+
+  const buildCallPreferenceNote = (): string | undefined => {
+    if (preferredDays.length === 0) return undefined;
+    const dayList = preferredDays.join(", ");
+    return `Preferred call: ${dayList}, ${preferredTimeFrom} - ${preferredTimeTo}`;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,14 +86,16 @@ export default function FreeSetup() {
     try {
       const utmData = getStoredUtmData();
       const params = new URLSearchParams(window.location.search);
+      const callNote = buildCallPreferenceNote();
 
       const body: Record<string, string | undefined> = {
         name: formData.name,
         email: formData.email || undefined,
-        phone: formData.phone || undefined,
+        phone: formData.phone.replace(/\D/g, "") || undefined,
         serviceCategory: formData.serviceCategory || undefined,
         city: formData.city || undefined,
         source: "free_setup",
+        notes: callNote,
         referrerCode: params.get("ref") || utmData?.referrerCode || undefined,
         utmSource: utmData?.utmSource || undefined,
         utmMedium: utmData?.utmMedium || undefined,
@@ -86,6 +126,7 @@ export default function FreeSetup() {
         service_category: formData.serviceCategory,
         has_email: !!formData.email,
         has_phone: !!formData.phone,
+        has_call_preference: preferredDays.length > 0,
         utm_source: utmData?.utmSource,
         utm_campaign: utmData?.utmCampaign,
         landing_path: window.location.pathname,
@@ -178,9 +219,10 @@ export default function FreeSetup() {
                   <Label htmlFor="phone">Phone</Label>
                   <Input
                     id="phone"
+                    type="tel"
                     data-testid="input-setup-phone"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={handlePhoneChange}
                     placeholder="(555) 123-4567"
                   />
                 </div>
@@ -212,6 +254,56 @@ export default function FreeSetup() {
                     placeholder="Dallas, TX"
                   />
                 </div>
+
+                <div className="space-y-3 pt-2">
+                  <Label>Best Day to Call</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {daysOfWeek.map((day) => (
+                      <button
+                        key={day}
+                        type="button"
+                        data-testid={`toggle-day-${day.toLowerCase()}`}
+                        onClick={() => toggleDay(day)}
+                        className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                          preferredDays.includes(day)
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background text-foreground border-border hover-elevate"
+                        }`}
+                      >
+                        {day.slice(0, 3)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {preferredDays.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Best Time Range</Label>
+                    <div className="flex items-center gap-2">
+                      <Select value={preferredTimeFrom} onValueChange={setPreferredTimeFrom}>
+                        <SelectTrigger className="flex-1" data-testid="select-time-from">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {timeSlots.map((t) => (
+                            <SelectItem key={t} value={t}>{t}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-sm text-muted-foreground">to</span>
+                      <Select value={preferredTimeTo} onValueChange={setPreferredTimeTo}>
+                        <SelectTrigger className="flex-1" data-testid="select-time-to">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {timeSlots.map((t) => (
+                            <SelectItem key={t} value={t}>{t}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
 
                 <Button
                   type="submit"

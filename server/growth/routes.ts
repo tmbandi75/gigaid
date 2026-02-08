@@ -39,6 +39,7 @@ const createLeadSchema = z.object({
   utmContent: z.string().optional(),
   utmTerm: z.string().optional(),
   referrerCode: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 const bookCallSchema = z.object({

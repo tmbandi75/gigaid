@@ -16,6 +16,7 @@ export interface CreateLeadInput {
   utmContent?: string;
   utmTerm?: string;
   referrerCode?: string;
+  notes?: string;
 }
 
 export async function createGrowthLead(input: CreateLeadInput) {
@@ -48,6 +49,7 @@ export async function createGrowthLead(input: CreateLeadInput) {
       utmContent: input.utmContent || null,
       utmTerm: input.utmTerm || null,
       referrerUserId,
+      notes: input.notes || null,
     })
     .returning();
 
