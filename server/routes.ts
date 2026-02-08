@@ -6541,15 +6541,29 @@ Final price confirmed onsite.`;
   });
 
   // Activation engine endpoints
+  const ACTIVATION_DISABLED_RESPONSE = { servicesDone: true, pricingDone: true, paymentsDone: true, linkDone: true, quoteDone: true, completedAt: new Date().toISOString(), completedSteps: 5, totalSteps: 5, percentComplete: 100, isFullyActivated: true, disabled: true };
+
+  const ACTIVATION_CUTOFF_DATE = "2026-02-08T00:00:00.000Z";
+
+  async function isActivationEnabledForUser(userId: string): Promise<boolean> {
+    const flag = await storage.getFeatureFlag("activation_engine_v1");
+    if (flag?.enabled) return true;
+
+    const user = await storage.getUser(userId);
+    if (!user || !user.createdAt) return false;
+
+    return new Date(user.createdAt) >= new Date(ACTIVATION_CUTOFF_DATE);
+  }
+
   app.get("/api/activation", isAuthenticated, async (req, res) => {
     try {
-      const flag = await storage.getFeatureFlag("activation_engine_v1");
-      if (!flag?.enabled) {
-        return res.json({ servicesDone: true, pricingDone: true, paymentsDone: true, linkDone: true, quoteDone: true, completedAt: new Date().toISOString(), completedSteps: 5, totalSteps: 5, percentComplete: 100, isFullyActivated: true, disabled: true });
-      }
       const userId = getAuthenticatedUserId(req);
       if (!userId) {
         return res.status(401).json({ error: "Authentication required" });
+      }
+      const enabled = await isActivationEnabledForUser(userId);
+      if (!enabled) {
+        return res.json(ACTIVATION_DISABLED_RESPONSE);
       }
       const { evaluateAndUpdateActivation } = await import("./lib/activationEngine");
       const status = await evaluateAndUpdateActivation(userId);
@@ -6562,13 +6576,13 @@ Final price confirmed onsite.`;
 
   app.post("/api/activation/refresh", isAuthenticated, async (req, res) => {
     try {
-      const flag = await storage.getFeatureFlag("activation_engine_v1");
-      if (!flag?.enabled) {
-        return res.json({ servicesDone: true, pricingDone: true, paymentsDone: true, linkDone: true, quoteDone: true, completedAt: new Date().toISOString(), completedSteps: 5, totalSteps: 5, percentComplete: 100, isFullyActivated: true, disabled: true });
-      }
       const userId = getAuthenticatedUserId(req);
       if (!userId) {
         return res.status(401).json({ error: "Authentication required" });
+      }
+      const enabled = await isActivationEnabledForUser(userId);
+      if (!enabled) {
+        return res.json(ACTIVATION_DISABLED_RESPONSE);
       }
       const { evaluateAndUpdateActivation } = await import("./lib/activationEngine");
       const status = await evaluateAndUpdateActivation(userId);
@@ -6576,6 +6590,32 @@ Final price confirmed onsite.`;
     } catch (error) {
       console.error("Failed to refresh activation status:", error);
       res.status(500).json({ error: "Failed to refresh activation status" });
+    }
+  });
+
+  app.post("/api/admin/activation-backfill", async (req, res) => {
+    try {
+      const adminKey = process.env.GIGAID_ADMIN_API_KEY;
+      if (!adminKey || req.headers["x-admin-api-key"] !== adminKey) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      const { backfillAllActivation } = await import("./lib/activationEngine");
+
+      console.log("[Activation Backfill] Starting backfill for all users...");
+      const result = await backfillAllActivation();
+      console.log(`[Activation Backfill] Complete: ${JSON.stringify(result)}`);
+
+      await storage.setFeatureFlag("activation_engine_v1", true, "Activation engine - enabled for all users after backfill");
+
+      res.json({
+        success: true,
+        backfill: result,
+        flagEnabled: true,
+        message: `Backfill complete. ${result.updated} users updated, ${result.alreadyActivated} already activated, ${result.errors} errors. Feature flag now ON for all users.`,
+      });
+    } catch (error) {
+      console.error("[Activation Backfill] Error:", error);
+      res.status(500).json({ error: "Backfill failed" });
     }
   });
 

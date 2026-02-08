@@ -90,3 +90,48 @@ export async function evaluateAndUpdateActivation(userId: string): Promise<Activ
     isFullyActivated,
   };
 }
+
+export interface BackfillResult {
+  totalUsers: number;
+  processed: number;
+  updated: number;
+  alreadyActivated: number;
+  errors: number;
+}
+
+export async function backfillAllActivation(): Promise<BackfillResult> {
+  const allUsers = await storage.getAllUsers();
+  const result: BackfillResult = {
+    totalUsers: allUsers.length,
+    processed: 0,
+    updated: 0,
+    alreadyActivated: 0,
+    errors: 0,
+  };
+
+  for (const user of allUsers) {
+    try {
+      if (user.activationCompletedAt) {
+        result.alreadyActivated++;
+        result.processed++;
+        continue;
+      }
+
+      const status = await evaluateAndUpdateActivation(user.id);
+      result.processed++;
+
+      if (status.completedSteps > 0 || status.isFullyActivated) {
+        result.updated++;
+      }
+      if (status.isFullyActivated) {
+        result.alreadyActivated++;
+      }
+    } catch (err) {
+      console.error(`[Activation Backfill] Failed for user ${user.id}:`, err);
+      result.errors++;
+      result.processed++;
+    }
+  }
+
+  return result;
+}

@@ -196,4 +196,47 @@ describe('Activation Engine API', () => {
       }
     });
   });
+
+  describe('POST /api/admin/activation-backfill', () => {
+    it('requires admin API key', async () => {
+      const res = await fetch('http://localhost:5000/api/admin/activation-backfill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      expect(res.status).toBe(403);
+    });
+
+    it('runs backfill and enables feature flag', async () => {
+      await apiRequest('PATCH', '/api/profile', {
+        services: ['Plumbing'],
+        defaultPrice: 5000,
+      }, token);
+
+      const { status, data } = await apiRequest('POST', '/api/admin/activation-backfill', {});
+      expect(status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.backfill).toHaveProperty('totalUsers');
+      expect(data.backfill).toHaveProperty('processed');
+      expect(data.backfill).toHaveProperty('updated');
+      expect(data.backfill).toHaveProperty('alreadyActivated');
+      expect(data.backfill).toHaveProperty('errors');
+      expect(data.backfill.processed).toBe(data.backfill.totalUsers);
+      expect(data.flagEnabled).toBe(true);
+    });
+
+    it('reflects backfilled state for the user after backfill', async () => {
+      await apiRequest('PATCH', '/api/profile', {
+        services: ['Plumbing'],
+        defaultPrice: 5000,
+      }, token);
+
+      await apiRequest('POST', '/api/admin/activation-backfill', {});
+
+      const { data } = await apiRequest('GET', '/api/activation', undefined, token);
+      expect(data.servicesDone).toBe(true);
+      expect(data.pricingDone).toBe(true);
+      expect(data.disabled).toBeUndefined();
+    });
+  });
 });
