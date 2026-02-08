@@ -1,0 +1,194 @@
+Implement a Smart Encouragement Engine that shows short, context-aware, money-focused messages on the user dashboard and after key actions.
+
+Goal:
+Increase daily engagement, retention, and revenue by reinforcing profitable user behaviors with relevant feedback.
+
+Do NOT implement generic motivational quotes.
+Do NOT use random encouragement.
+All messages must be tied to user data and actions.
+
+==================================================
+CORE PRINCIPLE
+==================================================
+
+Every message must:
+1) Reference real user data
+2) Connect to income or progress
+3) Suggest a next action (when applicable)
+
+==================================================
+STEP 1 — MESSAGE CATEGORIES
+==================================================
+
+Implement 4 message categories:
+
+1) Progress-Based (Primary)
+   Trigger: Earnings, collections, job completion, weekly growth
+
+   Examples:
+   - "You earned ${{weeklyEarnings}} this week. One more job gets you past ${{nextTarget}}."
+   - "Up {{percentChange}}% from last week. Keep this pace."
+
+2) Effort Recognition
+   Trigger: After reminders, invoices, link shares, follow-ups
+
+   Examples:
+   - "Good move — reminders usually get paid in 48 hours."
+   - "Sharing your link converts 6/10 clients."
+
+3) Resilience (Low Activity)
+   Trigger: No payments or jobs in last N days
+
+   Examples:
+   - "Quiet days happen. One reminder can change today."
+   - "Most pros close jobs after follow-ups."
+
+4) Identity-Based (Occasional)
+   Trigger: Weekly cadence only
+
+   Examples:
+   - "You're running a real business."
+   - "Pros track their money. You do."
+
+Limit identity messages to max once per 7 days.
+
+==================================================
+STEP 2 — DATA SOURCES
+==================================================
+
+Pull data from:
+
+- Earnings
+- Collected payments
+- Outstanding invoices
+- Job completions
+- Link shares
+- Reminder sends
+- Weekly/monthly aggregates
+
+Use existing analytics/services where possible.
+
+==================================================
+STEP 3 — SELECTION LOGIC
+==================================================
+
+Implement selector:
+
+Function:
+getEncouragementMessage(userId)
+
+Logic:
+
+IF progress data available (last 7 days):
+  → show Progress-Based
+
+ELSE IF recent action (last 24h):
+  → show Effort Recognition
+
+ELSE IF inactivity > 48h:
+  → show Resilience
+
+ELSE:
+  → no message
+
+Identity-Based:
+  Inject only if lastShown > 7 days
+
+==================================================
+STEP 4 — DISPLAY LOCATIONS
+==================================================
+
+Show messages in:
+
+1) Home / "Today's Game Plan" header area
+2) After key actions:
+   - Send reminder
+   - Send invoice
+   - Share booking link
+   - Mark job complete
+
+Do NOT use blocking modals.
+Do NOT interrupt flows.
+
+==================================================
+STEP 5 — MESSAGE SYSTEM
+==================================================
+
+Create:
+
+/client/src/encouragement/
+
+- encouragementEngine.ts
+- encouragementRules.ts
+- encouragementTemplates.ts
+- useEncouragement.ts
+
+Templates must support variables.
+
+Example:
+"You collected ${{amount}} this week. One more reminder could add ${{delta}}."
+
+==================================================
+STEP 6 — COOLDOWNS & LIMITS
+==================================================
+
+Implement safeguards:
+
+- Max 1 encouragement per session
+- Max 3 per day
+- Respect user dismissals (24h)
+- No duplicates within 48h
+
+==================================================
+STEP 7 — ANALYTICS
+==================================================
+
+Track events:
+
+encouragement_shown
+encouragement_dismissed
+encouragement_action_clicked
+
+Include properties:
+- category
+- trigger
+- amount
+- surface
+- user_plan
+
+==================================================
+STEP 8 — ADMIN CONFIG (OPTIONAL)
+==================================================
+
+Allow tuning:
+
+- Thresholds
+- Message frequency
+- Category weights
+
+Via config file.
+
+==================================================
+STEP 9 — TESTING
+==================================================
+
+Add tests for:
+
+- Correct category selection
+- Cooldown enforcement
+- Variable substitution
+- No generic messages
+
+==================================================
+DELIVERABLES
+==================================================
+
+After implementation, provide:
+
+1) File structure
+2) Selection logic summary
+3) Example outputs
+4) How to tune messages
+5) How analytics are captured
+
+Proceed to implement.

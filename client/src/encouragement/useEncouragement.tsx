@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { apiFetch } from "@/lib/apiFetch";
+import { useAuth } from "@/hooks/use-auth";
 import {
   getEncouragementMessage,
   type SelectedEncouragement,
@@ -21,6 +22,8 @@ export function useEncouragement() {
   const [message, setMessage] = useState<SelectedEncouragement | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const initialized = useRef(false);
+  const { user } = useAuth();
+  const userPlan = user?.plan || "free";
 
   useEffect(() => {
     if (!sessionResetDone) {
@@ -43,19 +46,23 @@ export function useEncouragement() {
     const selected = getEncouragementMessage(data);
     if (selected) {
       recordShown(selected.id, selected.category === "identity");
-      trackEncouragement("shown", selected);
+      trackEncouragement("shown", selected, {
+        surface: "dashboard",
+        amount: data.weeklyEarnings,
+        userPlan,
+      });
       setMessage(selected);
     }
-  }, [data, dismissed, message]);
+  }, [data, dismissed, message, userPlan]);
 
   const dismiss = useCallback(() => {
     if (message) {
-      trackEncouragement("dismissed", message);
+      trackEncouragement("dismissed", message, { surface: "dashboard", userPlan });
     }
     recordDismissed();
     setDismissed(true);
     setMessage(null);
-  }, [message]);
+  }, [message, userPlan]);
 
   return { message, dismiss };
 }

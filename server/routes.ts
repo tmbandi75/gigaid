@@ -927,6 +927,29 @@ export async function registerRoutes(
         .filter((j) => j.status === "completed" && j.completedAt)
         .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime())[0];
 
+      const recentActions: { type: string; at: string }[] = [];
+      const sentInvoices = invoices.filter((inv) => inv.sentAt);
+      if (sentInvoices.length > 0) {
+        const latest = sentInvoices.sort((a, b) => new Date(b.sentAt!).getTime() - new Date(a.sentAt!).getTime())[0];
+        recentActions.push({ type: "invoice_sent", at: latest.sentAt! });
+      }
+      const completedJobs = jobs.filter((j) => j.status === "completed" && j.completedAt);
+      if (completedJobs.length > 0) {
+        const latest = completedJobs.sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime())[0];
+        recentActions.push({ type: "job_marked_complete", at: latest.completedAt! });
+      }
+      try {
+        const reminders = await storage.getReminders((req as any).userId);
+        const sentReminders = reminders.filter((r: any) => r.sentAt);
+        if (sentReminders.length > 0) {
+          const latest = sentReminders.sort((a: any, b: any) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime())[0];
+          recentActions.push({ type: "reminder_sent", at: (latest as any).sentAt });
+        }
+      } catch {}
+
+      recentActions.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+      const lastAction = recentActions[0] || null;
+
       res.json({
         weeklyEarnings,
         lastWeekEarnings,
@@ -934,8 +957,8 @@ export async function registerRoutes(
         collectedToday,
         moneyWaiting,
         outstandingAmount: moneyWaiting,
-        lastActionType: null,
-        lastActionAt: null,
+        lastActionType: lastAction?.type || null,
+        lastActionAt: lastAction?.at || null,
         lastPaymentAt: latestPaid?.paidAt || null,
         lastJobAt: latestJob?.completedAt || null,
       });

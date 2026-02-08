@@ -1,4 +1,4 @@
-import { getActionEncouragement, type SelectedEncouragement } from "./encouragementEngine";
+import { getActionEncouragement } from "./encouragementEngine";
 import { recordShown } from "./encouragementRules";
 import { trackEncouragement } from "./encouragementAnalytics";
 
@@ -9,6 +9,9 @@ export function getPostActionMessage(actionType: ActionType): string | null {
   if (!selected) return null;
 
   recordShown(selected.id, false);
-  trackEncouragement("shown", selected, actionType);
+  trackEncouragement("shown", selected, {
+    surface: actionType,
+    trigger: actionType,
+  });
   return selected.message;
 }
