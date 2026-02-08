@@ -132,6 +132,9 @@ export async function linkReferralSignup(
     referral_code: referralCode,
     source: "referral",
     trigger_surface: "signup",
+    landing_path: null,
+    utm_campaign: null,
+    plan: null,
   });
 
   return true;
@@ -164,6 +167,9 @@ export async function markReferralActivated(referredUserId: string): Promise<boo
     referral_code: record.referralCode,
     source: "referral",
     trigger_surface: "activation",
+    landing_path: null,
+    utm_campaign: null,
+    plan: null,
   });
 
   return true;

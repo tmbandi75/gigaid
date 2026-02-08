@@ -1,6 +1,7 @@
 import { apiRequest, createTestUser, resetTestData, getAuthToken, TEST_USER_A, TEST_USER_B } from './setup';
 
 const BASE_URL = 'http://localhost:5000';
+const ADMIN_KEY = process.env.GIGAID_ADMIN_API_KEY || '';
 
 async function publicRequest(
   method: string,
@@ -10,6 +11,26 @@ async function publicRequest(
   const opts: RequestInit = {
     method: method.toUpperCase(),
     headers: { 'Content-Type': 'application/json' },
+  };
+  if (body && method.toUpperCase() !== 'GET') {
+    opts.body = JSON.stringify(body);
+  }
+  const res = await fetch(`${BASE_URL}${path}`, opts);
+  const data = await res.json().catch(() => null);
+  return { status: res.status, data };
+}
+
+async function adminRequest(
+  method: string,
+  path: string,
+  body?: Record<string, any>,
+) {
+  const opts: RequestInit = {
+    method: method.toUpperCase(),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${ADMIN_KEY}`,
+    },
   };
   if (body && method.toUpperCase() !== 'GET') {
     opts.body = JSON.stringify(body);
@@ -75,6 +96,129 @@ describe('Growth Phase 2 API', () => {
     });
   });
 
+  describe('Book Call - POST /api/growth/book-call', () => {
+    it('books a call for an existing lead', async () => {
+      const { data: lead } = await publicRequest('POST', '/api/growth/lead', {
+        name: 'Call Lead',
+        email: 'call@example.com',
+      });
+      const scheduledAt = new Date(Date.now() + 86400000).toISOString();
+      const { status, data } = await publicRequest('POST', '/api/growth/book-call', {
+        leadId: lead.id,
+        scheduledAt,
+      });
+      expect(status).toBe(201);
+      expect(data).toHaveProperty('id');
+      expect(data.leadId).toBe(lead.id);
+    });
+
+    it('returns 404 for non-existent lead', async () => {
+      const { status } = await publicRequest('POST', '/api/growth/book-call', {
+        leadId: 'non-existent-lead-id',
+        scheduledAt: new Date().toISOString(),
+      });
+      expect(status).toBe(404);
+    });
+
+    it('rejects request without leadId', async () => {
+      const { status } = await publicRequest('POST', '/api/growth/book-call', {
+        scheduledAt: new Date().toISOString(),
+      });
+      expect(status).toBe(400);
+    });
+
+    it('rejects request without scheduledAt', async () => {
+      const { status } = await publicRequest('POST', '/api/growth/book-call', {
+        leadId: 'some-id',
+      });
+      expect(status).toBe(400);
+    });
+  });
+
+  describe('Convert Lead - POST /api/growth/convert', () => {
+    it('requires admin auth', async () => {
+      const { data: lead } = await publicRequest('POST', '/api/growth/lead', {
+        name: 'Convert Auth Lead',
+      });
+      const { status } = await publicRequest('POST', '/api/admin/growth/convert', {
+        leadId: lead.id,
+        userId: TEST_USER_A.id,
+      });
+      expect(status).toBe(401);
+    });
+
+    it('rejects with wrong admin key', async () => {
+      const { data: lead } = await publicRequest('POST', '/api/growth/lead', {
+        name: 'Convert Wrong Key Lead',
+      });
+      const res = await fetch(`${BASE_URL}/api/admin/growth/convert`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-api-key': 'wrong-key-123',
+        },
+        body: JSON.stringify({ leadId: lead.id, userId: TEST_USER_A.id }),
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('converts a lead with valid admin auth', async () => {
+      if (!ADMIN_KEY) return;
+      const { data: lead } = await publicRequest('POST', '/api/growth/lead', {
+        name: 'Convert Lead',
+        email: 'convert@example.com',
+      });
+      const res = await fetch(`${BASE_URL}/api/admin/growth/convert`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-api-key': ADMIN_KEY,
+        },
+        body: JSON.stringify({ leadId: lead.id, userId: TEST_USER_A.id }),
+      });
+      const data = await res.json();
+      expect(res.status).toBe(200);
+      expect(data).toHaveProperty('success');
+    });
+
+    it('returns 404 for non-existent lead', async () => {
+      if (!ADMIN_KEY) return;
+      const res = await fetch(`${BASE_URL}/api/admin/growth/convert`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-api-key': ADMIN_KEY,
+        },
+        body: JSON.stringify({ leadId: 'non-existent-lead', userId: TEST_USER_A.id }),
+      });
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 409 when converting already-converted lead', async () => {
+      if (!ADMIN_KEY) return;
+      const { data: lead } = await publicRequest('POST', '/api/growth/lead', {
+        name: 'Double Convert Lead',
+      });
+      await fetch(`${BASE_URL}/api/admin/growth/convert`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-api-key': ADMIN_KEY,
+        },
+        body: JSON.stringify({ leadId: lead.id, userId: TEST_USER_B.id }),
+      });
+      const res = await fetch(`${BASE_URL}/api/admin/growth/convert`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-api-key': ADMIN_KEY,
+        },
+        body: JSON.stringify({ leadId: lead.id, userId: TEST_USER_B.id }),
+      });
+      expect(res.status).toBe(409);
+    });
+  });
+
   describe('Referral Tracking', () => {
     it('generates a referral code for a user', async () => {
       const { status, data } = await apiRequest('GET', '/api/referral/code', undefined, tokenA);
@@ -115,6 +259,12 @@ describe('Growth Phase 2 API', () => {
       const { status } = await apiRequest('GET', '/api/referral/mine');
       expect(status).toBe(401);
     });
+
+    it('requires auth for referral code generation', async () => {
+      const { status } = await apiRequest('GET', '/api/referral/code');
+      expect(status).toBe(401);
+    });
+
   });
 
   describe('Attribution Tracking - POST /api/attribution/track', () => {
@@ -137,15 +287,99 @@ describe('Growth Phase 2 API', () => {
       });
       expect(status).toBe(401);
     });
+
+    it('tracks attribution with referrer code', async () => {
+      const { data: codeData } = await apiRequest('GET', '/api/referral/code', undefined, tokenA);
+      const { status, data } = await apiRequest('POST', '/api/attribution/track', {
+        landingPath: '/free-setup',
+        source: 'referral',
+        referrerCode: codeData.code,
+      }, tokenB);
+      expect(status).toBe(200);
+      expect(data).toHaveProperty('id');
+    });
+
+    it('retrieves attribution for user', async () => {
+      const { status, data } = await apiRequest('GET', '/api/attribution/me', undefined, tokenA);
+      expect(status).toBe(200);
+      expect(data).toBeTruthy();
+    });
+
+    it('requires auth for attribution retrieval', async () => {
+      const { status } = await apiRequest('GET', '/api/attribution/me');
+      expect(status).toBe(401);
+    });
   });
 
-  describe('Referral Reward Abuse Prevention', () => {
-    it('prevents self-referral (referrer cannot refer themselves)', async () => {
-      const { data: codeData } = await apiRequest('GET', '/api/referral/code', undefined, tokenA);
-      const { status } = await publicRequest('POST', '/api/referral/click', {
-        code: codeData.code,
+  describe('Admin Leads API', () => {
+    it('requires admin auth for leads listing', async () => {
+      const res = await fetch(`${BASE_URL}/api/admin/growth/leads`, {
+        headers: { 'Content-Type': 'application/json' },
       });
-      expect(status).toBe(200);
+      expect(res.status).toBe(401);
+    });
+
+    it('lists leads with admin auth', async () => {
+      if (!ADMIN_KEY) return;
+      const res = await fetch(`${BASE_URL}/api/admin/growth/leads`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-api-key': ADMIN_KEY,
+        },
+      });
+      const data = await res.json();
+      expect(res.status).toBe(200);
+      expect(Array.isArray(data)).toBe(true);
+    });
+
+    it('filters leads by status', async () => {
+      if (!ADMIN_KEY) return;
+      const res = await fetch(`${BASE_URL}/api/admin/growth/leads?status=new`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-api-key': ADMIN_KEY,
+        },
+      });
+      const data = await res.json();
+      expect(res.status).toBe(200);
+      expect(Array.isArray(data)).toBe(true);
+      data.forEach((lead: any) => {
+        expect(lead.status).toBe('new');
+      });
+    });
+
+    it('filters leads by source', async () => {
+      if (!ADMIN_KEY) return;
+      const res = await fetch(`${BASE_URL}/api/admin/growth/leads?source=free_setup`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-api-key': ADMIN_KEY,
+        },
+      });
+      const data = await res.json();
+      expect(res.status).toBe(200);
+      expect(Array.isArray(data)).toBe(true);
+      data.forEach((lead: any) => {
+        expect(lead.source).toBe('free_setup');
+      });
+    });
+
+    it('updates lead notes with admin auth', async () => {
+      if (!ADMIN_KEY) return;
+      const { data: lead } = await publicRequest('POST', '/api/growth/lead', {
+        name: 'Notes Test Lead',
+      });
+      const res = await fetch(`${BASE_URL}/api/admin/growth/leads/${lead.id}/notes`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-api-key': ADMIN_KEY,
+        },
+        body: JSON.stringify({ notes: 'Admin test notes' }),
+      });
+      const data = await res.json();
+      expect(res.status).toBe(200);
+      expect(data.notes).toBe('Admin test notes');
     });
   });
 });

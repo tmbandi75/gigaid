@@ -162,10 +162,18 @@ export async function getLeads(filters?: {
   limit?: number;
   offset?: number;
 }) {
-  let query = db.select().from(growthLeads).$dynamic();
-
+  const conditions = [];
   if (filters?.status) {
-    query = query.where(eq(growthLeads.status, filters.status));
+    conditions.push(eq(growthLeads.status, filters.status));
+  }
+  if (filters?.source) {
+    conditions.push(eq(growthLeads.source, filters.source));
+  }
+
+  let query = db.select().from(growthLeads).$dynamic();
+  if (conditions.length > 0) {
+    const { and } = await import("drizzle-orm");
+    query = query.where(conditions.length === 1 ? conditions[0] : and(...conditions));
   }
 
   const results = await query.limit(filters?.limit || 50).offset(filters?.offset || 0);

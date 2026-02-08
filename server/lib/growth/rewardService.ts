@@ -165,6 +165,9 @@ export async function applyReferralReward(
       reward_value: DEFAULT_REWARD_VALUE,
       source: "referral",
       trigger_surface: "activation",
+      landing_path: null,
+      utm_campaign: null,
+      plan: referrer?.plan || null,
     });
 
     return { success: true };

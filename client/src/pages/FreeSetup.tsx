@@ -90,6 +90,8 @@ export default function FreeSetup() {
         utm_campaign: utmData?.utmCampaign,
         landing_path: window.location.pathname,
         trigger_surface: "free_setup_page",
+        plan: null,
+        referrer_user_id: null,
       });
 
       toast({ title: "We got your info! We'll be in touch soon." });

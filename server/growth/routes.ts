@@ -109,11 +109,16 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
 
       const call = await bookCall(parsed.data.leadId, parsed.data.scheduledAt);
 
+      const leadForEvent = await getLeadById(parsed.data.leadId);
       trackServerEvent("growth_call_booked", parsed.data.leadId, {
         lead_id: parsed.data.leadId,
         scheduled_at: parsed.data.scheduledAt,
-        source: "book_call",
+        source: leadForEvent?.source || "book_call",
         trigger_surface: "free_setup_page",
+        landing_path: "/free-setup",
+        utm_campaign: leadForEvent?.utmCampaign || null,
+        referrer_user_id: leadForEvent?.referrerUserId || null,
+        plan: null,
       });
 
       res.status(201).json(call);
@@ -126,13 +131,8 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
     }
   });
 
-  app.post("/api/growth/convert", async (req: Request, res: Response) => {
+  app.post("/api/admin/growth/convert", adminMiddleware, async (req: Request, res: Response) => {
     try {
-      const adminKey = process.env.GIGAID_ADMIN_API_KEY;
-      const authHeader = req.headers.authorization;
-      if (!adminKey || authHeader !== `Bearer ${adminKey}`) {
-        return res.status(401).json({ error: "Admin auth required" });
-      }
 
       const parsed = convertLeadSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -141,11 +141,21 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
 
       const result = await convertLead(parsed.data.leadId, parsed.data.userId);
 
+      const convertLead_ = await getLeadById(parsed.data.leadId);
+      let convertPlan: string | null = null;
+      if (parsed.data.userId) {
+        const [convertUser] = await db.select({ plan: users.plan }).from(users).where(eq(users.id, parsed.data.userId)).limit(1);
+        if (convertUser) convertPlan = convertUser.plan;
+      }
       trackServerEvent("growth_user_converted", parsed.data.userId || parsed.data.leadId, {
         lead_id: parsed.data.leadId,
         user_id: parsed.data.userId,
-        source: "admin_convert",
+        source: convertLead_?.source || "admin_convert",
         trigger_surface: "admin",
+        landing_path: null,
+        utm_campaign: convertLead_?.utmCampaign || null,
+        referrer_user_id: convertLead_?.referrerUserId || null,
+        plan: convertPlan,
       });
 
       res.json(result);
@@ -175,12 +185,18 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
 
       const result = await trackAttribution({ userId, ...parsed.data });
 
+      let attrPlan: string | null = null;
+      const [attrUser] = await db.select({ plan: users.plan }).from(users).where(eq(users.id, userId)).limit(1);
+      if (attrUser) attrPlan = attrUser.plan;
+
       trackServerEvent("acquisition_touch_recorded", userId, {
         source: parsed.data.source,
         landing_path: parsed.data.landingPath,
         utm_campaign: parsed.data.utmCampaign,
         referrer_code: parsed.data.referrerCode,
+        referrer_user_id: (result as any)?.referrerUserId || null,
         trigger_surface: "attribution_track",
+        plan: attrPlan,
       });
 
       res.json(result);
@@ -273,6 +289,43 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
         .from(growthReferrals)
         .where(gte(growthReferrals.createdAt, sinceStr));
 
+      const [usersCreatedCount] = await db
+        .select({ count: count() })
+        .from(users)
+        .where(gte(users.createdAt, sinceStr));
+
+      const [activatedCount] = await db
+        .select({ count: count() })
+        .from(users)
+        .where(and(
+          gte(users.createdAt, sinceStr),
+          sql`${users.activationCompletedAt} IS NOT NULL`
+        ));
+
+      const [paidCount] = await db
+        .select({ count: count() })
+        .from(users)
+        .where(and(
+          gte(users.createdAt, sinceStr),
+          sql`${users.firstPaymentReceivedAt} IS NOT NULL`
+        ));
+
+      const [referralSourcedCount] = await db
+        .select({ count: count() })
+        .from(acquisitionAttribution)
+        .where(and(
+          gte(acquisitionAttribution.createdAt, sinceStr),
+          sql`${acquisitionAttribution.referrerUserId} IS NOT NULL`
+        ));
+
+      const totalUsers = Number(usersCreatedCount?.count) || 0;
+      const totalActivated = Number(activatedCount?.count) || 0;
+      const totalPaid = Number(paidCount?.count) || 0;
+      const totalReferralSourced = Number(referralSourcedCount?.count) || 0;
+      const activationRate = totalUsers > 0 ? Math.round((totalActivated / totalUsers) * 100) : 0;
+      const paidConversionRate = totalUsers > 0 ? Math.round((totalPaid / totalUsers) * 100) : 0;
+      const referralContribution = totalUsers > 0 ? Math.round((totalReferralSourced / totalUsers) * 100) : 0;
+
       const topSources = await db
         .select({ source: growthLeads.source, count: count() })
         .from(growthLeads)
@@ -295,6 +348,9 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
         callsBooked: bookedCount?.count || 0,
         conversions: convertedCount?.count || 0,
         referrals: referralCount?.count || 0,
+        activationRate,
+        paidConversionRate,
+        referralContribution,
         topSources,
         topCampaigns,
       });
@@ -355,11 +411,17 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
       const updated = await updateCallOutcome(req.params.id, outcome, completedAt);
 
       if (outcome === "completed") {
+        const callLead = updated?.leadId ? await getLeadById(updated.leadId) : null;
         trackServerEvent("growth_call_completed", req.params.id, {
           call_id: req.params.id,
           outcome,
           completed_at: completedAt,
           trigger_surface: "admin",
+          source: callLead?.source || null,
+          landing_path: null,
+          utm_campaign: callLead?.utmCampaign || null,
+          referrer_user_id: callLead?.referrerUserId || null,
+          plan: null,
         });
       }
 
