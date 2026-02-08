@@ -145,6 +145,62 @@ export function getEncouragementMessage(
   return null;
 }
 
+export function getSubtitleMessage(
+  data: EncouragementData
+): string | null {
+  const vars: Record<string, string | number> = {};
+
+  if (data.weeklyEarnings > 0) {
+    vars.weeklyEarnings = Math.round(data.weeklyEarnings / 100);
+    vars.nextTarget = roundTarget(Math.round(data.weeklyEarnings / 100));
+  }
+  if (data.lastWeekEarnings > 0 && data.weeklyEarnings > data.lastWeekEarnings) {
+    vars.percentChange = Math.round(
+      ((data.weeklyEarnings - data.lastWeekEarnings) / data.lastWeekEarnings) * 100
+    );
+  }
+  if (data.jobsCompletedThisWeek > 0) {
+    vars.jobsCompleted = data.jobsCompletedThisWeek;
+  }
+  if (data.collectedToday > 0) {
+    vars.collectedToday = Math.round(data.collectedToday / 100);
+  }
+  if (data.moneyWaiting > 0) {
+    vars.moneyWaiting = Math.round(data.moneyWaiting / 100);
+  }
+  if (data.outstandingAmount > 0) {
+    vars.outstandingAmount = Math.round(data.outstandingAmount / 100);
+  }
+
+  const hasProgressData =
+    data.weeklyEarnings > 0 ||
+    data.jobsCompletedThisWeek > 0 ||
+    data.collectedToday > 0 ||
+    data.moneyWaiting > 0;
+  const isInactive =
+    hoursSince(data.lastPaymentAt) > 48 && hoursSince(data.lastJobAt) > 48;
+
+  const allTemplates: { templates: EncouragementTemplate[]; eligible: boolean }[] = [
+    { templates: progressTemplates, eligible: hasProgressData },
+    { templates: resilienceTemplates, eligible: isInactive },
+    { templates: identityTemplates, eligible: true },
+    { templates: effortTemplates, eligible: true },
+  ];
+
+  for (const { templates, eligible } of allTemplates) {
+    if (!eligible) continue;
+    const valid = templates.filter((t) =>
+      t.requiredVars.every((v) => vars[v] !== undefined && vars[v] !== "")
+    );
+    if (valid.length > 0) {
+      const pick = valid[Math.floor(Math.random() * valid.length)];
+      return fillTemplate(pick.template, vars);
+    }
+  }
+
+  return null;
+}
+
 export function getActionEncouragement(
   actionType: "reminder_sent" | "invoice_sent" | "link_shared" | "job_marked_complete" | "follow_up_sent"
 ): SelectedEncouragement | null {

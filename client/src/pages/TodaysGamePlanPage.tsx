@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,7 +39,7 @@ import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { BookingLinkShare } from "@/components/booking-link";
 import { useUpgradeOrchestrator, useStallSignals, UpgradeNudgeModal } from "@/upgrade";
 import { useAuth } from "@/hooks/use-auth";
-import { useEncouragement } from "@/encouragement/useEncouragement";
+import { getSubtitleMessage, type EncouragementData } from "@/encouragement/encouragementEngine";
 import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
 
 interface ActionItem {
@@ -209,7 +209,17 @@ export default function TodaysGamePlanPage() {
   const { user } = useAuth();
   const firstName = user?.firstName || user?.name?.split(" ")[0] || "there";
   const greeting = getGreeting(firstName);
-  const encouragement = useEncouragement();
+  const { data: encouragementData } = useQuery<EncouragementData>({
+    queryKey: QUERY_KEYS.encouragementData(),
+    queryFn: () => apiFetch<EncouragementData>("/api/encouragement/data"),
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
+  });
+  const subtitleRef = useRef<string | null>(null);
+  if (encouragementData && subtitleRef.current === null) {
+    subtitleRef.current = getSubtitleMessage(encouragementData);
+  }
+  const subtitleText = subtitleRef.current || "Do these things to stay on track and get paid";
 
   const { data, isLoading } = useQuery<GamePlanData>({
     queryKey: QUERY_KEYS.dashboardGamePlan(),
@@ -290,14 +300,7 @@ export default function TodaysGamePlanPage() {
         <h1 className="text-2xl font-bold text-foreground mb-1" data-testid="text-greeting">
           {greeting.emoji} {greeting.text}
         </h1>
-        <div className="flex items-start gap-1">
-          <p className="text-sm text-muted-foreground flex-1">{encouragement.message?.message || "Do these things to stay on track and get paid"}</p>
-          {encouragement.message && (
-            <button onClick={encouragement.dismiss} className="text-muted-foreground/60 hover-elevate p-0.5 rounded flex-shrink-0 mt-0.5" data-testid="button-dismiss-encouragement" aria-label="Dismiss">
-              <X className="h-3 w-3" />
-            </button>
-          )}
-        </div>
+        <p className="text-sm text-muted-foreground" data-testid="text-encouragement-subtitle">{subtitleText}</p>
         <CoachingRenderer screen="dashboard" />
       </div>
     );
@@ -315,14 +318,7 @@ export default function TodaysGamePlanPage() {
               <h1 className="text-2xl font-bold text-foreground" data-testid="text-greeting">
                 {greeting.emoji} {greeting.text}
               </h1>
-              <div className="flex items-start gap-1 mt-0.5">
-                <p className="text-sm text-muted-foreground flex-1">{encouragement.message?.message || "Do these things to stay on track and get paid"}</p>
-                {encouragement.message && (
-                  <button onClick={encouragement.dismiss} className="text-muted-foreground/60 hover-elevate p-0.5 rounded flex-shrink-0 mt-0.5" data-testid="button-dismiss-encouragement-desktop" aria-label="Dismiss">
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
+              <p className="text-sm text-muted-foreground mt-0.5" data-testid="text-encouragement-subtitle-desktop">{subtitleText}</p>
               <CoachingRenderer screen="dashboard" />
             </div>
           </div>
