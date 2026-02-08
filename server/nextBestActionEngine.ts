@@ -300,6 +300,15 @@ async function processStallCandidate(candidate: StallCandidate): Promise<void> {
   if (existingAction) {
     return;
   }
+
+  // Check if user recently dismissed an action for this entity (within 24h)
+  const recentlyDismissed = await storage.getRecentlyDismissedActionForEntity(
+    candidate.entityType,
+    candidate.entityId
+  );
+  if (recentlyDismissed) {
+    return;
+  }
   
   let stallDetection: StallDetection;
   

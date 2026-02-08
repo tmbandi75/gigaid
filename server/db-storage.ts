@@ -1,4 +1,4 @@
-import { eq, and, desc, asc, lte, gte, or, ne, isNull, sql, notInArray, lt, inArray } from "drizzle-orm";
+import { eq, and, desc, asc, lte, gte, or, ne, isNull, isNotNull, sql, notInArray, lt, inArray } from "drizzle-orm";
 import { db } from "./db";
 import { 
   users, otpCodes, sessions, jobs, leads, invoices, reminders,
@@ -1514,6 +1514,20 @@ export class DatabaseStorage implements IStorage {
         isNull(nextActions.autoExecutedAt),
         gte(nextActions.expiresAt, now)
       ));
+    return action;
+  }
+
+  async getRecentlyDismissedActionForEntity(entityType: string, entityId: string): Promise<NextAction | undefined> {
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const [action] = await db.select().from(nextActions)
+      .where(and(
+        eq(nextActions.entityType, entityType),
+        eq(nextActions.entityId, entityId),
+        isNotNull(nextActions.dismissedAt),
+        gte(nextActions.dismissedAt, twentyFourHoursAgo)
+      ))
+      .orderBy(desc(nextActions.dismissedAt))
+      .limit(1);
     return action;
   }
 

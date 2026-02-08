@@ -298,6 +298,7 @@ export interface IStorage {
   getNextActions(userId: string, entityType?: string): Promise<NextAction[]>;
   getNextAction(id: string): Promise<NextAction | undefined>;
   getActiveNextActionForEntity(entityType: string, entityId: string): Promise<NextAction | undefined>;
+  getRecentlyDismissedActionForEntity(entityType: string, entityId: string): Promise<NextAction | undefined>;
   createNextAction(action: InsertNextAction): Promise<NextAction>;
   updateNextAction(id: string, updates: Partial<NextAction>): Promise<NextAction | undefined>;
   actOnNextAction(id: string): Promise<NextAction | undefined>;
@@ -2515,6 +2516,17 @@ export class MemStorage implements IStorage {
         !a.dismissedAt &&
         !a.autoExecutedAt &&
         a.expiresAt > now
+      );
+  }
+
+  async getRecentlyDismissedActionForEntity(entityType: string, entityId: string): Promise<NextAction | undefined> {
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    return Array.from(this.nextActions.values())
+      .find(a =>
+        a.entityType === entityType &&
+        a.entityId === entityId &&
+        a.dismissedAt &&
+        a.dismissedAt > twentyFourHoursAgo
       );
   }
 
