@@ -77,7 +77,7 @@ export default function LeadSummary() {
   const isMobile = useIsMobile();
 
   const { data: lead, isLoading } = useQuery<Lead>({
-    queryKey: QUERY_KEYS.lead(id!),
+    queryKey: QUERY_KEYS.leads.detail(id!),
     enabled: !!id,
   });
 

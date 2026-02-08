@@ -165,7 +165,7 @@ export function LeadEmailConversation({ leadId, clientEmail, clientName, service
         body: JSON.stringify(data),
       });
     },
-    [QUERY_KEYS.leadEmails(leadId), QUERY_KEYS.lead(leadId)],
+    [QUERY_KEYS.leadEmails(leadId), QUERY_KEYS.leads.detail(leadId)],
     {
       onSuccess: () => {
         toast({ title: "Email sent successfully" });

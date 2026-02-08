@@ -14,13 +14,19 @@ export const QUERY_KEYS = {
   jobScheduledMessages: (jobId: string | number) => ["/api/jobs", jobId, "scheduled-messages"] as const,
   photoAssets: (type: string, id: string | number) => ["/api/photo-assets", type, id] as const,
 
-  leads: () => ["/api/leads"] as const,
-  lead: (id: string | number) => ["/api/leads", id] as const,
+  leads: Object.assign(() => ["/api/leads"] as const, {
+    detail: (id: string | number) => ["/api/leads", id] as const,
+    sms: (phone: string) => ["/api/sms/conversation", phone] as const,
+  }),
   leadsFollowUp: () => ["/api/leads/follow-up-needed"] as const,
   leadPriceConfirmation: (id: string | number) => ["/api/leads", id, "active-price-confirmation"] as const,
 
-  invoices: () => ["/api/invoices"] as const,
-  invoice: (id: string | number) => ["/api/invoices", id] as const,
+  invoices: Object.assign(() => ["/api/invoices"] as const, {
+    detail: (id: string | number) => ["/api/invoices", id] as const,
+  }),
+  messaging: {
+    inbox: () => ["/api/sms/conversations"] as const,
+  },
 
   payments: () => ["/api/payments"] as const,
   paymentMethods: () => ["/api/payment-methods"] as const,
@@ -125,8 +131,6 @@ export const QUERY_KEYS = {
   adminAuditLogActionKeys: () => ["/api/admin/audit-logs/action-keys"] as const,
   adminUsersSearch: (query: string) => ["/api/admin/users/search", query] as const,
   adminUsersViews: (view: string, page: number | string) => ["/api/admin/users/views", view, page] as const,
-  smsConversation: (phone: string) => ["/api/sms/conversation", phone] as const,
-  smsConversations: () => ["/api/sms/conversations"] as const,
   downloads: () => ["/api/downloads"] as const,
   voiceNotes: () => ["/api/voice-notes"] as const,
   supportTickets: () => ["/api/support/tickets"] as const,

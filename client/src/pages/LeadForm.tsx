@@ -79,7 +79,7 @@ export default function LeadForm() {
   const priceConfirmUpgrade = useUpgradeOrchestrator({ capabilityKey: 'price.confirmation', surface: 'leads' });
 
   const { data: existingLead, isLoading: isLoadingLead } = useQuery<Lead>({
-    queryKey: QUERY_KEYS.lead(id!),
+    queryKey: QUERY_KEYS.leads.detail(id!),
     enabled: !!isEditing,
   });
 
@@ -162,7 +162,7 @@ export default function LeadForm() {
         body: JSON.stringify(payload),
       });
     },
-    [QUERY_KEYS.leads(), QUERY_KEYS.lead(id!), QUERY_KEYS.dashboardSummary()],
+    [QUERY_KEYS.leads(), QUERY_KEYS.leads.detail(id!), QUERY_KEYS.dashboardSummary()],
     {
       onSuccess: () => {
         toast({ title: "Lead updated successfully" });

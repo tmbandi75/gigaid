@@ -168,7 +168,7 @@ function MessageThread({
   const [reply, setReply] = useState("");
 
   const { data: messages = [], isLoading } = useQuery<SmsMessage[]>({
-    queryKey: QUERY_KEYS.smsConversation(phone),
+    queryKey: QUERY_KEYS.leads.sms(phone),
     refetchInterval: 5000,
   });
 
@@ -189,7 +189,7 @@ function MessageThread({
         clientName,
       }) });
     },
-    [QUERY_KEYS.smsConversation(phone), QUERY_KEYS.smsConversations(), QUERY_KEYS.smsUnreadCount(), QUERY_KEYS.messagesUsage()],
+    [QUERY_KEYS.leads.sms(phone), QUERY_KEYS.messaging.inbox(), QUERY_KEYS.smsUnreadCount(), QUERY_KEYS.messagesUsage()],
     {
       onSuccess: () => {
         setReply("");
@@ -369,7 +369,7 @@ export default function Messages() {
   const isMobile = useIsMobile();
 
   const { data: conversations = [], isLoading } = useQuery<Conversation[]>({
-    queryKey: QUERY_KEYS.smsConversations(),
+    queryKey: QUERY_KEYS.messaging.inbox(),
     refetchInterval: 10000,
   });
 

@@ -90,7 +90,7 @@ function InvoiceTableRow({ invoice }: { invoice: Invoice }) {
 
   const markPaidMutation = useApiMutation(
     () => apiFetch(`/api/invoices/${invoice.id}`, { method: "PATCH", body: JSON.stringify({ status: "paid" }) }),
-    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(invoice.id), QUERY_KEYS.dashboardGamePlan(), QUERY_KEYS.dashboardSummary()],
+    [QUERY_KEYS.invoices(), QUERY_KEYS.invoices.detail(invoice.id), QUERY_KEYS.dashboardGamePlan(), QUERY_KEYS.dashboardSummary()],
     {
       onSuccess: () => {
         toast({ title: "Invoice marked as paid" });

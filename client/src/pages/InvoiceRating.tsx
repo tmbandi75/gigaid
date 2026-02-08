@@ -21,14 +21,14 @@ export default function InvoiceRating() {
   const [submitted, setSubmitted] = useState(false);
 
   const { data: invoice, isLoading, error } = useQuery<Invoice>({
-    queryKey: QUERY_KEYS.invoice(invoiceId!),
+    queryKey: QUERY_KEYS.invoices.detail(invoiceId!),
     enabled: !!invoiceId,
   });
 
   const submitMutation = useApiMutation(
     (data: { rating: number; comment: string }) =>
       apiFetch(`/api/invoices/${invoiceId}/review`, { method: "POST", body: JSON.stringify(data) }),
-    [QUERY_KEYS.invoice(invoiceId!), QUERY_KEYS.reviews()],
+    [QUERY_KEYS.invoices.detail(invoiceId!), QUERY_KEYS.reviews()],
     {
       onSuccess: () => {
         setSubmitted(true);

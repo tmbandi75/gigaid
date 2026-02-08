@@ -166,7 +166,7 @@ export default function InvoiceView() {
   const { celebration, celebrate, dismiss: dismissCelebration } = useCelebration();
 
   const { data: invoice, isLoading } = useQuery<Invoice>({
-    queryKey: QUERY_KEYS.invoice(id!),
+    queryKey: QUERY_KEYS.invoices.detail(id!),
     enabled: !!id,
   });
 
@@ -191,7 +191,7 @@ export default function InvoiceView() {
         `/api/invoices/${id}/send`, { method: "POST", body: JSON.stringify({ sendEmail, sendSms }) }
       );
     },
-    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), QUERY_KEYS.dashboardGamePlan()],
+    [QUERY_KEYS.invoices(), QUERY_KEYS.invoices.detail(id!), QUERY_KEYS.dashboardGamePlan()],
     {
       onSuccess: (data) => {
         setShowSendDialog(false);
@@ -221,7 +221,7 @@ export default function InvoiceView() {
     async (paymentMethod: string) => {
       return apiFetch(`/api/invoices/${id}/mark-paid`, { method: "POST", body: JSON.stringify({ paymentMethod }) });
     },
-    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), [`/api/invoices/${id}/payments`], QUERY_KEYS.dashboardSummary(), QUERY_KEYS.dashboardGamePlan(), QUERY_KEYS.nextActions()],
+    [QUERY_KEYS.invoices(), QUERY_KEYS.invoices.detail(id!), [`/api/invoices/${id}/payments`], QUERY_KEYS.dashboardSummary(), QUERY_KEYS.dashboardGamePlan(), QUERY_KEYS.nextActions()],
     {
       onSuccess: async () => {
         await celebrate({
@@ -259,7 +259,7 @@ export default function InvoiceView() {
     async () => {
       return apiFetch(`/api/invoices/${id}/revert-paid`, { method: "POST" });
     },
-    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), [`/api/invoices/${id}/payments`], QUERY_KEYS.dashboardSummary(), QUERY_KEYS.dashboardGamePlan(), QUERY_KEYS.nextActions()],
+    [QUERY_KEYS.invoices(), QUERY_KEYS.invoices.detail(id!), [`/api/invoices/${id}/payments`], QUERY_KEYS.dashboardSummary(), QUERY_KEYS.dashboardGamePlan(), QUERY_KEYS.nextActions()],
     {
       onSuccess: () => {
         toast({ title: "Payment reverted - invoice is now pending" });
@@ -416,7 +416,6 @@ export default function InvoiceView() {
   return (
     <div className="flex flex-col min-h-full bg-background" data-testid="page-invoice-view">
       {isMobile ? renderMobileHeader() : renderDesktopHeader()}
-      
       <div className={`flex-1 ${isMobile ? 'px-4 pt-4 pb-6' : 'max-w-7xl mx-auto w-full px-6 lg:px-8 pt-6 pb-8'} space-y-4`}>
         <NextActionBanner entityType="invoice" entityId={id!} />
         
@@ -590,7 +589,7 @@ export default function InvoiceView() {
           invoice={invoice} 
           payments={payments}
           onPaymentConfirmed={() => {
-            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.invoice(id!) });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.invoices.detail(id!) });
             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.invoicePayments(id!) });
           }}
         />
@@ -634,7 +633,6 @@ export default function InvoiceView() {
           )}
         </div>
       </div>
-
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -683,7 +681,6 @@ export default function InvoiceView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -717,7 +714,6 @@ export default function InvoiceView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       <Dialog open={showRevertDialog} onOpenChange={setShowRevertDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -751,7 +747,6 @@ export default function InvoiceView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       <Dialog open={showSendDialog} onOpenChange={setShowSendDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -845,7 +840,6 @@ export default function InvoiceView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       <NudgeActionSheet
         nudge={selectedNudge}
         open={nudgeSheetOpen}
@@ -854,7 +848,6 @@ export default function InvoiceView() {
           setSelectedNudge(null);
         }}
       />
-
       <CelebrationOverlay
         isVisible={celebration.isVisible}
         message={celebration.message}

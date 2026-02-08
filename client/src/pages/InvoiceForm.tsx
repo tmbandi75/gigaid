@@ -74,7 +74,7 @@ export default function InvoiceForm() {
   const invoiceUpgrade = useUpgradeOrchestrator({ capabilityKey: 'invoices.send', surface: 'invoicing' });
 
   const { data: existingInvoice, isLoading: isLoadingInvoice } = useQuery<Invoice>({
-    queryKey: QUERY_KEYS.invoice(id!),
+    queryKey: QUERY_KEYS.invoices.detail(id!),
     enabled: !!isEditing,
   });
 
@@ -142,7 +142,7 @@ export default function InvoiceForm() {
       };
       return apiFetch(`/api/invoices/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
     },
-    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), QUERY_KEYS.dashboardGamePlan()],
+    [QUERY_KEYS.invoices(), QUERY_KEYS.invoices.detail(id!), QUERY_KEYS.dashboardGamePlan()],
     {
       onSuccess: () => {
         toast({ title: "Invoice updated successfully" });
@@ -158,7 +158,7 @@ export default function InvoiceForm() {
     async ({ sendEmail, sendSms }: { sendEmail: boolean; sendSms: boolean }) => {
       return apiFetch(`/api/invoices/${id}/send`, { method: "POST", body: JSON.stringify({ sendEmail, sendSms }) });
     },
-    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), QUERY_KEYS.dashboardGamePlan()],
+    [QUERY_KEYS.invoices(), QUERY_KEYS.invoices.detail(id!), QUERY_KEYS.dashboardGamePlan()],
     {
       onSuccess: () => {
         setShowSendDialog(false);
@@ -208,7 +208,7 @@ export default function InvoiceForm() {
     async (paymentMethod: string) => {
       return apiFetch(`/api/invoices/${id}/mark-paid`, { method: "POST", body: JSON.stringify({ paymentMethod }) });
     },
-    [QUERY_KEYS.invoices(), QUERY_KEYS.invoice(id!), QUERY_KEYS.dashboardSummary(), QUERY_KEYS.dashboardGamePlan(), QUERY_KEYS.nextActions()],
+    [QUERY_KEYS.invoices(), QUERY_KEYS.invoices.detail(id!), QUERY_KEYS.dashboardSummary(), QUERY_KEYS.dashboardGamePlan(), QUERY_KEYS.nextActions()],
     {
       onSuccess: () => {
         toast({ title: "Invoice marked as paid" });
