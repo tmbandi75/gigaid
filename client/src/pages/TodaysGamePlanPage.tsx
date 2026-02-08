@@ -206,7 +206,7 @@ export default function TodaysGamePlanPage() {
   const stallSignals = useStallSignals();
   const stallOrchestrator = useUpgradeOrchestrator({ capabilityKey: 'sms.auto_followups', surface: 'game_plan' });
   const { user } = useAuth();
-  const firstName = user?.name?.split(" ")[0] || "there";
+  const firstName = user?.firstName || user?.name?.split(" ")[0] || "there";
   const greeting = getGreeting(firstName);
   const encouragement = useEncouragement();
 
