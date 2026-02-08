@@ -36,6 +36,7 @@ import { JobsTableView } from "@/components/jobs/JobsTableView";
 import { PriorityBadge, inferJobPriority } from "@/components/priority/PriorityBadge";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
+import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
 import { JobResolutionModal } from "@/components/jobs/JobResolutionModal";
 import { JobsCalendar } from "@/components/calendar/JobsCalendar";
 import { BookingLinkShare } from "@/components/booking-link";
@@ -426,6 +427,9 @@ function JobCard({ job, nudges, invoices, onNudgeClick }: JobCardProps) {
 function EmptyState() {
   return (
     <div className="flex flex-col items-center py-12 text-center px-4">
+      <div className="w-full max-w-md mb-6">
+        <ActivationChecklist />
+      </div>
       <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-primary/20 to-violet-500/20 flex items-center justify-center mb-6">
         <Briefcase className="h-10 w-10 text-primary" />
       </div>

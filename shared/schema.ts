@@ -88,6 +88,7 @@ export const users = pgTable("users", {
   bookingLinkSharedAt: text("booking_link_shared_at"), // When user first shared their booking link
   firstPaidBookingAt: text("first_paid_booking_at"), // When user received first paid booking
   firstPaymentReceivedAt: text("first_payment_received_at"), // When user received first payment
+  firstQuoteSentAt: text("first_quote_sent_at"), // When user sent their first invoice/quote
   requiredSupportForPayment: boolean("required_support_for_payment").default(false), // If user needed help with payments
   
   // Plan and entitlements

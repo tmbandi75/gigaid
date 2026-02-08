@@ -238,6 +238,23 @@ async function handlePaymentIntentEvent(
   });
 
   if (event.type === "payment_intent.succeeded") {
+    // Track first_payment_received milestone from metadata
+    const userId = metadata?.user_id;
+    if (userId) {
+      try {
+        const user = await storage.getUser(userId);
+        if (user && !user.firstPaymentReceivedAt) {
+          await storage.updateUser(userId, {
+            firstPaymentReceivedAt: new Date().toISOString(),
+          });
+          const timeToFirstDollarHours = user.createdAt ? Math.round((Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60)) : null;
+          console.log(`[Activation] first_payment_received (Stripe) for user ${userId}, time_to_first_dollar: ${timeToFirstDollarHours}h`);
+        }
+      } catch (err: any) {
+        console.error(`[Activation] Failed to track first_payment_received:`, err.message);
+      }
+    }
+
     if (invoiceId) {
       try {
         const invoice = await storage.getInvoice(invoiceId);

@@ -488,6 +488,44 @@ router.get("/activation-funnel", async (req, res) => {
       },
     ];
     
+    // Activation engine funnel: Signup → Activated → Paid
+    const usersActivated = allUsers.filter(u => u.activationCompletedAt).length;
+    const usersWithFirstQuote = allUsers.filter(u => u.firstQuoteSentAt).length;
+    const pctActivated = totalUsers > 0 ? (usersActivated / totalUsers) * 100 : 0;
+    const pctWithFirstQuote = totalUsers > 0 ? (usersWithFirstQuote / totalUsers) * 100 : 0;
+    const pctPaidAfterActivation = usersActivated > 0 ? (allUsers.filter(u => u.activationCompletedAt && u.firstPaymentReceivedAt).length / usersActivated) * 100 : 0;
+
+    // Per-step activation breakdown
+    const activationSteps = {
+      servicesDone: allUsers.filter(u => u.activationServicesDone).length,
+      pricingDone: allUsers.filter(u => u.activationPricingDone).length,
+      paymentsDone: allUsers.filter(u => u.activationPaymentsDone).length,
+      linkDone: allUsers.filter(u => u.activationLinkDone).length,
+      quoteDone: allUsers.filter(u => u.activationQuoteDone).length,
+    };
+
+    // Time from signup to activation
+    const usersWithActivationTime = allUsers.filter(u => u.createdAt && u.activationCompletedAt);
+    let avgTimeToActivationHours = 0;
+    if (usersWithActivationTime.length > 0) {
+      const times = usersWithActivationTime.map(u => {
+        return (new Date(u.activationCompletedAt!).getTime() - new Date(u.createdAt!).getTime()) / (1000 * 60 * 60);
+      });
+      avgTimeToActivationHours = times.reduce((a, b) => a + b, 0) / times.length;
+    }
+
+    const activationFunnel = {
+      totalSignups: totalUsers,
+      activated: usersActivated,
+      pctActivated: Math.round(pctActivated * 10) / 10,
+      firstQuoteSent: usersWithFirstQuote,
+      pctFirstQuoteSent: Math.round(pctWithFirstQuote * 10) / 10,
+      paid: allUsers.filter(u => u.firstPaymentReceivedAt).length,
+      pctPaidAfterActivation: Math.round(pctPaidAfterActivation * 10) / 10,
+      avgTimeToActivationHours: Math.round(avgTimeToActivationHours),
+      steps: activationSteps,
+    };
+
     // Overall health
     const redCount = metrics.filter(m => m.health === "red").length;
     const yellowCount = metrics.filter(m => m.health === "yellow").length;
@@ -505,6 +543,7 @@ router.get("/activation-funnel", async (req, res) => {
     res.json({
       totalUsers,
       metrics,
+      activationFunnel,
       summary: {
         health: overallHealth,
         message,

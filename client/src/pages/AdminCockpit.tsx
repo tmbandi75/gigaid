@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import { 
   Users, 
   TrendingUp, 
@@ -456,6 +457,61 @@ export default function AdminCockpit() {
                   )}
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {funnelData?.activationFunnel && (
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-emerald-500" />
+                Signup &rarr; Activated &rarr; Paid
+              </CardTitle>
+              <span className="text-sm text-muted-foreground">{funnelData.activationFunnel.totalSignups} signups</span>
+            </div>
+            <CardDescription>
+              {funnelData.activationFunnel.avgTimeToActivationHours > 0
+                ? `Avg time to activation: ${funnelData.activationFunnel.avgTimeToActivationHours}h`
+                : "No activations yet"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3" data-testid="activation-funnel-stages">
+              {[
+                { label: "Signups", count: funnelData.activationFunnel.totalSignups, pct: 100 },
+                { label: "Activated (all 5 steps)", count: funnelData.activationFunnel.activated, pct: funnelData.activationFunnel.pctActivated },
+                { label: "First Quote Sent", count: funnelData.activationFunnel.firstQuoteSent, pct: funnelData.activationFunnel.pctFirstQuoteSent },
+                { label: "First Payment Received", count: funnelData.activationFunnel.paid, pct: funnelData.activationFunnel.totalSignups > 0 ? (funnelData.activationFunnel.paid / funnelData.activationFunnel.totalSignups * 100) : 0 },
+              ].map((stage) => (
+                <div key={stage.label} data-testid={`funnel-stage-${stage.label.toLowerCase().replace(/\s+/g, '-')}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm">{stage.label}</span>
+                    <span className="text-sm font-medium">{stage.count} ({stage.pct.toFixed(1)}%)</span>
+                  </div>
+                  <Progress value={stage.pct} className="h-2" />
+                </div>
+              ))}
+            </div>
+            <Separator />
+            <div data-testid="activation-step-breakdown">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Step Breakdown</p>
+              <div className="grid grid-cols-5 gap-2 text-center">
+                {[
+                  { label: "Service", count: funnelData.activationFunnel.steps.servicesDone },
+                  { label: "Price", count: funnelData.activationFunnel.steps.pricingDone },
+                  { label: "Pay", count: funnelData.activationFunnel.steps.paymentsDone },
+                  { label: "Link", count: funnelData.activationFunnel.steps.linkDone },
+                  { label: "Quote", count: funnelData.activationFunnel.steps.quoteDone },
+                ].map((step) => (
+                  <div key={step.label} className="p-2 rounded-md bg-muted/30">
+                    <p className="text-lg font-bold">{step.count}</p>
+                    <p className="text-xs text-muted-foreground">{step.label}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>

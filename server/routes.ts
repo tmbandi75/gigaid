@@ -3156,6 +3156,19 @@ export async function registerRoutes(
         smsSentAt,
       });
 
+      // Track first_quote_sent milestone
+      try {
+        const provider2 = await storage.getUser(existingInvoice.userId);
+        if (provider2 && !provider2.firstQuoteSentAt) {
+          await storage.updateUser(existingInvoice.userId, {
+            firstQuoteSentAt: new Date().toISOString(),
+          });
+          console.log(`[Activation] first_quote_sent recorded for user ${existingInvoice.userId}`);
+        }
+      } catch (trackErr) {
+        console.error("[Activation] Failed to track first_quote_sent:", trackErr);
+      }
+
       res.json({
         ...invoice,
         invoiceUrl,
@@ -3214,6 +3227,22 @@ export async function registerRoutes(
         } catch (err) {
           console.error("[AutoClear] Failed to update related job:", err);
         }
+      }
+
+      // Track first_payment_received milestone
+      try {
+        const user = await storage.getUser(existingInvoice.userId);
+        if (user && !user.firstPaymentReceivedAt) {
+          const now = new Date().toISOString();
+          await storage.updateUser(existingInvoice.userId, {
+            firstPaymentReceivedAt: now,
+          });
+          const timeToFirstDollarMs = user.createdAt ? Date.now() - new Date(user.createdAt).getTime() : null;
+          const timeToFirstDollarHours = timeToFirstDollarMs ? Math.round(timeToFirstDollarMs / (1000 * 60 * 60)) : null;
+          console.log(`[Activation] first_payment_received recorded for user ${existingInvoice.userId}, time_to_first_dollar: ${timeToFirstDollarHours}h`);
+        }
+      } catch (trackErr) {
+        console.error("[Activation] Failed to track first_payment_received:", trackErr);
       }
 
       res.json(invoice);

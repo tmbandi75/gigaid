@@ -54,6 +54,7 @@ import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
 import { LeadsTableView } from "@/components/leads/LeadsTableView";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
+import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
 import { BookingLinkShare, BookingLinkEmptyState } from "@/components/booking-link";
 import { SwipeableCard, type SwipeAction as SwipeCardAction } from "@/components/ui/swipeable-card";
 import { ActionConfirmDialog } from "@/components/ui/action-confirm-dialog";
@@ -342,6 +343,9 @@ function LeadCard({ lead, nudges, onGenerateFollowUp, onSendText, onNudgeClick }
 function EmptyState() {
   return (
     <div className="flex flex-col items-center py-12 text-center px-4">
+      <div className="w-full max-w-md mb-6">
+        <ActivationChecklist />
+      </div>
       <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center mb-6">
         <UserPlus className="h-10 w-10 text-emerald-600" />
       </div>

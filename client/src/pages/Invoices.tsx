@@ -29,6 +29,7 @@ import { InvoicesTableView } from "@/components/invoices/InvoicesTableView";
 import { PriorityBadge, inferInvoicePriority } from "@/components/priority/PriorityBadge";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
+import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
 import { SwipeableCard, type SwipeAction as SwipeCardAction } from "@/components/ui/swipeable-card";
 import { ActionConfirmDialog } from "@/components/ui/action-confirm-dialog";
 import { getInvoiceActionEligibility, getSwipeActions, type SwipeAction as RulesSwipeAction } from "@shared/archive-delete-rules";
@@ -273,6 +274,9 @@ function EmptyState({ filter }: { filter: string }) {
   
   return (
     <div className="flex flex-col items-center py-16 text-center px-4">
+      <div className="w-full max-w-md mb-6">
+        <ActivationChecklist />
+      </div>
       <div className="relative mb-6">
         <div className="h-24 w-24 rounded-3xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center">
           <FileText className="h-12 w-12 text-blue-500" />
