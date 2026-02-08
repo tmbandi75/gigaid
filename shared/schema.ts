@@ -134,6 +134,14 @@ export const users = pgTable("users", {
   // Payday onboarding (money-first forced flow for new users)
   paydayOnboardingCompleted: boolean("payday_onboarding_completed").default(false),
   paydayOnboardingStep: integer("payday_onboarding_step").default(0), // 0=welcome,1=stripe,2=booking,3=deposit,4=templates,5=done
+
+  // Activation engine tracking (Phase A: First Dollar in 24 Hours)
+  activationServicesDone: boolean("activation_services_done").default(false),
+  activationPricingDone: boolean("activation_pricing_done").default(false),
+  activationPaymentsDone: boolean("activation_payments_done").default(false),
+  activationLinkDone: boolean("activation_link_done").default(false),
+  activationQuoteDone: boolean("activation_quote_done").default(false),
+  activationCompletedAt: text("activation_completed_at"),
 });
 
 // Availability type for frontend use

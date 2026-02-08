@@ -1,0 +1,296 @@
+You are upgrading GigAid to implement a Phase 1 “First Dollar in 24 Hours” Conversion System.
+
+Your goal is to maximize:
+
+Activation Rate > 50%
+
+Free → Paid Conversion > 4%
+
+Time-to-First-Booking < 24 hours
+
+Implement the following system end-to-end.
+
+1️⃣ First Dollar in 24 Hours Funnel (Core Engine)
+
+Create a mandatory post-signup activation flow.
+
+A. Activation Checklist Component
+
+Build a persistent component called:
+
+ActivationChecklist.tsx
+
+It must appear:
+
+On Dashboard
+
+On Home
+
+On empty states
+
+After signup
+
+Until completed
+
+Checklist items:
+
+ Add at least 1 Service
+
+ Set at least 1 Price
+
+ Connect Stripe Payments
+
+ Generate Booking Link
+
+ Send First Quote
+
+Each item must be:
+
+Automatically checked when completed
+
+Linked to the relevant screen
+
+Non-dismissible until finished
+
+B. Progress Bar
+
+Add a progress bar:
+
+Progress = completed_steps / 5
+
+Display:
+
+"You're X% away from your first paid booking"
+
+C. Database Tracking
+
+Add to user table:
+
+activation_services_done BOOLEAN
+activation_pricing_done BOOLEAN
+activation_payments_done BOOLEAN
+activation_link_done BOOLEAN
+activation_quote_done BOOLEAN
+activation_completed_at TIMESTAMP
+
+
+Update automatically.
+
+2️⃣ First Dollar Promise System
+
+Add banner everywhere until activated:
+
+🎯 Get Your First Paid Booking in 24 Hours
+Complete setup to unlock clients
+
+When completed:
+
+Replace with:
+
+✅ You're Live — Start Getting Paid
+
+3️⃣ White-Glove Onboarding System (Founder Mode)
+A. Admin Flag
+
+Add to users table:
+
+white_glove_enabled BOOLEAN DEFAULT true
+white_glove_assigned_at TIMESTAMP
+
+B. Booking CTA
+
+When flag = true, show:
+
+📞 Free Setup Call
+I'll personally set this up with you
+
+Button → Calendly / internal booking
+
+C. Admin Dashboard Panel
+
+In Admin Cockpit:
+
+Create:
+
+"White Glove Queue"
+
+Show:
+
+Users not activated
+
+Signup date
+
+% completed
+
+Last activity
+
+Phone/email
+
+Stripe connected?
+
+Allow:
+
+Mark as onboarded
+
+Disable white glove
+
+Add notes
+
+4️⃣ Viral Booking Link System (Critical Growth Loop)
+A. Footer Badge
+
+On every public booking page:
+
+Add sticky footer:
+
+Powered by GigAid
+Create your free booking page
+
+Link → signup
+
+Must be:
+
+Always visible
+
+Mobile optimized
+
+Not hideable
+
+B. Watermark on Quotes & Invoices
+
+Every quote/invoice footer:
+
+Sent via GigAid — Get paid faster
+Create yours free
+
+With referral tracking.
+
+C. Referral Attribution
+
+Add:
+
+referral_source_user_id
+referral_booking_page_slug
+
+
+Track viral signups.
+
+5️⃣ First Quote Accelerator
+
+If user has no quote sent:
+
+Show banner:
+
+⚡ Send Your First Quote in 2 Minutes
+This is how you get paid fastest
+
+Button → Prefill quote wizard
+
+Wizard:
+
+Client name
+
+Service
+
+Price
+
+Auto-send
+
+6️⃣ Activation Enforcement Logic
+
+Until activation complete:
+
+Limit:
+
+No more than 3 manual actions/day
+
+No bulk features
+
+No automations
+
+No exports
+
+Show tooltip:
+
+"Complete setup to unlock"
+
+7️⃣ Analytics & Telemetry
+
+Add tracking events:
+
+activation_step_completed
+activation_completed
+first_quote_sent
+first_payment_received
+time_to_first_dollar
+
+
+Create dashboard:
+
+Activation Funnel
+
+Signup → Activated → Paid
+
+With timestamps.
+
+8️⃣ UX Requirements
+
+Checklist always visible
+
+Never hidden in menus
+
+Mobile-first
+
+No clutter
+
+No dismiss buttons
+
+No “later” option
+
+This is the primary UX.
+
+9️⃣ Migration & Backfill
+
+For existing users:
+
+Run migration:
+
+If user has:
+
+Stripe connected → payments_done = true
+
+Service exists → services_done = true
+
+Quote sent → quote_done = true
+
+Backfill activation status.
+
+10️⃣ Testing
+
+Add test:
+
+Create new user → complete flow → verify:
+
+activation_completed_at set
+
+banner removed
+
+viral footer present
+
+admin queue updated
+
+OUTPUT EXPECTED
+
+After implementation:
+
+New users see guided setup
+
+Cannot ignore activation
+
+Reach “live” state quickly
+
+Viral links propagate
+
+Admin can onboard at scale
+
+Do not remove existing features.

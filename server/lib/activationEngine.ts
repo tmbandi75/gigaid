@@ -1,0 +1,92 @@
+import { db } from "../db";
+import { users, invoices } from "@shared/schema";
+import { eq, count, inArray, and } from "drizzle-orm";
+import { storage } from "../storage";
+
+export interface ActivationStatus {
+  servicesDone: boolean;
+  pricingDone: boolean;
+  paymentsDone: boolean;
+  linkDone: boolean;
+  quoteDone: boolean;
+  completedAt: string | null;
+  completedSteps: number;
+  totalSteps: number;
+  percentComplete: number;
+  isFullyActivated: boolean;
+}
+
+const TOTAL_STEPS = 5;
+
+export async function evaluateAndUpdateActivation(userId: string): Promise<ActivationStatus> {
+  const user = await storage.getUser(userId);
+  if (!user) {
+    return {
+      servicesDone: false,
+      pricingDone: false,
+      paymentsDone: false,
+      linkDone: false,
+      quoteDone: false,
+      completedAt: null,
+      completedSteps: 0,
+      totalSteps: TOTAL_STEPS,
+      percentComplete: 0,
+      isFullyActivated: false,
+    };
+  }
+
+  const servicesDone = Array.isArray(user.services) && user.services.length >= 1;
+  const pricingDone = typeof user.defaultPrice === "number" && user.defaultPrice > 0;
+  const paymentsDone = user.stripeConnectStatus === "active";
+  const linkDone = user.publicProfileEnabled === true && !!user.publicProfileSlug;
+
+  const [invoiceCountResult] = await db
+    .select({ value: count() })
+    .from(invoices)
+    .where(and(eq(invoices.userId, userId), inArray(invoices.status, ["sent", "paid"])));
+  const quoteDone = (invoiceCountResult?.value ?? 0) >= 1;
+
+  const isFullyActivated = servicesDone && pricingDone && paymentsDone && linkDone && quoteDone;
+
+  const completedSteps = [servicesDone, pricingDone, paymentsDone, linkDone, quoteDone].filter(Boolean).length;
+  const percentComplete = Math.round((completedSteps / TOTAL_STEPS) * 100);
+
+  const changed =
+    user.activationServicesDone !== servicesDone ||
+    user.activationPricingDone !== pricingDone ||
+    user.activationPaymentsDone !== paymentsDone ||
+    user.activationLinkDone !== linkDone ||
+    user.activationQuoteDone !== quoteDone;
+
+  let completedAt = user.activationCompletedAt || null;
+
+  if (changed || (isFullyActivated && !completedAt)) {
+    const updates: Record<string, any> = {
+      activationServicesDone: servicesDone,
+      activationPricingDone: pricingDone,
+      activationPaymentsDone: paymentsDone,
+      activationLinkDone: linkDone,
+      activationQuoteDone: quoteDone,
+    };
+
+    if (isFullyActivated && !completedAt) {
+      completedAt = new Date().toISOString();
+      updates.activationCompletedAt = completedAt;
+    }
+
+    await storage.updateUser(userId, updates);
+  }
+
+  return {
+    servicesDone,
+    pricingDone,
+    paymentsDone,
+    linkDone,
+    quoteDone,
+    completedAt,
+    completedSteps,
+    totalSteps: TOTAL_STEPS,
+    percentComplete,
+    isFullyActivated,
+  };
+}

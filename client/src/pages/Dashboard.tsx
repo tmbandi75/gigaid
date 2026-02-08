@@ -39,6 +39,7 @@ import {
 import type { DashboardSummary, Job, Lead } from "@shared/schema";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
 
 interface MoneyDashboardData {
   weeklyRevenue: number;
@@ -325,6 +326,8 @@ export default function Dashboard() {
       {isMobile ? renderMobileHeader() : renderDesktopHeader()}
 
       <div className={`flex-1 px-4 md:px-6 lg:px-8 py-6 space-y-6 max-w-7xl mx-auto w-full ${isMobile ? "-mt-4" : ""}`}>
+        <ActivationChecklist />
+
         <div data-testid="section-money-summary">
           {isMoneyLoading ? (
             <div className="grid grid-cols-2 gap-3">

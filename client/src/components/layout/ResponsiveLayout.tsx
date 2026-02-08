@@ -36,6 +36,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { useAuth } from "@/hooks/use-auth";
+import { FirstDollarBanner } from "@/components/activation/FirstDollarBanner";
 
 interface ResponsiveLayoutProps {
   children: React.ReactNode;
@@ -357,6 +358,7 @@ export function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <MobileHeader />
+        <FirstDollarBanner />
         <main className="flex-1 overflow-auto pb-20">{children}</main>
         <MobileBottomNav />
       </div>
@@ -369,6 +371,7 @@ export function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
         <AppSidebar />
         <SidebarInset className="flex flex-col flex-1 overflow-hidden">
           <DesktopHeader />
+          <FirstDollarBanner />
           <main className="flex-1 overflow-auto">{children}</main>
         </SidebarInset>
       </div>

@@ -6511,6 +6511,45 @@ Final price confirmed onsite.`;
     }
   });
 
+  // Activation engine endpoints
+  app.get("/api/activation", isAuthenticated, async (req, res) => {
+    try {
+      const flag = await storage.getFeatureFlag("activation_engine_v1");
+      if (!flag?.enabled) {
+        return res.json({ servicesDone: true, pricingDone: true, paymentsDone: true, linkDone: true, quoteDone: true, completedAt: new Date().toISOString(), completedSteps: 5, totalSteps: 5, percentComplete: 100, isFullyActivated: true, disabled: true });
+      }
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      const { evaluateAndUpdateActivation } = await import("./lib/activationEngine");
+      const status = await evaluateAndUpdateActivation(userId);
+      res.json(status);
+    } catch (error) {
+      console.error("Failed to fetch activation status:", error);
+      res.status(500).json({ error: "Failed to fetch activation status" });
+    }
+  });
+
+  app.post("/api/activation/refresh", isAuthenticated, async (req, res) => {
+    try {
+      const flag = await storage.getFeatureFlag("activation_engine_v1");
+      if (!flag?.enabled) {
+        return res.json({ servicesDone: true, pricingDone: true, paymentsDone: true, linkDone: true, quoteDone: true, completedAt: new Date().toISOString(), completedSteps: 5, totalSteps: 5, percentComplete: 100, isFullyActivated: true, disabled: true });
+      }
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      const { evaluateAndUpdateActivation } = await import("./lib/activationEngine");
+      const status = await evaluateAndUpdateActivation(userId);
+      res.json(status);
+    } catch (error) {
+      console.error("Failed to refresh activation status:", error);
+      res.status(500).json({ error: "Failed to refresh activation status" });
+    }
+  });
+
   // AI Bio Rewrite
   app.post("/api/ai/rewrite-bio", async (req, res) => {
     try {

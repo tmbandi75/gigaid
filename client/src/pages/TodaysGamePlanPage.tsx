@@ -40,6 +40,7 @@ import { BookingLinkShare } from "@/components/booking-link";
 import { useUpgradeOrchestrator, useStallSignals, UpgradeNudgeModal } from "@/upgrade";
 import { useAuth } from "@/hooks/use-auth";
 import { useEncouragement, EncouragementBanner } from "@/encouragement/useEncouragement";
+import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
 
 interface ActionItem {
   id: string;
@@ -332,6 +333,8 @@ export default function TodaysGamePlanPage() {
         animate="visible"
         className={`space-y-6 ${isMobile ? "px-4 py-6 pb-24" : "max-w-7xl mx-auto px-6 lg:px-8 py-6"}`}
       >
+
+        <ActivationChecklist />
 
         {stallSignals.hasActionableStall && stallSignals.topStall && (
           <Card

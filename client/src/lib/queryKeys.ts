@@ -39,6 +39,7 @@ export const QUERY_KEYS = {
   subscriptionStatus: () => ["/api/subscription/status"] as const,
   capabilities: () => ["/api/capabilities"] as const,
   onboarding: () => ["/api/onboarding"] as const,
+  activation: () => ["/api/activation"] as const,
 
   nudges: () => ["/api/nudges"] as const,
   moneyPlan: () => ["/api/money-plan"] as const,
