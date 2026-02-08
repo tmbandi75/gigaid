@@ -39,7 +39,7 @@ import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { BookingLinkShare } from "@/components/booking-link";
 import { useUpgradeOrchestrator, useStallSignals, UpgradeNudgeModal } from "@/upgrade";
 import { useAuth } from "@/hooks/use-auth";
-import { useEncouragement, EncouragementBanner } from "@/encouragement/useEncouragement";
+import { useEncouragement } from "@/encouragement/useEncouragement";
 import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
 
 interface ActionItem {
@@ -290,10 +290,14 @@ export default function TodaysGamePlanPage() {
         <h1 className="text-2xl font-bold text-foreground mb-1" data-testid="text-greeting">
           {greeting.emoji} {greeting.text}
         </h1>
-        <p className="text-sm text-muted-foreground">Do these things to stay on track and get paid</p>
-        {encouragement.message && (
-          <EncouragementBanner message={encouragement.message} onDismiss={encouragement.dismiss} userPlan={encouragement.userPlan} />
-        )}
+        <div className="flex items-start gap-1">
+          <p className="text-sm text-muted-foreground flex-1">{encouragement.message?.message || "Do these things to stay on track and get paid"}</p>
+          {encouragement.message && (
+            <button onClick={encouragement.dismiss} className="text-muted-foreground/60 hover-elevate p-0.5 rounded flex-shrink-0 mt-0.5" data-testid="button-dismiss-encouragement" aria-label="Dismiss">
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
         <CoachingRenderer screen="dashboard" />
       </div>
     );
@@ -311,10 +315,14 @@ export default function TodaysGamePlanPage() {
               <h1 className="text-2xl font-bold text-foreground" data-testid="text-greeting">
                 {greeting.emoji} {greeting.text}
               </h1>
-              <p className="text-sm text-muted-foreground mt-0.5">Do these things to stay on track and get paid</p>
-              {encouragement.message && (
-                <EncouragementBanner message={encouragement.message} onDismiss={encouragement.dismiss} userPlan={encouragement.userPlan} />
-              )}
+              <div className="flex items-start gap-1 mt-0.5">
+                <p className="text-sm text-muted-foreground flex-1">{encouragement.message?.message || "Do these things to stay on track and get paid"}</p>
+                {encouragement.message && (
+                  <button onClick={encouragement.dismiss} className="text-muted-foreground/60 hover-elevate p-0.5 rounded flex-shrink-0 mt-0.5" data-testid="button-dismiss-encouragement-desktop" aria-label="Dismiss">
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
               <CoachingRenderer screen="dashboard" />
             </div>
           </div>
