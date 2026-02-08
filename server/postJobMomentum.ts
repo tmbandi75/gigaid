@@ -177,7 +177,8 @@ export async function schedulePostJobMessages(job: Job, previousStatus: string):
       const scheduledFor = new Date(now.getTime() + (settings.paymentReminderDelayHours || 24) * 60 * 60 * 1000);
       
       const invoice = jobInvoices.find(inv => inv.status !== "paid");
-      const invoiceLink = invoice ? `${process.env.FRONTEND_URL || ""}/pay/${job.id}` : "";
+      const invoiceToken = invoice?.publicToken || invoice?.shareLink;
+      const invoiceLink = invoiceToken ? `${process.env.FRONTEND_URL || ""}/invoice/${invoiceToken}` : "";
       
       const renderedMessage = renderTemplate(settings.paymentReminderTemplate || "", {
         client_first_name: clientFirstName,

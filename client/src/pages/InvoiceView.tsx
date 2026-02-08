@@ -272,8 +272,9 @@ export default function InvoiceView() {
   );
 
   const copyShareLink = () => {
-    if (invoice?.shareLink) {
-      const link = `${window.location.origin}/invoice/${invoice.shareLink}`;
+    const token = invoice?.publicToken || invoice?.shareLink;
+    if (token) {
+      const link = `${window.location.origin}/invoice/${token}`;
       navigator.clipboard.writeText(link);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -479,11 +480,10 @@ export default function InvoiceView() {
                     {invoice.clientPhone && (
                       <button 
                         onClick={() => {
-                          const payLink = invoice.publicToken
-                            ? `${window.location.origin}/pay/${invoice.publicToken}`
-                            : invoice.shareLink
-                              ? `${window.location.origin}/invoice/${invoice.shareLink}`
-                              : null;
+                          const token = invoice.publicToken || invoice.shareLink;
+                          const payLink = token
+                            ? `${window.location.origin}/invoice/${token}`
+                            : null;
                           const linkText = payLink ? ` You can view and pay it here: ${payLink}` : "";
                           sendText({ 
                             phoneNumber: invoice.clientPhone!, 
@@ -560,7 +560,7 @@ export default function InvoiceView() {
           </Card>
         )}
 
-        {invoice.shareLink && (
+        {(invoice.publicToken || invoice.shareLink) && (
           <Card className="border-0 shadow-md overflow-hidden">
             <CardContent className="p-4">
               <div className="flex items-center gap-4">

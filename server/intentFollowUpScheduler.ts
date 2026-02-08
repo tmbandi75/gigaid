@@ -69,7 +69,7 @@ async function sendFollowUpNudge(invoice: {
   
   // Compose the one-time nudge message
   const invoiceUrl = invoice.publicToken 
-    ? `${process.env.FRONTEND_URL || "http://localhost:5000"}/pay/${invoice.publicToken}`
+    ? `${process.env.FRONTEND_URL || "http://localhost:5000"}/invoice/${invoice.publicToken}`
     : null;
   
   const nudgeMessage = invoiceUrl

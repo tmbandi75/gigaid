@@ -372,9 +372,11 @@ export class DatabaseStorage implements IStorage {
 
   async createInvoice(insertInvoice: InsertInvoice): Promise<Invoice> {
     const id = randomUUID();
+    const publicToken = insertInvoice.publicToken || `inv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const [invoice] = await db.insert(invoices).values({
       ...insertInvoice,
       id,
+      publicToken,
       createdAt: new Date().toISOString(),
     }).returning();
     return invoice;

@@ -3076,7 +3076,9 @@ export async function registerRoutes(
 
       // Generate public token if not already present
       const publicToken = existingInvoice.publicToken || `inv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const frontendUrl = process.env.FRONTEND_URL || "https://account.gigaid.ai";
+      const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+      const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost:5000";
+      const frontendUrl = process.env.FRONTEND_URL || `${protocol}://${host}`;
       const invoiceUrl = `${frontendUrl}/invoice/${publicToken}`;
 
       // Get provider's payment methods for the email/SMS
@@ -10796,7 +10798,7 @@ Return ONLY the message text, no JSON or formatting.`
       const now = new Date().toISOString();
       const publicToken = uuidv4();
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5000";
-      const invoiceUrl = `${frontendUrl}/pay/${publicToken}`;
+      const invoiceUrl = `${frontendUrl}/invoice/${publicToken}`;
       
       // Generate booking link for the client
       const user = await storage.getUser(userId);

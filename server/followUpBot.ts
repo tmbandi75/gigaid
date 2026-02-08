@@ -213,11 +213,10 @@ async function checkFollowUps() {
                 if (existingLog.length > 0) continue;
 
                 const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5000";
-                const invoiceLink = invoice.publicToken
-                  ? `${frontendUrl}/pay/${invoice.publicToken}`
-                  : invoice.shareLink
-                    ? `${frontendUrl}/invoice/${invoice.shareLink}`
-                    : undefined;
+                const invoiceToken = invoice.publicToken || invoice.shareLink;
+                const invoiceLink = invoiceToken
+                  ? `${frontendUrl}/invoice/${invoiceToken}`
+                  : undefined;
 
                 const message = renderTemplate(rule.messageTemplate, invoice.clientName, invoiceLink);
                 const success = await sendSMS(invoice.clientPhone, message);
