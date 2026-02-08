@@ -266,10 +266,10 @@ function OverviewTab() {
                           categories.indexOf(driver.category) === 1 ? "bg-emerald-500" :
                           categories.indexOf(driver.category) === 2 ? "bg-orange-500" : "bg-violet-500"
                         )}
-                        style={{ width: `${Math.min(driver.avgScore * 10, 100)}%` }}
+                        style={{ width: `${Math.min((driver.avgScore ?? 0) * 10, 100)}%` }}
                       />
                     </div>
-                    <span className="text-sm text-muted-foreground w-12 text-right">{driver.avgScore.toFixed(1)}</span>
+                    <span className="text-sm text-muted-foreground w-12 text-right">{(driver.avgScore ?? 0).toFixed(1)}</span>
                   </div>
                 </div>
               ))}
@@ -444,7 +444,7 @@ function AtRiskUsersTab({
                           {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : "Never"}
                         </td>
                         <td className="py-3 px-2 text-right">{user.jobs7d}</td>
-                        <td className="py-3 px-2 text-right">${(user.revenue30d / 100).toFixed(0)}</td>
+                        <td className="py-3 px-2 text-right">${((user.revenue30d ?? 0) / 100).toFixed(0)}</td>
                         <td className="py-3 px-2 text-center">
                           {user.noPay14d ? (
                             <Badge variant="destructive" className="text-xs">Yes</Badge>
