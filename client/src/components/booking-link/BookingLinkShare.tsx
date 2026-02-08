@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Copy, Share2, Link2, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { getPostActionMessage } from "@/encouragement/encouragementToast";
 
 type BookingLinkShareProps = {
   variant: "primary" | "inline" | "compact";
@@ -39,9 +40,10 @@ export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       trackEvent('booking_link_copied', { screen: context });
+      const encouragement = getPostActionMessage("link_shared");
       toast({
         title: "Link copied",
-        description: "Your booking link is ready to share",
+        description: encouragement || "Your booking link is ready to share",
       });
     } catch {
       toast({

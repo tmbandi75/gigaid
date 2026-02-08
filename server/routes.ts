@@ -884,6 +884,67 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/encouragement/data", isAuthenticated, async (req, res) => {
+    try {
+      const now = new Date();
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+      const today = now.toISOString().split("T")[0];
+
+      const [jobs, invoices] = await Promise.all([
+        storage.getJobs((req as any).userId),
+        storage.getInvoices((req as any).userId),
+      ]);
+
+      const thisWeekPaid = invoices.filter(
+        (inv) => inv.status === "paid" && inv.paidAt && new Date(inv.paidAt) >= oneWeekAgo
+      );
+      const lastWeekPaid = invoices.filter(
+        (inv) =>
+          inv.status === "paid" &&
+          inv.paidAt &&
+          new Date(inv.paidAt) >= twoWeeksAgo &&
+          new Date(inv.paidAt) < oneWeekAgo
+      );
+      const weeklyEarnings = thisWeekPaid.reduce((s, i) => s + (i.amount || 0), 0);
+      const lastWeekEarnings = lastWeekPaid.reduce((s, i) => s + (i.amount || 0), 0);
+
+      const jobsCompletedThisWeek = jobs.filter(
+        (j) => j.status === "completed" && j.completedAt && new Date(j.completedAt) >= oneWeekAgo
+      ).length;
+
+      const collectedToday = invoices
+        .filter((inv) => inv.status === "paid" && inv.paidAt && inv.paidAt.startsWith(today))
+        .reduce((s, i) => s + (i.amount || 0), 0);
+
+      const outstandingInvoices = invoices.filter((inv) => inv.status === "sent");
+      const moneyWaiting = outstandingInvoices.reduce((s, i) => s + (i.amount || 0), 0);
+
+      const latestPaid = thisWeekPaid.sort(
+        (a, b) => new Date(b.paidAt!).getTime() - new Date(a.paidAt!).getTime()
+      )[0];
+      const latestJob = jobs
+        .filter((j) => j.status === "completed" && j.completedAt)
+        .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime())[0];
+
+      res.json({
+        weeklyEarnings,
+        lastWeekEarnings,
+        jobsCompletedThisWeek,
+        collectedToday,
+        moneyWaiting,
+        outstandingAmount: moneyWaiting,
+        lastActionType: null,
+        lastActionAt: null,
+        lastPaymentAt: latestPaid?.paidAt || null,
+        lastJobAt: latestJob?.completedAt || null,
+      });
+    } catch (error) {
+      console.error("Encouragement data error:", error);
+      res.status(500).json({ error: "Failed to fetch encouragement data" });
+    }
+  });
+
   app.get("/api/owner/metrics", isAuthenticated, async (req, res) => {
     try {
       const user = await storage.getUser((req as any).userId);

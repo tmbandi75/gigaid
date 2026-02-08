@@ -157,4 +157,6 @@ export const QUERY_KEYS = {
   adminChurnUser: (userId: string) => ["/api/admin/churn/user", userId] as const,
   adminChurnPlaybooks: () => ["/api/admin/churn/playbooks"] as const,
   adminChurnReport: () => ["/api/admin/churn/report.json"] as const,
+
+  encouragementData: () => ["/api/encouragement/data"] as const,
 };

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { getPostActionMessage } from "@/encouragement/encouragementToast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -200,7 +201,8 @@ export default function InvoiceView() {
         if (data?.smsSent) sentMethods.push("SMS");
         
         if (sentMethods.length > 0) {
-          toast({ title: `Invoice sent via ${sentMethods.join(" and ")}!` });
+          const encouragement = getPostActionMessage("invoice_sent");
+          toast({ title: `Invoice sent via ${sentMethods.join(" and ")}!`, description: encouragement || undefined });
         } else {
           toast({ title: "Invoice status updated!" });
         }

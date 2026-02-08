@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { getPostActionMessage } from "@/encouragement/encouragementToast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
@@ -75,7 +76,8 @@ export default function Reminders() {
       onSuccess: () => {
         setIsDialogOpen(false);
         resetForm();
-        toast({ title: "Reminder scheduled successfully" });
+        const encouragement = getPostActionMessage("reminder_sent");
+        toast({ title: "Reminder scheduled successfully", description: encouragement || undefined });
       },
       onError: () => {
         toast({ title: "Failed to create reminder", variant: "destructive" });

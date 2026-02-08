@@ -38,6 +38,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { BookingLinkShare } from "@/components/booking-link";
 import { useUpgradeOrchestrator, useStallSignals, UpgradeNudgeModal } from "@/upgrade";
+import { useAuth } from "@/hooks/use-auth";
+import { useEncouragement, EncouragementBanner } from "@/encouragement/useEncouragement";
 
 interface ActionItem {
   id: string;
@@ -184,6 +186,17 @@ function getEntityRoute(entityType: string, entityId: string): string {
   }
 }
 
+function getGreeting(firstName: string): { emoji: string; text: string } {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) {
+    return { emoji: "\u2600\uFE0F", text: `Good Morning, ${firstName}` };
+  } else if (hour >= 12 && hour < 17) {
+    return { emoji: "\uD83C\uDF24\uFE0F", text: `Good Afternoon, ${firstName}` };
+  } else {
+    return { emoji: "\uD83C\uDF19", text: `Good Evening, ${firstName}` };
+  }
+}
+
 export default function TodaysGamePlanPage() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
@@ -192,6 +205,10 @@ export default function TodaysGamePlanPage() {
   const isMobile = useIsMobile();
   const stallSignals = useStallSignals();
   const stallOrchestrator = useUpgradeOrchestrator({ capabilityKey: 'sms.auto_followups', surface: 'game_plan' });
+  const { user } = useAuth();
+  const firstName = user?.name?.split(" ")[0] || "there";
+  const greeting = getGreeting(firstName);
+  const encouragement = useEncouragement();
 
   const { data, isLoading } = useQuery<GamePlanData>({
     queryKey: QUERY_KEYS.dashboardGamePlan(),
@@ -269,8 +286,13 @@ export default function TodaysGamePlanPage() {
   function renderMobileHeader() {
     return (
       <div className="px-4 py-5 bg-background border-b">
-        <h1 className="text-2xl font-bold text-foreground mb-1">Today's Game Plan</h1>
+        <h1 className="text-2xl font-bold text-foreground mb-1" data-testid="text-greeting">
+          {greeting.emoji} {greeting.text}
+        </h1>
         <p className="text-sm text-muted-foreground">Do these things to stay on track and get paid</p>
+        {encouragement.message && (
+          <EncouragementBanner message={encouragement.message} onDismiss={encouragement.dismiss} />
+        )}
         <CoachingRenderer screen="dashboard" />
       </div>
     );
@@ -285,8 +307,13 @@ export default function TodaysGamePlanPage() {
               <Target className="h-6 w-6 text-primary" />
             </div>
             <div className="flex-1">
-              <h1 className="text-2xl font-bold text-foreground">Today's Game Plan</h1>
+              <h1 className="text-2xl font-bold text-foreground" data-testid="text-greeting">
+                {greeting.emoji} {greeting.text}
+              </h1>
               <p className="text-sm text-muted-foreground mt-0.5">Do these things to stay on track and get paid</p>
+              {encouragement.message && (
+                <EncouragementBanner message={encouragement.message} onDismiss={encouragement.dismiss} />
+              )}
               <CoachingRenderer screen="dashboard" />
             </div>
           </div>

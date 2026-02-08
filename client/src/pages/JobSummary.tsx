@@ -9,6 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { getPostActionMessage } from "@/encouragement/encouragementToast";
 import {
   ArrowLeft,
   Edit,
@@ -274,7 +275,8 @@ export default function JobSummary() {
     [QUERY_KEYS.job(id!), QUERY_KEYS.jobs(), QUERY_KEYS.dashboardGamePlan(), QUERY_KEYS.nextActions()],
     {
       onSuccess: () => {
-        toast({ title: "Job completed!", description: "Great work! Don't forget to get paid." });
+        const encouragement = getPostActionMessage("job_marked_complete");
+        toast({ title: "Job completed!", description: encouragement || "Great work! Don't forget to get paid." });
       },
       onError: (error: Error) => {
         if (error.message?.includes("RESOLUTION_REQUIRED")) {

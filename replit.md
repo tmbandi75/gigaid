@@ -46,6 +46,8 @@ Preferred communication style: Simple, everyday language.
 - **Centralized Upgrade Orchestration**: Manages all upgrade prompts (banners, modals) with thresholds, A/B testing, and cooldowns.
 - **Get Paid Today Product Roadmap**: Includes Payday Onboarding, Job Templates, Money-First Dashboard, Auto Follow-Up Bot, Rebooking Machine, Auto-Quote Generator, Price Optimization Engine, and Profit Warning System.
 - **Churn Prediction & Retention System**: Rule-based scoring, retention playbooks, scheduler, and admin UI for managing user churn.
+- **Smart Encouragement Engine**: Context-aware, money-focused messages shown on dashboard and after key actions (send reminder, send invoice, share booking link, mark job complete). 4 categories: Progress-Based, Effort Recognition, Resilience, Identity. Cooldown system: max 1/session, 3/day, 24h dismiss cooldown, no duplicates within 48h, identity messages max 1/week. Files in `client/src/encouragement/`. Server endpoint: `/api/encouragement/data`.
+- **Time-of-Day Greeting**: Game Plan header shows personalized greeting with user's first name and time-appropriate emoji (morning/afternoon/evening).
 
 ### UI Policies
 - **Emoji Usage Policy**: Emojis are restricted to user-facing presentation layers, limited to one per UI element, appearing before text, and must be from an approved whitelist.
