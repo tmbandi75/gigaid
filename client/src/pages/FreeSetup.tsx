@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUtmCapture } from "@/hooks/useUtmCapture";
 import { getStoredUtmData } from "@/lib/utmCapture";
 import { trackEvent } from "@/components/PostHogProvider";
-import { CheckCircle, Calendar, Clock, ArrowRight, Sparkles, Loader2 } from "lucide-react";
+import { CheckCircle, Calendar, Clock, ArrowRight, ArrowLeft, Sparkles, Loader2 } from "lucide-react";
 
 const serviceCategories = [
   "Plumbing",
@@ -174,6 +174,17 @@ export default function FreeSetup() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto px-4 py-8 md:py-16">
+        <div className="mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => window.history.back()}
+            data-testid="button-back"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            Back
+          </Button>
+        </div>
         <div className="text-center mb-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-3" data-testid="text-free-setup-headline">
             Free Booking Page Setup in 10 Minutes
