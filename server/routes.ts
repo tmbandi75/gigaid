@@ -443,12 +443,10 @@ export async function registerRoutes(
         );
         await storage.updateUser(user.id, {
           publicProfileSlug: newSlug,
-          publicProfileEnabled: user.publicProfileEnabled ?? true,
+          publicProfileEnabled: true,
         });
         user.publicProfileSlug = newSlug;
-        if (user.publicProfileEnabled === null || user.publicProfileEnabled === undefined) {
-          user.publicProfileEnabled = true;
-        }
+        user.publicProfileEnabled = true;
       }
 
       const bookingLink = user.publicProfileSlug 
