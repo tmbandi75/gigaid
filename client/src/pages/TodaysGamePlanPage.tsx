@@ -291,7 +291,7 @@ export default function TodaysGamePlanPage() {
         </h1>
         <p className="text-sm text-muted-foreground">Do these things to stay on track and get paid</p>
         {encouragement.message && (
-          <EncouragementBanner message={encouragement.message} onDismiss={encouragement.dismiss} />
+          <EncouragementBanner message={encouragement.message} onDismiss={encouragement.dismiss} userPlan={encouragement.userPlan} />
         )}
         <CoachingRenderer screen="dashboard" />
       </div>
@@ -312,7 +312,7 @@ export default function TodaysGamePlanPage() {
               </h1>
               <p className="text-sm text-muted-foreground mt-0.5">Do these things to stay on track and get paid</p>
               {encouragement.message && (
-                <EncouragementBanner message={encouragement.message} onDismiss={encouragement.dismiss} />
+                <EncouragementBanner message={encouragement.message} onDismiss={encouragement.dismiss} userPlan={encouragement.userPlan} />
               )}
               <CoachingRenderer screen="dashboard" />
             </div>

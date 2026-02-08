@@ -90,7 +90,11 @@ export function getEncouragementMessage(
     data.jobsCompletedThisWeek > 0 ||
     data.collectedToday > 0 ||
     data.moneyWaiting > 0;
-  const hasRecentAction = data.lastActionAt && hoursSince(data.lastActionAt) <= 24;
+  const validActionTypes = ["reminder_sent", "invoice_sent", "link_shared", "job_marked_complete", "follow_up_sent"];
+  const hasRecentAction =
+    data.lastActionAt &&
+    hoursSince(data.lastActionAt) <= 24 &&
+    (!data.lastActionType || validActionTypes.includes(data.lastActionType));
   const isInactive =
     hoursSince(data.lastPaymentAt) > 48 && hoursSince(data.lastJobAt) > 48;
 

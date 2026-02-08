@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { apiFetch } from "@/lib/apiFetch";
 import { useAuth } from "@/hooks/use-auth";
@@ -14,9 +15,26 @@ import {
   resetSessionCount,
 } from "./encouragementRules";
 import { trackEncouragement } from "./encouragementAnalytics";
-import { X, Sparkles } from "lucide-react";
+import { X, Sparkles, ChevronRight } from "lucide-react";
 
 let sessionResetDone = false;
+
+const ACTION_ROUTES: Record<string, string> = {
+  weekly_earnings: "/invoices",
+  weekly_growth: "/invoices",
+  jobs_completed: "/jobs",
+  collected_today: "/invoices",
+  money_waiting: "/invoices",
+  reminder_sent: "/reminders",
+  invoice_sent: "/invoices",
+  link_shared: "/settings",
+  job_marked_complete: "/invoices",
+  follow_up_sent: "/reminders",
+  quiet_day: "/reminders",
+  follow_up_reminder: "/reminders",
+  invoice_nudge: "/invoices",
+  booking_reminder: "/settings",
+};
 
 export function useEncouragement() {
   const [message, setMessage] = useState<SelectedEncouragement | null>(null);
@@ -64,22 +82,44 @@ export function useEncouragement() {
     setMessage(null);
   }, [message, userPlan]);
 
-  return { message, dismiss };
+  return { message, dismiss, userPlan };
 }
 
 interface EncouragementBannerProps {
   message: SelectedEncouragement;
   onDismiss: () => void;
+  userPlan?: string;
 }
 
-export function EncouragementBanner({ message, onDismiss }: EncouragementBannerProps) {
+export function EncouragementBanner({ message, onDismiss, userPlan }: EncouragementBannerProps) {
+  const [, navigate] = useLocation();
+  const actionRoute = ACTION_ROUTES[message.id];
+
+  const handleActionClick = () => {
+    trackEncouragement("action_clicked", message, {
+      surface: "dashboard",
+      trigger: message.id,
+      userPlan,
+    });
+    if (actionRoute) {
+      navigate(actionRoute);
+    }
+  };
+
   return (
     <div
       className="flex items-center gap-2 mt-2 px-3 py-2 rounded-md bg-primary/5 border border-primary/10 text-sm text-foreground"
       data-testid="banner-encouragement"
     >
       <Sparkles className="h-4 w-4 text-primary flex-shrink-0" />
-      <span className="flex-1">{message.message}</span>
+      <button
+        onClick={handleActionClick}
+        className="flex-1 text-left hover-elevate rounded px-1 -mx-1"
+        data-testid="button-encouragement-action"
+      >
+        <span>{message.message}</span>
+        {actionRoute && <ChevronRight className="inline h-3.5 w-3.5 ml-1 text-muted-foreground" />}
+      </button>
       <button
         onClick={onDismiss}
         className="flex-shrink-0 p-0.5 rounded hover-elevate"
