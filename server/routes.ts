@@ -1500,13 +1500,10 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Job not found" });
       }
 
-      // Check if resolution already exists
+      // If resolution already exists, return it successfully so the job can proceed
       const existingResolution = await storage.getJobResolution(jobId);
       if (existingResolution) {
-        return res.status(409).json({ 
-          error: "Job already has a resolution",
-          resolution: existingResolution,
-        });
+        return res.status(200).json(existingResolution);
       }
 
       const { resolutionType, paymentMethod, waiverReason } = req.body;
