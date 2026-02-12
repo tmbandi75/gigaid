@@ -18,6 +18,7 @@ export const QUERY_KEYS = {
     detail: (id: string | number) => ["/api/leads", id] as const,
     sms: (phone: string) => ["/api/sms/conversation", phone] as const,
   }),
+  leadSmsMessages: (leadId: string | number) => ["/api/leads", leadId, "sms-messages"] as const,
   leadsFollowUp: () => ["/api/leads/follow-up-needed"] as const,
   leadPriceConfirmation: (id: string | number) => ["/api/leads", id, "active-price-confirmation"] as const,
 
