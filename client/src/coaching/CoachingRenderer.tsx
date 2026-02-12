@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { COACHING_MESSAGES, Screen, AppState, Placement } from './coachingMessages';
 import { useCoachingState } from './useCoachingState';
 import { Lightbulb } from 'lucide-react';
+import { QUERY_KEYS } from '@/lib/queryKeys';
 
 function trackEvent(eventName: string, properties?: Record<string, unknown>) {
   if (typeof window !== 'undefined' && (window as { posthog?: { capture: (event: string, props?: Record<string, unknown>) => void } }).posthog) {
@@ -41,12 +42,12 @@ export function CoachingRenderer({ screen, placement = 'header' }: CoachingRende
   const markedRef = useRef<Set<string>>(new Set());
 
   const { data: dashboard, isLoading: dashboardLoading } = useQuery<DashboardSummary>({
-    queryKey: ['/api/dashboard/summary'],
+    queryKey: QUERY_KEYS.dashboardSummary(),
     staleTime: 60000,
   });
 
   const { data: profile, isLoading: profileLoading } = useQuery<Profile>({
-    queryKey: ['/api/profile'],
+    queryKey: QUERY_KEYS.profile(),
     staleTime: 300000,
   });
 

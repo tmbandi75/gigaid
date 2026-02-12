@@ -73,6 +73,8 @@ interface GamePlanData {
   upNextItems: ActionItem[];
   stats: GamePlanStats;
   recentlyCompleted: RecentItem[];
+  encouragementData?: EncouragementData;
+  dashboardSummary?: { totalJobs: number; completedJobs: number; totalLeads: number; totalInvoices: number; sentInvoices: number };
 }
 
 interface NextAction {
@@ -209,23 +211,20 @@ export default function TodaysGamePlanPage() {
   const { user } = useAuth();
   const firstName = user?.firstName || user?.name?.split(" ")[0] || user?.username || "there";
   const greeting = getGreeting(firstName);
-  const { data: encouragementData } = useQuery<EncouragementData>({
-    queryKey: QUERY_KEYS.encouragementData(),
-    queryFn: () => apiFetch<EncouragementData>("/api/encouragement/data"),
-    staleTime: 60000,
-    refetchOnWindowFocus: false,
+  const { data, isLoading } = useQuery<GamePlanData>({
+    queryKey: QUERY_KEYS.dashboardGamePlan(),
+    staleTime: 30000,
+    refetchOnWindowFocus: true,
   });
+
+  const encouragementData = data?.encouragementData;
   const subtitleRef = useRef<string | null>(null);
   if (encouragementData && subtitleRef.current === null) {
     subtitleRef.current = getSubtitleMessage(encouragementData);
   }
   const subtitleText = subtitleRef.current || "Do these things to stay on track and get paid";
 
-  const { data, isLoading } = useQuery<GamePlanData>({
-    queryKey: QUERY_KEYS.dashboardGamePlan(),
-    staleTime: 30000, // Cache for 30 seconds - fast page loads, still reasonably fresh
-    refetchOnWindowFocus: true,
-  });
+  const dashboardSummary = data?.dashboardSummary;
 
   const { data: nextActions = [] } = useQuery<NextAction[]>({
     queryKey: QUERY_KEYS.nextActions(),
@@ -238,14 +237,6 @@ export default function TodaysGamePlanPage() {
   const { data: profile } = useQuery<{ services: string[] | null; servicesCount: number }>({
     queryKey: QUERY_KEYS.profile(),
     staleTime: 300000,
-  });
-
-  const gamePlanLoaded = !isLoading && !!data;
-
-  const { data: dashboardSummary } = useQuery<{ totalJobs: number; completedJobs: number; totalInvoices: number }>({
-    queryKey: QUERY_KEYS.dashboardSummary(),
-    staleTime: 60000,
-    enabled: gamePlanLoaded,
   });
 
   const actMutation = useApiMutation(

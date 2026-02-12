@@ -883,6 +883,77 @@ export async function registerRoutes(
 
       recentlyCompleted.sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
 
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+      const thisWeekPaid = invoices.filter(
+        (inv) => inv.status === "paid" && inv.paidAt && new Date(inv.paidAt) >= oneWeekAgo
+      );
+      const lastWeekPaid = invoices.filter(
+        (inv) =>
+          inv.status === "paid" &&
+          inv.paidAt &&
+          new Date(inv.paidAt) >= twoWeeksAgo &&
+          new Date(inv.paidAt) < oneWeekAgo
+      );
+      const weeklyEarnings = thisWeekPaid.reduce((s, i) => s + (i.amount || 0), 0);
+      const lastWeekEarnings = lastWeekPaid.reduce((s, i) => s + (i.amount || 0), 0);
+      const jobsCompletedThisWeek = jobs.filter(
+        (j) => j.status === "completed" && j.completedAt && new Date(j.completedAt) >= oneWeekAgo
+      ).length;
+      const collectedToday = invoices
+        .filter((inv) => inv.status === "paid" && inv.paidAt && inv.paidAt.startsWith(today))
+        .reduce((s, i) => s + (i.amount || 0), 0);
+      const outstandingAmount = invoices.filter((inv) => inv.status === "sent").reduce((s, i) => s + (i.amount || 0), 0);
+      const latestPaid = thisWeekPaid.sort(
+        (a, b) => new Date(b.paidAt!).getTime() - new Date(a.paidAt!).getTime()
+      )[0];
+      const latestCompletedJob = jobs
+        .filter((j) => j.status === "completed" && j.completedAt)
+        .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime())[0];
+
+      const encRecentActions: { type: string; at: string }[] = [];
+      const sentInvoices = invoices.filter((inv) => inv.sentAt);
+      if (sentInvoices.length > 0) {
+        const latest = sentInvoices.sort((a, b) => new Date(b.sentAt!).getTime() - new Date(a.sentAt!).getTime())[0];
+        encRecentActions.push({ type: "invoice_sent", at: latest.sentAt! });
+      }
+      const completedJobsEnc = jobs.filter((j) => j.status === "completed" && j.completedAt);
+      if (completedJobsEnc.length > 0) {
+        const latest = completedJobsEnc.sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime())[0];
+        encRecentActions.push({ type: "job_marked_complete", at: latest.completedAt! });
+      }
+      const sentReminders = reminders.filter((r: any) => (r as any).sentAt);
+      if (sentReminders.length > 0) {
+        const latest = sentReminders.sort((a: any, b: any) => new Date((b as any).sentAt).getTime() - new Date((a as any).sentAt).getTime())[0];
+        encRecentActions.push({ type: "reminder_sent", at: (latest as any).sentAt });
+      }
+      encRecentActions.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+      const lastAction = encRecentActions[0] || null;
+
+      const encouragementData = {
+        weeklyEarnings,
+        lastWeekEarnings,
+        jobsCompletedThisWeek,
+        collectedToday,
+        moneyWaiting,
+        outstandingAmount,
+        lastActionType: lastAction?.type || null,
+        lastActionAt: lastAction?.at || null,
+        lastPaymentAt: latestPaid?.paidAt || null,
+        lastJobAt: latestCompletedJob?.completedAt || null,
+      };
+
+      const totalCompletedJobs = jobs.filter(j => j.status === "completed").length;
+      const sentInvoiceCount = invoices.filter(i => i.status === "sent" || i.status === "paid").length;
+      const dashboardSummary = {
+        totalJobs: jobs.length,
+        completedJobs: totalCompletedJobs,
+        totalLeads: leads.length,
+        totalInvoices: invoices.length,
+        sentInvoices: sentInvoiceCount,
+      };
+
       res.json({
         priorityItem,
         upNextItems,
@@ -893,6 +964,8 @@ export async function registerRoutes(
           messagesToSend: pendingReminders,
         },
         recentlyCompleted: recentlyCompleted.slice(0, 3),
+        encouragementData,
+        dashboardSummary,
       });
     } catch (error) {
       console.error("Game plan error:", error);
