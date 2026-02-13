@@ -1,7 +1,32 @@
 import { getAdminApiKey } from '../utils/adminKey';
+import { ns } from '../utils/testNamespace';
 
 const BASE_URL = 'http://localhost:5000';
 const ADMIN_API_KEY = getAdminApiKey();
+
+export interface TestUser {
+  id: string;
+  name: string;
+  email: string;
+  plan: string;
+}
+
+export function createSuiteUsers(suite: string): { userA: TestUser; userB: TestUser } {
+  return {
+    userA: {
+      id: ns(`${suite}-user-a`),
+      name: `${suite} Test User A`,
+      email: ns(`${suite}-a@gigaid.test`),
+      plan: 'free',
+    },
+    userB: {
+      id: ns(`${suite}-user-b`),
+      name: `${suite} Test User B`,
+      email: ns(`${suite}-b@gigaid.test`),
+      plan: 'free',
+    },
+  };
+}
 
 export const TEST_USER_A = {
   id: 'api-test-user-a',
@@ -58,8 +83,8 @@ export async function createTestUser(user: { id: string; name: string; email: st
   return data;
 }
 
-export async function resetTestData(userId: string) {
-  const { status, data } = await apiRequest('POST', '/api/test/reset-data', { userId });
+export async function resetTestData(userId: string, opts?: { resetProfile?: boolean }) {
+  const { status, data } = await apiRequest('POST', '/api/test/reset-data', { userId, ...opts });
   if (status !== 200) {
     throw new Error(`resetTestData failed (${status}): ${JSON.stringify(data)}`);
   }
