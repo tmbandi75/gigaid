@@ -1,0 +1,107 @@
+Investigate and diagnose the mobile white screen issue in this project.
+
+Context:
+The app shows a white screen in mobile Chrome and in the Android APK.
+Desktop works.
+
+Goal:
+Identify the exact root cause of the mobile initialization failure.
+
+Do NOT change business logic.
+
+--------------------------------------------------
+A. FRONTEND STARTUP ANALYSIS
+--------------------------------------------------
+
+1. Inspect main.tsx / index.tsx / App.tsx for startup crashes.
+
+2. Add temporary safe logging at app initialization to verify:
+   - App loads
+   - React mounts
+   - Firebase initializes
+   - Auth initializes
+   - API client initializes
+
+3. Log failures clearly.
+
+--------------------------------------------------
+B. ENVIRONMENT VARIABLE CHECK
+--------------------------------------------------
+
+4. Verify all VITE_* variables are available at build time:
+   - VITE_FIREBASE_API_KEY
+   - VITE_FIREBASE_AUTH_DOMAIN
+   - VITE_FIREBASE_PROJECT_ID
+   - VITE_FIREBASE_STORAGE_BUCKET
+   - VITE_FIREBASE_MESSAGING_SENDER_ID
+   - VITE_FIREBASE_APP_ID
+   - API base URL
+
+5. Detect and report any undefined variables.
+
+--------------------------------------------------
+C. FIREBASE INITIALIZATION
+--------------------------------------------------
+
+6. Wrap Firebase initialization in try/catch.
+
+7. Log initialization errors.
+
+8. Verify Firebase config is valid on mobile builds.
+
+--------------------------------------------------
+D. BUILD & BUNDLE VERIFICATION
+--------------------------------------------------
+
+9. Inspect built frontend bundle for embedded env values.
+
+10. Confirm Vite build is using correct mode (production).
+
+11. Verify no runtime env lookups are failing.
+
+--------------------------------------------------
+E. MOBILE COMPATIBILITY
+--------------------------------------------------
+
+12. Check for unsupported JS features on Android.
+
+13. Check for WebView / Chrome-specific failures.
+
+--------------------------------------------------
+F. SERVICE WORKER & CACHE
+--------------------------------------------------
+
+14. Inspect service worker registration and cache logic.
+
+15. Detect corrupted or outdated caches.
+
+--------------------------------------------------
+G. SENTRY CORRELATION
+--------------------------------------------------
+
+16. Correlate mobile user sessions with Sentry errors.
+
+17. Identify startup crashes in production.
+
+--------------------------------------------------
+H. REPORTING
+--------------------------------------------------
+
+18. Produce a diagnostic report including:
+   - Root cause
+   - File/line
+   - Reproduction steps
+   - Fix recommendation
+
+19. Save report to:
+   /reports/mobile-white-screen-diagnosis.json
+
+--------------------------------------------------
+I. SAFETY
+--------------------------------------------------
+
+20. Remove temporary logs after diagnosis.
+21. Do NOT commit debug-only code.
+22. Do NOT weaken security.
+
+Proceed with investigation.
