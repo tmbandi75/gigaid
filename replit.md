@@ -105,6 +105,7 @@ Modular pre-launch validation script at `scripts/launchReadiness.ts`. Run with `
 - **Config checks**: Required env vars (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_URL, SUPABASE_SERVICE_KEY, JWT_SECRET), legal routes, rate limiting, backups
 - **Monitoring checks**: Sentry DSN, error handler middleware
 - **Code checks**: Stripe webhook signature verification (constructEvent)
-- **Fail-fast**: Exits early on test failures, missing critical env vars, or missing Stripe verification
-- **Report output**: `reports/launch-readiness.json` with AUTOMATED_CHECKS, CONFIG_CHECKS, MANUAL_CHECKS_REQUIRED sections
+- **Suite Health Enforcement**: Tracks pass/fail per suite over last 20 runs in `reports/test-history.json`. Blocks release if any suite's flaky rate exceeds 5%. Critical suites (revenue, capability, billing, auth) trigger fail-fast. View health: `npx tsx scripts/suiteHealth.ts`.
+- **Fail-fast**: Exits early on test failures, missing critical env vars, missing Stripe verification, or flaky suite detection
+- **Report output**: `reports/launch-readiness.json` with AUTOMATED_CHECKS, CONFIG_CHECKS, MANUAL_CHECKS_REQUIRED sections, plus `suite_health` summary
 - **Extension**: Add new checkers as functions returning `CheckResult`, register in `main()`

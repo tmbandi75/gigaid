@@ -1,6 +1,7 @@
 import { execSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
+import { recordRun, computeHealth, printHealthTable, type HealthSummary } from "./suiteHealth";
 
 type CheckStatus = "pass" | "fail" | "warn" | "skip";
 type CheckCategory = "AUTOMATED_CHECKS" | "CONFIG_CHECKS" | "MANUAL_CHECKS_REQUIRED";
@@ -32,6 +33,7 @@ interface LaunchReport {
   };
   fail_fast_triggered: boolean;
   fail_fast_reason?: string;
+  suite_health?: HealthSummary;
 }
 
 const TEST_LAYERS = [
@@ -448,12 +450,45 @@ async function main() {
     results.push(testResult);
     logResult(testResult);
 
+    if (testResult.status !== "skip") {
+      recordRun({
+        suiteName: layer.name,
+        timestamp: new Date().toISOString(),
+        passed: testResult.status === "pass",
+        duration_ms: testResult.duration_ms || 0,
+        error: testResult.status === "fail" ? testResult.details : undefined,
+      });
+    }
+
     if (testResult.status === "fail") {
       failFast.triggered = true;
       failFast.reason = `Test layer "${layer.label}" failed`;
       log(`FAIL FAST: ${failFast.reason}`);
       break;
     }
+  }
+
+  const healthSummary = computeHealth();
+  printHealthTable(healthSummary);
+
+  if (healthSummary.blockRelease && !failFast.triggered) {
+    failFast.triggered = true;
+    failFast.reason = healthSummary.blockReason || "Flaky test suite detected";
+    log(`FAIL FAST: ${failFast.reason}`);
+
+    results.push({
+      name: "Suite Health Enforcement",
+      status: "fail",
+      category: "AUTOMATED_CHECKS",
+      message: healthSummary.blockReason || "Flaky test suite detected",
+    });
+  } else {
+    results.push({
+      name: "Suite Health Enforcement",
+      status: "pass",
+      category: "AUTOMATED_CHECKS",
+      message: `All suites within ${(healthSummary.threshold * 100).toFixed(0)}% flaky threshold`,
+    });
   }
 
   const stripeResult = checkStripeWebhookVerification();
@@ -505,6 +540,7 @@ async function main() {
 
   const totalDuration = Date.now() - globalStart;
   const report = generateReport(results, totalDuration, failFast);
+  report.suite_health = healthSummary;
   const reportPath = writeReport(report);
 
   logSection("SUMMARY");

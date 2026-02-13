@@ -59,6 +59,70 @@ npx jest --selectProjects api --testPathPatterns='jobs\.test' --forceExit
 npx jest --selectProjects api --runInBand --forceExit
 ```
 
+## Suite Health Enforcement
+
+The suite health system tracks test results over time and blocks releases when any suite becomes flaky.
+
+### How It Works
+
+1. Every time the Launch Readiness Agent runs, each test layer's pass/fail result is recorded to `reports/test-history.json`.
+2. A rolling window of the last 20 runs per suite is maintained.
+3. **Flaky rate** = failures / total runs for each suite.
+4. If any suite exceeds the 5% flaky threshold, the release is blocked with status `NOT_READY`.
+
+### Critical Suites (Fail-Fast)
+
+These suites trigger immediate fail-fast when flaky:
+- `revenue` — Payment reconciliation
+- `capability` — Plan enforcement
+- `billing` — Subscription management
+- `auth` — Authentication
+
+All other suites also block release when flaky, but don't trigger fail-fast.
+
+### Configuration
+
+In `scripts/suiteHealth.ts`:
+```ts
+const FLAKY_THRESHOLD = 0.05;  // 5% failure rate
+const HISTORY_LIMIT = 20;      // Rolling window size
+```
+
+### Viewing Suite Health
+
+```bash
+# View current suite health table
+npx tsx scripts/suiteHealth.ts
+
+# Full launch readiness check (includes suite health)
+npx tsx scripts/launchReadiness.ts
+```
+
+### Console Output
+
+The health check prints a table during launch readiness:
+
+```
+Suite Name                      Runs  Fails  Flaky %  Status
+------------------------------------------------------------
+test:core                          8      0     0.0%  OK
+test:revenue                       8      0     0.0%  OK
+test:capability                    8      1    12.5%  CRITICAL
+```
+
+### Report Integration
+
+Suite health results are included in:
+- `reports/launch-readiness.json` — under the `suite_health` key
+- `reports/test-history.json` — raw run history
+
+### Resetting History
+
+To clear history (e.g., after fixing a known flaky suite):
+```bash
+echo '{"version":1,"suites":{}}' > reports/test-history.json
+```
+
 ## Known Considerations
 
 - **Socket errors under heavy parallel load**: The dev server may drop connections when many suites run simultaneously. Use `--runInBand` if needed. This is a server connection limit, not a test isolation issue.
