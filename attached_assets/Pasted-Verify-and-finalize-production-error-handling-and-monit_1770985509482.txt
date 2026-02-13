@@ -1,0 +1,96 @@
+Verify and finalize production error handling and monitoring for this project.
+
+Context:
+Sentry is installed but error handling and monitoring have not been fully validated.
+
+Goal:
+Ensure all runtime errors are captured, sanitized, and alerted.
+
+Do NOT modify business logic.
+
+--------------------------------------------------
+A. CENTRAL ERROR HANDLER
+--------------------------------------------------
+
+1. Locate the main server entry file (app.ts / server.ts / index.ts).
+
+2. Verify a global error-handling middleware exists.
+
+3. If missing, add one that:
+   - Captures errors with Sentry
+   - Logs safely
+   - Returns:
+     { error: "Internal server error" }
+   - Is registered last in the middleware chain.
+
+--------------------------------------------------
+B. PROCESS-LEVEL HANDLERS
+--------------------------------------------------
+
+4. Verify handlers exist for:
+
+   process.on("unhandledRejection")
+   process.on("uncaughtException")
+
+5. If missing, add handlers that send errors to Sentry.
+
+--------------------------------------------------
+C. SENTRY HARDENING
+--------------------------------------------------
+
+6. Verify Sentry is initialized with:
+   - environment
+   - release
+   - tracesSampleRate
+
+7. Add beforeSend hook to remove sensitive data:
+   - Authorization headers
+   - JWT tokens
+   - Stripe keys
+
+--------------------------------------------------
+D. MONITORING VALIDATION
+--------------------------------------------------
+
+8. Add a temporary internal test route:
+
+   GET /__monitoring_test
+
+   that throws a controlled error.
+
+9. Use it once to confirm:
+   - Error appears in Sentry
+   - Stack trace is visible
+   - Client receives sanitized response
+
+10. Remove the test route after validation.
+
+--------------------------------------------------
+E. ALERT VERIFICATION
+--------------------------------------------------
+
+11. Verify Sentry alert rules exist for:
+    - New issues
+    - Error rate increase
+    - Payment-related errors
+
+12. If missing, document setup steps in README.
+
+--------------------------------------------------
+F. REPORTING
+--------------------------------------------------
+
+13. Update launch verification to confirm:
+    - Error middleware present
+    - Process handlers registered
+    - Sentry initialized
+
+--------------------------------------------------
+G. SAFETY
+--------------------------------------------------
+
+14. Do NOT expose stack traces to clients.
+15. Do NOT log secrets.
+16. Keep changes minimal.
+
+Proceed with verification and fixes.
