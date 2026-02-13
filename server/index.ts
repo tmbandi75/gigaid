@@ -74,12 +74,25 @@ app.use(
       ? {
           directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "https://apis.google.com"],
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             imgSrc: ["'self'", "data:", "https:", "blob:"],
-            connectSrc: ["'self'", "https://*.sentry.io", "https://*.stripe.com", "https://maps.googleapis.com"],
-            frameSrc: ["'self'", "https://*.stripe.com"],
+            connectSrc: [
+              "'self'",
+              "https://*.sentry.io",
+              "https://*.stripe.com",
+              "https://maps.googleapis.com",
+              "https://identitytoolkit.googleapis.com",
+              "https://securetoken.googleapis.com",
+              "https://www.googleapis.com",
+              "https://*.firebaseio.com",
+              "https://*.firebaseapp.com",
+              "https://firebase.googleapis.com",
+              "https://apis.google.com",
+              "https://accounts.google.com",
+            ],
+            frameSrc: ["'self'", "https://*.stripe.com", "https://*.firebaseapp.com", "https://accounts.google.com"],
           },
         }
       : false,
