@@ -23,84 +23,83 @@ import { pool } from "./db";
  * This MUST run on every server startup to ensure the trigger exists.
  */
 export async function createJobResolutionEnforcementTrigger(): Promise<void> {
-  console.log("[DBEnforcement] Creating/verifying job resolution trigger...");
-  
-  const client = await pool.connect();
-  try {
-    // Create the trigger function for UPDATES
-    // This function checks if a job_resolution exists before allowing completion
-    await client.query(`
-      CREATE OR REPLACE FUNCTION enforce_job_resolution_on_update()
-      RETURNS TRIGGER AS $$
-      BEGIN
-        -- Only check when status is being set to 'completed'
-        -- and it wasn't already 'completed'
-        IF NEW.status = 'completed' AND (OLD.status IS NULL OR OLD.status != 'completed') THEN
-          IF NOT EXISTS (
-            SELECT 1 FROM job_resolutions WHERE job_id = NEW.id
-          ) THEN
-            RAISE EXCEPTION 'RESOLUTION_REQUIRED: Completed jobs must have a job_resolution record (invoice, payment, or waiver). Job ID: %', NEW.id
-              USING ERRCODE = 'P0001';
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY_MS = 1000;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    console.log(`[DBEnforcement] Creating/verifying job resolution trigger (attempt ${attempt}/${MAX_RETRIES})...`);
+
+    const client = await pool.connect();
+    try {
+      await client.query(`
+        CREATE OR REPLACE FUNCTION enforce_job_resolution_on_update()
+        RETURNS TRIGGER AS $$
+        BEGIN
+          IF NEW.status = 'completed' AND (OLD.status IS NULL OR OLD.status != 'completed') THEN
+            IF NOT EXISTS (
+              SELECT 1 FROM job_resolutions WHERE job_id = NEW.id
+            ) THEN
+              RAISE EXCEPTION 'RESOLUTION_REQUIRED: Completed jobs must have a job_resolution record (invoice, payment, or waiver). Job ID: %', NEW.id
+                USING ERRCODE = 'P0001';
+            END IF;
           END IF;
-        END IF;
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql;
-    `);
-    
-    // Create the trigger function for INSERTS
-    // Prevents inserting a job directly with status='completed' without resolution
-    await client.query(`
-      CREATE OR REPLACE FUNCTION enforce_job_resolution_on_insert()
-      RETURNS TRIGGER AS $$
-      BEGIN
-        -- Block inserting a job with status='completed' without resolution
-        IF NEW.status = 'completed' THEN
-          IF NOT EXISTS (
-            SELECT 1 FROM job_resolutions WHERE job_id = NEW.id
-          ) THEN
-            RAISE EXCEPTION 'RESOLUTION_REQUIRED: Cannot insert job with completed status without job_resolution record. Job ID: %', NEW.id
-              USING ERRCODE = 'P0001';
+          RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+      `);
+
+      await client.query(`
+        CREATE OR REPLACE FUNCTION enforce_job_resolution_on_insert()
+        RETURNS TRIGGER AS $$
+        BEGIN
+          IF NEW.status = 'completed' THEN
+            IF NOT EXISTS (
+              SELECT 1 FROM job_resolutions WHERE job_id = NEW.id
+            ) THEN
+              RAISE EXCEPTION 'RESOLUTION_REQUIRED: Cannot insert job with completed status without job_resolution record. Job ID: %', NEW.id
+                USING ERRCODE = 'P0001';
+            END IF;
           END IF;
-        END IF;
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql;
-    `);
-    
-    // Drop existing triggers if they exist (to update them)
-    await client.query(`
-      DROP TRIGGER IF EXISTS enforce_job_resolution_trigger ON jobs;
-    `);
-    await client.query(`
-      DROP TRIGGER IF EXISTS enforce_job_resolution_insert_trigger ON jobs;
-    `);
-    
-    // Create UPDATE trigger
-    await client.query(`
-      CREATE TRIGGER enforce_job_resolution_trigger
-      BEFORE UPDATE ON jobs
-      FOR EACH ROW
-      EXECUTE FUNCTION enforce_job_resolution_on_update();
-    `);
-    
-    // Create INSERT trigger
-    await client.query(`
-      CREATE TRIGGER enforce_job_resolution_insert_trigger
-      BEFORE INSERT ON jobs
-      FOR EACH ROW
-      EXECUTE FUNCTION enforce_job_resolution_on_insert();
-    `);
-    
-    console.log("[DBEnforcement] Job resolution triggers (INSERT + UPDATE) created successfully");
-  } catch (error) {
-    // CRITICAL: Log and re-throw - the app should NOT start without enforcement
-    // The API guard provides defense-in-depth but DB trigger is the hard guarantee
-    console.error("[DBEnforcement] CRITICAL: Failed to create job resolution trigger:", error);
-    console.error("[DBEnforcement] The application CANNOT run without revenue protection enforcement!");
-    throw error;
-  } finally {
-    client.release();
+          RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+      `);
+
+      await client.query(`DROP TRIGGER IF EXISTS enforce_job_resolution_trigger ON jobs;`);
+      await client.query(`DROP TRIGGER IF EXISTS enforce_job_resolution_insert_trigger ON jobs;`);
+
+      await client.query(`
+        CREATE TRIGGER enforce_job_resolution_trigger
+        BEFORE UPDATE ON jobs
+        FOR EACH ROW
+        EXECUTE FUNCTION enforce_job_resolution_on_update();
+      `);
+
+      await client.query(`
+        CREATE TRIGGER enforce_job_resolution_insert_trigger
+        BEFORE INSERT ON jobs
+        FOR EACH ROW
+        EXECUTE FUNCTION enforce_job_resolution_on_insert();
+      `);
+
+      console.log("[DBEnforcement] Job resolution triggers (INSERT + UPDATE) created successfully");
+      return;
+    } catch (error: any) {
+      const isRetryable = error?.message?.includes('tuple concurrently updated') ||
+        error?.code === 'XX000';
+
+      if (isRetryable && attempt < MAX_RETRIES) {
+        console.warn(`[DBEnforcement] Transient error on attempt ${attempt}, retrying in ${RETRY_DELAY_MS}ms...`);
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+        continue;
+      }
+
+      console.error("[DBEnforcement] CRITICAL: Failed to create job resolution trigger:", error);
+      console.error("[DBEnforcement] The application CANNOT run without revenue protection enforcement!");
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 }
 
