@@ -1,0 +1,91 @@
+Implement production-grade security and error monitoring hardening.
+
+Context:
+Backup is fixed. Product is launch-ready except security/observability.
+
+Goal:
+Add centralized error handling, Sentry monitoring, and secure failure behavior.
+
+Do NOT modify business logic.
+
+--------------------------------------------------
+A. SENTRY INTEGRATION
+--------------------------------------------------
+
+1. Install Sentry:
+
+   npm install @sentry/node @sentry/profiling-node
+
+2. Initialize Sentry in server entry (server.ts / index.ts / app.ts):
+
+   - Read SENTRY_DSN from env
+   - Enable tracing
+   - Enable profiling in production only
+
+3. Do NOT log secrets.
+
+--------------------------------------------------
+B. CENTRAL ERROR HANDLER
+--------------------------------------------------
+
+4. Add global error middleware (Express/Fastify/etc):
+
+   - Capture errors with Sentry
+   - Log safely
+   - Return sanitized JSON:
+     { error: "Internal server error" }
+
+5. Ensure this handler is last in middleware chain.
+
+--------------------------------------------------
+C. UNHANDLED EXCEPTIONS
+--------------------------------------------------
+
+6. Add process-level handlers:
+
+   process.on("unhandledRejection")
+   process.on("uncaughtException")
+
+   → Log + send to Sentry.
+
+--------------------------------------------------
+D. ENV VALIDATION
+--------------------------------------------------
+
+7. Extend env validation to require:
+
+   SENTRY_DSN
+   JWT_SECRET
+   SUPABASE_URL
+   SUPABASE_SERVICE_KEY
+
+8. Fail startup if missing in production.
+
+--------------------------------------------------
+E. SECURITY HEADERS
+--------------------------------------------------
+
+9. Add basic HTTP hardening:
+
+   - helmet (or equivalent)
+   - disable x-powered-by
+   - enable CSP baseline
+
+--------------------------------------------------
+F. REPORTING
+--------------------------------------------------
+
+10. Update launch verification to detect:
+    - Sentry initialized
+    - Error handler present
+    - Process handlers registered
+
+--------------------------------------------------
+G. SAFETY
+--------------------------------------------------
+
+11. Do NOT change business logic.
+12. Do NOT expose stack traces to clients.
+13. Keep implementation minimal.
+
+Proceed with implementation.
