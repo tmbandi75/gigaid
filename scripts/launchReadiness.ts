@@ -471,10 +471,12 @@ async function main() {
   const healthSummary = computeHealth();
   printHealthTable(healthSummary);
 
-  if (healthSummary.blockRelease && !failFast.triggered) {
-    failFast.triggered = true;
-    failFast.reason = healthSummary.blockReason || "Flaky test suite detected";
-    log(`FAIL FAST: ${failFast.reason}`);
+  if (healthSummary.blockRelease) {
+    if (!failFast.triggered) {
+      failFast.triggered = true;
+      failFast.reason = healthSummary.blockReason || "Flaky test suite detected";
+      log(`FAIL FAST: ${failFast.reason}`);
+    }
 
     results.push({
       name: "Suite Health Enforcement",
