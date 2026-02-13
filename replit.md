@@ -109,11 +109,20 @@ npx playwright test e2e/public-links.spec.ts
 - **Exclusion rules**: Skips dangerous paths (logout, delete, pay, stripe, webhook, reset), API/auth routes, admin routes, and dynamic token routes without seeded data.
 - **Expected runtime**: ~2 minutes (authenticated), ~30 seconds (public)
 
-### Test Coverage Summary (47 API + 6 E2E suites + 2 link integrity)
+### Test Coverage Summary (50 API + 6 E2E suites + 2 link integrity)
 - **Auth**: Token validation, unauthenticated access blocking, profile retrieval
 - **Jobs**: CRUD, cross-user isolation, capability usage tracking
 - **Leads**: CRUD, archive/unarchive, cross-user isolation
 - **Invoices**: CRUD, public invoice view
 - **Capabilities**: Free plan limits (jobs=10, SMS=20), pro plan unlimited, usage enforcement
 - **Booking**: Public booking creation, invalid slug handling, auth-protected request listing
+- **Booking Validation** (`publicBooking.validation.test.ts`): 404 for missing slugs, 400 for missing required fields, deposit policy acknowledgment enforcement, optional field handling, cross-user isolation (12 tests)
+- **Stripe Platform Webhook** (`stripe.platform.webhook.test.ts`): Secret configuration check, missing/malformed/wrong signature rejection (4 tests). NOTE: Valid signature end-to-end tests blocked by raw-body issue (express.json parses req.body before route-level raw() middleware; fix: use req.rawBody in constructEvent).
+- **Stripe Connect Webhook** (`stripe.connect.webhook.test.ts`): Signature enforcement when secret configured; event processing (account.updated, payment_intent.succeeded, charge.dispute.created, customer.subscription.created) via parsed-body fallback when no secret (6 tests).
 - **Messaging**: SMS send validation, conversation listing, usage reporting
+
+### Test Seed Routes
+- `/api/test/set-deposit-config` — Configure deposit/Stripe Connect settings for test users (depositEnabled, depositValue, depositType, defaultPrice, defaultServiceType, depositPolicySet, stripeConnectAccountId, stripeConnectStatus, noShowProtectionEnabled, reschedulePolicy, cancellationPolicy)
+
+### Known Issues
+- **Stripe Platform Webhook raw-body**: `stripeWebhookRoutes.ts` line 62 calls `stripe.webhooks.constructEvent(req.body, ...)` but `req.body` is a parsed JS object (from global `express.json()`), not a raw Buffer. Stripe SDK requires raw string/Buffer for signature verification. The raw buffer is available at `req.rawBody` (stored by express.json verify callback in `server/index.ts`). Fix: change `req.body` to `req.rawBody` in constructEvent call.

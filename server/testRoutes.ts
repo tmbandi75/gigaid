@@ -365,5 +365,51 @@ export function registerTestRoutes(app: any, storage: IStorage) {
     }
   });
 
+  router.post("/set-deposit-config", async (req: Request, res: Response) => {
+    try {
+      const {
+        userId,
+        depositEnabled,
+        depositValue,
+        depositType,
+        defaultPrice,
+        defaultServiceType,
+        depositPolicySet,
+        stripeConnectAccountId,
+        stripeConnectStatus,
+        noShowProtectionEnabled,
+        reschedulePolicy,
+        cancellationPolicy,
+      } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ error: "Missing required field: userId" });
+      }
+
+      const user = await storage.getUserByUsername(userId) || await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const updates: Record<string, any> = {};
+      if (depositEnabled !== undefined) updates.depositEnabled = depositEnabled;
+      if (depositValue !== undefined) updates.depositValue = depositValue;
+      if (depositType !== undefined) updates.depositType = depositType;
+      if (defaultPrice !== undefined) updates.defaultPrice = defaultPrice;
+      if (defaultServiceType !== undefined) updates.defaultServiceType = defaultServiceType;
+      if (depositPolicySet !== undefined) updates.depositPolicySet = depositPolicySet;
+      if (stripeConnectAccountId !== undefined) updates.stripeConnectAccountId = stripeConnectAccountId;
+      if (stripeConnectStatus !== undefined) updates.stripeConnectStatus = stripeConnectStatus;
+      if (noShowProtectionEnabled !== undefined) updates.noShowProtectionEnabled = noShowProtectionEnabled;
+      if (reschedulePolicy !== undefined) updates.reschedulePolicy = reschedulePolicy;
+      if (cancellationPolicy !== undefined) updates.cancellationPolicy = cancellationPolicy;
+
+      await storage.updateUser(user.id, updates);
+      return res.json({ success: true, userId: user.id, updates });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
   app.use("/api/test", router);
 }
