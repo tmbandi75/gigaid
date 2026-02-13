@@ -19,7 +19,7 @@ interface SmokeResult {
 
 function runSuite(suite: typeof SMOKE_SUITES[number]): SmokeResult {
   const start = Date.now();
-  const cmd = `npx jest --selectProjects api --testPathPattern='${suite.pattern}' --forceExit`;
+  const cmd = `npx jest --selectProjects api --testPathPatterns='${suite.pattern}' --forceExit`;
   try {
     execSync(cmd, {
       timeout: TIMEOUT_MS,

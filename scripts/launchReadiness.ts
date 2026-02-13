@@ -41,10 +41,10 @@ interface LaunchReport {
 const TEST_LAYERS = [
   { name: "test:core", command: "npx jest --selectProjects api --forceExit", label: "Core API Tests" },
   { name: "test:e2e", command: "npx playwright test", label: "End-to-End Tests" },
-  { name: "test:revenue", command: "npx jest --selectProjects api --testPathPattern='revenue\\.' --forceExit", label: "Revenue Tests" },
-  { name: "test:capability", command: "npx jest --selectProjects api --testPathPattern='capabilities\\.' --forceExit", label: "Capability Tests" },
+  { name: "test:revenue", command: "npx jest --selectProjects api --testPathPatterns='revenue\\.' --forceExit", label: "Revenue Tests" },
+  { name: "test:capability", command: "npx jest --selectProjects api --testPathPatterns='capabilities\\.' --forceExit", label: "Capability Tests" },
   { name: "test:offline", command: "", label: "Offline Tests" },
-  { name: "test:upgrade", command: "npx jest --selectProjects api --testPathPattern='activation\\.' --forceExit", label: "Upgrade Tests" },
+  { name: "test:upgrade", command: "npx jest --selectProjects api --testPathPatterns='activation\\.' --forceExit", label: "Upgrade Tests" },
   { name: "test:downgrade", command: "", label: "Downgrade Tests" },
 ];
 
