@@ -73,6 +73,8 @@ import {
 } from "./bookingProtection";
 import mobileAuthRoutes from "./mobileAuthRoutes";
 import { verifyAppJwt } from "./appJwt";
+import { selfTestFirebaseAdmin } from "./firebaseAdmin";
+import { pool } from "./db";
 import { registerStripeWebhookRoutes, processRetryableWebhooks, reconcileStuckPayments, startWebhookRetryScheduler } from "./stripeWebhookRoutes";
 import { registerTestRoutes } from "./testRoutes";
 import { generateBookingSlug, ensureUniqueSlug, validateSlug } from "./lib/bookingSlug";
@@ -98,6 +100,55 @@ export async function registerRoutes(
   // Setup authentication FIRST before any other routes
   await setupAuth(app);
   registerAuthRoutes(app);
+
+  // Global health endpoint for uptime monitoring (UptimeRobot, Pingdom, etc.)
+  // Registered before auth middleware so it's always accessible without credentials.
+  app.get("/api/health", async (_req: Request, res: Response) => {
+    const TIMEOUT_MS = 3000; // Fail dependency check if it takes longer than 3s
+
+    function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+      return Promise.race([
+        promise,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`${label} check timed out after ${TIMEOUT_MS}ms`)), TIMEOUT_MS)
+        ),
+      ]);
+    }
+
+    const checks: Record<string, string> = { server: "ok" };
+    let healthy = true;
+
+    // Firebase check — reuses existing selfTestFirebaseAdmin (no duplicated logic)
+    try {
+      const fb = await withTimeout(selfTestFirebaseAdmin(), "firebase");
+      checks.firebase = fb.ok ? "ok" : (fb.error || "unhealthy");
+      if (!fb.ok) healthy = false;
+    } catch (err: any) {
+      checks.firebase = err.message || "unhealthy";
+      healthy = false;
+    }
+
+    // Database check — minimal SELECT 1 against the connection pool
+    try {
+      await withTimeout(pool.query("SELECT 1"), "database");
+      checks.database = "ok";
+    } catch (err: any) {
+      checks.database = err.message || "unhealthy";
+      healthy = false;
+    }
+
+    const result = {
+      status: healthy ? "healthy" as const : "unhealthy" as const,
+      checks,
+      timestamp: new Date().toISOString(),
+    };
+
+    if (!healthy) {
+      console.error("[HealthCheck] Unhealthy:", JSON.stringify(result));
+    }
+
+    return res.status(healthy ? 200 : 503).json(result);
+  });
 
   // Register Stripe webhook routes (needs raw body before JSON parsing)
   registerStripeWebhookRoutes(app, storage);
