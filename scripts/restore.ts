@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import * as readline from "readline";
@@ -90,10 +90,11 @@ async function main() {
   const start = Date.now();
 
   try {
-    execSync(`psql "${dbUrl}" < "${backupFile}"`, {
+    const sqlInput = fs.readFileSync(backupFile);
+    execFileSync("psql", [dbUrl], {
       timeout: 300_000,
+      input: sqlInput,
       stdio: ["pipe", "pipe", "pipe"],
-      shell: "/bin/sh",
     });
   } catch (err: any) {
     const stderr = err.stderr?.toString() || "";

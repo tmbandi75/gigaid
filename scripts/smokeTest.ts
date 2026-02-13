@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 
 const SMOKE_SUITES = [
   { name: "auth", pattern: "auth\\.test" },
@@ -19,9 +19,8 @@ interface SmokeResult {
 
 function runSuite(suite: typeof SMOKE_SUITES[number]): SmokeResult {
   const start = Date.now();
-  const cmd = `npx jest --selectProjects api --testPathPatterns='${suite.pattern}' --forceExit`;
   try {
-    execSync(cmd, {
+    execFileSync("npx", ["jest", "--selectProjects", "api", `--testPathPatterns=${suite.pattern}`, "--forceExit"], {
       timeout: TIMEOUT_MS,
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],
