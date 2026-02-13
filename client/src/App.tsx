@@ -77,6 +77,7 @@ import AutoQuotePage from "@/pages/AutoQuotePage";
 import PriceOptimizationPage from "@/pages/PriceOptimizationPage";
 import ProfitWarningsPage from "@/pages/ProfitWarningsPage";
 import NotFound from "@/pages/not-found";
+import { AppErrorBoundary } from "@/components/ErrorBoundary";
 import { logClientEnv } from "./debug/envProbe";
 
 logClientEnv();
@@ -309,40 +310,42 @@ function RedirectToDashboard() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <FirebaseAuthProvider>
-        <PostHogProvider>
-          <OptimisticCapabilityProvider>
-            <TooltipProvider>
-              <ThemeInitializer />
-              <SubscriptionHandler />
-              <Switch>
-              <Route path="/free-setup" component={FreeSetup} />
-              <Route path="/book/:slug" component={PublicBooking} />
-              <Route path="/booking/:token" component={CustomerBookingDetail} />
-              <Route path="/invoice/:token" component={PublicInvoice} />
-              <Route path="/invoice/:id/rate" component={InvoiceRating} />
-              <Route path="/confirm-price/:token" component={ConfirmPrice} />
-              <Route path="/pay-deposit/:token" component={PayDeposit} />
-              <Route path="/crew-portal/:token" component={CrewPortal} />
-              <Route path="/review/:token" component={PublicReview} />
-              <Route path="/qb/:token" component={QuickBookConfirm} />
-              <Route path="/terms" component={TermsOfService} />
-              <Route path="/privacy" component={PrivacyPolicy} />
-              <Route path="/downloads" component={Downloads} />
-              {/* /login redirects to home which shows the combined splash/login page */}
-              <Route path="/login" component={SplashPage} />
-              <Route path="/force-logout" component={ForceLogout} />
-              <Route>
-                <AuthenticatedApp />
-              </Route>
-              </Switch>
-              <Toaster />
-            </TooltipProvider>
-          </OptimisticCapabilityProvider>
-        </PostHogProvider>
-      </FirebaseAuthProvider>
-    </QueryClientProvider>
+    <AppErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <FirebaseAuthProvider>
+          <PostHogProvider>
+            <OptimisticCapabilityProvider>
+              <TooltipProvider>
+                <ThemeInitializer />
+                <SubscriptionHandler />
+                <Switch>
+                <Route path="/free-setup" component={FreeSetup} />
+                <Route path="/book/:slug" component={PublicBooking} />
+                <Route path="/booking/:token" component={CustomerBookingDetail} />
+                <Route path="/invoice/:token" component={PublicInvoice} />
+                <Route path="/invoice/:id/rate" component={InvoiceRating} />
+                <Route path="/confirm-price/:token" component={ConfirmPrice} />
+                <Route path="/pay-deposit/:token" component={PayDeposit} />
+                <Route path="/crew-portal/:token" component={CrewPortal} />
+                <Route path="/review/:token" component={PublicReview} />
+                <Route path="/qb/:token" component={QuickBookConfirm} />
+                <Route path="/terms" component={TermsOfService} />
+                <Route path="/privacy" component={PrivacyPolicy} />
+                <Route path="/downloads" component={Downloads} />
+                {/* /login redirects to home which shows the combined splash/login page */}
+                <Route path="/login" component={SplashPage} />
+                <Route path="/force-logout" component={ForceLogout} />
+                <Route>
+                  <AuthenticatedApp />
+                </Route>
+                </Switch>
+                <Toaster />
+              </TooltipProvider>
+            </OptimisticCapabilityProvider>
+          </PostHogProvider>
+        </FirebaseAuthProvider>
+      </QueryClientProvider>
+    </AppErrorBoundary>
   );
 }
 

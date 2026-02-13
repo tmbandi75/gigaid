@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, type FirebaseApp } from "firebase/app";
 import { 
   getAuth, 
   GoogleAuthProvider, 
@@ -13,9 +13,17 @@ import {
   reauthenticateWithCredential,
   EmailAuthProvider,
   updatePassword,
+  type Auth,
   type User as FirebaseUser 
 } from "firebase/auth";
 import { isNativePlatform } from "./platform";
+
+const REQUIRED_ENV_KEYS = [
+  'VITE_FIREBASE_API_KEY',
+  'VITE_FIREBASE_AUTH_DOMAIN',
+  'VITE_FIREBASE_PROJECT_ID',
+  'VITE_FIREBASE_APP_ID',
+] as const;
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -26,10 +34,39 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+export let firebaseInitError: string | null = null;
 
-// Function to get the auth instance (for use in callbacks where direct import may cause issues)
+let app: FirebaseApp | null = null;
+let _auth: Auth | null = null;
+
+try {
+  const missing = REQUIRED_ENV_KEYS.filter(
+    (key) => !import.meta.env[key]
+  );
+  if (missing.length > 0) {
+    const msg = `[Firebase] Missing required env vars: ${missing.join(', ')}`;
+    console.error(msg);
+    firebaseInitError = msg;
+  } else {
+    app = initializeApp(firebaseConfig);
+    _auth = getAuth(app);
+    console.log("[Firebase] Initialized successfully");
+  }
+} catch (err) {
+  const msg = `[Firebase] Initialization failed: ${err instanceof Error ? err.message : String(err)}`;
+  console.error(msg, err);
+  firebaseInitError = msg;
+}
+
+export const auth = _auth as Auth;
+
+function requireAuth(): Auth {
+  if (firebaseInitError || !_auth) {
+    throw new Error(firebaseInitError || "Firebase auth is not initialized");
+  }
+  return _auth;
+}
+
 export function getFirebaseAuth() {
   return auth;
 }
@@ -39,11 +76,13 @@ const googleProvider = new GoogleAuthProvider();
 let redirectResultPromise: Promise<string | null> | null = null;
 
 export function initializeRedirectResultHandler(): Promise<string | null> {
+  if (firebaseInitError || !_auth) return Promise.resolve(null);
+
   if (redirectResultPromise) {
     return redirectResultPromise;
   }
   
-  redirectResultPromise = getRedirectResult(auth)
+  redirectResultPromise = getRedirectResult(_auth)
     .then(async (result) => {
       if (result && result.user) {
         console.log("[Firebase] Redirect result received, getting ID token");
@@ -61,63 +100,74 @@ export function initializeRedirectResultHandler(): Promise<string | null> {
 }
 
 export async function signInWithGoogle(): Promise<string> {
+  const a = requireAuth();
   if (isNativePlatform()) {
     console.log("[Firebase] Native platform detected, using signInWithRedirect");
-    await signInWithRedirect(auth, googleProvider);
+    await signInWithRedirect(a, googleProvider);
     throw new Error("Redirect initiated - waiting for redirect result");
   }
   
-  const result = await signInWithPopup(auth, googleProvider);
+  const result = await signInWithPopup(a, googleProvider);
   const idToken = await result.user.getIdToken();
   return idToken;
 }
 
 export async function firebaseSignOut(): Promise<void> {
-  await signOut(auth);
+  if (!_auth) return;
+  await signOut(_auth);
 }
 
 export function onFirebaseAuthChange(callback: (user: FirebaseUser | null) => void): () => void {
-  return onAuthStateChanged(auth, callback);
+  if (!_auth) {
+    console.warn("[Firebase] Auth not initialized, calling back with null user");
+    callback(null);
+    return () => {};
+  }
+  return onAuthStateChanged(_auth, callback);
 }
 
 export async function getFirebaseIdToken(): Promise<string | null> {
-  const user = auth.currentUser;
+  if (!_auth) return null;
+  const user = _auth.currentUser;
   if (!user) return null;
   return user.getIdToken();
 }
 
 export async function signUpWithEmail(email: string, password: string): Promise<string> {
-  const result = await createUserWithEmailAndPassword(auth, email, password);
+  const a = requireAuth();
+  const result = await createUserWithEmailAndPassword(a, email, password);
   const idToken = await result.user.getIdToken();
   return idToken;
 }
 
 export async function signInWithEmail(email: string, password: string): Promise<string> {
-  const result = await signInWithEmailAndPassword(auth, email, password);
+  const a = requireAuth();
+  const result = await signInWithEmailAndPassword(a, email, password);
   const idToken = await result.user.getIdToken();
   return idToken;
 }
 
 export async function resetPassword(email: string): Promise<void> {
-  await sendPasswordResetEmail(auth, email);
+  const a = requireAuth();
+  await sendPasswordResetEmail(a, email);
 }
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
-  const user = auth.currentUser;
+  const a = requireAuth();
+  const user = a.currentUser;
   if (!user || !user.email) {
     throw new Error("No user is currently signed in");
   }
   
-  // Re-authenticate the user with current password
   const credential = EmailAuthProvider.credential(user.email, currentPassword);
   await reauthenticateWithCredential(user, credential);
   
-  // Update to new password
   await updatePassword(user, newPassword);
 }
 
 export function isEmailPasswordUser(): boolean {
-  const user = auth.currentUser;
+  if (!_auth) return false;
+  const user = _auth.currentUser;
   if (!user) return false;
   return user.providerData.some(provider => provider.providerId === "password");
 }

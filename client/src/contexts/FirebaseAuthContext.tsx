@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from "react";
-import { onFirebaseAuthChange } from "@/lib/firebase";
+import { onFirebaseAuthChange, firebaseInitError } from "@/lib/firebase";
 import type { User as FirebaseUser } from "firebase/auth";
 import { isTokenReadyForUser, resetTokenReadiness } from "@/lib/authToken";
 
@@ -43,6 +43,12 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   }, [firebaseUser]);
 
   useEffect(() => {
+    if (firebaseInitError) {
+      console.error("[FirebaseAuth] Firebase failed to initialize:", firebaseInitError);
+      setAuthLoading(false);
+      return;
+    }
+
     const setupTs = Date.now();
     console.log("[FirebaseAuth] Setting up onAuthStateChanged listener, timestamp:", setupTs);
     console.log("AUTH STATE CHANGE (initial)", {
