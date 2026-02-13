@@ -1,0 +1,172 @@
+REPLIT MASTER PROMPT — GIGAID TEST HARNESS
+
+Paste this into Replit AI:
+
+You are a senior SaaS test engineer.
+
+I need you to implement a production-grade testing framework for this GigAid codebase.
+
+Do NOT break existing functionality. Do NOT delete any routes. Do NOT modify business logic.
+
+Architecture
+
+Express backend
+
+Main router in server/routes.ts
+
+Additional routes in server/growth/routes.ts
+
+Test utilities in server/testRoutes.ts
+
+Stripe webhooks in:
+
+server/stripeWebhookRoutes.ts → /api/stripe/webhook
+
+server/routes.ts → /api/stripe/connect/webhook
+
+Required Changes
+1. Export Router
+
+If server/routes.ts does not already export its Express router, refactor it so it exports the router as default without changing any routing behavior.
+
+2. Create Test App Wrapper
+
+Create tests/helpers/app.ts that:
+
+Creates an Express app
+
+Applies express.json()
+
+Mounts the exported router
+
+3. Add Testing Config
+
+Add:
+
+jest.config.cjs
+
+tsconfig.test.json
+
+Configure Jest for TypeScript + ESM compatibility.
+
+4. Add Environment Guard
+
+Create tests/helpers/env.ts that:
+
+Sets NODE_ENV=test
+
+Validates presence of:
+
+DATABASE_URL_TEST
+
+STRIPE_SECRET_KEY_TEST
+
+STRIPE_WEBHOOK_SECRET_TEST
+
+STRIPE_CONNECT_WEBHOOK_SECRET_TEST
+
+5. Add DB Seed Helpers
+
+Create tests/helpers/seed.ts using existing /api/test/* routes to:
+
+Reset database
+
+Create a provider with slug test-plumber
+
+Enable deposits + Stripe Connect
+
+6. Add API Tests
+
+Implement:
+
+tests/api/publicBooking.test.ts
+
+Tests POST /api/public/book/:slug
+
+Asserts booking + deposit + protection fields
+
+tests/api/publicBooking.validation.test.ts
+
+Tests 400 validation
+
+Tests 404 missing slug
+
+tests/api/stripe.platform.webhook.test.ts
+
+Tests /api/stripe/webhook
+
+Uses Stripe test signature
+
+Validates idempotency
+
+tests/api/stripe.connect.webhook.test.ts
+
+Tests /api/stripe/connect/webhook
+
+Uses connect webhook secret
+
+7. Add NPM Scripts
+
+Update package.json to include:
+
+"test:api": "NODE_ENV=test jest --runInBand",
+"test:ci": "npm run test:api"
+
+
+Do not remove existing scripts.
+
+8. Safety Rules
+
+Do not touch production DB config
+
+Do not hardcode secrets
+
+Use environment variables only
+
+Keep test code isolated in /tests
+
+Do not modify Stripe logic
+
+Deliverable
+
+All files created
+
+Tests compile
+
+Tests runnable via npm run test:api
+
+No regressions
+
+If any assumptions are required, document them in comments instead of guessing.
+
+🧠 Why This Prompt Works
+
+This prompt:
+
+✅ Forces architectural respect
+✅ Prevents destructive edits
+✅ Anchors to your real files
+✅ Protects revenue systems
+✅ Produces CI-ready output
+✅ Avoids “AI cowboy coding”
+
+It’s tuned for Replit’s LLM behavior.
+
+⚠️ After It Runs (Important)
+
+Once Replit finishes:
+
+1. Add Test Env Vars in Replit Secrets
+DATABASE_URL_TEST
+STRIPE_SECRET_KEY_TEST
+STRIPE_WEBHOOK_SECRET_TEST
+STRIPE_CONNECT_WEBHOOK_SECRET_TEST
+
+
+Never reuse prod keys.
+
+2. Run:
+npm run test:api
+
+
+Fix any missing imports it reports (usually 5–10 min cleanup).
