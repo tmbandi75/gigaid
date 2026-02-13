@@ -84,6 +84,7 @@ app.use(
         }
       : false,
     crossOriginEmbedderPolicy: false,
+    frameguard: isProduction ? undefined : false,
   }),
 );
 
