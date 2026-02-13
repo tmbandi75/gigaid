@@ -1,3 +1,5 @@
+import { getAdminApiKey } from '../tests/utils/adminKey';
+
 export const TEST_USER = {
   id: 'e2e-test-user',
   name: 'E2E Test Worker',
@@ -13,7 +15,7 @@ export const TEST_USER_PRO = {
 };
 
 export const BASE_URL = 'http://localhost:5000';
-export const ADMIN_API_KEY = process.env.GIGAID_ADMIN_API_KEY || '';
+export const ADMIN_API_KEY = getAdminApiKey();
 
 export const STRIPE_TEST_CARD = {
   number: '4242424242424242',

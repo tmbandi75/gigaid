@@ -1,7 +1,8 @@
 import { TestResult, TestUser, createTestResult } from "./types.js";
+import { getAdminApiKey } from "../utils/adminKey";
 
 const BASE_URL = process.env.TEST_BASE_URL || `http://localhost:5000`;
-const ADMIN_API_KEY = process.env.GIGAID_ADMIN_API_KEY;
+const ADMIN_API_KEY = getAdminApiKey();
 
 const TEST_USERS: TestUser[] = [
   { id: "smoke-test-light", name: "Smoke Test Light", email: "smoke-light@test.gigaid.ai", plan: "free", usagePattern: "light" },

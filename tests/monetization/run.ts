@@ -3,12 +3,13 @@ import { checkUsage } from "../../shared/capabilities/usageTracking";
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
+import { getAdminApiKey } from "../utils/adminKey";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPORT_DIR = path.resolve(__dirname, "reports");
 
 const BASE_URL = process.env.TEST_BASE_URL || "http://localhost:5000";
-const ADMIN_API_KEY = process.env.GIGAID_ADMIN_API_KEY;
+const ADMIN_API_KEY = getAdminApiKey();
 
 const THRESHOLDS = { info: 0.60, warn: 0.80, critical: 0.95 };
 

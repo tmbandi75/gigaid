@@ -1,7 +1,8 @@
 import { apiRequest, createTestUser, resetTestData, getAuthToken, TEST_USER_A, TEST_USER_B } from './setup';
+import { getAdminApiKey } from '../utils/adminKey';
 
 const BASE_URL = 'http://localhost:5000';
-const ADMIN_KEY = process.env.GIGAID_ADMIN_API_KEY || '';
+const ADMIN_KEY = getAdminApiKey();
 
 async function publicRequest(
   method: string,

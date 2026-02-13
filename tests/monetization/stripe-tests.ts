@@ -1,7 +1,8 @@
 import { TestResult, createTestResult } from "./types.js";
+import { getAdminApiKey } from "../utils/adminKey";
 
 const BASE_URL = process.env.TEST_BASE_URL || `http://localhost:5000`;
-const ADMIN_API_KEY = process.env.GIGAID_ADMIN_API_KEY;
+const ADMIN_API_KEY = getAdminApiKey();
 
 async function apiRequest(path: string, options: RequestInit = {}): Promise<Response> {
   const headers: Record<string, string> = {
