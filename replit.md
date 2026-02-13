@@ -47,6 +47,14 @@ Preferred communication style: Simple, everyday language.
 - **Phase 2 Acquisition Engine**: Full growth pipeline including lead capture, UTM attribution, viral referral loops, free setup funnel, CRM-lite outreach, and admin analytics.
 - **Revenue Drift Detection System**: Automated reconciliation system to detect revenue discrepancies between internal database and Stripe.
 
+### Onboarding System
+- **Dual Layout**: Mobile (OnboardingFlow.tsx) and Desktop (WebOnboardingLayout.tsx) with shared logic in `useOnboarding` hook.
+- **Platform Detection**: `useIsMobile()` hook at 768px breakpoint routes users to appropriate layout in OnboardingPage.tsx.
+- **Shared Hook**: `client/src/hooks/useOnboarding.ts` — extracted state, mutations, and handlers used by both layouts.
+- **Web Components**: `WebOnboardingStepper.tsx` (sidebar step tracker), `WebOnboardingLayout.tsx` (two-column layout with step content).
+- **Identity Fields**: Both flows collect firstName (required) and lastName (optional), sent via PATCH /api/profile.
+- **Steps**: Welcome → Identity → Pricing → Deposit → Booking Link → Payments → AI Card → Complete (8 steps total).
+
 ### UI Policies
 - **Emoji Usage Policy**: Restricted to user-facing presentation layers, limited to one per UI element, appearing before text, and from an approved whitelist.
 

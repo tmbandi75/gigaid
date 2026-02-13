@@ -120,6 +120,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
   // Form data
   const [identity, setIdentity] = useState({
     firstName: "",
+    lastName: "",
     businessName: "",
     serviceType: "",
   });
@@ -203,6 +204,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
       setIdentity(prev => ({
         ...prev,
         firstName: (user as any).firstName || (user as any).name?.split(" ")[0] || "",
+        lastName: (user as any).lastName || "",
         businessName: (user as any).businessName || "",
       }));
     }
@@ -252,6 +254,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
     
     await updateProfileMutation.mutateAsync({
       firstName: identity.firstName,
+      lastName: identity.lastName || null,
       businessName: identity.businessName || null,
       defaultServiceType: identity.serviceType,
     });
@@ -565,6 +568,18 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
                       placeholder="Your first name"
                       className="h-12 text-lg rounded-xl"
                       data-testid="input-first-name"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName" className="text-base">Last name</Label>
+                    <Input
+                      id="lastName"
+                      value={identity.lastName}
+                      onChange={(e) => setIdentity({ ...identity, lastName: e.target.value })}
+                      placeholder="Your last name"
+                      className="h-12 text-lg rounded-xl"
+                      data-testid="input-last-name"
                     />
                   </div>
                   
