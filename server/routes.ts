@@ -8176,10 +8176,13 @@ Return ONLY the message text, no JSON or formatting.`
       }
 
       const baseUrl = process.env.FRONTEND_URL || "https://account.gigaid.ai";
+      const source = req.body?.source;
+      const returnPath = source === "onboarding" ? "/onboarding?stripe_connected=true" : "/settings?stripe_connected=true";
+      const refreshPath = source === "onboarding" ? "/onboarding?stripe_refresh=true" : "/settings?stripe_refresh=true";
       const accountLink = await stripe.accountLinks.create({
         account: accountId,
-        refresh_url: `${baseUrl}/settings?stripe_refresh=true`,
-        return_url: `${baseUrl}/settings?stripe_connected=true`,
+        refresh_url: `${baseUrl}${refreshPath}`,
+        return_url: `${baseUrl}${returnPath}`,
         type: "account_onboarding",
       });
 

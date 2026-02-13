@@ -642,9 +642,10 @@ function PaymentsStep({ ob }: { ob: ObType }) {
                 size="lg"
                 className="w-full h-12 rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-[#4F46E5]/30"
                 onClick={ob.handlePaymentsConnect}
+                disabled={ob.isConnectingStripe}
                 data-testid="button-connect-payments"
               >
-                Connect payments
+                {ob.isConnectingStripe ? <Loader2 className="h-5 w-5 animate-spin" /> : "Connect payments"}
               </Button>
             </CardContent>
           </Card>

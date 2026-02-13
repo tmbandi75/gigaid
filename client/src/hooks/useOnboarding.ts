@@ -52,6 +52,7 @@ export function useOnboarding(onComplete: () => void, initialStep?: number) {
   const [linkCopied, setLinkCopied] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [isConnectingStripe, setIsConnectingStripe] = useState(false);
 
   const [identity, setIdentity] = useState<IdentityData>({
     firstName: "",
@@ -135,6 +136,22 @@ export function useOnboarding(onComplete: () => void, initialStep?: number) {
       apiFetch("/api/profile", { method: "PATCH", body: JSON.stringify(data) }),
     [QUERY_KEYS.authUser()]
   );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("stripe_connected") === "true") {
+      toast({ title: "Stripe connected successfully" });
+      setStep(7);
+      updateOnboardingMutation.mutate({ step: 7 });
+      window.history.replaceState({}, "", window.location.pathname);
+      setInitialized(true);
+    } else if (params.get("stripe_refresh") === "true") {
+      toast({ title: "Stripe setup incomplete", description: "You can finish payment setup anytime in Settings", variant: "destructive" });
+      setStep(6);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   const handleSkipClick = () => {
     setShowSkipModal(true);
@@ -269,9 +286,25 @@ export function useOnboarding(onComplete: () => void, initialStep?: number) {
     setStep(7);
   };
 
-  const handlePaymentsConnect = () => {
-    toast({ title: "Payment setup coming soon" });
-    handlePaymentsSkip();
+  const handlePaymentsConnect = async () => {
+    if (isConnectingStripe) return;
+    setIsConnectingStripe(true);
+    try {
+      const data = await apiFetch<{ url: string }>("/api/stripe/connect/onboard", {
+        method: "POST",
+        body: JSON.stringify({ source: "onboarding" }),
+      });
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        toast({ title: "Could not start payment setup", description: "Please try again", variant: "destructive" });
+        setIsConnectingStripe(false);
+      }
+    } catch (err: any) {
+      console.error("[Onboarding] Stripe Connect error:", err);
+      toast({ title: "Payment setup failed", description: err?.message || "Please try again", variant: "destructive" });
+      setIsConnectingStripe(false);
+    }
   };
 
   const handleAICardDismiss = async () => {
@@ -365,6 +398,7 @@ export function useOnboarding(onComplete: () => void, initialStep?: number) {
     handleBookingLinkContinue,
     handlePaymentsSkip,
     handlePaymentsConnect,
+    isConnectingStripe,
     handleAICardDismiss,
     handleGoToDashboard,
   };
