@@ -9338,8 +9338,19 @@ Return ONLY the message text, no JSON or formatting.`
 
       let event;
       if (webhookSecret && sig) {
+        if (!req.rawBody) {
+          console.error("[Stripe Connect Webhook] req.rawBody missing — express.json verify callback did not run");
+          return res.status(500).json({ error: "Server misconfiguration: raw body not captured" });
+        }
         try {
-          event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+          // req.rawBody is a Buffer stored by the express.json() verify
+          // callback in server/index.ts. Stripe requires the raw body
+          // (not parsed JSON) to verify webhook signatures.
+          event = stripe.webhooks.constructEvent(
+            req.rawBody as string | Buffer,
+            sig,
+            webhookSecret
+          );
         } catch (err: any) {
           console.error("Webhook signature verification failed:", err.message);
           return res.status(400).send(`Webhook Error: ${err.message}`);

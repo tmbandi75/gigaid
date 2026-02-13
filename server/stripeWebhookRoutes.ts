@@ -1,4 +1,4 @@
-import { Express, Request, Response, raw } from "express";
+import { Express, Request, Response } from "express";
 import Stripe from "stripe";
 import { IStorage } from "./storage";
 
@@ -38,9 +38,12 @@ function isTransientError(error: any): boolean {
 }
 
 export function registerStripeWebhookRoutes(app: Express, storage: IStorage) {
+  // No route-level raw() middleware needed here. The global express.json()
+  // middleware (in index.ts) parses req.body but also stores the raw Buffer
+  // as req.rawBody via its verify callback. We pass req.rawBody to
+  // constructEvent so Stripe can verify the webhook signature correctly.
   app.post(
     "/api/stripe/webhook",
-    raw({ type: "application/json" }),
     async (req: Request, res: Response) => {
       const sig = req.headers["stripe-signature"];
       const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -55,11 +58,23 @@ export function registerStripeWebhookRoutes(app: Express, storage: IStorage) {
         return res.status(400).json({ error: "Missing signature" });
       }
 
+      if (!req.rawBody) {
+        console.error("[Stripe Webhook] req.rawBody missing — express.json verify callback did not run");
+        return res.status(500).json({ error: "Server misconfiguration: raw body not captured" });
+      }
+
       let event: Stripe.Event;
       try {
         const { getUncachableStripeClient } = await import("./stripeClient");
         const stripe = await getUncachableStripeClient();
-        event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+        // req.rawBody is a Buffer stored by the express.json() verify callback
+        // in server/index.ts. Stripe requires the raw body (not parsed JSON)
+        // to verify webhook signatures.
+        event = stripe.webhooks.constructEvent(
+          req.rawBody as string | Buffer,
+          sig,
+          webhookSecret
+        );
       } catch (err: any) {
         console.error("[Stripe Webhook] Signature verification failed:", err.message);
         return res.status(400).json({ error: `Webhook Error: ${err.message}` });
