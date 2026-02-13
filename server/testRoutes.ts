@@ -194,6 +194,22 @@ export function registerTestRoutes(app: any, storage: IStorage) {
         results[tableName] = deleted.length;
       }
 
+      if (req.body.resetProfile) {
+        await storage.updateUser(user.id, {
+          services: [],
+          defaultPrice: null,
+          publicProfileEnabled: false,
+          publicProfileSlug: null,
+          stripeConnectStatus: null,
+          activationServicesDone: false,
+          activationPricingDone: false,
+          activationPaymentsDone: false,
+          activationLinkDone: false,
+          activationQuoteDone: false,
+          activationCompletedAt: null,
+        });
+      }
+
       return res.json({ success: true, userId: user.id, deleted: results });
     } catch (err: any) {
       return res.status(500).json({ error: err.message });

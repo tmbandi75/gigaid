@@ -1,4 +1,4 @@
-import { apiRequest, createTestUser, resetTestData, getAuthToken, seedInvoice, TEST_USER_A } from './setup';
+import { apiRequest, createTestUser, getAuthToken, seedInvoice, TEST_USER_A } from './setup';
 
 const ACTIVATION_USER = {
   id: 'activation-test-user',
@@ -6,6 +6,14 @@ const ACTIVATION_USER = {
   email: 'activation@gigaid.test',
   plan: 'free',
 };
+
+async function resetActivationTestData(userId: string) {
+  const { status, data } = await apiRequest('POST', '/api/test/reset-data', { userId, resetProfile: true });
+  if (status !== 200) {
+    throw new Error(`resetActivationTestData failed (${status}): ${JSON.stringify(data)}`);
+  }
+  return data;
+}
 
 describe('Activation Engine API', () => {
   let token: string;
@@ -16,11 +24,11 @@ describe('Activation Engine API', () => {
   });
 
   beforeEach(async () => {
-    await resetTestData(ACTIVATION_USER.id);
+    await resetActivationTestData(ACTIVATION_USER.id);
   });
 
   afterAll(async () => {
-    await resetTestData(ACTIVATION_USER.id);
+    await resetActivationTestData(ACTIVATION_USER.id);
   });
 
   describe('GET /api/activation', () => {

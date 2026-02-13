@@ -537,8 +537,8 @@ export async function registerRoutes(
         depositEnabled, depositValue, slotDuration,
         // Messaging fields
         personalPhone, inAppInboxEnabled,
-        // Booking slug
-        publicProfileSlug
+        // Booking slug & profile
+        publicProfileSlug, publicProfileEnabled
       } = req.body;
       let user = await storage.getUser((req as any).userId);
       
@@ -576,6 +576,7 @@ export async function registerRoutes(
 
       const updates: Record<string, any> = {};
       if (publicProfileSlug !== undefined) updates.publicProfileSlug = publicProfileSlug;
+      if (publicProfileEnabled !== undefined) updates.publicProfileEnabled = publicProfileEnabled;
       if (name !== undefined) updates.name = name;
       if (firstName !== undefined) updates.firstName = firstName;
       if (lastName !== undefined) updates.lastName = lastName;

@@ -4,6 +4,7 @@ const REQUIRED_VARS: { key: string; description: string; fallback?: string }[] =
   {
     key: 'GIGAID_ADMIN_API_KEY',
     description: 'Admin API key for test route access',
+    fallback: 'test-admin-key-local',
   },
 ];
 

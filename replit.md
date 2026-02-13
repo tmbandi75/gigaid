@@ -74,12 +74,13 @@ Automated reconciliation system that detects revenue discrepancies between inter
 - **Classification**: delta === 0 → ok, |delta| < 1% → warning, |delta| >= 1% → critical.
 - **Alert hooks**: Structured console.error for critical, console.warn for warnings. Slack/Email stubs in comments (TODO).
 
-### Test Coverage Summary (60 API tests)
+### Test Coverage Summary (78 API tests)
 - **Revenue Drift Detection** (`revenue.drift.test.ts`): No drift clean state, deposit drift, transfer drift, subscription drift, drift classification and persistence (5 tests).
 - **Revenue Regression** (`revenue.regression.test.ts`): Lost deposit guard, failed retries guard, missed transfers guard, subscription leakage guard, downgrade bug guard (5 tests).
 - **Stripe Platform Webhook** (`stripe.platform.webhook.test.ts`): Secret check, signature validation, valid-signature e2e (7 tests).
 - **Stripe Connect Webhook** (`stripe.connect.webhook.test.ts`): Signature enforcement, event processing (7 tests).
 - **Booking Validation** (`publicBooking.validation.test.ts`): Missing slugs, required fields, deposit policy, optional fields, cross-user isolation (12 tests).
+- **Activation Engine** (`activation.test.ts`): Activation status, step tracking (services, pricing, link, quote), refresh, percentage calculations, feature flag, admin backfill (18 tests).
 
 ### Test Seed Routes
 - `/api/test/revenue/run-drift-check` — Run drift detection check (accepts startDate/endDate)
