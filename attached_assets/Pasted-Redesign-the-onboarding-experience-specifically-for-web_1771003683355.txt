@@ -1,0 +1,112 @@
+Redesign the onboarding experience specifically for web users while preserving brand identity and business logic.
+
+Context:
+Current onboarding flow is identical for mobile and web, which is suboptimal for desktop users.
+
+Goal:
+Create a web-optimized onboarding experience that improves usability and conversion, without changing core logic.
+
+Do NOT break mobile onboarding.
+
+--------------------------------------------------
+A. PLATFORM DETECTION
+--------------------------------------------------
+
+1. Implement reliable web vs mobile detection using:
+   - screen size
+   - user agent
+   - existing responsive utilities
+
+2. Route web users to a dedicated web onboarding layout.
+
+--------------------------------------------------
+B. WEB-SPECIFIC UI DESIGN
+--------------------------------------------------
+
+3. Design a new desktop-first onboarding layout that uses:
+   - Multi-column sections
+   - Step sidebar / progress tracker
+   - Inline help panels
+   - Wider forms
+   - Reduced vertical scrolling
+
+4. Use same:
+   - Color palette
+   - Typography
+   - Icons
+   - Button styles
+   - Spacing scale
+
+as the mobile flow.
+
+--------------------------------------------------
+C. FLOW OPTIMIZATION
+--------------------------------------------------
+
+5. Reorganize steps for web efficiency:
+   - Group related fields
+   - Reduce step count where possible
+   - Enable keyboard navigation
+   - Support copy/paste of bulk data
+
+6. Add optional “Skip for Later” for non-critical steps.
+
+--------------------------------------------------
+D. COMPONENT ARCHITECTURE
+--------------------------------------------------
+
+7. Extract shared onboarding logic into reusable hooks/services.
+
+8. Create:
+   - WebOnboardingLayout.tsx
+   - WebOnboardingStepper.tsx
+   - WebOnboardingContainer.tsx
+
+9. Keep mobile components unchanged.
+
+--------------------------------------------------
+E. RESPONSIVE SAFETY
+--------------------------------------------------
+
+10. Ensure tablet-sized devices still use mobile flow.
+
+11. Add breakpoint rules to prevent layout overlap.
+
+--------------------------------------------------
+F. ANALYTICS & TRACKING
+--------------------------------------------------
+
+12. Add conversion tracking:
+    - step_started
+    - step_completed
+    - step_abandoned
+
+13. Compare web vs mobile completion rates.
+
+--------------------------------------------------
+G. ACCESSIBILITY
+--------------------------------------------------
+
+14. Add proper tab order.
+15. Ensure WCAG contrast compliance.
+16. Support screen readers.
+
+--------------------------------------------------
+H. TESTING
+--------------------------------------------------
+
+17. Add unit tests for platform routing.
+18. Add E2E tests for web onboarding completion.
+
+--------------------------------------------------
+I. SAFETY
+--------------------------------------------------
+
+19. Do NOT change backend APIs.
+20. Do NOT alter validation rules.
+21. Do NOT break existing users.
+22. Preserve saved progress.
+
+--------------------------------------------------
+
+Proceed with full web onboarding redesign.
