@@ -51,9 +51,9 @@ const TEST_LAYERS = [
 const REQUIRED_ENV_VARS = [
   "STRIPE_SECRET_KEY",
   "STRIPE_WEBHOOK_SECRET",
-  "SUPABASE_URL",
-  "SUPABASE_SERVICE_KEY",
-  "JWT_SECRET",
+  "DATABASE_URL",
+  "APP_JWT_SECRET",
+  "SENTRY_DSN",
 ];
 
 const STRIPE_VERIFICATION_FILES = [
@@ -257,7 +257,7 @@ function checkErrorHandler(): CheckResult {
   const handlerFiles = MONITORING_FILES.errorHandler.filter((f) =>
     fileExists(f) || fileExists(`server/${f}`) || fileExists(`server/middleware/${f}`)
   );
-  const codeMatches = searchFilesForPattern("server", ["app.use(errorHandler", "app.use(handleErrors", "error_handler"]);
+  const codeMatches = searchFilesForPattern("server", ["app.use(errorHandler", "app.use(centralErrorHandler", "app.use(handleErrors", "error_handler"]);
 
   if (handlerFiles.length > 0 || codeMatches.length > 0) {
     return {
@@ -275,6 +275,28 @@ function checkErrorHandler(): CheckResult {
     category: "MANUAL_CHECKS_REQUIRED",
     message: "No dedicated error handler middleware found",
     details: "Consider adding centralized error handling middleware",
+  };
+}
+
+function checkProcessHandlers(): CheckResult {
+  const codeMatches = searchFilesForPattern("server", ["unhandledRejection", "uncaughtException", "setupProcessHandlers"]);
+
+  if (codeMatches.length > 0) {
+    return {
+      name: "Process Error Handlers",
+      status: "pass",
+      category: "CONFIG_CHECKS",
+      message: "Process-level error handlers detected",
+      details: codeMatches.join(", "),
+    };
+  }
+
+  return {
+    name: "Process Error Handlers",
+    status: "warn",
+    category: "MANUAL_CHECKS_REQUIRED",
+    message: "No process-level error handlers found",
+    details: "Add handlers for unhandledRejection and uncaughtException",
   };
 }
 
@@ -623,6 +645,10 @@ async function main() {
   const errorHandlerResult = checkErrorHandler();
   results.push(errorHandlerResult);
   logResult(errorHandlerResult);
+
+  const processHandlersResult = checkProcessHandlers();
+  results.push(processHandlersResult);
+  logResult(processHandlersResult);
 
   const totalDuration = Date.now() - globalStart;
   const report = generateReport(results, totalDuration, failFast);

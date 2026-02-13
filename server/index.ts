@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -12,6 +13,51 @@ import { startIntentDetectionEngine } from "./intentDetectionEngine";
 import { startIntentFollowUpScheduler } from "./intentFollowUpScheduler";
 import { startAccountDeletionScheduler } from "./accountDeletionScheduler";
 import { startChurnScheduler } from "./churn/churnScheduler";
+import { initSentry, setupProcessHandlers } from "./sentry";
+import { centralErrorHandler } from "./errorHandler";
+
+const isProduction = process.env.NODE_ENV === "production";
+
+function validateRequiredEnv(): void {
+  const required: Array<{ key: string; label: string }> = [
+    { key: "DATABASE_URL", label: "Database connection" },
+    { key: "APP_JWT_SECRET", label: "JWT signing secret" },
+  ];
+
+  const productionRequired: Array<{ key: string; label: string }> = [
+    { key: "SENTRY_DSN", label: "Sentry error tracking" },
+  ];
+
+  const missing: string[] = [];
+
+  for (const { key, label } of required) {
+    if (!process.env[key]) {
+      missing.push(`${key} (${label})`);
+    }
+  }
+
+  if (isProduction) {
+    for (const { key, label } of productionRequired) {
+      if (!process.env[key]) {
+        missing.push(`${key} (${label})`);
+      }
+    }
+  }
+
+  if (missing.length > 0) {
+    console.error(`[startup] Missing required environment variables:\n  - ${missing.join("\n  - ")}`);
+    if (isProduction) {
+      console.error("[startup] Cannot start in production with missing required vars. Exiting.");
+      process.exit(1);
+    } else {
+      console.warn("[startup] Continuing in development mode despite missing vars.");
+    }
+  }
+}
+
+validateRequiredEnv();
+initSentry();
+setupProcessHandlers();
 
 const app = express();
 const httpServer = createServer(app);
@@ -21,6 +67,25 @@ declare module "http" {
     rawBody: unknown;
   }
 }
+
+app.use(
+  helmet({
+    contentSecurityPolicy: isProduction
+      ? {
+          directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            imgSrc: ["'self'", "data:", "https:", "blob:"],
+            connectSrc: ["'self'", "https://*.sentry.io", "https://*.stripe.com", "https://maps.googleapis.com"],
+            frameSrc: ["'self'", "https://*.stripe.com"],
+          },
+        }
+      : false,
+    crossOriginEmbedderPolicy: false,
+  }),
+);
 
 app.use(
   express.json({
@@ -76,13 +141,7 @@ app.use((req, res, next) => {
   
   await registerRoutes(httpServer, app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
-  });
+  app.use(centralErrorHandler);
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route

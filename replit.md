@@ -120,3 +120,11 @@ Production-safe backup and restore scripts using `pg_dump`/`psql` with the Repli
 - **Backup** (`scripts/backup.ts`): Run with `npx tsx scripts/backup.ts`. Creates `/backups/backup_YYYYMMDD_HHmmss.sql`, auto-creates directory, 7-file retention policy with automatic cleanup, validates `DATABASE_URL` at startup, logs start/filename/size/duration/retention.
 - **Restore** (`scripts/restore.ts`): Run with `npx tsx scripts/restore.ts [--file=<path>] [--yes]`. Defaults to latest backup if no `--file` specified. Includes interactive confirmation prompt (skip with `--yes`), warns when `NODE_ENV=production`. Validates `DATABASE_URL` at startup.
 - **Safety**: No credentials exposed in logs, connection strings redacted in error output, 5-minute timeout on both operations.
+
+### Security & Error Monitoring
+Production-grade security hardening and centralized error tracking.
+- **Sentry Integration** (`server/sentry.ts`): Initializes `@sentry/node` with tracing, strips auth headers from events, gracefully skips in dev if `SENTRY_DSN` not set, required in production.
+- **Central Error Handler** (`server/errorHandler.ts`): Express error middleware, captures to Sentry, returns sanitized JSON (`{ error: "Internal server error" }`) for 500s, never exposes stack traces.
+- **Process Handlers**: `unhandledRejection` and `uncaughtException` handlers registered at startup, log and report to Sentry, flush before exit on uncaught exceptions.
+- **Security Headers**: `helmet` middleware with CSP baseline (production only), `x-powered-by` disabled, COEP relaxed for Stripe/Maps embeds.
+- **Env Validation**: Startup validates `DATABASE_URL` and `APP_JWT_SECRET` (always required), `SENTRY_DSN` (required in production). Fails startup in production if missing, warns in development.
