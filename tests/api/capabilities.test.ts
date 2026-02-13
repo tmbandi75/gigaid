@@ -1,19 +1,21 @@
-import { apiRequest, createTestUser, resetTestData, getAuthToken, TEST_USER_A } from './setup';
+import { apiRequest, createTestUser, resetTestData, getAuthToken, createSuiteUsers } from './setup';
+
+const { userA } = createSuiteUsers('capabilities');
 
 describe('Capabilities API', () => {
   let tokenA: string;
 
   beforeAll(async () => {
-    await createTestUser(TEST_USER_A);
-    tokenA = await getAuthToken(TEST_USER_A.id);
+    await createTestUser(userA);
+    tokenA = await getAuthToken(userA.id);
   });
 
   beforeEach(async () => {
-    await resetTestData(TEST_USER_A.id);
+    await resetTestData(userA.id);
   });
 
   afterAll(async () => {
-    await resetTestData(TEST_USER_A.id);
+    await resetTestData(userA.id);
   });
 
   const validJob = {
@@ -28,7 +30,7 @@ describe('Capabilities API', () => {
   describe('Free plan job limit enforcement', () => {
     it('returns 403 with JOB_LIMIT_EXCEEDED when free plan user hits 10 jobs', async () => {
       await apiRequest('POST', '/api/test/set-usage', {
-        userId: TEST_USER_A.id,
+        userId: userA.id,
         capability: 'jobs.create',
         count: 10,
       });
@@ -41,11 +43,11 @@ describe('Capabilities API', () => {
 
   describe('Pro plan unlimited jobs', () => {
     it('allows pro plan user to create jobs beyond free limit', async () => {
-      await createTestUser({ ...TEST_USER_A, plan: 'pro' });
-      tokenA = await getAuthToken(TEST_USER_A.id);
+      await createTestUser({ ...userA, plan: 'pro' });
+      tokenA = await getAuthToken(userA.id);
 
       await apiRequest('POST', '/api/test/set-usage', {
-        userId: TEST_USER_A.id,
+        userId: userA.id,
         capability: 'jobs.create',
         count: 10,
       });
@@ -54,15 +56,15 @@ describe('Capabilities API', () => {
       expect(status).toBe(201);
       expect(data).toHaveProperty('id');
 
-      await createTestUser({ ...TEST_USER_A, plan: 'free' });
-      tokenA = await getAuthToken(TEST_USER_A.id);
+      await createTestUser({ ...userA, plan: 'free' });
+      tokenA = await getAuthToken(userA.id);
     });
   });
 
   describe('GET /api/capabilities/:capability/check', () => {
     it('returns current usage and limit info for a capability', async () => {
       await apiRequest('POST', '/api/test/set-usage', {
-        userId: TEST_USER_A.id,
+        userId: userA.id,
         capability: 'jobs.create',
         count: 5,
       });
@@ -79,7 +81,7 @@ describe('Capabilities API', () => {
   describe('Free plan SMS limit enforcement', () => {
     it('returns 403 when sms.two_way usage reaches limit', async () => {
       await apiRequest('POST', '/api/test/set-usage', {
-        userId: TEST_USER_A.id,
+        userId: userA.id,
         capability: 'sms.two_way',
         count: 20,
       });

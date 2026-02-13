@@ -1,19 +1,21 @@
-import { apiRequest, createTestUser, resetTestData, getAuthToken, TEST_USER_A } from './setup';
+import { apiRequest, createTestUser, resetTestData, getAuthToken, createSuiteUsers } from './setup';
+
+const { userA } = createSuiteUsers('invoices');
 
 describe('Invoices API', () => {
   let tokenA: string;
 
   beforeAll(async () => {
-    await createTestUser(TEST_USER_A);
-    tokenA = await getAuthToken(TEST_USER_A.id);
+    await createTestUser(userA);
+    tokenA = await getAuthToken(userA.id);
   });
 
   beforeEach(async () => {
-    await resetTestData(TEST_USER_A.id);
+    await resetTestData(userA.id);
   });
 
   afterAll(async () => {
-    await resetTestData(TEST_USER_A.id);
+    await resetTestData(userA.id);
   });
 
   const validInvoice = {

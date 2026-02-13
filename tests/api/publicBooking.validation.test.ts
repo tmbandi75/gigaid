@@ -1,6 +1,8 @@
-import { apiRequest, createTestUser, resetTestData, getAuthToken, TEST_USER_A } from './setup';
+import { apiRequest, createTestUser, resetTestData, getAuthToken, createSuiteUsers } from './setup';
+import { ns } from '../utils/testNamespace';
 
-const SLUG = 'booking-val-test-slug';
+const { userA } = createSuiteUsers('pubbook');
+const SLUG = ns('booking-val-slug');
 
 const validBooking = {
   clientName: 'Validation Test Client',
@@ -16,8 +18,8 @@ describe('Public Booking Validation', () => {
   let tokenA: string;
 
   beforeAll(async () => {
-    await createTestUser(TEST_USER_A);
-    tokenA = await getAuthToken(TEST_USER_A.id);
+    await createTestUser(userA);
+    tokenA = await getAuthToken(userA.id);
     await apiRequest('PATCH', '/api/settings', {
       publicProfileSlug: SLUG,
       publicProfileEnabled: true,
@@ -25,7 +27,7 @@ describe('Public Booking Validation', () => {
   });
 
   afterAll(async () => {
-    await resetTestData(TEST_USER_A.id);
+    await resetTestData(userA.id);
   });
 
   describe('404 — missing/invalid slug', () => {
@@ -107,7 +109,7 @@ describe('Public Booking Validation', () => {
   describe('Deposit policy acknowledgment', () => {
     beforeEach(async () => {
       await apiRequest('POST', '/api/test/set-deposit-config', {
-        userId: TEST_USER_A.id,
+        userId: userA.id,
         depositEnabled: true,
         depositValue: 25,
         depositType: 'percent',
@@ -120,7 +122,7 @@ describe('Public Booking Validation', () => {
 
     afterEach(async () => {
       await apiRequest('POST', '/api/test/set-deposit-config', {
-        userId: TEST_USER_A.id,
+        userId: userA.id,
         depositEnabled: false,
         depositValue: 0,
         depositPolicySet: false,

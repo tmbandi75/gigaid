@@ -10,19 +10,20 @@
  */
 import Stripe from "stripe";
 import { apiRequest, createTestUser, resetTestData } from "./setup";
+import { ns } from "../utils/testNamespace";
 
 const BASE_URL = process.env.TEST_BASE_URL || "http://localhost:5000";
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
 const CONNECT_WEBHOOK_SECRET = process.env.STRIPE_CONNECT_WEBHOOK_SECRET || "";
 
 const REVENUE_USER = {
-  id: "revenue-regression-user",
+  id: ns("rev-regr-user"),
   name: "Revenue Test User",
-  email: "revenue@gigaid.test",
+  email: ns("revenue@gigaid.test"),
   plan: "free",
 };
 
-const REVENUE_SLUG = "revenue-test-plumber";
+const REVENUE_SLUG = ns("rev-test-plumber");
 
 function signPayload(payload: string, secret: string): string {
   const stripe = new Stripe("sk_test_fake");

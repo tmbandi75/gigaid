@@ -1,9 +1,10 @@
-import { apiRequest, createTestUser, getAuthToken, seedInvoice, TEST_USER_A } from './setup';
+import { apiRequest, createTestUser, getAuthToken, seedInvoice } from './setup';
+import { ns } from '../utils/testNamespace';
 
 const ACTIVATION_USER = {
-  id: 'activation-test-user',
+  id: ns('activation-user'),
   name: 'Activation Test User',
-  email: 'activation@gigaid.test',
+  email: ns('activation@gigaid.test'),
   plan: 'free',
 };
 
@@ -90,7 +91,7 @@ describe('Activation Engine API', () => {
     it('marks link_done when user enables public profile with slug', async () => {
       await apiRequest('PATCH', '/api/profile', {
         publicProfileEnabled: true,
-        publicProfileSlug: 'test-activation-user',
+        publicProfileSlug: ns('activation-slug'),
       }, token);
 
       const { data } = await apiRequest('GET', '/api/activation', undefined, token);

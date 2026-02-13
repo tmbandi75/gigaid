@@ -1,16 +1,19 @@
-import { apiRequest, createTestUser, resetTestData, getAuthToken, TEST_USER_A } from './setup';
+import { apiRequest, createTestUser, resetTestData, getAuthToken, createSuiteUsers } from './setup';
+import { ns } from '../utils/testNamespace';
+
+const { userA } = createSuiteUsers('booking');
 
 describe('Booking API', () => {
   let tokenA: string;
-  const testSlug = 'test-worker-slug';
+  const testSlug = ns('booking-test-slug');
 
   beforeAll(async () => {
-    await createTestUser(TEST_USER_A);
-    tokenA = await getAuthToken(TEST_USER_A.id);
+    await createTestUser(userA);
+    tokenA = await getAuthToken(userA.id);
   });
 
   beforeEach(async () => {
-    await resetTestData(TEST_USER_A.id);
+    await resetTestData(userA.id);
     await apiRequest('PATCH', '/api/settings', {
       publicProfileSlug: testSlug,
       publicProfileEnabled: true,
@@ -18,7 +21,7 @@ describe('Booking API', () => {
   });
 
   afterAll(async () => {
-    await resetTestData(TEST_USER_A.id);
+    await resetTestData(userA.id);
   });
 
   const validBooking = {

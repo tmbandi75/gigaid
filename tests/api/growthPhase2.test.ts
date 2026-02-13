@@ -1,4 +1,6 @@
-import { apiRequest, createTestUser, resetTestData, getAuthToken, TEST_USER_A, TEST_USER_B } from './setup';
+import { apiRequest, createTestUser, resetTestData, getAuthToken, createSuiteUsers } from './setup';
+
+const { userA, userB } = createSuiteUsers('growth');
 import { getAdminApiKey } from '../utils/adminKey';
 
 const BASE_URL = 'http://localhost:5000';
@@ -46,15 +48,15 @@ describe('Growth Phase 2 API', () => {
   let tokenB: string;
 
   beforeAll(async () => {
-    await createTestUser(TEST_USER_A);
-    await createTestUser(TEST_USER_B);
-    tokenA = await getAuthToken(TEST_USER_A.id);
-    tokenB = await getAuthToken(TEST_USER_B.id);
+    await createTestUser(userA);
+    await createTestUser(userB);
+    tokenA = await getAuthToken(userA.id);
+    tokenB = await getAuthToken(userB.id);
   });
 
   afterAll(async () => {
-    await resetTestData(TEST_USER_A.id);
-    await resetTestData(TEST_USER_B.id);
+    await resetTestData(userA.id);
+    await resetTestData(userB.id);
   });
 
   describe('Lead Capture - POST /api/growth/lead', () => {
@@ -143,7 +145,7 @@ describe('Growth Phase 2 API', () => {
       });
       const { status } = await publicRequest('POST', '/api/admin/growth/convert', {
         leadId: lead.id,
-        userId: TEST_USER_A.id,
+        userId: userA.id,
       });
       expect(status).toBe(401);
     });
@@ -158,7 +160,7 @@ describe('Growth Phase 2 API', () => {
           'Content-Type': 'application/json',
           'x-admin-api-key': 'wrong-key-123',
         },
-        body: JSON.stringify({ leadId: lead.id, userId: TEST_USER_A.id }),
+        body: JSON.stringify({ leadId: lead.id, userId: userA.id }),
       });
       expect(res.status).toBe(401);
     });
@@ -175,7 +177,7 @@ describe('Growth Phase 2 API', () => {
           'Content-Type': 'application/json',
           'x-admin-api-key': ADMIN_KEY,
         },
-        body: JSON.stringify({ leadId: lead.id, userId: TEST_USER_A.id }),
+        body: JSON.stringify({ leadId: lead.id, userId: userA.id }),
       });
       const data = await res.json();
       expect(res.status).toBe(200);
@@ -190,7 +192,7 @@ describe('Growth Phase 2 API', () => {
           'Content-Type': 'application/json',
           'x-admin-api-key': ADMIN_KEY,
         },
-        body: JSON.stringify({ leadId: 'non-existent-lead', userId: TEST_USER_A.id }),
+        body: JSON.stringify({ leadId: 'non-existent-lead', userId: userA.id }),
       });
       expect(res.status).toBe(404);
     });
@@ -206,7 +208,7 @@ describe('Growth Phase 2 API', () => {
           'Content-Type': 'application/json',
           'x-admin-api-key': ADMIN_KEY,
         },
-        body: JSON.stringify({ leadId: lead.id, userId: TEST_USER_B.id }),
+        body: JSON.stringify({ leadId: lead.id, userId: userB.id }),
       });
       const res = await fetch(`${BASE_URL}/api/admin/growth/convert`, {
         method: 'POST',
@@ -214,7 +216,7 @@ describe('Growth Phase 2 API', () => {
           'Content-Type': 'application/json',
           'x-admin-api-key': ADMIN_KEY,
         },
-        body: JSON.stringify({ leadId: lead.id, userId: TEST_USER_B.id }),
+        body: JSON.stringify({ leadId: lead.id, userId: userB.id }),
       });
       expect(res.status).toBe(409);
     });
@@ -406,7 +408,7 @@ describe('Growth Phase 2 API', () => {
           'Content-Type': 'application/json',
           'x-admin-api-key': ADMIN_KEY,
         },
-        body: JSON.stringify({ referrerId: TEST_USER_A.id, referredId: TEST_USER_A.id }),
+        body: JSON.stringify({ referrerId: userA.id, referredId: userA.id }),
       });
       const data = await res.json();
       expect(res.status).toBe(409);
@@ -421,7 +423,7 @@ describe('Growth Phase 2 API', () => {
           'Content-Type': 'application/json',
           'x-admin-api-key': ADMIN_KEY,
         },
-        body: JSON.stringify({ referrerId: TEST_USER_A.id, referredId: TEST_USER_B.id }),
+        body: JSON.stringify({ referrerId: userA.id, referredId: userB.id }),
       });
       const data = await res.json();
       expect(res.status).toBe(409);
@@ -436,15 +438,15 @@ describe('Growth Phase 2 API', () => {
           'Content-Type': 'application/json',
           'x-admin-api-key': ADMIN_KEY,
         },
-        body: JSON.stringify({ referrerId: TEST_USER_A.id }),
+        body: JSON.stringify({ referrerId: userA.id }),
       });
       expect(res.status).toBe(400);
     });
 
     it('requires admin auth for reward application', async () => {
       const { status } = await publicRequest('POST', '/api/admin/growth/reward', {
-        referrerId: TEST_USER_A.id,
-        referredId: TEST_USER_B.id,
+        referrerId: userA.id,
+        referredId: userB.id,
       });
       expect(status).toBe(401);
     });

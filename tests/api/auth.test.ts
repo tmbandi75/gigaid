@@ -1,19 +1,21 @@
-import { apiRequest, createTestUser, resetTestData, getAuthToken, TEST_USER_A } from './setup';
+import { apiRequest, createTestUser, resetTestData, getAuthToken, createSuiteUsers } from './setup';
+
+const { userA } = createSuiteUsers('auth');
 
 describe('Authentication API', () => {
   let tokenA: string;
 
   beforeAll(async () => {
-    await createTestUser(TEST_USER_A);
-    tokenA = await getAuthToken(TEST_USER_A.id);
+    await createTestUser(userA);
+    tokenA = await getAuthToken(userA.id);
   });
 
   beforeEach(async () => {
-    await resetTestData(TEST_USER_A.id);
+    await resetTestData(userA.id);
   });
 
   afterAll(async () => {
-    await resetTestData(TEST_USER_A.id);
+    await resetTestData(userA.id);
   });
 
   describe('Unauthenticated access', () => {
@@ -50,8 +52,8 @@ describe('Authentication API', () => {
     it('returns correct user profile fields', async () => {
       const { status, data } = await apiRequest('GET', '/api/profile', undefined, tokenA);
       expect(status).toBe(200);
-      expect(data.name).toBe(TEST_USER_A.name);
-      expect(data.email).toBe(TEST_USER_A.email);
+      expect(data.name).toBe(userA.name);
+      expect(data.email).toBe(userA.email);
     });
   });
 

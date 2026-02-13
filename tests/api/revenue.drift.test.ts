@@ -10,15 +10,16 @@
  */
 import Stripe from "stripe";
 import { apiRequest, createTestUser, resetTestData } from "./setup";
+import { ns } from "../utils/testNamespace";
 
 const BASE_URL = process.env.TEST_BASE_URL || "http://localhost:5000";
 const CONNECT_WEBHOOK_SECRET =
   process.env.STRIPE_CONNECT_WEBHOOK_SECRET || "";
 
 const DRIFT_USER = {
-  id: "drift-detection-user",
+  id: ns("drift-user"),
   name: "Drift Test User",
-  email: "drift@gigaid.test",
+  email: ns("drift@gigaid.test"),
   plan: "free",
 };
 

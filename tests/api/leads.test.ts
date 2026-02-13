@@ -1,24 +1,26 @@
-import { apiRequest, createTestUser, resetTestData, getAuthToken, TEST_USER_A, TEST_USER_B } from './setup';
+import { apiRequest, createTestUser, resetTestData, getAuthToken, createSuiteUsers } from './setup';
+
+const { userA, userB } = createSuiteUsers('leads');
 
 describe('Leads API', () => {
   let tokenA: string;
   let tokenB: string;
 
   beforeAll(async () => {
-    await createTestUser(TEST_USER_A);
-    await createTestUser(TEST_USER_B);
-    tokenA = await getAuthToken(TEST_USER_A.id);
-    tokenB = await getAuthToken(TEST_USER_B.id);
+    await createTestUser(userA);
+    await createTestUser(userB);
+    tokenA = await getAuthToken(userA.id);
+    tokenB = await getAuthToken(userB.id);
   });
 
   beforeEach(async () => {
-    await resetTestData(TEST_USER_A.id);
-    await resetTestData(TEST_USER_B.id);
+    await resetTestData(userA.id);
+    await resetTestData(userB.id);
   });
 
   afterAll(async () => {
-    await resetTestData(TEST_USER_A.id);
-    await resetTestData(TEST_USER_B.id);
+    await resetTestData(userA.id);
+    await resetTestData(userB.id);
   });
 
   const validLead = {
