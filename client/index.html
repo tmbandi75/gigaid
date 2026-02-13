@@ -21,6 +21,58 @@
   </head>
   <body>
     <div id="root"></div>
+    <div id="loading-fallback" style="display:none;position:fixed;inset:0;z-index:99999;background:#fff;justify-content:center;align-items:center;flex-direction:column;font-family:Roboto,system-ui,sans-serif;">
+      <div style="text-align:center;max-width:320px;padding:24px;">
+        <h2 style="margin:0 0 8px;font-size:20px;font-weight:500;color:#1a1a1a;">Taking longer than usual</h2>
+        <p style="margin:0 0 20px;font-size:14px;color:#666;line-height:1.5;">This can happen when your browser has an outdated version cached. Tap below to fix it.</p>
+        <button id="clear-cache-btn" style="background:#5276b0;color:#fff;border:none;border-radius:8px;padding:12px 24px;font-size:16px;font-weight:500;cursor:pointer;font-family:inherit;width:100%;">Clear Cache &amp; Reload</button>
+      </div>
+    </div>
+    <script>
+      (function(){
+        var t=setTimeout(function(){
+          var f=document.getElementById('loading-fallback');
+          var r=document.getElementById('root');
+          if(f&&r&&r.children.length===0){f.style.display='flex';}
+        },8000);
+        var obs=new MutationObserver(function(){
+          var r=document.getElementById('root');
+          if(r&&r.children.length>0){clearTimeout(t);obs.disconnect();}
+        });
+        obs.observe(document.getElementById('root'),{childList:true});
+        function clearAndReload(){
+          if('serviceWorker' in navigator){
+            navigator.serviceWorker.getRegistrations().then(function(regs){
+              return Promise.all(regs.map(function(r){return r.unregister();}));
+            }).then(function(){
+              return caches.keys();
+            }).then(function(keys){
+              return Promise.all(keys.map(function(k){return caches.delete(k);}));
+            }).then(function(){
+              window.location.reload();
+            }).catch(function(){
+              window.location.reload();
+            });
+          }else{
+            window.location.reload();
+          }
+        }
+        var btn=document.getElementById('clear-cache-btn');
+        if(btn){btn.addEventListener('click',function(){
+          btn.textContent='Clearing...';
+          btn.disabled=true;
+          clearAndReload();
+        });}
+        if('serviceWorker' in navigator){
+          navigator.serviceWorker.addEventListener('message',function(event){
+            if(event.data&&event.data.type==='SW_UPDATED'){
+              console.log('[SW] Service worker updated to v'+event.data.version+', reloading...');
+              window.location.reload();
+            }
+          });
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

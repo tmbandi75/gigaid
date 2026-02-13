@@ -11,7 +11,22 @@ if (import.meta.env.DEV) {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js').then((registration) => {
+    navigator.serviceWorker.register('/service-worker.js', { updateViaCache: 'none' }).then((registration) => {
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        if (newWorker) {
+          console.log('[SW] New service worker found, waiting for install...');
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              console.log('[SW] New version installed, sending SKIP_WAITING and reloading...');
+              newWorker.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+        }
+      });
+
+      registration.update().catch(() => {});
+
       if ('sync' in registration) {
         navigator.serviceWorker.ready.then((reg) => {
           window.addEventListener('online', () => {
@@ -29,6 +44,15 @@ if ('serviceWorker' in navigator) {
     }).catch((err) => {
       console.error('[SW] Registration failed:', err);
     });
+  });
+
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      refreshing = true;
+      console.log('[SW] Controller changed, reloading page for fresh content...');
+      window.location.reload();
+    }
   });
 }
 
