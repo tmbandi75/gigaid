@@ -1,0 +1,86 @@
+Implement automated database backup and restore for this project.
+
+Context:
+Project uses Supabase/Postgres.
+Do NOT modify application business logic.
+
+Goal:
+Create production-safe DB backup and restore scripts.
+
+--------------------------------------------------
+A. BACKUP SCRIPT
+--------------------------------------------------
+
+1. Create:
+   /scripts/backup.ts
+
+2. Implement backup using pg_dump:
+   - Read SUPABASE_URL and SUPABASE_SERVICE_KEY (if needed)
+   - Extract database connection string
+   - Run pg_dump
+   - Save file to /backups
+
+3. Filename format:
+   backup_YYYYMMDD_HHmmss.sql
+
+4. Ensure /backups directory auto-creates if missing.
+
+5. Add retention policy:
+   - Keep last 7 backups
+   - Delete older ones automatically
+
+--------------------------------------------------
+B. RESTORE SCRIPT
+--------------------------------------------------
+
+6. Create:
+   /scripts/restore.ts
+
+7. Accept optional argument:
+   --file=<backup_file>
+
+8. Use psql to restore selected backup.
+
+9. Add safety prompt:
+   - Confirm before restore
+   - Warn if NODE_ENV=production
+
+--------------------------------------------------
+C. NPM SCRIPTS
+--------------------------------------------------
+
+10. Add to package.json:
+
+   "backup:db": "tsx scripts/backup.ts",
+   "restore:db": "tsx scripts/restore.ts"
+
+--------------------------------------------------
+D. ENV VALIDATION
+--------------------------------------------------
+
+11. Validate at runtime:
+   - SUPABASE_URL exists
+   - JWT_SECRET exists
+
+12. Fail clearly if missing.
+
+--------------------------------------------------
+E. LOGGING
+--------------------------------------------------
+
+13. Print:
+   - Backup start
+   - Backup file name
+   - Backup size
+   - Duration
+   - Retention cleanup result
+
+--------------------------------------------------
+F. SAFETY
+--------------------------------------------------
+
+14. Do NOT expose credentials in logs.
+15. Do NOT change production logic.
+16. Keep implementation minimal and documented.
+
+Proceed with implementation.
