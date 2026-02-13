@@ -1,0 +1,127 @@
+You are a senior financial-systems engineer.
+
+I need you to implement an automated Revenue Drift Detection system for this GigAid codebase.
+
+ABSOLUTE RULES:
+- Do NOT modify business logic.
+- Do NOT change existing payment flows.
+- Do NOT refactor Stripe handlers.
+- Do NOT touch production secrets.
+- Do NOT weaken security.
+- Additive changes only.
+
+CONTEXT:
+- The system already has:
+  - Revenue regression tests
+  - Stripe webhook verification
+  - Deduplication and retry logic
+  - Subscription and deposit tracking
+- We want a daily (or on-demand) reconciliation job.
+
+GOAL:
+Detect and alert when:
+1) Expected revenue ≠ Actual Stripe revenue
+2) Captured deposits ≠ Stripe charges
+3) Provider payouts ≠ Transfers
+4) Active subscriptions ≠ Paid entitlements
+5) Experiment/pricing changes cause leakage
+
+REQUIRED FEATURES:
+
+1) Reconciliation Service
+Create: server/revenue/reconciliationService.ts
+
+Implement functions:
+
+- calculateExpectedDeposits(startDate, endDate)
+- calculateStripeCharges(startDate, endDate)
+- calculateExpectedTransfers(startDate, endDate)
+- calculateStripeTransfers(startDate, endDate)
+- calculateActiveSubscriptions()
+- calculateEntitledPaidUsers()
+
+Each function must:
+- Use existing DB models and Stripe SDK
+- Not duplicate logic
+- Handle pagination
+- Be unit-testable
+
+2) Drift Detector
+Create: server/revenue/driftDetector.ts
+
+Implement:
+
+runRevenueDriftCheck(startDate, endDate)
+
+Returns:
+
+{
+  deposits: { expected, actual, delta },
+  transfers: { expected, actual, delta },
+  subscriptions: { expected, actual, delta },
+  status: "ok" | "warning" | "critical"
+}
+
+Classification rules:
+- delta === 0 → ok
+- |delta| < 1% → warning
+- |delta| ≥ 1% → critical
+
+3) Test-Only Endpoint
+Extend server/testRoutes.ts:
+
+POST /api/test/revenue/run-drift-check
+
+Runs drift check for last 24h and returns result.
+
+Must be gated to test/dev only.
+
+4) Production Endpoint (Admin Only)
+Add:
+
+POST /api/admin/revenue/reconcile
+
+- Requires admin auth
+- Runs drift check
+- Logs results
+- Returns JSON
+- No side effects
+
+5) Scheduled Job (Optional)
+If project already has background jobs:
+- Register daily drift check (UTC midnight)
+Else:
+- Add commented stub showing how to schedule
+
+6) Logging + Alerts
+When status === "critical":
+- Log structured error
+- Store record in DB (revenue_drift_logs table or equivalent)
+- Prepare hook for Slack/Email (stub only, no secrets)
+
+7) Tests
+Create: tests/api/revenue.drift.test.ts
+
+Include tests for:
+- No drift (perfect match)
+- Deposit drift
+- Transfer drift
+- Subscription drift
+- Pricing experiment drift
+
+Use testRoutes seeding.
+
+8) Safety
+- All Stripe API calls must be in test mode for tests
+- No production calls in CI
+- No hardcoded keys
+- Respect rate limits
+
+DELIVERABLES:
+- All files created
+- Tests passing
+- npm run test:api includes drift tests
+- No regressions
+- Inline documentation
+
+If uncertain, add TODO comments instead of guessing.

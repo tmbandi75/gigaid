@@ -2738,5 +2738,35 @@ export const insertOutreachQueueSchema = createInsertSchema(outreachQueue).omit(
 export type InsertOutreachQueue = z.infer<typeof insertOutreachQueueSchema>;
 export type OutreachItem = typeof outreachQueue.$inferSelect;
 
+// ============ REVENUE DRIFT LOGS ============
+
+export const revenueDriftStatuses = ["ok", "warning", "critical"] as const;
+export type RevenueDriftStatus = typeof revenueDriftStatuses[number];
+
+export const revenueDriftLogs = pgTable("revenue_drift_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ranAt: text("ran_at").notNull(),
+  startDate: text("start_date").notNull(),
+  endDate: text("end_date").notNull(),
+  status: text("status").notNull().default("ok"),
+  depositsExpected: integer("deposits_expected").notNull().default(0),
+  depositsActual: integer("deposits_actual").notNull().default(0),
+  depositsDelta: integer("deposits_delta").notNull().default(0),
+  transfersExpected: integer("transfers_expected").notNull().default(0),
+  transfersActual: integer("transfers_actual").notNull().default(0),
+  transfersDelta: integer("transfers_delta").notNull().default(0),
+  subscriptionsExpected: integer("subscriptions_expected").notNull().default(0),
+  subscriptionsActual: integer("subscriptions_actual").notNull().default(0),
+  subscriptionsDelta: integer("subscriptions_delta").notNull().default(0),
+  triggeredBy: text("triggered_by"), // "scheduled", "admin", "test"
+  details: text("details"), // JSON string with additional context
+});
+
+export const insertRevenueDriftLogSchema = createInsertSchema(revenueDriftLogs).omit({
+  id: true,
+});
+export type InsertRevenueDriftLog = z.infer<typeof insertRevenueDriftLogSchema>;
+export type RevenueDriftLog = typeof revenueDriftLogs.$inferSelect;
+
 export * from "./models/chat";
 export * from "./models/auth";
