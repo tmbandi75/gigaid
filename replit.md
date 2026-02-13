@@ -90,3 +90,13 @@ Automated reconciliation system that detects revenue discrepancies between inter
 - `/api/test/stripe/seed-subscription-user` — Seed user with subscription mapping
 - `/api/test/revenue/booking/:id` — Reconciliation surface for booking state
 - `/api/test/revenue/user/:userId/entitlements` — User plan/entitlements truth
+
+### Launch Readiness Agent
+Modular pre-launch validation script at `scripts/launchReadiness.ts`. Run with `npx tsx scripts/launchReadiness.ts`.
+- **Test layers**: core, e2e, revenue, capability, offline, upgrade, downgrade (commands defined inline, extensible via TEST_LAYERS array)
+- **Config checks**: Required env vars (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_URL, SUPABASE_SERVICE_KEY, JWT_SECRET), legal routes, rate limiting, backups
+- **Monitoring checks**: Sentry DSN, error handler middleware
+- **Code checks**: Stripe webhook signature verification (constructEvent)
+- **Fail-fast**: Exits early on test failures, missing critical env vars, or missing Stripe verification
+- **Report output**: `reports/launch-readiness.json` with AUTOMATED_CHECKS, CONFIG_CHECKS, MANUAL_CHECKS_REQUIRED sections
+- **Extension**: Add new checkers as functions returning `CheckResult`, register in `main()`
