@@ -45,6 +45,7 @@ import adminAnalyticsRoutes from "./admin/analyticsRoutes";
 import adminCustomerioRoutes from "./admin/customerioRoutes";
 import adminStripeRoutes from "./admin/stripeAdminRoutes";
 import adminChurnRoutes from "./churn/adminChurnRoutes";
+import adminRevenueReconcileRoutes from "./admin/revenueReconcileRoutes";
 import leadEmailRoutes from "./leadEmailRoutes";
 import { startCopilotScheduler } from "./copilot/engine";
 import { startCampaignSuggestionScheduler } from "./campaignSuggestionEngine";
@@ -142,6 +143,7 @@ export async function registerRoutes(
   app.use("/api/admin/customerio", adminCustomerioRoutes);
   app.use("/api/admin/stripe", adminStripeRoutes);
   app.use("/api/admin/churn", adminChurnRoutes);
+  app.use("/api/admin/revenue", adminRevenueReconcileRoutes);
 
   app.post("/api/events/churn-signal", isAuthenticated, async (req: Request, res: Response) => {
     const userId = (req as any).userId || (req as any).user?.claims?.sub;

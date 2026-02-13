@@ -605,5 +605,18 @@ export function registerTestRoutes(app: any, storage: IStorage) {
     }
   });
 
+  router.post("/revenue/run-drift-check", async (req: Request, res: Response) => {
+    try {
+      const { runRevenueDriftCheck } = await import("./revenue/driftDetector");
+      const endDate = new Date().toISOString();
+      const startDate = req.body.startDate || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const endDateOverride = req.body.endDate || endDate;
+      const result = await runRevenueDriftCheck(startDate, endDateOverride, "test");
+      return res.json(result);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
   app.use("/api/test", router);
 }
