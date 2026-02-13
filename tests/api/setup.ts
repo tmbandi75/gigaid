@@ -28,19 +28,6 @@ export function createSuiteUsers(suite: string): { userA: TestUser; userB: TestU
   };
 }
 
-export const TEST_USER_A = {
-  id: 'api-test-user-a',
-  name: 'API Test User A',
-  email: 'api-test-a@gigaid.test',
-  plan: 'free',
-};
-
-export const TEST_USER_B = {
-  id: 'api-test-user-b',
-  name: 'API Test User B',
-  email: 'api-test-b@gigaid.test',
-  plan: 'free',
-};
 
 function headers(token?: string): Record<string, string> {
   const h: Record<string, string> = { 'Content-Type': 'application/json' };

@@ -92,6 +92,13 @@ Automated reconciliation system that detects revenue discrepancies between inter
 - `/api/test/revenue/booking/:id` — Reconciliation surface for booking state
 - `/api/test/revenue/user/:userId/entitlements` — User plan/entitlements truth
 
+### Test Namespace Isolation
+Each API test suite uses namespaced user IDs and data via `tests/utils/testNamespace.ts` to prevent parallel test interference. Key files:
+- **testNamespace.ts**: Generates unique run-scoped prefix via `ns(value)`.
+- **setup.ts**: `createSuiteUsers(suite)` factory creates per-suite users with namespaced IDs/emails.
+- **tests/README.md**: Full documentation of the isolation strategy and suite mapping.
+- Override namespace: `TEST_RUN_ID=debug npx jest --selectProjects api`
+
 ### Launch Readiness Agent
 Modular pre-launch validation script at `scripts/launchReadiness.ts`. Run with `npx tsx scripts/launchReadiness.ts`.
 - **Test layers**: core, e2e, revenue, capability, offline, upgrade, downgrade (commands defined inline, extensible via TEST_LAYERS array)
