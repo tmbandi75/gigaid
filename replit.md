@@ -114,3 +114,9 @@ Modular pre-launch validation script at `scripts/launchReadiness.ts`. Run with `
 
 ### Test Environment Hardening
 All test env access centralized in `tests/utils/env.ts`. Exports: `TEST_BASE_URL`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET`, `STRIPE_SECRET_KEY`, `validateTestEnv()`. Admin key access via `tests/utils/adminKey.ts`. Test namespace via `tests/utils/testNamespace.ts`.
+
+### Automated Database Backup & Restore
+Production-safe backup and restore scripts using `pg_dump`/`psql` with the Replit-provided `DATABASE_URL`.
+- **Backup** (`scripts/backup.ts`): Run with `npx tsx scripts/backup.ts`. Creates `/backups/backup_YYYYMMDD_HHmmss.sql`, auto-creates directory, 7-file retention policy with automatic cleanup, validates `DATABASE_URL` at startup, logs start/filename/size/duration/retention.
+- **Restore** (`scripts/restore.ts`): Run with `npx tsx scripts/restore.ts [--file=<path>] [--yes]`. Defaults to latest backup if no `--file` specified. Includes interactive confirmation prompt (skip with `--yes`), warns when `NODE_ENV=production`. Validates `DATABASE_URL` at startup.
+- **Safety**: No credentials exposed in logs, connection strings redacted in error output, 5-minute timeout on both operations.
