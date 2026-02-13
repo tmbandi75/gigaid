@@ -1,14 +1,10 @@
 import type { Request, Response, NextFunction } from "express";
-import { captureError } from "./sentry";
+import * as Sentry from "@sentry/node";
 
 export function centralErrorHandler(err: any, req: Request, res: Response, _next: NextFunction): void {
   const status = err.status || err.statusCode || 500;
 
-  captureError(err instanceof Error ? err : new Error(String(err)), {
-    method: req.method,
-    url: req.originalUrl,
-    statusCode: status,
-  });
+  Sentry.captureException(err);
 
   if (status >= 500) {
     console.error(`[error] ${req.method} ${req.originalUrl} ${status}: ${err.message || err}`);
