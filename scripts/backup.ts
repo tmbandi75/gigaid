@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -38,7 +38,7 @@ function runBackup(dbUrl: string, filePath: string): void {
   const start = Date.now();
 
   try {
-    execSync(`pg_dump "${dbUrl}" --no-owner --no-acl -f "${filePath}"`, {
+    execFileSync("pg_dump", [dbUrl, "--no-owner", "--no-acl", "-f", filePath], {
       timeout: 300_000,
       stdio: ["pipe", "pipe", "pipe"],
     });
