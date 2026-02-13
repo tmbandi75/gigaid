@@ -109,7 +109,7 @@ npx playwright test e2e/public-links.spec.ts
 - **Exclusion rules**: Skips dangerous paths (logout, delete, pay, stripe, webhook, reset), API/auth routes, admin routes, and dynamic token routes without seeded data.
 - **Expected runtime**: ~2 minutes (authenticated), ~30 seconds (public)
 
-### Test Coverage Summary (50 API + 6 E2E suites + 2 link integrity)
+### Test Coverage Summary (55 API + 6 E2E suites + 2 link integrity)
 - **Auth**: Token validation, unauthenticated access blocking, profile retrieval
 - **Jobs**: CRUD, cross-user isolation, capability usage tracking
 - **Leads**: CRUD, archive/unarchive, cross-user isolation
@@ -119,7 +119,15 @@ npx playwright test e2e/public-links.spec.ts
 - **Booking Validation** (`publicBooking.validation.test.ts`): 404 for missing slugs, 400 for missing required fields, deposit policy acknowledgment enforcement, optional field handling, cross-user isolation (12 tests)
 - **Stripe Platform Webhook** (`stripe.platform.webhook.test.ts`): Secret configuration check, missing/malformed/wrong signature rejection, valid-signature end-to-end (accept, replay-attack rejection, deduplication) (7 tests).
 - **Stripe Connect Webhook** (`stripe.connect.webhook.test.ts`): Signature enforcement when secret configured (invalid sig rejection, valid sig acceptance); event processing (account.updated, payment_intent.succeeded, charge.dispute.created, customer.subscription.created) via parsed-body fallback when no secret (7 tests).
+- **Revenue Regression** (`revenue.regression.test.ts`): Lost deposit guard (deposit transitions pending->captured after payment_intent.succeeded), failed retries guard (stuck webhook events get retried), missed transfers guard (connect payment updates booking tracking), subscription leakage guard (subscription.created upgrades plan), downgrade bug guard (subscription.deleted downgrades to free) (5 tests).
 - **Messaging**: SMS send validation, conversation listing, usage reporting
 
 ### Test Seed Routes
 - `/api/test/set-deposit-config` — Configure deposit/Stripe Connect settings for test users (depositEnabled, depositValue, depositType, defaultPrice, defaultServiceType, depositPolicySet, stripeConnectAccountId, stripeConnectStatus, noShowProtectionEnabled, reschedulePolicy, cancellationPolicy)
+- `/api/test/stripe/insert-failed-webhook` — Insert a failed webhook event into stripe_webhook_events for retry testing
+- `/api/test/stripe/run-retry` — Trigger the webhook retry processor immediately (no 60s wait)
+- `/api/test/stripe/webhook-status/:eventId` — Get webhook event status (eventId, status, attempts, lastError)
+- `/api/test/stripe/seed-connect-payment` — Seed a connect payment scenario (provider + booking + connectedAccountId)
+- `/api/test/stripe/seed-subscription-user` — Seed a user with subscription mapping (stripeCustomerId, stripeSubscriptionId)
+- `/api/test/revenue/booking/:id` — Reconciliation surface for booking deposit/transfer state
+- `/api/test/revenue/user/:userId/entitlements` — User plan/entitlements truth (plan, isPaid, isPro)

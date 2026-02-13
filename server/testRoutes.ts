@@ -411,5 +411,199 @@ export function registerTestRoutes(app: any, storage: IStorage) {
     }
   });
 
+  // --- Revenue Regression Test Routes ---
+
+  router.post("/stripe/insert-failed-webhook", async (req: Request, res: Response) => {
+    try {
+      const { stripeEventId, type, payload, error: errorMsg } = req.body;
+      if (!stripeEventId || !type) {
+        return res.status(400).json({ error: "Missing required fields: stripeEventId, type" });
+      }
+
+      const eventPayload = payload || JSON.stringify({
+        id: stripeEventId,
+        object: "event",
+        type,
+        data: { object: {} },
+      });
+
+      await storage.createStripeWebhookEvent({
+        stripeEventId,
+        type,
+        apiVersion: "2024-12-18.acacia",
+        livemode: false,
+        account: null,
+        created: new Date().toISOString(),
+        payload: eventPayload,
+        receivedAt: new Date().toISOString(),
+        status: "failed",
+        error: errorMsg || "Test-injected failure",
+        attemptCount: 1,
+        nextAttemptAt: new Date(Date.now() - 60000).toISOString(),
+      });
+
+      return res.json({ success: true, stripeEventId });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.post("/stripe/run-retry", async (_req: Request, res: Response) => {
+    try {
+      const { processRetryableWebhooks } = await import("./stripeWebhookRoutes");
+      await processRetryableWebhooks(storage);
+      return res.json({ success: true });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.get("/stripe/webhook-status/:eventId", async (req: Request, res: Response) => {
+    try {
+      const { eventId } = req.params;
+      const event = await storage.getStripeWebhookEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+      return res.json({
+        eventId: event.stripeEventId,
+        status: event.status,
+        attempts: event.attemptCount,
+        lastError: event.error,
+        nextAttemptAt: event.nextAttemptAt,
+        processedAt: event.processedAt,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.post("/stripe/seed-connect-payment", async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ error: "Missing required field: userId" });
+      }
+
+      const user = await storage.getUserByUsername(userId) || await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const connectedAccountId = `acct_test_${Date.now()}`;
+      await storage.updateUser(user.id, {
+        stripeConnectAccountId: connectedAccountId,
+        stripeConnectStatus: "active",
+      });
+
+      const booking = await storage.createBookingRequest({
+        userId: user.id,
+        clientName: "Revenue Test Client",
+        clientPhone: "+15559999999",
+        serviceType: "General",
+        depositAmountCents: 5000,
+      });
+
+      await storage.updateBookingRequest(booking.id, {
+        depositStatus: "pending",
+      });
+
+      const connectPaymentIntentId = `pi_connect_test_${Date.now()}`;
+
+      return res.json({
+        connectedAccountId,
+        connectPaymentIntentId,
+        bookingRequestId: booking.id,
+        userId: user.id,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.post("/stripe/seed-subscription-user", async (req: Request, res: Response) => {
+    try {
+      const { userId, plan } = req.body;
+      if (!userId) {
+        return res.status(400).json({ error: "Missing required field: userId" });
+      }
+
+      const user = await storage.getUserByUsername(userId) || await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const stripeCustomerId = `cus_test_${Date.now()}`;
+      const subscriptionId = `sub_test_${Date.now()}`;
+
+      await storage.updateUser(user.id, {
+        plan: plan || "pro",
+        isPro: true,
+        stripeCustomerId,
+        stripeSubscriptionId: subscriptionId,
+      });
+
+      return res.json({
+        userId: user.id,
+        subscriptionId,
+        stripeCustomerId,
+        plan: plan || "pro",
+      });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.get("/revenue/booking/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const booking = await storage.getBookingRequest(id);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+
+      return res.json({
+        id: booking.id,
+        userId: booking.userId,
+        clientName: booking.clientName,
+        serviceType: booking.serviceType,
+        status: booking.status,
+        depositAmountCents: booking.depositAmountCents,
+        depositStatus: booking.depositStatus,
+        stripePaymentIntentId: booking.stripePaymentIntentId,
+        stripeChargeId: booking.stripeChargeId,
+        stripeTransferId: booking.stripeTransferId,
+        transfer: {
+          status: booking.stripeTransferId ? "completed" : null,
+          noTransferExpected: !booking.depositAmountCents || booking.depositAmountCents === 0,
+          reason: !booking.depositAmountCents ? "no_deposit" : null,
+        },
+      });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.get("/revenue/user/:userId/entitlements", async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const user = await storage.getUserByUsername(userId) || await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      return res.json({
+        userId: user.id,
+        plan: user.plan || "free",
+        isPaid: user.plan !== "free" && user.plan !== null,
+        isPro: user.isPro || false,
+        stripeCustomerId: user.stripeCustomerId || null,
+        stripeSubscriptionId: user.stripeSubscriptionId || null,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
   app.use("/api/test", router);
 }

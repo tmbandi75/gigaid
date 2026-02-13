@@ -1,0 +1,93 @@
+You are a senior payment-systems + backend test engineer. Implement a “Revenue Regression System” for this GigAid codebase in ONE pass.
+
+ABSOLUTE RULES (must follow):
+- Do NOT change business logic or production behavior.
+- Do NOT refactor routes except to add test-only endpoints under existing testRoutes.
+- Do NOT touch production DB config or prod secrets.
+- Do NOT weaken Stripe signature verification.
+- Keep all changes minimal, isolated, and CI-friendly.
+- All new endpoints MUST be test-only and gated by NODE_ENV === "test" (or an existing test guard you already use).
+- Reuse existing testRoutes utilities (reset/seed/etc.) wherever possible.
+
+CONTEXT (current system):
+- Express backend with main router in server/routes.ts, extra in server/growth/routes.ts, test routes in server/testRoutes.ts.
+- Stripe platform webhook: POST /api/stripe/webhook in server/stripeWebhookRoutes.ts using req.rawBody + STRIPE_WEBHOOK_SECRET.
+- Stripe connect webhook: POST /api/stripe/connect/webhook in server/routes.ts using req.rawBody + STRIPE_CONNECT_WEBHOOK_SECRET.
+- There is already a stripe_webhook_events table with dedup + retry scheduler.
+- Existing test harness: Jest + Supertest, already passing tests. Do not break it.
+
+GOAL:
+Add a Revenue Regression test suite that detects:
+1) Lost deposits
+2) Failed retries getting stuck
+3) Missed transfers for provider payments (Connect)
+4) Subscription leakage (Stripe says active but DB says free)
+5) Downgrade bugs (Stripe canceled but entitlements still paid)
+
+DELIVERABLES (create/modify all of these):
+A) Create test file:
+- tests/api/revenue.regression.test.ts
+Implement 5 tests:
+1. Lost deposit guard:
+   - Create a booking via POST /api/public/book/:slug (use seeded provider slug like “test-plumber”).
+   - Assert depositAmountCents > 0 and depositStatus starts pending.
+   - Simulate platform webhook payment_intent.succeeded (signed when STRIPE_WEBHOOK_SECRET_TEST exists; otherwise follow existing test pattern).
+   - Verify booking becomes depositStatus “succeeded”.
+2. Failed retries guard:
+   - Insert a failed webhook row (test-only endpoint) and run the retry scheduler (test-only endpoint).
+   - Assert the event transitions to “processed” OR “dead_letter”, and is not “stuck”.
+3. Missed transfers guard:
+   - Seed a connect payment scenario (test-only endpoint) returning connectedAccountId + connect payment_intent id + bookingRequestId.
+   - Simulate connect webhook payment_intent.succeeded (signed when STRIPE_CONNECT_WEBHOOK_SECRET_TEST exists; otherwise follow existing connect tests).
+   - Verify either a transfer record exists OR a “noTransferExpected” reason is recorded (test-only introspection endpoint).
+4. Subscription leakage guard:
+   - Seed a user + subscription mapping (test-only endpoint) and simulate customer.subscription.updated with status active.
+   - Verify entitlements/plan reflect paid in DB (test-only entitlements endpoint).
+5. Downgrade bug guard:
+   - Seed paid user + subscription, simulate customer.subscription.deleted (or invoice.payment_failed if that’s how you downgrade).
+   - Verify entitlements/plan becomes free and paid gating is removed server-side (test-only entitlements endpoint).
+
+B) Add/extend test-only routes in server/testRoutes.ts (ONLY if missing):
+Implement these endpoints (names can differ if equivalents exist—prefer reusing what exists):
+- POST /api/test/reset
+  Resets database to clean state.
+- POST /api/test/stripe/insert-failed-webhook
+  Inserts a failed webhook event record into stripe_webhook_events with status=failed and needed fields to allow retry.
+- POST /api/test/stripe/run-retry
+  Invokes the same retry processor used in production (call the internal function directly; do NOT wait 60s).
+- GET /api/test/stripe/webhook-status/:eventId
+  Returns { eventId, status, attempts, lastAttemptAt, lastError } from stripe_webhook_events.
+- POST /api/test/stripe/seed-connect-payment
+  Creates a minimal DB scenario for a connect payment: a provider with a connectedAccountId, a booking/invoice/job link if needed, and returns:
+  { connectedAccountId, connectPaymentIntentId, bookingRequestId }
+  IMPORTANT: do not call real Stripe network APIs; just create the DB rows required so your connect webhook handler can process the event.
+- POST /api/test/stripe/seed-subscription-user
+  Creates a user and a subscription mapping row used by your connect webhook handler, returning:
+  { userId, subscriptionId, stripeCustomerId? }
+- GET /api/test/revenue/booking/:id
+  Returns a stable “reconciliation surface” object for tests:
+  { id, depositStatus, depositAmountCents, stripePaymentIntentId, transfer: { status?, noTransferExpected?, reason? }, ... }
+  Use DB joins/queries inside the test route. Avoid leaking schema details into tests.
+- GET /api/test/revenue/user/:userId/entitlements
+  Returns:
+  { userId, plan, isPaid, capabilities? }
+  Must reflect the same server-side truth used by CapabilityGate enforcement (even if simplified for tests).
+
+C) Update Jest setup if needed:
+- Ensure the new test file is picked up by jest.config.cjs.
+- Ensure tests run deterministically (runInBand is ok).
+
+D) Environment variables behavior:
+- Tests must run with DATABASE_URL_TEST etc.
+- For connect signature tests: if STRIPE_CONNECT_WEBHOOK_SECRET_TEST is missing, tests should SKIP only the signature assertion but still validate core processing (mirror the pattern used in existing connect webhook tests).
+
+IMPLEMENTATION NOTES (important):
+- Prefer Supertest calls to test routes for seeding/resetting instead of direct DB access in test code.
+- Do not assume table names in tests; put schema-specific logic inside test routes.
+- Keep new endpoints fully test-gated.
+- Add concise comments explaining what each test detects and why it matters for revenue.
+
+OUTPUT REQUIREMENTS:
+- Create/modify the files and show a concise summary of what changed.
+- Do not leave placeholders. If an endpoint cannot be implemented because the relevant internal function is missing, implement a minimal safe version and clearly comment it.
+- After implementation, run tests (or ensure they can be run) via: npm run test:api
