@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import { recordRun, computeHealth, printHealthTable, type HealthSummary } from "./suiteHealth";
@@ -39,13 +39,13 @@ interface LaunchReport {
 }
 
 const TEST_LAYERS = [
-  { name: "test:core", command: "npx jest --selectProjects api --forceExit", label: "Core API Tests" },
-  { name: "test:e2e", command: "npx playwright test", label: "End-to-End Tests" },
-  { name: "test:revenue", command: "npx jest --selectProjects api --testPathPatterns='revenue\\.' --forceExit", label: "Revenue Tests" },
-  { name: "test:capability", command: "npx jest --selectProjects api --testPathPatterns='capabilities\\.' --forceExit", label: "Capability Tests" },
-  { name: "test:offline", command: "", label: "Offline Tests" },
-  { name: "test:upgrade", command: "npx jest --selectProjects api --testPathPatterns='activation\\.' --forceExit", label: "Upgrade Tests" },
-  { name: "test:downgrade", command: "", label: "Downgrade Tests" },
+  { name: "test:core", cmd: "npx", args: ["jest", "--selectProjects", "api", "--forceExit"], label: "Core API Tests" },
+  { name: "test:e2e", cmd: "npx", args: ["playwright", "test"], label: "End-to-End Tests" },
+  { name: "test:revenue", cmd: "npx", args: ["jest", "--selectProjects", "api", "--testPathPatterns=revenue\\.", "--forceExit"], label: "Revenue Tests" },
+  { name: "test:capability", cmd: "npx", args: ["jest", "--selectProjects", "api", "--testPathPatterns=capabilities\\.", "--forceExit"], label: "Capability Tests" },
+  { name: "test:offline", cmd: "", args: [], label: "Offline Tests" },
+  { name: "test:upgrade", cmd: "npx", args: ["jest", "--selectProjects", "api", "--testPathPatterns=activation\\.", "--forceExit"], label: "Upgrade Tests" },
+  { name: "test:downgrade", cmd: "", args: [], label: "Downgrade Tests" },
 ];
 
 const REQUIRED_ENV_VARS = [
@@ -95,9 +95,9 @@ function logResult(result: CheckResult): void {
   }
 }
 
-function runCommand(cmd: string, timeoutMs = 120_000): { success: boolean; output: string } {
+function runCommand(cmd: string, args: string[], timeoutMs = 120_000): { success: boolean; output: string } {
   try {
-    const output = execSync(cmd, {
+    const output = execFileSync(cmd, args, {
       timeout: timeoutMs,
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],
@@ -149,19 +149,19 @@ function searchFilesForPattern(dir: string, patterns: string[], extensions = [".
 function runTestLayer(layer: typeof TEST_LAYERS[number]): CheckResult {
   const start = Date.now();
 
-  if (!layer.command) {
+  if (!layer.cmd) {
     return {
       name: layer.label,
       status: "skip",
       category: "AUTOMATED_CHECKS",
       message: `No tests configured yet for "${layer.name}"`,
       duration_ms: Date.now() - start,
-      details: "Add test files and update TEST_LAYERS command to enable this check",
+      details: "Add test files and update TEST_LAYERS to enable this check",
     };
   }
 
   log(`Running ${layer.label}...`);
-  const result = runCommand(layer.command, 180_000);
+  const result = runCommand(layer.cmd, layer.args, 180_000);
   const duration = Date.now() - start;
 
   if (result.success) {
