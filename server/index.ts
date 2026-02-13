@@ -140,6 +140,13 @@ app.use((req, res, next) => {
   // CRITICAL: This ensures no job can be completed without resolution
   await initializeDbEnforcement();
   
+  const { selfTestFirebaseAdmin } = await import("./firebaseAdmin");
+  const fbTest = await selfTestFirebaseAdmin();
+  if (!fbTest.ok) {
+    console.error(`[STARTUP] Firebase Admin self-test FAILED: ${fbTest.error}`);
+    console.error('[STARTUP] Email/password signup and login will NOT work until this is fixed.');
+  }
+
   await registerRoutes(httpServer, app);
 
   app.use(centralErrorHandler);

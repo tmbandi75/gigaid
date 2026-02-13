@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { verifyFirebaseIdToken, isFirebaseConfigured } from './firebaseAdmin';
+import { verifyFirebaseIdToken, isFirebaseConfigured, selfTestFirebaseAdmin, getFirebaseInitError } from './firebaseAdmin';
 import { signAppJwt, isAppJwtConfigured } from './appJwt';
 import { storage } from './storage';
 import { eq, or } from 'drizzle-orm';
@@ -237,14 +237,24 @@ router.post('/web/firebase', async (req: Request, res: Response) => {
     }
 
     if (!isAppJwtConfigured()) {
+      console.error('[WebAuth] APP_JWT_SECRET not configured');
       return res.status(503).json({ 
         error: 'Authentication is not fully configured. Please contact support.' 
       });
     }
 
-    const decoded = await verifyFirebaseIdToken(idToken);
+    let decoded;
+    try {
+      decoded = await verifyFirebaseIdToken(idToken);
+    } catch (verifyErr: any) {
+      console.error('[WebAuth] Firebase token verification threw:', verifyErr?.message);
+      return res.status(503).json({ 
+        error: 'Authentication service error. Please try again or contact support.' 
+      });
+    }
     if (!decoded) {
-      return res.status(401).json({ error: 'Invalid or expired Firebase token' });
+      console.error('[WebAuth] Token verification returned null — token may be expired or malformed');
+      return res.status(401).json({ error: 'Invalid or expired login session. Please try again.' });
     }
 
     const firebaseUid = decoded.uid;
@@ -422,6 +432,35 @@ router.get('/web/status', (req: Request, res: Response) => {
     jwtConfigured: jwtReady,
     webAuthReady: firebaseReady && jwtReady,
     supportedProviders: ['google', 'apple', 'email'],
+  });
+});
+
+router.get('/health', async (req: Request, res: Response) => {
+  const firebaseConfigured = isFirebaseConfigured();
+  const jwtConfigured = isAppJwtConfigured();
+  const initError = getFirebaseInitError();
+
+  let firebaseLive = false;
+  let firebaseError: string | null = initError;
+
+  if (firebaseConfigured && !initError) {
+    const test = await selfTestFirebaseAdmin();
+    firebaseLive = test.ok;
+    if (!test.ok) firebaseError = test.error || 'Self-test failed';
+  }
+
+  const healthy = firebaseConfigured && jwtConfigured && firebaseLive;
+
+  res.status(healthy ? 200 : 503).json({
+    status: healthy ? 'healthy' : 'unhealthy',
+    firebase: {
+      configured: firebaseConfigured,
+      live: firebaseLive,
+      error: firebaseError,
+    },
+    jwt: {
+      configured: jwtConfigured,
+    },
   });
 });
 

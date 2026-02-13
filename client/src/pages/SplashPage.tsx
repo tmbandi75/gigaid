@@ -138,15 +138,22 @@ export default function SplashPage() {
         : await signInWithEmail(email, password);
       await exchangeTokenAndNavigate(idToken);
     } catch (err: any) {
-      let message = "Please try again";
+      console.error('[Auth] Email auth error:', err?.code, err?.message, err);
+      let message = err?.message || "Please try again";
       if (err.code === "auth/email-already-in-use") {
-        message = "An account with this email already exists";
+        message = "An account with this email already exists. Try signing in instead.";
       } else if (err.code === "auth/invalid-email") {
         message = "Please enter a valid email address";
       } else if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
         message = "Invalid email or password";
       } else if (err.code === "auth/weak-password") {
-        message = "Password is too weak";
+        message = "Password should be at least 6 characters";
+      } else if (err.code === "auth/too-many-requests") {
+        message = "Too many attempts. Please wait a moment and try again.";
+      } else if (err.code === "auth/network-request-failed") {
+        message = "Network error. Please check your connection and try again.";
+      } else if (err.code === "auth/operation-not-allowed") {
+        message = "Email/password sign-in is not enabled. Please contact support.";
       }
       toast({
         title: mode === "signup" ? "Sign up failed" : "Sign in failed",
