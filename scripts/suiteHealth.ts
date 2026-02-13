@@ -3,8 +3,9 @@ import * as path from "path";
 
 export const FLAKY_THRESHOLD = 0.05;
 export const HISTORY_LIMIT = 20;
+export const CRITICAL_RECENT_WINDOW = 5;
 
-const CRITICAL_SUITES = ["revenue", "capability", "billing", "auth"];
+const CRITICAL_SUITES = ["revenue", "capability", "billing", "auth", "activation"];
 
 const HISTORY_PATH = path.resolve(process.cwd(), "reports", "test-history.json");
 
@@ -26,6 +27,7 @@ export interface SuiteHealthResult {
   runs: number;
   failures: number;
   flakyRate: number;
+  recentFailures: number;
   status: "healthy" | "flaky" | "critical";
   isCriticalSuite: boolean;
 }
@@ -99,7 +101,15 @@ export function computeHealth(): HealthSummary {
     const critical = isCritical(name);
     let status: SuiteHealthResult["status"] = "healthy";
 
-    if (flakyRate > FLAKY_THRESHOLD) {
+    const recentRuns = runs.slice(-CRITICAL_RECENT_WINDOW);
+    const recentFailures = recentRuns.filter((r) => !r.passed).length;
+
+    if (critical && recentFailures > 0) {
+      status = "critical";
+      blockRelease = true;
+      const reason = `${name}: ${recentFailures} failure(s) in last ${recentRuns.length} runs`;
+      blockReason = blockReason ? `${blockReason}; ${reason}` : `Critical suite failure: ${reason}`;
+    } else if (flakyRate > FLAKY_THRESHOLD) {
       status = critical ? "critical" : "flaky";
       if (critical) {
         blockRelease = true;
@@ -109,7 +119,7 @@ export function computeHealth(): HealthSummary {
       }
     }
 
-    suites.push({ suiteName: name, runs: runs.length, failures, flakyRate, status, isCriticalSuite: critical });
+    suites.push({ suiteName: name, runs: runs.length, failures, flakyRate, recentFailures, status, isCriticalSuite: critical });
   }
 
   if (!blockRelease) {

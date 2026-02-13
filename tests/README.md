@@ -59,6 +59,50 @@ npx jest --selectProjects api --testPathPatterns='jobs\.test' --forceExit
 npx jest --selectProjects api --runInBand --forceExit
 ```
 
+## Smoke Test Gate
+
+A minimal smoke test gate runs critical suites first during launch readiness. If any smoke suite fails, subsequent test layers are skipped.
+
+### Smoke Suites
+
+| Suite | Pattern |
+|-------|---------|
+| auth | `auth.test` |
+| activation | `activation.test` |
+| revenue.drift | `revenue.drift.test` |
+| revenue.regression | `revenue.regression.test` |
+| capabilities | `capabilities.test` |
+
+### Running Smoke Tests
+
+```bash
+npx tsx scripts/smokeTest.ts
+```
+
+### Orchestrator Integration
+
+The smoke gate runs **before** full test layers in the Launch Readiness Agent. If any smoke suite fails, `FAIL FAST` is triggered and remaining layers are skipped. Smoke results are also recorded in suite health history under `smoke:<name>`.
+
+## Environment Variable Hardening
+
+All test environment variables are centralized in `tests/utils/env.ts`.
+
+### Exports
+
+- `TEST_BASE_URL` — Base URL for API requests (default: `http://localhost:5000`)
+- `STRIPE_WEBHOOK_SECRET` — Platform webhook signing secret
+- `STRIPE_CONNECT_WEBHOOK_SECRET` — Connect webhook signing secret
+- `STRIPE_SECRET_KEY` — Stripe secret key
+- `validateTestEnv()` — Validates required/optional env vars with warnings
+
+### Usage
+
+```ts
+import { TEST_BASE_URL, STRIPE_WEBHOOK_SECRET } from "../utils/env";
+```
+
+The Launch Readiness Agent validates required test env vars at startup and fails fast if any are missing.
+
 ## Suite Health Enforcement
 
 The suite health system tracks test results over time and blocks releases when any suite becomes flaky.
@@ -77,8 +121,9 @@ These suites trigger immediate fail-fast when flaky:
 - `capability` — Plan enforcement
 - `billing` — Subscription management
 - `auth` — Authentication
+- `activation` — First-dollar setup flow
 
-All other suites also block release when flaky, but don't trigger fail-fast.
+**Stricter enforcement**: Critical suites block release on **any failure in the last 5 runs**, regardless of the overall flaky rate. Non-critical suites use the standard 5% threshold over the full 20-run window.
 
 ### Configuration
 

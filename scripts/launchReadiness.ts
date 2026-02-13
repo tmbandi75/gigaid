@@ -2,6 +2,8 @@ import { execSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import { recordRun, computeHealth, printHealthTable, type HealthSummary } from "./suiteHealth";
+import { SMOKE_SUITES, runSuite as runSmokeSuite, type SmokeResult } from "./smokeTest";
+import { validateTestEnv } from "../tests/utils/env";
 
 type CheckStatus = "pass" | "fail" | "warn" | "skip";
 type CheckCategory = "AUTOMATED_CHECKS" | "CONFIG_CHECKS" | "MANUAL_CHECKS_REQUIRED";
@@ -439,33 +441,115 @@ async function main() {
   console.log("  " + new Date().toISOString());
   console.log("\n");
 
+  logSection("TEST ENVIRONMENT VALIDATION");
+  const envCheck = validateTestEnv();
+  for (const w of envCheck.warnings) {
+    log(w);
+  }
+  if (!envCheck.valid) {
+    failFast.triggered = true;
+    failFast.reason = "Required test environment variables missing";
+    log(`FAIL FAST: ${failFast.reason}`);
+    results.push({
+      name: "Test Environment Validation",
+      status: "fail",
+      category: "AUTOMATED_CHECKS",
+      message: "Required test environment variables missing",
+      details: envCheck.warnings.filter((w) => w.includes("MISSING REQUIRED")).join("; "),
+    });
+  } else {
+    results.push({
+      name: "Test Environment Validation",
+      status: "pass",
+      category: "AUTOMATED_CHECKS",
+      message: "All required test environment variables present",
+    });
+  }
+
+  logSection("SMOKE TEST GATE");
+
+  if (!failFast.triggered) {
+    let smokeAllPassed = true;
+    const smokeStart = Date.now();
+    for (const suite of SMOKE_SUITES) {
+      log(`Smoke: ${suite.name}...`);
+      const sr = runSmokeSuite(suite);
+      const icon = sr.passed ? "OK" : "FAIL";
+      log(`[${icon}] ${suite.name} (${(sr.duration_ms / 1000).toFixed(1)}s)`);
+
+      recordRun({
+        suiteName: `smoke:${suite.name}`,
+        timestamp: new Date().toISOString(),
+        passed: sr.passed,
+        duration_ms: sr.duration_ms,
+        error: sr.passed ? undefined : sr.error,
+      });
+
+      if (!sr.passed) {
+        smokeAllPassed = false;
+        failFast.triggered = true;
+        failFast.reason = `Smoke test "${suite.name}" failed`;
+        log(`FAIL FAST: ${failFast.reason}`);
+        results.push({
+          name: "Smoke Test Gate",
+          status: "fail",
+          category: "AUTOMATED_CHECKS",
+          message: `Smoke suite "${suite.name}" failed`,
+          duration_ms: Date.now() - smokeStart,
+          details: sr.error,
+        });
+        break;
+      }
+    }
+    if (smokeAllPassed) {
+      results.push({
+        name: "Smoke Test Gate",
+        status: "pass",
+        category: "AUTOMATED_CHECKS",
+        message: `All ${SMOKE_SUITES.length} smoke suites passed`,
+        duration_ms: Date.now() - smokeStart,
+      });
+    }
+  } else {
+    results.push({
+      name: "Smoke Test Gate",
+      status: "skip",
+      category: "AUTOMATED_CHECKS",
+      message: "Skipped due to prior fail-fast",
+    });
+  }
+
   logSection("AUTOMATED CHECKS");
 
   const dbResult = checkDatabaseReset();
   results.push(dbResult);
   logResult(dbResult);
 
-  for (const layer of TEST_LAYERS) {
-    const testResult = runTestLayer(layer);
-    results.push(testResult);
-    logResult(testResult);
+  if (!failFast.triggered) {
+    for (const layer of TEST_LAYERS) {
+      const testResult = runTestLayer(layer);
+      results.push(testResult);
+      logResult(testResult);
 
-    if (testResult.status !== "skip") {
-      recordRun({
-        suiteName: layer.name,
-        timestamp: new Date().toISOString(),
-        passed: testResult.status === "pass",
-        duration_ms: testResult.duration_ms || 0,
-        error: testResult.status === "fail" ? testResult.details : undefined,
-      });
-    }
+      if (testResult.status !== "skip") {
+        recordRun({
+          suiteName: layer.name,
+          timestamp: new Date().toISOString(),
+          passed: testResult.status === "pass",
+          duration_ms: testResult.duration_ms || 0,
+          error: testResult.status === "fail" ? testResult.details : undefined,
+        });
+      }
 
-    if (testResult.status === "fail") {
-      failFast.triggered = true;
-      failFast.reason = `Test layer "${layer.label}" failed`;
-      log(`FAIL FAST: ${failFast.reason}`);
-      break;
+      if (testResult.status === "fail") {
+        failFast.triggered = true;
+        failFast.reason = `Test layer "${layer.label}" failed`;
+        log(`FAIL FAST: ${failFast.reason}`);
+        break;
+      }
     }
+  } else {
+    log("Skipping full test layers due to prior fail-fast");
   }
 
   const healthSummary = computeHealth();

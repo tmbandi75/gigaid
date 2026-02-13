@@ -1,7 +1,8 @@
 import { getAdminApiKey } from '../utils/adminKey';
 import { ns } from '../utils/testNamespace';
+import { TEST_BASE_URL } from '../utils/env';
 
-const BASE_URL = 'http://localhost:5000';
+const BASE_URL = TEST_BASE_URL;
 const ADMIN_API_KEY = getAdminApiKey();
 
 export interface TestUser {

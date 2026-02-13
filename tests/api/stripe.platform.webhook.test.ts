@@ -1,7 +1,8 @@
 import Stripe from "stripe";
+import { TEST_BASE_URL, STRIPE_WEBHOOK_SECRET } from "../utils/env";
 
-const BASE_URL = process.env.TEST_BASE_URL || "http://localhost:5000";
-const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
+const BASE_URL = TEST_BASE_URL;
+const WEBHOOK_SECRET = STRIPE_WEBHOOK_SECRET;
 
 function generateWebhookPayload(
   eventType: string,

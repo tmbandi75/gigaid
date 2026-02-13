@@ -102,10 +102,15 @@ Each API test suite uses namespaced user IDs and data via `tests/utils/testNames
 ### Launch Readiness Agent
 Modular pre-launch validation script at `scripts/launchReadiness.ts`. Run with `npx tsx scripts/launchReadiness.ts`.
 - **Test layers**: core, e2e, revenue, capability, offline, upgrade, downgrade (commands defined inline, extensible via TEST_LAYERS array)
+- **Smoke Test Gate**: Runs critical suites (auth, activation, revenue.drift, revenue.regression, capabilities) first. Fail-fast if any smoke suite fails. Run standalone: `npx tsx scripts/smokeTest.ts`.
 - **Config checks**: Required env vars (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_URL, SUPABASE_SERVICE_KEY, JWT_SECRET), legal routes, rate limiting, backups
+- **Test Env Validation**: Validates required test env vars (GIGAID_ADMIN_API_KEY) at startup; fails fast if missing. Optional vars (STRIPE_WEBHOOK_SECRET, STRIPE_CONNECT_WEBHOOK_SECRET, STRIPE_SECRET_KEY) logged as warnings.
 - **Monitoring checks**: Sentry DSN, error handler middleware
 - **Code checks**: Stripe webhook signature verification (constructEvent)
-- **Suite Health Enforcement**: Tracks pass/fail per suite over last 20 runs in `reports/test-history.json`. Blocks release if any suite's flaky rate exceeds 5%. Critical suites (revenue, capability, billing, auth) trigger fail-fast. View health: `npx tsx scripts/suiteHealth.ts`.
-- **Fail-fast**: Exits early on test failures, missing critical env vars, missing Stripe verification, or flaky suite detection
+- **Suite Health Enforcement**: Tracks pass/fail per suite over last 20 runs in `reports/test-history.json`. Blocks release if any suite's flaky rate exceeds 5%. Critical suites (revenue, capability, billing, auth, activation) block on any failure in last 5 runs. View health: `npx tsx scripts/suiteHealth.ts`.
+- **Fail-fast**: Exits early on smoke failures, test failures, missing critical env vars, missing Stripe verification, or flaky suite detection
 - **Report output**: `reports/launch-readiness.json` with AUTOMATED_CHECKS, CONFIG_CHECKS, MANUAL_CHECKS_REQUIRED sections, plus `suite_health` summary
 - **Extension**: Add new checkers as functions returning `CheckResult`, register in `main()`
+
+### Test Environment Hardening
+All test env access centralized in `tests/utils/env.ts`. Exports: `TEST_BASE_URL`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET`, `STRIPE_SECRET_KEY`, `validateTestEnv()`. Admin key access via `tests/utils/adminKey.ts`. Test namespace via `tests/utils/testNamespace.ts`.

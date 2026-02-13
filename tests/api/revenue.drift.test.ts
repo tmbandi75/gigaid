@@ -11,10 +11,10 @@
 import Stripe from "stripe";
 import { apiRequest, createTestUser, resetTestData } from "./setup";
 import { ns } from "../utils/testNamespace";
+import { TEST_BASE_URL, STRIPE_CONNECT_WEBHOOK_SECRET } from "../utils/env";
 
-const BASE_URL = process.env.TEST_BASE_URL || "http://localhost:5000";
-const CONNECT_WEBHOOK_SECRET =
-  process.env.STRIPE_CONNECT_WEBHOOK_SECRET || "";
+const BASE_URL = TEST_BASE_URL;
+const CONNECT_WEBHOOK_SECRET = STRIPE_CONNECT_WEBHOOK_SECRET;
 
 const DRIFT_USER = {
   id: ns("drift-user"),

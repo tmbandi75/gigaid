@@ -1,0 +1,81 @@
+Finalize launch-readiness hardening for this project.
+
+Context:
+Admin key standardization, test namespacing, isolation, and flaky rate calculation are already implemented.
+
+Goal:
+Implement the remaining protections needed for release-grade stability.
+
+--------------------------------------------------
+A. FLAKY ENFORCEMENT
+--------------------------------------------------
+
+1. Locate where flakyRate is calculated in the test orchestrator.
+
+2. Enforce blocking:
+
+   If any suite has flakyRate > 0.05:
+     - Log suite name and rate
+     - Set STATUS = "NOT_READY"
+     - Exit process with code 1
+
+3. Apply stricter enforcement for critical suites:
+   activation, revenue, capability, billing, auth
+   (block on any failure in last 5 runs).
+
+--------------------------------------------------
+B. ENVIRONMENT VARIABLE HARDENING
+--------------------------------------------------
+
+4. Scan test code for direct process.env access.
+
+5. Centralize all required test env access in:
+   /tests/utils/env.ts
+
+6. Replace direct reads with shared helpers.
+
+7. Add validation at orchestrator startup that all required env vars exist.
+
+--------------------------------------------------
+C. SMOKE TEST GATE
+--------------------------------------------------
+
+8. Create a minimal smoke test suite that runs:
+   - auth
+   - activation
+   - revenue
+   - capability
+   - upgrade
+
+9. Add npm script:
+
+   "test:smoke": "playwright test tests/e2e/auth.spec.ts tests/e2e/activation.spec.ts tests/e2e/revenue.spec.ts tests/e2e/capability.spec.ts tests/e2e/upgrade.spec.ts"
+
+   (adjust paths if needed).
+
+10. Ensure smoke suite runtime < 5 minutes.
+
+--------------------------------------------------
+D. ORCHESTRATOR INTEGRATION
+--------------------------------------------------
+
+11. Integrate smoke tests into the main orchestrator:
+    - Run first
+    - Fail fast if smoke fails
+
+12. Include smoke results in launch reports.
+
+13. Update status logic to block if smoke fails.
+
+--------------------------------------------------
+E. SAFETY
+--------------------------------------------------
+
+14. Do NOT modify production logic.
+15. Do NOT reset test history.
+16. Keep changes minimal and localized.
+17. Preserve existing test behavior.
+
+--------------------------------------------------
+
+Proceed with implementation.
