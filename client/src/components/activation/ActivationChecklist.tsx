@@ -122,6 +122,17 @@ export function ActivationChecklist() {
     }
   }, [activation?.isFullyActivated]);
 
+  const isStalled = useMemo(() => {
+    if (!activation?.userCreatedAt) return false;
+    const createdAt = new Date(activation.userCreatedAt).getTime();
+    const now = Date.now();
+    const hoursSinceCreation = (now - createdAt) / (1000 * 60 * 60);
+    const incompleteSteps = (activation?.totalSteps ?? 0) - (activation?.completedSteps ?? 0);
+    if (hoursSinceCreation >= 48) return true;
+    if (hoursSinceCreation >= 24 && incompleteSteps >= 2) return true;
+    return false;
+  }, [activation?.userCreatedAt, activation?.completedSteps, activation?.totalSteps]);
+
   if (activation?.disabled) return null;
 
   if (isLoading || !activation) {
@@ -145,17 +156,6 @@ export function ActivationChecklist() {
   }
 
   const remaining = activation.totalSteps - activation.completedSteps;
-
-  const isStalled = useMemo(() => {
-    if (!activation.userCreatedAt) return false;
-    const createdAt = new Date(activation.userCreatedAt).getTime();
-    const now = Date.now();
-    const hoursSinceCreation = (now - createdAt) / (1000 * 60 * 60);
-    const incompleteSteps = activation.totalSteps - activation.completedSteps;
-    if (hoursSinceCreation >= 48) return true;
-    if (hoursSinceCreation >= 24 && incompleteSteps >= 2) return true;
-    return false;
-  }, [activation.userCreatedAt, activation.completedSteps, activation.totalSteps]);
 
   return (
     <Card className="border-0 shadow-sm" data-testid="activation-checklist">
