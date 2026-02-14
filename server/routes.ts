@@ -589,7 +589,9 @@ export async function registerRoutes(
         // Messaging fields
         personalPhone, inAppInboxEnabled,
         // Booking slug & profile
-        publicProfileSlug, publicProfileEnabled
+        publicProfileSlug, publicProfileEnabled,
+        // Payday onboarding fields
+        paydayOnboardingCompleted, paydayOnboardingStep
       } = req.body;
       let user = await storage.getUser((req as any).userId);
       
@@ -651,6 +653,10 @@ export async function registerRoutes(
       // Messaging fields
       if (personalPhone !== undefined) updates.personalPhone = personalPhone;
       if (inAppInboxEnabled !== undefined) updates.inAppInboxEnabled = inAppInboxEnabled;
+      
+      // Payday onboarding fields
+      if (paydayOnboardingCompleted !== undefined) updates.paydayOnboardingCompleted = paydayOnboardingCompleted;
+      if (paydayOnboardingStep !== undefined) updates.paydayOnboardingStep = paydayOnboardingStep;
       
       const updatedUser = await storage.updateUser((req as any).userId, updates);
       
