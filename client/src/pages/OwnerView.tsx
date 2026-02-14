@@ -16,7 +16,6 @@ import {
   TrendingDown,
   ArrowRight,
   Crown,
-  Lock,
   ChevronRight,
   BarChart3,
   AlertCircle,
@@ -56,77 +55,6 @@ interface OwnerMetrics {
   depositsCollectedThisWeek?: number;
 }
 
-function UpgradeGate() {
-  const [, navigate] = useLocation();
-  
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 flex items-center justify-center p-4" data-testid="page-upgrade-gate">
-      <Card className="max-w-lg w-full border-0 shadow-xl" data-testid="card-upgrade-gate">
-        <CardContent className="pt-12 pb-8 text-center">
-          <div className="h-20 w-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-lg">
-            <Lock className="h-10 w-10 text-white" />
-          </div>
-          
-          <h1 className="text-2xl font-bold mb-2" data-testid="text-upgrade-title">Owner View is a Pro Feature</h1>
-          <p className="text-muted-foreground mb-8 max-w-sm mx-auto" data-testid="text-upgrade-description">
-            Get a bird's eye view of your business with powerful insights and analytics
-          </p>
-          
-          <div className="text-left space-y-4 mb-8 p-6 bg-muted/50 rounded-xl" data-testid="list-features">
-            <div className="flex items-center gap-3" data-testid="feature-revenue">
-              <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-              </div>
-              <span className="text-sm">See weekly & monthly revenue trends</span>
-            </div>
-            <div className="flex items-center gap-3" data-testid="feature-invoices">
-              <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-              </div>
-              <span className="text-sm">Track unpaid invoices at a glance</span>
-            </div>
-            <div className="flex items-center gap-3" data-testid="feature-upcoming">
-              <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-              </div>
-              <span className="text-sm">Know what jobs are coming up</span>
-            </div>
-            <div className="flex items-center gap-3" data-testid="feature-email">
-              <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-              </div>
-              <span className="text-sm">Weekly email business summaries</span>
-            </div>
-          </div>
-          
-          <div className="space-y-3">
-            <Button 
-              className="w-full h-12 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600"
-              onClick={() => navigate("/pricing")}
-              data-testid="button-upgrade-pro"
-            >
-              <Crown className="h-5 w-5 mr-2" />
-              Upgrade to Pro
-            </Button>
-            <Button 
-              variant="ghost" 
-              className="w-full"
-              onClick={() => navigate("/jobs")}
-              data-testid="button-back-jobs"
-            >
-              Back to Jobs
-            </Button>
-            <div className="text-center pt-2">
-              <Link href="/pricing" className="text-sm text-muted-foreground hover:underline" data-testid="link-view-all-plans">
-                View all plans
-              </Link>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
 
 function MetricCard({ 
   title, 

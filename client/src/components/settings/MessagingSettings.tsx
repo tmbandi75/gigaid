@@ -19,9 +19,10 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
-import { MessageCircle, Phone, Inbox, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import { MessageCircle, Phone, Inbox, AlertCircle, CheckCircle, Loader2, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { UpgradeInterceptModal } from "@/upgrade";
 
 interface MessageUsage {
   outboundSent: number;
@@ -38,6 +39,7 @@ interface Profile {
 
 export function MessagingSettings() {
   const { toast } = useToast();
+  const [inboxInterceptOpen, setInboxInterceptOpen] = useState(false);
   const [showInboxConfirm, setShowInboxConfirm] = useState(false);
 
   const { data: profile, isLoading: profileLoading } = useQuery<Profile>({
@@ -224,10 +226,28 @@ export function MessagingSettings() {
               )}
             </>
           ) : (
-            <div className="p-3 bg-muted/50 rounded-lg">
-              <p className="text-sm text-muted-foreground">
-                Upgrade to Pro+ to manage replies in GigAid.
-              </p>
+            <div 
+              className="p-3 bg-muted/50 rounded-lg cursor-pointer hover-elevate relative"
+              role="button"
+              tabIndex={0}
+              onClick={() => setInboxInterceptOpen(true)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setInboxInterceptOpen(true); }}
+              data-testid="card-inbox-upgrade-intercept"
+            >
+              <div className="opacity-60 pointer-events-none select-none">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-sm">Keep replies inside GigAid</p>
+                    <p className="text-xs text-muted-foreground">
+                      Replies will appear in GigAid instead of your phone.
+                    </p>
+                  </div>
+                  <Switch checked={false} disabled />
+                </div>
+              </div>
+              <div className="absolute top-1 right-1 h-5 w-5 rounded-full bg-muted/80 flex items-center justify-center z-10" aria-hidden="true">
+                <Lock className="h-3 w-3 text-muted-foreground" />
+              </div>
             </div>
           )}
         </div>
@@ -255,6 +275,13 @@ export function MessagingSettings() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <UpgradeInterceptModal
+        open={inboxInterceptOpen}
+        onOpenChange={setInboxInterceptOpen}
+        featureKey="sms.two_way"
+        featureName="In-App Inbox"
+      />
     </div>
   );
 }

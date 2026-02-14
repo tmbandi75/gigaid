@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { MessageSquare, Loader2, Sparkles, Copy, Send, Check, Phone, User, Info } from "lucide-react";
+import { UpgradeInterceptModal } from "@/upgrade";
 import type { Job, Lead } from "@shared/schema";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 
@@ -46,6 +47,7 @@ export function FollowUpComposer() {
   const [copied, setCopied] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [showFirstSendTooltip, setShowFirstSendTooltip] = useState(false);
+  const [inboxInterceptOpen, setInboxInterceptOpen] = useState(false);
 
   const { data: jobs = [] } = useQuery<Job[]>({
     queryKey: QUERY_KEYS.jobs(),
@@ -336,9 +338,13 @@ export function FollowUpComposer() {
                     <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
                     <div className="text-sm">
                       <p className="font-medium">Replies will go to your phone</p>
-                      <p className="text-muted-foreground mt-1">
-                        Upgrade to Pro+ to manage replies directly in GigAid.
-                      </p>
+                      <button
+                        className="text-primary mt-1 text-left hover:underline cursor-pointer"
+                        onClick={() => setInboxInterceptOpen(true)}
+                        data-testid="button-followup-inbox-upgrade"
+                      >
+                        Tap to unlock in-app replies
+                      </button>
                     </div>
                   </div>
                 </TooltipContent>
@@ -347,6 +353,13 @@ export function FollowUpComposer() {
           </>
         )}
       </CardContent>
+
+      <UpgradeInterceptModal
+        open={inboxInterceptOpen}
+        onOpenChange={setInboxInterceptOpen}
+        featureKey="sms.two_way"
+        featureName="In-App Replies"
+      />
     </Card>
   );
 }
