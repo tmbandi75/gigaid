@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { User } from "@shared/schema";
-import { getAuthToken, clearAuthToken } from "@/lib/authToken";
-import { firebaseSignOut } from "@/lib/firebase";
+import { getAuthToken, clearAuthToken, setAuthToken } from "@/lib/authToken";
+import { firebaseSignOut, getFirebaseIdToken } from "@/lib/firebase";
 import { setGlobalLoggingOut, getGlobalLoggingOut } from "@/lib/queryClient";
 import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { QUERY_KEYS } from "@/lib/queryKeys";
@@ -48,20 +48,45 @@ export function useAuth() {
   // Token readiness timeout - prevent indefinite blocking
   // After Firebase auth resolves, give token exchange 5 seconds max
   const [tokenTimeout, setTokenTimeout] = useState(false);
-  
+  const autoExchangeInProgress = useRef(false);
+
   useEffect(() => {
-    // Only start timeout once Firebase auth is resolved and we have a user
+    if (!authLoading && firebaseUser && !isTokenReady && !autoExchangeInProgress.current) {
+      autoExchangeInProgress.current = true;
+      (async () => {
+        try {
+          const idToken = await getFirebaseIdToken();
+          if (!idToken) {
+            autoExchangeInProgress.current = false;
+            return;
+          }
+          const response = await fetch("/api/auth/web/firebase", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idToken }),
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setAuthToken(data.token, firebaseUser.uid);
+            setTokenReady(true);
+          }
+        } catch {
+        } finally {
+          autoExchangeInProgress.current = false;
+        }
+      })();
+    }
+  }, [authLoading, firebaseUser, isTokenReady, setTokenReady]);
+
+  useEffect(() => {
     if (!authLoading && firebaseUser && !isTokenReady) {
-      console.log("[Auth] Token not ready after Firebase auth - starting 5s timeout");
       const timer = setTimeout(() => {
-        console.log("[Auth] Token readiness timeout reached - allowing fallback");
         setTokenTimeout(true);
       }, 5000);
       
       return () => clearTimeout(timer);
     }
     
-    // Reset timeout if token becomes ready
     if (isTokenReady) {
       setTokenTimeout(false);
     }
