@@ -1,0 +1,108 @@
+The “You’re All Set” completion screen (with confetti/celebration) currently appears at the end of main onboarding.
+
+This screen must be moved to the end of Payday onboarding instead.
+
+DO NOT recreate it.
+DO NOT redesign it.
+DO NOT refactor it.
+DO NOT change copy.
+DO NOT change styling.
+DO NOT change animation.
+DO NOT change logic.
+
+Your task is to relocate the existing screen and reuse it verbatim.
+
+--------------------------------------------------
+
+GOAL
+
+- Main onboarding should NOT show the final success screen.
+- Payday onboarding should show this exact screen as its final step.
+- Same component.
+- Same confetti.
+- Same behavior.
+- Same tracking.
+
+--------------------------------------------------
+
+STRICT RULES
+
+- Reuse the existing “You’re All Set” component/file.
+- Do NOT duplicate code.
+- Do NOT rewrite JSX.
+- Do NOT extract new components.
+- Do NOT modify animation logic.
+- Do NOT change button behavior.
+- Do NOT touch activation logic.
+- Do NOT touch routing.
+
+Only move where it is rendered.
+
+--------------------------------------------------
+
+STEP 1 — IDENTIFY COMPONENT
+
+Find the existing component responsible for:
+- “You’re all set!”
+- Confetti / celebration
+- Green checkmark
+- “Go to Dashboard” button
+
+Likely uses CelebrationOverlay / use-celebration / Lottie.
+
+Do not modify it.
+
+--------------------------------------------------
+
+STEP 2 — REMOVE FROM MAIN ONBOARDING
+
+In main onboarding flow:
+
+- Remove the final step that renders this component.
+- Ensure main onboarding now ends on the last profile/setup step.
+- Do NOT add any replacement success screen.
+
+--------------------------------------------------
+
+STEP 3 — ADD TO PAYDAY ONBOARDING FINAL STEP
+
+In payday onboarding:
+
+- Import the existing success component.
+- Add it as the final step (after Stripe / booking / deposits).
+- Render it only when all payday steps are complete.
+
+Do not change the component props or behavior.
+
+--------------------------------------------------
+
+STEP 4 — BUTTON BEHAVIOR
+
+Ensure “Go to Dashboard” continues to:
+- Navigate to dashboard
+- Respect ActivationGate
+- Not bypass activation checks
+
+Do NOT change its logic.
+
+--------------------------------------------------
+
+STEP 5 — VALIDATION
+
+After change:
+
+1) Main onboarding ends without a final success screen.
+2) Payday onboarding ends with the exact same success screen.
+3) Confetti still plays.
+4) No duplicate screens.
+5) No regressions.
+6) No styling changes.
+
+--------------------------------------------------
+
+DELIVERABLE
+
+Provide:
+- List of files modified
+- Confirmation the same component is reused
+- Confirmation no new success screen was created
