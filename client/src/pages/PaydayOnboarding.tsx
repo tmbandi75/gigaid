@@ -7,9 +7,9 @@ import { queryClient } from "@/lib/queryClient";
 import { useActivationState } from "@/hooks/useActivationState";
 import { isActivated } from "@/lib/isActivated";
 import { useToast } from "@/hooks/use-toast";
+import { BookingLinkShare } from "@/components/booking-link/BookingLinkShare";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
@@ -22,6 +22,7 @@ import {
   Copy,
   Check,
   CheckCircle2,
+  Share2,
   ExternalLink,
   RefreshCw,
   Wrench,
@@ -44,8 +45,8 @@ interface ProfileData {
 }
 
 interface BookingLinkData {
-  url?: string;
-  link?: string;
+  bookingLink?: string | null;
+  servicesCount?: number;
 }
 
 interface StripeStatusData {
@@ -215,27 +216,69 @@ function StepConnectStripe({
   );
 }
 
-function StepBookingLink({ onNext }: { onNext: () => void }) {
+function BookingLinkFallback({ url }: { url: string }) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      toast({ title: "Link copied" });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({ title: "Couldn't copy", variant: "destructive" });
+    }
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Book with me", text: "Book a job with me using this link", url });
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") handleCopy();
+      }
+    } else {
+      handleCopy();
+    }
+  };
+
+  return (
+    <Card className="border shadow-sm" data-testid="card-booking-link-fallback">
+      <div className="p-4">
+        <div className="flex items-start gap-3">
+          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <Link2 className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-foreground">Your Booking Link</p>
+            <p className="text-sm text-muted-foreground mt-1 truncate">{url}</p>
+            <div className="flex gap-2 mt-3 flex-wrap">
+              <Button size="sm" variant="default" onClick={handleCopy} data-testid="button-copy-booking-link">
+                {copied ? <><Check className="h-4 w-4 mr-1" />Copied</> : <><Copy className="h-4 w-4 mr-1" />Copy Link</>}
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleShare} data-testid="button-share-booking-link">
+                <Share2 className="h-4 w-4 mr-1" />Share
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Most first jobs come from sharing this link by text.
+            </p>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function StepBookingLink({ onNext }: { onNext: () => void }) {
   const { data: linkData, isLoading } = useQuery<BookingLinkData>({
     queryKey: QUERY_KEYS.bookingLink(),
   });
 
-  const bookingUrl = linkData?.url || linkData?.link || "";
-
-  const handleCopy = async () => {
-    if (!bookingUrl) return;
-    try {
-      await navigator.clipboard.writeText(bookingUrl);
-      setCopied(true);
-      toast({ title: "Link copied to clipboard" });
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast({ title: "Failed to copy", variant: "destructive" });
-    }
-  };
+  const bookingLink = linkData?.bookingLink || "";
+  const hasLink = !!bookingLink;
+  const hasServices = (linkData?.servicesCount || 0) > 0;
 
   return (
     <div className="flex flex-col px-6 py-8">
@@ -253,23 +296,23 @@ function StepBookingLink({ onNext }: { onNext: () => void }) {
         <div className="flex items-center justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
+      ) : hasLink ? (
+        <div className="space-y-4">
+          {hasServices ? (
+            <BookingLinkShare variant="primary" context="bookings" />
+          ) : (
+            <BookingLinkFallback url={bookingLink} />
+          )}
+          <Button className="w-full" onClick={onNext} data-testid="button-booking-next">
+            Next
+            <ChevronRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
       ) : (
         <div className="space-y-3">
-          <div className="flex gap-2">
-            <Input
-              readOnly
-              value={bookingUrl}
-              className="flex-1 text-sm"
-              data-testid="input-booking-link"
-            />
-            <Button
-              variant="outline"
-              onClick={handleCopy}
-              data-testid="button-copy-link"
-            >
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            </Button>
-          </div>
+          <p className="text-sm text-muted-foreground" data-testid="text-booking-pending">
+            Your booking link will be ready once your profile setup is complete.
+          </p>
           <Button className="w-full" onClick={onNext} data-testid="button-booking-next">
             Next
             <ChevronRight className="ml-2 h-4 w-4" />
@@ -640,7 +683,7 @@ export default function PaydayOnboarding() {
 
   const totalSteps = 6;
   const progressPercent = ((currentStep + 1) / totalSteps) * 100;
-  const bookingUrl = linkData?.url || linkData?.link || "";
+  const bookingUrl = linkData?.bookingLink || "";
 
   const renderStep = () => {
     switch (currentStep) {
