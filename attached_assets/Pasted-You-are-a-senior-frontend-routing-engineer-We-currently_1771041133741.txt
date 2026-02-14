@@ -1,0 +1,167 @@
+You are a senior frontend routing engineer.
+
+We currently have two competing routing systems:
+- OnboardingWrapper (old system using /api/onboarding)
+- PaydayOnboardingGuard (new activation-based system)
+
+They conflict and cause duplicate onboarding and redirect loops.
+
+Your task is to surgically remove OnboardingWrapper as a global routing authority and rewire routing to use a single ActivationGate without breaking authentication or protected routes.
+
+ABSOLUTE RULES:
+- Do NOT modify authentication logic.
+- Do NOT modify business logic.
+- Do NOT delete onboarding components.
+- Do NOT delete payday onboarding.
+- Do NOT change Stripe/payment logic.
+- Do NOT refactor unrelated routes.
+- Minimal routing changes only.
+- No infinite redirect loops.
+- Preserve all protected route behavior.
+
+--------------------------------------------------
+
+STEP 1 — REMOVE ONBOARDINGWRAPPER AS GLOBAL WRAPPER
+
+In App.tsx:
+
+1. Find any usage of:
+   <Route element={<OnboardingWrapper />}>
+   or similar global wrapping.
+
+2. Remove OnboardingWrapper from wrapping dashboard/payday routes.
+
+3. Keep the /onboarding route itself intact and directly accessible.
+
+OnboardingWrapper may remain as a component but must no longer wrap protected routes.
+
+--------------------------------------------------
+
+STEP 2 — ENSURE AUTH WRAPPER STILL WORKS
+
+If there is an AuthGuard / RequireAuth wrapper:
+- Keep it intact.
+- ActivationGate must run AFTER authentication is confirmed.
+
+Correct order:
+
+<AuthGuard>
+  <ActivationGate>
+    <Dashboard />
+  </ActivationGate>
+</AuthGuard>
+
+--------------------------------------------------
+
+STEP 3 — IMPLEMENT ACTIVATIONGATE AS SINGLE ROUTING AUTHORITY
+
+If ActivationGate does not exist, create:
+
+components/ActivationGate.tsx
+
+Responsibilities:
+- Call useActivationState()
+- If loading → spinner
+- If activated → render children
+- If NOT stripeConnected AND NOT bookingLinkCreated → redirect "/onboarding"
+- Else → redirect "/payday-onboarding"
+
+Ensure:
+- Do not redirect if already on that route.
+- Use <Navigate replace /> to prevent history stacking.
+- Prevent infinite loops.
+
+--------------------------------------------------
+
+STEP 4 — WRAP PROTECTED ROUTES
+
+In App.tsx:
+
+Wrap dashboard/home routes:
+
+<Route
+  path="/"
+  element={
+    <AuthGuard>
+      <ActivationGate>
+        <RedirectToDashboardOrHome />
+      </ActivationGate>
+    </AuthGuard>
+  }
+/>
+
+Wrap dashboard, main app routes similarly.
+
+DO NOT wrap:
+- /onboarding
+- /payday-onboarding
+- /login
+- public routes
+
+--------------------------------------------------
+
+STEP 5 — UPDATE PAYDAYONBOARDINGGUARD
+
+If PaydayOnboardingGuard exists:
+
+- Remove redirect logic from it.
+- It should only:
+  - Fetch activation state
+  - If fully activated → redirect "/"
+  - Otherwise render payday flow
+
+Do not duplicate routing logic here.
+
+--------------------------------------------------
+
+STEP 6 — FIX ONBOARDING COMPLETION
+
+In OnboardingFlow / OnboardingPage:
+
+Replace any:
+
+navigate("/payday-onboarding");
+
+with:
+
+queryClient.invalidateQueries(["activation-state"]);
+navigate("/");
+
+Let ActivationGate decide where user goes.
+
+--------------------------------------------------
+
+STEP 7 — CLEANUP
+
+- Remove any usage of /api/onboarding for routing decisions.
+- Ensure activation-state is the only routing authority.
+- Add temporary console logs in ActivationGate for:
+  - state
+  - isActivated result
+Remove logs after confirming behavior.
+
+--------------------------------------------------
+
+VALIDATION CHECKLIST (Must Pass)
+
+After changes:
+
+1. Brand new user:
+   Login → /onboarding → /payday-onboarding → dashboard
+
+2. Partially activated user:
+   Login → /payday-onboarding
+
+3. Fully activated user:
+   Login → dashboard
+
+4. Activated user cannot access /payday-onboarding (auto redirect)
+
+5. No redirect loops.
+
+6. No auth breakage.
+
+--------------------------------------------------
+
+Deliver minimal diff summary when complete.
+If uncertain about a route, add a TODO comment instead of guessing.
