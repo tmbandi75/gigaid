@@ -82,6 +82,8 @@ app.use(
               "'self'",
               "https://*.sentry.io",
               "https://*.stripe.com",
+              "https://connect.stripe.com",
+              "https://api.stripe.com",
               "https://maps.googleapis.com",
               "https://identitytoolkit.googleapis.com",
               "https://securetoken.googleapis.com",
@@ -92,7 +94,18 @@ app.use(
               "https://apis.google.com",
               "https://accounts.google.com",
             ],
-            frameSrc: ["'self'", "https://*.stripe.com", "https://*.firebaseapp.com", "https://accounts.google.com"],
+            frameSrc: [
+              "'self'",
+              "https://*.stripe.com",
+              "https://connect.stripe.com",
+              "https://*.firebaseapp.com",
+              "https://accounts.google.com",
+            ],
+            formAction: [
+              "'self'",
+              "https://connect.stripe.com",
+              "https://api.stripe.com",
+            ],
           },
         }
       : false,
