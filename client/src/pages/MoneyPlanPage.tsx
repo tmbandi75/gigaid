@@ -1,10 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { InlineInfoCard } from "@/components/ui/inline-info-card";
 import { BookingLinkShare } from "@/components/booking-link";
 import { useLocation } from "wouter";
 import { apiFetch } from "@/lib/apiFetch";
@@ -12,6 +11,7 @@ import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useCapability } from "@/hooks/useCapability";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { UpgradeInterceptModal } from "@/upgrade";
 import {
   DollarSign,
   ChevronLeft,
@@ -85,9 +85,9 @@ export default function MoneyPlanPage() {
     enabled: flag?.enabled === true,
   });
 
-  // Log capability attempt for analytics (soft gating - never blocks)
   const hasMoneyPlanCapability = checkCapability("todays_money_plan");
   const showCapabilityHint = !hasMoneyPlanCapability && !checkIsDeveloper();
+  const [moneyPlanInterceptOpen, setMoneyPlanInterceptOpen] = useState(false);
   
   useEffect(() => {
     if (flag?.enabled) {
@@ -210,12 +210,27 @@ export default function MoneyPlanPage() {
   const renderContent = () => (
     <div className={isMobile ? "flex-1 p-4 space-y-4" : "flex-1 max-w-7xl mx-auto w-full px-6 lg:px-8 py-6 space-y-6"}>
       {showCapabilityHint && (
-        <InlineInfoCard
-          title="Today's Money Plan is available on Pro+"
-          description="Shows what gets you paid fastest and helps you prioritize your day for maximum revenue."
-          actionLabel="Learn about Pro+"
-          onAction={() => navigate("/settings")}
-        />
+        <Card 
+          className="cursor-pointer hover-elevate border-primary/20"
+          onClick={() => setMoneyPlanInterceptOpen(true)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setMoneyPlanInterceptOpen(true); }}
+          data-testid="card-money-plan-upgrade-hint"
+        >
+          <CardContent className="flex items-center gap-3 py-3 px-4">
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <TrendingUp className="h-4 w-4 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">Unlock full Money Plan</p>
+              <p className="text-xs text-muted-foreground">Get AI-prioritized daily actions to maximize your revenue</p>
+            </div>
+            <Button variant="outline" size="sm" data-testid="button-money-plan-learn-more">
+              Learn more
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {isLoading ? (
@@ -399,6 +414,13 @@ export default function MoneyPlanPage() {
     <div className="flex flex-col min-h-full bg-background" data-testid="page-money-plan">
       {isMobile ? renderMobileHeader() : renderDesktopHeader()}
       {renderContent()}
+
+      <UpgradeInterceptModal
+        open={moneyPlanInterceptOpen}
+        onOpenChange={setMoneyPlanInterceptOpen}
+        featureKey="ai.money_plan"
+        featureName="Today's Money Plan"
+      />
     </div>
   );
 }

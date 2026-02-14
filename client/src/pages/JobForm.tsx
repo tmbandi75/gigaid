@@ -72,7 +72,7 @@ import { JobLocationMap } from "@/components/JobLocationMap";
 import { JobResolutionModal } from "@/components/jobs/JobResolutionModal";
 import { AddressAutocomplete } from "@/components/booking/AddressAutocomplete";
 import { CapabilityLimitInfo } from "@/components/CapabilityGate";
-import { useUpgradeOrchestrator, UpgradeBanner, UpgradeNudgeModal } from "@/upgrade";
+import { useUpgradeOrchestrator, UpgradeBanner, UpgradeNudgeModal, UpgradeInterceptModal } from "@/upgrade";
 
 interface JobTemplate {
   id: string;
@@ -389,6 +389,7 @@ export default function JobForm() {
   } | null>(null);
   const { celebration, celebrate, dismiss: dismissCelebration } = useCelebration();
   const jobUpgrade = useUpgradeOrchestrator({ capabilityKey: 'jobs.create', surface: 'jobs' });
+  const [jobBlockedModalOpen, setJobBlockedModalOpen] = useState(false);
   
   // Coordinates from address autocomplete
   const [addressCoords, setAddressCoords] = useState<{ lat?: number; lng?: number }>({});
@@ -1664,24 +1665,36 @@ export default function JobForm() {
               </Button>
             )}
 
-            <Button 
-              type="submit" 
-              className="w-full h-14 text-base font-semibold bg-gradient-to-r from-primary to-violet-600 hover:from-primary/90 hover:to-violet-600/90 shadow-lg" 
-              disabled={isPending || (!isEditing && jobUsage?.warningLevel === "blocked")}
-              data-testid="button-submit"
-            >
-              {isPending ? (
-                <>
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                  {isEditing ? "Updating..." : "Creating..."}
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="h-5 w-5 mr-2" />
-                  {isEditing ? "Update Job" : "Create Job"}
-                </>
-              )}
-            </Button>
+            {!isEditing && jobUsage?.warningLevel === "blocked" ? (
+              <Button 
+                type="button"
+                className="w-full h-14 text-base font-semibold bg-gradient-to-r from-primary to-violet-600 hover:from-primary/90 hover:to-violet-600/90 shadow-lg" 
+                onClick={() => setJobBlockedModalOpen(true)}
+                data-testid="button-submit"
+              >
+                <CheckCircle2 className="h-5 w-5 mr-2" />
+                Create Job
+              </Button>
+            ) : (
+              <Button 
+                type="submit" 
+                className="w-full h-14 text-base font-semibold bg-gradient-to-r from-primary to-violet-600 hover:from-primary/90 hover:to-violet-600/90 shadow-lg" 
+                disabled={isPending}
+                data-testid="button-submit"
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    {isEditing ? "Updating..." : "Creating..."}
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-5 w-5 mr-2" />
+                    {isEditing ? "Update Job" : "Create Job"}
+                  </>
+                )}
+              </Button>
+            )}
             
             <div className={isMobile ? "h-6" : "h-8"} />
           </form>
@@ -1740,6 +1753,13 @@ export default function JobForm() {
           recommendedPlan={jobUpgrade.modalPayload.recommendedPlan}
         />
       )}
+
+      <UpgradeInterceptModal
+        open={jobBlockedModalOpen}
+        onOpenChange={setJobBlockedModalOpen}
+        featureKey="jobs.create"
+        featureName="Job Creation"
+      />
     </div>
   );
 }

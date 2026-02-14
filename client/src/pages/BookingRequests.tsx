@@ -57,7 +57,7 @@ import {
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { BookingLinkShare } from "@/components/booking-link";
-import { useUpgradeOrchestrator, UpgradeBanner, UpgradeNudgeModal, incrementStallCounter } from "@/upgrade";
+import { useUpgradeOrchestrator, UpgradeBanner, UpgradeNudgeModal, incrementStallCounter, UpgradeInterceptModal } from "@/upgrade";
 
 interface BookingRequest {
   id: number;
@@ -139,6 +139,8 @@ export default function BookingRequests() {
   const [dismissedIntercept, setDismissedIntercept] = useState<Set<number>>(new Set());
   const [showBlockingIntercept, setShowBlockingIntercept] = useState(false);
   const [blockingBookingId, setBlockingBookingId] = useState<number | null>(null);
+  const [depositInterceptOpen, setDepositInterceptOpen] = useState(false);
+  const [riskInterceptOpen, setRiskInterceptOpen] = useState(false);
   
   const bookingUpgrade = useUpgradeOrchestrator({ capabilityKey: 'deposit.enforce', surface: 'booking' });
   
@@ -463,7 +465,19 @@ export default function BookingRequests() {
                !isDev && !dismissedIntercept.has(selectedBooking.id) && (
                 <>
                   {isHardGated("deposit_enforcement") && STRIPE_ENABLED && !hasDepositEnforcement ? (
-                    <Card className="p-4 border-primary/50 bg-primary/5" data-testid="card-deposit-enforcement-gate">
+                    <Card 
+                      className="p-4 border-primary/50 bg-primary/5 cursor-pointer hover-elevate" 
+                      data-testid="card-deposit-enforcement-gate"
+                      onClick={() => {
+                        logPricingInterest({
+                          user: user ? { email: user.email, plan: user.plan } : undefined,
+                          source: "soft_intercept",
+                          capability: "deposit_enforcement",
+                          context: { booking_id: selectedBooking.id }
+                        });
+                        setDepositInterceptOpen(true);
+                      }}
+                    >
                       <div className="flex items-start gap-3">
                         <div className="shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                           <CreditCard className="h-5 w-5 text-primary" />
@@ -471,80 +485,41 @@ export default function BookingRequests() {
                         <div className="flex-1 space-y-2">
                           <h4 className="font-medium">Protect this job with a deposit</h4>
                           <p className="text-sm text-muted-foreground">
-                            Deposits prevent no-shows and late cancellations. Available on Pro+ for $28/month.
+                            Deposits prevent no-shows and late cancellations. Tap to learn more.
                           </p>
-                          <div className="flex gap-2 pt-2">
-                            <Button
-                              size="sm"
-                              onClick={() => {
-                                logPricingInterest({
-                                  user: user ? { email: user.email, plan: user.plan } : undefined,
-                                  source: "soft_intercept",
-                                  capability: "deposit_enforcement",
-                                  context: { booking_id: selectedBooking.id }
-                                });
-                                setBlockingBookingId(selectedBooking.id);
-                                setShowBlockingIntercept(true);
-                              }}
-                              data-testid="button-upgrade-deposit"
-                            >
-                              Upgrade to Pro+
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setDismissedIntercept(prev => {
-                                  const newSet = new Set(prev);
-                                  newSet.add(selectedBooking.id);
-                                  return newSet;
-                                });
-                              }}
-                              data-testid="button-dismiss-deposit-gate"
-                            >
-                              Continue without protection
-                            </Button>
-                          </div>
-                          <div className="text-center mt-2">
-                            <Link href="/pricing" className="text-sm text-muted-foreground hover:underline" data-testid="link-view-all-plans">
-                              View all plans
-                            </Link>
-                          </div>
                         </div>
+                        <ChevronRight className="h-5 w-5 text-muted-foreground/50 mt-2 flex-shrink-0" />
                       </div>
                     </Card>
                   ) : !hasRiskProtection ? (
-                    <SoftIntercept
-                      title="This booking looks riskier than usual"
-                      description="Pro+ can automatically enforce a deposit and protect you from no-shows and late cancellations."
-                      primaryActionLabel="Protect this job with Pro+"
-                      secondaryActionLabel="Continue without protection"
-                      onPrimary={() => {
+                    <Card 
+                      className="p-4 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 cursor-pointer hover-elevate" 
+                      data-testid="card-risk-protection-intercept"
+                      onClick={() => {
                         logPricingInterest({
                           user: user ? { email: user.email, plan: user.plan } : undefined,
                           source: "soft_intercept",
                           capability: "booking_risk_protection",
                           context: { booking_id: selectedBooking.id }
                         });
-                        navigate("/pro-plus-context");
+                        setRiskInterceptOpen(true);
                       }}
-                      onSecondary={() => {
-                        console.log("[capability_attempted]", {
-                          capability: "booking_risk_protection",
-                          context: {
-                            booking_id: selectedBooking.id,
-                            action: "dismissed_soft_intercept"
-                          },
-                          timestamp: new Date().toISOString()
-                        });
-                        setDismissedIntercept(prev => {
-                          const newSet = new Set(prev);
-                          newSet.add(selectedBooking.id);
-                          return newSet;
-                        });
-                      }}
-                      data-testid="card-risk-protection-intercept"
-                    />
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 mt-0.5">
+                          <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-amber-900 dark:text-amber-100">
+                            This booking looks riskier than usual
+                          </p>
+                          <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                            Tap to see how Pro+ can protect you from no-shows and late cancellations.
+                          </p>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-amber-600/50 mt-2 flex-shrink-0" />
+                      </div>
+                    </Card>
                   ) : null}
                 </>
               )}
@@ -873,6 +848,20 @@ export default function BookingRequests() {
           recommendedPlan={bookingUpgrade.modalPayload.recommendedPlan}
         />
       )}
+
+      <UpgradeInterceptModal
+        open={depositInterceptOpen}
+        onOpenChange={setDepositInterceptOpen}
+        featureKey="deposit.enforce"
+        featureName="Deposit Protection"
+      />
+
+      <UpgradeInterceptModal
+        open={riskInterceptOpen}
+        onOpenChange={setRiskInterceptOpen}
+        featureKey="booking.risk_protection"
+        featureName="Booking Risk Protection"
+      />
     </div>
   );
 }

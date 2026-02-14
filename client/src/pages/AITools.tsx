@@ -39,6 +39,7 @@ import {
   Calculator,
   Lock,
 } from "lucide-react";
+import { UpgradeInterceptModal } from "@/upgrade/UpgradeInterceptModal";
 
 interface AIFeature {
   id: string;
@@ -53,6 +54,7 @@ interface AIFeature {
 
 export default function AITools() {
   const [activeFeature, setActiveFeature] = useState<string | null>(null);
+  const [lockedFeatureModalOpen, setLockedFeatureModalOpen] = useState(false);
   const isMobile = useIsMobile();
 
   const { data: summary } = useQuery<DashboardSummary>({
@@ -312,12 +314,10 @@ export default function AITools() {
                     return (
                       <Card
                         key={feature.id}
-                        className={`group overflow-visible border-0 shadow-sm ${
-                          isLocked 
-                            ? "opacity-60 cursor-not-allowed" 
-                            : "cursor-pointer hover-elevate"
+                        className={`group overflow-visible border-0 shadow-sm cursor-pointer hover-elevate ${
+                          isLocked ? "opacity-60" : ""
                         }`}
-                        onClick={() => !isLocked && setActiveFeature(feature.id)}
+                        onClick={() => isLocked ? setLockedFeatureModalOpen(true) : setActiveFeature(feature.id)}
                         data-testid={`card-feature-${feature.id}`}
                       >
                         <CardContent className={isMobile ? "p-4" : "p-4"}>
@@ -410,6 +410,13 @@ export default function AITools() {
           </DialogContent>
         </Dialog>
       )}
+
+      <UpgradeInterceptModal
+        open={lockedFeatureModalOpen}
+        onOpenChange={setLockedFeatureModalOpen}
+        featureKey="ai.micro_nudges"
+        featureName="AI Growth Tools"
+      />
     </div>
   );
 }

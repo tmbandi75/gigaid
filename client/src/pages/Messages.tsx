@@ -17,7 +17,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { PriorityBadge, inferMessagePriority } from "@/components/priority/PriorityBadge";
-import { useUpgradeOrchestrator, UpgradeBanner, UpgradeNudgeModal, incrementStallCounter } from "@/upgrade";
+import { useUpgradeOrchestrator, UpgradeBanner, UpgradeNudgeModal, incrementStallCounter, UpgradeInterceptModal } from "@/upgrade";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiFetch } from "@/lib/apiFetch";
@@ -180,6 +180,7 @@ function MessageThread({
   const isNearLimit = !!(usage?.outboundLimit && usage.outboundRemaining !== null && usage.outboundRemaining <= 5);
   const isAtLimit = !!(usage?.outboundLimit && usage.outboundRemaining !== null && usage.outboundRemaining <= 0);
   const smsUpgrade = useUpgradeOrchestrator({ capabilityKey: 'sms.two_way', surface: 'messages' });
+  const [smsInterceptOpen, setSmsInterceptOpen] = useState(false);
 
   const sendMutation = useApiMutation(
     async (message: string) => {
@@ -213,7 +214,11 @@ function MessageThread({
   );
 
   const handleSend = () => {
-    if (!reply.trim() || isAtLimit) return;
+    if (!reply.trim()) return;
+    if (isAtLimit) {
+      setSmsInterceptOpen(true);
+      return;
+    }
     sendMutation.mutate(reply.trim());
   };
 
@@ -298,9 +303,16 @@ function MessageThread({
           />
         )}
         {isAtLimit && (
-          <div className="flex items-center gap-2 px-3 py-2 bg-destructive/10 text-destructive rounded-md text-sm" data-testid="warning-limit-reached">
+          <div 
+            className="flex items-center gap-2 px-3 py-2 bg-destructive/10 text-destructive rounded-md text-sm cursor-pointer hover-elevate" 
+            data-testid="warning-limit-reached"
+            onClick={() => setSmsInterceptOpen(true)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSmsInterceptOpen(true); }}
+          >
             <AlertCircle className="h-4 w-4 flex-shrink-0" />
-            <span>You've reached your Free message limit. Upgrade to keep messaging and manage replies in GigAid.</span>
+            <span>You've reached your Free message limit. Tap to unlock more.</span>
           </div>
         )}
         {isNearLimit && !isAtLimit && (
@@ -313,10 +325,9 @@ function MessageThread({
           <Textarea
             value={reply}
             onChange={(e) => setReply(e.target.value)}
-            placeholder={isAtLimit ? "Message limit reached" : "Type a message..."}
+            placeholder={isAtLimit ? "Tap Send to unlock more messages" : "Type a message..."}
             className="resize-none min-h-[44px] max-h-32"
             rows={1}
-            disabled={isAtLimit}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -327,7 +338,7 @@ function MessageThread({
           />
           <Button
             onClick={handleSend}
-            disabled={!reply.trim() || sendMutation.isPending || isAtLimit}
+            disabled={!reply.trim() && !isAtLimit || sendMutation.isPending}
             size="icon"
             data-testid="button-send-reply"
           >
@@ -359,6 +370,13 @@ function MessageThread({
           recommendedPlan={smsUpgrade.modalPayload.recommendedPlan}
         />
       )}
+
+      <UpgradeInterceptModal
+        open={smsInterceptOpen}
+        onOpenChange={setSmsInterceptOpen}
+        featureKey="sms.two_way"
+        featureName="Two-Way Messaging"
+      />
     </div>
   );
 }
