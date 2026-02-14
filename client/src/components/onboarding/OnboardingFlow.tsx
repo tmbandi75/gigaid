@@ -11,8 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
@@ -55,12 +53,8 @@ import {
   ChevronRight,
   Loader2,
   CheckCircle2,
-  Copy,
-  Share2,
-  CreditCard,
   Sparkle,
   ArrowRight,
-  X,
   type LucideIcon,
 } from "lucide-react";
 import { serviceCategories, type ServiceIconName } from "@shared/service-categories";
@@ -105,8 +99,7 @@ const getIconForCategory = (iconName: ServiceIconName): LucideIcon => {
   return iconMap[iconName] || MoreHorizontal;
 };
 
-// Steps: 1=Welcome, 2=Identity, 3=Pricing, 4=Deposit, 5=BookingLink, 6=Payments, 7=AICard, 8=Complete
-const TOTAL_STEPS = 8;
+const TOTAL_STEPS = 5;
 
 export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps) {
   const [, navigate] = useLocation();
@@ -114,12 +107,9 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
   
   const [step, setStep] = useState(initialStep || 1);
   const [showSkipModal, setShowSkipModal] = useState(false);
-  const [linkCopied, setLinkCopied] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
-  const [isConnectingStripe, setIsConnectingStripe] = useState(false);
   
-  // Form data
   const [identity, setIdentity] = useState({
     firstName: "",
     lastName: "",
@@ -135,16 +125,9 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
     duration: "60",
     pricingType: "fixed" as "fixed" | "range" | "varies",
   });
-  
-  const [deposit, setDeposit] = useState({
-    enabled: true,
-    percentage: 30,
-  });
 
-  // Get user data via useAuth hook
   const { user, isAuthenticated } = useAuth();
 
-  // Get onboarding status from server
   const { data: onboardingStatus } = useQuery<{
     completed: boolean;
     step: number;
@@ -158,11 +141,9 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
     queryKey: QUERY_KEYS.onboarding(),
   });
 
-  // Handle initialStep prop changes - when user navigates directly to a step
   useEffect(() => {
     if (initialStep && onboardingStatus) {
       setStep(initialStep);
-      // Pre-fill form data from saved state
       if (onboardingStatus.defaultServiceType) {
         setIdentity(prev => ({ ...prev, serviceType: onboardingStatus.defaultServiceType || "" }));
       }
@@ -173,12 +154,10 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
     }
   }, [initialStep, onboardingStatus]);
 
-  // Initialize step from server state (resume capability) - only when no initialStep
   useEffect(() => {
     if (!initialized && !initialStep && onboardingStatus && user) {
       setInitialized(true);
       
-      // If onboarding is completed or skipped, go to dashboard
       if (onboardingStatus.completed || onboardingStatus.state === "completed" || onboardingStatus.state === "skipped_explore") {
         onComplete();
         queryClient.invalidateQueries({ queryKey: ["/api/user/activation-state"] });
@@ -186,12 +165,15 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
         return;
       }
       
-      // Resume from last saved step if in progress
       if (onboardingStatus.state === "in_progress" && onboardingStatus.step > 1) {
-        setStep(onboardingStatus.step);
+        const savedStep = onboardingStatus.step;
+        if (savedStep <= TOTAL_STEPS) {
+          setStep(savedStep);
+        } else {
+          setStep(2);
+        }
       }
       
-      // Pre-fill form data from saved state
       if (onboardingStatus.defaultServiceType) {
         setIdentity(prev => ({ ...prev, serviceType: onboardingStatus.defaultServiceType || "" }));
       }
@@ -201,7 +183,6 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
     }
   }, [initialized, onboardingStatus, user, onComplete, navigate, initialStep]);
 
-  // Pre-fill from user data
   useEffect(() => {
     if (user) {
       setIdentity(prev => ({
@@ -224,22 +205,6 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
       apiFetch("/api/profile", { method: "PATCH", body: JSON.stringify(data) }),
     [QUERY_KEYS.authUser()]
   );
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("stripe_connected") === "true") {
-      toast({ title: "Stripe connected successfully" });
-      setStep(7);
-      updateOnboardingMutation.mutate({ step: 7 });
-      window.history.replaceState({}, "", window.location.pathname);
-      setInitialized(true);
-    } else if (params.get("stripe_refresh") === "true") {
-      toast({ title: "Stripe setup incomplete", description: "You can finish payment setup anytime in Settings", variant: "destructive" });
-      setStep(6);
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  }, []);
 
   const handleSkipClick = () => {
     setShowSkipModal(true);
@@ -279,7 +244,6 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
       defaultServiceType: identity.serviceType,
     });
     
-    // Pre-fill pricing based on service
     const category = serviceCategories.find(c => c.id === identity.serviceType);
     if (category) {
       setPricing(prev => ({
@@ -293,7 +257,6 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
   };
 
   const handlePricingSubmit = async () => {
-    // Validate based on pricing type
     if (pricing.pricingType === "fixed" && !pricing.typicalPrice) {
       toast({ title: "Please enter your typical price" });
       return;
@@ -303,7 +266,6 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
       return;
     }
     
-    // Calculate price in cents based on pricing type
     let priceInCents = 0;
     let priceMinCents: number | null = null;
     let priceMaxCents: number | null = null;
@@ -313,10 +275,8 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
     } else if (pricing.pricingType === "range") {
       priceMinCents = Math.round(parseFloat(pricing.priceMin) * 100);
       priceMaxCents = Math.round(parseFloat(pricing.priceMax) * 100);
-      // Use the average as the default price for calculations
       priceInCents = Math.round((priceMinCents + priceMaxCents) / 2);
     }
-    // For "varies" type, priceInCents stays 0 (no default price)
     
     await updateProfileMutation.mutateAsync({
       defaultPrice: pricing.pricingType === "varies" ? null : priceInCents,
@@ -330,79 +290,6 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
     setStep(4);
   };
 
-  const handleDepositSubmit = async () => {
-    await updateProfileMutation.mutateAsync({
-      depositEnabled: deposit.enabled,
-      depositValue: deposit.percentage,
-      depositPolicySet: true,
-      // Auto-enable public profile when reaching booking link step
-      // This ensures the booking link will work immediately
-      publicProfileEnabled: true,
-    });
-    
-    updateOnboardingMutation.mutate({ step: 5 });
-    setStep(5);
-  };
-
-  const handleCopyLink = async () => {
-    const slug = (user as any)?.publicProfileSlug || (user as any)?.id;
-    const link = `${window.location.origin}/book/${slug}`;
-    await navigator.clipboard.writeText(link);
-    setLinkCopied(true);
-    toast({ title: "Link copied!" });
-    setTimeout(() => setLinkCopied(false), 2000);
-  };
-
-  const handleShareLink = async () => {
-    const slug = (user as any)?.publicProfileSlug || (user as any)?.id;
-    const link = `${window.location.origin}/book/${slug}`;
-    
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: "Book with me",
-          text: "Schedule a service with me",
-          url: link,
-        });
-      } catch (e) {
-        handleCopyLink();
-      }
-    } else {
-      handleCopyLink();
-    }
-  };
-
-  const handleBookingLinkContinue = () => {
-    updateOnboardingMutation.mutate({ step: 6 });
-    setStep(6);
-  };
-
-  const handlePaymentsSkip = () => {
-    updateOnboardingMutation.mutate({ step: 7 });
-    setStep(7);
-  };
-
-  const handlePaymentsConnect = async () => {
-    if (isConnectingStripe) return;
-    setIsConnectingStripe(true);
-    try {
-      const data = await apiFetch<{ url: string }>("/api/stripe/connect/onboard", {
-        method: "POST",
-        body: JSON.stringify({ source: "onboarding" }),
-      });
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        toast({ title: "Could not start payment setup", description: "Please try again", variant: "destructive" });
-        setIsConnectingStripe(false);
-      }
-    } catch (err: any) {
-      console.error("[Onboarding] Stripe Connect error:", err);
-      toast({ title: "Payment setup failed", description: err?.message || "Please try again", variant: "destructive" });
-      setIsConnectingStripe(false);
-    }
-  };
-
   const handleAICardDismiss = async () => {
     await updateProfileMutation.mutateAsync({
       aiExpectationShown: true,
@@ -411,15 +298,13 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
     await updateOnboardingMutation.mutateAsync({ 
       state: "completed",
       completed: true,
-      step: 8 
+      step: 5 
     });
     
-    setStep(8);
+    setStep(5);
     
-    // Show Lottie celebration animation
     setShowCelebration(true);
     
-    // Celebration confetti
     setTimeout(() => {
       const duration = 3000;
       const end = Date.now() + duration;
@@ -447,7 +332,6 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
       
       frame();
       
-      // Big burst
       setTimeout(() => {
         confetti({
           particleCount: 150,
@@ -465,7 +349,6 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
     navigate("/");
   };
 
-  // POST-AUTH guard: show sign-in prompt if not authenticated
   if (!isAuthenticated || !user) {
     return (
       <div className="flex flex-col min-h-[70vh]" data-testid="onboarding-flow-unauthenticated">
@@ -512,7 +395,6 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
 
   return (
     <div className="flex flex-col min-h-[70vh]" data-testid="onboarding-flow">
-      {/* Skip Modal */}
       <Dialog open={showSkipModal} onOpenChange={setShowSkipModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -532,8 +414,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
         </DialogContent>
       </Dialog>
 
-      {/* Progress bar */}
-      {step > 1 && step < 8 && (
+      {step > 1 && step < 5 && (
         <div className="h-1.5 bg-muted rounded-t-2xl overflow-hidden">
           <div 
             className="h-full bg-gradient-to-r from-[#6366F1] to-[#4F46E5] transition-all duration-500 ease-out"
@@ -545,7 +426,6 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-lg mx-auto px-6 py-8 min-h-full flex flex-col">
           
-          {/* Step 1: Welcome */}
           {step === 1 && (
             <div className="flex-1 flex flex-col justify-center animate-in fade-in slide-in-from-bottom-4 duration-500" data-testid="step-welcome">
               <div className="space-y-8 text-center">
@@ -568,7 +448,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
                     onClick={handleStartSetup}
                     data-testid="button-start-setup"
                   >
-                    Set up my first booking
+                    Set up my profile
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                   <Button 
@@ -584,12 +464,11 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
             </div>
           )}
 
-          {/* Step 2: Identity */}
           {step === 2 && (
             <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500" data-testid="step-identity">
               <div className="flex-1 space-y-8">
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-[#6366F1]">Step 1 of 6</p>
+                  <p className="text-sm font-medium text-[#6366F1]">Step 1 of 3</p>
                   <h1 className="text-3xl font-bold tracking-tight">Tell us about yourself</h1>
                   <p className="text-muted-foreground">Just the basics to get started.</p>
                 </div>
@@ -688,18 +567,16 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
             </div>
           )}
 
-          {/* Step 3: Pricing */}
           {step === 3 && (
             <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500" data-testid="step-pricing">
               <div className="flex-1 space-y-6">
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-[#6366F1]">Step 2 of 6</p>
+                  <p className="text-sm font-medium text-[#6366F1]">Step 2 of 3</p>
                   <h1 className="text-3xl font-bold tracking-tight">What do you usually charge?</h1>
                   <p className="text-muted-foreground">This helps with estimates and invoices.</p>
                 </div>
                 
                 <div className="space-y-5">
-                  {/* Pricing type selector */}
                   <div className="space-y-3">
                     <Label className="text-base">How do you price your work?</Label>
                     <div className="grid gap-2">
@@ -768,7 +645,6 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
                     </div>
                   </div>
                   
-                  {/* Fixed price input */}
                   {pricing.pricingType === "fixed" && (
                     <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
                       <Label htmlFor="typicalPrice" className="text-base">Your typical price</Label>
@@ -787,7 +663,6 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
                     </div>
                   )}
                   
-                  {/* Price range inputs */}
                   {pricing.pricingType === "range" && (
                     <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
                       <Label className="text-base">Your price range</Label>
@@ -819,17 +694,14 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
                     </div>
                   )}
                   
-                  {/* "It depends" message */}
                   {pricing.pricingType === "varies" && (
                     <div className="p-4 rounded-xl bg-muted/50 border border-border animate-in fade-in slide-in-from-bottom-2 duration-300">
                       <p className="text-sm text-muted-foreground">
-                        No problem! You can set prices when creating each job or invoice. 
-                        We'll skip the deposit step since it needs a price to calculate.
+                        No problem! You can set prices when creating each job or invoice.
                       </p>
                     </div>
                   )}
                   
-                  {/* Duration selector - not shown for "varies" */}
                   {pricing.pricingType !== "varies" && (
                     <div className="space-y-2">
                       <Label className="text-base">Typical duration (optional)</Label>
@@ -873,206 +745,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
             </div>
           )}
 
-          {/* Step 4: Deposit */}
           {step === 4 && (
-            <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500" data-testid="step-deposit">
-              <div className="flex-1 space-y-8">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-[#6366F1]">Step 3 of 6</p>
-                  <h1 className="text-3xl font-bold tracking-tight">Protect your time</h1>
-                  <p className="text-muted-foreground">Deposits reduce no-shows and last-minute cancellations.</p>
-                </div>
-                
-                <Card className="border-2">
-                  <CardContent className="p-6 space-y-6">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="font-semibold text-lg">Require deposit on booking</p>
-                        <p className="text-sm text-muted-foreground">Clients pay upfront to confirm</p>
-                      </div>
-                      <Switch
-                        checked={deposit.enabled}
-                        onCheckedChange={(checked) => setDeposit({ ...deposit, enabled: checked })}
-                        data-testid="switch-deposit"
-                      />
-                    </div>
-                    
-                    {deposit.enabled && (
-                      <div className="space-y-4 pt-4 border-t animate-in fade-in slide-in-from-top-2 duration-300">
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Deposit amount</span>
-                          <span className="text-2xl font-bold text-primary">{deposit.percentage}%</span>
-                        </div>
-                        <Slider
-                          value={[deposit.percentage]}
-                          onValueChange={([value]) => setDeposit({ ...deposit, percentage: value })}
-                          min={20}
-                          max={50}
-                          step={5}
-                          className="py-4"
-                          data-testid="slider-deposit"
-                        />
-                        <div className="flex justify-between text-sm text-muted-foreground">
-                          <span>20%</span>
-                          <span>50%</span>
-                        </div>
-                        {(() => {
-                          const examplePrice = pricing.pricingType === "fixed" && pricing.typicalPrice 
-                            ? parseFloat(pricing.typicalPrice)
-                            : pricing.pricingType === "range" && pricing.priceMin && pricing.priceMax
-                              ? (parseFloat(pricing.priceMin) + parseFloat(pricing.priceMax)) / 2
-                              : null;
-                          
-                          if (examplePrice) {
-                            return (
-                              <p className="text-center text-sm text-muted-foreground pt-2">
-                                On a ${examplePrice.toFixed(0)} job, you'd collect{" "}
-                                <span className="font-semibold text-foreground">
-                                  ${(examplePrice * deposit.percentage / 100).toFixed(0)}
-                                </span>{" "}
-                                upfront
-                              </p>
-                            );
-                          }
-                          return null;
-                        })()}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-                
-                <p className="text-sm text-muted-foreground text-center">
-                  You can change this anytime in settings.
-                </p>
-              </div>
-              
-              <div className="pt-6">
-                <Button 
-                  size="lg" 
-                  className="w-full h-14 text-lg rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-[#4F46E5]/30"
-                  onClick={handleDepositSubmit}
-                  disabled={updateProfileMutation.isPending}
-                  data-testid="button-deposit-continue"
-                >
-                  {updateProfileMutation.isPending ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>Continue<ChevronRight className="w-5 h-5 ml-1" /></>
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 5: Booking Link */}
-          {step === 5 && (
-            <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500" data-testid="step-booking-link">
-              <div className="flex-1 space-y-8">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-[#6366F1]">Step 4 of 6</p>
-                  <h1 className="text-3xl font-bold tracking-tight">Your booking link is ready</h1>
-                  <p className="text-muted-foreground">Share it with clients so they can book you directly.</p>
-                </div>
-                
-                <Card className="border-2 border-primary/20 bg-primary/5">
-                  <CardContent className="p-6 space-y-4">
-                    <div className="flex items-center gap-3 p-4 bg-background rounded-xl border">
-                      <div className="flex-1 truncate font-mono text-sm">
-                        {window.location.origin}/book/{(user as any)?.publicProfileSlug || (user as any)?.id || "..."}
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button 
-                        variant="outline" 
-                        size="lg"
-                        className="h-12 rounded-xl"
-                        onClick={handleCopyLink}
-                        data-testid="button-copy-link"
-                      >
-                        {linkCopied ? <CheckCircle2 className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-                        {linkCopied ? "Copied" : "Copy"}
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="lg"
-                        className="h-12 rounded-xl"
-                        onClick={handleShareLink}
-                        data-testid="button-share-link"
-                      >
-                        <Share2 className="w-4 h-4 mr-2" />
-                        Share
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <p className="text-sm text-muted-foreground text-center">
-                  You don't have to share it now. You can find it anytime in your profile.
-                </p>
-              </div>
-              
-              <div className="pt-6">
-                <Button 
-                  size="lg" 
-                  className="w-full h-14 text-lg rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-[#4F46E5]/30"
-                  onClick={handleBookingLinkContinue}
-                  data-testid="button-booking-continue"
-                >
-                  Continue
-                  <ChevronRight className="w-5 h-5 ml-1" />
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 6: Payments */}
-          {step === 6 && (
-            <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500" data-testid="step-payments">
-              <div className="flex-1 space-y-8">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-[#6366F1]">Step 5 of 6</p>
-                  <h1 className="text-3xl font-bold tracking-tight">Get paid automatically</h1>
-                  <p className="text-muted-foreground">Connect payments so deposits go straight to your bank.</p>
-                </div>
-                
-                <Card className="border-2">
-                  <CardContent className="p-6 flex flex-col items-center text-center space-y-4">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500/20 to-blue-500/20 flex items-center justify-center">
-                      <CreditCard className="w-8 h-8 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-lg">Stripe Connect</p>
-                      <p className="text-sm text-muted-foreground">Secure payments powered by Stripe</p>
-                    </div>
-                    <Button 
-                      size="lg" 
-                      className="w-full h-12 rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-[#4F46E5]/30"
-                      onClick={handlePaymentsConnect}
-                      disabled={isConnectingStripe}
-                      data-testid="button-connect-payments"
-                    >
-                      {isConnectingStripe ? <Loader2 className="h-5 w-5 animate-spin" /> : "Connect payments"}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-              
-              <div className="pt-6">
-                <Button 
-                  variant="ghost" 
-                  className="w-full h-14 text-lg"
-                  onClick={handlePaymentsSkip}
-                  data-testid="button-skip-payments"
-                >
-                  Skip for now
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 7: AI Card */}
-          {step === 7 && (
             <div className="flex-1 flex flex-col justify-center animate-in fade-in slide-in-from-right-4 duration-500" data-testid="step-ai-card">
               <Card className="border-2 border-primary/20 overflow-hidden">
                 <div className="h-2 bg-gradient-to-r from-primary via-violet-500 to-blue-500" />
@@ -1101,8 +774,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
             </div>
           )}
 
-          {/* Step 8: Complete */}
-          {step === 8 && (
+          {step === 5 && (
             <div className="flex-1 flex flex-col justify-center animate-in fade-in zoom-in-95 duration-500" data-testid="step-complete">
               <div className="space-y-8 text-center">
                 <div className="space-y-4">
@@ -1132,7 +804,6 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
         </div>
       </div>
 
-      {/* Celebration overlay for onboarding completion */}
       <CelebrationOverlay
         isVisible={showCelebration}
         message="GigAid is ready to help you get paid faster and protect your time."

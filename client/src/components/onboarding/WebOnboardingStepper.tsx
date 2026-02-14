@@ -1,9 +1,6 @@
 import {
   User,
   DollarSign,
-  Shield,
-  Link2,
-  CreditCard,
   Sparkle,
   CheckCircle2,
   type LucideIcon,
@@ -18,9 +15,6 @@ interface StepConfig {
 const steps: StepConfig[] = [
   { label: "About You", icon: User, description: "Name & service type" },
   { label: "Pricing", icon: DollarSign, description: "Set your rates" },
-  { label: "Deposits", icon: Shield, description: "Protect your time" },
-  { label: "Booking Link", icon: Link2, description: "Share with clients" },
-  { label: "Payments", icon: CreditCard, description: "Get paid automatically" },
   { label: "AI Setup", icon: Sparkle, description: "Smart suggestions" },
 ];
 

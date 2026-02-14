@@ -5,6 +5,7 @@ import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { serviceCategories } from "@shared/service-categories";
 import confetti from "canvas-confetti";
@@ -25,11 +26,6 @@ export interface PricingData {
   pricingType: "fixed" | "range" | "varies";
 }
 
-export interface DepositData {
-  enabled: boolean;
-  percentage: number;
-}
-
 export interface OnboardingStatus {
   completed: boolean;
   step: number;
@@ -41,7 +37,7 @@ export interface OnboardingStatus {
   aiExpectationShown: boolean;
 }
 
-export const TOTAL_STEPS = 8;
+export const TOTAL_STEPS = 5;
 
 export function useOnboarding(onComplete: () => void, initialStep?: number) {
   const [, navigate] = useLocation();
@@ -49,10 +45,8 @@ export function useOnboarding(onComplete: () => void, initialStep?: number) {
 
   const [step, setStep] = useState(initialStep || 1);
   const [showSkipModal, setShowSkipModal] = useState(false);
-  const [linkCopied, setLinkCopied] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
-  const [isConnectingStripe, setIsConnectingStripe] = useState(false);
 
   const [identity, setIdentity] = useState<IdentityData>({
     firstName: "",
@@ -68,11 +62,6 @@ export function useOnboarding(onComplete: () => void, initialStep?: number) {
     priceMax: "",
     duration: "60",
     pricingType: "fixed",
-  });
-
-  const [deposit, setDeposit] = useState<DepositData>({
-    enabled: true,
-    percentage: 30,
   });
 
   const { user, isAuthenticated } = useAuth();
@@ -103,7 +92,12 @@ export function useOnboarding(onComplete: () => void, initialStep?: number) {
         return;
       }
       if (onboardingStatus.state === "in_progress" && onboardingStatus.step > 1) {
-        setStep(onboardingStatus.step);
+        const savedStep = onboardingStatus.step;
+        if (savedStep <= TOTAL_STEPS) {
+          setStep(savedStep);
+        } else {
+          setStep(2);
+        }
       }
       if (onboardingStatus.defaultServiceType) {
         setIdentity(prev => ({ ...prev, serviceType: onboardingStatus.defaultServiceType || "" }));
@@ -137,22 +131,6 @@ export function useOnboarding(onComplete: () => void, initialStep?: number) {
     [QUERY_KEYS.authUser()]
   );
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("stripe_connected") === "true") {
-      toast({ title: "Stripe connected successfully" });
-      setStep(7);
-      updateOnboardingMutation.mutate({ step: 7 });
-      window.history.replaceState({}, "", window.location.pathname);
-      setInitialized(true);
-    } else if (params.get("stripe_refresh") === "true") {
-      toast({ title: "Stripe setup incomplete", description: "You can finish payment setup anytime in Settings", variant: "destructive" });
-      setStep(6);
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  }, []);
-
   const handleSkipClick = () => {
     setShowSkipModal(true);
   };
@@ -164,6 +142,7 @@ export function useOnboarding(onComplete: () => void, initialStep?: number) {
     });
     setShowSkipModal(false);
     onComplete();
+    queryClient.invalidateQueries({ queryKey: ["/api/user/activation-state"] });
     navigate("/");
   };
 
@@ -236,77 +215,6 @@ export function useOnboarding(onComplete: () => void, initialStep?: number) {
     setStep(4);
   };
 
-  const handleDepositSubmit = async () => {
-    await updateProfileMutation.mutateAsync({
-      depositEnabled: deposit.enabled,
-      depositValue: deposit.percentage,
-      depositPolicySet: true,
-      publicProfileEnabled: true,
-    });
-
-    updateOnboardingMutation.mutate({ step: 5 });
-    setStep(5);
-  };
-
-  const handleCopyLink = async () => {
-    const slug = (user as any)?.publicProfileSlug || (user as any)?.id;
-    const link = `${window.location.origin}/book/${slug}`;
-    await navigator.clipboard.writeText(link);
-    setLinkCopied(true);
-    toast({ title: "Link copied!" });
-    setTimeout(() => setLinkCopied(false), 2000);
-  };
-
-  const handleShareLink = async () => {
-    const slug = (user as any)?.publicProfileSlug || (user as any)?.id;
-    const link = `${window.location.origin}/book/${slug}`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: "Book with me",
-          text: "Schedule a service with me",
-          url: link,
-        });
-      } catch {
-        handleCopyLink();
-      }
-    } else {
-      handleCopyLink();
-    }
-  };
-
-  const handleBookingLinkContinue = () => {
-    updateOnboardingMutation.mutate({ step: 6 });
-    setStep(6);
-  };
-
-  const handlePaymentsSkip = () => {
-    updateOnboardingMutation.mutate({ step: 7 });
-    setStep(7);
-  };
-
-  const handlePaymentsConnect = async () => {
-    if (isConnectingStripe) return;
-    setIsConnectingStripe(true);
-    try {
-      const data = await apiFetch<{ url: string }>("/api/stripe/connect/onboard", {
-        method: "POST",
-        body: JSON.stringify({ source: "onboarding" }),
-      });
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        toast({ title: "Could not start payment setup", description: "Please try again", variant: "destructive" });
-        setIsConnectingStripe(false);
-      }
-    } catch (err: any) {
-      console.error("[Onboarding] Stripe Connect error:", err);
-      toast({ title: "Payment setup failed", description: err?.message || "Please try again", variant: "destructive" });
-      setIsConnectingStripe(false);
-    }
-  };
-
   const handleAICardDismiss = async () => {
     await updateProfileMutation.mutateAsync({
       aiExpectationShown: true,
@@ -315,10 +223,10 @@ export function useOnboarding(onComplete: () => void, initialStep?: number) {
     await updateOnboardingMutation.mutateAsync({
       state: "completed",
       completed: true,
-      step: 8,
+      step: 5,
     });
 
-    setStep(8);
+    setStep(5);
     setShowCelebration(true);
 
     setTimeout(() => {
@@ -361,6 +269,7 @@ export function useOnboarding(onComplete: () => void, initialStep?: number) {
 
   const handleGoToDashboard = () => {
     onComplete();
+    queryClient.invalidateQueries({ queryKey: ["/api/user/activation-state"] });
     navigate("/");
   };
 
@@ -371,15 +280,12 @@ export function useOnboarding(onComplete: () => void, initialStep?: number) {
     setStep,
     showSkipModal,
     setShowSkipModal,
-    linkCopied,
     showCelebration,
     setShowCelebration,
     identity,
     setIdentity,
     pricing,
     setPricing,
-    deposit,
-    setDeposit,
     user,
     isAuthenticated,
     onboardingStatus,
@@ -392,13 +298,6 @@ export function useOnboarding(onComplete: () => void, initialStep?: number) {
     handleStartSetup,
     handleIdentitySubmit,
     handlePricingSubmit,
-    handleDepositSubmit,
-    handleCopyLink,
-    handleShareLink,
-    handleBookingLinkContinue,
-    handlePaymentsSkip,
-    handlePaymentsConnect,
-    isConnectingStripe,
     handleAICardDismiss,
     handleGoToDashboard,
   };

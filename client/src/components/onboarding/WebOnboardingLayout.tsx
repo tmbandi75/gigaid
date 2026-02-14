@@ -2,8 +2,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
@@ -22,8 +20,8 @@ import {
   Lock, Scissors, Baby, Dog, Home, Heart, Camera,
   PartyPopper, GraduationCap, ShowerHead, Shield, Monitor,
   Briefcase, ClipboardCheck, Snowflake, MoreHorizontal,
-  ChevronRight, Loader2, CheckCircle2, Copy, Share2,
-  CreditCard, Sparkle, ArrowRight, X,
+  ChevronRight, Loader2, CheckCircle2,
+  Sparkle, ArrowRight,
   type LucideIcon,
 } from "lucide-react";
 
@@ -98,7 +96,7 @@ export function WebOnboardingLayout({ onComplete, initialStep }: WebOnboardingLa
                 onClick={ob.handleStartSetup}
                 data-testid="button-start-setup"
               >
-                Set up my first booking
+                Set up my profile
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
               <div>
@@ -119,7 +117,7 @@ export function WebOnboardingLayout({ onComplete, initialStep }: WebOnboardingLa
     );
   }
 
-  if (ob.step === 8) {
+  if (ob.step === 5) {
     return (
       <>
         <div className="flex items-center justify-center min-h-[70vh]" data-testid="web-step-complete">
@@ -160,7 +158,7 @@ export function WebOnboardingLayout({ onComplete, initialStep }: WebOnboardingLa
         <aside className="w-64 shrink-0 flex flex-col gap-6">
           <div className="space-y-1">
             <h2 className="text-lg font-semibold text-white">Setup Progress</h2>
-            <p className="text-sm text-white/60">Step {ob.step - 1} of 6</p>
+            <p className="text-sm text-white/60">Step {ob.step - 1} of 3</p>
           </div>
           <WebOnboardingStepper currentStep={ob.step} />
           <div className="mt-auto pt-4">
@@ -180,10 +178,7 @@ export function WebOnboardingLayout({ onComplete, initialStep }: WebOnboardingLa
             <div className="p-8 lg:p-10 min-h-[500px] flex flex-col">
               {ob.step === 2 && <IdentityStep ob={ob} />}
               {ob.step === 3 && <PricingStep ob={ob} />}
-              {ob.step === 4 && <DepositStep ob={ob} />}
-              {ob.step === 5 && <BookingLinkStep ob={ob} />}
-              {ob.step === 6 && <PaymentsStep ob={ob} />}
-              {ob.step === 7 && <AICardStep ob={ob} />}
+              {ob.step === 4 && <AICardStep ob={ob} />}
             </div>
           </div>
         </main>
@@ -418,7 +413,6 @@ function PricingStep({ ob }: { ob: ObType }) {
             <div className="p-4 rounded-xl bg-muted/50 border border-border animate-in fade-in slide-in-from-bottom-2 duration-300">
               <p className="text-sm text-muted-foreground">
                 No problem! You can set prices when creating each job or invoice.
-                We'll skip the deposit step since it needs a price to calculate.
               </p>
             </div>
           )}
@@ -461,206 +455,6 @@ function PricingStep({ ob }: { ob: ObType }) {
           ) : (
             <>Continue<ChevronRight className="w-5 h-5 ml-1" /></>
           )}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function DepositStep({ ob }: { ob: ObType }) {
-  const examplePrice = ob.pricing.pricingType === "fixed" && ob.pricing.typicalPrice
-    ? parseFloat(ob.pricing.typicalPrice)
-    : ob.pricing.pricingType === "range" && ob.pricing.priceMin && ob.pricing.priceMax
-      ? (parseFloat(ob.pricing.priceMin) + parseFloat(ob.pricing.priceMax)) / 2
-      : null;
-
-  return (
-    <div className="flex-1 flex flex-col" data-testid="web-step-deposit">
-      <div className="flex-1 space-y-8">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Protect your time</h1>
-          <p className="text-muted-foreground">Deposits reduce no-shows and last-minute cancellations.</p>
-        </div>
-
-        <div className="max-w-lg">
-          <Card className="border-2">
-            <CardContent className="p-6 space-y-6">
-              <div className="flex items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <p className="font-semibold text-lg">Require deposit on booking</p>
-                  <p className="text-sm text-muted-foreground">Clients pay upfront to confirm</p>
-                </div>
-                <Switch
-                  checked={ob.deposit.enabled}
-                  onCheckedChange={(checked) => ob.setDeposit({ ...ob.deposit, enabled: checked })}
-                  data-testid="switch-deposit"
-                />
-              </div>
-
-              {ob.deposit.enabled && (
-                <div className="space-y-4 pt-4 border-t animate-in fade-in slide-in-from-top-2 duration-300">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Deposit amount</span>
-                    <span className="text-2xl font-bold text-primary">{ob.deposit.percentage}%</span>
-                  </div>
-                  <Slider
-                    value={[ob.deposit.percentage]}
-                    onValueChange={([value]) => ob.setDeposit({ ...ob.deposit, percentage: value })}
-                    min={20}
-                    max={50}
-                    step={5}
-                    className="py-4"
-                    data-testid="slider-deposit"
-                  />
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>20%</span>
-                    <span>50%</span>
-                  </div>
-                  {examplePrice && (
-                    <p className="text-center text-sm text-muted-foreground pt-2">
-                      On a ${examplePrice.toFixed(0)} job, you'd collect{" "}
-                      <span className="font-semibold text-foreground">
-                        ${(examplePrice * ob.deposit.percentage / 100).toFixed(0)}
-                      </span>{" "}
-                      upfront
-                    </p>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <p className="text-sm text-muted-foreground text-center mt-4">
-            You can change this anytime in settings.
-          </p>
-        </div>
-      </div>
-
-      <div className="pt-6 flex justify-end">
-        <Button
-          size="lg"
-          className="h-12 px-8 text-base rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-[#4F46E5]/30"
-          onClick={ob.handleDepositSubmit}
-          disabled={ob.updateProfileMutation.isPending}
-          data-testid="button-deposit-continue"
-        >
-          {ob.updateProfileMutation.isPending ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <>Continue<ChevronRight className="w-5 h-5 ml-1" /></>
-          )}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function BookingLinkStep({ ob }: { ob: ObType }) {
-  return (
-    <div className="flex-1 flex flex-col" data-testid="web-step-booking-link">
-      <div className="flex-1 space-y-8">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Your booking link is ready</h1>
-          <p className="text-muted-foreground">Share it with clients so they can book you directly.</p>
-        </div>
-
-        <div className="max-w-lg">
-          <Card className="border-2 border-primary/20 bg-primary/5">
-            <CardContent className="p-6 space-y-4">
-              <div className="flex items-center gap-3 p-4 bg-background rounded-xl border">
-                <div className="flex-1 truncate font-mono text-sm">
-                  {window.location.origin}/book/{(ob.user as any)?.publicProfileSlug || (ob.user as any)?.id || "..."}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="h-12 rounded-xl"
-                  onClick={ob.handleCopyLink}
-                  data-testid="button-copy-link"
-                >
-                  {ob.linkCopied ? <CheckCircle2 className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-                  {ob.linkCopied ? "Copied" : "Copy"}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="h-12 rounded-xl"
-                  onClick={ob.handleShareLink}
-                  data-testid="button-share-link"
-                >
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Share
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <p className="text-sm text-muted-foreground text-center mt-4">
-            You don't have to share it now. You can find it anytime in your profile.
-          </p>
-        </div>
-      </div>
-
-      <div className="pt-6 flex justify-end">
-        <Button
-          size="lg"
-          className="h-12 px-8 text-base rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-[#4F46E5]/30"
-          onClick={ob.handleBookingLinkContinue}
-          data-testid="button-booking-continue"
-        >
-          Continue
-          <ChevronRight className="w-5 h-5 ml-1" />
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function PaymentsStep({ ob }: { ob: ObType }) {
-  return (
-    <div className="flex-1 flex flex-col" data-testid="web-step-payments">
-      <div className="flex-1 space-y-8">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Get paid automatically</h1>
-          <p className="text-muted-foreground">Connect payments so deposits go straight to your bank.</p>
-        </div>
-
-        <div className="max-w-lg">
-          <Card className="border-2">
-            <CardContent className="p-6 flex flex-col items-center text-center space-y-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500/20 to-blue-500/20 flex items-center justify-center">
-                <CreditCard className="w-8 h-8 text-primary" />
-              </div>
-              <div>
-                <p className="font-semibold text-lg">Stripe Connect</p>
-                <p className="text-sm text-muted-foreground">Secure payments powered by Stripe</p>
-              </div>
-              <Button
-                size="lg"
-                className="w-full h-12 rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-[#4F46E5]/30"
-                onClick={ob.handlePaymentsConnect}
-                disabled={ob.isConnectingStripe}
-                data-testid="button-connect-payments"
-              >
-                {ob.isConnectingStripe ? <Loader2 className="h-5 w-5 animate-spin" /> : "Connect payments"}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      <div className="pt-6 flex justify-end">
-        <Button
-          variant="ghost"
-          size="lg"
-          className="h-12 text-base"
-          onClick={ob.handlePaymentsSkip}
-          data-testid="button-skip-payments"
-        >
-          Skip for now
         </Button>
       </div>
     </div>

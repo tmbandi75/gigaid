@@ -54,7 +54,7 @@ Preferred communication style: Simple, everyday language.
 - **Shared Hook**: `client/src/hooks/useOnboarding.ts` — extracted state, mutations, and handlers used by both layouts.
 - **Web Components**: `WebOnboardingStepper.tsx` (sidebar step tracker), `WebOnboardingLayout.tsx` (two-column layout with step content).
 - **Identity Fields**: Both flows collect firstName (required) and lastName (optional), sent via PATCH /api/profile.
-- **Steps**: Welcome → Identity → Pricing → Deposit → Booking Link → Payments → AI Card → Complete (8 steps total).
+- **Steps**: Welcome → Identity → Pricing → AI Card → Complete (5 steps total). Monetization steps (Deposit, Booking Link, Payments/Stripe Connect) are handled exclusively in Payday Onboarding.
 
 ### UI Policies
 - **Emoji Usage Policy**: Restricted to user-facing presentation layers, limited to one per UI element, appearing before text, and from an approved whitelist.
