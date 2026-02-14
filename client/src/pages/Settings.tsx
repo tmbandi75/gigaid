@@ -10,7 +10,6 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiFetch } from "@/lib/apiFetch";
@@ -18,12 +17,10 @@ import { useApiMutation } from "@/hooks/useApiMutation";
 import { getAuthToken } from "@/lib/authToken";
 import { 
   Bell, 
-  Link2, 
   Crown, 
   Copy, 
   Check,
   Loader2,
-  Plus,
   Eye,
   EyeOff,
   Download,
@@ -37,9 +34,6 @@ import {
   DollarSign,
   Shield,
   Lock,
-  Trash2,
-  CreditCard,
-  Calendar,
   Zap,
   User,
   AlertCircle,
@@ -58,7 +52,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { AvailabilityEditor, DEFAULT_AVAILABILITY } from "@/components/settings/AvailabilityEditor";
+import { AvailabilityEditor } from "@/components/settings/AvailabilityEditor";
 import { PaymentMethodsSettings } from "@/components/PaymentMethodsSettings";
 import { StripeConnectSettings } from "@/components/settings/StripeConnectSettings";
 import { EmailSignatureSettings } from "@/components/settings/EmailSignatureSettings";
@@ -67,9 +61,9 @@ import { AutomationSettings } from "@/components/settings/AutomationSettings";
 import { MessagingSettings } from "@/components/settings/MessagingSettings";
 import { ChangePasswordDialog } from "@/components/settings/ChangePasswordDialog";
 import { SubscriptionSettings } from "@/components/settings/SubscriptionSettings";
-import { SettingsSection } from "@/components/settings/SettingsSection";
+import { SettingsSectionAccordion } from "@/components/settings/SettingsSectionAccordion";
 import { isEmailPasswordUser } from "@/lib/firebase";
-import type { Referral, WeeklyAvailability, FeatureFlag } from "@shared/schema";
+import type { Referral, WeeklyAvailability } from "@shared/schema";
 import { useFeatureFlag, useUpdateFeatureFlag } from "@/hooks/use-nudges";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 
@@ -102,10 +96,6 @@ export default function Settings() {
   const [bookingLinkCopied, setBookingLinkCopied] = useState(false);
   const { isAuthenticated } = useAuth();
   
-  // Initialize tab from URL parameter
-  const urlParams = new URLSearchParams(window.location.search);
-  const tabFromUrl = urlParams.get("tab");
-  const [activeTab, setActiveTab] = useState(tabFromUrl === "billing" ? "billing" : "general");
 
   const handleAuthenticatedDownload = async (url: string, filename: string) => {
     try {
@@ -460,224 +450,35 @@ export default function Settings() {
     <div className={`min-h-screen bg-background ${isMobile ? 'pb-24' : 'pb-12'}`} data-testid="page-settings">
       {isMobile ? renderMobileHeader() : renderDesktopHeader()}
 
-      <div className={`${isMobile ? 'px-4 py-4' : 'max-w-7xl mx-auto px-6 lg:px-8 py-6'}`}>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <Card className="mb-6 border shadow-sm" data-testid="tabs-settings">
-            <div className="grid grid-cols-2 p-1">
-              <Button 
-                variant={activeTab === "general" ? "default" : "ghost"}
-                className="flex items-center gap-2 justify-center"
-                onClick={() => setActiveTab("general")}
-                data-testid="tab-general"
-              >
-                <SettingsIcon className="h-4 w-4" />
-                General
-              </Button>
-              <Button 
-                variant={activeTab === "billing" ? "default" : "ghost"}
-                className="flex items-center gap-2 justify-center"
-                onClick={() => setActiveTab("billing")}
-                data-testid="tab-billing"
-              >
-                <CreditCard className="h-4 w-4" />
-                Billing
-              </Button>
-            </div>
-          </Card>
+      <div className={`${isMobile ? 'px-4 py-4' : 'max-w-7xl mx-auto px-6 lg:px-8 py-6'} space-y-4`}>
 
-          <TabsContent value="general" className="space-y-4">
-            {/* Plan Status Banner - only shown for non-Business plans */}
-            {!isBusinessPlan && subscription !== undefined && (
-              <Card className="border-0 shadow-sm" data-testid="card-plan-status">
-                <CardContent className="py-4 px-5">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shrink-0">
-                        <Crown className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground">Current Plan: {currentPlanLabel}</p>
-                        <p className="text-sm text-muted-foreground">Unlock advanced automations, booking protection, and AI tools</p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="secondary"
-                      onClick={() => navigate("/pricing")}
-                      data-testid="button-upgrade-plan"
-                    >
-                      Upgrade
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* SECTION 1: Booking & Public Profile */}
-        <SettingsSection
-          title="Booking & Public Profile"
-          subtitle="How clients find and book you"
-          icon={<Globe className="h-4 w-4 text-white" />}
-          iconGradient="from-emerald-500 to-teal-500"
-          testId="card-public-profile"
-          defaultExpanded={true}
+        {/* SECTION 1: Get Paid (always expanded by default) */}
+        <SettingsSectionAccordion
+          id="get-paid"
+          title="Get Paid"
+          subtitle="Everything required to collect money from clients"
+          icon={<DollarSign className="h-4 w-4 text-white" />}
+          iconGradient="from-green-500 to-emerald-500"
+          defaultOpen={true}
+          className="border-emerald-200 dark:border-emerald-800/40 bg-emerald-50/30 dark:bg-emerald-950/10"
+          headerExtra={
+            stripeEnabled && stripeStatus?.connected ? (
+              <Badge variant="secondary" className="text-xs bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+                Connected
+              </Badge>
+            ) : null
+          }
         >
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-sm">Enable Public Profile</p>
-                <p className="text-xs text-muted-foreground">Let clients find and book you</p>
-              </div>
-              <Switch
-                checked={settings.publicProfileEnabled}
-                onCheckedChange={(checked) => setSettings({ ...settings, publicProfileEnabled: checked })}
-                data-testid="switch-public-profile"
-              />
-            </div>
+          <div className="space-y-6">
+            {stripeStatusBanner}
 
-            {settings.publicProfileEnabled && (
+            <PaymentMethodsSettings onStripeToggle={setStripeEnabled} />
+
+            {stripeEnabled && (
               <>
                 <Separator />
-                <div className="space-y-2">
-                  <Label className="text-sm">Your Booking URL</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={settings.publicProfileSlug}
-                      onChange={(e) => handleSlugChange(e.target.value)}
-                      placeholder="your-name"
-                      data-testid="input-profile-slug"
-                    />
-                    <Button variant="outline" size="icon" onClick={copyBookingLink} data-testid="button-copy-booking">
-                      {bookingLinkCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs text-muted-foreground">
-                      {window.location.origin}/book/{settings.publicProfileSlug || "your-name"}
-                    </p>
-                    {slugChecking && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
-                    {slugAvailable === true && !slugChecking && (
-                      <span className="text-xs text-green-600 flex items-center gap-1">
-                        <Check className="h-3 w-3" /> Available
-                      </span>
-                    )}
-                  </div>
-                  {slugError && (
-                    <p className="text-xs text-destructive">{slugError}</p>
-                  )}
-                </div>
-                
-                {needsSetup && (
-                  <div className="p-4 rounded-xl border-dashed border-2 border-amber-500/30 bg-amber-500/5">
-                    <div className="flex items-start gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
-                        <Lock className="h-5 w-5 text-amber-600" />
-                      </div>
-                      <div className="space-y-2">
-                        <p className="font-medium text-foreground">Complete setup to enable deposits</p>
-                        <p className="text-sm text-muted-foreground">
-                          Your booking link works, but deposits won't be collected until you complete setup.
-                        </p>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="mt-2"
-                          onClick={() => navigate("/onboarding")}
-                          data-testid="button-setup-booking"
-                        >
-                          Quick setup (30 sec)
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label className="text-sm">Your Services</Label>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigate("/profile?edit=true")}
-                      data-testid="button-edit-services"
-                    >
-                      <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                      Edit in Profile
-                    </Button>
-                  </div>
-                  {profile?.services && profile.services.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {profile.services.map((service: string) => (
-                        <Badge key={service} variant="secondary">
-                          {service}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No services added yet. Edit your profile to add services.</p>
-                  )}
-                </div>
-
-                <Separator />
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {settings.showReviewsOnBooking ? <Eye className="h-4 w-4 text-muted-foreground" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
-                    <div>
-                      <p className="font-medium text-sm">Show Reviews</p>
-                      <p className="text-xs text-muted-foreground">Display ratings on booking page</p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={settings.showReviewsOnBooking}
-                    onCheckedChange={(checked) => setSettings({ ...settings, showReviewsOnBooking: checked })}
-                    data-testid="switch-show-reviews"
-                  />
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium text-sm">Public Price Estimates</p>
-                      <p className="text-xs text-muted-foreground">Allow customers to get AI estimates on booking page</p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={settings.publicEstimationEnabled}
-                    onCheckedChange={(checked) => setSettings({ ...settings, publicEstimationEnabled: checked })}
-                    data-testid="switch-public-estimation"
-                  />
-                </div>
+                <StripeConnectSettings />
               </>
-            )}
-          </div>
-        </SettingsSection>
-
-        {/* SECTION 2: Availability & Booking Rules */}
-        <SettingsSection
-          title="Availability & Booking Rules"
-          subtitle="When clients can book and how bookings are protected"
-          icon={<Calendar className="h-4 w-4 text-white" />}
-          iconGradient="from-blue-500 to-indigo-500"
-          testId="card-availability-rules"
-          defaultExpanded={true}
-        >
-          <div className="space-y-4">
-            {settings.publicProfileEnabled && (
-              <AvailabilityEditor
-                availability={settings.availability}
-                slotDuration={settings.slotDuration}
-                onChange={handleAvailabilityChange}
-              />
-            )}
-
-            {!settings.publicProfileEnabled && (
-              <p className="text-sm text-muted-foreground py-2">
-                Enable your public profile above to configure availability.
-              </p>
             )}
 
             <Separator />
@@ -685,7 +486,7 @@ export default function Settings() {
             <div className="space-y-4">
               <h4 className="font-medium text-sm flex items-center gap-2">
                 <Shield className="h-4 w-4 text-blue-500" />
-                Booking Protection
+                Deposit Protection
               </h4>
               
               {needsSetup ? (
@@ -798,67 +599,229 @@ export default function Settings() {
               )}
             </div>
           </div>
-        </SettingsSection>
+        </SettingsSectionAccordion>
 
-        {/* SECTION 3: Payments & Payouts */}
-        <SettingsSection
-          title="Payments & Payouts"
-          subtitle="How you get paid and collect deposits"
-          icon={<CreditCard className="h-4 w-4 text-white" />}
-          iconGradient="from-green-500 to-emerald-500"
-          testId="card-payments"
-          defaultExpanded={true}
-          statusBanner={stripeStatusBanner}
+        {/* SECTION 2: Get Booked */}
+        <SettingsSectionAccordion
+          id="get-booked"
+          title="Get Booked"
+          subtitle="How clients find and book you"
+          icon={<Globe className="h-4 w-4 text-white" />}
+          iconGradient="from-blue-500 to-indigo-500"
+          defaultOpen={false}
         >
           <div className="space-y-4">
-            <PaymentMethodsSettings onStripeToggle={setStripeEnabled} />
-            
-            {stripeEnabled && (
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-sm">Enable Public Profile</p>
+                <p className="text-xs text-muted-foreground">Let clients find and book you</p>
+              </div>
+              <Switch
+                checked={settings.publicProfileEnabled}
+                onCheckedChange={(checked) => setSettings({ ...settings, publicProfileEnabled: checked })}
+                data-testid="switch-public-profile"
+              />
+            </div>
+
+            {settings.publicProfileEnabled && (
               <>
                 <Separator />
-                <StripeConnectSettings />
+                <div className="space-y-2">
+                  <Label className="text-sm">Your Booking URL</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={settings.publicProfileSlug}
+                      onChange={(e) => handleSlugChange(e.target.value)}
+                      placeholder="your-name"
+                      data-testid="input-profile-slug"
+                    />
+                    <Button variant="outline" size="icon" onClick={copyBookingLink} data-testid="button-copy-booking">
+                      {bookingLinkCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-muted-foreground">
+                      {window.location.origin}/book/{settings.publicProfileSlug || "your-name"}
+                    </p>
+                    {slugChecking && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                    {slugAvailable === true && !slugChecking && (
+                      <span className="text-xs text-green-600 flex items-center gap-1">
+                        <Check className="h-3 w-3" /> Available
+                      </span>
+                    )}
+                  </div>
+                  {slugError && (
+                    <p className="text-xs text-destructive">{slugError}</p>
+                  )}
+                </div>
+
+                {needsSetup && (
+                  <div className="p-4 rounded-xl border-dashed border-2 border-amber-500/30 bg-amber-500/5">
+                    <div className="flex items-start gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                        <Lock className="h-5 w-5 text-amber-600" />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="font-medium text-foreground">Complete setup to enable deposits</p>
+                        <p className="text-sm text-muted-foreground">
+                          Your booking link works, but deposits won't be collected until you complete setup.
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="mt-2"
+                          onClick={() => navigate("/onboarding")}
+                          data-testid="button-setup-booking"
+                        >
+                          Quick setup (30 sec)
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label className="text-sm">Your Services</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate("/profile?edit=true")}
+                      data-testid="button-edit-services"
+                    >
+                      <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                      Edit in Profile
+                    </Button>
+                  </div>
+                  {profile?.services && profile.services.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {profile.services.map((service: string) => (
+                        <Badge key={service} variant="secondary">
+                          {service}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No services added yet. Edit your profile to add services.</p>
+                  )}
+                </div>
+
+                <Separator />
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {settings.showReviewsOnBooking ? <Eye className="h-4 w-4 text-muted-foreground" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
+                    <div>
+                      <p className="font-medium text-sm">Show Reviews</p>
+                      <p className="text-xs text-muted-foreground">Display ratings on booking page</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={settings.showReviewsOnBooking}
+                    onCheckedChange={(checked) => setSettings({ ...settings, showReviewsOnBooking: checked })}
+                    data-testid="switch-show-reviews"
+                  />
+                </div>
+
+                <Separator />
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium text-sm">Public Price Estimates</p>
+                      <p className="text-xs text-muted-foreground">Allow customers to get AI estimates on booking page</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={settings.publicEstimationEnabled}
+                    onCheckedChange={(checked) => setSettings({ ...settings, publicEstimationEnabled: checked })}
+                    data-testid="switch-public-estimation"
+                  />
+                </div>
+
+                <Separator />
+
+                {settings.publicProfileEnabled && (
+                  <AvailabilityEditor
+                    availability={settings.availability}
+                    slotDuration={settings.slotDuration}
+                    onChange={handleAvailabilityChange}
+                  />
+                )}
               </>
             )}
-          </div>
-        </SettingsSection>
 
-        {/* SECTION 4: Automations */}
-        <SettingsSection
-          title="Automations"
-          subtitle="Messages sent automatically on your behalf"
+            {!settings.publicProfileEnabled && (
+              <p className="text-sm text-muted-foreground py-2">
+                Enable your public profile above to configure availability.
+              </p>
+            )}
+          </div>
+        </SettingsSectionAccordion>
+
+        {/* SECTION 3: Automate */}
+        <SettingsSectionAccordion
+          id="automate"
+          title="Automate"
+          subtitle="Let GigAid follow up for you"
           icon={<Zap className="h-4 w-4 text-white" />}
           iconGradient="from-orange-500 to-amber-500"
-          testId="card-automations"
-          defaultExpanded={true}
-          collapsible={true}
-        >
-          <AutomationSettings />
-        </SettingsSection>
-
-        {/* SECTION 5: Messaging */}
-        <SettingsSection
-          title="Messaging"
-          subtitle="Send texts through GigAid and manage replies"
-          icon={<MessageCircle className="h-4 w-4 text-white" />}
-          iconGradient="from-blue-500 to-cyan-500"
-          testId="card-messaging"
-          defaultExpanded={false}
-          collapsible={true}
-        >
-          <MessagingSettings />
-        </SettingsSection>
-
-        {/* SECTION 6: Preferences & Account */}
-        <SettingsSection
-          title="Preferences & Account"
-          subtitle="App preferences and sign-in options"
-          icon={<User className="h-4 w-4 text-white" />}
-          iconGradient="from-violet-500 to-purple-600"
-          testId="card-preferences-account"
-          defaultExpanded={false}
-          collapsible={true}
+          defaultOpen={false}
         >
           <div className="space-y-6">
+            <AutomationSettings />
+            <Separator />
+            <div>
+              <h4 className="font-medium text-sm flex items-center gap-2 mb-4">
+                <MessageCircle className="h-4 w-4 text-blue-500" />
+                Messaging
+              </h4>
+              <MessagingSettings />
+            </div>
+          </div>
+        </SettingsSectionAccordion>
+
+        {/* SECTION 4: Account */}
+        <SettingsSectionAccordion
+          id="account"
+          title="Account"
+          subtitle="Your account and app preferences"
+          icon={<User className="h-4 w-4 text-white" />}
+          iconGradient="from-violet-500 to-purple-600"
+          defaultOpen={false}
+        >
+          <div className="space-y-6">
+            {/* Plan */}
+            {!isBusinessPlan && subscription !== undefined && (
+              <>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shrink-0">
+                      <Crown className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">Current Plan: {currentPlanLabel}</p>
+                      <p className="text-sm text-muted-foreground">Unlock advanced automations, booking protection, and AI tools</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    onClick={() => navigate("/pricing")}
+                    data-testid="button-upgrade-plan"
+                  >
+                    Upgrade
+                  </Button>
+                </div>
+                <Separator />
+              </>
+            )}
+
+            <SubscriptionSettings />
+
+            <Separator />
+
             {/* Notifications */}
             <div className="space-y-4">
               <h4 className="font-medium text-sm flex items-center gap-2">
@@ -919,12 +882,10 @@ export default function Settings() {
 
             <Separator />
 
-            {/* Email Signature */}
             <EmailSignatureSettings />
 
             <Separator />
 
-            {/* Account Linking */}
             <AccountLinking
               currentProvider={profile?.authProvider || 'email'}
               linkedMethods={[
@@ -950,7 +911,6 @@ export default function Settings() {
               <>
                 <Separator />
 
-                {/* Account & Security */}
                 <div className="space-y-4">
                   <h4 className="font-medium text-sm flex items-center gap-2">
                     <Lock className="h-4 w-4 text-slate-500" />
@@ -1001,74 +961,62 @@ export default function Settings() {
                     </AlertDialog>
                   </div>
                 </div>
+
+                <Separator />
+
+                {/* Data Export */}
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <Download className="h-4 w-4 text-blue-500" />
+                    Export Data
+                  </h4>
+                  <button 
+                    onClick={() => handleAuthenticatedDownload("/api/export/json", `gigaid-export-${new Date().toISOString().split('T')[0]}.json`)}
+                    className="block w-full text-left"
+                    data-testid="button-download-json"
+                  >
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover-elevate cursor-pointer">
+                      <FileJson className="h-5 w-5 text-blue-500" />
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">Download JSON</p>
+                        <p className="text-xs text-muted-foreground">Complete data export</p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </button>
+                  <button 
+                    onClick={() => handleAuthenticatedDownload("/api/export/dot", `gigaid-graph-${new Date().toISOString().split('T')[0]}.dot`)}
+                    className="block w-full text-left"
+                    data-testid="button-download-dot"
+                  >
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover-elevate cursor-pointer">
+                      <Share className="h-5 w-5 text-purple-500" />
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">Download DOT Graph</p>
+                        <p className="text-xs text-muted-foreground">Data relationships (GraphViz)</p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </button>
+                </div>
               </>
             )}
           </div>
-        </SettingsSection>
+        </SettingsSectionAccordion>
 
-        {/* Data Export */}
-        {isAuthenticated && (
-          <SettingsSection
-            title="Export Data"
-            subtitle="Download your data"
-            icon={<Download className="h-4 w-4 text-white" />}
-            iconGradient="from-blue-500 to-cyan-500"
-            testId="card-export"
-            defaultExpanded={false}
-            collapsible={true}
-          >
-            <div className="space-y-3">
-              <button 
-                onClick={() => handleAuthenticatedDownload("/api/export/json", `gigaid-export-${new Date().toISOString().split('T')[0]}.json`)}
-                className="block w-full text-left"
-                data-testid="button-download-json"
-              >
-                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover-elevate cursor-pointer">
-                  <FileJson className="h-5 w-5 text-blue-500" />
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">Download JSON</p>
-                    <p className="text-xs text-muted-foreground">Complete data export</p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </button>
-              <button 
-                onClick={() => handleAuthenticatedDownload("/api/export/dot", `gigaid-graph-${new Date().toISOString().split('T')[0]}.dot`)}
-                className="block w-full text-left"
-                data-testid="button-download-dot"
-              >
-                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover-elevate cursor-pointer">
-                  <Share className="h-5 w-5 text-purple-500" />
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">Download DOT Graph</p>
-                    <p className="text-xs text-muted-foreground">Data relationships (GraphViz)</p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </button>
-            </div>
-          </SettingsSection>
-        )}
-
-            {/* Save Button */}
-            <Button 
-              onClick={handleSave} 
-              className="w-full" 
-              size="lg"
-              disabled={updateMutation.isPending}
-              data-testid="button-save-settings"
-            >
-              {updateMutation.isPending ? (
-                <Loader2 className="h-5 w-5 animate-spin mr-2" />
-              ) : null}
-              Save Settings
-            </Button>
-          </TabsContent>
-
-          <TabsContent value="billing" className="space-y-4">
-            <SubscriptionSettings />
-          </TabsContent>
-        </Tabs>
+        {/* Save Button */}
+        <Button 
+          onClick={handleSave} 
+          className="w-full" 
+          size="lg"
+          disabled={updateMutation.isPending}
+          data-testid="button-save-settings"
+        >
+          {updateMutation.isPending ? (
+            <Loader2 className="h-5 w-5 animate-spin mr-2" />
+          ) : null}
+          Save Settings
+        </Button>
       </div>
     </div>
   );
