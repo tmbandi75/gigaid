@@ -4,6 +4,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/apiFetch";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { queryClient } from "@/lib/queryClient";
+import { useActivationState } from "@/hooks/useActivationState";
+import { isActivated } from "@/lib/isActivated";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -559,6 +561,8 @@ export default function PaydayOnboarding() {
   const [stripeConnected, setStripeConnected] = useState(false);
   const [templatesAdded, setTemplatesAdded] = useState(0);
 
+  const { state: activationState, loading: activationLoading } = useActivationState();
+
   const { data: profile } = useQuery<ProfileData>({
     queryKey: QUERY_KEYS.profile(),
   });
@@ -566,6 +570,16 @@ export default function PaydayOnboarding() {
   const { data: linkData } = useQuery<BookingLinkData>({
     queryKey: QUERY_KEYS.bookingLink(),
   });
+
+  const shouldRedirectAway = !activationLoading && activationState &&
+    (isActivated(activationState) || activationState.paydayOnboardingCompleted);
+
+  useEffect(() => {
+    if (shouldRedirectAway) {
+      console.log("[PaydayOnboarding] User already activated or completed, redirecting to /dashboard");
+      navigate("/dashboard");
+    }
+  }, [shouldRedirectAway, navigate]);
 
   useEffect(() => {
     if (profile && !initialized) {
@@ -611,6 +625,14 @@ export default function PaydayOnboarding() {
       toast({ title: "Could not complete setup", description: err.message, variant: "destructive" });
     },
   });
+
+  if (activationLoading || shouldRedirectAway) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
 
   const advanceTo = (step: number) => {
     saveStepMutation.mutate(step);
