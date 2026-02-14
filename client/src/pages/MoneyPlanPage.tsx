@@ -25,6 +25,7 @@ import {
   AlertTriangle,
   Sparkles,
   TrendingUp,
+  Lock,
 } from "lucide-react";
 import type { ActionQueueItem } from "@shared/schema";
 
@@ -210,27 +211,30 @@ export default function MoneyPlanPage() {
   const renderContent = () => (
     <div className={isMobile ? "flex-1 p-4 space-y-4" : "flex-1 max-w-7xl mx-auto w-full px-6 lg:px-8 py-6 space-y-6"}>
       {showCapabilityHint && (
-        <Card 
-          className="cursor-pointer hover-elevate border-primary/20"
-          onClick={() => setMoneyPlanInterceptOpen(true)}
+        <div 
+          className="relative cursor-pointer"
           role="button"
           tabIndex={0}
+          onClick={() => setMoneyPlanInterceptOpen(true)}
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setMoneyPlanInterceptOpen(true); }}
+          aria-label="Unlock Today's Money Plan"
           data-testid="card-money-plan-upgrade-hint"
         >
-          <CardContent className="flex items-center gap-3 py-3 px-4">
-            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <TrendingUp className="h-4 w-4 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium">Unlock full Money Plan</p>
-              <p className="text-xs text-muted-foreground">Get AI-prioritized daily actions to maximize your revenue</p>
-            </div>
-            <Button variant="outline" size="sm" data-testid="button-money-plan-learn-more">
-              Learn more
-            </Button>
-          </CardContent>
-        </Card>
+          <Card className="opacity-60 pointer-events-none select-none">
+            <CardContent className="flex items-center gap-3 py-3 px-4">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <TrendingUp className="h-4 w-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">Full Money Plan</p>
+                <p className="text-xs text-muted-foreground">AI-prioritized daily actions to maximize your revenue</p>
+              </div>
+            </CardContent>
+          </Card>
+          <div className="absolute top-1 right-1 h-5 w-5 rounded-full bg-muted/80 flex items-center justify-center z-10" aria-hidden="true">
+            <Lock className="h-3 w-3 text-muted-foreground" />
+          </div>
+        </div>
       )}
 
       {isLoading ? (

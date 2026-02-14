@@ -59,9 +59,8 @@ export function CapabilityGate({
           <div
             role="button"
             tabIndex={0}
-            onClick={handleInterceptClick}
-            onKeyDown={handleInterceptKeyDown}
             onClickCapture={handleInterceptClick}
+            onKeyDown={handleInterceptKeyDown}
             className="relative cursor-pointer group"
             aria-label={featureName ? `Unlock ${featureName}` : `Unlock this feature`}
             data-testid={`capability-gate-intercept-${capability}`}
