@@ -1,0 +1,220 @@
+Good — this is exactly the right instinct. The current “Game Plan” page works, but it looks and behaves like an internal admin tool, not a modern money-focused mobile-first product.
+
+I’m going to be direct and then give you a production-grade redesign + a Replit prompt.
+
+🔍 Honest Assessment of Current Page
+What’s wrong right now
+1. It’s Visually Dated
+
+Flat white blocks
+
+No depth
+
+No hierarchy
+
+No emotional pull
+
+It feels like 2017 SaaS, not 2026 mobile-first.
+
+2. It’s Action-Confusing
+
+You show:
+
+Get Paid
+
+Start Job
+
+On The Way
+
+Edit Job
+
+All at once.
+
+User thinks:
+
+“What do I press first?”
+
+That’s bad.
+
+3. No “Money Narrative”
+
+Gig workers think in:
+
+“How do I get paid faster?”
+
+This page does not tell that story clearly.
+
+4. Desktop Layout on Mobile
+
+Buttons are too wide.
+Spacing is inefficient.
+No thumb-first ergonomics.
+
+✅ What “Ultra-Modern & Intuitive” Should Mean Here
+
+This page should feel like:
+
+“Uber + Stripe + Notion had a baby for contractors.”
+
+Principles:
+
+1️⃣ One Primary Action
+
+Only ONE big CTA at a time.
+
+Example:
+
+If unpaid → “Collect Payment”
+
+If not started → “Start Job”
+
+If in progress → “Complete Job”
+
+Everything else secondary.
+
+2️⃣ Card-Based Flow
+
+Instead of big bars, use stacked smart cards:
+
+[ Job Status Card ]
+[ Payment Card ]
+[ Next Action Card ]
+[ Client Card ]
+
+3️⃣ Progress + Momentum
+
+Always show:
+
+“You’re 1 step away from getting paid”
+
+Psychology matters.
+
+4️⃣ Bottom Sticky CTA (Mobile)
+
+Primary action floats at bottom.
+
+Like:
+
+[ 💰 Get Paid $65 ]
+
+Always visible.
+
+🧠 Proposed New Layout (Concept)
+Top: Status Header
+Job: Furniture Assembly
+Client: John Paul
+Status: In Progress ●
+
+$65 pending
+
+Card 1 — Money First
+
+💵 Payment Card
+
+$65.00
+Waiting on payment
+
+[ Collect Payment ]
+
+
+(or Paid ✅)
+
+Card 2 — Job Progress
+
+🛠️ Job Card
+
+Not started → In progress → Done
+
+
+Buttons update dynamically.
+
+Card 3 — Next Action
+
+✨ Smart Recommendation
+
+Next best action:
+Send invoice reminder
+[ Do It ]
+
+Sticky Footer
+[ 💰 Get Paid $65 ]
+
+🚀 Replit Implementation Prompt (Copy-Paste)
+
+Use this exactly.
+
+✅ Replit Prompt — Game Plan Redesign
+
+Redesign the Game Plan page for webview users to be ultra-modern, mobile-first, and money-focused, without breaking existing logic.
+
+Requirements:
+
+Refactor only UI/layout/styling — do NOT change business logic, APIs, or state flows.
+
+Replace the current stacked button layout with a card-based layout:
+
+Payment Card (primary)
+
+Job Status Card
+
+Next Action Card
+
+Client Info Card (if applicable)
+
+Implement a “money-first” hierarchy:
+
+The primary CTA must always be payment-related when unpaid.
+
+Only one main CTA should be visually dominant.
+
+Add a sticky bottom CTA for mobile/webview:
+
+Shows “Get Paid $X” or context-aware action
+
+Always visible
+
+Improve visual design:
+
+Add soft shadows
+
+Rounded cards
+
+Clear spacing
+
+Modern typography scale
+
+Consistent iconography
+
+Replace wide full-width bars with stacked interactive cards.
+
+Preserve:
+
+Existing handlers
+
+Navigation
+
+Payment logic
+
+Job state transitions
+
+Ensure responsive behavior:
+
+Optimized for mobile webview
+
+Thumb-friendly spacing
+
+Do not introduce new dependencies.
+
+After implementation, verify:
+
+All existing actions still work
+
+No regression in payment flow
+
+No layout overflow on small screens
+
+Output:
+
+Updated Game Plan page component
+
+Brief summary of layout changes

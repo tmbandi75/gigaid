@@ -1,8 +1,9 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { PageSpinner } from "@/components/ui/spinner";
 import { apiFetch } from "@/lib/apiFetch";
 import { QUERY_KEYS } from "@/lib/queryKeys";
@@ -32,6 +33,10 @@ import {
   Target,
   Wrench,
   AlertTriangle,
+  ArrowRight,
+  TrendingUp,
+  CircleDot,
+  Send,
 } from "lucide-react";
 import { AddServiceDialog } from "@/components/settings/AddServiceDialog";
 import { motion, AnimatePresence } from "framer-motion";
@@ -135,42 +140,6 @@ function getIconForType(type: string) {
   }
 }
 
-function getUrgencyStyles(urgency: "critical" | "high" | "normal") {
-  switch (urgency) {
-    case "critical":
-      return {
-        border: "border-l-4 border-l-red-500",
-        iconBg: "bg-red-500",
-        iconColor: "text-white",
-      };
-    case "high":
-      return {
-        border: "border-l-4 border-l-orange-500",
-        iconBg: "bg-orange-500",
-        iconColor: "text-white",
-      };
-    default:
-      return {
-        border: "border-l-4 border-l-emerald-500",
-        iconBg: "bg-emerald-500",
-        iconColor: "text-white",
-      };
-  }
-}
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.06 },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
-};
-
 function getEntityLabel(entityType: string): string {
   switch (entityType) {
     case "lead": return "Lead";
@@ -189,15 +158,61 @@ function getEntityRoute(entityType: string, entityId: string): string {
   }
 }
 
-function getGreeting(firstName: string): { emoji: string; text: string } {
+function getGreeting(firstName: string): string {
   const hour = new Date().getHours();
-  if (hour >= 5 && hour < 12) {
-    return { emoji: "\u2600\uFE0F", text: `Good Morning, ${firstName}` };
-  } else if (hour >= 12 && hour < 17) {
-    return { emoji: "\uD83C\uDF24\uFE0F", text: `Good Afternoon, ${firstName}` };
-  } else {
-    return { emoji: "\uD83C\uDF19", text: `Good Evening, ${firstName}` };
+  if (hour >= 5 && hour < 12) return `Good morning, ${firstName}`;
+  if (hour >= 12 && hour < 17) return `Good afternoon, ${firstName}`;
+  return `Good evening, ${firstName}`;
+}
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05, delayChildren: 0.1 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.25, 0.1, 0.25, 1] } },
+};
+
+function getStickyCtaInfo(
+  stats: GamePlanStats,
+  priorityItem: ActionItem | null,
+  firstTimeState: string,
+): { label: string; route: string; icon: typeof DollarSign } | null {
+  if (stats.moneyWaiting > 0) {
+    return {
+      label: `Collect ${formatCurrency(stats.moneyWaiting)}`,
+      route: "/invoices",
+      icon: DollarSign,
+    };
   }
+  if (priorityItem?.type === "invoice") {
+    return {
+      label: priorityItem.actionLabel,
+      route: priorityItem.actionRoute,
+      icon: DollarSign,
+    };
+  }
+  if (firstTimeState === "no_invoices") {
+    return {
+      label: "Send Your First Invoice",
+      route: "/invoices/new",
+      icon: Send,
+    };
+  }
+  if (priorityItem) {
+    const Icon = getIconForType(priorityItem.type);
+    return {
+      label: priorityItem.actionLabel,
+      route: priorityItem.actionRoute,
+      icon: Icon,
+    };
+  }
+  return null;
 }
 
 export default function TodaysGamePlanPage() {
@@ -222,7 +237,7 @@ export default function TodaysGamePlanPage() {
   if (encouragementData && subtitleRef.current === null) {
     subtitleRef.current = getSubtitleMessage(encouragementData);
   }
-  const subtitleText = subtitleRef.current || "Do these things to stay on track and get paid";
+  const subtitleText = subtitleRef.current || "Let's get you paid today";
 
   const dashboardSummary = data?.dashboardSummary;
 
@@ -249,14 +264,6 @@ export default function TodaysGamePlanPage() {
     [QUERY_KEYS.nextActions()]
   );
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background p-4 lg:p-8 flex items-center justify-center">
-        <PageSpinner message="Loading your game plan..." />
-      </div>
-    );
-  }
-
   const { priorityItem, upNextItems, stats, recentlyCompleted } = data || {
     priorityItem: null,
     upNextItems: [],
@@ -269,93 +276,133 @@ export default function TodaysGamePlanPage() {
   const totalInvoices = dashboardSummary?.totalInvoices || 0;
 
   type FirstTimeUserState = "no_services" | "no_jobs" | "no_invoices" | "normal";
-  
+
   const getFirstTimeUserState = (): FirstTimeUserState => {
-    if (servicesCount === 0 && totalJobs === 0 && totalInvoices === 0) {
-      return "no_services";
-    }
-    if (servicesCount > 0 && totalJobs === 0) {
-      return "no_jobs";
-    }
-    if (totalJobs > 0 && totalInvoices === 0) {
-      return "no_invoices";
-    }
+    if (servicesCount === 0 && totalJobs === 0 && totalInvoices === 0) return "no_services";
+    if (servicesCount > 0 && totalJobs === 0) return "no_jobs";
+    if (totalJobs > 0 && totalInvoices === 0) return "no_invoices";
     return "normal";
   };
 
   const firstTimeUserState = getFirstTimeUserState();
 
-  function renderMobileHeader() {
+  const stickyCtaInfo = useMemo(
+    () => getStickyCtaInfo(stats, priorityItem, firstTimeUserState),
+    [stats, priorityItem, firstTimeUserState]
+  );
+
+  if (isLoading) {
     return (
-      <div className="px-4 py-5 bg-background border-b">
-        <h1 className="text-2xl font-bold text-foreground mb-1" data-testid="text-greeting">
-          {greeting.emoji} {greeting.text}
-        </h1>
-        <p className="text-sm text-muted-foreground" data-testid="text-encouragement-subtitle">{subtitleText}</p>
-        <CoachingRenderer screen="dashboard" />
+      <div className="min-h-screen bg-background p-4 lg:p-8 flex items-center justify-center">
+        <PageSpinner message="Loading your game plan..." />
       </div>
     );
   }
 
-  function renderDesktopHeader() {
-    return (
-      <div className="border-b bg-background sticky top-0 z-[999]">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-violet-500/20 flex items-center justify-center flex-shrink-0">
-              <Target className="h-6 w-6 text-primary" />
-            </div>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-foreground" data-testid="text-greeting">
-                {greeting.emoji} {greeting.text}
-              </h1>
-              <p className="text-sm text-muted-foreground mt-0.5" data-testid="text-encouragement-subtitle-desktop">{subtitleText}</p>
-              <CoachingRenderer screen="dashboard" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const stepsToGettingPaid = (() => {
+    if (firstTimeUserState === "no_services") return 3;
+    if (firstTimeUserState === "no_jobs") return 2;
+    if (firstTimeUserState === "no_invoices") return 1;
+    return 0;
+  })();
 
   return (
     <div className="min-h-screen bg-background" data-testid="page-game-plan">
-      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
-      
+      {/* Header */}
+      {isMobile ? (
+        <div className="px-5 pt-6 pb-5 bg-background">
+          <p className="text-sm text-muted-foreground mb-0.5" data-testid="text-greeting">{greeting}</p>
+          <h1 className="text-xl font-bold text-foreground" data-testid="text-encouragement-subtitle">{subtitleText}</h1>
+          <CoachingRenderer screen="dashboard" />
+        </div>
+      ) : (
+        <div className="border-b bg-background sticky top-0 z-[999]">
+          <div className="max-w-3xl mx-auto px-6 lg:px-8 py-5">
+            <p className="text-sm text-muted-foreground mb-0.5" data-testid="text-greeting">{greeting}</p>
+            <h1 className="text-xl font-bold text-foreground" data-testid="text-encouragement-subtitle-desktop">{subtitleText}</h1>
+            <CoachingRenderer screen="dashboard" />
+          </div>
+        </div>
+      )}
+
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className={`space-y-6 ${isMobile ? "px-4 py-6 pb-24" : "max-w-7xl mx-auto px-6 lg:px-8 py-6"}`}
+        className={`space-y-4 ${isMobile ? "px-4 py-4 pb-28" : "max-w-3xl mx-auto px-6 lg:px-8 py-6"}`}
       >
 
         <ActivationChecklist />
 
+        {/* Money-at-a-glance strip */}
+        {firstTimeUserState === "normal" && (stats.moneyWaiting > 0 || stats.moneyCollectedToday > 0) && (
+          <motion.div variants={itemVariants}>
+            <div className="flex items-stretch gap-3">
+              {stats.moneyWaiting > 0 && (
+                <Card
+                  className="flex-1 border-0 shadow-sm cursor-pointer hover-elevate bg-amber-50 dark:bg-amber-950/20"
+                  onClick={() => navigate("/invoices")}
+                  data-testid="stat-money-waiting"
+                >
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0">
+                      <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-foreground leading-tight">{formatCurrency(stats.moneyWaiting)}</p>
+                      <p className="text-xs text-muted-foreground">waiting</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              {stats.moneyCollectedToday > 0 && (
+                <Card
+                  className="flex-1 border-0 shadow-sm bg-emerald-50 dark:bg-emerald-950/20"
+                  data-testid="stat-money-collected"
+                >
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-emerald-500/15 flex items-center justify-center shrink-0">
+                      <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-foreground leading-tight">{formatCurrency(stats.moneyCollectedToday)}</p>
+                      <p className="text-xs text-muted-foreground">collected today</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Stall upgrade banner */}
         {stallSignals.hasActionableStall && stallSignals.topStall && (
-          <Card
-            className="border-amber-500/20 bg-amber-500/5 cursor-pointer hover-elevate"
-            onClick={() => stallOrchestrator.maybeShowStallPrompt(
-              stallSignals.topStall!.stallType,
-              stallSignals.topStall!.count,
-              stallSignals.topStall!.totalMoneyAtRisk
-            )}
-            data-testid="card-stall-upgrade-banner"
-          >
-            <CardContent className="py-3 px-4">
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">
-                    {stallSignals.topStall.totalMoneyAtRisk > 0
-                      ? `$${(stallSignals.topStall.totalMoneyAtRisk / 100).toFixed(0)} at risk`
-                      : `${stallSignals.topStall.count} items need attention`}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Tap to see how upgrading can help</p>
+          <motion.div variants={itemVariants}>
+            <Card
+              className="border-amber-200 dark:border-amber-800/30 bg-amber-50/50 dark:bg-amber-950/20 cursor-pointer hover-elevate"
+              onClick={() => stallOrchestrator.maybeShowStallPrompt(
+                stallSignals.topStall!.stallType,
+                stallSignals.topStall!.count,
+                stallSignals.topStall!.totalMoneyAtRisk
+              )}
+              data-testid="card-stall-upgrade-banner"
+            >
+              <CardContent className="py-3 px-4">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground">
+                      {stallSignals.topStall.totalMoneyAtRisk > 0
+                        ? `${formatCurrency(stallSignals.topStall.totalMoneyAtRisk)} at risk`
+                        : `${stallSignals.topStall.count} items need attention`}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Tap to see how upgrading can help</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </motion.div>
         )}
 
         <CampaignSuggestionBanner />
@@ -364,41 +411,81 @@ export default function TodaysGamePlanPage() {
           <BookingLinkShare variant="primary" context="plan" />
         </motion.div>
 
-        <motion.section variants={itemVariants} aria-labelledby="do-this-first">
-          <h2 id="do-this-first" className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-            {firstTimeUserState === "no_services" ? "Start here" : "Do This First"}
-          </h2>
+        {/* Progress momentum for first-time users */}
+        {stepsToGettingPaid > 0 && (
+          <motion.div variants={itemVariants}>
+            <div className="flex items-center gap-2 px-1">
+              <CircleDot className="h-4 w-4 text-primary" />
+              <p className="text-sm font-medium text-foreground">
+                {stepsToGettingPaid === 1
+                  ? "You're 1 step away from getting paid"
+                  : `${stepsToGettingPaid} steps to your first payment`}
+              </p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* CARD 1 — Payment Card (Money First) */}
+        {firstTimeUserState === "normal" && stats.moneyWaiting > 0 && (
+          <motion.div variants={itemVariants}>
+            <Card
+              className="border-0 shadow-md overflow-visible bg-gradient-to-br from-emerald-50 to-emerald-50/30 dark:from-emerald-950/30 dark:to-emerald-950/10"
+              data-testid="card-payment"
+            >
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <DollarSign className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Collect Payment</span>
+                </div>
+                <p className="text-3xl font-bold text-foreground mb-1">
+                  {formatCurrency(stats.moneyWaiting)}
+                </p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  waiting to be collected
+                </p>
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={() => navigate("/invoices")}
+                  data-testid="button-collect-payment"
+                >
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Collect Payment
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* CARD 2 — Primary Action / First-time CTA */}
+        <motion.section variants={itemVariants}>
           <AnimatePresence mode="wait">
             {firstTimeUserState === "no_services" ? (
               <motion.div
                 key="add-service"
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
               >
-                <Card
-                  className="border-0 shadow-md overflow-hidden border-l-4 border-l-primary"
-                  data-testid="card-add-first-service"
-                >
-                  <CardContent className="p-4 lg:p-6">
+                <Card className="border-0 shadow-md overflow-visible" data-testid="card-add-first-service">
+                  <CardContent className="p-5">
                     <div className="flex items-start gap-4">
-                      <div className="h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-primary">
+                      <div className="h-12 w-12 rounded-2xl bg-primary flex items-center justify-center shrink-0">
                         <Wrench className="h-6 w-6 text-white" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-foreground text-lg">
-                          Add your first service
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Tell GigAid what kind of work you do so we can help you book jobs and get paid.
+                      <div className="flex-1">
+                        <p className="font-semibold text-foreground text-lg mb-1">Add your first service</p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Tell us what kind of work you do so we can help you book jobs and get paid.
                         </p>
                         <Button
-                          className="mt-4"
+                          className="w-full"
                           onClick={() => setShowAddService(true)}
                           data-testid="button-add-first-service"
                         >
-                          Add a service
-                          <ChevronRight className="h-4 w-4 ml-1" />
+                          Add a Service
+                          <ArrowRight className="h-4 w-4 ml-2" />
                         </Button>
                       </div>
                     </div>
@@ -408,33 +495,28 @@ export default function TodaysGamePlanPage() {
             ) : firstTimeUserState === "no_jobs" ? (
               <motion.div
                 key="add-job"
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
               >
-                <Card
-                  className="border-0 shadow-md overflow-hidden border-l-4 border-l-blue-500"
-                  data-testid="card-add-first-job"
-                >
-                  <CardContent className="p-4 lg:p-6">
+                <Card className="border-0 shadow-md overflow-visible" data-testid="card-add-first-job">
+                  <CardContent className="p-5">
                     <div className="flex items-start gap-4">
-                      <div className="h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-blue-500">
+                      <div className="h-12 w-12 rounded-2xl bg-blue-500 flex items-center justify-center shrink-0">
                         <Briefcase className="h-6 w-6 text-white" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-foreground text-lg">
-                          Create your first job
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1">
+                      <div className="flex-1">
+                        <p className="font-semibold text-foreground text-lg mb-1">Create your first job</p>
+                        <p className="text-sm text-muted-foreground mb-4">
                           Add a job to start tracking your work and getting paid.
                         </p>
                         <Button
-                          className="mt-4"
+                          className="w-full"
                           onClick={() => navigate("/jobs/new")}
                           data-testid="button-add-first-job"
                         >
-                          Create a job
-                          <ChevronRight className="h-4 w-4 ml-1" />
+                          Create a Job
+                          <ArrowRight className="h-4 w-4 ml-2" />
                         </Button>
                       </div>
                     </div>
@@ -444,75 +526,71 @@ export default function TodaysGamePlanPage() {
             ) : firstTimeUserState === "no_invoices" ? (
               <motion.div
                 key="add-invoice"
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
               >
                 <Card
-                  className="border-0 shadow-md overflow-hidden border-l-4 border-l-emerald-500"
+                  className="border-0 shadow-md overflow-visible bg-gradient-to-br from-emerald-50 to-emerald-50/30 dark:from-emerald-950/30 dark:to-emerald-950/10"
                   data-testid="card-add-first-invoice"
                 >
-                  <CardContent className="p-4 lg:p-6">
+                  <CardContent className="p-5">
                     <div className="flex items-start gap-4">
-                      <div className="h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-emerald-500">
+                      <div className="h-12 w-12 rounded-2xl bg-emerald-500 flex items-center justify-center shrink-0">
                         <DollarSign className="h-6 w-6 text-white" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-foreground text-lg">
-                          Create your first invoice
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Send an invoice to get paid for your work.
+                      <div className="flex-1">
+                        <p className="font-semibold text-foreground text-lg mb-1">Send your first invoice</p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Get paid for the work you've done.
                         </p>
                         <Button
-                          className="mt-4"
+                          className="w-full"
                           onClick={() => navigate("/invoices/new")}
                           data-testid="button-add-first-invoice"
                         >
-                          Create invoice
-                          <ChevronRight className="h-4 w-4 ml-1" />
+                          <DollarSign className="h-4 w-4 mr-2" />
+                          Create Invoice
+                          <ArrowRight className="h-4 w-4 ml-2" />
                         </Button>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               </motion.div>
-            ) : priorityItem ? (
+            ) : priorityItem && !(priorityItem.type === "invoice" && stats.moneyWaiting > 0) ? (
               <motion.div
                 key="priority"
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
               >
-                <Card
-                  className={`border-0 shadow-md overflow-hidden ${getUrgencyStyles(priorityItem.urgency).border}`}
-                  data-testid="card-priority-item"
-                >
-                  <CardContent className="p-4 lg:p-6">
+                <Card className="border-0 shadow-md overflow-visible" data-testid="card-priority-item">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Target className="h-4 w-4 text-primary" />
+                      <span className="text-xs font-semibold uppercase tracking-wider text-primary">Do This First</span>
+                      {priorityItem.urgency === "critical" && (
+                        <Badge variant="destructive" className="text-xs">Urgent</Badge>
+                      )}
+                    </div>
                     <div className="flex items-start gap-4">
-                      <div
-                        className={`h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                          getUrgencyStyles(priorityItem.urgency).iconBg
-                        }`}
-                      >
-                        {(() => {
-                          const Icon = getIconForType(priorityItem.type);
-                          return (
-                            <Icon
-                              className={`h-6 w-6 ${getUrgencyStyles(priorityItem.urgency).iconColor}`}
-                            />
-                          );
-                        })()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-foreground text-lg">
-                          {priorityItem.title}
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {priorityItem.subtitle}
-                        </p>
+                      {(() => {
+                        const Icon = getIconForType(priorityItem.type);
+                        return (
+                          <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                            priorityItem.urgency === "critical" ? "bg-red-500" :
+                            priorityItem.urgency === "high" ? "bg-orange-500" : "bg-primary"
+                          }`}>
+                            <Icon className="h-6 w-6 text-white" />
+                          </div>
+                        );
+                      })()}
+                      <div className="flex-1">
+                        <p className="font-semibold text-foreground text-lg mb-1">{priorityItem.title}</p>
+                        <p className="text-sm text-muted-foreground mb-4">{priorityItem.subtitle}</p>
                         <Button
-                          className="mt-4"
+                          className="w-full"
                           onClick={() => {
                             queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboardGamePlan() });
                             navigate(priorityItem.actionRoute);
@@ -520,79 +598,77 @@ export default function TodaysGamePlanPage() {
                           data-testid="button-priority-action"
                         >
                           {priorityItem.actionLabel}
-                          <ChevronRight className="h-4 w-4 ml-1" />
+                          <ArrowRight className="h-4 w-4 ml-2" />
                         </Button>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               </motion.div>
-            ) : (
+            ) : !priorityItem && stats.moneyWaiting === 0 ? (
               <motion.div
                 key="caught-up"
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
               >
-                <Card className="border-0 shadow-sm bg-emerald-50 dark:bg-emerald-950/30" data-testid="card-all-caught-up">
-                  <CardContent className="p-4 lg:p-6">
-                    <div className="flex items-start gap-3">
-                      <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                        <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-semibold text-emerald-700 dark:text-emerald-400">
-                          Quiet day
-                        </p>
-                        <p className="text-sm text-emerald-600/80 dark:text-emerald-500/80 mb-3">
-                          Great time to follow up or send invoices.
-                        </p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="border-emerald-300 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-900/50"
-                          onClick={() => navigate("/leads")}
-                          data-testid="button-get-ahead"
-                        >
-                          Follow up on leads
-                          <ChevronRight className="h-3 w-3 ml-1" />
-                        </Button>
-                      </div>
+                <Card className="border-0 shadow-sm bg-emerald-50/50 dark:bg-emerald-950/20" data-testid="card-all-caught-up">
+                  <CardContent className="p-5 text-center">
+                    <div className="h-12 w-12 rounded-2xl bg-emerald-500/15 flex items-center justify-center mx-auto mb-3">
+                      <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <p className="font-semibold text-foreground mb-1">You're all caught up</p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Great time to follow up on leads or send an invoice.
+                    </p>
+                    <div className="flex gap-3 justify-center">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate("/leads")}
+                        data-testid="button-get-ahead"
+                      >
+                        <MessageSquare className="h-4 w-4 mr-1" />
+                        Follow Up
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => navigate("/invoices/new")}
+                        data-testid="button-send-invoice-caught-up"
+                      >
+                        <DollarSign className="h-4 w-4 mr-1" />
+                        Send Invoice
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
               </motion.div>
-            )}
+            ) : null}
           </AnimatePresence>
         </motion.section>
 
+        {/* CARD 3 — Up Next (secondary actions) */}
         {upNextItems.length > 0 && (
-          <motion.section variants={itemVariants} aria-labelledby="up-next">
-            <h2 id="up-next" className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-              Up Next
-            </h2>
-            <div className="space-y-3">
+          <motion.section variants={itemVariants}>
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">Up Next</h2>
+            <div className="space-y-2">
               {upNextItems.slice(0, 3).map((item) => {
                 const Icon = getIconForType(item.type);
                 return (
                   <Card
                     key={item.id}
-                    className="border-0 shadow-sm hover-elevate cursor-pointer"
+                    className="border shadow-sm hover-elevate cursor-pointer"
                     onClick={() => navigate(item.actionRoute)}
                     data-testid={`card-upnext-${item.id}`}
                   >
-                    <CardContent className="p-4">
+                    <CardContent className="p-3">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center flex-shrink-0">
-                          <Icon className="h-5 w-5 text-muted-foreground" />
+                        <div className="h-9 w-9 rounded-xl bg-muted/60 flex items-center justify-center shrink-0">
+                          <Icon className="h-4 w-4 text-muted-foreground" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-foreground text-sm">
-                            {item.title}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {item.subtitle}
-                          </p>
+                          <p className="font-medium text-foreground text-sm">{item.title}</p>
+                          <p className="text-xs text-muted-foreground truncate">{item.subtitle}</p>
                         </div>
                         <Button size="sm" variant="ghost" data-testid={`button-upnext-action-${item.id}`}>
                           {item.actionLabel}
@@ -607,45 +683,42 @@ export default function TodaysGamePlanPage() {
           </motion.section>
         )}
 
+        {/* CARD 4 — Smart Suggestions */}
         {nextActions.length > 0 && (
-          <motion.section variants={itemVariants} aria-labelledby="smart-suggestions">
-            <h2 id="smart-suggestions" className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-purple-500" />
-              What To Do Next
+          <motion.section variants={itemVariants}>
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1 flex items-center gap-2">
+              <Sparkles className="h-3.5 w-3.5 text-violet-500" />
+              Smart Suggestions
             </h2>
-            <div className="space-y-3">
-              {nextActions.slice(0, 5).map((action) => {
+            <div className="space-y-2">
+              {nextActions.slice(0, 4).map((action) => {
                 const Icon = getIconForType(action.entityType);
                 return (
                   <Card
                     key={action.id}
-                    className="border-0 shadow-md bg-gradient-to-r from-purple-500/5 via-transparent to-transparent"
+                    className="border shadow-sm"
                     data-testid={`card-suggestion-${action.id}`}
                   >
-                    <CardContent className="p-4">
+                    <CardContent className="p-3">
                       <div className="flex items-start gap-3">
-                        <div className="h-10 w-10 rounded-xl bg-purple-500/10 flex items-center justify-center flex-shrink-0">
-                          <Icon className="h-5 w-5 text-purple-600" />
+                        <div className="h-9 w-9 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <Icon className="h-4 w-4 text-violet-600 dark:text-violet-400" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-400">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <Badge variant="secondary" className="text-xs">
                               {getEntityLabel(action.entityType)}
-                            </span>
+                            </Badge>
                             {action.autoExecutable && (
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <span className="text-xs text-muted-foreground flex items-center gap-0.5">
                                 <Zap className="h-3 w-3" />
-                                Auto-send eligible
+                                Auto
                               </span>
                             )}
                           </div>
-                          <p className="font-medium text-foreground text-sm">
-                            {action.action}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {action.reason}
-                          </p>
-                          <div className="flex items-center gap-2 mt-3">
+                          <p className="font-medium text-foreground text-sm">{action.action}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 mb-2">{action.reason}</p>
+                          <div className="flex items-center gap-2">
                             <Button
                               size="sm"
                               onClick={() => {
@@ -654,11 +727,11 @@ export default function TodaysGamePlanPage() {
                               }}
                               data-testid={`button-act-${action.id}`}
                             >
-                              Do It Now
-                              <ChevronRight className="h-3 w-3 ml-1" />
+                              Do It
+                              <ArrowRight className="h-3 w-3 ml-1" />
                             </Button>
                             <Button
-                              size="sm"
+                              size="icon"
                               variant="ghost"
                               onClick={() => dismissMutation.mutate(action.id)}
                               data-testid={`button-dismiss-${action.id}`}
@@ -676,133 +749,102 @@ export default function TodaysGamePlanPage() {
           </motion.section>
         )}
 
-        <motion.section variants={itemVariants} aria-labelledby="today-glance">
-          <h2 id="today-glance" className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-            Today at a Glance
-          </h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-500/10 to-transparent" data-testid="stat-jobs-today">
-              <CardContent className="p-4 text-center">
-                <div className="h-10 w-10 rounded-xl bg-blue-500 flex items-center justify-center mx-auto mb-2">
-                  <Briefcase className="h-5 w-5 text-white" />
-                </div>
-                <p className="text-2xl font-bold text-foreground">{stats.jobsToday}</p>
-                <p className="text-xs text-muted-foreground">Jobs today</p>
-              </CardContent>
-            </Card>
-            <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-500/10 to-transparent" data-testid="stat-money-collected">
-              <CardContent className="p-4 text-center">
-                <div className="h-10 w-10 rounded-xl bg-emerald-500 flex items-center justify-center mx-auto mb-2">
-                  <DollarSign className="h-5 w-5 text-white" />
-                </div>
-                <p className="text-2xl font-bold text-foreground">
-                  {formatCurrency(stats.moneyCollectedToday)}
-                </p>
-                <p className="text-xs text-muted-foreground">Collected today</p>
-              </CardContent>
-            </Card>
-            <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-500/10 to-transparent" data-testid="stat-money-waiting">
-              <CardContent className="p-4 text-center">
-                <div className="h-10 w-10 rounded-xl bg-amber-500 flex items-center justify-center mx-auto mb-2">
-                  <Clock className="h-5 w-5 text-white" />
-                </div>
-                <p className="text-2xl font-bold text-foreground">
-                  {formatCurrency(stats.moneyWaiting)}
-                </p>
-                <p className="text-xs text-muted-foreground">Money waiting</p>
-              </CardContent>
-            </Card>
-            <Card className="border-0 shadow-sm bg-gradient-to-br from-violet-500/10 to-transparent" data-testid="stat-messages">
-              <CardContent className="p-4 text-center">
-                <div className="h-10 w-10 rounded-xl bg-violet-500 flex items-center justify-center mx-auto mb-2">
-                  <MessageSquare className="h-5 w-5 text-white" />
-                </div>
-                <p className="text-2xl font-bold text-foreground">{stats.messagesToSend}</p>
-                <p className="text-xs text-muted-foreground">Messages to send</p>
-              </CardContent>
-            </Card>
-          </div>
-        </motion.section>
+        {/* Stats grid - compact */}
+        {firstTimeUserState === "normal" && (
+          <motion.section variants={itemVariants}>
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">Today at a Glance</h2>
+            <div className="grid grid-cols-2 gap-2">
+              <Card className="border shadow-sm" data-testid="stat-jobs-today">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+                    <Briefcase className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-foreground leading-tight">{stats.jobsToday}</p>
+                    <p className="text-xs text-muted-foreground">jobs today</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border shadow-sm" data-testid="stat-messages">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
+                    <MessageSquare className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-foreground leading-tight">{stats.messagesToSend}</p>
+                    <p className="text-xs text-muted-foreground">to send</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </motion.section>
+        )}
 
-        <motion.section variants={itemVariants} aria-labelledby="quick-actions">
-          <h2 id="quick-actions" className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-            Quick Actions
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
-            <Card
-              className="border shadow-sm hover-elevate cursor-pointer"
+        {/* Quick Actions - thumb-friendly grid */}
+        <motion.section variants={itemVariants}>
+          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">Quick Actions</h2>
+          <div className="grid grid-cols-4 gap-2">
+            <button
               onClick={() => navigate("/jobs/new")}
+              className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover-elevate"
               data-testid="button-add-job"
             >
-              <CardContent className="p-4 flex flex-col items-center gap-2">
-                <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                  <Plus className="h-5 w-5 text-blue-600" />
-                </div>
-                <span className="font-medium text-sm text-foreground">Add a Job</span>
-              </CardContent>
-            </Card>
-            <Card
-              className="border shadow-sm hover-elevate cursor-pointer"
+              <div className="h-11 w-11 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                <Plus className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <span className="text-xs font-medium text-foreground">New Job</span>
+            </button>
+            <button
               onClick={() => navigate("/invoices/new")}
+              className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover-elevate"
               data-testid="button-ask-payment"
             >
-              <CardContent className="p-4 flex flex-col items-center gap-2">
-                <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                  <DollarSign className="h-5 w-5 text-emerald-600" />
-                </div>
-                <span className="font-medium text-sm text-foreground">Ask for Payment</span>
-              </CardContent>
-            </Card>
-            <Card
-              className="border shadow-sm hover-elevate cursor-pointer"
+              <div className="h-11 w-11 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <span className="text-xs font-medium text-foreground">Invoice</span>
+            </button>
+            <button
               onClick={() => navigate("/reminders")}
+              className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover-elevate"
               data-testid="button-message-client"
             >
-              <CardContent className="p-4 flex flex-col items-center gap-2">
-                <div className="h-10 w-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
-                  <MessageSquare className="h-5 w-5 text-violet-600" />
-                </div>
-                <span className="font-medium text-sm text-foreground">Message a Client</span>
-              </CardContent>
-            </Card>
-            <Card
-              className="border shadow-sm hover-elevate cursor-pointer"
+              <div className="h-11 w-11 rounded-xl bg-violet-500/10 flex items-center justify-center">
+                <MessageSquare className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+              </div>
+              <span className="text-xs font-medium text-foreground">Message</span>
+            </button>
+            <button
               onClick={() => setShowVoiceNotes(true)}
+              className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover-elevate"
               data-testid="button-talk-it-in"
             >
-              <CardContent className="p-4 flex flex-col items-center gap-2">
-                <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                  <Mic className="h-5 w-5 text-amber-600" />
-                </div>
-                <span className="font-medium text-sm text-foreground">Talk It In</span>
-              </CardContent>
-            </Card>
+              <div className="h-11 w-11 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                <Mic className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <span className="text-xs font-medium text-foreground">Voice</span>
+            </button>
           </div>
         </motion.section>
 
+        {/* Done Recently */}
         {recentlyCompleted.length > 0 && (
-          <motion.section variants={itemVariants} aria-labelledby="done-recently">
-            <h2 id="done-recently" className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-              Done Recently
-            </h2>
-            <div className="space-y-2">
+          <motion.section variants={itemVariants}>
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">Done Recently</h2>
+            <div className="space-y-1">
               {recentlyCompleted.map((item) => {
                 const Icon = getIconForType(item.type);
                 return (
                   <div
                     key={item.id}
-                    className="flex items-center gap-3 py-2 px-3 rounded-lg bg-muted/30"
+                    className="flex items-center gap-3 py-2 px-3 rounded-lg"
                     data-testid={`recent-${item.id}`}
                   >
-                    <div className="h-8 w-8 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
-                      <Icon className="h-4 w-4 text-muted-foreground" />
+                    <div className="h-7 w-7 rounded-lg bg-muted/40 flex items-center justify-center shrink-0">
+                      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-muted-foreground">{item.title}</p>
-                    </div>
-                    <p className="text-xs text-muted-foreground/70">
-                      {formatRelativeTime(item.completedAt)}
-                    </p>
+                    <p className="flex-1 text-sm text-muted-foreground truncate">{item.title}</p>
+                    <p className="text-xs text-muted-foreground/60 shrink-0">{formatRelativeTime(item.completedAt)}</p>
                   </div>
                 );
               })}
@@ -810,6 +852,24 @@ export default function TodaysGamePlanPage() {
           </motion.section>
         )}
       </motion.div>
+
+      {/* Sticky bottom CTA (mobile only) */}
+      {isMobile && stickyCtaInfo && (
+        <div className="fixed bottom-16 left-0 right-0 p-3 z-50" data-testid="sticky-cta-wrapper">
+          <div className="max-w-lg mx-auto">
+            <Button
+              size="lg"
+              className="w-full shadow-lg rounded-xl h-12 text-base font-semibold"
+              onClick={() => navigate(stickyCtaInfo.route)}
+              data-testid="button-sticky-cta"
+            >
+              <stickyCtaInfo.icon className="h-5 w-5 mr-2" />
+              {stickyCtaInfo.label}
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {showVoiceNotes && (
         <Dialog open={showVoiceNotes} onOpenChange={setShowVoiceNotes}>
@@ -820,8 +880,8 @@ export default function TodaysGamePlanPage() {
                   <Mic className="h-5 w-5" />
                   Talk It In
                 </DialogTitle>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   onClick={() => { setShowVoiceNotes(false); navigate("/voice-notes"); }}
                   data-testid="link-view-voice-history"
                 >
@@ -829,16 +889,16 @@ export default function TodaysGamePlanPage() {
                 </Button>
               </div>
             </DialogHeader>
-            <VoiceNoteSummarizer 
+            <VoiceNoteSummarizer
               onNoteSaved={() => setShowVoiceNotes(false)}
             />
           </DialogContent>
         </Dialog>
       )}
 
-      <AddServiceDialog 
-        open={showAddService} 
-        onOpenChange={setShowAddService} 
+      <AddServiceDialog
+        open={showAddService}
+        onOpenChange={setShowAddService}
       />
 
       {stallOrchestrator.modalPayload && (
