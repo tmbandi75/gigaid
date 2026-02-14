@@ -1,0 +1,110 @@
+On the Payday onboarding final step (“You’re all set!”), the celebration/confetti overlay popup is covering the “Go to Dashboard” button.
+
+We must NOT remove or disable the celebration popup.
+
+The fix is purely positional/layout.
+
+--------------------------------------------------
+
+GOAL
+
+- Keep the celebration popup.
+- Keep confetti.
+- Keep animation.
+- Keep behavior.
+- Ensure “Go to Dashboard” is always visible and clickable.
+
+--------------------------------------------------
+
+STRICT RULES
+
+- Do NOT remove the popup.
+- Do NOT disable confetti.
+- Do NOT change timing.
+- Do NOT change logic.
+- Do NOT refactor components.
+- Do NOT redesign UI.
+
+Only adjust layout/positioning/z-index/margins.
+
+--------------------------------------------------
+
+STEP 1 — IDENTIFY COMPONENT
+
+Locate the celebration overlay / success popup component
+(likely CelebrationOverlay / useCelebration / Lottie wrapper).
+
+Do not modify its logic.
+
+--------------------------------------------------
+
+STEP 2 — ADJUST POSITIONING
+
+Update styles so that the overlay:
+
+- Does NOT overlap the bottom CTA area
+- Sits higher on the screen
+- Or reserves vertical space
+
+Acceptable fixes:
+
+Option A:
+Add bottom margin/padding to the overlay container
+
+Option B:
+Constrain overlay max-height
+
+Option C:
+Move overlay upward with top/bottom offset
+
+Option D:
+Add safe-area spacing above the CTA
+
+Use the smallest change possible.
+
+--------------------------------------------------
+
+STEP 3 — Z-INDEX SAFETY
+
+Ensure:
+
+- Button remains above background
+- Overlay does not block pointer events on CTA
+
+If needed:
+pointer-events: none on decorative layers only (not the popup container).
+
+Do NOT disable interaction globally.
+
+--------------------------------------------------
+
+STEP 4 — RESPONSIVE CHECK
+
+Ensure fix works on:
+
+- Mobile viewport
+- Small screens
+- PWA mode
+
+Button must be visible without scrolling.
+
+--------------------------------------------------
+
+STEP 5 — VALIDATION
+
+After change:
+
+1) Confetti still fires
+2) Popup still shows
+3) “Go to Dashboard” visible
+4) Button clickable
+5) No visual regressions
+
+--------------------------------------------------
+
+DELIVERABLE
+
+Provide:
+- Files modified
+- CSS/JSX changes summary
+- Screenshot confirmation
