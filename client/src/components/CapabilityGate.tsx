@@ -1,22 +1,31 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useState, useEffect, useRef, useCallback, type ReactNode, type KeyboardEvent, type MouseEvent } from "react";
 import { useCanPerform, type NewCapability } from "@/hooks/useCapability";
 import { emitChurnEvent } from "@/lib/churnEvents";
+import { UpgradeInterceptModal } from "@/upgrade/UpgradeInterceptModal";
+import { Lock } from "lucide-react";
 
 interface CapabilityGateProps {
   capability: NewCapability;
   children: ReactNode;
   fallback?: ReactNode;
   showMessage?: boolean;
+  interceptClicks?: boolean;
+  featureName?: string;
+  showLockIndicator?: boolean;
 }
 
 export function CapabilityGate({ 
   capability, 
   children, 
   fallback,
-  showMessage = true 
+  showMessage = true,
+  interceptClicks = true,
+  featureName,
+  showLockIndicator = true,
 }: CapabilityGateProps) {
   const { allowed, reason, loading } = useCanPerform(capability);
   const emittedRef = useRef<string | null>(null);
+  const [interceptModalOpen, setInterceptModalOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !allowed && emittedRef.current !== capability) {
@@ -25,11 +34,57 @@ export function CapabilityGate({
     }
   }, [loading, allowed, capability]);
 
+  const handleInterceptClick = useCallback((e: MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setInterceptModalOpen(true);
+  }, []);
+
+  const handleInterceptKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      e.stopPropagation();
+      setInterceptModalOpen(true);
+    }
+  }, []);
+
   if (loading) {
     return null;
   }
   
   if (!allowed) {
+    if (interceptClicks) {
+      return (
+        <>
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={handleInterceptClick}
+            onKeyDown={handleInterceptKeyDown}
+            onClickCapture={handleInterceptClick}
+            className="relative cursor-pointer group"
+            aria-label={featureName ? `Unlock ${featureName}` : `Unlock this feature`}
+            data-testid={`capability-gate-intercept-${capability}`}
+          >
+            <div className="opacity-60 pointer-events-none select-none" aria-hidden="true">
+              {children}
+            </div>
+            {showLockIndicator && (
+              <div className="absolute top-1 right-1 h-5 w-5 rounded-full bg-muted/80 flex items-center justify-center z-10" aria-hidden="true">
+                <Lock className="h-3 w-3 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+          <UpgradeInterceptModal
+            open={interceptModalOpen}
+            onOpenChange={setInterceptModalOpen}
+            featureKey={capability}
+            featureName={featureName}
+          />
+        </>
+      );
+    }
+
     if (fallback) {
       return <>{fallback}</>;
     }
@@ -77,11 +132,13 @@ export function CapabilityLimitInfo({ capability, className }: CapabilityLimitIn
   );
 }
 
-export function useCapabilityEnforce(capability: NewCapability) {
+export function useCapabilityEnforce(capability: NewCapability, featureName?: string) {
   const result = useCanPerform(capability);
+  const [interceptModalOpen, setInterceptModalOpen] = useState(false);
   
   const enforce = (onBlocked?: (reason: string) => void): boolean => {
     if (!result.allowed && result.reason) {
+      setInterceptModalOpen(true);
       onBlocked?.(result.reason);
       
       if (typeof window !== 'undefined' && (window as any).posthog) {
@@ -98,9 +155,21 @@ export function useCapabilityEnforce(capability: NewCapability) {
     }
     return true;
   };
+
+  const InterceptModal = useCallback(() => (
+    <UpgradeInterceptModal
+      open={interceptModalOpen}
+      onOpenChange={setInterceptModalOpen}
+      featureKey={capability}
+      featureName={featureName}
+    />
+  ), [interceptModalOpen, capability, featureName]);
   
   return {
     ...result,
-    enforce
+    enforce,
+    interceptModalOpen,
+    setInterceptModalOpen,
+    InterceptModal,
   };
 }

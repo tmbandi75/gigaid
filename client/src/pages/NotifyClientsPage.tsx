@@ -30,7 +30,7 @@ import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CapabilityGate } from "@/components/CapabilityGate";
-import { useUpgradeOrchestrator, UpgradeBanner } from "@/upgrade";
+import { useUpgradeOrchestrator, UpgradeBanner, UpgradeInterceptModal } from "@/upgrade";
 import { useCanPerform } from "@/hooks/useCapability";
 import { 
   categoryEventMapping, 
@@ -121,6 +121,7 @@ export default function NotifyClientsPage() {
   
   const notificationCap = useCanPerform('notifications.event_driven');
   const notifyUpgrade = useUpgradeOrchestrator({ capabilityKey: 'notifications.event_driven', surface: 'notifications' });
+  const [interceptModalOpen, setInterceptModalOpen] = useState(false);
 
   const [step, setStep] = useState<"service" | "event" | "compose" | "review">("service");
   const [selectedServiceId, setSelectedServiceId] = useState<string>("");
@@ -233,7 +234,10 @@ export default function NotifyClientsPage() {
 
   const handleSend = () => {
     if (!validationResult?.valid) return;
-    if (notificationCap.mode === 'suggest_only' || !notificationCap.allowed) return;
+    if (notificationCap.mode === 'suggest_only' || !notificationCap.allowed) {
+      setInterceptModalOpen(true);
+      return;
+    }
     
     sendMutation.mutate({
       serviceId: selectedServiceId,
@@ -628,18 +632,12 @@ export default function NotifyClientsPage() {
                   <Button 
                     className="w-full" 
                     onClick={handleSend}
-                    disabled={sendMutation.isPending || notificationCap.mode === 'suggest_only' || !notificationCap.allowed}
+                    disabled={sendMutation.isPending}
                     data-testid="button-send-notifications"
                   >
                     <Send className="h-4 w-4 mr-2" />
                     {sendMutation.isPending ? "Sending..." : "Send Notifications"}
                   </Button>
-                  {notificationCap.mode === 'suggest_only' && notificationCap.reason && (
-                    <p className="text-sm text-muted-foreground text-center" data-testid="text-suggest-only-reason">{notificationCap.reason}</p>
-                  )}
-                  {!notificationCap.allowed && notificationCap.mode !== 'suggest_only' && notificationCap.reason && (
-                    <p className="text-sm text-destructive text-center" data-testid="text-capability-blocked-reason">{notificationCap.reason}</p>
-                  )}
                 </CardFooter>
               </Card>
             </>
@@ -980,18 +978,12 @@ export default function NotifyClientsPage() {
                   <Button 
                     className="w-full" 
                     onClick={handleSend}
-                    disabled={sendMutation.isPending || notificationCap.mode === 'suggest_only' || !notificationCap.allowed}
+                    disabled={sendMutation.isPending}
                     data-testid="button-send-notifications"
                   >
                     <Send className="h-4 w-4 mr-2" />
                     {sendMutation.isPending ? "Sending..." : "Send Notifications"}
                   </Button>
-                  {notificationCap.mode === 'suggest_only' && notificationCap.reason && (
-                    <p className="text-sm text-muted-foreground text-center" data-testid="text-suggest-only-reason">{notificationCap.reason}</p>
-                  )}
-                  {!notificationCap.allowed && notificationCap.mode !== 'suggest_only' && notificationCap.reason && (
-                    <p className="text-sm text-destructive text-center" data-testid="text-capability-blocked-reason">{notificationCap.reason}</p>
-                  )}
                 </CardFooter>
               </Card>
             </>
@@ -1023,6 +1015,13 @@ export default function NotifyClientsPage() {
       )}
         </div>
       </div>
+
+      <UpgradeInterceptModal
+        open={interceptModalOpen}
+        onOpenChange={setInterceptModalOpen}
+        featureKey="notifications.event_driven"
+        featureName="Smart Notifications"
+      />
     </div>
   );
 }

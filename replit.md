@@ -32,7 +32,7 @@ Preferred communication style: Simple, everyday language.
 - **Payment Enforcement**: Ensures explicit payment resolution for completed jobs via a three-level enforcement system.
 - **AI Micro-Nudges System**: Contextual AI recommendations for managing leads, invoices, and jobs.
 - **Today's Money Plan**: Global action queue prioritizing revenue-impactful tasks.
-- **Capability Enforcement Engine**: Manages feature access and limits across Free, Pro, Pro+, Business tiers.
+- **Capability Enforcement Engine**: Manages feature access and limits across Free, Pro, Pro+, Business tiers. Locked features remain visible but intercept clicks to show contextual upgrade modal (`UpgradeInterceptModal`). Centralized config in `client/src/upgrade/upgradeInterceptConfig.ts` maps all 23 capabilities to modal copy. `useCapabilityEnforce` hook returns renderable `InterceptModal` component for imperative usage.
 - **Authentication**: Dual system with Web (OpenID Connect with Replit) and Mobile (Firebase Authentication), supporting account linking.
 - **Offline Capture Infrastructure**: IndexedDB for offline data capture and background sync.
 - **Drive Mode**: Hands-free interface for use on the move.
