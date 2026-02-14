@@ -8187,7 +8187,7 @@ Return ONLY the message text, no JSON or formatting.`
 
       let accountId = user.stripeConnectAccountId;
 
-      if (!accountId) {
+      const createNewAccount = async () => {
         const account = await stripe.accounts.create({
           type: "express",
           country: "US",
@@ -8201,29 +8201,48 @@ Return ONLY the message text, no JSON or formatting.`
             transfers: { requested: true },
           },
         });
-        accountId = account.id;
-
         await storage.updateUser(user.id, {
-          stripeConnectAccountId: accountId,
+          stripeConnectAccountId: account.id,
           stripeConnectStatus: "pending",
         });
+        return account.id;
+      };
+
+      if (!accountId) {
+        accountId = await createNewAccount();
       }
 
       const baseUrl = process.env.FRONTEND_URL || "https://account.gigaid.ai";
       const source = req.body?.source;
       const returnPath = source === "onboarding" ? "/onboarding?stripe_connected=true" : "/settings?stripe_connected=true";
       const refreshPath = source === "onboarding" ? "/onboarding?stripe_refresh=true" : "/settings?stripe_refresh=true";
-      const accountLink = await stripe.accountLinks.create({
-        account: accountId,
-        refresh_url: `${baseUrl}${refreshPath}`,
-        return_url: `${baseUrl}${returnPath}`,
-        type: "account_onboarding",
-      });
 
-      res.json({ url: accountLink.url });
-    } catch (error) {
-      console.error("Stripe Connect onboarding error:", error);
-      res.status(500).json({ error: "Failed to create onboarding link" });
+      try {
+        const accountLink = await stripe.accountLinks.create({
+          account: accountId,
+          refresh_url: `${baseUrl}${refreshPath}`,
+          return_url: `${baseUrl}${returnPath}`,
+          type: "account_onboarding",
+        });
+        res.json({ url: accountLink.url });
+      } catch (linkError: any) {
+        if (linkError?.type === "StripeInvalidRequestError" && accountId !== user.stripeConnectAccountId) {
+          throw linkError;
+        }
+        console.warn("Stripe account link failed for existing account, creating new account:", linkError?.message);
+        accountId = await createNewAccount();
+        const accountLink = await stripe.accountLinks.create({
+          account: accountId,
+          refresh_url: `${baseUrl}${refreshPath}`,
+          return_url: `${baseUrl}${returnPath}`,
+          type: "account_onboarding",
+        });
+        res.json({ url: accountLink.url });
+      }
+    } catch (error: any) {
+      console.error("Stripe Connect onboarding error:", error?.message || error);
+      const detail = error?.raw?.message || error?.message || "Unknown error";
+      res.status(500).json({ error: "Failed to create onboarding link", detail });
     }
   });
 
