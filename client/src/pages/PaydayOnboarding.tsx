@@ -604,6 +604,7 @@ export default function PaydayOnboarding() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile() });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/activation-state"] });
       navigate("/dashboard");
     },
     onError: (err: Error) => {

@@ -1,18 +1,16 @@
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
 import { VoiceFAB } from "@/components/layout/VoiceFAB";
-import { OnboardingWrapper } from "@/components/onboarding/OnboardingWrapper";
+import { ActivationGate } from "@/components/ActivationGate";
 import { PostHogProvider } from "@/components/PostHogProvider";
 import { DriveModeProvider } from "@/components/drivemode/DriveModeProvider";
 import { OptimisticCapabilityProvider, useOptimisticCapability } from "@/contexts/OptimisticCapabilityContext";
 import { FirebaseAuthProvider, useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
-import { useEffect, useState } from "react";
-import { useActivationState } from "@/hooks/useActivationState";
-import { getActivationRoute } from "@/lib/isActivated";
+import { useEffect } from "react";
 import SplashPage from "@/pages/SplashPage";
 import ForceLogout from "@/pages/force-logout";
 
@@ -222,71 +220,30 @@ function AuthenticatedApp() {
   // Show app for authenticated users
   return (
     <DriveModeProvider>
-      <OnboardingWrapper>
-        {isOnboardingRoute ? (
+      {isOnboardingRoute ? (
+        <Router />
+      ) : isAdminRoute ? (
+        <AdminLayout>
           <Router />
-        ) : isAdminRoute ? (
-          <AdminLayout>
+        </AdminLayout>
+      ) : (
+        <ActivationGate>
+          <ResponsiveLayout>
             <Router />
-          </AdminLayout>
-        ) : (
-          <PaydayOnboardingGuard>
-            <ResponsiveLayout>
-              <Router />
-            </ResponsiveLayout>
-            <VoiceFAB />
-          </PaydayOnboardingGuard>
-        )}
-      </OnboardingWrapper>
+          </ResponsiveLayout>
+          <VoiceFAB />
+        </ActivationGate>
+      )}
     </DriveModeProvider>
   );
 }
 
-function usePaydayOnboardingRequired() {
-  const { state, loading } = useActivationState();
-  if (loading || !state) return { loading, required: false, step: undefined as number | undefined };
-  const routeInfo = getActivationRoute(state);
-  if (routeInfo.route === "payday-onboarding") {
-    return { loading: false, required: true, step: routeInfo.step };
-  }
-  return { loading: false, required: false, step: undefined };
-}
-
-function PaydayOnboardingGuard({ children }: { children: React.ReactNode }) {
-  const [, setLocation] = useLocation();
-  const { loading, required, step } = usePaydayOnboardingRequired();
-
-  useEffect(() => {
-    if (!loading && required) {
-      const url = step != null ? `/payday-onboarding?startStep=${step}` : "/payday-onboarding";
-      setLocation(url);
-    }
-  }, [loading, required, step, setLocation]);
-
-  if (loading || required) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
-  }
-
-  return <>{children}</>;
-}
-
 function RedirectToDashboard() {
   const [, setLocation] = useLocation();
-  const { loading, required, step } = usePaydayOnboardingRequired();
 
   useEffect(() => {
-    if (loading) return;
-    if (required) {
-      const url = step != null ? `/payday-onboarding?startStep=${step}` : "/payday-onboarding";
-      setLocation(url);
-    } else {
-      setLocation("/dashboard");
-    }
-  }, [setLocation, loading, required, step]);
+    setLocation("/dashboard");
+  }, [setLocation]);
 
   return (
     <div className="min-h-screen flex items-center justify-center">

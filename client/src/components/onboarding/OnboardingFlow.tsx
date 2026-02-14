@@ -5,6 +5,7 @@ import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -180,6 +181,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
       // If onboarding is completed or skipped, go to dashboard
       if (onboardingStatus.completed || onboardingStatus.state === "completed" || onboardingStatus.state === "skipped_explore") {
         onComplete();
+        queryClient.invalidateQueries({ queryKey: ["/api/user/activation-state"] });
         navigate("/");
         return;
       }
@@ -250,6 +252,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
     });
     setShowSkipModal(false);
     onComplete();
+    queryClient.invalidateQueries({ queryKey: ["/api/user/activation-state"] });
     navigate("/");
   };
 
@@ -458,6 +461,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
 
   const handleGoToDashboard = () => {
     onComplete();
+    queryClient.invalidateQueries({ queryKey: ["/api/user/activation-state"] });
     navigate("/");
   };
 
