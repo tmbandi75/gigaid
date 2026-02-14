@@ -10,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CelebrationOverlay } from "@/components/CelebrationOverlay";
 import { WebOnboardingStepper } from "./WebOnboardingStepper";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { serviceCategories, type ServiceIconName } from "@shared/service-categories";
@@ -113,41 +112,6 @@ export function WebOnboardingLayout({ onComplete, initialStep }: WebOnboardingLa
           </div>
         </div>
         <SkipModal ob={ob} />
-      </>
-    );
-  }
-
-  if (ob.step === 5) {
-    return (
-      <>
-        <div className="flex items-center justify-center min-h-[70vh]" data-testid="web-step-complete">
-          <div className="max-w-md text-center space-y-8">
-            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-emerald-400/20">
-              <CheckCircle2 className="w-12 h-12 text-emerald-400" />
-            </div>
-            <div className="space-y-3">
-              <h1 className="text-4xl font-bold text-white tracking-tight">You're all set!</h1>
-              <p className="text-lg text-white/70">
-                GigAid is ready to help you get paid faster and protect your time.
-              </p>
-            </div>
-            <Button
-              size="lg"
-              className="h-14 px-10 text-lg rounded-xl bg-white text-[#4F46E5] shadow-lg"
-              onClick={ob.handleGoToDashboard}
-              data-testid="button-go-dashboard"
-            >
-              Go to Dashboard
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-          </div>
-        </div>
-        <CelebrationOverlay
-          isVisible={ob.showCelebration}
-          message="GigAid is ready to help you get paid faster and protect your time."
-          type="onboarding_complete"
-          onDismiss={() => ob.setShowCelebration(false)}
-        />
       </>
     );
   }

@@ -8,6 +8,8 @@ import { useActivationState } from "@/hooks/useActivationState";
 import { isActivated } from "@/lib/isActivated";
 import { useToast } from "@/hooks/use-toast";
 import { BookingLinkShare } from "@/components/booking-link/BookingLinkShare";
+import { CelebrationOverlay } from "@/components/CelebrationOverlay";
+import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -533,6 +535,51 @@ function StepDone({
   depositEnabled: boolean;
   templatesAdded: number;
 }) {
+  const [showCelebration, setShowCelebration] = useState(false);
+
+  useEffect(() => {
+    setShowCelebration(true);
+
+    const timer = setTimeout(() => {
+      const duration = 3000;
+      const end = Date.now() + duration;
+
+      const frame = () => {
+        confetti({
+          particleCount: 3,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+          colors: ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ec4899"],
+        });
+        confetti({
+          particleCount: 3,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+          colors: ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ec4899"],
+        });
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      };
+
+      frame();
+
+      setTimeout(() => {
+        confetti({
+          particleCount: 150,
+          spread: 100,
+          origin: { y: 0.6 },
+          colors: ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ec4899"],
+        });
+      }, 500);
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   const summaryItems = [
     {
       label: "Stripe Payments",
@@ -557,42 +604,56 @@ function StepDone({
   ];
 
   return (
-    <div className="flex flex-col items-center text-center px-6 py-8">
-      <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-6">
-        <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
-      </div>
-      <h2 className="text-2xl font-bold text-foreground mb-2" data-testid="text-done-title">
-        You're Ready to Get Paid!
-      </h2>
-      <p className="text-muted-foreground text-sm mb-6" data-testid="text-done-subtitle">
-        Here's a summary of your setup
-      </p>
+    <>
+      <div className="flex flex-col items-center text-center px-6 py-8 animate-in fade-in zoom-in-95 duration-500">
+        <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 mb-6">
+          <CheckCircle2 className="w-12 h-12 text-emerald-500" />
+        </div>
+        <h1 className="text-4xl font-bold tracking-tight mb-2" data-testid="text-done-title">
+          You're all set!
+        </h1>
+        <p className="text-lg text-muted-foreground max-w-sm mx-auto mb-6" data-testid="text-done-subtitle">
+          GigAid is ready to help you get paid faster and protect your time.
+        </p>
 
-      <div className="w-full space-y-3 mb-8">
-        {summaryItems.map((item, i) => (
-          <div
-            key={i}
-            className="flex items-center gap-3 p-3 rounded-lg bg-muted/50"
-            data-testid={`text-summary-${i}`}
-          >
-            {item.done ? (
-              <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
-            ) : (
-              <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30 shrink-0" />
-            )}
-            <span className="text-sm font-medium text-foreground flex-1 text-left">
-              {item.label}
-            </span>
-            <span className="text-xs text-muted-foreground">{item.text}</span>
-          </div>
-        ))}
+        <div className="w-full space-y-3 mb-8">
+          {summaryItems.map((item, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-3 p-3 rounded-lg bg-muted/50"
+              data-testid={`text-summary-${i}`}
+            >
+              {item.done ? (
+                <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
+              ) : (
+                <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30 shrink-0" />
+              )}
+              <span className="text-sm font-medium text-foreground flex-1 text-left">
+                {item.label}
+              </span>
+              <span className="text-xs text-muted-foreground">{item.text}</span>
+            </div>
+          ))}
+        </div>
+
+        <Button
+          size="lg"
+          className="w-full h-14 text-lg rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-[#4F46E5]/30"
+          onClick={onFinish}
+          data-testid="button-go-dashboard"
+        >
+          Go to Dashboard
+          <ArrowRight className="w-5 h-5 ml-2" />
+        </Button>
       </div>
 
-      <Button className="w-full" onClick={onFinish} data-testid="button-go-dashboard">
-        Go to Dashboard
-        <ArrowRight className="ml-2 h-4 w-4" />
-      </Button>
-    </div>
+      <CelebrationOverlay
+        isVisible={showCelebration}
+        message="GigAid is ready to help you get paid faster and protect your time."
+        type="onboarding_complete"
+        onDismiss={() => setShowCelebration(false)}
+      />
+    </>
   );
 }
 

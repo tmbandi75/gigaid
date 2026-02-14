@@ -19,8 +19,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import confetti from "canvas-confetti";
-import { CelebrationOverlay } from "@/components/CelebrationOverlay";
 import {
   Wrench,
   Droplets,
@@ -99,7 +97,7 @@ const getIconForCategory = (iconName: ServiceIconName): LucideIcon => {
   return iconMap[iconName] || MoreHorizontal;
 };
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 4;
 
 export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps) {
   const [, navigate] = useLocation();
@@ -108,7 +106,6 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
   const [step, setStep] = useState(initialStep || 1);
   const [showSkipModal, setShowSkipModal] = useState(false);
   const [initialized, setInitialized] = useState(false);
-  const [showCelebration, setShowCelebration] = useState(false);
   
   const [identity, setIdentity] = useState({
     firstName: "",
@@ -298,52 +295,9 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
     await updateOnboardingMutation.mutateAsync({ 
       state: "completed",
       completed: true,
-      step: 5 
+      step: 4 
     });
     
-    setStep(5);
-    
-    setShowCelebration(true);
-    
-    setTimeout(() => {
-      const duration = 3000;
-      const end = Date.now() + duration;
-      
-      const frame = () => {
-        confetti({
-          particleCount: 3,
-          angle: 60,
-          spread: 55,
-          origin: { x: 0 },
-          colors: ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ec4899"],
-        });
-        confetti({
-          particleCount: 3,
-          angle: 120,
-          spread: 55,
-          origin: { x: 1 },
-          colors: ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ec4899"],
-        });
-        
-        if (Date.now() < end) {
-          requestAnimationFrame(frame);
-        }
-      };
-      
-      frame();
-      
-      setTimeout(() => {
-        confetti({
-          particleCount: 150,
-          spread: 100,
-          origin: { y: 0.6 },
-          colors: ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ec4899"],
-        });
-      }, 500);
-    }, 200);
-  };
-
-  const handleGoToDashboard = () => {
     onComplete();
     queryClient.invalidateQueries({ queryKey: ["/api/user/activation-state"] });
     navigate("/");
@@ -774,42 +728,8 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
             </div>
           )}
 
-          {step === 5 && (
-            <div className="flex-1 flex flex-col justify-center animate-in fade-in zoom-in-95 duration-500" data-testid="step-complete">
-              <div className="space-y-8 text-center">
-                <div className="space-y-4">
-                  <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-emerald-500/20 to-emerald-500/5">
-                    <CheckCircle2 className="w-12 h-12 text-emerald-500" />
-                  </div>
-                  <h1 className="text-4xl font-bold tracking-tight">You're all set!</h1>
-                  <p className="text-lg text-muted-foreground max-w-sm mx-auto">
-                    GigAid is ready to help you get paid faster and protect your time.
-                  </p>
-                </div>
-                
-                <div className="space-y-4 pt-4">
-                  <Button 
-                    size="lg" 
-                    className="w-full h-14 text-lg rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-[#4F46E5]/30"
-                    onClick={handleGoToDashboard}
-                    data-testid="button-go-dashboard"
-                  >
-                    Go to Dashboard
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
-
-      <CelebrationOverlay
-        isVisible={showCelebration}
-        message="GigAid is ready to help you get paid faster and protect your time."
-        type="onboarding_complete"
-        onDismiss={() => setShowCelebration(false)}
-      />
     </div>
   );
 }

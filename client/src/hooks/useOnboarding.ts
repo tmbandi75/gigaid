@@ -8,7 +8,6 @@ import { QUERY_KEYS } from "@/lib/queryKeys";
 import { queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { serviceCategories } from "@shared/service-categories";
-import confetti from "canvas-confetti";
 
 export interface IdentityData {
   firstName: string;
@@ -37,7 +36,7 @@ export interface OnboardingStatus {
   aiExpectationShown: boolean;
 }
 
-export const TOTAL_STEPS = 5;
+export const TOTAL_STEPS = 4;
 
 export function useOnboarding(onComplete: () => void, initialStep?: number) {
   const [, navigate] = useLocation();
@@ -46,7 +45,6 @@ export function useOnboarding(onComplete: () => void, initialStep?: number) {
   const [step, setStep] = useState(initialStep || 1);
   const [showSkipModal, setShowSkipModal] = useState(false);
   const [initialized, setInitialized] = useState(false);
-  const [showCelebration, setShowCelebration] = useState(false);
 
   const [identity, setIdentity] = useState<IdentityData>({
     firstName: "",
@@ -223,51 +221,9 @@ export function useOnboarding(onComplete: () => void, initialStep?: number) {
     await updateOnboardingMutation.mutateAsync({
       state: "completed",
       completed: true,
-      step: 5,
+      step: 4,
     });
 
-    setStep(5);
-    setShowCelebration(true);
-
-    setTimeout(() => {
-      const duration = 3000;
-      const end = Date.now() + duration;
-
-      const frame = () => {
-        confetti({
-          particleCount: 3,
-          angle: 60,
-          spread: 55,
-          origin: { x: 0 },
-          colors: ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ec4899"],
-        });
-        confetti({
-          particleCount: 3,
-          angle: 120,
-          spread: 55,
-          origin: { x: 1 },
-          colors: ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ec4899"],
-        });
-
-        if (Date.now() < end) {
-          requestAnimationFrame(frame);
-        }
-      };
-
-      frame();
-
-      setTimeout(() => {
-        confetti({
-          particleCount: 150,
-          spread: 100,
-          origin: { y: 0.6 },
-          colors: ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ec4899"],
-        });
-      }, 500);
-    }, 200);
-  };
-
-  const handleGoToDashboard = () => {
     onComplete();
     queryClient.invalidateQueries({ queryKey: ["/api/user/activation-state"] });
     navigate("/");
@@ -280,8 +236,6 @@ export function useOnboarding(onComplete: () => void, initialStep?: number) {
     setStep,
     showSkipModal,
     setShowSkipModal,
-    showCelebration,
-    setShowCelebration,
     identity,
     setIdentity,
     pricing,
@@ -299,6 +253,5 @@ export function useOnboarding(onComplete: () => void, initialStep?: number) {
     handleIdentitySubmit,
     handlePricingSubmit,
     handleAICardDismiss,
-    handleGoToDashboard,
   };
 }
