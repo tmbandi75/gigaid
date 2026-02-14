@@ -11,6 +11,8 @@ import { DriveModeProvider } from "@/components/drivemode/DriveModeProvider";
 import { OptimisticCapabilityProvider, useOptimisticCapability } from "@/contexts/OptimisticCapabilityContext";
 import { FirebaseAuthProvider, useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useEffect, useState } from "react";
+import { useActivationState } from "@/hooks/useActivationState";
+import { getActivationRoute } from "@/lib/isActivated";
 import SplashPage from "@/pages/SplashPage";
 import ForceLogout from "@/pages/force-logout";
 
@@ -241,43 +243,27 @@ function AuthenticatedApp() {
 }
 
 function usePaydayOnboardingRequired() {
-  const { data: profile, isLoading: profileLoading } = useQuery<{ paydayOnboardingCompleted?: boolean }>({
-    queryKey: ['/api/profile'],
-    staleTime: 300000,
-  });
-  const needsCheck = !!profile && !profile.paydayOnboardingCompleted;
-  const { data: hasData, isLoading: hasDataLoading } = useQuery<{ hasJobs: boolean; hasInvoices: boolean }>({
-    queryKey: ['/api/has-data'],
-    enabled: needsCheck,
-    staleTime: 300000,
-  });
-
-  if (profileLoading) return { loading: true, required: false };
-  if (!profile || profile.paydayOnboardingCompleted) return { loading: false, required: false };
-  if (hasDataLoading) return { loading: true, required: false };
-  const hasExistingData = hasData?.hasJobs || hasData?.hasInvoices || false;
-  return { loading: false, required: !hasExistingData };
+  const { state, loading } = useActivationState();
+  if (loading || !state) return { loading, required: false, step: undefined as number | undefined };
+  const routeInfo = getActivationRoute(state);
+  if (routeInfo.route === "payday-onboarding") {
+    return { loading: false, required: true, step: routeInfo.step };
+  }
+  return { loading: false, required: false, step: undefined };
 }
 
 function PaydayOnboardingGuard({ children }: { children: React.ReactNode }) {
   const [, setLocation] = useLocation();
-  const { loading, required } = usePaydayOnboardingRequired();
+  const { loading, required, step } = usePaydayOnboardingRequired();
 
   useEffect(() => {
     if (!loading && required) {
-      setLocation("/payday-onboarding");
+      const url = step != null ? `/payday-onboarding?startStep=${step}` : "/payday-onboarding";
+      setLocation(url);
     }
-  }, [loading, required, setLocation]);
+  }, [loading, required, step, setLocation]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
-  }
-
-  if (required) {
+  if (loading || required) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
@@ -290,16 +276,17 @@ function PaydayOnboardingGuard({ children }: { children: React.ReactNode }) {
 
 function RedirectToDashboard() {
   const [, setLocation] = useLocation();
-  const { loading, required } = usePaydayOnboardingRequired();
+  const { loading, required, step } = usePaydayOnboardingRequired();
 
   useEffect(() => {
     if (loading) return;
     if (required) {
-      setLocation("/payday-onboarding");
+      const url = step != null ? `/payday-onboarding?startStep=${step}` : "/payday-onboarding";
+      setLocation(url);
     } else {
       setLocation("/dashboard");
     }
-  }, [setLocation, loading, required]);
+  }, [setLocation, loading, required, step]);
 
   return (
     <div className="min-h-screen flex items-center justify-center">

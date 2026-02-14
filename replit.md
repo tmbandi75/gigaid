@@ -38,6 +38,7 @@ Preferred communication style: Simple, everyday language.
 - **Drive Mode**: Hands-free interface for use on the move.
 - **Event-Driven Client Notifications**: Targeted SMS/email notifications with rate limiting and quiet hours.
 - **Centralized Upgrade Orchestration**: Manages all upgrade prompts with thresholds, A/B testing, and cooldowns.
+- **Activation Gating**: Centralized routing via `shared/activationRules.ts` — single source of truth determining whether users go to dashboard, main onboarding, or payday onboarding (and which step to skip to). Server endpoint `GET /api/user/activation-state` maps DB fields to `ActivationState`, client hook `useActivationState` fetches it, `isActivated()` / `getActivationRoute()` / `isPaydayRequired()` are pure shared functions used by both server and client.
 - **Get Paid Today Product Roadmap**: Features include Payday Onboarding, Job Templates, Money-First Dashboard, Auto Follow-Up Bot, Rebooking Machine, Auto-Quote Generator, Price Optimization Engine, and Profit Warning System.
 - **Churn Prediction & Retention System**: Rule-based scoring, retention playbooks, and admin UI.
 - **Smart Encouragement Engine**: Context-aware, money-focused messages for user engagement.

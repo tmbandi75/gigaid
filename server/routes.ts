@@ -6693,6 +6693,40 @@ Final price confirmed onsite.`;
     return new Date(user.createdAt) >= new Date(ACTIVATION_CUTOFF_DATE);
   }
 
+  app.get("/api/user/activation-state", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const [bookings, jobs, invoices] = await Promise.all([
+        storage.getBookingRequests(userId),
+        storage.getJobs(userId),
+        storage.getInvoices(userId),
+      ]);
+      const { isActivated } = await import("@shared/activationRules");
+      const state = {
+        stripeConnected: user.stripeConnectStatus === "active",
+        depositsEnabled: user.depositEnabled === true && user.depositPolicySet === true,
+        bookingLinkCreated: user.publicProfileEnabled === true && !!user.publicProfileSlug,
+        payoutVerified: user.stripeConnectStatus === "active",
+        firstBookingReceived: bookings.length > 0,
+        hasExistingData: jobs.length > 0 || invoices.length > 0,
+        mainOnboardingCompleted: user.onboardingCompleted === true || user.onboardingState === "completed" || user.onboardingState === "skipped_explore",
+        paydayOnboardingCompleted: user.paydayOnboardingCompleted === true,
+        paydayOnboardingStep: user.paydayOnboardingStep ?? 0,
+      };
+      res.json({ ...state, activated: isActivated(state) });
+    } catch (error) {
+      console.error("Failed to fetch activation state:", error);
+      res.status(500).json({ error: "Failed to fetch activation state" });
+    }
+  });
+
   app.get("/api/activation", isAuthenticated, async (req, res) => {
     try {
       const userId = getAuthenticatedUserId(req);

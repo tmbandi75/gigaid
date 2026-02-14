@@ -569,9 +569,16 @@ export default function PaydayOnboarding() {
 
   useEffect(() => {
     if (profile && !initialized) {
-      setCurrentStep(profile.paydayOnboardingStep || 0);
+      const params = new URLSearchParams(window.location.search);
+      const startStep = params.get("startStep");
+      const savedStep = profile.paydayOnboardingStep || 0;
+      const skipStep = startStep ? Math.max(0, Math.min(parseInt(startStep, 10) || 0, 5)) : null;
+      setCurrentStep(skipStep != null && skipStep > savedStep ? skipStep : savedStep);
       setStripeConnected(profile.stripeConnectStatus === "active");
       setInitialized(true);
+      if (startStep) {
+        window.history.replaceState({}, "", window.location.pathname);
+      }
     }
   }, [profile, initialized]);
 
