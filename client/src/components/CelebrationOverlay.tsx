@@ -43,7 +43,7 @@ export function CelebrationOverlay({
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md"
+            className="fixed bottom-28 left-4 right-4 z-50 mx-auto max-w-md"
             data-testid="celebration-overlay"
           >
             <div className="relative rounded-md bg-primary p-4 shadow-xl">

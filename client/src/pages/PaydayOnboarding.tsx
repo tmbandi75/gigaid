@@ -605,7 +605,7 @@ function StepDone({
 
   return (
     <>
-      <div className="flex flex-col items-center text-center px-6 py-8 animate-in fade-in zoom-in-95 duration-500">
+      <div className="flex flex-col items-center text-center px-6 py-8 pb-36 animate-in fade-in zoom-in-95 duration-500">
         <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 mb-6">
           <CheckCircle2 className="w-12 h-12 text-emerald-500" />
         </div>
@@ -638,7 +638,7 @@ function StepDone({
 
         <Button
           size="lg"
-          className="w-full h-14 text-lg rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-[#4F46E5]/30"
+          className="w-full"
           onClick={onFinish}
           data-testid="button-go-dashboard"
         >
