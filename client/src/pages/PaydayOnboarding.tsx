@@ -576,7 +576,6 @@ export default function PaydayOnboarding() {
 
   useEffect(() => {
     if (shouldRedirectAway) {
-      console.log("[PaydayOnboarding] User already activated or completed, redirecting to /dashboard");
       navigate("/dashboard");
     }
   }, [shouldRedirectAway, navigate]);

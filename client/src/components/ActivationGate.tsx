@@ -12,17 +12,12 @@ export function ActivationGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loading || !state || !routeInfo) return;
 
-    console.log("[ActivationGate] state:", JSON.stringify(state));
-    console.log("[ActivationGate] routeInfo:", JSON.stringify(routeInfo));
-
     if (routeInfo.route === "onboarding" && !location.startsWith("/onboarding")) {
-      console.log("[ActivationGate] Redirecting to /onboarding");
       setLocation("/onboarding");
     } else if (routeInfo.route === "payday-onboarding" && !location.startsWith("/payday-onboarding")) {
       const url = routeInfo.step != null
         ? `/payday-onboarding?startStep=${routeInfo.step}`
         : "/payday-onboarding";
-      console.log("[ActivationGate] Redirecting to", url);
       setLocation(url);
     }
   }, [loading, state, routeInfo, location, setLocation]);
