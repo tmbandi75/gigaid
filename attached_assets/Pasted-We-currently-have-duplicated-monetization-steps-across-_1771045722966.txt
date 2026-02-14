@@ -1,0 +1,124 @@
+We currently have duplicated monetization steps across:
+
+- Main onboarding
+- Payday onboarding
+
+Specifically:
+- Booking link setup/display
+- Stripe Connect
+- (Possibly deposit configuration)
+
+Main onboarding currently contains the fully functional booking link logic.
+Payday onboarding has a booking link step but does NOT display the actual link.
+
+This causes duplication and user confusion.
+
+Your task is to consolidate ownership of monetization steps.
+
+--------------------------------------------------
+
+GOAL
+
+Main onboarding = profile setup only.
+Payday onboarding = monetization setup only.
+
+Booking link, Stripe Connect, and deposit setup must exist ONLY in Payday onboarding.
+
+--------------------------------------------------
+
+STRICT RULES
+
+- Do NOT modify activation-state logic.
+- Do NOT modify routing or ActivationGate.
+- Do NOT modify Stripe business logic.
+- Do NOT modify backend booking link generation.
+- Reuse existing components instead of rewriting.
+- Make minimal changes.
+- Preserve all existing working functionality.
+
+--------------------------------------------------
+
+STEP 1 — MOVE REAL BOOKING LINK INTO PAYDAY
+
+In Payday onboarding:
+
+1) Replace the placeholder booking link step.
+2) Import and reuse the existing working BookingLinkShare component (or equivalent).
+3) Ensure the user sees:
+   - Their actual booking URL
+   - Copy button
+   - Share functionality
+4) Ensure the component uses the same data source as main onboarding currently uses.
+
+Payday must now be the canonical place where the user:
+- Sees
+- Copies
+- Shares
+their booking link.
+
+--------------------------------------------------
+
+STEP 2 — REMOVE FUNCTIONAL BOOKING LINK FROM MAIN ONBOARDING
+
+In main onboarding:
+
+1) Remove any interactive booking link generation.
+2) Remove copy/share logic.
+3) Remove any Stripe Connect step.
+4) If necessary, replace with a simple informational message:
+   "You'll finish payment and booking setup in the next step."
+
+Do NOT delete onboarding structure.
+Only remove monetization functionality.
+
+--------------------------------------------------
+
+STEP 3 — STRIPE CONNECT OWNERSHIP
+
+Ensure Stripe Connect:
+- Exists only in Payday onboarding.
+- Is not present in main onboarding.
+- Still correctly updates activation-state.
+
+Do NOT change Stripe logic.
+
+--------------------------------------------------
+
+STEP 4 — DEPOSIT SETUP OWNERSHIP
+
+If deposit setup appears in both flows:
+- Keep it only in Payday onboarding.
+- Remove from main onboarding.
+
+--------------------------------------------------
+
+STEP 5 — VALIDATION
+
+After changes, verify:
+
+1) New user flow:
+   Login → Main onboarding (no booking link, no Stripe)
+   → Payday onboarding (real booking link + Stripe)
+   → Dashboard
+
+2) Activation-state remains correct.
+
+3) No duplicated steps appear.
+
+4) No redirect loops.
+
+5) No payment functionality is broken.
+
+--------------------------------------------------
+
+DELIVERABLE
+
+Provide:
+- Minimal diff summary
+- List of files modified
+- Confirmation that booking link is now displayed in Payday onboarding
+- Confirmation Stripe only exists in Payday onboarding
+
+Do not refactor unrelated code.
+Do not change routing.
+Do not change activation logic.
