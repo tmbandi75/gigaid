@@ -1,0 +1,254 @@
+Goal:
+Reorganize the existing Settings page into a simplified “Money-First” layout that prioritizes getting paid first, while preserving 100% of current functionality, logic, and API behavior.
+
+Constraints (Do Not Violate):
+
+❌ Do NOT change any backend routes
+
+❌ Do NOT change data models
+
+❌ Do NOT rename API fields
+
+❌ Do NOT remove any features
+
+❌ Do NOT refactor business logic
+
+❌ Do NOT break existing saves
+
+✅ This is a UI + layout reorganization only
+
+1️⃣ Create New Section Layout (UI Only)
+
+In pages/Settings.tsx (or the main settings renderer), reorganize content into four collapsible sections in this exact order:
+
+Section 1 — 💰 Get Paid (Always Expanded by Default)
+
+Move these existing components here:
+
+Stripe connect / enable deposits
+
+Payment methods (Zelle, Venmo, Cash, Card, etc.)
+
+Deposit protection / pricing setup
+
+Payout status
+
+“Complete setup” / “Quick setup” cards
+
+Title:
+
+<GetPaidSection title="Get Paid" defaultOpen />
+
+
+Subtitle:
+
+“Everything required to collect money from clients”
+
+Section 2 — 🔗 Get Booked
+
+Move here:
+
+Public profile toggle
+
+Booking URL
+
+Reviews toggle
+
+Public price estimates
+
+Availability
+
+Duration
+
+Working days
+
+Subtitle:
+
+“How clients find and book you”
+
+Section 3 — 🤖 Automate
+
+Move here:
+
+Auto booking confirmation
+
+Auto follow-up
+
+Payment reminders
+
+Review links
+
+Message templates
+
+Subtitle:
+
+“Let GigAid follow up for you”
+
+Section 4 — ⚙️ Account
+
+Move here:
+
+Plan / upgrade
+
+Preferences
+
+Messaging settings
+
+Export data
+
+Password / auth
+
+Account management
+
+Subtitle:
+
+“Your account and app preferences”
+
+2️⃣ Convert Sections to Accordions (UI Only)
+
+Wrap each section in a reusable accordion:
+
+Create:
+
+components/settings/SettingsSectionAccordion.tsx
+
+
+Props:
+
+title: string
+subtitle: string
+defaultOpen?: boolean
+children: ReactNode
+
+
+Behavior:
+
+Mobile-friendly
+
+Remembers open/closed state in localStorage
+
+Smooth animation
+
+Accessible
+
+3️⃣ Reorder — Do NOT Rewrite
+
+Important:
+
+❗ Move existing components as-is.
+❗ Do NOT reimplement any logic.
+❗ Do NOT duplicate state.
+
+Only change their parent containers.
+
+Example:
+
+❌ Bad:
+
+const NewStripeSection = () => { ... }
+
+
+✅ Good:
+
+<SettingsSectionAccordion>
+  <ExistingStripeComponent />
+</SettingsSectionAccordion>
+
+4️⃣ Add Money-First Visual Priority
+
+In Section 1 (Get Paid):
+
+Add a subtle highlight:
+
+Light green / blue background
+
+Soft border
+
+Optional “Recommended” badge
+
+Only via CSS:
+
+.get-paid-section {
+  background: #f8fffd;
+  border: 1px solid #d4f3ec;
+}
+
+
+No logic changes.
+
+5️⃣ Reduce Cognitive Load
+
+Remove visual noise:
+
+Collapse all sections except “Get Paid” by default
+
+Hide nested dividers
+
+Remove redundant headers
+
+Reduce card stacking
+
+Do not remove content.
+
+6️⃣ Preserve All Save Behavior
+
+Verify after refactor:
+
+✅ All Save buttons still work
+✅ All toggles persist
+✅ All forms submit
+✅ No API changes
+✅ No console errors
+
+If anything breaks → revert and fix layout only.
+
+7️⃣ Final Validation Checklist
+
+Before marking done, verify:
+
+New user sees “Get Paid” first
+
+Stripe CTA is immediately visible
+
+Booking link still editable
+
+Automations still configurable
+
+Account settings intact
+
+Mobile scroll reduced by ≥40%
+
+No duplicated state
+
+No broken queries
+
+8️⃣ File Targets
+
+Primary files to modify:
+
+pages/Settings.tsx
+
+components/settings/*
+
+(Add) components/settings/SettingsSectionAccordion.tsx
+
+No backend files.
+
+Expected Outcome
+
+After implementation:
+
+Old
+
+❌ Wall of toggles
+❌ No prioritization
+❌ Financial setup buried
+❌ High abandonment risk
+
+New
+
+✅ “Get Paid” first
+✅ Stripe impossible to miss
+✅ Clear mental model
+✅ Lower activation friction
+✅ Higher monetization
