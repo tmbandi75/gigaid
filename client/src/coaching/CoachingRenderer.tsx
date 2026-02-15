@@ -85,17 +85,12 @@ export function CoachingRenderer({ screen, placement = 'header' }: CoachingRende
     if (message && !markedRef.current.has(message.id)) {
       setDisplayedMessage(message.id);
       markedRef.current.add(message.id);
-      
-      const timer = setTimeout(() => {
-        markSeen(message.id);
-        trackEvent('coaching_message_shown', {
-          id: message.id,
-          screen: message.screen,
-          placement: message.placement
-        });
-      }, 500);
-      
-      return () => clearTimeout(timer);
+      markSeen(message.id);
+      trackEvent('coaching_message_shown', {
+        id: message.id,
+        screen: message.screen,
+        placement: message.placement
+      });
     }
   }, [message?.id, markSeen]);
 
