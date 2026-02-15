@@ -13,8 +13,10 @@ import {
   Send,
   Check,
   ChevronRight,
+  X,
 } from "lucide-react";
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
 import confetti from "canvas-confetti";
 
 interface ActivationStatus {
@@ -70,9 +72,18 @@ const STEPS = [
   },
 ];
 
+const DISMISS_KEY = "gigaid_activation_checklist_dismissed";
+
 export function ActivationChecklist() {
   const [, navigate] = useLocation();
   const confettiShownRef = useRef(false);
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return localStorage.getItem(DISMISS_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
 
   const { data: activation, isLoading } = useQuery<ActivationStatus>({
     queryKey: QUERY_KEYS.activation(),
@@ -134,6 +145,7 @@ export function ActivationChecklist() {
   }, [activation?.userCreatedAt, activation?.completedSteps, activation?.totalSteps]);
 
   if (activation?.disabled) return null;
+  if (dismissed) return null;
 
   if (isLoading || !activation) {
     return (
@@ -160,13 +172,30 @@ export function ActivationChecklist() {
   return (
     <Card className="border-0 shadow-sm" data-testid="activation-checklist">
       <CardContent className="p-4 space-y-4">
-        <div>
-          <p className="text-sm font-semibold" data-testid="text-activation-progress">
-            You're {activation.percentComplete}% to your first paid booking
-          </p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {remaining} step{remaining !== 1 ? "s" : ""} left
-          </p>
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="text-sm font-semibold" data-testid="text-activation-progress">
+              You're {activation.percentComplete}% to your first paid booking
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {remaining} step{remaining !== 1 ? "s" : ""} left
+            </p>
+          </div>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => {
+              setDismissed(true);
+              try { localStorage.setItem(DISMISS_KEY, "true"); } catch {}
+              trackEvent("activation_checklist_dismissed", {
+                completedSteps: activation.completedSteps,
+                percentComplete: activation.percentComplete,
+              });
+            }}
+            data-testid="button-dismiss-activation"
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </div>
 
         <Progress
