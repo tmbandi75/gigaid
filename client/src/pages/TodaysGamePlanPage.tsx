@@ -853,8 +853,8 @@ export default function TodaysGamePlanPage() {
         )}
       </motion.div>
 
-      {/* Sticky bottom CTA (mobile only) */}
-      {isMobile && stickyCtaInfo && (
+      {/* Sticky bottom CTA (mobile only) — only show for money-waiting since other actions already have prominent cards */}
+      {isMobile && stickyCtaInfo && stats.moneyWaiting > 0 && (
         <div className="fixed bottom-16 left-0 right-0 p-3 z-50" data-testid="sticky-cta-wrapper">
           <div className="max-w-lg mx-auto">
             <Button
