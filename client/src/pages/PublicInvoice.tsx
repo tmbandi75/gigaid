@@ -54,6 +54,7 @@ const statusConfig: Record<string, {
   icon: typeof Clock; 
   label: string;
   description: string;
+  descriptionNoPaymentMethods?: string;
 }> = {
   draft: { 
     color: "bg-slate-100 text-slate-700", 
@@ -65,7 +66,8 @@ const statusConfig: Record<string, {
     color: "bg-amber-100 text-amber-700", 
     icon: Send, 
     label: "Awaiting Payment",
-    description: "Please submit payment using one of the options below"
+    description: "Please submit payment using one of the options below",
+    descriptionNoPaymentMethods: "Please contact your service provider for payment details"
   },
   paid: { 
     color: "bg-green-100 text-green-700", 
@@ -203,7 +205,11 @@ export default function PublicInvoice() {
 
           <CardContent className="space-y-6">
             <div className="p-4 bg-muted/50 rounded-lg">
-              <p className="text-sm text-muted-foreground">{statusInfo.description}</p>
+              <p className="text-sm text-muted-foreground">
+                {(!hasPaymentMethods && statusInfo.descriptionNoPaymentMethods) 
+                  ? statusInfo.descriptionNoPaymentMethods 
+                  : statusInfo.description}
+              </p>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -300,7 +306,25 @@ export default function PublicInvoice() {
           </Card>
         )}
 
-        <Card>
+        {invoice.status !== "paid" && !hasPaymentMethods && (
+          <Card data-testid="card-no-payment-methods">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                How to Pay
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  To arrange payment, please reach out to {provider.businessName || provider.name || "your service provider"} using the contact details below.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card data-testid="card-contact-provider">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Building2 className="h-5 w-5" />
@@ -313,6 +337,7 @@ export default function PublicInvoice() {
               <a 
                 href={`tel:${provider.phone}`} 
                 className="flex items-center gap-2 text-sm text-primary hover:underline"
+                data-testid="link-provider-phone"
               >
                 <Phone className="h-4 w-4" />
                 {provider.phone}
@@ -322,6 +347,7 @@ export default function PublicInvoice() {
               <a 
                 href={`mailto:${provider.email}`} 
                 className="flex items-center gap-2 text-sm text-primary hover:underline"
+                data-testid="link-provider-email"
               >
                 <Mail className="h-4 w-4" />
                 {provider.email}
