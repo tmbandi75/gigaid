@@ -40,6 +40,7 @@ import {
   CheckCircle,
   Pencil,
   MessageCircle,
+  BarChart3,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -66,6 +67,8 @@ import { isEmailPasswordUser } from "@/lib/firebase";
 import type { Referral, WeeklyAvailability } from "@shared/schema";
 import { useFeatureFlag, useUpdateFeatureFlag } from "@/hooks/use-nudges";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { getAnalyticsConsent, setAnalyticsConsent } from "@/lib/consent/analyticsConsent";
+import { initAnalytics, shutdownAnalytics } from "@/lib/analytics/initAnalytics";
 
 interface ReferralData {
   referralCode: string;
@@ -95,7 +98,18 @@ export default function Settings() {
   const isMobile = useIsMobile();
   const [bookingLinkCopied, setBookingLinkCopied] = useState(false);
   const { isAuthenticated } = useAuth();
-  
+  const [analyticsEnabled, setAnalyticsEnabled] = useState(() => getAnalyticsConsent() === "granted");
+
+  const handleAnalyticsToggle = (checked: boolean) => {
+    setAnalyticsEnabled(checked);
+    if (checked) {
+      setAnalyticsConsent("granted");
+      initAnalytics();
+    } else {
+      setAnalyticsConsent("denied");
+      shutdownAnalytics();
+    }
+  };
 
   const handleAuthenticatedDownload = async (url: string, filename: string) => {
     try {
@@ -906,6 +920,28 @@ export default function Settings() {
                 toast({ title: "Email linking", description: "Email linking is available in the mobile app" });
               }}
             />
+
+            <Separator />
+
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-indigo-500" />
+                Analytics
+              </h4>
+              <div className="pl-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-sm">Usage analytics</p>
+                    <p className="text-xs text-muted-foreground">Help improve GigAid by sharing anonymous usage data</p>
+                  </div>
+                  <Switch
+                    checked={analyticsEnabled}
+                    onCheckedChange={handleAnalyticsToggle}
+                    data-testid="switch-analytics"
+                  />
+                </div>
+              </div>
+            </div>
 
             {isAuthenticated && (
               <>

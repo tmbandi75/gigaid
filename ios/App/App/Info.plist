@@ -55,5 +55,7 @@
         <string>GigAid needs permission to save photos of invoices and job records to your photo library.</string>
         <key>NSLocationWhenInUseUsageDescription</key>
         <string>GigAid needs your location to find client addresses and provide directions to job sites.</string>
+        <key>NSUserTrackingUsageDescription</key>
+        <string>GigAid would like permission to use analytics to improve features and performance. We do not sell your data.</string>
 </dict>
 </plist>

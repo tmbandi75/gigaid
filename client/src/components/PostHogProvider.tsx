@@ -1,33 +1,46 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import posthog from "posthog-js";
+import { getAnalyticsConsent } from "@/lib/consent/analyticsConsent";
+import { initAnalytics } from "@/lib/analytics/initAnalytics";
+import { AnalyticsConsentModal } from "@/components/AnalyticsConsentModal";
 
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_API_KEY;
-const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST || "https://us.i.posthog.com";
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
+  const [showConsent, setShowConsent] = useState(false);
+
   useEffect(() => {
-    if (POSTHOG_KEY) {
-      posthog.init(POSTHOG_KEY, {
-        api_host: POSTHOG_HOST,
-        person_profiles: "identified_only",
-        capture_pageview: true,
-        capture_pageleave: true,
-        disable_surveys: true,
-      });
+    const consent = getAnalyticsConsent();
+    if (consent === null) {
+      setShowConsent(true);
+    } else if (consent === "granted") {
+      initAnalytics();
     }
   }, []);
 
-  return <>{children}</>;
+  const handleConsentChoice = (granted: boolean) => {
+    setShowConsent(false);
+    if (granted) {
+      initAnalytics();
+    }
+  };
+
+  return (
+    <>
+      {showConsent && <AnalyticsConsentModal onChoice={handleConsentChoice} />}
+      {children}
+    </>
+  );
 }
 
 export function identifyUser(userId: string, properties?: Record<string, unknown>) {
-  if (POSTHOG_KEY) {
+  if (POSTHOG_KEY && getAnalyticsConsent() === "granted") {
     posthog.identify(userId, properties);
   }
 }
 
 export function trackEvent(eventName: string, properties?: Record<string, unknown>) {
-  if (POSTHOG_KEY) {
+  if (POSTHOG_KEY && getAnalyticsConsent() === "granted") {
     posthog.capture(eventName, properties);
   }
 }
