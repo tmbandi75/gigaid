@@ -1,0 +1,112 @@
+You are a senior backend engineer preparing this app for Apple App Store review.
+
+Create a one-time, idempotent script that provisions an Apple Review demo account
+in the PRODUCTION environment.
+
+------------------------------------
+GOAL
+------------------------------------
+
+Ensure a permanent, fully functional demo account exists for Apple reviewers.
+
+------------------------------------
+REQUIREMENTS
+------------------------------------
+
+1) Account Identity
+
+Email: reviewer@gigaid.ai
+Password: GigaidReview2026!
+
+(If account already exists, do NOT recreate — update it.)
+
+------------------------------------
+2) Environment Safety
+------------------------------------
+
+- Script MUST refuse to run unless:
+  NODE_ENV === "production" OR VITE_APP_ENV === "production"
+- Print warning and exit otherwise
+
+------------------------------------
+3) Account Creation
+------------------------------------
+
+If user does not exist:
+- Create via the normal auth system
+- Bypass email verification
+- Disable MFA
+- Disable CAPTCHA
+- Disable rate limits
+- Mark as verified
+
+If user exists:
+- Ensure credentials are valid
+- Reset password if needed
+
+------------------------------------
+4) Subscription / Entitlements
+------------------------------------
+
+Ensure user has:
+
+plan = "pro"
+subscription_status = "active"
+never_expires = true
+is_review_account = true
+
+Do NOT rely on Stripe renewal.
+
+------------------------------------
+5) Sample Data Seeding
+------------------------------------
+
+Populate account with realistic data:
+
+- 3 clients
+- 3 jobs (1 completed)
+- 2 invoices (1 paid, 1 unpaid)
+- Activity history
+- Notifications
+
+Use production-safe factories.
+
+------------------------------------
+6) Account Protection
+------------------------------------
+
+Exclude account from:
+
+- Auto-cleanup jobs
+- Fraud detection
+- Inactivity purges
+- Billing suspension
+- Marketing emails
+
+------------------------------------
+7) Verification
+------------------------------------
+
+After setup:
+
+- Attempt login programmatically
+- Fetch dashboard
+- Verify entitlements
+- Verify data exists
+- Print PASS/FAIL summary
+
+------------------------------------
+8) Idempotency
+------------------------------------
+
+Script can be run multiple times safely.
+
+------------------------------------
+9) Output
+------------------------------------
+
+Return:
+- File path
+- How to run
+- Expected output
+- Rollback steps
