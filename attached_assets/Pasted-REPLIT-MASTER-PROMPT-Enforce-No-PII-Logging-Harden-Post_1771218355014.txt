@@ -1,0 +1,242 @@
+REPLIT MASTER PROMPT — Enforce No-PII Logging + Harden PostHog (GigAid)
+
+You are a senior security/privacy engineer. Lock down the codebase so that
+PII can never be logged or auto-captured again.
+
+GOAL
+1) Fail CI/build if developers introduce PII logs
+2) Enforce safeLogger usage
+3) Disable/mask PostHog autocapture/session replay for sensitive data
+4) Prevent regressions
+
+STACK
+- Backend: Node/Express + PostgreSQL
+- Frontend: Capacitor/Web
+- Analytics: PostHog
+- CI: Replit / GitHub Actions (use existing setup)
+
+────────────────────────────────────────────────────────────
+A) ADD CI / BUILD GATE (PII SCANNER)
+────────────────────────────────────────────────────────────
+
+1) Create script:
+
+/scripts/pii-log-scan.js
+
+This script must:
+
+- Recursively scan:
+  /server
+  /client
+  /src
+- Check .ts .tsx .js files
+- Ignore node_modules, dist, build
+
+- Fail if ANY of these appear inside logging calls:
+
+Forbidden patterns:
+
+console.log(
+console.debug(
+console.warn(
+console.error(
+logger.
+safeLogger. (allowed)
+
+AND containing:
+
+email
+phone
+mobile
+uid
+firebase
+token
+authorization
+bearer
+address
+street
+zipcode
+ssn
+personalPhone
+clientPhone
+clientEmail
+emailNormalized
+phoneE164
+firebaseUid
+
+Regex example (implement robustly):
+
+/(console\.(log|warn|error|debug)|logger\.)\([^)]*(email|phone|uid|token|address)/i
+
+If matches:
+- Print file + line
+- Exit(1)
+
+2) Add npm script in package.json:
+
+"scripts": {
+  "scan:pii": "node scripts/pii-log-scan.js"
+}
+
+3) Wire into CI / build:
+
+If GitHub Actions exists:
+- Add scan:pii before tests
+
+If Replit build/start exists:
+- Run scan:pii before start
+
+Fail fast.
+
+────────────────────────────────────────────────────────────
+B) ENFORCE safeLogger
+────────────────────────────────────────────────────────────
+
+1) Update ESLint (if present):
+
+Disallow:
+- console.log/warn/error/debug in prod code
+- logger.* unless from safeLogger
+
+Add rule or custom lint if needed.
+
+2) Add code comment header in safeLogger.ts:
+
+/**
+ * Only approved logging interface.
+ * DO NOT log PII.
+ */
+
+3) Refactor remaining logger imports to use safeLogger where feasible.
+
+────────────────────────────────────────────────────────────
+C) HARDEN POSTHOG (CLIENT)
+────────────────────────────────────────────────────────────
+
+Locate PostHog initialization.
+
+Modify to:
+
+posthog.init(KEY, {
+  api_host: "...",
+
+  autocapture: false,
+
+  disable_session_recording: true,
+
+  mask_all_text: true,
+  mask_all_inputs: true,
+
+  capture_pageview: false,
+
+  capture_pageleave: false,
+
+  sanitize_properties: (props) => {
+    const blocked = [
+      'email','phone','mobile','address','token','uid',
+      'authorization','bearer','firebase','zipcode'
+    ];
+
+    const clean = {};
+
+    for (const k in props) {
+      if (!blocked.some(b => k.toLowerCase().includes(b))) {
+        clean[k] = props[k];
+      }
+    }
+
+    return clean;
+  }
+});
+
+If session replay is required by business:
+- Enable only with strict masking
+- Document why
+
+────────────────────────────────────────────────────────────
+D) HARDEN POSTHOG (IDENTIFY)
+────────────────────────────────────────────────────────────
+
+Locate identifyUser().
+
+Ensure:
+
+posthog.identify(user.id, {
+  plan,
+  role,
+  tier,
+  // NO email, phone, uid, auth info
+});
+
+Remove:
+- email
+- phone
+- username
+- firebase ids
+- tokens
+
+If present, delete and migrate.
+
+────────────────────────────────────────────────────────────
+E) SERVER-SIDE REQUEST LOGGING
+────────────────────────────────────────────────────────────
+
+Search for:
+- morgan
+- winston
+- pino
+- req.body
+- req.headers
+
+Ensure:
+
+- No full body logging
+- No Authorization header logging
+- No query param dumps
+
+Replace with:
+
+{
+  method,
+  path,
+  status,
+  duration
+}
+
+only.
+
+────────────────────────────────────────────────────────────
+F) REGRESSION TEST
+────────────────────────────────────────────────────────────
+
+Add test:
+
+tests/piiScan.test.ts
+
+Which runs:
+
+npm run scan:pii
+
+and fails if exit != 0.
+
+This guarantees PRs cannot bypass.
+
+────────────────────────────────────────────────────────────
+G) OUTPUT
+────────────────────────────────────────────────────────────
+
+After completion, print:
+
+1) Files added/changed
+2) CI modifications
+3) PostHog config changes
+4) Any remaining unavoidable PII flows
+5) How to verify manually
+
+DO NOT
+- Log PII
+- Re-enable autocapture
+- Add broad request dumps
+- Add debug logs in auth paths
+
+Proceed now.
