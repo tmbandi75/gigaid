@@ -769,7 +769,7 @@ export default function Settings() {
                       placeholder="your-name"
                       data-testid="input-profile-slug"
                     />
-                    <Button variant="outline" size="icon" onClick={copyBookingLink} data-testid="button-copy-booking">
+                    <Button variant="outline" size="icon" onClick={copyBookingLink} aria-label="Copy booking link" data-testid="button-copy-booking">
                       {bookingLinkCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                     </Button>
                   </div>
