@@ -1,6 +1,9 @@
 import { createRoot } from "react-dom/client";
+import { initGlobalErrorHandlers } from "./lib/errors/globalErrorHandler";
 import App from "./App";
 import "./index.css";
+
+initGlobalErrorHandlers();
 
 if (import.meta.env.DEV) {
   console.log('[env] Startup check:', {

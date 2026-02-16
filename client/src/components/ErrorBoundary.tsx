@@ -20,8 +20,20 @@ export class AppErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundar
   }
 
   componentDidCatch(error: Error, info: { componentStack?: string | null }) {
-    console.error("[AppErrorBoundary] Caught error:", error);
-    console.error("[AppErrorBoundary] Component stack:", info.componentStack);
+    if (import.meta.env.DEV) {
+      console.error("[AppErrorBoundary] Caught error:", error);
+      console.error("[AppErrorBoundary] Component stack:", info.componentStack);
+    }
+    try {
+      const sentry = (window as unknown as Record<string, unknown>).Sentry as
+        | { captureException?: (e: unknown) => void }
+        | undefined;
+      if (sentry?.captureException) {
+        sentry.captureException(error);
+      }
+    } catch {
+      // Sentry not available
+    }
   }
 
   render() {
@@ -69,9 +81,9 @@ export class AppErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundar
             >
               Refresh App
             </button>
-            {this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <details style={{ marginTop: "20px", textAlign: "left", fontSize: "12px", color: "#999" }}>
-                <summary style={{ cursor: "pointer" }}>Technical details</summary>
+                <summary style={{ cursor: "pointer" }}>Technical details (dev only)</summary>
                 <pre style={{ marginTop: "8px", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
                   {this.state.error.message}
                 </pre>
