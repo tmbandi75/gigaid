@@ -263,6 +263,7 @@ export function DriveModeView({ onExit }: DriveModeViewProps) {
           className="h-11 w-11 rounded-full bg-white/5 backdrop-blur-xl border border-white/10 hover:bg-white/10 text-white"
           onClick={onExit}
           data-testid="button-exit-drive-mode"
+          aria-label="Exit drive mode"
         >
           <X className="h-5 w-5" />
         </Button>
@@ -324,6 +325,7 @@ export function DriveModeView({ onExit }: DriveModeViewProps) {
                 onClick={prevJob}
                 disabled={currentJobIndex === 0}
                 data-testid="button-prev-job"
+                aria-label="Previous job"
               >
                 <ChevronLeft className="h-5 w-5" />
               </Button>
@@ -353,6 +355,7 @@ export function DriveModeView({ onExit }: DriveModeViewProps) {
                 onClick={nextJob}
                 disabled={currentJobIndex >= todayJobs.length - 1}
                 data-testid="button-next-job"
+                aria-label="Next job"
               >
                 <ChevronRight className="h-5 w-5" />
               </Button>

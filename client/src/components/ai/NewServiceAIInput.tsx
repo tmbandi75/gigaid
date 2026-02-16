@@ -163,6 +163,7 @@ export function NewServiceAIInput({ onServicesCreated }: NewServiceAIInputProps)
                           size="icon"
                           className="h-7 w-7"
                           onClick={() => setEditingIndex(idx)}
+                          aria-label="Edit service"
                         >
                           <Edit className="h-3 w-3" />
                         </Button>
@@ -171,6 +172,7 @@ export function NewServiceAIInput({ onServicesCreated }: NewServiceAIInputProps)
                           size="icon"
                           className="h-7 w-7"
                           onClick={() => handleRemove(idx)}
+                          aria-label="Remove service"
                         >
                           <X className="h-3 w-3" />
                         </Button>

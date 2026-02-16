@@ -478,6 +478,7 @@ export default function Profile() {
                 className="absolute bottom-0 right-0 h-10 w-10 rounded-full shadow-md bg-primary"
                 onClick={handlePhotoClick}
                 disabled={isUploading}
+                aria-label="Change profile photo"
                 data-testid="button-change-photo"
               >
                 {isUploading ? (

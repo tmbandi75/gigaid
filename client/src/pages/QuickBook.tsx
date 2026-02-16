@@ -185,6 +185,7 @@ export default function QuickBook() {
           variant="ghost"
           size="icon"
           onClick={() => step === "paste" ? navigate("/") : setStep(step === "sent" ? "preview" : "paste")}
+          aria-label="Go back"
           data-testid="button-back"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -486,6 +487,7 @@ export default function QuickBook() {
                   variant="outline"
                   size="icon"
                   onClick={handleCopyLink}
+                  aria-label="Copy link"
                   data-testid="button-copy-link"
                 >
                   {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}

@@ -198,6 +198,7 @@ export default function Referrals() {
                   variant="ghost" 
                   size="icon"
                   onClick={copyReferralLink}
+                  aria-label="Copy referral link"
                   data-testid="button-copy-referral"
                 >
                   {copied ? (

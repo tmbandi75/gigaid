@@ -524,7 +524,7 @@ export default function Jobs() {
               <CoachingRenderer screen="jobs" />
             </div>
             <Link href="/jobs/new">
-              <Button size="icon" className="bg-white/20 hover:bg-white/30 text-white" data-testid="button-add-job-header">
+              <Button size="icon" className="bg-white/20 hover:bg-white/30 text-white" aria-label="Add new job" data-testid="button-add-job-header">
                 <Plus className="h-5 w-5" />
               </Button>
             </Link>

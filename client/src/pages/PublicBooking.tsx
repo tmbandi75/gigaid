@@ -643,6 +643,7 @@ export default function PublicBooking() {
                   variant="ghost"
                   size="icon"
                   onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+                  aria-label="Previous month"
                   data-testid="button-prev-month"
                 >
                   <ChevronLeft className="h-5 w-5" />
@@ -652,6 +653,7 @@ export default function PublicBooking() {
                   variant="ghost"
                   size="icon"
                   onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+                  aria-label="Next month"
                   data-testid="button-next-month"
                 >
                   <ChevronRight className="h-5 w-5" />
@@ -904,6 +906,7 @@ export default function PublicBooking() {
                         variant="outline"
                         size="icon"
                         onClick={handleCheckHistory}
+                        aria-label="Check booking history"
                         data-testid="button-check-history"
                         title="Check booking history"
                       >

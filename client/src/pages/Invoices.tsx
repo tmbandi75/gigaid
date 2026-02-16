@@ -351,7 +351,7 @@ export default function Invoices() {
               <CoachingRenderer screen="invoices" />
             </div>
             <Link href="/invoices/new">
-              <Button size="icon" className="h-11 w-11 rounded-xl bg-white/20 backdrop-blur hover:bg-white/30 text-white border border-white/20" data-testid="button-add-invoice-header">
+              <Button size="icon" className="h-11 w-11 rounded-xl bg-white/20 backdrop-blur hover:bg-white/30 text-white border border-white/20" aria-label="Create new invoice" data-testid="button-add-invoice-header">
                 <Plus className="h-5 w-5" />
               </Button>
             </Link>

@@ -186,6 +186,7 @@ export function AddServiceDialog({ open, onOpenChange }: AddServiceDialogProps) 
                 onClick={handleAddCustomService}
                 disabled={!customService.trim()}
                 data-testid="button-add-custom-service-dialog"
+                aria-label="Add custom service"
               >
                 <Plus className="h-4 w-4" />
               </Button>

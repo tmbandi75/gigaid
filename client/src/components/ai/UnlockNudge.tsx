@@ -85,6 +85,7 @@ export function UnlockNudge({
         className="absolute top-1 right-1 h-6 w-6"
         onClick={() => setDismissed(true)}
         data-testid="button-dismiss-nudge"
+        aria-label="Dismiss nudge"
       >
         <X className="h-3 w-3" />
       </Button>

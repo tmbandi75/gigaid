@@ -692,6 +692,7 @@ export function SubscriptionSettings() {
                           onClick={() => window.open(invoice.hostedUrl!, "_blank")}
                           title="View invoice"
                           data-testid={`button-view-invoice-${invoice.id}`}
+                          aria-label="View invoice"
                         >
                           <ExternalLink className="h-4 w-4" />
                         </Button>
@@ -703,6 +704,7 @@ export function SubscriptionSettings() {
                           onClick={() => window.open(invoice.pdfUrl!, "_blank")}
                           title="Download PDF"
                           data-testid={`button-download-invoice-${invoice.id}`}
+                          aria-label="Download PDF"
                         >
                           <Download className="h-4 w-4" />
                         </Button>

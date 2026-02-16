@@ -116,7 +116,7 @@ function MobileHeader() {
       <img src="/gigaid-logo.png" alt="GigAid" className="h-[120px]" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
       <div className="flex items-center gap-1">
         <Link href="/reminders">
-          <Button variant="ghost" size="icon" className="relative" data-testid="mobile-button-notifications">
+          <Button variant="ghost" size="icon" className="relative" data-testid="mobile-button-notifications" aria-label="Notifications">
             <Bell className="h-5 w-5" />
             {(summary?.pendingReminders ?? 0) > 0 && (
               <span className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
@@ -126,7 +126,7 @@ function MobileHeader() {
           </Button>
         </Link>
         <Link href="/messages">
-          <Button variant="ghost" size="icon" className="relative" data-testid="mobile-button-messages">
+          <Button variant="ghost" size="icon" className="relative" data-testid="mobile-button-messages" aria-label="Messages">
             <MessageSquare className="h-5 w-5" />
             {(unreadSms?.count ?? 0) > 0 && (
               <span className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
@@ -286,7 +286,7 @@ function DesktopHeader() {
         <Separator orientation="vertical" className="h-6 hidden lg:block bg-white/20" />
 
         <Link href="/reminders">
-          <Button variant="ghost" size="icon" className="relative h-9 w-9 text-primary-foreground hover:bg-white/10" data-testid="button-notifications">
+          <Button variant="ghost" size="icon" className="relative h-9 w-9 text-primary-foreground hover:bg-white/10" data-testid="button-notifications" aria-label="Notifications">
             <Bell className="h-5 w-5" />
             {(summary?.pendingReminders ?? 0) > 0 && (
               <span className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full bg-white text-primary text-[10px] font-bold flex items-center justify-center animate-pulse">
@@ -297,7 +297,7 @@ function DesktopHeader() {
         </Link>
 
         <Link href="/messages">
-          <Button variant="ghost" size="icon" className="relative h-9 w-9 text-primary-foreground hover:bg-white/10" data-testid="button-messages">
+          <Button variant="ghost" size="icon" className="relative h-9 w-9 text-primary-foreground hover:bg-white/10" data-testid="button-messages" aria-label="Messages">
             <MessageSquare className="h-5 w-5" />
             {(unreadSms?.count ?? 0) > 0 && (
               <span className="absolute -top-0.5 -right-0.5 h-5 w-5 rounded-full bg-white text-primary text-[10px] font-bold flex items-center justify-center animate-pulse">
@@ -309,7 +309,7 @@ function DesktopHeader() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-white/10" data-testid="header-user-menu">
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-white/10" data-testid="header-user-menu" aria-label="User menu">
               <Avatar className="h-8 w-8 ring-2 ring-white/30">
                 {profile?.photo ? (
                   <AvatarImage src={profile.photo} alt="Profile" />

@@ -128,6 +128,7 @@ export function GoldenPathGuide({ onNavigate }: GoldenPathGuideProps) {
             className="h-8 w-8 shrink-0"
             onClick={handleSkip}
             data-testid="button-dismiss-golden-path"
+            aria-label="Dismiss guide"
           >
             <X className="h-4 w-4" />
           </Button>

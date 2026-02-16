@@ -126,6 +126,7 @@ export function ChangePasswordDialog() {
                   className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                   onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                   data-testid="button-toggle-current-password"
+                  aria-label="Toggle current password visibility"
                 >
                   {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
@@ -151,6 +152,7 @@ export function ChangePasswordDialog() {
                   className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                   onClick={() => setShowNewPassword(!showNewPassword)}
                   data-testid="button-toggle-new-password"
+                  aria-label="Toggle new password visibility"
                 >
                   {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>

@@ -734,6 +734,7 @@ function OutreachTab() {
                             size="icon"
                             variant="ghost"
                             onClick={() => openEdit(item)}
+                            aria-label="Edit outreach item"
                             data-testid={`button-edit-outreach-${item.id}`}
                           >
                             <Pencil className="h-4 w-4" />
@@ -743,6 +744,7 @@ function OutreachTab() {
                             variant="ghost"
                             onClick={() => deleteMutation.mutate(item.id)}
                             disabled={deleteMutation.isPending}
+                            aria-label="Delete outreach item"
                             data-testid={`button-delete-outreach-${item.id}`}
                           >
                             <Trash2 className="h-4 w-4" />

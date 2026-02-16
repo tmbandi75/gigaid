@@ -21,6 +21,7 @@ export function TopBar({ title, showActions = true }: TopBarProps) {
               size="icon" 
               data-testid="button-notifications"
               className="text-muted-foreground"
+              aria-label="Notifications"
             >
               <Bell className="h-5 w-5" />
             </Button>
@@ -29,6 +30,7 @@ export function TopBar({ title, showActions = true }: TopBarProps) {
               size="icon"
               data-testid="button-settings"
               className="text-muted-foreground"
+              aria-label="Settings"
             >
               <Settings className="h-5 w-5" />
             </Button>

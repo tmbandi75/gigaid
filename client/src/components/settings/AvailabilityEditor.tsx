@@ -316,6 +316,7 @@ export function AvailabilityEditor({ availability, slotDuration, onChange }: Ava
                           size="icon"
                           onClick={() => removeRange(expandedDay, rangeIndex)}
                           data-testid={`button-remove-range-${rangeIndex}`}
+                          aria-label="Remove time range"
                         >
                           <Trash2 className="h-4 w-4 text-muted-foreground" />
                         </Button>

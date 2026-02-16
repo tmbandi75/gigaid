@@ -139,6 +139,7 @@ export function TextToPlanInput({ onJobCreated, onSave }: TextToPlanInputProps) 
                 className="absolute top-2 right-2"
                 onClick={handleVoiceToggle}
                 data-testid="button-voice-input"
+                aria-label="Toggle voice input"
               >
                 {isRecording ? (
                   <MicOff className="h-4 w-4 text-destructive" />

@@ -482,7 +482,7 @@ export default function Leads() {
               <CoachingRenderer screen="leads" />
             </div>
             <Link href="/leads/new">
-              <Button size="icon" className="bg-white/20 hover:bg-white/30 text-white" data-testid="button-add-lead-header">
+              <Button size="icon" className="bg-white/20 hover:bg-white/30 text-white" aria-label="Add new lead" data-testid="button-add-lead-header">
                 <Plus className="h-5 w-5" />
               </Button>
             </Link>

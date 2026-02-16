@@ -104,6 +104,7 @@ export function VoiceFAB() {
         className="fixed bottom-24 right-4 z-40 h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90"
         onClick={handleOpen}
         data-testid="button-voice-fab"
+        aria-label="Quick add job"
       >
         <Sparkles className="h-6 w-6 text-primary-foreground" />
       </Button>
@@ -122,6 +123,7 @@ export function VoiceFAB() {
                   variant="ghost" 
                   onClick={handleClose}
                   data-testid="button-close-modal"
+                  aria-label="Close dialog"
                 >
                   <X className="h-5 w-5" />
                 </Button>

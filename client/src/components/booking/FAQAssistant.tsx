@@ -80,6 +80,7 @@ export function FAQAssistant({ slug, providerName }: FAQAssistantProps) {
           size="icon"
           onClick={() => setIsOpen(false)}
           data-testid="button-close-faq"
+          aria-label="Close FAQ assistant"
         >
           <X className="h-4 w-4" />
         </Button>
@@ -145,6 +146,7 @@ export function FAQAssistant({ slug, providerName }: FAQAssistantProps) {
           size="icon"
           disabled={!question.trim() || askMutation.isPending}
           data-testid="button-submit-faq"
+          aria-label="Submit question"
         >
           <Send className="h-4 w-4" />
         </Button>

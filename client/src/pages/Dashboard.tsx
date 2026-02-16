@@ -192,6 +192,7 @@ export default function Dashboard() {
               variant="ghost"
               size="icon"
               className="text-primary-foreground hover:bg-white/20 relative"
+              aria-label="View notifications"
               data-testid="button-notifications"
             >
               <Bell className="h-5 w-5" />

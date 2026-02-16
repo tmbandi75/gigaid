@@ -364,6 +364,7 @@ export default function InvoiceView() {
                   size="icon"
                   onClick={() => navigate(`/invoices/${id}/edit`)}
                   className="text-white/90 hover:text-white hover:bg-white/20 h-9 w-9"
+                  aria-label="Edit invoice"
                   data-testid="button-edit"
                 >
                   <Edit className="h-4 w-4" />
@@ -375,6 +376,7 @@ export default function InvoiceView() {
                   size="icon"
                   onClick={() => setShowDeleteDialog(true)}
                   className="text-white/90 hover:text-white hover:bg-white/20 h-9 w-9"
+                  aria-label="Delete invoice"
                   data-testid="button-delete"
                 >
                   <Trash2 className="h-4 w-4" />
