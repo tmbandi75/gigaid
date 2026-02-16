@@ -1,0 +1,110 @@
+You are a senior iOS App Store compliance engineer and SaaS release auditor.
+
+Your task is to perform a full Apple App Store Readiness Audit on this repository.
+
+Analyze the entire codebase, configuration, and deployment setup.
+
+Check for the following categories:
+
+==============================
+1. APPLE POLICY COMPLIANCE
+==============================
+
+- Privacy policy URL present and valid
+- Terms of service present
+- In-app purchase / subscription disclosures
+- Data collection disclosures
+- No hidden data tracking
+- ATT (App Tracking Transparency) handling if applicable
+- No misleading claims
+- No forbidden content
+- No scraping or automation violations
+- No undisclosed background activity
+
+==============================
+2. TECHNICAL REQUIREMENTS
+==============================
+
+- No console errors on production build
+- No white screen / hydration issues
+- Proper error boundaries
+- Offline / PWA behavior safe for iOS
+- iOS Safari compatibility
+- WebView compatibility
+- Service worker stability
+- No crash loops
+- Memory leaks
+- Unhandled promise rejections
+
+==============================
+3. PERFORMANCE & UX
+==============================
+
+- Cold start < 3 seconds on mobile
+- First interaction < 2 seconds
+- Touch targets compliant
+- Keyboard handling
+- Scroll jank
+- Accessibility basics (labels, contrast)
+- Dark mode support (if declared)
+- Responsive layouts for iPhone SE → Pro Max
+
+==============================
+4. PAYMENTS & MONETIZATION
+==============================
+
+- Stripe / external payments policy risk
+- Proper disclosure if external checkout used
+- No bypass of IAP for digital goods
+- Subscription management links
+- Refund handling
+
+==============================
+5. METADATA & STORE ASSETS
+==============================
+
+- Screenshot dimensions
+- Device framing accuracy
+- No misleading marketing
+- App description accuracy
+- Keywords compliance
+- Category fit
+
+==============================
+6. SECURITY & LEGAL
+==============================
+
+- API key exposure
+- Secrets in frontend
+- Logging PII
+- GDPR/CPRA readiness
+- Age rating risks
+
+==============================
+7. BUILD & DEPLOYMENT
+==============================
+
+- Production env sanity
+- Env var validation
+- Build reproducibility
+- Versioning scheme
+- Rollback readiness
+
+==============================
+OUTPUT FORMAT:
+
+Produce a structured report:
+
+- Overall Readiness Score (0–100)
+- Blockers (must-fix)
+- High Risk
+- Medium Risk
+- Low Risk
+- Revenue Risks
+- App Review Rejection Risks
+- Recommended Fix Order
+- Submission Readiness Verdict (GO / NO-GO)
+
+Be brutally honest.
+Assume this app is being submitted within 72 hours.
+Do not be optimistic.
