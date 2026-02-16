@@ -271,7 +271,7 @@ export default function PublicBooking() {
     : null;
 
   const { data: slotsData, isLoading: slotsLoading } = useQuery<AvailableSlots>({
-    queryKey: QUERY_KEYS.publicAvailableSlots(slug, selectedDateStr),
+    queryKey: QUERY_KEYS.publicAvailableSlots(slug, selectedDateStr ?? ""),
     queryFn: async () => {
       const res = await fetch(`/api/public/available-slots/${slug}/${selectedDateStr}`);
       if (!res.ok) throw new Error("Failed to fetch slots");
@@ -281,7 +281,7 @@ export default function PublicBooking() {
   });
 
   const { data: smartSlotsData, isLoading: smartSlotsLoading } = useQuery<SmartSlotsResponse>({
-    queryKey: QUERY_KEYS.publicSmartSlots(slug, selectedDateStr, clientZipCode),
+    queryKey: QUERY_KEYS.publicSmartSlots(slug, selectedDateStr ?? "", clientZipCode),
     queryFn: async () => {
       const res = await fetch(`/api/public/smart-slots/${slug}/${selectedDateStr}`, {
         method: "POST",
