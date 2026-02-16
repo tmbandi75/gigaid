@@ -46,15 +46,15 @@
         <key>UIViewControllerBasedStatusBarAppearance</key>
         <true/>
         <key>NSCameraUsageDescription</key>
-        <string>GigAid needs camera access to take photos of jobs, invoices, and client records.</string>
+        <string>GigAid uses your camera to take photos of jobs, invoices, and client records.</string>
         <key>NSMicrophoneUsageDescription</key>
-        <string>GigAid needs microphone access to record voice notes for job details.</string>
+        <string>GigAid uses your microphone to record voice notes for job details.</string>
         <key>NSPhotoLibraryUsageDescription</key>
-        <string>GigAid needs photo library access to upload photos for jobs, invoices, and client records.</string>
+        <string>GigAid accesses your photo library to upload photos for jobs, invoices, and client records.</string>
         <key>NSPhotoLibraryAddUsageDescription</key>
-        <string>GigAid needs permission to save photos of invoices and job records to your photo library.</string>
+        <string>GigAid saves photos of invoices and job records to your photo library for easy access.</string>
         <key>NSLocationWhenInUseUsageDescription</key>
-        <string>GigAid needs your location to find client addresses and provide directions to job sites.</string>
+        <string>GigAid uses your location to find client addresses and provide directions to job sites.</string>
         <key>NSUserTrackingUsageDescription</key>
         <string>GigAid would like permission to use analytics to improve features and performance. We do not sell your data.</string>
 </dict>
