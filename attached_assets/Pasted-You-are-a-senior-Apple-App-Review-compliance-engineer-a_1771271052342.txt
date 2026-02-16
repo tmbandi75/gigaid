@@ -1,0 +1,174 @@
+You are a senior Apple App Review compliance engineer and mobile security auditor.
+
+Perform a FINAL pre-submission audit of this repository for Apple App Store approval.
+
+Assume:
+- All recent compliance fixes have been implemented
+- The app will be submitted within 24–48 hours
+- This is the last review before submission
+
+Be strict.
+Be skeptical.
+Assume Apple reviewers are adversarial.
+Do not be optimistic.
+
+--------------------------------------------------
+SCOPE
+--------------------------------------------------
+
+Audit:
+- Client code
+- Server code
+- iOS project files
+- Capacitor config
+- Privacy and Terms pages
+- Payment flows
+- Analytics
+- Logging
+- Error handling
+- Versioning
+- Metadata readiness
+
+--------------------------------------------------
+1. PRIVACY & DATA COMPLIANCE (Guidelines 5.1.x)
+--------------------------------------------------
+
+Verify:
+
+- No PII (email, phone, UID, tokens) logged anywhere in production paths
+- Privacy policy includes:
+  - All third-party SDKs (Firebase, Stripe, PostHog, Google Maps, Twilio, SendGrid, OpenAI)
+  - Data categories collected
+  - Retention periods
+  - GDPR rights
+  - CCPA/CPRA rights
+  - ATT disclosure
+  - Contact email
+- No promises (data export, portability, etc.) without implementation
+- Account deletion works end-to-end
+- Subscription restore works end-to-end
+- Analytics is opt-in
+- ATT gating works correctly
+- PostHog does not initialize before consent
+- Analytics opt-out truly stops tracking
+
+--------------------------------------------------
+2. PAYMENTS & MONETIZATION (Guidelines 3.1.x)
+--------------------------------------------------
+
+Verify:
+
+- Stripe subscriptions are compliant with Apple policy
+- No digital content is sold via external payments
+- Upgrade UI is correctly gated on iOS (if applicable)
+- Restore Access exists and functions
+- Subscription management instructions are present
+- App Review notes prepared
+- No misleading pricing claims
+- No references to bypassing Apple payments
+
+--------------------------------------------------
+3. STABILITY & COMPLETENESS (Guideline 2.1)
+--------------------------------------------------
+
+Verify:
+
+- Global window.onerror handler exists
+- Global unhandledrejection handler exists
+- Error boundaries do not expose technical details
+- No white-screen crash paths
+- Offline fallback works
+- No unhandled async calls
+- No infinite loops or crash risks
+- App loads cleanly on first launch
+
+--------------------------------------------------
+4. SECURITY & BUILD HYGIENE
+--------------------------------------------------
+
+Verify:
+
+- No secrets in client bundle
+- No debug flags enabled in production
+- No verbose console logging in production
+- API keys are intended for client use
+- App Check (if implemented) initializes correctly
+- Sentry or monitoring scrubs PII
+- No mixed-content networking
+- ATS compliance in Info.plist
+
+--------------------------------------------------
+5. iOS-SPECIFIC REQUIREMENTS
+--------------------------------------------------
+
+Verify:
+
+- Info.plist contains:
+  NSCameraUsageDescription
+  NSMicrophoneUsageDescription
+  NSPhotoLibraryUsageDescription
+  NSPhotoLibraryAddUsageDescription
+  NSLocationWhenInUseUsageDescription
+  NSUserTrackingUsageDescription
+- Permission language is neutral (e.g., "uses" not "needs")
+- armv7 is NOT present
+- arm64 supported
+- Version and build numbers set properly
+- App icon is 1024x1024
+- No missing asset catalog entries
+- Orientation settings intentional
+- No legacy device capability flags
+
+--------------------------------------------------
+6. ACCESSIBILITY & UX (Guideline 2.5)
+--------------------------------------------------
+
+Verify:
+
+- All primary buttons have aria-labels
+- Icon-only buttons labeled
+- Toggles accessible
+- Touch targets >= 44px
+- Focus states visible
+- Dark mode renders correctly
+- No clipped layouts
+- Keyboard navigation works
+
+--------------------------------------------------
+7. TEST SCENARIOS
+--------------------------------------------------
+
+Simulate:
+
+- First launch
+- Consent modal
+- ATT prompt
+- Login
+- Upgrade attempt on iOS
+- Restore Access after reinstall
+- Account deletion
+- Analytics opt-out
+- Offline → online transition
+
+--------------------------------------------------
+OUTPUT FORMAT
+--------------------------------------------------
+
+Return:
+
+1) Overall Readiness Score (0–100)
+2) Submission Verdict:
+   - GO
+   - CONDITIONAL GO
+   - NO-GO
+3) BLOCKERS (if any)
+4) HIGH RISK
+5) MEDIUM RISK
+6) LOW RISK
+7) Rejection Probability Estimate (%)
+8) Top 5 Likely Reviewer Concerns
+9) Required App Review Notes (if missing)
+10) Final Recommendation
+
+If there are no true blockers, clearly state:
+"READY FOR SUBMISSION."
