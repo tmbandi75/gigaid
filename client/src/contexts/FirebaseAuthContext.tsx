@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef, type ReactNode 
 import { onFirebaseAuthChange, firebaseInitError } from "@/lib/firebase";
 import type { User as FirebaseUser } from "firebase/auth";
 import { isTokenReadyForUser, resetTokenReadiness } from "@/lib/authToken";
+import { logger } from "@/lib/logger";
 
 interface FirebaseAuthContextValue {
   firebaseUser: FirebaseUser | null;
@@ -36,7 +37,7 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (firebaseInitError) {
-      console.error("[FirebaseAuth] Firebase failed to initialize");
+      logger.error("[FirebaseAuth] Firebase failed to initialize");
       setAuthLoading(false);
       return;
     }

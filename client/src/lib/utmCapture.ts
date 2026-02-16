@@ -1,3 +1,5 @@
+import { logger } from "@/lib/logger";
+
 const UTM_STORAGE_KEY = "gigaid_utm_data";
 const UTM_TTL_DAYS = 14;
 
@@ -119,6 +121,6 @@ export async function sendAttributionToServer(): Promise<void> {
       clearStoredUtmData();
     }
   } catch (err) {
-    console.error("[UTM] Failed to send attribution:", err);
+    logger.error("[UTM] Failed to send attribution:", err);
   }
 }

@@ -1,3 +1,5 @@
+import { logger } from "@/lib/logger";
+
 const TOKEN_KEY = "gigaid_auth_token";
 const TOKEN_UID_KEY = "gigaid_token_uid";
 
@@ -19,7 +21,7 @@ export function setAuthToken(token: string, firebaseUid?: string): void {
       tokenOwnerUid = firebaseUid;
     }
   } catch {
-    console.error("[AuthToken] Failed to store auth token");
+    logger.error("[AuthToken] Failed to store auth token");
   }
 }
 
@@ -29,7 +31,7 @@ export function clearAuthToken(): void {
     localStorage.removeItem(TOKEN_UID_KEY);
     tokenOwnerUid = null;
   } catch {
-    console.error("[AuthToken] Failed to clear auth token");
+    logger.error("[AuthToken] Failed to clear auth token");
   }
 }
 

@@ -1,3 +1,5 @@
+import { logger } from "@/lib/logger";
+
 const MOBILE_AUTH_TOKEN_KEY = 'gigaid_mobile_auth_token';
 
 export interface MobileAuthResult {
@@ -106,7 +108,7 @@ export async function getMobileAuthUser(): Promise<MobileAuthResult['user'] | nu
     
     return response.json();
   } catch (error) {
-    console.error('[MobileAuth] Failed to get user:', error);
+    logger.error('[MobileAuth] Failed to get user:', error);
     return null;
   }
 }

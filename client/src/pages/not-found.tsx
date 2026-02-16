@@ -2,10 +2,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 import { SupportTicketForm } from "@/components/SupportTicketForm";
 import { useLocation } from "wouter";
+import { logger } from "@/lib/logger";
 
 export default function NotFound() {
   const [location] = useLocation();
-  console.log("[NotFound] Rendering 404 for path:", location);
+  logger.info("[NotFound] Rendering 404 for path:", location);
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-background p-4">
       <div className="w-full max-w-md">

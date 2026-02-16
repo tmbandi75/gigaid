@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from "react";
+import { logger } from "@/lib/logger";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -21,8 +22,8 @@ export class AppErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundar
 
   componentDidCatch(error: Error, info: { componentStack?: string | null }) {
     if (import.meta.env.DEV) {
-      console.error("[AppErrorBoundary] Caught error:", error);
-      console.error("[AppErrorBoundary] Component stack:", info.componentStack);
+      logger.error("[AppErrorBoundary] Caught error:", error);
+      logger.error("[AppErrorBoundary] Component stack:", info.componentStack);
     }
     try {
       const sentry = (window as unknown as Record<string, unknown>).Sentry as

@@ -68,6 +68,7 @@ import type { Referral, WeeklyAvailability } from "@shared/schema";
 import { useFeatureFlag, useUpdateFeatureFlag } from "@/hooks/use-nudges";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { getAnalyticsConsent, setAnalyticsConsent } from "@/lib/consent/analyticsConsent";
+import { logger } from "@/lib/logger";
 import { initAnalyticsSafely, disableAnalytics, persistAnalyticsPreferences } from "@/lib/analytics/initAnalytics";
 import { requestATTUserInitiated, isIOSNative, type AnalyticsProfile } from "@/lib/att/attManager";
 
@@ -247,7 +248,7 @@ export default function Settings() {
       
       toast({ title: "Download started", description: `${filename} is downloading` });
     } catch (error: any) {
-      console.error("Download error:", error);
+      logger.error("Download error:", error);
       toast({ 
         title: "Download failed", 
         description: error.message || "Could not download file",

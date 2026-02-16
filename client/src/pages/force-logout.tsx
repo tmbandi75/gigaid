@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { clearAuthToken } from "@/lib/authToken";
 import { firebaseSignOut } from "@/lib/firebase";
+import { logger } from "@/lib/logger";
 
 export default function ForceLogout() {
   const [status, setStatus] = useState("Clearing authentication...");
@@ -18,7 +19,7 @@ export default function ForceLogout() {
         try {
           await firebaseSignOut();
         } catch (e) {
-          console.log("Firebase signout:", e);
+          logger.debug("Firebase signout:", e);
         }
         
         setStatus("Clearing server session...");
@@ -28,7 +29,7 @@ export default function ForceLogout() {
             credentials: "include" 
           });
         } catch (e) {
-          console.log("Server logout:", e);
+          logger.debug("Server logout:", e);
         }
         
         setStatus("Clearing IndexedDB...");
@@ -40,7 +41,7 @@ export default function ForceLogout() {
             }
           }
         } catch (e) {
-          console.log("IndexedDB clear:", e);
+          logger.debug("IndexedDB clear:", e);
         }
         
         setStatus("Clearing sessionStorage...");
@@ -53,7 +54,7 @@ export default function ForceLogout() {
         }, 1000);
         
       } catch (error) {
-        console.error("Force logout error:", error);
+        logger.error("Force logout error:", error);
         setStatus("Error occurred. Redirecting anyway...");
         setTimeout(() => {
           window.location.replace("/");

@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MapPin, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { logger } from "@/lib/logger";
 
 interface AddressComponents {
   streetAddress: string;
@@ -126,7 +127,7 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
         setReady(true);
       } catch (err) {
         if (cancelled) return;
-        console.error("[AddressAutocomplete] Failed to load:", err);
+        logger.error("[AddressAutocomplete] Failed to load:", err);
         setManualMode(true);
         setError("Failed to load address lookup");
       }
@@ -212,7 +213,7 @@ export function AddressAutocomplete({ value, onChange, placeholder = "Start typi
           lng,
         });
       } catch (err) {
-        console.error("[AddressAutocomplete] Error processing place:", err);
+        logger.error("[AddressAutocomplete] Error processing place:", err);
       }
     };
 

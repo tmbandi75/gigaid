@@ -2,11 +2,12 @@ import { createRoot } from "react-dom/client";
 import { initGlobalErrorHandlers } from "./lib/errors/globalErrorHandler";
 import App from "./App";
 import "./index.css";
+import { logger } from "@/lib/logger";
 
 initGlobalErrorHandlers();
 
 if (import.meta.env.DEV) {
-  console.log('[env] Startup check:', {
+  logger.debug('[env] Startup check:', {
     VITE_STRIPE_ENABLED: import.meta.env.VITE_STRIPE_ENABLED,
     MODE: import.meta.env.MODE
   });
@@ -18,10 +19,10 @@ if ('serviceWorker' in navigator) {
       registration.addEventListener('updatefound', () => {
         const newWorker = registration.installing;
         if (newWorker) {
-          console.log('[SW] New service worker found, waiting for install...');
+          logger.debug('[SW] New service worker found, waiting for install...');
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('[SW] New version installed, sending SKIP_WAITING and reloading...');
+              logger.debug('[SW] New version installed, sending SKIP_WAITING and reloading...');
               newWorker.postMessage({ type: 'SKIP_WAITING' });
             }
           });
@@ -45,7 +46,7 @@ if ('serviceWorker' in navigator) {
         }
       });
     }).catch((err) => {
-      console.error('[SW] Registration failed:', err);
+      logger.error('[SW] Registration failed:', err);
     });
   });
 
@@ -53,7 +54,7 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!refreshing) {
       refreshing = true;
-      console.log('[SW] Controller changed, reloading page for fresh content...');
+      logger.debug('[SW] Controller changed, reloading page for fresh content...');
       window.location.reload();
     }
   });

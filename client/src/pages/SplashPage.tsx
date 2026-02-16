@@ -9,6 +9,7 @@ import { setAuthToken } from "@/lib/authToken";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
+import { logger } from "@/lib/logger";
 
 type AuthMode = "signin" | "signup" | "forgot";
 
@@ -138,7 +139,7 @@ export default function SplashPage() {
         : await signInWithEmail(email, password);
       await exchangeTokenAndNavigate(idToken);
     } catch (err: any) {
-      console.error('[Auth] Email auth error:', err?.code, err?.message, err);
+      logger.error('[Auth] Email auth error:', err?.code, err?.message, err);
       let message = err?.message || "Please try again";
       if (err.code === "auth/email-already-in-use") {
         message = "An account with this email already exists. Try signing in instead.";

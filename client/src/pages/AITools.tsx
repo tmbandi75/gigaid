@@ -40,6 +40,7 @@ import {
   Lock,
 } from "lucide-react";
 import { UpgradeInterceptModal } from "@/upgrade/UpgradeInterceptModal";
+import { logger } from "@/lib/logger";
 
 interface AIFeature {
   id: string;
@@ -112,7 +113,7 @@ export default function AITools() {
       component: (
         <TextToPlanInput
           onJobCreated={(job) => {
-            console.log("Job created:", job);
+            logger.debug("Job created:", job);
             setActiveFeature(null);
           }}
         />
@@ -129,7 +130,7 @@ export default function AITools() {
         <SmartScheduling
           jobDuration={60}
           onSelectSlot={(date, time) => {
-            console.log("Slot selected:", date, time);
+            logger.debug("Slot selected:", date, time);
           }}
         />
       ),
@@ -159,7 +160,7 @@ export default function AITools() {
           <TabsContent value="record">
             <VoiceNoteSummarizer
               onSummaryComplete={(summary) => {
-                console.log("Summary:", summary);
+                logger.debug("Summary:", summary);
               }}
             />
           </TabsContent>
@@ -205,7 +206,7 @@ export default function AITools() {
       component: (
         <NewServiceAIInput
           onServicesCreated={(services) => {
-            console.log("Services created:", services);
+            logger.debug("Services created:", services);
           }}
         />
       ),
@@ -273,7 +274,7 @@ export default function AITools() {
       component: (
         <EstimationTool
           onEstimateComplete={(estimate) => {
-            console.log("Estimate generated:", estimate);
+            logger.debug("Estimate generated:", estimate);
           }}
         />
       ),

@@ -3,6 +3,7 @@ import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { logger } from "@/lib/logger";
 
 interface OnboardingStatus {
   completed: boolean;
@@ -52,7 +53,7 @@ export function OnboardingWrapper({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if ((isLoading || tokenPending) && !loadingTimeout) {
       const timer = setTimeout(() => {
-        console.log("[OnboardingWrapper] Loading timeout reached - proceeding without onboarding check");
+        logger.debug("[OnboardingWrapper] Loading timeout reached - proceeding without onboarding check");
         setLoadingTimeout(true);
       }, 5000);
       return () => clearTimeout(timer);

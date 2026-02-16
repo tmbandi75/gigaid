@@ -1,4 +1,5 @@
 import { isIOS, isNativePlatform } from "@/lib/platform";
+import { logger } from "@/lib/logger";
 
 export type ATTStatus = "authorized" | "denied" | "restricted" | "not_determined" | "unavailable" | "unknown";
 
@@ -38,7 +39,7 @@ export async function getATTStatus(): Promise<ATTStatus> {
     const { status } = await AppTrackingTransparency.getStatus();
     return normalizeATTStatus(status);
   } catch (err) {
-    console.warn("[ATT] Plugin not available:", err);
+    logger.warn("[ATT] Plugin not available:", err);
     return "unavailable";
   }
 }
@@ -57,7 +58,7 @@ export async function requestATT(): Promise<ATTStatus> {
     const { status } = await AppTrackingTransparency.requestPermission();
     return normalizeATTStatus(status);
   } catch (err) {
-    console.warn("[ATT] Plugin not available or error:", err);
+    logger.warn("[ATT] Plugin not available or error:", err);
     return "unavailable";
   }
 }

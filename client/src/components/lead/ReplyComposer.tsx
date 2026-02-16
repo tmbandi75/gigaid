@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import type { Lead } from "@shared/schema";
 import { useSendText } from "@/hooks/use-send-text";
+import { logger } from "@/lib/logger";
 
 interface ReplyComposerProps {
   lead: Lead;
@@ -80,7 +81,7 @@ export function ReplyComposer({ lead }: ReplyComposerProps) {
       await apiFetch(`/api/leads/${lead.id}/respond-tap`, { method: "POST" });
     } catch (err) {
       // Silent fail - tracking is non-critical
-      console.debug("[RespondTap] Failed to track:", err);
+      logger.debug("[RespondTap] Failed to track:", err);
     }
   };
 

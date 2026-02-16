@@ -19,6 +19,7 @@ import {
   FileText,
 } from "lucide-react";
 import type { ActionQueueItem } from "@shared/schema";
+import { logger } from "@/lib/logger";
 
 interface FeatureFlag {
   key: string;
@@ -91,7 +92,7 @@ export function MoneyPlanWidget() {
         navigate(action.route);
       }
     } catch {
-      console.error("Failed to parse action");
+      logger.error("Failed to parse action");
     }
   };
 

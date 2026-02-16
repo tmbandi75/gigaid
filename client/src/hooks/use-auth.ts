@@ -6,11 +6,12 @@ import { firebaseSignOut, getFirebaseIdToken } from "@/lib/firebase";
 import { setGlobalLoggingOut, getGlobalLoggingOut } from "@/lib/queryClient";
 import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { logger } from "@/lib/logger";
 
 async function fetchUser(): Promise<User | null> {
   // Don't fetch user if we're in the middle of logging out
   if (getGlobalLoggingOut()) {
-    console.log("[Auth] fetchUser blocked - logout in progress, timestamp:", Date.now());
+    logger.debug("[Auth] fetchUser blocked - logout in progress, timestamp:", Date.now());
     return null;
   }
 
@@ -20,14 +21,14 @@ async function fetchUser(): Promise<User | null> {
     headers["Authorization"] = `Bearer ${token}`;
   }
   
-  console.log("[Auth] fetchUser called, timestamp:", Date.now());
+  logger.debug("[Auth] fetchUser called, timestamp:", Date.now());
   
   const response = await fetch("/api/auth/user", {
     credentials: "include",
     headers,
   });
 
-  console.log("[Auth] fetchUser response:", response.status, "timestamp:", Date.now());
+  logger.debug("[Auth] fetchUser response:", response.status, "timestamp:", Date.now());
 
   if (response.status === 401) {
     return null;
@@ -108,38 +109,38 @@ export function useAuth() {
   });
 
   const performLogout = useCallback(async (): Promise<void> => {
-    console.log("[Auth] ========== LOGOUT STARTED ==========");
-    console.log("[Auth] Logout timestamp:", Date.now());
+    logger.info("[Auth] ========== LOGOUT STARTED ==========");
+    logger.info("[Auth] Logout timestamp:", Date.now());
     
     // Step 1: Set global logout flag to prevent ALL rehydration
     setGlobalLoggingOut(true);
     setIsLoggingOut(true);
     
     // Step 1b: Reset token ready flag
-    console.log("[Auth] Step 1b: Resetting token ready flag");
+    logger.debug("[Auth] Step 1b: Resetting token ready flag");
     setTokenReady(false);
     
     try {
       // Step 2: Clear app JWT from localStorage
-      console.log("[Auth] Step 2: Clearing app JWT token");
+      logger.debug("[Auth] Step 2: Clearing app JWT token");
       clearAuthToken();
       
       // Step 3: Clear React Query cache COMPLETELY
-      console.log("[Auth] Step 3: Clearing React Query cache");
+      logger.debug("[Auth] Step 3: Clearing React Query cache");
       queryClient.setQueryData(QUERY_KEYS.authUser(), null);
       queryClient.clear();
       
       // Step 4: Await Firebase signOut
-      console.log("[Auth] Step 4: Signing out from Firebase");
+      logger.debug("[Auth] Step 4: Signing out from Firebase");
       try {
         await firebaseSignOut();
-        console.log("[Auth] Firebase signOut complete, timestamp:", Date.now());
+        logger.debug("[Auth] Firebase signOut complete, timestamp:", Date.now());
       } catch (e) {
-        console.error("[Auth] Firebase sign out error:", e);
+        logger.error("[Auth] Firebase sign out error:", e);
       }
       
       // Step 5: Await server logout with JSON acknowledgment
-      console.log("[Auth] Step 5: Calling server logout");
+      logger.debug("[Auth] Step 5: Calling server logout");
       try {
         const response = await fetch("/api/auth/logout", { 
           method: "POST",
@@ -151,27 +152,27 @@ export function useAuth() {
         
         if (response.ok) {
           const data = await response.json();
-          console.log("[Auth] Server logout acknowledged:", data, "timestamp:", Date.now());
+          logger.debug("[Auth] Server logout acknowledged:", data, "timestamp:", Date.now());
         } else {
-          console.error("[Auth] Server logout failed:", response.status);
+          logger.error("[Auth] Server logout failed:", response.status);
         }
       } catch (e) {
-        console.error("[Auth] Server logout error:", e);
+        logger.error("[Auth] Server logout error:", e);
       }
       
       // Step 6: Clear sessionStorage
-      console.log("[Auth] Step 6: Clearing sessionStorage");
+      logger.debug("[Auth] Step 6: Clearing sessionStorage");
       sessionStorage.clear();
       
       // Step 7: Clear splash seen flag to ensure landing page shows
-      console.log("[Auth] Step 7: Clearing splash seen flag");
+      logger.debug("[Auth] Step 7: Clearing splash seen flag");
       localStorage.removeItem("gigaid_splash_seen");
       
-      console.log("[Auth] ========== LOGOUT COMPLETE ==========");
-      console.log("[Auth] Final timestamp:", Date.now());
+      logger.info("[Auth] ========== LOGOUT COMPLETE ==========");
+      logger.info("[Auth] Final timestamp:", Date.now());
       
     } catch (error) {
-      console.error("[Auth] Logout error:", error);
+      logger.error("[Auth] Logout error:", error);
     } finally {
       // Reset global logout flag - Firebase onAuthStateChanged will handle state
       setGlobalLoggingOut(false);

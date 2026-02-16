@@ -21,6 +21,7 @@ import {
   Shield,
 } from "lucide-react";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { logger } from "@/lib/logger";
 
 interface ConnectStatus {
   connected: boolean;
@@ -92,7 +93,7 @@ export function StripeConnectSettings() {
         }
       },
       onError: (error: any) => {
-        console.error("Onboarding error:", error);
+        logger.error("Onboarding error:", error);
         toast({ title: "Failed to start onboarding", variant: "destructive" });
       },
     }
@@ -110,7 +111,7 @@ export function StripeConnectSettings() {
         }
       },
       onError: (error: any) => {
-        console.error("Dashboard error:", error);
+        logger.error("Dashboard error:", error);
         toast({ 
           title: "Cannot open dashboard", 
           description: "Please complete your Stripe setup first.",

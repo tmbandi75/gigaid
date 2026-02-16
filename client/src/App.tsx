@@ -79,6 +79,7 @@ import ProfitWarningsPage from "@/pages/ProfitWarningsPage";
 import NotFound from "@/pages/not-found";
 import { AppErrorBoundary } from "@/components/ErrorBoundary";
 import { logClientEnv } from "./debug/envProbe";
+import { logger } from "@/lib/logger";
 
 logClientEnv();
 
@@ -173,7 +174,7 @@ function SubscriptionHandler() {
       newUrl.searchParams.delete('subscription');
       window.history.replaceState({}, '', newUrl.toString());
       
-      console.log('[Subscription] Payment successful - profile cache invalidated, optimistic capability granted');
+      logger.info('[Subscription] Payment successful - profile cache invalidated, optimistic capability granted');
     }
   }, [grantOptimisticCapability]);
   
@@ -187,8 +188,8 @@ function AuthenticatedApp() {
   // CRITICAL: Block ALL routing decisions until Firebase auth state is resolved
   // No redirects, no rendering decisions until authLoading === false
   if (authLoading) {
-    console.log("[AuthenticatedApp] authLoading === true, blocking all routing");
-    console.log("[AuthenticatedApp] lastAuthEventTs:", lastAuthEventTs, "callbackCount:", callbackCount);
+    logger.debug("[AuthenticatedApp] authLoading === true, blocking all routing");
+    logger.debug("[AuthenticatedApp] lastAuthEventTs:", lastAuthEventTs, "callbackCount:", callbackCount);
     
     return (
       <div className="min-h-screen flex items-center justify-center">

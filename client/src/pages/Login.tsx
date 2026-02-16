@@ -12,6 +12,7 @@ import { isNativePlatform } from "@/lib/platform";
 import { queryClient } from "@/lib/queryClient";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
+import { logger } from "@/lib/logger";
 
 type AuthMode = "signin" | "signup" | "forgot";
 
@@ -219,7 +220,7 @@ export default function Login() {
         : await signInWithEmail(email, password);
       await exchangeTokenAndNavigate(idToken);
     } catch (error: any) {
-      console.error('[Auth] Email auth error:', error?.code, error?.message, error);
+      logger.error('[Auth] Email auth error:', error?.code, error?.message, error);
       let message = error?.message || "Please try again";
       if (error.code === "auth/email-already-in-use") {
         message = "An account with this email already exists. Try signing in instead.";

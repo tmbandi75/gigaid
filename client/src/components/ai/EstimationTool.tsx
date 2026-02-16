@@ -10,6 +10,7 @@ import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { serviceCategories, type ServiceCategory } from "@shared/service-categories";
 import { CATEGORY_ESTIMATION_PROFILES, type EstimationProfile } from "@shared/estimation-profiles";
+import { logger } from "@/lib/logger";
 import { 
   Calculator, 
   Loader2, 
@@ -46,10 +47,10 @@ export function EstimationTool({ onEstimateComplete }: EstimationToolProps) {
   const estimateMutation = useApiMutation(
     async (data: { category: string; description: string; squareFootage?: number; photos?: string[] }) => {
       const payloadSize = JSON.stringify(data).length;
-      console.log(`[Estimation] Sending request, payload size: ${Math.round(payloadSize / 1024)}KB, photos: ${data.photos?.length || 0}`);
+      logger.debug(`[Estimation] Sending request, payload size: ${Math.round(payloadSize / 1024)}KB, photos: ${data.photos?.length || 0}`);
       
       if (payloadSize > 4 * 1024 * 1024) {
-        console.warn("[Estimation] Payload too large, attempting without photos");
+        logger.warn("[Estimation] Payload too large, attempting without photos");
         const { photos, ...dataWithoutPhotos } = data;
         return apiFetch<EstimateResult>("/api/estimation/in-app", {
           method: "POST",
@@ -69,7 +70,7 @@ export function EstimationTool({ onEstimateComplete }: EstimationToolProps) {
         onEstimateComplete?.(data);
       },
       onError: (error) => {
-        console.error("[Estimation] Error:", error);
+        logger.error("[Estimation] Error:", error);
       },
     }
   );
@@ -124,7 +125,7 @@ export function EstimationTool({ onEstimateComplete }: EstimationToolProps) {
         const dataUrl = await compressImage(file);
         newPhotos.push(dataUrl);
       } catch {
-        console.error("Failed to process image");
+        logger.error("Failed to process image");
       }
     }
 

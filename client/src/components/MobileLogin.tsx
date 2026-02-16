@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Smartphone, Mail, Phone as PhoneIcon } from 'lucide-react';
 import { SiGoogle, SiApple } from 'react-icons/si';
 import { checkMobileAuthStatus } from '@/lib/auth/mobileAuth';
+import { logger } from "@/lib/logger";
 
 interface MobileLoginProps {
   onFirebaseAuth: (idToken: string) => Promise<void>;
@@ -24,7 +25,7 @@ export function MobileLogin({ onFirebaseAuth, onBack, isLoading = false, error =
   useEffect(() => {
     checkMobileAuthStatus()
       .then(setAuthStatus)
-      .catch(console.error)
+      .catch((err) => logger.error(err))
       .finally(() => setStatusLoading(false));
   }, []);
 

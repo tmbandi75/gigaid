@@ -5,6 +5,7 @@ import { MapPin, Navigation, Clock, AlertCircle, Loader2, ExternalLink, Car } fr
 import { formatDistanceToNow } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { logger } from "@/lib/logger";
 
 interface JobLocationMapProps {
   customerLat: number;
@@ -209,7 +210,7 @@ export function JobLocationMap({
 
       setIsLoading(false);
     } catch (err: any) {
-      console.error("[JobLocationMap] Failed to load:", err?.message || err);
+      logger.error("[JobLocationMap] Failed to load:", err?.message || err);
       setError("Unable to load map");
       setIsLoading(false);
     }

@@ -8,6 +8,7 @@ import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { MessageSquare, Send, Loader2, Sparkles, RefreshCw, Copy, Check, Phone } from "lucide-react";
 import { useSendText } from "@/hooks/use-send-text";
+import { logger } from "@/lib/logger";
 
 interface LeadTextComposerProps {
   leadId: string;
@@ -70,7 +71,7 @@ export function LeadTextComposer({ leadId, clientPhone, clientName, serviceType,
     try {
       await apiFetch(`/api/leads/${leadId}/respond-tap`, { method: "POST" });
     } catch (err) {
-      console.debug("[RespondTap] Failed to track:", err);
+      logger.debug("[RespondTap] Failed to track:", err);
     }
   };
 

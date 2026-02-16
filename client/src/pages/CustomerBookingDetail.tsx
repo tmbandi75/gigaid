@@ -39,6 +39,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { logger } from "@/lib/logger";
 
 interface BookingDetail {
   id: number;
@@ -151,10 +152,10 @@ function PaymentForm({ token, bookingId, depositAmountCents, depositCurrency, on
         });
 
         if (!confirmRes.ok) {
-          console.error("Failed to confirm deposit on backend");
+          logger.error("Failed to confirm deposit on backend");
         }
       } catch (err) {
-        console.error("Error confirming deposit:", err);
+        logger.error("Error confirming deposit:", err);
       }
 
       toast({ 

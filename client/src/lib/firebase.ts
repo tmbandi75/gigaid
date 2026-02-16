@@ -17,6 +17,7 @@ import {
   type User as FirebaseUser 
 } from "firebase/auth";
 import { isNativePlatform } from "./platform";
+import { logger } from "@/lib/logger";
 
 const REQUIRED_ENV_KEYS = [
   'VITE_FIREBASE_API_KEY',
@@ -45,16 +46,16 @@ try {
   );
   if (missing.length > 0) {
     const msg = `[Firebase] Missing required env vars: ${missing.join(', ')}`;
-    console.error(msg);
+    logger.error(msg);
     firebaseInitError = msg;
   } else {
     app = initializeApp(firebaseConfig);
     _auth = getAuth(app);
-    console.log("[Firebase] Initialized successfully");
+    logger.info("[Firebase] Initialized successfully");
   }
 } catch (err) {
   const msg = `[Firebase] Initialization failed: ${err instanceof Error ? err.message : String(err)}`;
-  console.error(msg, err);
+  logger.error(msg, err);
   firebaseInitError = msg;
 }
 
@@ -85,14 +86,14 @@ export function initializeRedirectResultHandler(): Promise<string | null> {
   redirectResultPromise = getRedirectResult(_auth)
     .then(async (result) => {
       if (result && result.user) {
-        console.log("[Firebase] Redirect result received, getting ID token");
+        logger.debug("[Firebase] Redirect result received, getting ID token");
         const idToken = await result.user.getIdToken();
         return idToken;
       }
       return null;
     })
     .catch((error) => {
-      console.error("[Firebase] Redirect result error:", error);
+      logger.error("[Firebase] Redirect result error:", error);
       return null;
     });
   
@@ -102,7 +103,7 @@ export function initializeRedirectResultHandler(): Promise<string | null> {
 export async function signInWithGoogle(): Promise<string> {
   const a = requireAuth();
   if (isNativePlatform()) {
-    console.log("[Firebase] Native platform detected, using signInWithRedirect");
+    logger.debug("[Firebase] Native platform detected, using signInWithRedirect");
     await signInWithRedirect(a, googleProvider);
     throw new Error("Redirect initiated - waiting for redirect result");
   }
@@ -119,7 +120,7 @@ export async function firebaseSignOut(): Promise<void> {
 
 export function onFirebaseAuthChange(callback: (user: FirebaseUser | null) => void): () => void {
   if (!_auth) {
-    console.warn("[Firebase] Auth not initialized, calling back with null user");
+    logger.warn("[Firebase] Auth not initialized, calling back with null user");
     callback(null);
     return () => {};
   }

@@ -1,3 +1,5 @@
+import { logger } from "@/lib/logger";
+
 let recoveryOverlayShown = false;
 
 function showRecoveryOverlay() {
@@ -69,7 +71,7 @@ function safeLog(prefix: string, err: unknown) {
   try {
     if (import.meta.env.DEV) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error(`[${prefix}]`, message);
+      logger.error(`[${prefix}]`, message);
     }
     captureToSentry(err);
   } catch {

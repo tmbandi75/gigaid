@@ -14,6 +14,7 @@ import { MessageSquare, Loader2, Sparkles, Copy, Send, Check, Phone, User, Info 
 import { UpgradeInterceptModal } from "@/upgrade";
 import type { Job, Lead } from "@shared/schema";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { logger } from "@/lib/logger";
 
 interface MessageUsage {
   outboundSent: number;
@@ -117,7 +118,7 @@ export function FollowUpComposer() {
     try {
       await apiFetch(`/api/leads/${leadId}/respond-tap`, { method: "POST" });
     } catch (err) {
-      console.debug("[RespondTap] Failed to track:", err);
+      logger.debug("[RespondTap] Failed to track:", err);
     }
   };
 

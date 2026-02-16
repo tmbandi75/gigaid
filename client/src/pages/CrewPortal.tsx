@@ -31,6 +31,7 @@ import {
   Plus,
   Users,
 } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 interface CrewPortalData {
   invite: {
@@ -222,7 +223,7 @@ export default function CrewPortal() {
         description: "Your photo has been uploaded successfully.",
       });
     } catch (err) {
-      console.error("Photo upload error:", err);
+      logger.error("Photo upload error:", err);
       toast({
         title: "Upload Failed",
         description: "Failed to upload photo. Please try again.",

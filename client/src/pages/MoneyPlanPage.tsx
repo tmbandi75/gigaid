@@ -28,6 +28,7 @@ import {
   Lock,
 } from "lucide-react";
 import type { ActionQueueItem } from "@shared/schema";
+import { logger } from "@/lib/logger";
 
 interface FeatureFlag {
   key: string;
@@ -92,7 +93,7 @@ export default function MoneyPlanPage() {
   
   useEffect(() => {
     if (flag?.enabled) {
-      console.log("[capability_attempted]", {
+      logger.debug("[capability_attempted]", {
         capability: "todays_money_plan",
         plan: getUserPlan(),
         is_dev: checkIsDeveloper(),
@@ -141,7 +142,7 @@ export default function MoneyPlanPage() {
         navigate(action.route);
       }
     } catch {
-      console.error("Failed to parse action");
+      logger.error("Failed to parse action");
     }
   };
 

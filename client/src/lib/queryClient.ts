@@ -1,12 +1,13 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { getAuthToken } from "./authToken";
+import { logger } from "@/lib/logger";
 
 // Global logout state - prevents any API calls during logout
 let isLoggingOutGlobal = false;
 
 export function setGlobalLoggingOut(value: boolean): void {
   isLoggingOutGlobal = value;
-  console.log("[QueryClient] Global logout state set to:", value, "timestamp:", Date.now());
+  logger.debug("[QueryClient] Global logout state set to:", value, "timestamp:", Date.now());
 }
 
 export function getGlobalLoggingOut(): boolean {
@@ -36,7 +37,7 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     // Block all queries during logout to prevent rehydration
     if (isLoggingOutGlobal) {
-      console.log("[QueryClient] Query blocked during logout:", queryKey);
+      logger.debug("[QueryClient] Query blocked during logout:", queryKey);
       if (unauthorizedBehavior === "returnNull") {
         return null;
       }

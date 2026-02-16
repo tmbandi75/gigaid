@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
 import { Capability } from "@shared/plans";
+import { logger } from "@/lib/logger";
 
 interface OptimisticCapabilityContextType {
   hasOptimisticCapability: (capability: Capability) => boolean;
@@ -39,7 +40,7 @@ export function OptimisticCapabilityProvider({ children }: { children: ReactNode
       const filtered = prev.filter(g => g.capability !== capability);
       return [...filtered, { capability, expiresAt }];
     });
-    console.log(`[OptimisticCapability] Granted ${capability} for ${durationMs}ms`);
+    logger.debug(`[OptimisticCapability] Granted ${capability} for ${durationMs}ms`);
   }, []);
 
   const clearOptimisticCapability = useCallback((capability: Capability) => {

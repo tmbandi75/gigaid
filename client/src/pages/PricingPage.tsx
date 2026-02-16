@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { trackEvent } from "@/components/PostHogProvider";
 import { emitChurnEvent } from "@/lib/churnEvents";
+import { logger } from "@/lib/logger";
 
 interface PlanFeature {
   text: string;
@@ -173,7 +174,7 @@ export default function PricingPage() {
   const hasSubscription = subscription?.hasSubscription ?? false;
   
   // REQUIRED: Debug log on pricing page state (per spec)
-  console.log("[pricing state]", {
+  logger.debug("[pricing state]", {
     userId: isAuthenticated ? "authenticated" : "anonymous",
     currentPlan,
     hasSubscription,
@@ -189,7 +190,7 @@ export default function PricingPage() {
   // CLICK-TIME DECISION — NOT RENDER-TIME (per spec)
   const handlePlanAction = async (plan: PlanInfo) => {
     // Required debug logging per spec
-    console.log("[pricing click]", {
+    logger.debug("[pricing click]", {
       userId: isAuthenticated ? "authenticated" : "anonymous",
       currentPlan,
       targetPlan: plan.id,
@@ -217,13 +218,13 @@ export default function PricingPage() {
     // Upgrade: use Stripe Checkout
     if (isUpgrade(plan.id)) {
       if (!plan.stripeKey) {
-        console.error("[pricing] No stripeKey for plan:", plan.id);
+        logger.error("[pricing] No stripeKey for plan:", plan.id);
         return;
       }
 
       setLoadingPlan(plan.stripeKey);
       try {
-        console.log("[pricing] Starting Stripe checkout for:", plan.stripeKey);
+        logger.debug("[pricing] Starting Stripe checkout for:", plan.stripeKey);
         const result = await startStripeCheckout({
           plan: plan.stripeKey,
           returnTo: "/pricing",
@@ -237,7 +238,7 @@ export default function PricingPage() {
           });
         }
       } catch (error) {
-        console.error("[pricing] Checkout error:", error);
+        logger.error("[pricing] Checkout error:", error);
         toast({
           title: "Checkout failed",
           description: "Please try again in a few minutes.",
