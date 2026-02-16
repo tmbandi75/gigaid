@@ -211,7 +211,7 @@ export default function PrivacyPolicy() {
                 <li><strong>Rectification</strong> — Ask us to correct inaccurate or incomplete data.</li>
                 <li><strong>Erasure</strong> — Ask us to delete your personal data ("right to be forgotten").</li>
                 <li><strong>Restriction</strong> — Ask us to limit how we use your data while we resolve a concern.</li>
-                <li><strong>Data portability</strong> — Receive your data in a structured, machine-readable format.</li>
+                <li><strong>Data access</strong> — Users may request access to their account information by contacting support.</li>
                 <li><strong>Object</strong> — Object to processing based on legitimate interests or direct marketing.</li>
                 <li><strong>Withdraw consent</strong> — Where processing is based on consent, withdraw it at any time.</li>
               </ul>
