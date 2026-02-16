@@ -227,7 +227,7 @@ export default function PrivacyPolicy() {
               </p>
               <p className="mt-2">
                 To exercise any of these rights, email us at{" "}
-                <a href="mailto:support@gigaid.io" className="underline">support@gigaid.io</a>.
+                <a href="mailto:support@gigaid.ai" className="underline">support@gigaid.ai</a>.
                 We will respond within 30 days.
               </p>
             </section>
@@ -262,7 +262,7 @@ export default function PrivacyPolicy() {
               </ul>
               <p className="mt-2">
                 To make a request, email{" "}
-                <a href="mailto:support@gigaid.io" className="underline">support@gigaid.io</a>.
+                <a href="mailto:support@gigaid.ai" className="underline">support@gigaid.ai</a>.
                 We will verify your identity and respond within 45 days.
               </p>
             </section>
@@ -365,8 +365,8 @@ export default function PrivacyPolicy() {
                 data rights, contact us at:
               </p>
               <p className="mt-2 font-medium">
-                <a href="mailto:support@gigaid.io" className="underline" data-testid="link-contact-email">
-                  support@gigaid.io
+                <a href="mailto:support@gigaid.ai" className="underline" data-testid="link-contact-email">
+                  support@gigaid.ai
                 </a>
               </p>
               <p className="mt-1 text-sm text-muted-foreground">

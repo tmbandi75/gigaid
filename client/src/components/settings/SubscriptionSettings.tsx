@@ -705,8 +705,18 @@ export function SubscriptionSettings() {
                   continues until the end of your current billing period.
                 </li>
                 <li>
-                  <strong>Manage billing</strong> — Tap "Manage Billing" above to update your payment
-                  method, view invoices, or change your plan through the Stripe billing portal.
+                  <strong>Manage billing</strong> — Visit{" "}
+                  <a
+                    href="https://gigaid.ai/account"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                    data-testid="link-manage-billing"
+                  >
+                    gigaid.ai/account
+                  </a>{" "}
+                  or tap "Manage Billing" above to update your payment method, view invoices,
+                  or change your plan.
                 </li>
               </ul>
             </div>
