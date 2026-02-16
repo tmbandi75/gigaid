@@ -9,6 +9,7 @@ import {
 import { db } from "../db";
 import { revenueDriftLogs } from "@shared/schema";
 import type { RevenueDriftStatus } from "@shared/schema";
+import { logger } from "../lib/logger";
 
 export interface DriftMetric {
   expected: number;
@@ -118,11 +119,11 @@ export async function runRevenueDriftCheck(
       }),
     });
   } catch (err) {
-    console.error("[DriftDetector] Failed to persist drift log:", err);
+    logger.error("[DriftDetector] Failed to persist drift log:", err);
   }
 
   if (overallStatus === "critical") {
-    console.error(
+    logger.error(
       `[DriftDetector] CRITICAL revenue drift detected:`,
       JSON.stringify(result, null, 2)
     );
@@ -130,7 +131,7 @@ export async function runRevenueDriftCheck(
     // Example: await sendSlackAlert({ channel: "#revenue-alerts", ...result });
     // Example: await sendEmailAlert({ to: "finance@gigaid.ai", ...result });
   } else if (overallStatus === "warning") {
-    console.warn(
+    logger.warn(
       `[DriftDetector] Revenue drift warning:`,
       JSON.stringify(result, null, 2)
     );

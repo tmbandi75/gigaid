@@ -6,12 +6,13 @@ import { eq, and, gte, lte, desc, count, avg, sql } from "drizzle-orm";
 import { computeChurnScore, extractSignals } from "./churnScorer";
 import { emitCanonicalEvent } from "../copilot/canonicalEvents";
 import { sendEmail } from "../sendgrid";
+import { logger } from "../lib/logger";
 
 let sendSMS: ((to: string, message: string) => Promise<boolean>) | undefined;
 import("../twilio").then((mod) => {
   sendSMS = mod.sendSMS;
 }).catch(() => {
-  console.warn("[AdminChurn] Twilio module not available, SMS disabled");
+  logger.warn("[AdminChurn] Twilio module not available, SMS disabled");
 });
 
 const router = Router();
@@ -92,7 +93,7 @@ router.get("/overview", async (req, res) => {
 
     res.json({ distribution, trends, topDrivers });
   } catch (error) {
-    console.error("[AdminChurn] Overview error:", error);
+    logger.error("[AdminChurn] Overview error:", error);
     res.status(500).json({ error: "Failed to fetch churn overview" });
   }
 });
@@ -188,7 +189,7 @@ router.get("/users", async (req, res) => {
 
     res.json({ users: usersResult, total, page });
   } catch (error) {
-    console.error("[AdminChurn] Users error:", error);
+    logger.error("[AdminChurn] Users error:", error);
     res.status(500).json({ error: "Failed to fetch churn users" });
   }
 });
@@ -243,7 +244,7 @@ router.get("/user/:id", async (req, res) => {
       planOverrides: overrides,
     });
   } catch (error) {
-    console.error("[AdminChurn] User detail error:", error);
+    logger.error("[AdminChurn] User detail error:", error);
     res.status(500).json({ error: "Failed to fetch user churn profile" });
   }
 });
@@ -378,7 +379,7 @@ router.post("/action", async (req, res) => {
 
     res.json(updatedAction);
   } catch (error) {
-    console.error("[AdminChurn] Action error:", error);
+    logger.error("[AdminChurn] Action error:", error);
     res.status(500).json({ error: "Failed to create retention action" });
   }
 });
@@ -479,7 +480,7 @@ router.get("/report.json", async (req, res) => {
       criticalSample,
     });
   } catch (error) {
-    console.error("[AdminChurn] Report error:", error);
+    logger.error("[AdminChurn] Report error:", error);
     res.status(500).json({ error: "Failed to generate churn report" });
   }
 });
@@ -493,7 +494,7 @@ router.get("/playbooks", async (req, res) => {
 
     res.json(playbooks);
   } catch (error) {
-    console.error("[AdminChurn] Playbooks list error:", error);
+    logger.error("[AdminChurn] Playbooks list error:", error);
     res.status(500).json({ error: "Failed to fetch playbooks" });
   }
 });
@@ -525,7 +526,7 @@ router.put("/playbooks/:id", async (req, res) => {
 
     res.json(updated);
   } catch (error) {
-    console.error("[AdminChurn] Playbook update error:", error);
+    logger.error("[AdminChurn] Playbook update error:", error);
     res.status(500).json({ error: "Failed to update playbook" });
   }
 });
@@ -553,7 +554,7 @@ router.post("/playbooks", async (req, res) => {
 
     res.status(201).json(playbook);
   } catch (error) {
-    console.error("[AdminChurn] Playbook create error:", error);
+    logger.error("[AdminChurn] Playbook create error:", error);
     res.status(500).json({ error: "Failed to create playbook" });
   }
 });
@@ -573,7 +574,7 @@ router.delete("/playbooks/:id", async (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error("[AdminChurn] Playbook delete error:", error);
+    logger.error("[AdminChurn] Playbook delete error:", error);
     res.status(500).json({ error: "Failed to delete playbook" });
   }
 });

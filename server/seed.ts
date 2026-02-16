@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { logger } from "./lib/logger";
 import {
   users,
   jobs,
@@ -39,7 +40,7 @@ function daysAgo(days: number): string {
 }
 
 export async function seedDatabase() {
-  console.log("[Seed] Starting database seeding...");
+  logger.info("[Seed] Starting database seeding...");
 
   try {
     // Seed Demo User first (all other records reference this user)
@@ -84,7 +85,7 @@ export async function seedDatabase() {
       target: users.id,
       set: demoUser,
     });
-    console.log("[Seed] Demo user seeded");
+    logger.info("[Seed] Demo user seeded");
 
     // Seed Jobs with various statuses and locations
     // Using service names from predefined catalog (shared/service-categories.ts)
@@ -223,7 +224,7 @@ export async function seedDatabase() {
         set: job,
       });
     }
-    console.log("[Seed] Jobs seeded");
+    logger.info("[Seed] Jobs seeded");
 
     // Seed Leads with various statuses
     // Using service names from predefined catalog (shared/service-categories.ts)
@@ -376,7 +377,7 @@ export async function seedDatabase() {
         set: lead,
       });
     }
-    console.log("[Seed] Leads seeded");
+    logger.info("[Seed] Leads seeded");
 
     // Seed Invoices
     const invoicesData = [
@@ -447,7 +448,7 @@ export async function seedDatabase() {
         set: invoice,
       });
     }
-    console.log("[Seed] Invoices seeded");
+    logger.info("[Seed] Invoices seeded");
 
     // Seed Reminders
     const remindersData = [
@@ -496,7 +497,7 @@ export async function seedDatabase() {
         set: reminder,
       });
     }
-    console.log("[Seed] Reminders seeded");
+    logger.info("[Seed] Reminders seeded");
 
     // Seed Crew Members
     const crewMembersData = [
@@ -540,7 +541,7 @@ export async function seedDatabase() {
         set: crew,
       });
     }
-    console.log("[Seed] Crew members seeded");
+    logger.info("[Seed] Crew members seeded");
 
     // Seed Crew Invites
     const crewInvitesData = [
@@ -578,7 +579,7 @@ export async function seedDatabase() {
         set: invite,
       });
     }
-    console.log("[Seed] Crew invites seeded");
+    logger.info("[Seed] Crew invites seeded");
 
     // Seed Booking Requests
     const bookingRequestsData = [
@@ -647,7 +648,7 @@ export async function seedDatabase() {
         set: booking,
       });
     }
-    console.log("[Seed] Booking requests seeded");
+    logger.info("[Seed] Booking requests seeded");
 
     // Seed Booking Events
     const bookingEventsData = [
@@ -683,7 +684,7 @@ export async function seedDatabase() {
         set: event,
       });
     }
-    console.log("[Seed] Booking events seeded");
+    logger.info("[Seed] Booking events seeded");
 
     // Seed Reviews
     const reviewsData = [
@@ -739,7 +740,7 @@ export async function seedDatabase() {
         set: review,
       });
     }
-    console.log("[Seed] Reviews seeded");
+    logger.info("[Seed] Reviews seeded");
 
     // Seed Referrals
     const referralsData = [
@@ -778,7 +779,7 @@ export async function seedDatabase() {
         set: referral,
       });
     }
-    console.log("[Seed] Referrals seeded");
+    logger.info("[Seed] Referrals seeded");
 
     // Seed User Payment Methods
     const paymentMethodsData = [
@@ -817,7 +818,7 @@ export async function seedDatabase() {
         set: method,
       });
     }
-    console.log("[Seed] Payment methods seeded");
+    logger.info("[Seed] Payment methods seeded");
 
     // Seed Job Payments
     const jobPaymentsData = [
@@ -857,7 +858,7 @@ export async function seedDatabase() {
         set: payment,
       });
     }
-    console.log("[Seed] Job payments seeded");
+    logger.info("[Seed] Job payments seeded");
 
     // Seed Voice Notes
     const voiceNotesData = [
@@ -888,7 +889,7 @@ export async function seedDatabase() {
         set: note,
       });
     }
-    console.log("[Seed] Voice notes seeded");
+    logger.info("[Seed] Voice notes seeded");
 
     // Seed Feature Flags (enable AI nudges and QuickBook)
     const featureFlagsData = [
@@ -954,7 +955,7 @@ export async function seedDatabase() {
         set: flag,
       });
     }
-    console.log("[Seed] Feature flags seeded");
+    logger.info("[Seed] Feature flags seeded");
 
     // Seed AI Nudges for Today's Game Plan
     // Includes multiple nudges of same type to demo deduplication/grouping
@@ -1091,12 +1092,12 @@ export async function seedDatabase() {
         set: nudge,
       });
     }
-    console.log("[Seed] AI nudges seeded");
+    logger.info("[Seed] AI nudges seeded");
 
-    console.log("[Seed] Database seeding completed successfully!");
+    logger.info("[Seed] Database seeding completed successfully!");
     return true;
   } catch (error) {
-    console.error("[Seed] Error seeding database:", error);
+    logger.error("[Seed] Error seeding database:", error);
     throw error;
   }
 }

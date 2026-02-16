@@ -1,4 +1,5 @@
 import { storage } from "./storage";
+import { logger } from "./lib/logger";
 
 /**
  * Account Deletion Scheduler
@@ -13,7 +14,7 @@ import { storage } from "./storage";
 
 async function processAccountDeletions() {
   try {
-    console.log("[AccountDeletion] Checking for accounts to process...");
+    logger.info("[AccountDeletion] Checking for accounts to process...");
     
     const now = new Date();
     
@@ -24,11 +25,11 @@ async function processAccountDeletions() {
     );
     
     if (pendingDeletionUsers.length === 0) {
-      console.log("[AccountDeletion] No accounts pending deletion");
+      logger.info("[AccountDeletion] No accounts pending deletion");
       return;
     }
 
-    console.log(`[AccountDeletion] Found ${pendingDeletionUsers.length} accounts pending deletion`);
+    logger.info(`[AccountDeletion] Found ${pendingDeletionUsers.length} accounts pending deletion`);
 
     for (const user of pendingDeletionUsers) {
       try {
@@ -50,17 +51,17 @@ async function processAccountDeletions() {
 
         if (daysSinceCancellation < 30) {
           // Still in recovery window - no action needed
-          console.log(
+          logger.info(
             `[AccountDeletion] User ${user.id} is in recovery window (day ${daysSinceCancellation}/30)`
           );
         } else if (daysSinceCancellation < 150) {
           // In archive period - data retained, account inaccessible
-          console.log(
+          logger.info(
             `[AccountDeletion] User ${user.id} is in archive period (day ${daysSinceCancellation}/150)`
           );
         } else {
           // Past 150 days - mark for permanent deletion
-          console.log(
+          logger.info(
             `[AccountDeletion] User ${user.id} is past 150-day retention (day ${daysSinceCancellation}). Marking as deleted.`
           );
           
@@ -70,21 +71,21 @@ async function processAccountDeletions() {
             deletedAt: now.toISOString(),
           });
           
-          console.log(`[AccountDeletion] User ${user.id} marked as deleted`);
+          logger.info(`[AccountDeletion] User ${user.id} marked as deleted`);
         }
       } catch (error) {
-        console.error(`[AccountDeletion] Error processing user ${user.id}:`, error);
+        logger.error(`[AccountDeletion] Error processing user ${user.id}:`, error);
       }
     }
 
-    console.log("[AccountDeletion] Processing complete");
+    logger.info("[AccountDeletion] Processing complete");
   } catch (error) {
-    console.error("[AccountDeletion] Error in scheduler:", error);
+    logger.error("[AccountDeletion] Error in scheduler:", error);
   }
 }
 
 export function startAccountDeletionScheduler() {
-  console.log("[AccountDeletion] Starting account deletion scheduler (checks daily at midnight)");
+  logger.info("[AccountDeletion] Starting account deletion scheduler (checks daily at midnight)");
   
   // Run immediately on startup
   processAccountDeletions();

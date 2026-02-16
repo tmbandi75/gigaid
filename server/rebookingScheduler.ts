@@ -1,4 +1,5 @@
 import { sendSMS } from "./twilio";
+import { logger } from "./lib/logger";
 
 interface DefaultRebookingRule {
   serviceType: string;
@@ -73,14 +74,14 @@ async function detectConversions() {
           await db.update(rebookingLogs)
             .set({ status: "converted", convertedJobId: matchingJob.id, convertedAt: new Date().toISOString() })
             .where(eq(rebookingLogs.id, log.id));
-          console.log(`[RebookingScheduler] Detected conversion for rebooking log ${log.id}`);
+          logger.info(`[RebookingScheduler] Detected conversion for rebooking log ${log.id}`);
         }
       } catch (logError) {
-        console.error(`[RebookingScheduler] Error detecting conversion for log ${log.id}:`, logError);
+        logger.error(`[RebookingScheduler] Error detecting conversion for log ${log.id}:`, logError);
       }
     }
   } catch (error) {
-    console.error("[RebookingScheduler] Error in detectConversions:", error);
+    logger.error("[RebookingScheduler] Error in detectConversions:", error);
   }
 }
 
@@ -153,30 +154,30 @@ async function checkRebookings() {
               });
 
               if (success) {
-                console.log(`[RebookingScheduler] Sent rebooking for job ${job.id}`);
+                logger.info(`[RebookingScheduler] Sent rebooking for job ${job.id}`);
               }
             }
           } catch (ruleError) {
-            console.error(`[RebookingScheduler] Error processing rule ${rule.serviceType} for user ${user.id}:`, ruleError);
+            logger.error(`[RebookingScheduler] Error processing rule ${rule.serviceType} for user ${user.id}:`, ruleError);
           }
         }
       } catch (userError) {
-        console.error(`[RebookingScheduler] Error processing user ${user.id}:`, userError);
+        logger.error(`[RebookingScheduler] Error processing user ${user.id}:`, userError);
       }
     }
   } catch (error) {
-    console.error("[RebookingScheduler] Error in checkRebookings:", error);
+    logger.error("[RebookingScheduler] Error in checkRebookings:", error);
   }
 }
 
 export function startRebookingScheduler() {
-  console.log("[RebookingScheduler] Starting scheduler (checks every hour)");
+  logger.info("[RebookingScheduler] Starting scheduler (checks every hour)");
 
   setInterval(async () => {
     try {
       await checkRebookings();
     } catch (error) {
-      console.error("[RebookingScheduler] Scheduler error:", error);
+      logger.error("[RebookingScheduler] Scheduler error:", error);
     }
   }, 3600000);
 

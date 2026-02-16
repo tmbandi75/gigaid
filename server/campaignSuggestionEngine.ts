@@ -7,6 +7,7 @@ import {
 } from "@shared/schema";
 import { hasCapability, isDeveloper } from "@shared/entitlements";
 import { generateDefaultMessage } from "./notificationCampaignValidator";
+import { logger } from "./lib/logger";
 
 const MAX_SUGGESTIONS_PER_ACCOUNT_PER_WEEK = 2;
 
@@ -130,12 +131,12 @@ async function createSuggestionIfValid(
     createdAt: new Date().toISOString(),
   });
   
-  console.log(`[CampaignSuggestion] Created suggestion for user ${userId}, service ${serviceId}`);
+  logger.info(`[CampaignSuggestion] Created suggestion for user ${userId}, service ${serviceId}`);
   return true;
 }
 
 export async function runSuggestionDetection(): Promise<void> {
-  console.log("[CampaignSuggestion] Running detection scan...");
+  logger.info("[CampaignSuggestion] Running detection scan...");
   
   try {
     const users = await storage.getAllUsers();
@@ -144,7 +145,7 @@ export async function runSuggestionDetection(): Promise<void> {
     const seasonalSignal = detectSeasonalSignal();
     
     if (!weatherSignal && !seasonalSignal) {
-      console.log("[CampaignSuggestion] No signals detected");
+      logger.info("[CampaignSuggestion] No signals detected");
       return;
     }
     
@@ -165,7 +166,7 @@ export async function runSuggestionDetection(): Promise<void> {
       );
       
       if (recentSuggestions.length >= MAX_SUGGESTIONS_PER_ACCOUNT_PER_WEEK) {
-        console.log(`[CampaignSuggestion] Skipping user ${user.id} - at weekly suggestion limit`);
+        logger.info(`[CampaignSuggestion] Skipping user ${user.id} - at weekly suggestion limit`);
         continue;
       }
       
@@ -222,9 +223,9 @@ export async function runSuggestionDetection(): Promise<void> {
       }
     }
     
-    console.log(`[CampaignSuggestion] Detection complete. Created ${suggestionsCreated} suggestions.`);
+    logger.info(`[CampaignSuggestion] Detection complete. Created ${suggestionsCreated} suggestions.`);
   } catch (error) {
-    console.error("[CampaignSuggestion] Error during detection:", error);
+    logger.error("[CampaignSuggestion] Error during detection:", error);
   }
 }
 
@@ -234,7 +235,7 @@ export function startCampaignSuggestionScheduler(): void {
   const INTERVAL_HOURS = 6;
   const INTERVAL_MS = INTERVAL_HOURS * 60 * 60 * 1000;
   
-  console.log(`[CampaignSuggestion] Starting scheduler (runs every ${INTERVAL_HOURS} hours)`);
+  logger.info(`[CampaignSuggestion] Starting scheduler (runs every ${INTERVAL_HOURS} hours)`);
   
   setTimeout(() => {
     runSuggestionDetection();
@@ -247,6 +248,6 @@ export function stopCampaignSuggestionScheduler(): void {
   if (intervalId) {
     clearInterval(intervalId);
     intervalId = null;
-    console.log("[CampaignSuggestion] Scheduler stopped");
+    logger.info("[CampaignSuggestion] Scheduler stopped");
   }
 }

@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import * as Sentry from "@sentry/node";
+import { logger } from "./lib/logger";
 
 export function centralErrorHandler(err: any, req: Request, res: Response, _next: NextFunction): void {
   const status = err.status || err.statusCode || 500;
@@ -7,7 +8,7 @@ export function centralErrorHandler(err: any, req: Request, res: Response, _next
   Sentry.captureException(err);
 
   if (status >= 500) {
-    console.error(`[error] ${req.method} ${req.originalUrl} ${status}: ${err.message || err}`);
+    logger.error(`[error] ${req.method} ${req.originalUrl} ${status}: ${err.message || err}`);
   }
 
   if (res.headersSent) {

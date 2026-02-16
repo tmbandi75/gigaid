@@ -1,4 +1,5 @@
 import admin from 'firebase-admin';
+import { logger } from "./lib/logger";
 
 let firebaseInitialized = false;
 let initError: string | null = null;
@@ -37,7 +38,7 @@ function initializeFirebaseAdmin(): boolean {
     if (!clientEmail) missing.push('FIREBASE_CLIENT_EMAIL');
     if (!privateKeyRaw) missing.push('FIREBASE_PRIVATE_KEY');
     initError = `Missing Firebase credentials: ${missing.join(', ')}`;
-    console.error(`[Firebase] ${initError}. Signup/login will NOT work.`);
+    logger.error(`[Firebase] ${initError}. Signup/login will NOT work.`);
     return false;
   }
 
@@ -46,7 +47,7 @@ function initializeFirebaseAdmin(): boolean {
     privateKey = parsePrivateKey(privateKeyRaw);
   } catch (err) {
     initError = err instanceof Error ? err.message : String(err);
-    console.error(`[Firebase] Private key parsing failed: ${initError}`);
+    logger.error(`[Firebase] Private key parsing failed: ${initError}`);
     return false;
   }
 
@@ -59,11 +60,11 @@ function initializeFirebaseAdmin(): boolean {
       }),
     });
     firebaseInitialized = true;
-    console.log('[Firebase] Admin SDK initialized successfully');
+    logger.info('[Firebase] Admin SDK initialized successfully');
     return true;
   } catch (error) {
     initError = error instanceof Error ? error.message : String(error);
-    console.error('[Firebase] Failed to initialize Admin SDK:', initError);
+    logger.error('[Firebase] Failed to initialize Admin SDK:', initError);
     return false;
   }
 }
@@ -75,11 +76,11 @@ export async function selfTestFirebaseAdmin(): Promise<{ ok: boolean; error?: st
 
   try {
     await admin.auth().listUsers(1);
-    console.log('[Firebase] Self-test PASSED — Admin SDK can reach Firebase Auth');
+    logger.info('[Firebase] Self-test PASSED — Admin SDK can reach Firebase Auth');
     return { ok: true };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error(`[Firebase] Self-test FAILED — Admin SDK cannot reach Firebase Auth: ${msg}`);
+    logger.error(`[Firebase] Self-test FAILED — Admin SDK cannot reach Firebase Auth: ${msg}`);
     return { ok: false, error: msg };
   }
 }
@@ -116,7 +117,7 @@ export async function verifyFirebaseIdToken(idToken: string): Promise<DecodedFir
     };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error('[Firebase] Token verification failed:', msg);
+    logger.error('[Firebase] Token verification failed:', msg);
     return null;
   }
 }

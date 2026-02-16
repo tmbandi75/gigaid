@@ -3,6 +3,7 @@ import { users, invoices } from "@shared/schema";
 import { eq, count, inArray, and } from "drizzle-orm";
 import { storage } from "../storage";
 import { markReferralActivated } from "./growth/referralService";
+import { logger } from "./logger";
 
 export interface ActivationStatus {
   servicesDone: boolean;
@@ -130,7 +131,7 @@ export async function backfillAllActivation(): Promise<BackfillResult> {
         result.alreadyActivated++;
       }
     } catch (err) {
-      console.error(`[Activation Backfill] Failed for user ${user.id}:`, err);
+      logger.error(`[Activation Backfill] Failed for user ${user.id}:`, err);
       result.errors++;
       result.processed++;
     }

@@ -1,5 +1,6 @@
 // Twilio integration for SMS notifications
 import twilio from 'twilio';
+import { logger } from "./lib/logger";
 
 let connectionSettings: any;
 
@@ -54,7 +55,7 @@ export async function sendSMS(to: string, message: string): Promise<boolean> {
     const fromNumber = await getTwilioFromPhoneNumber();
     
     if (!fromNumber) {
-      console.error('No Twilio phone number configured');
+      logger.error('No Twilio phone number configured');
       return false;
     }
 
@@ -71,10 +72,10 @@ export async function sendSMS(to: string, message: string): Promise<boolean> {
       to: cleanTo
     });
 
-    console.log(`SMS sent successfully to ${cleanTo}`);
+    logger.info(`SMS sent successfully to ${cleanTo}`);
     return true;
   } catch (error) {
-    console.error('Failed to send SMS:', error);
+    logger.error('Failed to send SMS:', error);
     return false;
   }
 }
@@ -102,10 +103,10 @@ export async function sendSMSWithTracking(to: string, message: string): Promise<
       to: cleanTo
     });
 
-    console.log(`[Twilio] SMS sent to ${cleanTo}, SID: ${result.sid}`);
+    logger.debug(`[Twilio] SMS sent to ${cleanTo}, SID: ${result.sid}`);
     return { success: true, sid: result.sid };
   } catch (error: any) {
-    console.error('[Twilio] Failed to send SMS:', error);
+    logger.error('[Twilio] Failed to send SMS:', error);
     return { success: false, error: error.message || 'Failed to send SMS' };
   }
 }

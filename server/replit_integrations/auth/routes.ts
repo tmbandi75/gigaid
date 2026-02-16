@@ -2,6 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { authStorage } from "./storage";
 import { isAuthenticated } from "./replitAuth";
 import { verifyAppJwt } from "../../appJwt";
+import { logger } from "../../lib/logger";
 
 // Register auth-specific routes
 export function registerAuthRoutes(app: Express): void {
@@ -36,7 +37,7 @@ export function registerAuthRoutes(app: Express): void {
         // Send with a timestamp to bust any remaining caches
         res.json({ ...user, _ts: Date.now() });
       } catch (error) {
-        console.error("Error fetching user:", error);
+        logger.error("Error fetching user:", error);
         res.status(500).json({ message: "Failed to fetch user" });
       }
     }

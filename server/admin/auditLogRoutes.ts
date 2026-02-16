@@ -3,6 +3,7 @@ import { db } from "../db";
 import { adminActionAudit, users } from "@shared/schema";
 import { eq, desc, and, gte, lte, ilike, count, sql, or } from "drizzle-orm";
 import { adminMiddleware } from "../copilot/adminMiddleware";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -108,7 +109,7 @@ router.get("/", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("[Audit Log] List error:", error);
+    logger.error("[Audit Log] List error:", error);
     res.status(500).json({ error: "Failed to list audit logs" });
   }
 });
@@ -122,7 +123,7 @@ router.get("/action-keys", async (req, res) => {
 
     res.json({ actionKeys: result.map(r => r.actionKey) });
   } catch (error) {
-    console.error("[Audit Log] Action keys error:", error);
+    logger.error("[Audit Log] Action keys error:", error);
     res.status(500).json({ error: "Failed to get action keys" });
   }
 });
@@ -167,7 +168,7 @@ router.get("/export", async (req, res) => {
     res.setHeader("Content-Disposition", `attachment; filename=audit-logs-${new Date().toISOString().split("T")[0]}.csv`);
     res.send(csv);
   } catch (error) {
-    console.error("[Audit Log] Export error:", error);
+    logger.error("[Audit Log] Export error:", error);
     res.status(500).json({ error: "Failed to export audit logs" });
   }
 });
@@ -215,7 +216,7 @@ router.get("/:logId", async (req, res) => {
       payloadParsed: log.payload ? JSON.parse(log.payload) : null,
     });
   } catch (error) {
-    console.error("[Audit Log] Detail error:", error);
+    logger.error("[Audit Log] Detail error:", error);
     res.status(500).json({ error: "Failed to get audit log" });
   }
 });

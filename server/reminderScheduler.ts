@@ -1,5 +1,6 @@
 import { storage } from "./storage";
 import { sendSMS } from "./twilio";
+import { logger } from "./lib/logger";
 
 const formatTime = (time: string) => {
   const [hours, minutes] = time.split(":");
@@ -32,9 +33,9 @@ async function checkAndSendReminders() {
         try {
           await sendSMS(job.clientPhone, message);
           await storage.updateJob(job.id, { reminder24hSent: true });
-          console.log(`[Reminder] Sent 24h reminder for job ${job.id}`);
+          logger.info(`[Reminder] Sent 24h reminder for job ${job.id}`);
         } catch (err) {
-          console.error(`[Reminder] Failed to send 24h reminder for job ${job.id}:`, err);
+          logger.error(`[Reminder] Failed to send 24h reminder for job ${job.id}:`, err);
         }
       }
 
@@ -44,19 +45,19 @@ async function checkAndSendReminders() {
         try {
           await sendSMS(job.clientPhone, message);
           await storage.updateJob(job.id, { reminder2hSent: true });
-          console.log(`[Reminder] Sent 2h reminder for job ${job.id}`);
+          logger.info(`[Reminder] Sent 2h reminder for job ${job.id}`);
         } catch (err) {
-          console.error(`[Reminder] Failed to send 2h reminder for job ${job.id}:`, err);
+          logger.error(`[Reminder] Failed to send 2h reminder for job ${job.id}:`, err);
         }
       }
     }
   } catch (error) {
-    console.error("[Reminder] Error checking reminders:", error);
+    logger.error("[Reminder] Error checking reminders:", error);
   }
 }
 
 export function startReminderScheduler() {
-  console.log("[Reminder] Starting auto-reminder scheduler (checks every 5 minutes)");
+  logger.info("[Reminder] Starting auto-reminder scheduler (checks every 5 minutes)");
   checkAndSendReminders();
   setInterval(checkAndSendReminders, 5 * 60 * 1000);
 }

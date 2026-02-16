@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { logger } from "./lib/logger";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -54,7 +55,7 @@ export async function generateCelebrationMessage(context: CelebrationContext): P
 
     return response.choices[0]?.message?.content || getDefaultMessage(context.type);
   } catch (error) {
-    console.error("Error generating celebration message:", error);
+    logger.error("Error generating celebration message:", error);
     return getDefaultMessage(context.type);
   }
 }

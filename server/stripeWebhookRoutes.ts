@@ -1,6 +1,7 @@
 import { Express, Request, Response } from "express";
 import Stripe from "stripe";
 import { IStorage } from "./storage";
+import { logger } from "./lib/logger";
 
 const WEBHOOK_EVENT_TYPES = [
   "payment_intent.succeeded",
@@ -49,17 +50,17 @@ export function registerStripeWebhookRoutes(app: Express, storage: IStorage) {
       const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
       if (!webhookSecret) {
-        console.error("[Stripe Webhook] STRIPE_WEBHOOK_SECRET not configured");
+        logger.error("[Stripe Webhook] STRIPE_WEBHOOK_SECRET not configured");
         return res.status(500).json({ error: "Webhook secret not configured" });
       }
 
       if (!sig) {
-        console.warn("[Stripe Webhook] Missing stripe-signature header");
+        logger.warn("[Stripe Webhook] Missing stripe-signature header");
         return res.status(400).json({ error: "Missing signature" });
       }
 
       if (!req.rawBody) {
-        console.error("[Stripe Webhook] req.rawBody missing — express.json verify callback did not run");
+        logger.error("[Stripe Webhook] req.rawBody missing — express.json verify callback did not run");
         return res.status(500).json({ error: "Server misconfiguration: raw body not captured" });
       }
 
@@ -76,15 +77,15 @@ export function registerStripeWebhookRoutes(app: Express, storage: IStorage) {
           webhookSecret
         );
       } catch (err: any) {
-        console.error("[Stripe Webhook] Signature verification failed:", err.message);
+        logger.error("[Stripe Webhook] Signature verification failed:", err.message);
         return res.status(400).json({ error: `Webhook Error: ${err.message}` });
       }
 
-      console.log(`[Stripe Webhook] Received event: ${event.id} (${event.type})`);
+      logger.info(`[Stripe Webhook] Received event: ${event.id} (${event.type})`);
 
       const existing = await storage.getStripeWebhookEvent(event.id);
       if (existing) {
-        console.log(`[Stripe Webhook] Duplicate event ${event.id}, returning 200`);
+        logger.info(`[Stripe Webhook] Duplicate event ${event.id}, returning 200`);
         return res.status(200).json({ received: true, duplicate: true });
       }
 
@@ -101,9 +102,9 @@ export function registerStripeWebhookRoutes(app: Express, storage: IStorage) {
           status: "received",
           attemptCount: 0,
         });
-        console.log(`[Stripe Webhook] Stored event ${event.id}`);
+        logger.info(`[Stripe Webhook] Stored event ${event.id}`);
       } catch (err: any) {
-        console.error("[Stripe Webhook] Failed to store event:", err.message);
+        logger.error("[Stripe Webhook] Failed to store event:", err.message);
         return res.status(500).json({ error: "Failed to store webhook event" });
       }
 
@@ -117,19 +118,19 @@ export function registerStripeWebhookRoutes(app: Express, storage: IStorage) {
 async function processWebhookEvent(stripeEventId: string, storage: IStorage) {
   const webhookEvent = await storage.getStripeWebhookEvent(stripeEventId);
   if (!webhookEvent) {
-    console.error(`[Stripe Webhook Processor] Event not found: ${stripeEventId}`);
+    logger.error(`[Stripe Webhook Processor] Event not found: ${stripeEventId}`);
     return;
   }
 
   if (webhookEvent.status === "processed") {
-    console.log(`[Stripe Webhook Processor] Event already processed: ${stripeEventId}`);
+    logger.info(`[Stripe Webhook Processor] Event already processed: ${stripeEventId}`);
     return;
   }
 
   const lockKey = `${stripeEventId}:process`;
   const lockAcquired = await storage.acquireStripeIdempotencyLock(lockKey);
   if (!lockAcquired) {
-    console.log(`[Stripe Webhook Processor] Lock exists for ${stripeEventId}, skipping`);
+    logger.info(`[Stripe Webhook Processor] Lock exists for ${stripeEventId}, skipping`);
     return;
   }
 
@@ -141,9 +142,9 @@ async function processWebhookEvent(stripeEventId: string, storage: IStorage) {
 
     await storage.markStripeWebhookProcessed(stripeEventId);
     await storage.releaseStripeIdempotencyLock(lockKey);
-    console.log(`[Stripe Webhook Processor] Successfully processed: ${stripeEventId}`);
+    logger.info(`[Stripe Webhook Processor] Successfully processed: ${stripeEventId}`);
   } catch (err: any) {
-    console.error(`[Stripe Webhook Processor] Error processing ${stripeEventId}:`, err.message);
+    logger.error(`[Stripe Webhook Processor] Error processing ${stripeEventId}:`, err.message);
 
     const currentEvent = await storage.getStripeWebhookEvent(stripeEventId);
     const attemptCount = currentEvent?.attemptCount || 1;
@@ -151,10 +152,10 @@ async function processWebhookEvent(stripeEventId: string, storage: IStorage) {
     if (isTransientError(err) && attemptCount < 5) {
       const nextAttemptAt = new Date(Date.now() + getBackoffMs(attemptCount)).toISOString();
       await storage.markStripeWebhookFailed(stripeEventId, err.message, nextAttemptAt);
-      console.log(`[Stripe Webhook Processor] Scheduled retry at ${nextAttemptAt}`);
+      logger.info(`[Stripe Webhook Processor] Scheduled retry at ${nextAttemptAt}`);
     } else {
       await storage.markStripeWebhookFailed(stripeEventId, err.message, null);
-      console.log(`[Stripe Webhook Processor] Marked as failed (non-transient or max retries)`);
+      logger.info(`[Stripe Webhook Processor] Marked as failed (non-transient or max retries)`);
     }
 
     await storage.releaseStripeIdempotencyLock(lockKey);
@@ -202,7 +203,7 @@ async function handleStripeEvent(
     }
 
     default:
-      console.log(`[Stripe Webhook Processor] Unhandled event type: ${eventType}`);
+      logger.info(`[Stripe Webhook Processor] Unhandled event type: ${eventType}`);
   }
 }
 
@@ -263,10 +264,10 @@ async function handlePaymentIntentEvent(
             firstPaymentReceivedAt: new Date().toISOString(),
           });
           const timeToFirstDollarHours = user.createdAt ? Math.round((Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60)) : null;
-          console.log(`[Activation] first_payment_received (Stripe) for user ${userId}, time_to_first_dollar: ${timeToFirstDollarHours}h`);
+          logger.info(`[Activation] first_payment_received (Stripe) for user ${userId}, time_to_first_dollar: ${timeToFirstDollarHours}h`);
         }
       } catch (err: any) {
-        console.error(`[Activation] Failed to track first_payment_received:`, err.message);
+        logger.error(`[Activation] Failed to track first_payment_received:`, err.message);
       }
     }
 
@@ -279,10 +280,10 @@ async function handlePaymentIntentEvent(
             paidAt: new Date().toISOString(),
             paymentMethod: "card",
           });
-          console.log(`[Stripe Webhook] Marked invoice ${invoiceId} as paid`);
+          logger.info(`[Stripe Webhook] Marked invoice ${invoiceId} as paid`);
         }
       } catch (err: any) {
-        console.error(`[Stripe Webhook] Failed to update invoice ${invoiceId}:`, err.message);
+        logger.error(`[Stripe Webhook] Failed to update invoice ${invoiceId}:`, err.message);
       }
     }
 
@@ -294,15 +295,15 @@ async function handlePaymentIntentEvent(
             paymentStatus: "paid",
             paymentMethod: "card",
           });
-          console.log(`[Stripe Webhook] Marked job ${jobId} as paid`);
+          logger.info(`[Stripe Webhook] Marked job ${jobId} as paid`);
         }
       } catch (err: any) {
-        console.error(`[Stripe Webhook] Failed to update job ${jobId}:`, err.message);
+        logger.error(`[Stripe Webhook] Failed to update job ${jobId}:`, err.message);
       }
     }
   }
 
-  console.log(`[Stripe Webhook] Updated payment state for ${paymentIntent.id}: ${status}`);
+  logger.info(`[Stripe Webhook] Updated payment state for ${paymentIntent.id}: ${status}`);
 }
 
 async function handleChargeRefundEvent(
@@ -319,7 +320,7 @@ async function handleChargeRefundEvent(
 
   const existingState = await storage.getStripePaymentStateByPI(paymentIntentId);
   if (!existingState) {
-    console.log(`[Stripe Webhook] No payment state for refund event, PI: ${paymentIntentId}`);
+    logger.info(`[Stripe Webhook] No payment state for refund event, PI: ${paymentIntentId}`);
     return;
   }
 
@@ -335,7 +336,7 @@ async function handleChargeRefundEvent(
     lastUpdatedAt: new Date().toISOString(),
   });
 
-  console.log(`[Stripe Webhook] Updated payment ${paymentIntentId} to ${isFullRefund ? "refunded" : "partially_refunded"}`);
+  logger.info(`[Stripe Webhook] Updated payment ${paymentIntentId} to ${isFullRefund ? "refunded" : "partially_refunded"}`);
 }
 
 async function handleAccountUpdatedEvent(
@@ -362,7 +363,7 @@ async function handleAccountUpdatedEvent(
       stripeConnectStatus: status,
     });
     
-    console.log(`[Stripe Webhook] Updated Connect status for user ${user.id}: ${status}`);
+    logger.info(`[Stripe Webhook] Updated Connect status for user ${user.id}: ${status}`);
   }
 }
 
@@ -436,10 +437,10 @@ async function handleDisputeEvent(
         await storage.updateInvoice(invoiceId, {
           status: "disputed",
         });
-        console.log(`[Stripe Webhook] Marked invoice ${invoiceId} as disputed`);
+        logger.info(`[Stripe Webhook] Marked invoice ${invoiceId} as disputed`);
       }
     } catch (err: any) {
-      console.error(`[Stripe Webhook] Failed to update invoice ${invoiceId}:`, err.message);
+      logger.error(`[Stripe Webhook] Failed to update invoice ${invoiceId}:`, err.message);
     }
   }
 
@@ -450,21 +451,21 @@ async function handleDisputeEvent(
         await storage.updateJob(jobId, {
           paymentStatus: "disputed",
         });
-        console.log(`[Stripe Webhook] Marked job ${jobId} payment as disputed`);
+        logger.info(`[Stripe Webhook] Marked job ${jobId} payment as disputed`);
       }
     } catch (err: any) {
-      console.error(`[Stripe Webhook] Failed to update job ${jobId}:`, err.message);
+      logger.error(`[Stripe Webhook] Failed to update job ${jobId}:`, err.message);
     }
   }
 
-  console.log(`[Stripe Webhook] ${event.type} for dispute ${dispute.id}: status=${dispute.status}, reason=${dispute.reason}`);
+  logger.info(`[Stripe Webhook] ${event.type} for dispute ${dispute.id}: status=${dispute.status}, reason=${dispute.reason}`);
 }
 
 export async function processRetryableWebhooks(storage: IStorage) {
   const now = new Date().toISOString();
   const pendingEvents = await storage.getRetryableStripeWebhookEvents(now, 25);
 
-  console.log(`[Stripe Webhook Retry] Found ${pendingEvents.length} events to retry`);
+  logger.info(`[Stripe Webhook Retry] Found ${pendingEvents.length} events to retry`);
 
   for (const event of pendingEvents) {
     await processWebhookEvent(event.stripeEventId, storage);
@@ -478,14 +479,14 @@ export function startWebhookRetryScheduler(storage: IStorage, intervalMs: number
     clearInterval(webhookRetrySchedulerInterval);
   }
   
-  console.log(`[Stripe Webhook Retry] Starting scheduler with ${intervalMs / 1000}s interval`);
+  logger.info(`[Stripe Webhook Retry] Starting scheduler with ${intervalMs / 1000}s interval`);
   
   webhookRetrySchedulerInterval = setInterval(async () => {
     try {
       await processRetryableWebhooks(storage);
       await cleanupStaleIdempotencyLocks(storage);
     } catch (err: any) {
-      console.error("[Stripe Webhook Retry] Scheduler error:", err.message);
+      logger.error("[Stripe Webhook Retry] Scheduler error:", err.message);
     }
   }, intervalMs);
   
@@ -493,7 +494,7 @@ export function startWebhookRetryScheduler(storage: IStorage, intervalMs: number
     try {
       await processRetryableWebhooks(storage);
     } catch (err: any) {
-      console.error("[Stripe Webhook Retry] Initial run error:", err.message);
+      logger.error("[Stripe Webhook Retry] Initial run error:", err.message);
     }
   });
 }
@@ -502,7 +503,7 @@ async function cleanupStaleIdempotencyLocks(storage: IStorage) {
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   const cleaned = await storage.cleanupStaleStripeIdempotencyLocks(oneHourAgo);
   if (cleaned > 0) {
-    console.log(`[Stripe Webhook Retry] Cleaned up ${cleaned} stale idempotency locks`);
+    logger.info(`[Stripe Webhook Retry] Cleaned up ${cleaned} stale idempotency locks`);
   }
 }
 
@@ -556,13 +557,13 @@ export async function reconcileStuckPayments(storage: IStorage): Promise<{
         }
 
         result.fixed++;
-        console.log(`[Stripe Reconcile] Fixed payment ${payment.paymentIntentId}: ${currentStatus} -> ${latestStatus}`);
+        logger.info(`[Stripe Reconcile] Fixed payment ${payment.paymentIntentId}: ${currentStatus} -> ${latestStatus}`);
       } else {
         result.unchanged++;
       }
     } catch (err: any) {
       result.errors++;
-      console.error(`[Stripe Reconcile] Error for ${payment.paymentIntentId}:`, err.message);
+      logger.error(`[Stripe Reconcile] Error for ${payment.paymentIntentId}:`, err.message);
     }
   }
 

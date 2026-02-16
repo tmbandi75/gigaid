@@ -78,6 +78,7 @@ import { pool } from "./db";
 import { registerStripeWebhookRoutes, processRetryableWebhooks, reconcileStuckPayments, startWebhookRetryScheduler } from "./stripeWebhookRoutes";
 import { registerTestRoutes } from "./testRoutes";
 import { generateBookingSlug, ensureUniqueSlug, validateSlug } from "./lib/bookingSlug";
+import { logger } from "./lib/logger";
 
 const quoteCache = new Map<string, { result: any; timestamp: number }>();
 const QUOTE_CACHE_TTL = 3600000;
@@ -144,7 +145,7 @@ export async function registerRoutes(
     };
 
     if (!healthy) {
-      console.error("[HealthCheck] Unhealthy:", JSON.stringify(result));
+      logger.error("[HealthCheck] Unhealthy:", JSON.stringify(result));
     }
 
     return res.status(healthy ? 200 : 503).json(result);
@@ -236,17 +237,17 @@ export async function registerRoutes(
       userEmail = dbUser?.email || null;
     }
     
-    console.log("[AdminStatus] Checking admin for user");
+    logger.debug("[AdminStatus] Checking admin for user");
     
     if (!userId && !userEmail) {
-      console.log("[AdminStatus] No userId or email found, returning false");
+      logger.debug("[AdminStatus] No userId or email found, returning false");
       return res.json({ isAdmin: false });
     }
     
     // Import isAdminUser dynamically to check admin status
     const { isAdminUser } = await import("./copilot/adminMiddleware");
     const isAdmin = isAdminUser(userId || undefined, userEmail || undefined);
-    console.log("[AdminStatus] Bootstrap admin check: isAdmin=", isAdmin);
+    logger.debug("[AdminStatus] Bootstrap admin check: isAdmin=", isAdmin);
     
     if (isAdmin) {
       return res.json({ isAdmin: true, role: "super_admin" });
@@ -347,7 +348,7 @@ export async function registerRoutes(
       // In production, this would upload to object storage
       res.json({ success: true, message: "Asset upload acknowledged" });
     } catch (error) {
-      console.error("[Offline] Asset upload error:", error);
+      logger.error("[Offline] Asset upload error:", error);
       res.status(500).json({ error: "Failed to upload asset" });
     }
   });
@@ -358,7 +359,7 @@ export async function registerRoutes(
       // Process the offline action
       res.json({ success: true, message: "Action processed" });
     } catch (error) {
-      console.error("[Offline] Action processing error:", error);
+      logger.error("[Offline] Action processing error:", error);
       res.status(500).json({ error: "Failed to process action" });
     }
   });
@@ -553,7 +554,7 @@ export async function registerRoutes(
         analyticsDisabledReason: user.analyticsDisabledReason ?? null,
       });
     } catch (error) {
-      console.error("[Profile] Error fetching profile:", error);
+      logger.error("[Profile] Error fetching profile:", error);
       res.status(500).json({ error: "Failed to fetch profile" });
     }
   });
@@ -578,7 +579,7 @@ export async function registerRoutes(
       
       res.json({ bookingLink, servicesCount });
     } catch (error) {
-      console.error("[BookingLink] Error fetching booking link:", error);
+      logger.error("[BookingLink] Error fetching booking link:", error);
       res.status(500).json({ error: "Failed to fetch booking link" });
     }
   });
@@ -617,7 +618,7 @@ export async function registerRoutes(
           const { ensureUserReferralCode } = await import("./lib/growth/referralService");
           await ensureUserReferralCode(user.id);
         } catch (err) {
-          console.error("[Growth] Failed to generate referral code on signup:", err);
+          logger.error("[Growth] Failed to generate referral code on signup:", err);
         }
       }
       
@@ -682,7 +683,7 @@ export async function registerRoutes(
         notifyByEmail: updatedUser?.notifyByEmail,
       });
     } catch (error) {
-      console.error("Profile update error:", error);
+      logger.error("Profile update error:", error);
       res.status(500).json({ error: "Failed to update profile" });
     }
   });
@@ -744,7 +745,7 @@ export async function registerRoutes(
             createdAt: new Date().toISOString(),
           });
         } catch (err) {
-          console.error("[PrivacyEvent] Failed to log privacy event:", err);
+          logger.error("[PrivacyEvent] Failed to log privacy event:", err);
         }
       }
 
@@ -755,7 +756,7 @@ export async function registerRoutes(
         analyticsDisabledReason: updatedUser?.analyticsDisabledReason ?? null,
       });
     } catch (error) {
-      console.error("[AnalyticsPrefs] Error updating analytics preferences:", error);
+      logger.error("[AnalyticsPrefs] Error updating analytics preferences:", error);
       res.status(500).json({ error: "Failed to update analytics preferences" });
     }
   });
@@ -873,7 +874,7 @@ export async function registerRoutes(
           await db.delete(table).where(eq(col, userId));
           tablesCleared.push(name);
         } catch (tableErr) {
-          console.error(`[AccountDelete] Error deleting from ${name}:`, tableErr);
+          logger.error(`[AccountDelete] Error deleting from ${name}:`, tableErr);
         }
       }
 
@@ -887,10 +888,10 @@ export async function registerRoutes(
             const stripe = new Stripe(stripeKey);
             await stripe.accounts.del(user.stripeConnectAccountId);
             stripeCleanup = true;
-            console.log(`[AccountDelete] Stripe Connect account ${user.stripeConnectAccountId} deleted`);
+            logger.info(`[AccountDelete] Stripe Connect account ${user.stripeConnectAccountId} deleted`);
           }
         } catch (stripeErr: any) {
-          console.error(`[AccountDelete] Stripe cleanup error:`, stripeErr?.message);
+          logger.error(`[AccountDelete] Stripe cleanup error:`, stripeErr?.message);
         }
       }
 
@@ -903,10 +904,10 @@ export async function registerRoutes(
             const stripe = new Stripe(stripeKey);
             await stripe.customers.del(user.stripeCustomerId);
             stripeCleanup = true;
-            console.log(`[AccountDelete] Stripe customer ${user.stripeCustomerId} deleted`);
+            logger.info(`[AccountDelete] Stripe customer ${user.stripeCustomerId} deleted`);
           }
         } catch (stripeErr: any) {
-          console.error(`[AccountDelete] Stripe customer cleanup error:`, stripeErr?.message);
+          logger.error(`[AccountDelete] Stripe customer cleanup error:`, stripeErr?.message);
         }
       }
 
@@ -918,7 +919,7 @@ export async function registerRoutes(
           posthogCleanup = true;
         }
       } catch (phErr: any) {
-        console.error(`[AccountDelete] PostHog cleanup error:`, phErr?.message);
+        logger.error(`[AccountDelete] PostHog cleanup error:`, phErr?.message);
       }
 
       // Anonymize and soft-delete the user record (keep for audit trail)
@@ -957,18 +958,18 @@ export async function registerRoutes(
         })
         .where(eq(schema.accountDeletions.userId, userId));
 
-      console.log(`[AccountDelete] User ${userId} account fully deleted at ${now}. Tables cleared: ${tablesCleared.length}`);
+      logger.info(`[AccountDelete] User ${userId} account fully deleted at ${now}. Tables cleared: ${tablesCleared.length}`);
 
       // Destroy session
       if (req.session) {
         req.session.destroy((err: any) => {
-          if (err) console.error("[AccountDelete] Session destroy error:", err);
+          if (err) logger.error("[AccountDelete] Session destroy error:", err);
         });
       }
 
       res.json({ success: true, message: "Account deleted", tablesCleared: tablesCleared.length });
     } catch (error) {
-      console.error("[AccountDelete] Error:", error);
+      logger.error("[AccountDelete] Error:", error);
 
       // Log failed deletion attempt
       try {
@@ -1281,7 +1282,7 @@ export async function registerRoutes(
         dashboardSummary,
       });
     } catch (error) {
-      console.error("Game plan error:", error);
+      logger.error("Game plan error:", error);
       res.status(500).json({ error: "Failed to fetch game plan" });
     }
   });
@@ -1365,7 +1366,7 @@ export async function registerRoutes(
         lastJobAt: latestJob?.completedAt || null,
       });
     } catch (error) {
-      console.error("Encouragement data error:", error);
+      logger.error("Encouragement data error:", error);
       res.status(500).json({ error: "Failed to fetch encouragement data" });
     }
   });
@@ -1497,7 +1498,7 @@ export async function registerRoutes(
         depositsCollectedThisWeek,
       });
     } catch (error) {
-      console.error("Owner metrics error:", error);
+      logger.error("Owner metrics error:", error);
       res.status(500).json({ error: "Failed to fetch owner metrics" });
     }
   });
@@ -1614,7 +1615,7 @@ export async function registerRoutes(
       if (updated && validated.status === 'completed' && previousStatus !== 'completed') {
         import("./postJobMomentum").then(({ schedulePostJobMessages }) => {
           schedulePostJobMessages(updated, previousStatus || "").catch(err => {
-            console.error("[PostJobMomentum] Failed to schedule messages:", err);
+            logger.error("[PostJobMomentum] Failed to schedule messages:", err);
           });
         }).catch(() => {});
       }
@@ -1706,7 +1707,7 @@ export async function registerRoutes(
         if (coords) {
           jobWithCoords.customerLat = coords.lat;
           jobWithCoords.customerLng = coords.lng;
-          console.log(`[Jobs] Geocoded address for new job -> (${coords.lat}, ${coords.lng})`);
+          logger.debug(`[Jobs] Geocoded address for new job -> (${coords.lat}, ${coords.lng})`);
         }
       }
       
@@ -1728,7 +1729,7 @@ export async function registerRoutes(
       if (job.scheduledDate && job.scheduledTime) {
         import("./postJobMomentum")
           .then(({ scheduleJobConfirmation }) => scheduleJobConfirmation(job, false))
-          .catch(err => console.error("[PostJobMomentum] Failed to schedule confirmation:", err));
+          .catch(err => logger.error("[PostJobMomentum] Failed to schedule confirmation:", err));
       }
       
       // Auto-link lead if leadId provided
@@ -1769,7 +1770,7 @@ export async function registerRoutes(
           if (coords) {
             updates.customerLat = coords.lat;
             updates.customerLng = coords.lng;
-            console.log(`[Jobs] Geocoded updated address -> (${coords.lat}, ${coords.lng})`);
+            logger.debug(`[Jobs] Geocoded updated address -> (${coords.lat}, ${coords.lng})`);
           }
         }
       }
@@ -1814,7 +1815,7 @@ export async function registerRoutes(
             await generateReadyActionFromSignal(signal);
           }
         } catch (err) {
-          console.error("[IntentDetection] Failed to detect job completed:", err);
+          logger.error("[IntentDetection] Failed to detect job completed:", err);
         }
       }
       
@@ -1831,7 +1832,7 @@ export async function registerRoutes(
       if (isReschedule && job.scheduledDate && job.scheduledTime) {
         import("./postJobMomentum")
           .then(({ scheduleJobConfirmation }) => scheduleJobConfirmation(job, true))
-          .catch(err => console.error("[PostJobMomentum] Failed to schedule reschedule confirmation:", err));
+          .catch(err => logger.error("[PostJobMomentum] Failed to schedule reschedule confirmation:", err));
       }
       
       // Revenue protection: Auto-create draft invoice when job is completed
@@ -1941,7 +1942,7 @@ export async function registerRoutes(
 
       res.status(201).json(resolution);
     } catch (error) {
-      console.error("Create job resolution error:", error);
+      logger.error("Create job resolution error:", error);
       res.status(500).json({ error: "Failed to create job resolution" });
     }
   });
@@ -2205,7 +2206,7 @@ export async function registerRoutes(
         depositLink,
       });
     } catch (error) {
-      console.error("Send deposit request error:", error);
+      logger.error("Send deposit request error:", error);
       res.status(500).json({ error: "Failed to send deposit request" });
     }
   });
@@ -2309,7 +2310,7 @@ export async function registerRoutes(
 
       res.json({ success: true, message: "Confirmation sent" });
     } catch (error) {
-      console.error("Failed to send confirmation:", error);
+      logger.error("Failed to send confirmation:", error);
       res.status(500).json({ error: "Failed to send confirmation" });
     }
   });
@@ -2346,7 +2347,7 @@ export async function registerRoutes(
       );
       res.json(photos);
     } catch (error) {
-      console.error("Failed to fetch photo assets:", error);
+      logger.error("Failed to fetch photo assets:", error);
       res.status(500).json({ error: "Failed to fetch photo assets" });
     }
   });
@@ -2453,7 +2454,7 @@ export async function registerRoutes(
       
       res.json(updatedPhotos);
     } catch (error) {
-      console.error("Failed to save job photos:", error);
+      logger.error("Failed to save job photos:", error);
       res.status(500).json({ error: "Failed to save job photos" });
     }
   });
@@ -2602,7 +2603,7 @@ export async function registerRoutes(
             await generateReadyActionFromSignal(signal);
           }
         } catch (err) {
-          console.error("[IntentDetection] Failed to detect engaged status:", err);
+          logger.error("[IntentDetection] Failed to detect engaged status:", err);
         }
       }
       
@@ -2639,7 +2640,7 @@ export async function registerRoutes(
             await storage.dismissReadyAction(activeAction.id);
           }
         } catch (err) {
-          console.error("[AiOverride] Failed to track alternative action:", err);
+          logger.error("[AiOverride] Failed to track alternative action:", err);
         }
       }
       
@@ -2738,7 +2739,7 @@ export async function registerRoutes(
 
       res.status(201).json({ jobId: job.id, job });
     } catch (error) {
-      console.error("Failed to convert lead:", error);
+      logger.error("Failed to convert lead:", error);
       res.status(500).json({ error: "Failed to convert lead to job" });
     }
   });
@@ -2975,7 +2976,7 @@ export async function registerRoutes(
           await sendSMS(lead.clientPhone, message);
           smsSent = true;
         } catch (e) {
-          console.error("SMS send failed:", e);
+          logger.error("SMS send failed:", e);
         }
       }
       
@@ -2996,7 +2997,7 @@ export async function registerRoutes(
           });
           emailSent = true;
         } catch (e) {
-          console.error("Email send failed:", e);
+          logger.error("Email send failed:", e);
         }
       }
       
@@ -3020,7 +3021,7 @@ export async function registerRoutes(
         emailSent,
       });
     } catch (error) {
-      console.error("Send price confirmation error:", error);
+      logger.error("Send price confirmation error:", error);
       res.status(500).json({ error: "Failed to send price confirmation" });
     }
   });
@@ -3141,7 +3142,7 @@ export async function registerRoutes(
         jobId: job.id,
       });
     } catch (error) {
-      console.error("Confirm price error:", error);
+      logger.error("Confirm price error:", error);
       res.status(500).json({ error: "Failed to confirm price" });
     }
   });
@@ -3188,7 +3189,7 @@ export async function registerRoutes(
         },
       });
     } catch (error) {
-      console.error("Public deposit error:", error);
+      logger.error("Public deposit error:", error);
       res.status(500).json({ error: "Failed to fetch deposit info" });
     }
   });
@@ -3242,7 +3243,7 @@ export async function registerRoutes(
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
       }
-      console.error("Record deposit error:", error);
+      logger.error("Record deposit error:", error);
       res.status(500).json({ error: "Failed to record deposit payment" });
     }
   });
@@ -3298,7 +3299,7 @@ export async function registerRoutes(
         currency: paymentIntent.currency,
       });
     } catch (error) {
-      console.error("Create deposit payment intent error:", error);
+      logger.error("Create deposit payment intent error:", error);
       res.status(500).json({ error: "Failed to create payment intent" });
     }
   });
@@ -3377,7 +3378,7 @@ export async function registerRoutes(
         paymentMethods: paymentMethodsMap,
       });
     } catch (error) {
-      console.error("Public invoice error:", error);
+      logger.error("Public invoice error:", error);
       res.status(500).json({ error: "Failed to fetch invoice" });
     }
   });
@@ -3519,7 +3520,7 @@ export async function registerRoutes(
           emailSentAt = new Date().toISOString();
           emailSentNow = true;
         } catch (emailError) {
-          console.error("Failed to send invoice email:", emailError);
+          logger.error("Failed to send invoice email:", emailError);
         }
       }
 
@@ -3533,7 +3534,7 @@ export async function registerRoutes(
           smsSentAt = new Date().toISOString();
           smsSentNow = true;
         } catch (smsError) {
-          console.error("Failed to send invoice SMS:", smsError);
+          logger.error("Failed to send invoice SMS:", smsError);
         }
       }
 
@@ -3553,10 +3554,10 @@ export async function registerRoutes(
           await storage.updateUser(existingInvoice.userId, {
             firstQuoteSentAt: new Date().toISOString(),
           });
-          console.log(`[Activation] first_quote_sent recorded for user ${existingInvoice.userId}`);
+          logger.debug(`[Activation] first_quote_sent recorded for user ${existingInvoice.userId}`);
         }
       } catch (trackErr) {
-        console.error("[Activation] Failed to track first_quote_sent:", trackErr);
+        logger.error("[Activation] Failed to track first_quote_sent:", trackErr);
       }
 
       res.json({
@@ -3566,7 +3567,7 @@ export async function registerRoutes(
         smsSent: smsSentNow,
       });
     } catch (error) {
-      console.error("Invoice send error:", error);
+      logger.error("Invoice send error:", error);
       res.status(500).json({ error: "Failed to send invoice" });
     }
   });
@@ -3612,10 +3613,10 @@ export async function registerRoutes(
             }
             
             await storage.updateJob(existingInvoice.jobId, updates);
-            console.log(`[AutoClear] Job ${existingInvoice.jobId} updated: payment received`);
+            logger.info(`[AutoClear] Job ${existingInvoice.jobId} updated: payment received`);
           }
         } catch (err) {
-          console.error("[AutoClear] Failed to update related job:", err);
+          logger.error("[AutoClear] Failed to update related job:", err);
         }
       }
 
@@ -3629,10 +3630,10 @@ export async function registerRoutes(
           });
           const timeToFirstDollarMs = user.createdAt ? Date.now() - new Date(user.createdAt).getTime() : null;
           const timeToFirstDollarHours = timeToFirstDollarMs ? Math.round(timeToFirstDollarMs / (1000 * 60 * 60)) : null;
-          console.log(`[Activation] first_payment_received recorded for user ${existingInvoice.userId}, time_to_first_dollar: ${timeToFirstDollarHours}h`);
+          logger.debug(`[Activation] first_payment_received recorded for user ${existingInvoice.userId}, time_to_first_dollar: ${timeToFirstDollarHours}h`);
         }
       } catch (trackErr) {
-        console.error("[Activation] Failed to track first_payment_received:", trackErr);
+        logger.error("[Activation] Failed to track first_payment_received:", trackErr);
       }
 
       res.json(invoice);
@@ -3761,7 +3762,7 @@ export async function registerRoutes(
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid request" });
       }
-      console.error("Text-to-plan error:", error);
+      logger.error("Text-to-plan error:", error);
       res.status(500).json({ error: "AI service temporarily unavailable" });
     }
   });
@@ -3780,7 +3781,7 @@ export async function registerRoutes(
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid request" });
       }
-      console.error("Schedule suggestions error:", error);
+      logger.error("Schedule suggestions error:", error);
       res.status(500).json({ error: "AI service temporarily unavailable" });
     }
   });
@@ -3800,7 +3801,7 @@ export async function registerRoutes(
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid request" });
       }
-      console.error("Follow-up generation error:", error);
+      logger.error("Follow-up generation error:", error);
       res.status(500).json({ error: "AI service temporarily unavailable" });
     }
   });
@@ -3824,12 +3825,12 @@ export async function registerRoutes(
           // Reset if current billing period started after usage window
           if (currentPeriodStart > usageWindowStart) {
             await storage.resetCapabilityUsage(userId, 'sms.two_way');
-            console.log(`[SMS Usage] Reset for user ${userId} - new Stripe billing cycle started ${currentPeriodStart.toISOString()}`);
+            logger.debug(`[SMS Usage] Reset for user ${userId} - new Stripe billing cycle started ${currentPeriodStart.toISOString()}`);
             return;
           }
         }
       } catch (err) {
-        console.warn('[SMS Usage] Could not check Stripe billing cycle:', err);
+        logger.warn('[SMS Usage] Could not check Stripe billing cycle:', err);
         // Fall through to calendar month check as fallback
       }
     }
@@ -3838,7 +3839,7 @@ export async function registerRoutes(
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     if (currentMonthStart > usageWindowStart) {
       await storage.resetCapabilityUsage(userId, 'sms.two_way');
-      console.log(`[SMS Usage] Reset for user ${userId} - new calendar month started ${currentMonthStart.toISOString()}`);
+      logger.debug(`[SMS Usage] Reset for user ${userId} - new calendar month started ${currentMonthStart.toISOString()}`);
     }
   }
 
@@ -3905,7 +3906,7 @@ export async function registerRoutes(
         res.status(500).json({ error: "Failed to send SMS" });
       }
     } catch (error) {
-      console.error("SMS send error:", error);
+      logger.error("SMS send error:", error);
       res.status(500).json({ error: "Failed to send SMS" });
     }
   });
@@ -3916,7 +3917,7 @@ export async function registerRoutes(
       const { From, Body, MessageSid } = req.body;
       
       if (!From || !Body) {
-        console.error("Missing required fields in Twilio webhook (From or Body absent)");
+        logger.error("Missing required fields in Twilio webhook (From or Body absent)");
         return res.status(400).send("Missing required fields");
       }
 
@@ -3936,7 +3937,7 @@ export async function registerRoutes(
           relatedLeadId: lastOutbound.relatedLeadId,
           isRead: false,
         });
-        console.log(`[SMS Webhook] Incoming from ${From} routed to worker ${lastOutbound.userId} (matched previous conversation)`);
+        logger.debug(`[SMS Webhook] Incoming from ${From} routed to worker ${lastOutbound.userId} (matched previous conversation)`);
         
         // Intent detection: check message for time/price cues
         try {
@@ -3953,17 +3954,17 @@ export async function registerRoutes(
             );
             if (signal) {
               await generateReadyActionFromSignal(signal);
-              console.log(`[IntentDetection] Created ready action from SMS intent: ${signal.signalType}`);
+              logger.info(`[IntentDetection] Created ready action from SMS intent: ${signal.signalType}`);
             }
           }
         } catch (err) {
-          console.error("[IntentDetection] Failed to detect SMS intent:", err);
+          logger.error("[IntentDetection] Failed to detect SMS intent:", err);
         }
       } else {
         // No previous conversation found - cannot route message without knowing the provider
         // TODO: Implement Twilio number lookup to determine which provider owns this number
-        console.log(`[SMS Webhook] No previous conversation found for ${From} - cannot route without prior context`);
-        console.log(`[SMS Webhook] Message from unknown sender: ${Body.substring(0, 50)}...`);
+        logger.info(`[SMS Webhook] No previous conversation found for ${From} - cannot route without prior context`);
+        logger.info(`[SMS Webhook] Message from unknown sender: ${Body.substring(0, 50)}...`);
         // Do not store the message since we don't know which provider it belongs to
       }
 
@@ -3971,7 +3972,7 @@ export async function registerRoutes(
       res.set("Content-Type", "text/xml");
       res.send("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response></Response>");
     } catch (error) {
-      console.error("Twilio webhook error:", error);
+      logger.error("Twilio webhook error:", error);
       res.status(500).send("Internal server error");
     }
   });
@@ -3982,7 +3983,7 @@ export async function registerRoutes(
       const messages = await storage.getSmsMessages((req as any).userId);
       res.json(messages);
     } catch (error) {
-      console.error("SMS messages fetch error:", error);
+      logger.error("SMS messages fetch error:", error);
       res.status(500).json({ error: "Failed to fetch messages" });
     }
   });
@@ -4029,7 +4030,7 @@ export async function registerRoutes(
 
       res.json(conversations);
     } catch (error) {
-      console.error("SMS conversations fetch error:", error);
+      logger.error("SMS conversations fetch error:", error);
       res.status(500).json({ error: "Failed to fetch conversations" });
     }
   });
@@ -4044,7 +4045,7 @@ export async function registerRoutes(
       
       res.json(messages);
     } catch (error) {
-      console.error("SMS conversation fetch error:", error);
+      logger.error("SMS conversation fetch error:", error);
       res.status(500).json({ error: "Failed to fetch conversation" });
     }
   });
@@ -4054,7 +4055,7 @@ export async function registerRoutes(
       const count = await storage.getUnreadSmsCount((req as any).userId);
       res.json({ count });
     } catch (error) {
-      console.error("Unread count fetch error:", error);
+      logger.error("Unread count fetch error:", error);
       res.status(500).json({ error: "Failed to fetch unread count" });
     }
   });
@@ -4077,7 +4078,7 @@ export async function registerRoutes(
       );
       res.json(leadMessages);
     } catch (error) {
-      console.error("Lead SMS messages fetch error:", error);
+      logger.error("Lead SMS messages fetch error:", error);
       res.status(500).json({ error: "Failed to fetch SMS messages" });
     }
   });
@@ -4114,7 +4115,7 @@ export async function registerRoutes(
         isFirstSend: !user?.firstGigaidMessageSentAt,
       });
     } catch (error) {
-      console.error("Message usage fetch error:", error);
+      logger.error("Message usage fetch error:", error);
       res.status(500).json({ error: "Failed to fetch message usage" });
     }
   });
@@ -4136,12 +4137,12 @@ export async function registerRoutes(
           const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
           if (currentPeriodStart > usagePeriodStart) {
             await storage.resetMessageUsage(userId, currentPeriodStart.toISOString(), currentPeriodEnd.toISOString());
-            console.log(`[Message Usage] Reset for user ${userId} - new Stripe billing cycle started ${currentPeriodStart.toISOString()}`);
+            logger.debug(`[Message Usage] Reset for user ${userId} - new Stripe billing cycle started ${currentPeriodStart.toISOString()}`);
             return;
           }
         }
       } catch (err) {
-        console.warn('[Message Usage] Could not check Stripe billing cycle:', err);
+        logger.warn('[Message Usage] Could not check Stripe billing cycle:', err);
       }
     }
     
@@ -4150,7 +4151,7 @@ export async function registerRoutes(
     const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     if (currentMonthStart > usagePeriodStart) {
       await storage.resetMessageUsage(userId, currentMonthStart.toISOString(), currentMonthEnd.toISOString());
-      console.log(`[Message Usage] Reset for user ${userId} - new calendar month started ${currentMonthStart.toISOString()}`);
+      logger.debug(`[Message Usage] Reset for user ${userId} - new calendar month started ${currentMonthStart.toISOString()}`);
     }
   }
 
@@ -4160,17 +4161,17 @@ export async function registerRoutes(
       const { From, Body, MessageSid } = req.body;
       
       if (!From || !Body) {
-        console.log("[Twilio Inbound] Missing From or Body");
+        logger.debug("[Twilio Inbound] Missing From or Body");
         return res.status(400).send("Missing required fields");
       }
 
-      console.log(`[Twilio Inbound] SMS from ${From}: ${Body.substring(0, 50)}...`);
+      logger.debug(`[Twilio Inbound] SMS from ${From}: ${Body.substring(0, 50)}...`);
 
       // Find the last outbound message to this phone to identify the provider
       const lastOutbound = await storage.getLastOutboundMessageByPhone(From);
       
       if (!lastOutbound) {
-        console.log(`[Twilio Inbound] No matching provider found for ${From}`);
+        logger.debug(`[Twilio Inbound] No matching provider found for ${From}`);
         return res.status(200).send("OK");
       }
 
@@ -4178,7 +4179,7 @@ export async function registerRoutes(
       const user = await storage.getUser(userId);
       
       if (!user) {
-        console.log(`[Twilio Inbound] User not found: ${userId}`);
+        logger.debug(`[Twilio Inbound] User not found: ${userId}`);
         return res.status(200).send("OK");
       }
 
@@ -4209,7 +4210,7 @@ export async function registerRoutes(
       if (useInbox) {
         // Store for in-app inbox (Pro+/Business - unlimited inbound)
         await storage.incrementInboundStored(userId);
-        console.log(`[Twilio Inbound] Stored message ${smsMessage.id} in inbox for user ${userId}`);
+        logger.debug(`[Twilio Inbound] Stored message ${smsMessage.id} in inbox for user ${userId}`);
       } else {
         // Forward to personal phone (FREE users have 20/mo limit but we never drop messages)
         if (user.personalPhone) {
@@ -4225,22 +4226,22 @@ export async function registerRoutes(
           if (fwdResult.success) {
             await storage.incrementInboundForwarded(userId);
             if (usageExceeded) {
-              console.log(`[Twilio Inbound] Forwarded (usage_exceeded=true, count=${usage.inboundForwarded + 1})`);
+              logger.debug(`[Twilio Inbound] Forwarded (usage_exceeded=true, count=${usage.inboundForwarded + 1})`);
             } else {
-              console.log(`[Twilio Inbound] Forwarded successfully`);
+              logger.debug(`[Twilio Inbound] Forwarded successfully`);
             }
           } else {
-            console.error(`[Twilio Inbound] Forward failed: ${fwdResult.error}`);
+            logger.error(`[Twilio Inbound] Forward failed: ${fwdResult.error}`);
           }
         } else {
-          console.log(`[Twilio Inbound] No personal phone set for user ${userId}, message stored only`);
+          logger.debug(`[Twilio Inbound] No personal phone set for user ${userId}, message stored only`);
         }
       }
 
       // Return TwiML response (empty is fine for now)
       res.type("text/xml").send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
     } catch (error) {
-      console.error("[Twilio Inbound] Error:", error);
+      logger.error("[Twilio Inbound] Error:", error);
       res.status(500).send("Internal error");
     }
   });
@@ -4375,7 +4376,7 @@ export async function registerRoutes(
             });
           }
         } catch (notifError) {
-          console.error("Failed to send crew welcome notification:", notifError);
+          logger.error("Failed to send crew welcome notification:", notifError);
         }
       })();
     } catch (error) {
@@ -4522,7 +4523,7 @@ export async function registerRoutes(
           deliveredVia = "sms";
           notifications.push("SMS sent");
         } catch (err) {
-          console.error("Failed to send SMS:", err);
+          logger.error("Failed to send SMS:", err);
         }
       }
 
@@ -4556,7 +4557,7 @@ export async function registerRoutes(
           deliveredVia = deliveredVia ? "both" : "email";
           notifications.push("Email sent");
         } catch (err) {
-          console.error("Failed to send email:", err);
+          logger.error("Failed to send email:", err);
         }
       }
 
@@ -4574,7 +4575,7 @@ export async function registerRoutes(
         notifications,
       });
     } catch (error) {
-      console.error("Failed to create crew invite:", error);
+      logger.error("Failed to create crew invite:", error);
       res.status(500).json({ error: "Failed to create crew invite" });
     }
   });
@@ -4644,7 +4645,7 @@ export async function registerRoutes(
         messages: messages.filter(m => m.crewMemberId === invite.crewMemberId),
       });
     } catch (error) {
-      console.error("Failed to get crew portal data:", error);
+      logger.error("Failed to get crew portal data:", error);
       res.status(500).json({ error: "Failed to load portal" });
     }
   });
@@ -4682,7 +4683,7 @@ export async function registerRoutes(
             `${crewMember?.name || "Crew member"} confirmed attendance for "${job?.title || "job"}" on ${job?.scheduledDate || "TBD"}.`
           );
         } catch (err) {
-          console.error("Failed to notify owner via SMS:", err);
+          logger.error("Failed to notify owner via SMS:", err);
         }
       }
 
@@ -4726,7 +4727,7 @@ export async function registerRoutes(
             `${crewMember?.name || "Crew member"} declined the job "${job?.title || "job"}" on ${job?.scheduledDate || "TBD"}.${reason ? ` Reason: ${reason}` : ""}`
           );
         } catch (err) {
-          console.error("Failed to notify owner via SMS:", err);
+          logger.error("Failed to notify owner via SMS:", err);
         }
       }
 
@@ -4778,7 +4779,7 @@ export async function registerRoutes(
             `Message from ${crewMember?.name || "crew member"} about "${job?.title || "job"}": ${message.trim().substring(0, 100)}${message.length > 100 ? "..." : ""}`
           );
         } catch (err) {
-          console.error("Failed to notify owner via SMS:", err);
+          logger.error("Failed to notify owner via SMS:", err);
         }
       }
 
@@ -4888,7 +4889,7 @@ export async function registerRoutes(
           );
           notifications.push("SMS sent");
         } catch (err) {
-          console.error("Failed to resend SMS:", err);
+          logger.error("Failed to resend SMS:", err);
         }
       }
 
@@ -4914,7 +4915,7 @@ export async function registerRoutes(
           });
           notifications.push("Email sent");
         } catch (err) {
-          console.error("Failed to resend email:", err);
+          logger.error("Failed to resend email:", err);
         }
       }
 
@@ -4962,7 +4963,7 @@ export async function registerRoutes(
             `Message from ${owner?.name || "Team Lead"} about "${job?.title || "job"}": ${message.trim().substring(0, 100)}${message.length > 100 ? "..." : ""}`
           );
         } catch (err) {
-          console.error("Failed to notify crew member via SMS:", err);
+          logger.error("Failed to notify crew member via SMS:", err);
         }
       }
 
@@ -5075,7 +5076,7 @@ export async function registerRoutes(
           });
           stripeApplied = true;
         } catch (stripeError) {
-          console.error("Failed to apply Stripe credit:", stripeError);
+          logger.error("Failed to apply Stripe credit:", stripeError);
           // Stripe failed but referrals are already marked redeemed
           // Track credit locally as fallback
         }
@@ -5099,7 +5100,7 @@ export async function registerRoutes(
           : `$${(totalCredit / 100).toFixed(2)} credit saved to your account`,
       });
     } catch (error) {
-      console.error("Failed to redeem referral rewards:", error);
+      logger.error("Failed to redeem referral rewards:", error);
       res.status(500).json({ error: "Failed to redeem rewards" });
     }
   });
@@ -5227,9 +5228,9 @@ export async function registerRoutes(
             if (isHardGated("deposit_enforcement") && !hasDepositEnforcement) {
               const { STRIPE_ENABLED } = await import("@shared/stripeConfig");
               if (!STRIPE_ENABLED) {
-                console.warn("[Hard Gate] Stripe disabled - blocking prevented, continuing without deposit enforcement");
+                logger.warn("[Hard Gate] Stripe disabled - blocking prevented, continuing without deposit enforcement");
               } else {
-                console.log("[Hard Gate] User requires upgrade for deposit enforcement - client will show blocking intercept");
+                logger.info("[Hard Gate] User requires upgrade for deposit enforcement - client will show blocking intercept");
               }
             }
           }
@@ -5259,7 +5260,7 @@ export async function registerRoutes(
             });
           }
         } catch (protectionError) {
-          console.error("Failed to assess booking protection:", protectionError);
+          logger.error("Failed to assess booking protection:", protectionError);
         }
       }
 
@@ -5284,7 +5285,7 @@ export async function registerRoutes(
                 await storage.updateUser(user.id, { stripeConnectStatus: "active" });
               }
             } catch (stripeErr) {
-              console.error("Failed to verify Stripe Connect status for booking deposit:", stripeErr);
+              logger.error("Failed to verify Stripe Connect status for booking deposit:", stripeErr);
               stripeConnectActive = user.stripeConnectStatus === "active";
             }
           }
@@ -5338,7 +5339,7 @@ export async function registerRoutes(
             }
           }
         } catch (stripeErr) {
-          console.error("Failed to create deposit PaymentIntent (booking still created):", stripeErr);
+          logger.error("Failed to create deposit PaymentIntent (booking still created):", stripeErr);
         }
       }
 
@@ -5396,7 +5397,7 @@ export async function registerRoutes(
       if (request.clientPhone) {
         const smsMessage = `Hi ${request.clientName.split(" ")[0]}! Your ${serviceName} booking request ${preferredDateTime} has been received. ${providerFirstName} will get back to you shortly to confirm. - Powered by GigAid™`;
         sendSMS(request.clientPhone, smsMessage).catch(err => {
-          console.error("Failed to send booking confirmation SMS:", err);
+          logger.error("Failed to send booking confirmation SMS:", err);
         });
       }
 
@@ -5425,7 +5426,7 @@ export async function registerRoutes(
           text: emailText,
           html: emailHtml,
         }).catch(err => {
-          console.error("Failed to send booking confirmation email:", err);
+          logger.error("Failed to send booking confirmation email:", err);
         });
       }
 
@@ -5766,16 +5767,16 @@ export async function registerRoutes(
             const city = place["place name"];
             const state = place["state abbreviation"];
             const locationName = `${city}, ${state}`;
-            console.log(`[ZIPValidation] Zippopotam validated ZIP ${zipCode}: ${locationName}`);
+            logger.info(`[ZIPValidation] Zippopotam validated ZIP ${zipCode}: ${locationName}`);
             return res.json({ valid: true, lat, lng, city, state, locationName, inServiceArea });
           }
         } else if (zippoResponse.status === 404) {
           // ZIP code not found - definitely invalid
-          console.log(`[ZIPValidation] Zippopotam: ZIP ${zipCode} not found`);
+          logger.info(`[ZIPValidation] Zippopotam: ZIP ${zipCode} not found`);
           return res.json({ valid: false, error: "Please enter a valid US ZIP code", inServiceArea: false });
         }
       } catch (zippoError) {
-        console.warn(`[ZIPValidation] Zippopotam API error:`, zippoError);
+        logger.warn(`[ZIPValidation] Zippopotam API error:`, zippoError);
         // Fall through to Google Maps
       }
       
@@ -5788,14 +5789,14 @@ export async function registerRoutes(
       } else if (result.status === "ZERO_RESULTS") {
         res.json({ valid: false, error: "Please enter a valid US ZIP code", inServiceArea: false });
       } else if (result.status === "REQUEST_DENIED" || result.status === "NO_API_KEY") {
-        console.log(`[ZIPValidation] All APIs unavailable, rejecting ZIP ${zipCode}`);
+        logger.info(`[ZIPValidation] All APIs unavailable, rejecting ZIP ${zipCode}`);
         res.json({ valid: false, error: "Unable to verify ZIP code. Please try again.", inServiceArea: false });
       } else {
-        console.log(`[ZIPValidation] API error (${result.status}), rejecting ZIP ${zipCode}`);
+        logger.info(`[ZIPValidation] API error (${result.status}), rejecting ZIP ${zipCode}`);
         res.json({ valid: false, error: "Unable to verify ZIP code. Please try again.", inServiceArea: false });
       }
     } catch (error) {
-      console.error("ZIP validation error:", error);
+      logger.error("ZIP validation error:", error);
       res.status(500).json({ valid: false, error: "Validation failed" });
     }
   });
@@ -5867,14 +5868,14 @@ export async function registerRoutes(
             stripePublishableKey = await getStripePublishableKey();
           }
         } catch (err) {
-          console.error("Failed to check Stripe Connect status:", err);
+          logger.error("Failed to check Stripe Connect status:", err);
           stripeConnected = user.stripeConnectStatus === "active";
           if (stripeConnected) {
             try {
               const { getStripePublishableKey } = await import("./stripeClient");
               stripePublishableKey = await getStripePublishableKey();
             } catch (err2) {
-              console.error("Failed to get Stripe publishable key:", err2);
+              logger.error("Failed to get Stripe publishable key:", err2);
             }
           }
         }
@@ -6082,7 +6083,7 @@ export async function registerRoutes(
       
       res.json({ client: clientResults[0] });
     } catch (error) {
-      console.error("Error fetching client:", error);
+      logger.error("Error fetching client:", error);
       res.status(500).json({ error: "Failed to fetch client" });
     }
   });
@@ -6121,7 +6122,7 @@ export async function registerRoutes(
       
       res.json({ client: updated[0] });
     } catch (error) {
-      console.error("Error updating client deposit:", error);
+      logger.error("Error updating client deposit:", error);
       res.status(500).json({ error: "Failed to update client deposit" });
     }
   });
@@ -6197,7 +6198,7 @@ export async function registerRoutes(
         slotDuration,
       });
     } catch (error) {
-      console.error("Error fetching available slots:", error);
+      logger.error("Error fetching available slots:", error);
       res.status(500).json({ error: "Failed to fetch available slots" });
     }
   });
@@ -6346,7 +6347,7 @@ export async function registerRoutes(
         clientZipCode,
       });
     } catch (error) {
-      console.error("Error generating smart slots:", error);
+      logger.error("Error generating smart slots:", error);
       res.status(500).json({ error: "Failed to generate smart slots" });
     }
   });
@@ -6380,7 +6381,7 @@ export async function registerRoutes(
       const recommendations = await recommendService({ userInput, services });
       res.json({ recommendations });
     } catch (error) {
-      console.error("Error recommending service:", error);
+      logger.error("Error recommending service:", error);
       res.json({ recommendations: [] });
     }
   });
@@ -6396,7 +6397,7 @@ export async function registerRoutes(
       const result = await autocompleteNotes({ partialText, serviceName });
       res.json(result);
     } catch (error) {
-      console.error("Error autocompleting notes:", error);
+      logger.error("Error autocompleting notes:", error);
       res.json({ suggestion: null });
     }
   });
@@ -6423,7 +6424,7 @@ export async function registerRoutes(
       const result = await answerFAQ({ question, providerName, services });
       res.json(result);
     } catch (error) {
-      console.error("Error answering FAQ:", error);
+      logger.error("Error answering FAQ:", error);
       res.json({ answer: "Please contact the provider directly for assistance.", confidence: 0 });
     }
   });
@@ -6448,7 +6449,7 @@ export async function registerRoutes(
       const result = await estimatePrice({ description, services });
       res.json(result);
     } catch (error) {
-      console.error("Error estimating price:", error);
+      logger.error("Error estimating price:", error);
       res.json({ estimateRange: "Contact for quote" });
     }
   });
@@ -6514,7 +6515,7 @@ Final price confirmed onsite.`;
         formattedOutput,
       });
     } catch (error) {
-      console.error("Error generating category estimate:", error);
+      logger.error("Error generating category estimate:", error);
       res.json({
         lowEstimate: 100,
         highEstimate: 300,
@@ -6545,7 +6546,7 @@ Final price confirmed onsite.`;
 
       res.json(result);
     } catch (error) {
-      console.error("Error generating provider estimate:", error);
+      logger.error("Error generating provider estimate:", error);
       res.json({
         lowEstimate: 150,
         highEstimate: 400,
@@ -6598,7 +6599,7 @@ Final price confirmed onsite.`;
 
       res.json({ success: true, requestId: request.id });
     } catch (error) {
-      console.error("Error creating estimation request:", error);
+      logger.error("Error creating estimation request:", error);
       res.status(500).json({ error: "Failed to create estimation request" });
     }
   });
@@ -6609,7 +6610,7 @@ Final price confirmed onsite.`;
       const requests = await storage.getPendingEstimationRequests((req as any).userId);
       res.json(requests);
     } catch (error) {
-      console.error("Error fetching estimation requests:", error);
+      logger.error("Error fetching estimation requests:", error);
       res.status(500).json({ error: "Failed to fetch estimation requests" });
     }
   });
@@ -6620,7 +6621,7 @@ Final price confirmed onsite.`;
       const requests = await storage.getEstimationRequests((req as any).userId);
       res.json(requests);
     } catch (error) {
-      console.error("Error fetching estimation requests:", error);
+      logger.error("Error fetching estimation requests:", error);
       res.status(500).json({ error: "Failed to fetch estimation requests" });
     }
   });
@@ -6646,7 +6647,7 @@ Final price confirmed onsite.`;
 
       res.json(updated);
     } catch (error) {
-      console.error("Error reviewing estimation request:", error);
+      logger.error("Error reviewing estimation request:", error);
       res.status(500).json({ error: "Failed to review estimation request" });
     }
   });
@@ -6681,7 +6682,7 @@ Final price confirmed onsite.`;
 
       res.json({ success: true, request: updated });
     } catch (error) {
-      console.error("Error sending estimate:", error);
+      logger.error("Error sending estimate:", error);
       res.status(500).json({ error: "Failed to send estimate" });
     }
   });
@@ -6725,7 +6726,7 @@ Final price confirmed onsite.`;
 
       res.json({ success: true, jobId: job.id });
     } catch (error) {
-      console.error("Error confirming estimate:", error);
+      logger.error("Error confirming estimate:", error);
       res.status(500).json({ error: "Failed to confirm estimate" });
     }
   });
@@ -6739,7 +6740,7 @@ Final price confirmed onsite.`;
         return res.status(400).json({ error: "Category and description are required" });
       }
 
-      console.log(`[Estimation] In-app request: category=${category}, hasPhotos=${photos?.length > 0 ? photos.length : 0}`);
+      logger.info(`[Estimation] In-app request: category=${category}, hasPhotos=${photos?.length > 0 ? photos.length : 0}`);
 
       const { generateAIEstimate, getEstimationGuardrails } = await import("./ai/aiService");
       const guardrails = getEstimationGuardrails();
@@ -6782,9 +6783,9 @@ Final price confirmed onsite.`;
         formattedOutput,
       });
     } catch (error: any) {
-      console.error("[Estimation] Error generating in-app estimate:", error?.message || error);
+      logger.error("[Estimation] Error generating in-app estimate:", error?.message || error);
       if (error?.response) {
-        console.error("[Estimation] API response error:", error.response.status, error.response.data);
+        logger.error("[Estimation] API response error:", error.response.status, error.response.data);
       }
       res.status(500).json({ error: "Failed to generate estimate. Please try again." });
     }
@@ -6800,7 +6801,7 @@ Final price confirmed onsite.`;
         },
       });
     } catch (error) {
-      console.error("Error fetching config:", error);
+      logger.error("Error fetching config:", error);
       res.status(500).json({ error: "Failed to fetch config" });
     }
   });
@@ -6932,7 +6933,7 @@ Final price confirmed onsite.`;
 
       res.json({ success: true, message: "Booking link sent to your phone!" });
     } catch (error) {
-      console.error("Failed to send booking link:", error);
+      logger.error("Failed to send booking link:", error);
       res.status(500).json({ error: "Failed to send booking link" });
     }
   });
@@ -6981,7 +6982,7 @@ Final price confirmed onsite.`;
       };
       res.json({ ...state, activated: isActivated(state) });
     } catch (error) {
-      console.error("Failed to fetch activation state:", error);
+      logger.error("Failed to fetch activation state:", error);
       res.status(500).json({ error: "Failed to fetch activation state" });
     }
   });
@@ -7001,7 +7002,7 @@ Final price confirmed onsite.`;
       const user = await storage.getUser(userId);
       res.json({ ...status, userCreatedAt: user?.createdAt || null });
     } catch (error) {
-      console.error("Failed to fetch activation status:", error);
+      logger.error("Failed to fetch activation status:", error);
       res.status(500).json({ error: "Failed to fetch activation status" });
     }
   });
@@ -7020,7 +7021,7 @@ Final price confirmed onsite.`;
       const status = await evaluateAndUpdateActivation(userId);
       res.json(status);
     } catch (error) {
-      console.error("Failed to refresh activation status:", error);
+      logger.error("Failed to refresh activation status:", error);
       res.status(500).json({ error: "Failed to refresh activation status" });
     }
   });
@@ -7033,9 +7034,9 @@ Final price confirmed onsite.`;
       }
       const { backfillAllActivation } = await import("./lib/activationEngine");
 
-      console.log("[Activation Backfill] Starting backfill for all users...");
+      logger.info("[Activation Backfill] Starting backfill for all users...");
       const result = await backfillAllActivation();
-      console.log(`[Activation Backfill] Complete: ${JSON.stringify(result)}`);
+      logger.info(`[Activation Backfill] Complete: ${JSON.stringify(result)}`);
 
       await storage.setFeatureFlag("activation_engine_v1", true, "Activation engine - enabled for all users after backfill");
 
@@ -7046,7 +7047,7 @@ Final price confirmed onsite.`;
         message: `Backfill complete. ${result.updated} users updated, ${result.alreadyActivated} already activated, ${result.errors} errors. Feature flag now ON for all users.`,
       });
     } catch (error) {
-      console.error("[Activation Backfill] Error:", error);
+      logger.error("[Activation Backfill] Error:", error);
       res.status(500).json({ error: "Backfill failed" });
     }
   });
@@ -7063,7 +7064,7 @@ Final price confirmed onsite.`;
       const result = await rewriteBio({ bio, businessName, services });
       res.json(result);
     } catch (error) {
-      console.error("Error rewriting bio:", error);
+      logger.error("Error rewriting bio:", error);
       res.json({ rewrittenBio: req.body.bio });
     }
   });
@@ -7079,7 +7080,7 @@ Final price confirmed onsite.`;
       const result = await summarizeVoiceNote(transcript);
       res.json(result);
     } catch (error) {
-      console.error("Error summarizing voice note:", error);
+      logger.error("Error summarizing voice note:", error);
       res.status(500).json({ error: "Failed to summarize voice note" });
     }
   });
@@ -7095,7 +7096,7 @@ Final price confirmed onsite.`;
       const result = await generateReferralMessage({ tone: tone || "friendly", link, serviceCategory, providerName });
       res.json(result);
     } catch (error) {
-      console.error("Error generating referral message:", error);
+      logger.error("Error generating referral message:", error);
       res.status(500).json({ error: "Failed to generate referral message" });
     }
   });
@@ -7115,7 +7116,7 @@ Final price confirmed onsite.`;
       const result = await analyzeBookingPatterns({ jobs: jobData });
       res.json(result);
     } catch (error) {
-      console.error("Error analyzing booking patterns:", error);
+      logger.error("Error analyzing booking patterns:", error);
       res.status(500).json({ error: "Failed to analyze booking patterns" });
     }
   });
@@ -7132,7 +7133,7 @@ Final price confirmed onsite.`;
       });
       res.json(result);
     } catch (error) {
-      console.error("Error generating nudge:", error);
+      logger.error("Error generating nudge:", error);
       res.status(500).json({ error: "Failed to generate nudge" });
     }
   });
@@ -7148,7 +7149,7 @@ Final price confirmed onsite.`;
       const result = await buildServicesFromDescription(description);
       res.json({ services: result });
     } catch (error) {
-      console.error("Error building services:", error);
+      logger.error("Error building services:", error);
       res.status(500).json({ error: "Failed to build services" });
     }
   });
@@ -7198,7 +7199,7 @@ Return ONLY the message text, no JSON or formatting.`
       
       res.json({ reply });
     } catch (error) {
-      console.error("Negotiation reply error:", error);
+      logger.error("Negotiation reply error:", error);
       res.status(500).json({ error: "Failed to generate reply" });
     }
   });
@@ -7213,7 +7214,7 @@ Return ONLY the message text, no JSON or formatting.`
       const result = await generateReviewDraft({ clientName, jobName, tone, highlights });
       res.json(result);
     } catch (error) {
-      console.error("Error generating review draft:", error);
+      logger.error("Error generating review draft:", error);
       res.status(500).json({ error: "Failed to generate review draft" });
     }
   });
@@ -7229,7 +7230,7 @@ Return ONLY the message text, no JSON or formatting.`
       const result = await tagClient({ clientHistory });
       res.json(result);
     } catch (error) {
-      console.error("Error tagging client:", error);
+      logger.error("Error tagging client:", error);
       res.status(500).json({ error: "Failed to tag client" });
     }
   });
@@ -7365,7 +7366,7 @@ Return ONLY the message text, no JSON or formatting.`
 
       res.json(results);
     } catch (error) {
-      console.error("[PaymentMethods] Error updating payment methods:", error);
+      logger.error("[PaymentMethods] Error updating payment methods:", error);
       res.status(500).json({ error: "Failed to update payment methods" });
     }
   });
@@ -7479,7 +7480,7 @@ Return ONLY the message text, no JSON or formatting.`
       const publishableKey = await getStripePublishableKey();
       res.json({ publishableKey });
     } catch (error) {
-      console.error("Error getting Stripe key:", error);
+      logger.error("Error getting Stripe key:", error);
       res.status(500).json({ error: "Stripe not configured" });
     }
   });
@@ -7508,7 +7509,7 @@ Return ONLY the message text, no JSON or formatting.`
         },
       };
 
-      console.log("[API] Checkout session endpoint hit", { plan, returnTo });
+      logger.info("[API] Checkout session endpoint hit", { plan, returnTo });
       
       const planConfig = planConfigs[plan];
       if (!planConfig) {
@@ -7518,10 +7519,10 @@ Return ONLY the message text, no JSON or formatting.`
       const { getUncachableStripeClient } = await import("./stripeClient");
       const { STRIPE_ENABLED } = await import("@shared/stripeConfig");
       
-      console.log("[API] STRIPE_ENABLED =", STRIPE_ENABLED);
+      logger.info("[API] STRIPE_ENABLED =", STRIPE_ENABLED);
       
       if (!STRIPE_ENABLED) {
-        console.warn("[Stripe] Subscription checkout blocked - STRIPE_ENABLED is false");
+        logger.warn("[Stripe] Subscription checkout blocked - STRIPE_ENABLED is false");
         return res.status(503).json({ error: "Payments temporarily unavailable" });
       }
 
@@ -7562,10 +7563,10 @@ Return ONLY the message text, no JSON or formatting.`
         },
       });
 
-      console.log("[API] Checkout session created", session.id);
+      logger.info("[API] Checkout session created", session.id);
       res.json({ url: session.url });
     } catch (error) {
-      console.error("Subscription checkout error:", error);
+      logger.error("Subscription checkout error:", error);
       res.status(500).json({ error: "Failed to create checkout session" });
     }
   });
@@ -7619,7 +7620,7 @@ Return ONLY the message text, no JSON or formatting.`
       let effectivePlan = user.plan || "free";
       
       if (subscription.status === "active" && stripePlan && stripePlan !== user.plan) {
-        console.log(`[Subscription Sync] User ${user.id} plan mismatch: DB=${user.plan}, Stripe=${stripePlan}. Auto-syncing.`);
+        logger.info(`[Subscription Sync] User ${user.id} plan mismatch: DB=${user.plan}, Stripe=${stripePlan}. Auto-syncing.`);
         await storage.updateUser(user.id, { 
           plan: stripePlan,
           isPro: stripePlan !== "free",
@@ -7637,7 +7638,7 @@ Return ONLY the message text, no JSON or formatting.`
         cancelAt: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
       });
     } catch (error) {
-      console.error("Subscription status error:", error);
+      logger.error("Subscription status error:", error);
       res.status(500).json({ error: "Failed to get subscription status" });
     }
   });
@@ -7810,7 +7811,7 @@ Return ONLY the message text, no JSON or formatting.`
         message: "No active subscription found. You can subscribe from the pricing page.",
       });
     } catch (error: any) {
-      console.error("Subscription restore error:", error?.message || "Unknown error");
+      logger.error("Subscription restore error:", error?.message || "Unknown error");
       res.status(500).json({ error: "Failed to restore subscription" });
     }
   });
@@ -7847,7 +7848,7 @@ Return ONLY the message text, no JSON or formatting.`
         cancelAt: new Date(subscription.current_period_end * 1000).toISOString(),
       });
     } catch (error) {
-      console.error("Subscription cancel error:", error);
+      logger.error("Subscription cancel error:", error);
       res.status(500).json({ error: "Failed to cancel subscription" });
     }
   });
@@ -7884,7 +7885,7 @@ Return ONLY the message text, no JSON or formatting.`
         status: subscription.status,
       });
     } catch (error) {
-      console.error("Subscription reactivate error:", error);
+      logger.error("Subscription reactivate error:", error);
       res.status(500).json({ error: "Failed to reactivate subscription" });
     }
   });
@@ -7919,7 +7920,7 @@ Return ONLY the message text, no JSON or formatting.`
 
       res.json({ url: session.url });
     } catch (error) {
-      console.error("Billing portal error:", error);
+      logger.error("Billing portal error:", error);
       res.status(500).json({ error: "Failed to create billing portal session" });
     }
   });
@@ -8076,7 +8077,7 @@ Return ONLY the message text, no JSON or formatting.`
 
       return res.json({ success: true, checkoutUrl: session.url });
     } catch (error) {
-      console.error("Change plan error:", error);
+      logger.error("Change plan error:", error);
       res.status(500).json({ error: "Failed to change plan" });
     }
   });
@@ -8113,9 +8114,9 @@ Return ONLY the message text, no JSON or formatting.`
           try {
             const stripe = await getUncachableStripeClient();
             await stripe.subscriptions.cancel(user.stripeSubscriptionId);
-            console.log(`[Billing] Cancelled Stripe subscription ${user.stripeSubscriptionId} for user ${userId}`);
+            logger.info(`[Billing] Cancelled Stripe subscription ${user.stripeSubscriptionId} for user ${userId}`);
           } catch (stripeError: any) {
-            console.error("[Billing] Stripe cancellation error:", stripeError);
+            logger.error("[Billing] Stripe cancellation error:", stripeError);
             // Continue even if Stripe call fails - we still want to update local state
           }
         }
@@ -8131,7 +8132,7 @@ Return ONLY the message text, no JSON or formatting.`
         stripeSubscriptionId: null,
       });
 
-      console.log(`[Billing] User ${userId} suspended their subscription. Previous plan: ${user.plan}`);
+      logger.info(`[Billing] User ${userId} suspended their subscription. Previous plan: ${user.plan}`);
 
       res.json({
         success: true,
@@ -8139,7 +8140,7 @@ Return ONLY the message text, no JSON or formatting.`
         accountStatus: "suspended",
       });
     } catch (error: any) {
-      console.error("[Billing] Suspend error:", error);
+      logger.error("[Billing] Suspend error:", error);
       res.status(500).json({ error: "Failed to pause subscription. Please try again." });
     }
   });
@@ -8164,7 +8165,7 @@ Return ONLY the message text, no JSON or formatting.`
         suspendedAt: null,
       });
 
-      console.log(`[Billing] User ${userId} reactivated their account. Was suspended at: ${user.suspendedAt}`);
+      logger.info(`[Billing] User ${userId} reactivated their account. Was suspended at: ${user.suspendedAt}`);
 
       res.json({
         success: true,
@@ -8173,7 +8174,7 @@ Return ONLY the message text, no JSON or formatting.`
         redirectTo: "/pricing",
       });
     } catch (error: any) {
-      console.error("[Billing] Reactivate error:", error);
+      logger.error("[Billing] Reactivate error:", error);
       res.status(500).json({ error: "Failed to reactivate account. Please try again." });
     }
   });
@@ -8221,11 +8222,11 @@ Return ONLY the message text, no JSON or formatting.`
 
         res.json({ invoices: formattedInvoices });
       } catch (stripeError: any) {
-        console.error("[Billing] Stripe invoice fetch error:", stripeError);
+        logger.error("[Billing] Stripe invoice fetch error:", stripeError);
         res.json({ invoices: [] });
       }
     } catch (error: any) {
-      console.error("[Billing] Invoice history error:", error);
+      logger.error("[Billing] Invoice history error:", error);
       res.status(500).json({ error: "Failed to fetch invoice history" });
     }
   });
@@ -8256,9 +8257,9 @@ Return ONLY the message text, no JSON or formatting.`
           try {
             const stripe = await getUncachableStripeClient();
             await stripe.subscriptions.cancel(user.stripeSubscriptionId);
-            console.log(`[Account] Cancelled Stripe subscription ${user.stripeSubscriptionId} for user ${userId}`);
+            logger.info(`[Account] Cancelled Stripe subscription ${user.stripeSubscriptionId} for user ${userId}`);
           } catch (stripeError: any) {
-            console.error("[Account] Stripe cancellation error:", stripeError);
+            logger.error("[Account] Stripe cancellation error:", stripeError);
           }
         }
       }
@@ -8281,7 +8282,7 @@ Return ONLY the message text, no JSON or formatting.`
         disabledReason: "Account closure requested by user",
       });
 
-      console.log(`[Account] User ${userId} requested account cancellation. Reason: ${reason || "none"}. Previous plan: ${user.plan}. Scheduled deletion: ${scheduledDeletionAt}`);
+      logger.info(`[Account] User ${userId} requested account cancellation. Reason: ${reason || "none"}. Previous plan: ${user.plan}. Scheduled deletion: ${scheduledDeletionAt}`);
 
       res.json({
         success: true,
@@ -8290,7 +8291,7 @@ Return ONLY the message text, no JSON or formatting.`
         scheduledDeletionAt,
       });
     } catch (error: any) {
-      console.error("[Account] Cancel error:", error);
+      logger.error("[Account] Cancel error:", error);
       res.status(500).json({ error: "Failed to close account. Please try again." });
     }
   });
@@ -8329,7 +8330,7 @@ Return ONLY the message text, no JSON or formatting.`
         enabledAt: now,
       });
 
-      console.log(`[Account] User ${userId} undid account cancellation. Was scheduled for: ${user.scheduledDeletionAt}`);
+      logger.info(`[Account] User ${userId} undid account cancellation. Was scheduled for: ${user.scheduledDeletionAt}`);
 
       res.json({
         success: true,
@@ -8337,7 +8338,7 @@ Return ONLY the message text, no JSON or formatting.`
         accountStatus: "active",
       });
     } catch (error: any) {
-      console.error("[Account] Undo cancel error:", error);
+      logger.error("[Account] Undo cancel error:", error);
       res.status(500).json({ error: "Failed to restore account. Please try again." });
     }
   });
@@ -8390,7 +8391,7 @@ Return ONLY the message text, no JSON or formatting.`
 
       res.json({ url: session.url, paymentId: payment.id });
     } catch (error) {
-      console.error("Stripe checkout error:", error);
+      logger.error("Stripe checkout error:", error);
       res.status(500).json({ error: "Failed to create checkout session" });
     }
   });
@@ -8458,7 +8459,7 @@ Return ONLY the message text, no JSON or formatting.`
           await sendSMS(job.clientPhone, message);
           smsSent = true;
         } catch (e) {
-          console.error("Payment link SMS error:", e);
+          logger.error("Payment link SMS error:", e);
         }
       }
 
@@ -8484,7 +8485,7 @@ Return ONLY the message text, no JSON or formatting.`
           });
           emailSent = true;
         } catch (e) {
-          console.error("Payment link email error:", e);
+          logger.error("Payment link email error:", e);
         }
       }
 
@@ -8499,7 +8500,7 @@ Return ONLY the message text, no JSON or formatting.`
           : "Payment link created but could not send notification",
       });
     } catch (error) {
-      console.error("Send payment link error:", error);
+      logger.error("Send payment link error:", error);
       res.status(500).json({ error: "Failed to create payment link" });
     }
   });
@@ -8549,17 +8550,17 @@ Return ONLY the message text, no JSON or formatting.`
               }
               
               await storage.updateJob(invoice.jobId, updates);
-              console.log(`[AutoClear] Job ${invoice.jobId} updated after Stripe payment`);
+              logger.info(`[AutoClear] Job ${invoice.jobId} updated after Stripe payment`);
             }
           } catch (err) {
-            console.error("[AutoClear] Failed to update related job after Stripe payment:", err);
+            logger.error("[AutoClear] Failed to update related job after Stripe payment:", err);
           }
         }
       }
 
       res.json({ success: true, status: session.payment_status });
     } catch (error) {
-      console.error("Stripe success handler error:", error);
+      logger.error("Stripe success handler error:", error);
       res.status(500).json({ error: "Failed to process payment confirmation" });
     }
   });
@@ -8601,7 +8602,7 @@ Return ONLY the message text, no JSON or formatting.`
         accountId: user.stripeConnectAccountId,
       });
     } catch (error) {
-      console.error("Stripe Connect status error:", error);
+      logger.error("Stripe Connect status error:", error);
       res.status(500).json({ error: "Failed to get Connect status" });
     }
   });
@@ -8661,7 +8662,7 @@ Return ONLY the message text, no JSON or formatting.`
         if (linkError?.type === "StripeInvalidRequestError" && accountId !== user.stripeConnectAccountId) {
           throw linkError;
         }
-        console.warn("Stripe account link failed for existing account, creating new account:", linkError?.message);
+        logger.warn("Stripe account link failed for existing account, creating new account:", linkError?.message);
         accountId = await createNewAccount();
         const accountLink = await stripe.accountLinks.create({
           account: accountId,
@@ -8672,7 +8673,7 @@ Return ONLY the message text, no JSON or formatting.`
         res.json({ url: accountLink.url });
       }
     } catch (error: any) {
-      console.error("Stripe Connect onboarding error:", error?.message || error);
+      logger.error("Stripe Connect onboarding error:", error?.message || error);
       const detail = error?.raw?.message || error?.message || "Unknown error";
       res.status(500).json({ error: "Failed to create onboarding link", detail });
     }
@@ -8692,7 +8693,7 @@ Return ONLY the message text, no JSON or formatting.`
       const loginLink = await stripe.accounts.createLoginLink(user.stripeConnectAccountId);
       res.json({ url: loginLink.url });
     } catch (error) {
-      console.error("Stripe Connect dashboard error:", error);
+      logger.error("Stripe Connect dashboard error:", error);
       res.status(500).json({ error: "Failed to create dashboard link" });
     }
   });
@@ -8734,7 +8735,7 @@ Return ONLY the message text, no JSON or formatting.`
         lateRescheduleRetainPctCap: updated.lateRescheduleRetainPctCap,
       });
     } catch (error) {
-      console.error("Deposit settings update error:", error);
+      logger.error("Deposit settings update error:", error);
       res.status(500).json({ error: "Failed to update deposit settings" });
     }
   });
@@ -8812,7 +8813,7 @@ Return ONLY the message text, no JSON or formatting.`
         currency: paymentIntent.currency,
       });
     } catch (error) {
-      console.error("Create deposit intent error:", error);
+      logger.error("Create deposit intent error:", error);
       res.status(500).json({ error: "Failed to create payment intent" });
     }
   });
@@ -8839,7 +8840,7 @@ Return ONLY the message text, no JSON or formatting.`
         providerHasPayments: provider?.stripeConnectStatus === "active",
       });
     } catch (error) {
-      console.error("Get deposit status error:", error);
+      logger.error("Get deposit status error:", error);
       res.status(500).json({ error: "Failed to get deposit status" });
     }
   });
@@ -8890,7 +8891,7 @@ Return ONLY the message text, no JSON or formatting.`
         } : null,
       });
     } catch (error) {
-      console.error("Get booking detail error:", error);
+      logger.error("Get booking detail error:", error);
       res.status(500).json({ error: "Failed to get booking detail" });
     }
   });
@@ -8974,7 +8975,7 @@ Return ONLY the message text, no JSON or formatting.`
         currency: paymentIntent.currency,
       });
     } catch (error) {
-      console.error("Create deposit intent error:", error);
+      logger.error("Create deposit intent error:", error);
       res.status(500).json({ error: "Failed to create payment intent" });
     }
   });
@@ -9027,7 +9028,7 @@ Return ONLY the message text, no JSON or formatting.`
         amount: paymentIntent.amount,
       });
     } catch (error) {
-      console.error("Confirm deposit error:", error);
+      logger.error("Confirm deposit error:", error);
       res.status(500).json({ error: "Failed to confirm deposit" });
     }
   });
@@ -9131,7 +9132,7 @@ Return ONLY the message text, no JSON or formatting.`
               }),
             });
           } catch (transferError) {
-            console.error("Failed to transfer late fee:", transferError);
+            logger.error("Failed to transfer late fee:", transferError);
           }
         }
 
@@ -9185,7 +9186,7 @@ Return ONLY the message text, no JSON or formatting.`
         lateRescheduleCount: booking.lateRescheduleCount,
       });
     } catch (error) {
-      console.error("Reschedule booking error:", error);
+      logger.error("Reschedule booking error:", error);
       res.status(500).json({ error: "Failed to reschedule booking" });
     }
   });
@@ -9212,7 +9213,7 @@ Return ONLY the message text, no JSON or formatting.`
 
       res.json({ success: true, waiveRescheduleFee: true });
     } catch (error) {
-      console.error("Waive reschedule fee error:", error);
+      logger.error("Waive reschedule fee error:", error);
       res.status(500).json({ error: "Failed to waive reschedule fee" });
     }
   });
@@ -9254,7 +9255,7 @@ Return ONLY the message text, no JSON or formatting.`
         autoReleaseAt,
       });
     } catch (error) {
-      console.error("Mark completed error:", error);
+      logger.error("Mark completed error:", error);
       res.status(500).json({ error: "Failed to mark job as completed" });
     }
   });
@@ -9320,7 +9321,7 @@ Return ONLY the message text, no JSON or formatting.`
                 }),
               });
             } catch (transferError) {
-              console.error("Failed to transfer deposit:", transferError);
+              logger.error("Failed to transfer deposit:", transferError);
             }
           }
         }
@@ -9332,7 +9333,7 @@ Return ONLY the message text, no JSON or formatting.`
         depositStatus: booking.depositStatus,
       });
     } catch (error) {
-      console.error("Confirm completion error:", error);
+      logger.error("Confirm completion error:", error);
       res.status(500).json({ error: "Failed to confirm completion" });
     }
   });
@@ -9374,7 +9375,7 @@ Return ONLY the message text, no JSON or formatting.`
         message: "Issue flagged. The deposit is now on hold pending resolution.",
       });
     } catch (error) {
-      console.error("Flag issue error:", error);
+      logger.error("Flag issue error:", error);
       res.status(500).json({ error: "Failed to flag issue" });
     }
   });
@@ -9408,7 +9409,7 @@ Return ONLY the message text, no JSON or formatting.`
         })),
       });
     } catch (error) {
-      console.error("Get booking status error:", error);
+      logger.error("Get booking status error:", error);
       res.status(500).json({ error: "Failed to get booking status" });
     }
   });
@@ -9483,7 +9484,7 @@ Return ONLY the message text, no JSON or formatting.`
         transferId: transfer.id,
       });
     } catch (error) {
-      console.error("Force release error:", error);
+      logger.error("Force release error:", error);
       res.status(500).json({ error: "Failed to force release deposit" });
     }
   });
@@ -9542,7 +9543,7 @@ Return ONLY the message text, no JSON or formatting.`
         refundId: refund.id,
       });
     } catch (error) {
-      console.error("Full refund error:", error);
+      logger.error("Full refund error:", error);
       res.status(500).json({ error: "Failed to process full refund" });
     }
   });
@@ -9609,7 +9610,7 @@ Return ONLY the message text, no JSON or formatting.`
         refundId: refund.id,
       });
     } catch (error) {
-      console.error("Partial refund error:", error);
+      logger.error("Partial refund error:", error);
       res.status(500).json({ error: "Failed to process partial refund" });
     }
   });
@@ -9738,7 +9739,7 @@ Return ONLY the message text, no JSON or formatting.`
         completionStatus: booking.completionStatus,
       });
     } catch (error) {
-      console.error("Resolve dispute error:", error);
+      logger.error("Resolve dispute error:", error);
       res.status(500).json({ error: "Failed to resolve dispute" });
     }
   });
@@ -9754,7 +9755,7 @@ Return ONLY the message text, no JSON or formatting.`
       const events = await storage.getBookingEvents(booking.id);
       res.json(events);
     } catch (error) {
-      console.error("Get booking events error:", error);
+      logger.error("Get booking events error:", error);
       res.status(500).json({ error: "Failed to get booking events" });
     }
   });
@@ -9821,7 +9822,7 @@ Return ONLY the message text, no JSON or formatting.`
         booking: updated,
       });
     } catch (error) {
-      console.error("Record remainder payment error:", error);
+      logger.error("Record remainder payment error:", error);
       res.status(500).json({ error: "Failed to record remainder payment" });
     }
   });
@@ -9864,7 +9865,7 @@ Return ONLY the message text, no JSON or formatting.`
         remainderPaidAt: booking.remainderPaidAt,
       });
     } catch (error) {
-      console.error("Get payment methods error:", error);
+      logger.error("Get payment methods error:", error);
       res.status(500).json({ error: "Failed to get payment methods" });
     }
   });
@@ -9881,7 +9882,7 @@ Return ONLY the message text, no JSON or formatting.`
       let event;
       if (webhookSecret && sig) {
         if (!req.rawBody) {
-          console.error("[Stripe Connect Webhook] req.rawBody missing — express.json verify callback did not run");
+          logger.error("[Stripe Connect Webhook] req.rawBody missing — express.json verify callback did not run");
           return res.status(500).json({ error: "Server misconfiguration: raw body not captured" });
         }
         try {
@@ -9894,7 +9895,7 @@ Return ONLY the message text, no JSON or formatting.`
             webhookSecret
           );
         } catch (err: any) {
-          console.error("Webhook signature verification failed:", err.message);
+          logger.error("Webhook signature verification failed:", err.message);
           return res.status(400).send(`Webhook Error: ${err.message}`);
         }
       } else {
@@ -9916,7 +9917,7 @@ Return ONLY the message text, no JSON or formatting.`
             await storage.updateUser(gigaidUserId, {
               stripeConnectStatus: status,
             });
-            console.log(`Updated Connect status for user ${gigaidUserId}: ${status}`);
+            logger.info(`Updated Connect status for user ${gigaidUserId}: ${status}`);
           }
           break;
         }
@@ -9951,7 +9952,7 @@ Return ONLY the message text, no JSON or formatting.`
                 source: "system",
               });
               
-              console.log(`Deposit captured for booking ${bookingId}`);
+              logger.info(`Deposit captured for booking ${bookingId}`);
             }
           }
           break;
@@ -10010,7 +10011,7 @@ Return ONLY the message text, no JSON or formatting.`
                 transferId: transfer.id,
               }),
             });
-            console.log(`Deposit released for booking ${bookingId}`);
+            logger.info(`Deposit released for booking ${bookingId}`);
           }
           break;
         }
@@ -10055,7 +10056,7 @@ Return ONLY the message text, no JSON or formatting.`
               source: "system",
             });
             
-            console.log(`Stripe dispute created for booking ${booking.id}`);
+            logger.info(`Stripe dispute created for booking ${booking.id}`);
           }
           break;
         }
@@ -10065,7 +10066,7 @@ Return ONLY the message text, no JSON or formatting.`
           const bookingId = paymentIntent.metadata?.booking_id;
           const userId = paymentIntent.metadata?.user_id;
           if (!userId) {
-            console.warn(`[Stripe Webhook] payment_intent.payment_failed missing user_id in metadata`);
+            logger.warn(`[Stripe Webhook] payment_intent.payment_failed missing user_id in metadata`);
           }
           
           emitCanonicalEvent({
@@ -10080,7 +10081,7 @@ Return ONLY the message text, no JSON or formatting.`
             source: "system",
           });
           
-          console.log(`Payment failed for booking ${bookingId || "unknown"}`);
+          logger.info(`Payment failed for booking ${bookingId || "unknown"}`);
           break;
         }
 
@@ -10089,7 +10090,7 @@ Return ONLY the message text, no JSON or formatting.`
           const customerId = subscription.customer;
           const userId = subscription.metadata?.user_id;
           if (!userId) {
-            console.error(`[Stripe Webhook] subscription.created missing user_id in metadata - cannot process`);
+            logger.error(`[Stripe Webhook] subscription.created missing user_id in metadata - cannot process`);
             break;
           }
           const planFromMetadata = subscription.metadata?.plan || "pro_plus";
@@ -10117,11 +10118,11 @@ Return ONLY the message text, no JSON or formatting.`
               source: "system",
             });
             
-            console.log(`[Webhook] User ${userId} upgraded to ${planFromMetadata}`);
+            logger.info(`[Webhook] User ${userId} upgraded to ${planFromMetadata}`);
           } else if (!user) {
-            console.warn(`[Webhook] No user found for subscription ${subscription.id}`);
+            logger.warn(`[Webhook] No user found for subscription ${subscription.id}`);
           } else {
-            console.log(`[Webhook] User ${userId} already on ${planFromMetadata} - skipping`);
+            logger.info(`[Webhook] User ${userId} already on ${planFromMetadata} - skipping`);
           }
           
           emitCanonicalEvent({
@@ -10137,7 +10138,7 @@ Return ONLY the message text, no JSON or formatting.`
             source: "system",
           });
           
-          console.log(`Subscription started for user ${userId}`);
+          logger.info(`Subscription started for user ${userId}`);
           break;
         }
 
@@ -10145,7 +10146,7 @@ Return ONLY the message text, no JSON or formatting.`
           const subscription = event.data.object as any;
           const userId = subscription.metadata?.user_id;
           if (!userId) {
-            console.error(`[Stripe Webhook] subscription.deleted missing user_id in metadata - cannot process`);
+            logger.error(`[Stripe Webhook] subscription.deleted missing user_id in metadata - cannot process`);
             break;
           }
           
@@ -10156,7 +10157,7 @@ Return ONLY the message text, no JSON or formatting.`
             stripeSubscriptionId: null,
           });
           
-          console.log(`[Webhook] User ${userId} downgraded to free plan`);
+          logger.info(`[Webhook] User ${userId} downgraded to free plan`);
           
           emitCanonicalEvent({
             eventName: "subscription_canceled",
@@ -10169,7 +10170,7 @@ Return ONLY the message text, no JSON or formatting.`
             source: "system",
           });
           
-          console.log(`Subscription canceled for user ${userId}`);
+          logger.info(`Subscription canceled for user ${userId}`);
           break;
         }
 
@@ -10181,19 +10182,19 @@ Return ONLY the message text, no JSON or formatting.`
           
           // Skip if no user_id in metadata (not our subscription)
           if (!userId) {
-            console.log(`[Webhook] Skipping subscription.updated - no user_id in metadata`);
+            logger.info(`[Webhook] Skipping subscription.updated - no user_id in metadata`);
             break;
           }
           
           const user = await storage.getUser(userId);
           if (!user) {
-            console.warn(`[Webhook] User ${userId} not found for subscription.updated`);
+            logger.warn(`[Webhook] User ${userId} not found for subscription.updated`);
             break;
           }
           
           // Verify this subscription belongs to this user
           if (user.stripeSubscriptionId && user.stripeSubscriptionId !== subscription.id) {
-            console.warn(`[Webhook] Subscription mismatch for user ${userId}: expected ${user.stripeSubscriptionId}, got ${subscription.id}`);
+            logger.warn(`[Webhook] Subscription mismatch for user ${userId}: expected ${user.stripeSubscriptionId}, got ${subscription.id}`);
             break;
           }
           
@@ -10206,10 +10207,10 @@ Return ONLY the message text, no JSON or formatting.`
               isPro: true,
             });
             stateChanged = true;
-            console.log(`[Webhook] User ${userId} plan updated to ${newPlan}`);
+            logger.info(`[Webhook] User ${userId} plan updated to ${newPlan}`);
           } else if (status === "past_due" || status === "unpaid") {
             // Keep plan active during grace period, but log warning
-            console.warn(`[Webhook] User ${userId} subscription is ${status} - entering grace period`);
+            logger.warn(`[Webhook] User ${userId} subscription is ${status} - entering grace period`);
             stateChanged = true;
             
             emitCanonicalEvent({
@@ -10251,17 +10252,17 @@ Return ONLY the message text, no JSON or formatting.`
           
           if (!userId) {
             // Log for debugging but don't emit event for unknown users
-            console.warn(`[Webhook] Payment failed for subscription ${subscriptionId} - no user_id found`);
+            logger.warn(`[Webhook] Payment failed for subscription ${subscriptionId} - no user_id found`);
             break;
           }
           
           const user = await storage.getUser(userId);
           if (!user) {
-            console.warn(`[Webhook] User ${userId} not found for invoice.payment_failed`);
+            logger.warn(`[Webhook] User ${userId} not found for invoice.payment_failed`);
             break;
           }
           
-          console.warn(`[Webhook] Payment failed for user ${userId}, subscription ${subscriptionId}, attempt ${attemptCount}`);
+          logger.warn(`[Webhook] Payment failed for user ${userId}, subscription ${subscriptionId}, attempt ${attemptCount}`);
           
           emitCanonicalEvent({
             eventName: "invoice_payment_failed",
@@ -10278,14 +10279,14 @@ Return ONLY the message text, no JSON or formatting.`
           });
           
           // Only log for support - don't downgrade until subscription.deleted fires
-          console.log(`[Webhook] Invoice payment failed - Stripe will retry automatically`);
+          logger.info(`[Webhook] Invoice payment failed - Stripe will retry automatically`);
           break;
         }
       }
 
       res.json({ received: true });
     } catch (error) {
-      console.error("Stripe webhook error:", error);
+      logger.error("Stripe webhook error:", error);
       res.status(500).json({ error: "Webhook handler failed" });
     }
   });
@@ -10341,7 +10342,7 @@ Return ONLY the message text, no JSON or formatting.`
       res.setHeader("Content-Disposition", `attachment; filename="gigaid-export-${new Date().toISOString().split('T')[0]}.json"`);
       res.json(exportData);
     } catch (error) {
-      console.error("Export JSON error:", error);
+      logger.error("Export JSON error:", error);
       res.status(500).json({ error: "Failed to export data" });
     }
   });
@@ -10473,7 +10474,7 @@ Return ONLY the message text, no JSON or formatting.`
       res.setHeader("Content-Disposition", `attachment; filename="gigaid-graph-${new Date().toISOString().split('T')[0]}.dot"`);
       res.send(dot);
     } catch (error) {
-      console.error("Export DOT error:", error);
+      logger.error("Export DOT error:", error);
       res.status(500).json({ error: "Failed to export graph" });
     }
   });
@@ -10500,7 +10501,7 @@ Return ONLY the message text, no JSON or formatting.`
 
       res.json(parsed);
     } catch (error) {
-      console.error("Parse share error:", error);
+      logger.error("Parse share error:", error);
       res.status(500).json({ error: "Failed to parse content" });
     }
   });
@@ -10522,7 +10523,7 @@ Return ONLY the message text, no JSON or formatting.`
 
       res.json({ replies });
     } catch (error) {
-      console.error("Generate replies error:", error);
+      logger.error("Generate replies error:", error);
       res.status(500).json({ error: "Failed to generate replies" });
     }
   });
@@ -10553,7 +10554,7 @@ Return ONLY the message text, no JSON or formatting.`
           await sendSMS(job.clientPhone, message);
           smsSent = true;
         } catch (e) {
-          console.error("On the way SMS error:", e);
+          logger.error("On the way SMS error:", e);
         }
       }
 
@@ -10568,7 +10569,7 @@ Return ONLY the message text, no JSON or formatting.`
           });
           emailSent = true;
         } catch (e) {
-          console.error("On the way email error:", e);
+          logger.error("On the way email error:", e);
         }
       }
 
@@ -10581,7 +10582,7 @@ Return ONLY the message text, no JSON or formatting.`
           : "No contact info available to send notification",
       });
     } catch (error) {
-      console.error("On the way error:", error);
+      logger.error("On the way error:", error);
       res.status(500).json({ error: "Failed to send notification" });
     }
   });
@@ -10608,7 +10609,7 @@ Return ONLY the message text, no JSON or formatting.`
 
       res.json(result);
     } catch (error) {
-      console.error("Driving distance error:", error);
+      logger.error("Driving distance error:", error);
       res.status(500).json({ error: "Failed to calculate driving distance" });
     }
   });
@@ -10648,7 +10649,7 @@ Return ONLY the message text, no JSON or formatting.`
           const sent = await sendSMS(job.clientPhone, message);
           smsSent = sent;
         } catch (e) {
-          console.error("Review request SMS error:", e);
+          logger.error("Review request SMS error:", e);
         }
       }
 
@@ -10675,7 +10676,7 @@ Return ONLY the message text, no JSON or formatting.`
           });
           emailSent = true;
         } catch (e) {
-          console.error("Review request email error:", e);
+          logger.error("Review request email error:", e);
         }
       }
 
@@ -10689,7 +10690,7 @@ Return ONLY the message text, no JSON or formatting.`
           : "No contact info available",
       });
     } catch (error) {
-      console.error("Review request error:", error);
+      logger.error("Review request error:", error);
       res.status(500).json({ error: "Failed to send review request" });
     }
   });
@@ -10717,7 +10718,7 @@ Return ONLY the message text, no JSON or formatting.`
         alreadyReviewed,
       });
     } catch (error) {
-      console.error("Get review page error:", error);
+      logger.error("Get review page error:", error);
       res.status(500).json({ error: "Failed to load review page" });
     }
   });
@@ -10775,7 +10776,7 @@ Return ONLY the message text, no JSON or formatting.`
 
       res.json({ success: true, review });
     } catch (error) {
-      console.error("Submit review error:", error);
+      logger.error("Submit review error:", error);
       res.status(500).json({ error: "Failed to submit review" });
     }
   });
@@ -10795,7 +10796,7 @@ Return ONLY the message text, no JSON or formatting.`
       
       res.json(result);
     } catch (error) {
-      console.error("Generate nudges error:", error);
+      logger.error("Generate nudges error:", error);
       res.status(500).json({ error: "Failed to generate nudges" });
     }
   });
@@ -10858,7 +10859,7 @@ Return ONLY the message text, no JSON or formatting.`
             })
           );
         } catch (err) {
-          console.error("Failed to update lastShownAt:", err);
+          logger.error("Failed to update lastShownAt:", err);
         }
         
         return res.json(topNudges);
@@ -10894,12 +10895,12 @@ Return ONLY the message text, no JSON or formatting.`
           })
         );
       } catch (err) {
-        console.error("Failed to update lastShownAt:", err);
+        logger.error("Failed to update lastShownAt:", err);
       }
       
       res.json(limitedNudges);
     } catch (error) {
-      console.error("Get nudges error:", error);
+      logger.error("Get nudges error:", error);
       res.status(500).json({ error: "Failed to get nudges" });
     }
   });
@@ -10913,7 +10914,7 @@ Return ONLY the message text, no JSON or formatting.`
       }
       res.json(nudge);
     } catch (error) {
-      console.error("Get nudge error:", error);
+      logger.error("Get nudge error:", error);
       res.status(500).json({ error: "Failed to get nudge" });
     }
   });
@@ -10936,7 +10937,7 @@ Return ONLY the message text, no JSON or formatting.`
 
       res.json({ success: true });
     } catch (error) {
-      console.error("Dismiss nudge error:", error);
+      logger.error("Dismiss nudge error:", error);
       res.status(500).json({ error: "Failed to dismiss nudge" });
     }
   });
@@ -10964,7 +10965,7 @@ Return ONLY the message text, no JSON or formatting.`
 
       res.json({ success: true, snoozedUntil });
     } catch (error) {
-      console.error("Snooze nudge error:", error);
+      logger.error("Snooze nudge error:", error);
       res.status(500).json({ error: "Failed to snooze nudge" });
     }
   });
@@ -11010,7 +11011,7 @@ Return ONLY the message text, no JSON or formatting.`
 
       res.json(result);
     } catch (error) {
-      console.error("Act on nudge error:", error);
+      logger.error("Act on nudge error:", error);
       res.status(500).json({ error: "Failed to process action" });
     }
   });
@@ -11042,7 +11043,7 @@ Return ONLY the message text, no JSON or formatting.`
 
       res.json({ success: true, status: "completed" });
     } catch (error) {
-      console.error("Complete nudge error:", error);
+      logger.error("Complete nudge error:", error);
       res.status(500).json({ error: "Failed to complete nudge" });
     }
   });
@@ -11088,7 +11089,7 @@ Return ONLY the message text, no JSON or formatting.`
       
       res.json({ intervention: null });
     } catch (error) {
-      console.error("Intervention check error:", error);
+      logger.error("Intervention check error:", error);
       res.status(500).json({ error: "Failed to check interventions" });
     }
   });
@@ -11172,7 +11173,7 @@ Return ONLY the message text, no JSON or formatting.`
         }
       });
     } catch (error) {
-      console.error("Get impact stats error:", error);
+      logger.error("Get impact stats error:", error);
       res.status(500).json({ error: "Failed to get impact stats" });
     }
   });
@@ -11235,7 +11236,7 @@ Return ONLY the message text, no JSON or formatting.`
         completedJobsWithoutInvoice: completedWithoutInvoice.length,
       });
     } catch (error) {
-      console.error("Backfill nudges error:", error);
+      logger.error("Backfill nudges error:", error);
       res.status(500).json({ error: "Failed to backfill nudges" });
     }
   });
@@ -11268,7 +11269,7 @@ Return ONLY the message text, no JSON or formatting.`
         items 
       });
     } catch (error) {
-      console.error("Generate action queue error:", error);
+      logger.error("Generate action queue error:", error);
       res.status(500).json({ error: "Failed to generate action queue" });
     }
   });
@@ -11292,7 +11293,7 @@ Return ONLY the message text, no JSON or formatting.`
       );
       res.json(items);
     } catch (error) {
-      console.error("Get action queue error:", error);
+      logger.error("Get action queue error:", error);
       res.status(500).json({ error: "Failed to get action queue" });
     }
   });
@@ -11310,7 +11311,7 @@ Return ONLY the message text, no JSON or formatting.`
       });
       res.json(updated);
     } catch (error) {
-      console.error("Mark action done error:", error);
+      logger.error("Mark action done error:", error);
       res.status(500).json({ error: "Failed to mark action as done" });
     }
   });
@@ -11328,7 +11329,7 @@ Return ONLY the message text, no JSON or formatting.`
       });
       res.json(updated);
     } catch (error) {
-      console.error("Dismiss action error:", error);
+      logger.error("Dismiss action error:", error);
       res.status(500).json({ error: "Failed to dismiss action" });
     }
   });
@@ -11351,7 +11352,7 @@ Return ONLY the message text, no JSON or formatting.`
       });
       res.json(updated);
     } catch (error) {
-      console.error("Snooze action error:", error);
+      logger.error("Snooze action error:", error);
       res.status(500).json({ error: "Failed to snooze action" });
     }
   });
@@ -11367,7 +11368,7 @@ Return ONLY the message text, no JSON or formatting.`
       const detections = await storage.getStallDetections(userId, entityType);
       res.json(detections);
     } catch (error) {
-      console.error("Get stall detections error:", error);
+      logger.error("Get stall detections error:", error);
       res.status(500).json({ error: "Failed to get stall detections" });
     }
   });
@@ -11394,7 +11395,7 @@ Return ONLY the message text, no JSON or formatting.`
       }).returning();
       res.json(stall);
     } catch (error) {
-      console.error("Create stall error:", error);
+      logger.error("Create stall error:", error);
       res.status(500).json({ error: "Failed to create stall event" });
     }
   });
@@ -11423,7 +11424,7 @@ Return ONLY the message text, no JSON or formatting.`
         .groupBy(stallDetections.stallType);
       res.json(rows);
     } catch (error) {
-      console.error("Stall summary error:", error);
+      logger.error("Stall summary error:", error);
       res.status(500).json({ error: "Failed to get stall summary" });
     }
   });
@@ -11449,7 +11450,7 @@ Return ONLY the message text, no JSON or formatting.`
       }
       res.json(actions);
     } catch (error) {
-      console.error("Get next actions error:", error);
+      logger.error("Get next actions error:", error);
       res.status(500).json({ error: "Failed to get next actions" });
     }
   });
@@ -11461,7 +11462,7 @@ Return ONLY the message text, no JSON or formatting.`
       const action = await storage.getActiveNextActionForEntity(entityType, entityId);
       res.json(action || null);
     } catch (error) {
-      console.error("Get entity next action error:", error);
+      logger.error("Get entity next action error:", error);
       res.status(500).json({ error: "Failed to get entity next action" });
     }
   });
@@ -11475,7 +11476,7 @@ Return ONLY the message text, no JSON or formatting.`
       }
       res.json(updated);
     } catch (error) {
-      console.error("Act on next action error:", error);
+      logger.error("Act on next action error:", error);
       res.status(500).json({ error: "Failed to act on action" });
     }
   });
@@ -11489,7 +11490,7 @@ Return ONLY the message text, no JSON or formatting.`
       }
       res.json(updated);
     } catch (error) {
-      console.error("Dismiss next action error:", error);
+      logger.error("Dismiss next action error:", error);
       res.status(500).json({ error: "Failed to dismiss action" });
     }
   });
@@ -11515,7 +11516,7 @@ Return ONLY the message text, no JSON or formatting.`
       const actions = await storage.getReadyActions(userId);
       res.json(actions);
     } catch (error) {
-      console.error("Get ready actions error:", error);
+      logger.error("Get ready actions error:", error);
       res.status(500).json({ error: "Failed to get ready actions" });
     }
   });
@@ -11527,7 +11528,7 @@ Return ONLY the message text, no JSON or formatting.`
       const action = await storage.getActiveReadyActionForEntity(entityType, entityId);
       res.json(action || null);
     } catch (error) {
-      console.error("Get entity ready action error:", error);
+      logger.error("Get entity ready action error:", error);
       res.status(500).json({ error: "Failed to get entity ready action" });
     }
   });
@@ -11622,7 +11623,7 @@ Return ONLY the message text, no JSON or formatting.`
             sendMessage = "Invoice sent via email";
           }
         } catch (emailErr) {
-          console.error("[ReadyAction] Email send failed:", emailErr);
+          logger.error("[ReadyAction] Email send failed:", emailErr);
         }
       }
       
@@ -11639,7 +11640,7 @@ Return ONLY the message text, no JSON or formatting.`
             sendMessage = "Invoice sent via SMS";
           }
         } catch (smsErr) {
-          console.error("[ReadyAction] SMS send failed:", smsErr);
+          logger.error("[ReadyAction] SMS send failed:", smsErr);
         }
       }
       
@@ -11661,7 +11662,7 @@ Return ONLY the message text, no JSON or formatting.`
         message: sendMessage
       });
     } catch (error) {
-      console.error("Act on ready action error:", error);
+      logger.error("Act on ready action error:", error);
       res.status(500).json({ error: "Failed to act on ready action" });
     }
   });
@@ -11675,7 +11676,7 @@ Return ONLY the message text, no JSON or formatting.`
       }
       res.json(updated);
     } catch (error) {
-      console.error("Dismiss ready action error:", error);
+      logger.error("Dismiss ready action error:", error);
       res.status(500).json({ error: "Failed to dismiss ready action" });
     }
   });
@@ -11734,7 +11735,7 @@ Return ONLY the message text, no JSON or formatting.`
       
       res.json({ success: true, id: override.id });
     } catch (error) {
-      console.error("Create AI override error:", error);
+      logger.error("Create AI override error:", error);
       res.status(500).json({ error: "Failed to log override" });
     }
   });
@@ -11765,7 +11766,7 @@ Return ONLY the message text, no JSON or formatting.`
         respondTapCount: lead.respondTapCount 
       });
     } catch (error) {
-      console.error("Track respond tap error:", error);
+      logger.error("Track respond tap error:", error);
       res.status(500).json({ error: "Failed to track respond tap" });
     }
   });
@@ -11870,7 +11871,7 @@ Return ONLY the message text, no JSON or formatting.`
 
       res.json(result);
     } catch (error) {
-      console.error("Compute outcomes error:", error);
+      logger.error("Compute outcomes error:", error);
       res.status(500).json({ error: "Failed to compute outcome metrics" });
     }
   });
@@ -11910,7 +11911,7 @@ Return ONLY the message text, no JSON or formatting.`
 
       res.json({ metrics, summary });
     } catch (error) {
-      console.error("Get outcomes error:", error);
+      logger.error("Get outcomes error:", error);
       res.status(500).json({ error: "Failed to get outcome metrics" });
     }
   });
@@ -11921,7 +11922,7 @@ Return ONLY the message text, no JSON or formatting.`
       const flags = await storage.getAllFeatureFlags();
       res.json(flags);
     } catch (error) {
-      console.error("Get feature flags error:", error);
+      logger.error("Get feature flags error:", error);
       res.status(500).json({ error: "Failed to get feature flags" });
     }
   });
@@ -11934,7 +11935,7 @@ Return ONLY the message text, no JSON or formatting.`
       }
       res.json(flag);
     } catch (error) {
-      console.error("Get feature flag error:", error);
+      logger.error("Get feature flag error:", error);
       res.status(500).json({ error: "Failed to get feature flag" });
     }
   });
@@ -11945,7 +11946,7 @@ Return ONLY the message text, no JSON or formatting.`
       const flag = await storage.setFeatureFlag(req.params.key, enabled, description);
       res.json(flag);
     } catch (error) {
-      console.error("Set feature flag error:", error);
+      logger.error("Set feature flag error:", error);
       res.status(500).json({ error: "Failed to set feature flag" });
     }
   });
@@ -12001,7 +12002,7 @@ Return ONLY the message text, no JSON or formatting.`
         capabilities
       });
     } catch (error) {
-      console.error("Get capabilities error:", error);
+      logger.error("Get capabilities error:", error);
       res.status(500).json({ error: "Failed to get capabilities" });
     }
   });
@@ -12026,7 +12027,7 @@ Return ONLY the message text, no JSON or formatting.`
         planName: PLAN_NAMES[plan]
       });
     } catch (error) {
-      console.error("Check capability error:", error);
+      logger.error("Check capability error:", error);
       res.status(500).json({ error: "Failed to check capability" });
     }
   });
@@ -12037,7 +12038,7 @@ Return ONLY the message text, no JSON or formatting.`
       const allUsage = await storage.getAllCapabilityUsage((req as any).userId);
       res.json(allUsage);
     } catch (error) {
-      console.error("Get usage error:", error);
+      logger.error("Get usage error:", error);
       res.status(500).json({ error: "Failed to get usage" });
     }
   });
@@ -12075,7 +12076,7 @@ Return ONLY the message text, no JSON or formatting.`
         ...newResult
       });
     } catch (error) {
-      console.error("Increment usage error:", error);
+      logger.error("Increment usage error:", error);
       res.status(500).json({ error: "Failed to increment usage" });
     }
   });
@@ -12087,7 +12088,7 @@ Return ONLY the message text, no JSON or formatting.`
       await storage.resetCapabilityUsage((req as any).userId, capability);
       res.json({ success: true, capability });
     } catch (error) {
-      console.error("Reset usage error:", error);
+      logger.error("Reset usage error:", error);
       res.status(500).json({ error: "Failed to reset usage" });
     }
   });
@@ -12102,7 +12103,7 @@ Return ONLY the message text, no JSON or formatting.`
         capabilityNames: CAPABILITY_DISPLAY_NAMES
       });
     } catch (error) {
-      console.error("Get plans error:", error);
+      logger.error("Get plans error:", error);
       res.status(500).json({ error: "Failed to get plans" });
     }
   });
@@ -12202,7 +12203,7 @@ Return ONLY the message text, no JSON or formatting.`
           client: (parsedFields.clientName || parsedFields.clientPhone) ? 0.8 : 0.2,
         };
       } catch (aiError) {
-        console.error("AI parsing failed, using rule-based fallback:", aiError);
+        logger.error("AI parsing failed, using rule-based fallback:", aiError);
         
         // Rule-based fallback
         const dateMatch = trimmed.match(/\b(tomorrow|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday|next week|\d{1,2}\/\d{1,2}|\d{1,2}-\d{1,2})/i);
@@ -12276,7 +12277,7 @@ Return ONLY the message text, no JSON or formatting.`
         } : undefined,
       });
     } catch (error) {
-      console.error("QuickBook parse error:", error);
+      logger.error("QuickBook parse error:", error);
       res.status(500).json({ error: "Failed to parse message" });
     }
   });
@@ -12299,7 +12300,7 @@ Return ONLY the message text, no JSON or formatting.`
         paymentConfig: JSON.parse(draft.paymentConfig || "{}"),
       });
     } catch (error) {
-      console.error("Get draft error:", error);
+      logger.error("Get draft error:", error);
       res.status(500).json({ error: "Failed to get draft" });
     }
   });
@@ -12347,7 +12348,7 @@ Return ONLY the message text, no JSON or formatting.`
         confidence: JSON.parse(updated?.confidence || "{}"),
       });
     } catch (error) {
-      console.error("Update draft error:", error);
+      logger.error("Update draft error:", error);
       res.status(500).json({ error: "Failed to update draft" });
     }
   });
@@ -12402,7 +12403,7 @@ Return ONLY the message text, no JSON or formatting.`
         paymentConfig,
       });
     } catch (error) {
-      console.error("Send booking link error:", error);
+      logger.error("Send booking link error:", error);
       res.status(500).json({ error: "Failed to generate booking link" });
     }
   });
@@ -12437,7 +12438,7 @@ Return ONLY the message text, no JSON or formatting.`
         expiresAt: draft.expiresAt,
       });
     } catch (error) {
-      console.error("Get public quickbook error:", error);
+      logger.error("Get public quickbook error:", error);
       res.status(500).json({ error: "Failed to get booking details" });
     }
   });
@@ -12493,7 +12494,7 @@ Return ONLY the message text, no JSON or formatting.`
         message: "Booking confirmed! The provider will be notified.",
       });
     } catch (error) {
-      console.error("Confirm quickbook error:", error);
+      logger.error("Confirm quickbook error:", error);
       res.status(500).json({ error: "Failed to confirm booking" });
     }
   });
@@ -12517,7 +12518,7 @@ Return ONLY the message text, no JSON or formatting.`
 
       res.json({ message });
     } catch (error) {
-      console.error("Celebration message error:", error);
+      logger.error("Celebration message error:", error);
       res.status(500).json({ error: "Failed to generate celebration message" });
     }
   });
@@ -12761,7 +12762,7 @@ Return ONLY the message text, no JSON or formatting.`
         message: "Support ticket created successfully",
       });
     } catch (error: any) {
-      console.error("Error creating public support ticket:", error);
+      logger.error("Error creating public support ticket:", error);
       res.status(500).json({ 
         error: "Failed to create support ticket",
         details: error.message 
@@ -12813,7 +12814,7 @@ Return ONLY the message text, no JSON or formatting.`
         message: "Support ticket created successfully",
       });
     } catch (error: any) {
-      console.error("Error creating support ticket:", error);
+      logger.error("Error creating support ticket:", error);
       res.status(500).json({ 
         error: "Failed to create support ticket",
         details: error.message 
@@ -12843,7 +12844,7 @@ Return ONLY the message text, no JSON or formatting.`
 
       res.json({ tickets });
     } catch (error: any) {
-      console.error("Error fetching tickets:", error);
+      logger.error("Error fetching tickets:", error);
       res.status(500).json({ 
         error: "Failed to fetch support tickets",
         details: error.message 
@@ -12880,7 +12881,7 @@ Return ONLY the message text, no JSON or formatting.`
         })) || [],
       });
     } catch (error: any) {
-      console.error("Error fetching ticket:", error);
+      logger.error("Error fetching ticket:", error);
       res.status(500).json({ 
         error: "Failed to fetch ticket details",
         details: error.message 
@@ -12901,7 +12902,7 @@ Return ONLY the message text, no JSON or formatting.`
         message: "Comment added successfully",
       });
     } catch (error: any) {
-      console.error("Error adding comment:", error);
+      logger.error("Error adding comment:", error);
       res.status(500).json({ 
         error: "Failed to add comment",
         details: error.message 
@@ -12918,7 +12919,7 @@ Return ONLY the message text, no JSON or formatting.`
       const services = await storage.getProviderServices(userId);
       res.json(services);
     } catch (error: any) {
-      console.error("Error fetching provider services:", error);
+      logger.error("Error fetching provider services:", error);
       res.status(500).json({ error: "Failed to fetch services" });
     }
   });
@@ -12940,7 +12941,7 @@ Return ONLY the message text, no JSON or formatting.`
       
       res.json(service);
     } catch (error: any) {
-      console.error("Error creating provider service:", error);
+      logger.error("Error creating provider service:", error);
       res.status(500).json({ error: "Failed to create service" });
     }
   });
@@ -12957,7 +12958,7 @@ Return ONLY the message text, no JSON or formatting.`
         clients: eligibleClients,
       });
     } catch (error: any) {
-      console.error("Error fetching eligible clients:", error);
+      logger.error("Error fetching eligible clients:", error);
       res.status(500).json({ error: "Failed to fetch eligible clients" });
     }
   });
@@ -13010,7 +13011,7 @@ Return ONLY the message text, no JSON or formatting.`
         suggestedMessage: generateDefaultMessage(eventType, eventReason, bookingLink, channel),
       });
     } catch (error: any) {
-      console.error("Error validating campaign:", error);
+      logger.error("Error validating campaign:", error);
       res.status(500).json({ error: "Failed to validate campaign" });
     }
   });
@@ -13131,7 +13132,7 @@ Return ONLY the message text, no JSON or formatting.`
             successCount++;
           }
         } catch (sendError) {
-          console.error(`Failed to send to client ${client.id}:`, sendError);
+          logger.error(`Failed to send to client ${client.id}:`, sendError);
           failCount++;
         }
       }
@@ -13144,7 +13145,7 @@ Return ONLY the message text, no JSON or formatting.`
         total: eligibleClients.length,
       });
     } catch (error: any) {
-      console.error("Error sending campaign:", error);
+      logger.error("Error sending campaign:", error);
       res.status(500).json({ error: "Failed to send campaign" });
     }
   });
@@ -13156,7 +13157,7 @@ Return ONLY the message text, no JSON or formatting.`
       const campaigns = await storage.getCampaigns(userId);
       res.json(campaigns);
     } catch (error: any) {
-      console.error("Error fetching campaigns:", error);
+      logger.error("Error fetching campaigns:", error);
       res.status(500).json({ error: "Failed to fetch campaigns" });
     }
   });
@@ -13176,7 +13177,7 @@ Return ONLY the message text, no JSON or formatting.`
       const suggestions = await storage.getCampaignSuggestions(userId);
       res.json(suggestions);
     } catch (error: any) {
-      console.error("Error fetching suggestions:", error);
+      logger.error("Error fetching suggestions:", error);
       res.status(500).json({ error: "Failed to fetch suggestions" });
     }
   });
@@ -13190,7 +13191,7 @@ Return ONLY the message text, no JSON or formatting.`
       await storage.dismissCampaignSuggestion(suggestionId, userId);
       res.json({ success: true });
     } catch (error: any) {
-      console.error("Error dismissing suggestion:", error);
+      logger.error("Error dismissing suggestion:", error);
       res.status(500).json({ error: "Failed to dismiss suggestion" });
     }
   });
@@ -13207,7 +13208,7 @@ Return ONLY the message text, no JSON or formatting.`
       await storage.optOutClient(phone, email);
       res.json({ success: true, message: "You have been opted out of notifications" });
     } catch (error: any) {
-      console.error("Error processing opt-out:", error);
+      logger.error("Error processing opt-out:", error);
       res.status(500).json({ error: "Failed to process opt-out" });
     }
   });
@@ -13224,7 +13225,7 @@ Return ONLY the message text, no JSON or formatting.`
       const settings = await getOrCreateAutomationSettings(userId);
       res.json(settings);
     } catch (error: any) {
-      console.error("Error fetching automation settings:", error);
+      logger.error("Error fetching automation settings:", error);
       res.status(500).json({ error: "Failed to fetch automation settings" });
     }
   });
@@ -13292,7 +13293,7 @@ Return ONLY the message text, no JSON or formatting.`
       
       res.json(updated);
     } catch (error: any) {
-      console.error("Error updating automation settings:", error);
+      logger.error("Error updating automation settings:", error);
       res.status(500).json({ error: "Failed to update automation settings" });
     }
   });
@@ -13307,7 +13308,7 @@ Return ONLY the message text, no JSON or formatting.`
       const messages = await getScheduledMessagesForJob(jobId, userId);
       res.json(messages);
     } catch (error: any) {
-      console.error("Error fetching scheduled messages:", error);
+      logger.error("Error fetching scheduled messages:", error);
       res.status(500).json({ error: "Failed to fetch scheduled messages" });
     }
   });
@@ -13327,7 +13328,7 @@ Return ONLY the message text, no JSON or formatting.`
         res.status(400).json({ error: "Cannot cancel message - already sent or not found" });
       }
     } catch (error: any) {
-      console.error("Error canceling message:", error);
+      logger.error("Error canceling message:", error);
       res.status(500).json({ error: "Failed to cancel message" });
     }
   });
@@ -13357,7 +13358,7 @@ Return ONLY the message text, no JSON or formatting.`
       const messages = await query;
       res.json(messages);
     } catch (error: any) {
-      console.error("Error fetching outbound messages:", error);
+      logger.error("Error fetching outbound messages:", error);
       res.status(500).json({ error: "Failed to fetch outbound messages" });
     }
   });
@@ -13410,7 +13411,7 @@ Return ONLY the message text, no JSON or formatting.`
         recentPayments: recentPayments.filter(p => p.paidAt) 
       });
     } catch (error: any) {
-      console.error("Error fetching recent activity:", error);
+      logger.error("Error fetching recent activity:", error);
       res.status(500).json({ error: "Failed to fetch recent activity" });
     }
   });
@@ -13423,7 +13424,7 @@ Return ONLY the message text, no JSON or formatting.`
       const templates = await db.select().from(jobTemplates).orderBy(jobTemplates.category, jobTemplates.name);
       res.json(templates);
     } catch (error: any) {
-      console.error("Error fetching job templates:", error);
+      logger.error("Error fetching job templates:", error);
       res.status(500).json({ error: "Failed to fetch job templates" });
     }
   });
@@ -13460,7 +13461,7 @@ Return ONLY the message text, no JSON or formatting.`
       
       res.json(job);
     } catch (error: any) {
-      console.error("Error creating job from template:", error);
+      logger.error("Error creating job from template:", error);
       res.status(500).json({ error: "Failed to create job from template" });
     }
   });
@@ -13515,7 +13516,7 @@ Return ONLY the message text, no JSON or formatting.`
         hotLeadCount: hotLeads.length,
       });
     } catch (error: any) {
-      console.error("Error fetching money dashboard:", error);
+      logger.error("Error fetching money dashboard:", error);
       res.status(500).json({ error: "Failed to fetch money dashboard" });
     }
   });
@@ -13802,7 +13803,7 @@ Respond in JSON format only:
             sampleSize: 0,
           };
         } catch (aiError) {
-          console.error("AI quote error:", aiError);
+          logger.error("AI quote error:", aiError);
           quoteResult = {
             source: "default",
             suggestedPriceLow: 5000,
@@ -13820,7 +13821,7 @@ Respond in JSON format only:
       
       res.json(quoteResult);
     } catch (error: any) {
-      console.error("Error generating quote estimate:", error);
+      logger.error("Error generating quote estimate:", error);
       res.status(500).json({ error: "Failed to generate quote estimate" });
     }
   });
@@ -13883,7 +13884,7 @@ Respond in JSON format only:
       
       res.json({ insights: insights.filter(i => i.totalJobs >= 2) });
     } catch (error: any) {
-      console.error("Error fetching price optimization:", error);
+      logger.error("Error fetching price optimization:", error);
       res.status(500).json({ error: "Failed to fetch price optimization" });
     }
   });
@@ -13925,7 +13926,7 @@ Respond in JSON format only:
 
       res.json({ success: true, adjustment });
     } catch (error: any) {
-      console.error("Error applying price adjustment:", error);
+      logger.error("Error applying price adjustment:", error);
       res.status(500).json({ error: "Failed to apply price adjustment" });
     }
   });
@@ -14017,7 +14018,7 @@ Respond in JSON format only:
         highSeverityCount: warnings.filter(w => w.severity === "high").length,
       });
     } catch (error: any) {
-      console.error("Error fetching profit warnings:", error);
+      logger.error("Error fetching profit warnings:", error);
       res.status(500).json({ error: "Failed to fetch profit warnings" });
     }
   });
@@ -14026,19 +14027,19 @@ Respond in JSON format only:
   import("./postJobMomentum").then(({ startMomentumScheduler }) => {
     startMomentumScheduler(60000); // Check every minute
   }).catch(err => {
-    console.error("[PostJobMomentum] Failed to start scheduler:", err);
+    logger.error("[PostJobMomentum] Failed to start scheduler:", err);
   });
 
   import("./followUpBot").then(({ startFollowUpBot }) => {
     startFollowUpBot();
   }).catch(err => {
-    console.error("[FollowUpBot] Failed to start:", err);
+    logger.error("[FollowUpBot] Failed to start:", err);
   });
 
   import("./rebookingScheduler").then(({ startRebookingScheduler }) => {
     startRebookingScheduler();
   }).catch(err => {
-    console.error("[RebookingScheduler] Failed to start:", err);
+    logger.error("[RebookingScheduler] Failed to start:", err);
   });
 
   const { registerGrowthRoutes } = await import("./growth/routes");

@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/node";
 import * as fs from "fs";
 import * as path from "path";
+import { logger } from "./lib/logger";
 
 const isProduction = process.env.NODE_ENV === "production";
 let sentryInitialized = false;
@@ -28,9 +29,9 @@ export function initSentry(): void {
 
   if (!dsn) {
     if (isProduction) {
-      console.warn("[sentry] WARNING: SENTRY_DSN not set in production. Error tracking disabled.");
+      logger.warn("[sentry] WARNING: SENTRY_DSN not set in production. Error tracking disabled.");
     } else {
-      console.log("[sentry] SENTRY_DSN not set. Skipping Sentry initialization (development).");
+      logger.info("[sentry] SENTRY_DSN not set. Skipping Sentry initialization (development).");
     }
     return;
   }
@@ -65,7 +66,7 @@ export function initSentry(): void {
   });
 
   sentryInitialized = true;
-  console.log(`[sentry] Initialized (environment: ${isProduction ? "production" : "development"})`);
+  logger.info(`[sentry] Initialized (environment: ${isProduction ? "production" : "development"})`);
 }
 
 export function captureError(err: Error, context?: Record<string, any>): void {
@@ -84,12 +85,12 @@ export function captureError(err: Error, context?: Record<string, any>): void {
 export function setupProcessHandlers(): void {
   process.on("unhandledRejection", (reason) => {
     const err = reason instanceof Error ? reason : new Error(String(reason));
-    console.error("[process] Unhandled rejection:", err.message);
+    logger.error("[process] Unhandled rejection:", err.message);
     captureError(err, { type: "unhandledRejection" });
   });
 
   process.on("uncaughtException", (err) => {
-    console.error("[process] Uncaught exception:", err.message);
+    logger.error("[process] Uncaught exception:", err.message);
     captureError(err, { type: "uncaughtException" });
     if (sentryInitialized) {
       Sentry.flush(2000).finally(() => {
@@ -100,5 +101,5 @@ export function setupProcessHandlers(): void {
     }
   });
 
-  console.log("[sentry] Process-level error handlers registered.");
+  logger.info("[sentry] Process-level error handlers registered.");
 }

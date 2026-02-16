@@ -9,6 +9,7 @@ import connectPg from "connect-pg-simple";
 import { authStorage } from "./storage";
 import { storage } from "../../storage";
 import { verifyAppJwt, signAppJwt } from "../../appJwt";
+import { logger } from "../../lib/logger";
 
 const getOidcConfig = memoize(
   async () => {
@@ -106,21 +107,21 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
-    console.log("[Auth] /api/login requested, hostname:", req.hostname);
+    logger.debug("[Auth] /api/login requested, hostname:", req.hostname);
     try {
       ensureStrategy(req.hostname);
-      console.log("[Auth] Strategy ensured for:", req.hostname);
+      logger.debug("[Auth] Strategy ensured for:", req.hostname);
       passport.authenticate(`replitauth:${req.hostname}`, {
         prompt: "login consent",
         scope: ["openid", "email", "profile", "offline_access"],
       })(req, res, (err: any) => {
         if (err) {
-          console.error("[Auth] Passport authenticate error:", err);
+          logger.error("[Auth] Passport authenticate error:", err);
         }
         next(err);
       });
     } catch (error) {
-      console.error("[Auth] Error in /api/login:", error);
+      logger.error("[Auth] Error in /api/login:", error);
       next(error);
     }
   });
@@ -147,7 +148,7 @@ export async function setupAuth(app: Express) {
       if (req.session) {
         req.session.destroy((err) => {
           if (err) {
-            console.error("[Auth] Session destroy error:", err);
+            logger.error("[Auth] Session destroy error:", err);
           }
           // Redirect to root - LandingPage shows for unauthenticated users
           res.redirect("/");
@@ -162,16 +163,16 @@ export async function setupAuth(app: Express) {
   // Returns JSON acknowledgment only after all logout operations complete
   app.post("/api/auth/logout", async (req, res) => {
     const startTime = Date.now();
-    console.log("[Auth] POST /api/auth/logout - starting deterministic logout, timestamp:", startTime);
+    logger.debug("[Auth] POST /api/auth/logout - starting deterministic logout, timestamp:", startTime);
     
     try {
       // Step 1: Await passport logout completion
       await new Promise<void>((resolve) => {
         req.logout((err) => {
           if (err) {
-            console.error("[Auth] Passport logout error:", err);
+            logger.error("[Auth] Passport logout error:", err);
           }
-          console.log("[Auth] Passport logout complete, timestamp:", Date.now());
+          logger.debug("[Auth] Passport logout complete, timestamp:", Date.now());
           resolve();
         });
       });
@@ -181,9 +182,9 @@ export async function setupAuth(app: Express) {
         await new Promise<void>((resolve) => {
           req.session.destroy((err) => {
             if (err) {
-              console.error("[Auth] Session destroy error:", err);
+              logger.error("[Auth] Session destroy error:", err);
             }
-            console.log("[Auth] Session destroyed, timestamp:", Date.now());
+            logger.debug("[Auth] Session destroyed, timestamp:", Date.now());
             resolve();
           });
         });
@@ -199,24 +200,24 @@ export async function setupAuth(app: Express) {
       };
       
       res.clearCookie("connect.sid", cookieOptions);
-      console.log("[Auth] Cleared connect.sid cookie with options:", cookieOptions);
+      logger.debug("[Auth] Cleared connect.sid cookie with options:", cookieOptions);
       
       // Also clear any other potential session cookies
       const cookieNames = Object.keys(req.cookies || {});
       for (const name of cookieNames) {
         if (name.includes("session") || name.includes("sid")) {
           res.clearCookie(name, cookieOptions);
-          console.log("[Auth] Cleared additional cookie:", name);
+          logger.debug("[Auth] Cleared additional cookie:", name);
         }
       }
       
       const endTime = Date.now();
-      console.log("[Auth] POST /api/auth/logout - complete, duration:", endTime - startTime, "ms");
+      logger.debug("[Auth] POST /api/auth/logout - complete, duration:", endTime - startTime, "ms");
       
       res.json({ success: true, timestamp: endTime });
       
     } catch (error) {
-      console.error("[Auth] Logout error:", error);
+      logger.error("[Auth] Logout error:", error);
       res.status(500).json({ success: false, error: "Logout failed" });
     }
   });
@@ -230,7 +231,7 @@ export async function setupAuth(app: Express) {
         return res.status(400).json({ error: "Email required" });
       }
       
-      console.log("[Auth] TEST-LOGIN: Creating session for:", email);
+      logger.debug("[Auth] TEST-LOGIN: Creating session for:", email);
       
       try {
         // Find user by email
@@ -260,16 +261,16 @@ export async function setupAuth(app: Express) {
         // Also log the user in via Passport (for session-based auth)
         req.login(sessionUser, (err) => {
           if (err) {
-            console.error("[Auth] TEST-LOGIN error:", err);
+            logger.error("[Auth] TEST-LOGIN error:", err);
             // Still return token even if session fails
           }
           
-          console.log("[Auth] TEST-LOGIN: Session created for user:", user.id);
+          logger.debug("[Auth] TEST-LOGIN: Session created for user:", user.id);
           res.json({ success: true, userId: user.id, token });
         });
         
       } catch (error) {
-        console.error("[Auth] TEST-LOGIN error:", error);
+        logger.error("[Auth] TEST-LOGIN error:", error);
         res.status(500).json({ error: "Login failed" });
       }
     });

@@ -3,6 +3,7 @@ import { db } from "../db";
 import { admins, adminActionAudit, users, type AdminRole } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { adminMiddleware, requireRole, canManageAdmins, clearAdminCache, type AdminRequest } from "../copilot/adminMiddleware";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -44,7 +45,7 @@ router.get("/me", adminMiddleware, async (req, res) => {
       isBootstrap: true,
     });
   } catch (error) {
-    console.error("[Admin Auth] Error getting admin:", error);
+    logger.error("[Admin Auth] Error getting admin:", error);
     res.status(500).json({ error: "Failed to get admin info" });
   }
 });
@@ -67,7 +68,7 @@ router.get("/list", requireRole("super_admin"), async (req, res) => {
 
     res.json({ admins: adminList });
   } catch (error) {
-    console.error("[Admin Auth] Error listing admins:", error);
+    logger.error("[Admin Auth] Error listing admins:", error);
     res.status(500).json({ error: "Failed to list admins" });
   }
 });
@@ -134,7 +135,7 @@ router.post("/create", requireRole("super_admin"), async (req, res) => {
 
     res.json({ admin: newAdmin });
   } catch (error) {
-    console.error("[Admin Auth] Error creating admin:", error);
+    logger.error("[Admin Auth] Error creating admin:", error);
     res.status(500).json({ error: "Failed to create admin" });
   }
 });
@@ -188,7 +189,7 @@ router.patch("/:adminId", requireRole("super_admin"), async (req, res) => {
 
     res.json({ admin: updated });
   } catch (error) {
-    console.error("[Admin Auth] Error updating admin:", error);
+    logger.error("[Admin Auth] Error updating admin:", error);
     res.status(500).json({ error: "Failed to update admin" });
   }
 });

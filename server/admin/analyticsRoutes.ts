@@ -3,6 +3,7 @@ import { db } from "../db";
 import { users, leads, jobs, invoices, eventsCanonical, metricsDaily, adminActionAudit } from "@shared/schema";
 import { eq, sql, desc, and, gte, lte, isNull, isNotNull, count } from "drizzle-orm";
 import { adminMiddleware, AdminRequest, requireRole } from "../copilot/adminMiddleware";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -55,7 +56,7 @@ router.get("/user/:userId/timeline", adminMiddleware, async (req: AdminRequest, 
 
     res.json({ timeline, hasMore });
   } catch (error) {
-    console.error("[Analytics] Error fetching user timeline:", error);
+    logger.error("[Analytics] Error fetching user timeline:", error);
     res.status(500).json({ error: "Failed to fetch user timeline" });
   }
 });
@@ -129,7 +130,7 @@ router.get("/revenue", adminMiddleware, async (req: AdminRequest, res: Response)
       })),
     });
   } catch (error) {
-    console.error("[Analytics] Error fetching revenue data:", error);
+    logger.error("[Analytics] Error fetching revenue data:", error);
     res.status(500).json({ error: "Failed to fetch revenue data" });
   }
 });
@@ -164,7 +165,7 @@ router.get("/cohorts", adminMiddleware, async (req: AdminRequest, res: Response)
 
     res.json({ cohorts: cohortData.rows });
   } catch (error) {
-    console.error("[Analytics] Error fetching cohort data:", error);
+    logger.error("[Analytics] Error fetching cohort data:", error);
     res.status(500).json({ error: "Failed to fetch cohort data" });
   }
 });
@@ -274,7 +275,7 @@ router.get("/funnels", adminMiddleware, async (req: AdminRequest, res: Response)
       period: `Last ${days} days`,
     });
   } catch (error) {
-    console.error("[Analytics] Error fetching funnel data:", error);
+    logger.error("[Analytics] Error fetching funnel data:", error);
     res.status(500).json({ error: "Failed to fetch funnel data" });
   }
 });
@@ -318,7 +319,7 @@ router.get("/ltv", adminMiddleware, async (req: AdminRequest, res: Response) => 
       })),
     });
   } catch (error) {
-    console.error("[Analytics] Error fetching LTV data:", error);
+    logger.error("[Analytics] Error fetching LTV data:", error);
     res.status(500).json({ error: "Failed to fetch LTV data" });
   }
 });

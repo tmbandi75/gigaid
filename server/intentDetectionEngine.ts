@@ -1,4 +1,5 @@
 import { storage } from "./storage";
+import { logger } from "./lib/logger";
 import type { 
   Lead, Job, Invoice, User,
   IntentSignal, ReadyAction,
@@ -271,7 +272,7 @@ export async function generateReadyActionFromSignal(
 }
 
 export async function processUnprocessedSignals(): Promise<void> {
-  console.log("[IntentDetection] Processing unprocessed signals...");
+  logger.info("[IntentDetection] Processing unprocessed signals...");
   
   try {
     const users = await storage.getAllUsers();
@@ -284,14 +285,14 @@ export async function processUnprocessedSignals(): Promise<void> {
       }
     }
     
-    console.log("[IntentDetection] Processing complete");
+    logger.info("[IntentDetection] Processing complete");
   } catch (error) {
-    console.error("[IntentDetection] Error processing signals:", error);
+    logger.error("[IntentDetection] Error processing signals:", error);
   }
 }
 
 export async function runAutoFollowUp(): Promise<void> {
-  console.log("[IntentDetection] Checking for auto-follow-up...");
+  logger.info("[IntentDetection] Checking for auto-follow-up...");
   
   try {
     const users = await storage.getAllUsers();
@@ -306,22 +307,22 @@ export async function runAutoFollowUp(): Promise<void> {
         const hoursSinceCreated = (Date.now() - createdAt) / HOURS_IN_MS;
         
         if (hoursSinceCreated >= 4 && hoursSinceCreated < 24) {
-          console.log(`[IntentDetection] Would auto-send follow-up for ${action.entityType} ${action.entityId}`);
+          logger.info(`[IntentDetection] Would auto-send follow-up for ${action.entityType} ${action.entityId}`);
           await storage.markReadyActionFollowUpSent(action.id);
         }
       }
     }
     
-    console.log("[IntentDetection] Auto-follow-up check complete");
+    logger.info("[IntentDetection] Auto-follow-up check complete");
   } catch (error) {
-    console.error("[IntentDetection] Error during auto-follow-up:", error);
+    logger.error("[IntentDetection] Error during auto-follow-up:", error);
   }
 }
 
 let scanInterval: NodeJS.Timeout | null = null;
 
 export function startIntentDetectionEngine(intervalMinutes: number = 5): void {
-  console.log(`[IntentDetection] Starting with ${intervalMinutes} minute interval`);
+  logger.info(`[IntentDetection] Starting with ${intervalMinutes} minute interval`);
   
   processUnprocessedSignals();
   
@@ -336,6 +337,6 @@ export function stopIntentDetectionEngine(): void {
   if (scanInterval) {
     clearInterval(scanInterval);
     scanInterval = null;
-    console.log("[IntentDetection] Stopped");
+    logger.info("[IntentDetection] Stopped");
   }
 }

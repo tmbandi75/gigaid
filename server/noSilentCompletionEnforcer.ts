@@ -15,6 +15,7 @@
 
 import { storage } from "./storage";
 import type { Job, InsertAiNudge } from "@shared/schema";
+import { logger } from "./lib/logger";
 
 const NUDGE_TYPE = "job_unresolved_payment";
 const NUDGE_PRIORITY = 100; // Maximum priority - cannot be bypassed
@@ -161,7 +162,7 @@ async function enforceForUser(userId: string): Promise<{
 
     // VIOLATION: Completed job without resolution
     violations++;
-    console.log(`[NoSilentCompletion] Violation found: Job ${job.id} (${job.title}) for user ${userId}`);
+    logger.info(`[NoSilentCompletion] Violation found: Job ${job.id} (${job.title}) for user ${userId}`);
 
     // Check if we already have an active nudge for this job
     const existingNudges = await storage.getAiNudgesByEntity("job", job.id);
@@ -192,7 +193,7 @@ async function enforceForUser(userId: string): Promise<{
     });
     
     nudgesCreated++;
-    console.log(`[NoSilentCompletion] Created enforcement nudge for job ${job.id}`);
+    logger.info(`[NoSilentCompletion] Created enforcement nudge for job ${job.id}`);
   }
 
   return { checked: completedJobs.length, violations, nudgesCreated };
@@ -209,11 +210,11 @@ export async function enforceNoSilentCompletion(): Promise<{
   // Check if feature flag is enabled
   const featureFlag = await storage.getFeatureFlag("enforce_no_silent_completion");
   if (!featureFlag?.enabled) {
-    console.log("[NoSilentCompletion] Feature flag is OFF - skipping enforcement");
+    logger.info("[NoSilentCompletion] Feature flag is OFF - skipping enforcement");
     return { checked: 0, violations: 0, nudgesCreated: 0 };
   }
 
-  console.log("[NoSilentCompletion] Running background enforcement check...");
+  logger.info("[NoSilentCompletion] Running background enforcement check...");
 
   // Get all users and check each user's jobs
   const allUsers = await storage.getAllUsers();
@@ -229,7 +230,7 @@ export async function enforceNoSilentCompletion(): Promise<{
     totalNudgesCreated += result.nudgesCreated;
   }
 
-  console.log(
+  logger.info(
     `[NoSilentCompletion] Check complete: ${allUsers.length} users, ${totalChecked} completed jobs, ` +
     `${totalViolations} violations, ${totalNudgesCreated} new nudges created`
   );
@@ -247,19 +248,19 @@ export async function enforceNoSilentCompletion(): Promise<{
 export function startNoSilentCompletionScheduler(): void {
   const HOUR_MS = 60 * 60 * 1000;
   
-  console.log("[NoSilentCompletion] Starting background enforcement scheduler (runs hourly)");
+  logger.info("[NoSilentCompletion] Starting background enforcement scheduler (runs hourly)");
   
   // Run immediately on startup
   setTimeout(() => {
     enforceNoSilentCompletion().catch(err => {
-      console.error("[NoSilentCompletion] Error in enforcement check:", err);
+      logger.error("[NoSilentCompletion] Error in enforcement check:", err);
     });
   }, 5000); // Wait 5 seconds after startup
   
   // Then run every hour
   setInterval(() => {
     enforceNoSilentCompletion().catch(err => {
-      console.error("[NoSilentCompletion] Error in enforcement check:", err);
+      logger.error("[NoSilentCompletion] Error in enforcement check:", err);
     });
   }, HOUR_MS);
 }

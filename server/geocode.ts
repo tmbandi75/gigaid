@@ -1,3 +1,4 @@
+import { logger } from "./lib/logger";
 // Server can access VITE_ prefixed env vars in development
 // Use GOOGLE_MAPS_API_KEY for production, fallback to VITE_ for dev
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -31,7 +32,7 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult | n
 
 export async function geocodeAddressExtended(address: string): Promise<GeocodeExtendedResult> {
   if (!GOOGLE_MAPS_API_KEY) {
-    console.warn("[Geocode] No Google Maps API key configured");
+    logger.warn("[Geocode] No Google Maps API key configured");
     return { success: false, status: "NO_API_KEY" };
   }
 
@@ -46,35 +47,35 @@ export async function geocodeAddressExtended(address: string): Promise<GeocodeEx
     const response = await fetch(url);
     
     if (!response.ok) {
-      console.error("[Geocode] API request failed:", response.status, response.statusText);
+      logger.error("[Geocode] API request failed:", response.status, response.statusText);
       return { success: false, status: "FETCH_ERROR" };
     }
 
     const data = await response.json();
     
     if (data.status === "ZERO_RESULTS") {
-      console.warn("[Geocode] No results for provided address");
+      logger.warn("[Geocode] No results for provided address");
       return { success: false, status: "ZERO_RESULTS" };
     }
     
     if (data.status === "REQUEST_DENIED") {
-      console.warn("[Geocode] Request denied for address. Error:", data.error_message);
+      logger.warn("[Geocode] Request denied for address. Error:", data.error_message);
       return { success: false, status: "REQUEST_DENIED" };
     }
     
     if (data.status !== "OK" || !data.results || data.results.length === 0) {
-      console.warn("[Geocode] Unexpected status for address. Status:", data.status);
+      logger.warn("[Geocode] Unexpected status for address. Status:", data.status);
       return { success: false, status: data.status || "UNKNOWN_ERROR" };
     }
 
     const location = data.results[0].geometry?.location;
     
     if (!location || typeof location.lat !== "number" || typeof location.lng !== "number") {
-      console.warn("[Geocode] Invalid location data for address");
+      logger.warn("[Geocode] Invalid location data for address");
       return { success: false, status: "UNKNOWN_ERROR" };
     }
 
-    console.log(`[Geocode] Successfully geocoded address to (${location.lat}, ${location.lng})`);
+    logger.debug(`[Geocode] Successfully geocoded address to (${location.lat}, ${location.lng})`);
     
     return {
       success: true,
@@ -83,7 +84,7 @@ export async function geocodeAddressExtended(address: string): Promise<GeocodeEx
       status: "OK",
     };
   } catch (error) {
-    console.error("[Geocode] Error geocoding address:", error);
+    logger.error("[Geocode] Error geocoding address:", error);
     return { success: false, status: "FETCH_ERROR" };
   }
 }
@@ -95,7 +96,7 @@ export async function getDrivingDistance(
   destLng: number
 ): Promise<DrivingDistanceResult | null> {
   if (!GOOGLE_MAPS_API_KEY) {
-    console.warn("[DrivingDistance] No Google Maps API key configured");
+    logger.warn("[DrivingDistance] No Google Maps API key configured");
     return null;
   }
 
@@ -107,21 +108,21 @@ export async function getDrivingDistance(
     const response = await fetch(url);
     
     if (!response.ok) {
-      console.error("[DrivingDistance] API request failed:", response.status, response.statusText);
+      logger.error("[DrivingDistance] API request failed:", response.status, response.statusText);
       return null;
     }
 
     const data = await response.json();
     
     if (data.status !== "OK") {
-      console.warn("[DrivingDistance] API returned status:", data.status);
+      logger.warn("[DrivingDistance] API returned status:", data.status);
       return null;
     }
 
     const element = data.rows?.[0]?.elements?.[0];
     
     if (!element || element.status !== "OK") {
-      console.warn("[DrivingDistance] No route found, element status:", element?.status);
+      logger.warn("[DrivingDistance] No route found, element status:", element?.status);
       return null;
     }
 
@@ -132,7 +133,7 @@ export async function getDrivingDistance(
       durationSeconds: element.duration.value,
     };
   } catch (error) {
-    console.error("[DrivingDistance] Error calculating distance:", error);
+    logger.error("[DrivingDistance] Error calculating distance:", error);
     return null;
   }
 }

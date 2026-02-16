@@ -1,5 +1,6 @@
 import { db } from "../db";
 import { eventsCanonical, InsertEventsCanonical } from "@shared/schema";
+import { logger } from "../lib/logger";
 
 export interface EmitEventParams {
   eventName: string;
@@ -35,9 +36,9 @@ export async function emitCanonicalEvent(params: EmitEventParams): Promise<void>
 
     await fanOutToIntegrations(eventName, params);
     
-    console.log(`[CanonicalEvent] ${eventName} emitted for user ${userId || "system"}`);
+    logger.info(`[CanonicalEvent] ${eventName} emitted for user ${userId || "system"}`);
   } catch (error) {
-    console.error(`[CanonicalEvent] Failed to emit ${eventName}:`, error);
+    logger.error(`[CanonicalEvent] Failed to emit ${eventName}:`, error);
   }
 }
 
@@ -45,7 +46,7 @@ async function fanOutToIntegrations(eventName: string, params: EmitEventParams):
   try {
     await sendToAmplitude(eventName, params);
   } catch (error) {
-    console.error("[CanonicalEvent] Amplitude fan-out failed:", error);
+    logger.error("[CanonicalEvent] Amplitude fan-out failed:", error);
   }
 
   try {
@@ -60,7 +61,7 @@ async function fanOutToIntegrations(eventName: string, params: EmitEventParams):
       await sendToCustomerIO(eventName, params);
     }
   } catch (error) {
-    console.error("[CanonicalEvent] Customer.io fan-out failed:", error);
+    logger.error("[CanonicalEvent] Customer.io fan-out failed:", error);
   }
 
   try {
@@ -75,7 +76,7 @@ async function fanOutToIntegrations(eventName: string, params: EmitEventParams):
       await sendToOneSignal(eventName, params);
     }
   } catch (error) {
-    console.error("[CanonicalEvent] OneSignal fan-out failed:", error);
+    logger.error("[CanonicalEvent] OneSignal fan-out failed:", error);
   }
 }
 
@@ -83,19 +84,19 @@ async function sendToAmplitude(eventName: string, params: EmitEventParams): Prom
   const amplitudeApiKey = process.env.AMPLITUDE_API_KEY;
   if (!amplitudeApiKey) return;
 
-  console.log(`[Amplitude] Would send event: ${eventName}`);
+  logger.info(`[Amplitude] Would send event: ${eventName}`);
 }
 
 async function sendToCustomerIO(eventName: string, params: EmitEventParams): Promise<void> {
   const customerioApiKey = process.env.CUSTOMERIO_API_KEY;
   if (!customerioApiKey) return;
 
-  console.log(`[Customer.io] Would send lifecycle event: ${eventName}`);
+  logger.info(`[Customer.io] Would send lifecycle event: ${eventName}`);
 }
 
 async function sendToOneSignal(eventName: string, params: EmitEventParams): Promise<void> {
   const onesignalAppId = process.env.ONESIGNAL_APP_ID;
   if (!onesignalAppId) return;
 
-  console.log(`[OneSignal] Would send push for: ${eventName}`);
+  logger.info(`[OneSignal] Would send push for: ${eventName}`);
 }

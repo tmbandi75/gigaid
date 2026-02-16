@@ -16,6 +16,7 @@ import {
 } from "@shared/schema";
 import { sql, eq, and, gte, lte, lt, count, desc, asc } from "drizzle-orm";
 import { emitCanonicalEvent } from "./canonicalEvents";
+import { logger } from "../lib/logger";
 
 interface CopilotEvaluationResult {
   healthState: CopilotHealthState;
@@ -232,7 +233,7 @@ export async function evaluateCopilot(): Promise<CopilotEvaluationResult> {
 }
 
 export async function runCopilotEvaluation(): Promise<void> {
-  console.log("[CoPilot] Running evaluation...");
+  logger.info("[CoPilot] Running evaluation...");
   const now = new Date();
   const today = now.toISOString().split("T")[0];
   
@@ -324,15 +325,15 @@ export async function runCopilotEvaluation(): Promise<void> {
     }
     
     if (newlyInactiveUsers.length > 0) {
-      console.log(`[CoPilot] Emitted user_inactive_7d for ${newlyInactiveUsers.length} newly inactive users`);
+      logger.info(`[CoPilot] Emitted user_inactive_7d for ${newlyInactiveUsers.length} newly inactive users`);
     }
     
     // Expire ready actions and log overrides for AI learning
     await runExpirationTracking();
 
-    console.log(`[CoPilot] Evaluation complete. Health: ${evaluation.healthState}, Bottleneck: ${evaluation.primaryBottleneck}`);
+    logger.info(`[CoPilot] Evaluation complete. Health: ${evaluation.healthState}, Bottleneck: ${evaluation.primaryBottleneck}`);
   } catch (error) {
-    console.error("[CoPilot] Evaluation failed:", error);
+    logger.error("[CoPilot] Evaluation failed:", error);
   }
 }
 
@@ -369,10 +370,10 @@ async function runExpirationTracking(): Promise<void> {
         });
       }
       
-      console.log(`[CoPilot] Expired ${count} ready actions, logged as overrides for AI learning`);
+      logger.info(`[CoPilot] Expired ${count} ready actions, logged as overrides for AI learning`);
     }
   } catch (error) {
-    console.error("[CoPilot] Expiration tracking failed:", error);
+    logger.error("[CoPilot] Expiration tracking failed:", error);
   }
 }
 
@@ -381,7 +382,7 @@ let copilotInterval: ReturnType<typeof setInterval> | null = null;
 export function startCopilotScheduler(): void {
   if (copilotInterval) return;
   
-  console.log("[CoPilot] Starting scheduler (runs every hour)");
+  logger.info("[CoPilot] Starting scheduler (runs every hour)");
   
   setTimeout(() => {
     runCopilotEvaluation().catch(console.error);
@@ -396,6 +397,6 @@ export function stopCopilotScheduler(): void {
   if (copilotInterval) {
     clearInterval(copilotInterval);
     copilotInterval = null;
-    console.log("[CoPilot] Scheduler stopped");
+    logger.info("[CoPilot] Scheduler stopped");
   }
 }

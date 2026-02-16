@@ -3,6 +3,7 @@ import { db } from "../db";
 import { admins, users, type AdminRole } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { verifyAppJwt } from "../appJwt";
+import { logger } from "../lib/logger";
 
 // Fallback admin user IDs for bootstrapping (before admins table is populated)
 const BOOTSTRAP_ADMIN_USER_IDS = (process.env.ADMIN_USER_IDS || "demo-user").split(",").map(s => s.trim());
@@ -39,7 +40,7 @@ async function extractUserFromRequest(req: Request): Promise<{ userId: string | 
         .limit(1);
       userEmail = dbUser?.email || null;
     } catch (error) {
-      console.error("[AdminMiddleware] Failed to look up user email:", error);
+      logger.error("[AdminMiddleware] Failed to look up user email:", error);
     }
   }
 
@@ -73,7 +74,7 @@ async function getAdminFromDb(userId: string): Promise<{ role: AdminRole; isActi
       return { role: admin.role as AdminRole, isActive: active };
     }
   } catch (error) {
-    console.error("[AdminMiddleware] DB lookup error:", error);
+    logger.error("[AdminMiddleware] DB lookup error:", error);
   }
 
   return null;
@@ -101,7 +102,7 @@ async function getAdminByEmail(email: string): Promise<{ role: AdminRole; isActi
       return { role: admin.role as AdminRole, isActive: active };
     }
   } catch (error) {
-    console.error("[AdminMiddleware] DB lookup by email error:", error);
+    logger.error("[AdminMiddleware] DB lookup by email error:", error);
   }
 
   return null;

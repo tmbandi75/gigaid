@@ -1,4 +1,5 @@
 import { storage } from "./storage";
+import { logger } from "./lib/logger";
 import type { 
   Lead, Job, Invoice, User,
   StallDetection, InsertStallDetection,
@@ -242,7 +243,7 @@ function generateLeadAction(stall: StallCandidate): ActionRecommendation {
 // ============================================================
 
 export async function runStallDetection(): Promise<void> {
-  console.log("[NextBestActionEngine] Starting stall detection scan...");
+  logger.info("[NextBestActionEngine] Starting stall detection scan...");
   
   try {
     // Get all users
@@ -252,9 +253,9 @@ export async function runStallDetection(): Promise<void> {
       await detectStallsForUser(user);
     }
     
-    console.log("[NextBestActionEngine] Stall detection scan complete");
+    logger.info("[NextBestActionEngine] Stall detection scan complete");
   } catch (error) {
-    console.error("[NextBestActionEngine] Error during stall detection:", error);
+    logger.error("[NextBestActionEngine] Error during stall detection:", error);
   }
 }
 
@@ -364,7 +365,7 @@ async function processStallCandidate(candidate: StallCandidate): Promise<void> {
 // ============================================================
 
 export async function runAutoExecution(): Promise<void> {
-  console.log("[NextBestActionEngine] Starting auto-execution check...");
+  logger.info("[NextBestActionEngine] Starting auto-execution check...");
   
   try {
     const users = await storage.getAllUsers();
@@ -373,9 +374,9 @@ export async function runAutoExecution(): Promise<void> {
       await checkAutoExecutionForUser(user);
     }
     
-    console.log("[NextBestActionEngine] Auto-execution check complete");
+    logger.info("[NextBestActionEngine] Auto-execution check complete");
   } catch (error) {
-    console.error("[NextBestActionEngine] Error during auto-execution:", error);
+    logger.error("[NextBestActionEngine] Error during auto-execution:", error);
   }
 }
 
@@ -415,7 +416,7 @@ async function attemptAutoExecution(action: NextAction, user: User): Promise<voi
   // Execute based on action type
   // For now, we'll just mark it as auto-executed and log
   // In a full implementation, this would send SMS/email
-  console.log(`[NextBestActionEngine] Would auto-execute: ${action.recommendedAction} for ${action.entityType} ${action.entityId}`);
+  logger.info(`[NextBestActionEngine] Would auto-execute: ${action.recommendedAction} for ${action.entityType} ${action.entityId}`);
   
   // Mark action as auto-executed
   await storage.updateNextAction(action.id, {
@@ -443,7 +444,7 @@ async function attemptAutoExecution(action: NextAction, user: User): Promise<voi
 let scanInterval: NodeJS.Timeout | null = null;
 
 export function startNextBestActionEngine(intervalMinutes: number = 15): void {
-  console.log(`[NextBestActionEngine] Starting with ${intervalMinutes} minute interval`);
+  logger.info(`[NextBestActionEngine] Starting with ${intervalMinutes} minute interval`);
   
   // Run immediately on start
   runStallDetection();
@@ -461,7 +462,7 @@ export function stopNextBestActionEngine(): void {
   if (scanInterval) {
     clearInterval(scanInterval);
     scanInterval = null;
-    console.log("[NextBestActionEngine] Stopped");
+    logger.info("[NextBestActionEngine] Stopped");
   }
 }
 

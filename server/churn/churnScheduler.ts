@@ -3,6 +3,7 @@ import { users, churnMetrics } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { extractSignals, computeChurnScore } from "./churnScorer";
 import { executeRetentionForUser, seedDefaultPlaybooks } from "./retentionEngine";
+import { logger } from "../lib/logger";
 
 const SIX_HOURS_MS = 21600000;
 const STARTUP_DELAY_MS = 30000;
@@ -12,7 +13,7 @@ export async function runChurnComputation(): Promise<{
   errors: number;
   tiers: { Healthy: number; Drifting: number; AtRisk: number; Critical: number };
 }> {
-  console.log("[ChurnScheduler] Starting churn computation for all active users");
+  logger.info("[ChurnScheduler] Starting churn computation for all active users");
 
   const allUsers = await db.select().from(users);
   let processed = 0;
@@ -83,11 +84,11 @@ export async function runChurnComputation(): Promise<{
       processed++;
     } catch (err) {
       errors++;
-      console.error(`[ChurnScheduler] Error processing user ${user.id}:`, err);
+      logger.error(`[ChurnScheduler] Error processing user ${user.id}:`, err);
     }
   }
 
-  console.log(`[ChurnScheduler] Completed: ${processed} users processed, ${errors} errors`);
+  logger.info(`[ChurnScheduler] Completed: ${processed} users processed, ${errors} errors`);
   return { processed, errors, tiers };
 }
 
@@ -96,19 +97,19 @@ export async function backfillChurnMetrics(days: number): Promise<{
   errors: number;
   tiers: { Healthy: number; Drifting: number; AtRisk: number; Critical: number };
 }> {
-  console.log(`[ChurnScheduler] Starting backfill for ${days} days of churn metrics`);
+  logger.info(`[ChurnScheduler] Starting backfill for ${days} days of churn metrics`);
   return runChurnComputation();
 }
 
 export function startChurnScheduler(): void {
-  console.log("[ChurnScheduler] Starting nightly churn computation scheduler");
+  logger.info("[ChurnScheduler] Starting nightly churn computation scheduler");
 
   setTimeout(async () => {
     try {
       await seedDefaultPlaybooks();
       await runChurnComputation();
     } catch (err) {
-      console.error("[ChurnScheduler] Error on initial run:", err);
+      logger.error("[ChurnScheduler] Error on initial run:", err);
     }
   }, STARTUP_DELAY_MS);
 
@@ -116,7 +117,7 @@ export function startChurnScheduler(): void {
     try {
       await runChurnComputation();
     } catch (err) {
-      console.error("[ChurnScheduler] Error on scheduled run:", err);
+      logger.error("[ChurnScheduler] Error on scheduled run:", err);
     }
   }, SIX_HOURS_MS);
 }

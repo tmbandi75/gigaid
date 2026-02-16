@@ -4,6 +4,7 @@ import { eq, and, gte, desc, count } from "drizzle-orm";
 import { emitCanonicalEvent } from "../copilot/canonicalEvents";
 import { sendEmail } from "../sendgrid";
 import { sendSMS } from "../twilio";
+import { logger } from "../lib/logger";
 
 export const RETENTION_TEMPLATES: Record<string, { subject: string; body: string }> = {
   payday_flow_nudge: {
@@ -31,7 +32,7 @@ export const RETENTION_TEMPLATES: Record<string, { subject: string; body: string
 export async function seedDefaultPlaybooks(): Promise<void> {
   const existing = await db.select().from(retentionPlaybooks).limit(1);
   if (existing.length > 0) {
-    console.log("[RetentionEngine] Playbooks already seeded, skipping.");
+    logger.info("[RetentionEngine] Playbooks already seeded, skipping.");
     return;
   }
 
@@ -44,7 +45,7 @@ export async function seedDefaultPlaybooks(): Promise<void> {
   ];
 
   await db.insert(retentionPlaybooks).values(defaults);
-  console.log("[RetentionEngine] Default playbooks seeded.");
+  logger.info("[RetentionEngine] Default playbooks seeded.");
 }
 
 export async function executeRetentionForUser(userId: string, tier: string): Promise<void> {
@@ -58,7 +59,7 @@ export async function executeRetentionForUser(userId: string, tier: string): Pro
     .orderBy(retentionPlaybooks.priority);
 
   if (playbooks.length === 0) {
-    console.log(`[RetentionEngine] No enabled playbooks for tier=${tier}`);
+    logger.info(`[RetentionEngine] No enabled playbooks for tier=${tier}`);
     return;
   }
 
@@ -72,7 +73,7 @@ export async function executeRetentionForUser(userId: string, tier: string): Pro
       .limit(1);
 
     if (existingAction) {
-      console.log(`[RetentionEngine] Skipping duplicate action: ${idempotencyKey}`);
+      logger.info(`[RetentionEngine] Skipping duplicate action: ${idempotencyKey}`);
       continue;
     }
 
@@ -82,13 +83,13 @@ export async function executeRetentionForUser(userId: string, tier: string): Pro
       .where(and(eq(retentionActions.userId, userId), gte(retentionActions.createdAt, todayStart)));
 
     if ((todayCount?.value ?? 0) >= 1) {
-      console.log(`[RetentionEngine] Max 1 action/day reached for user=${userId}`);
+      logger.info(`[RetentionEngine] Max 1 action/day reached for user=${userId}`);
       break;
     }
 
     const template = RETENTION_TEMPLATES[playbook.templateKey];
     if (!template) {
-      console.error(`[RetentionEngine] Unknown template: ${playbook.templateKey}`);
+      logger.error(`[RetentionEngine] Unknown template: ${playbook.templateKey}`);
       continue;
     }
 
@@ -144,7 +145,7 @@ export async function executeRetentionForUser(userId: string, tier: string): Pro
       }
     } catch (err: any) {
       sendError = err.message || "Send failed with unknown error";
-      console.error(`[RetentionEngine] Send error for ${playbook.channel}:`, err);
+      logger.error(`[RetentionEngine] Send error for ${playbook.channel}:`, err);
     }
 
     if (sendSuccess) {
@@ -167,7 +168,7 @@ export async function executeRetentionForUser(userId: string, tier: string): Pro
         expiresAt,
         createdBy: "retention_engine",
       });
-      console.log(`[RetentionEngine] Pro trial override created for user=${userId}, expires=${expiresAt}`);
+      logger.info(`[RetentionEngine] Pro trial override created for user=${userId}, expires=${expiresAt}`);
     }
 
     if (playbook.actionType === "Credit") {
@@ -178,7 +179,7 @@ export async function executeRetentionForUser(userId: string, tier: string): Pro
         expiresAt,
         createdBy: "retention_engine",
       });
-      console.log(`[RetentionEngine] Free month override created for user=${userId}, expires=${expiresAt}`);
+      logger.info(`[RetentionEngine] Free month override created for user=${userId}, expires=${expiresAt}`);
     }
 
     if (playbook.actionType === "FounderSave") {

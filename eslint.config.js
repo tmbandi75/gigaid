@@ -31,4 +31,26 @@ export default [
       "no-console": ["error", { allow: ["error"] }],
     },
   },
+  {
+    files: ["server/**/*.ts"],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        ecmaVersion: "latest",
+        sourceType: "module",
+      },
+    },
+    plugins: {
+      "@typescript-eslint": tsPlugin,
+    },
+    rules: {
+      "no-console": "error",
+    },
+  },
+  {
+    files: ["server/lib/logger.ts"],
+    rules: {
+      "no-console": "off",
+    },
+  },
 ];

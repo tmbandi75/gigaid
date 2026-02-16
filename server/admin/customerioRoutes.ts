@@ -3,6 +3,7 @@ import { db } from "../db";
 import { users, eventsCanonical, adminActionAudit } from "@shared/schema";
 import { eq, desc, gte, sql, count } from "drizzle-orm";
 import { adminMiddleware, AdminRequest, requireRole } from "../copilot/adminMiddleware";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -96,7 +97,7 @@ router.get("/status", async (req: AdminRequest, res: Response) => {
       }
     });
   } catch (error) {
-    console.error("[Customer.io] Status check error:", error);
+    logger.error("[Customer.io] Status check error:", error);
     res.status(500).json({ error: "Failed to check Customer.io status" });
   }
 });
@@ -149,7 +150,7 @@ router.post("/sync-user/:userId", async (req: AdminRequest, res: Response) => {
 
     res.json({ success: true, message: "User synced to Customer.io" });
   } catch (error: any) {
-    console.error("[Customer.io] Sync user error:", error);
+    logger.error("[Customer.io] Sync user error:", error);
     res.status(500).json({ error: error.message || "Failed to sync user" });
   }
 });
@@ -191,7 +192,7 @@ router.post("/track-event/:userId", async (req: AdminRequest, res: Response) => 
 
     res.json({ success: true, message: `Event '${eventName}' sent to Customer.io` });
   } catch (error: any) {
-    console.error("[Customer.io] Track event error:", error);
+    logger.error("[Customer.io] Track event error:", error);
     res.status(500).json({ error: error.message || "Failed to track event" });
   }
 });
@@ -240,7 +241,7 @@ router.post("/backfill/:userId", async (req: AdminRequest, res: Response) => {
         });
         synced++;
       } catch (err) {
-        console.error(`[Customer.io] Failed to backfill event ${event.id}:`, err);
+        logger.error(`[Customer.io] Failed to backfill event ${event.id}:`, err);
         failed++;
       }
     }
@@ -263,7 +264,7 @@ router.post("/backfill/:userId", async (req: AdminRequest, res: Response) => {
       message: `Backfilled ${synced} events (${failed} failed)` 
     });
   } catch (error: any) {
-    console.error("[Customer.io] Backfill error:", error);
+    logger.error("[Customer.io] Backfill error:", error);
     res.status(500).json({ error: error.message || "Failed to backfill events" });
   }
 });
@@ -295,7 +296,7 @@ router.post("/suppress/:userId", async (req: AdminRequest, res: Response) => {
 
     res.json({ success: true, message: "User suppressed in Customer.io" });
   } catch (error: any) {
-    console.error("[Customer.io] Suppress error:", error);
+    logger.error("[Customer.io] Suppress error:", error);
     res.status(500).json({ error: error.message || "Failed to suppress user" });
   }
 });
@@ -327,7 +328,7 @@ router.post("/unsuppress/:userId", async (req: AdminRequest, res: Response) => {
 
     res.json({ success: true, message: "User unsuppressed in Customer.io" });
   } catch (error: any) {
-    console.error("[Customer.io] Unsuppress error:", error);
+    logger.error("[Customer.io] Unsuppress error:", error);
     res.status(500).json({ error: error.message || "Failed to unsuppress user" });
   }
 });
@@ -357,7 +358,7 @@ router.get("/campaigns", requireRole("super_admin", "admin"), async (req: AdminR
 
     res.json({ campaigns: campaigns.campaigns || [] });
   } catch (error: any) {
-    console.error("[Customer.io] List campaigns error:", error);
+    logger.error("[Customer.io] List campaigns error:", error);
     res.status(500).json({ error: error.message || "Failed to list campaigns" });
   }
 });
@@ -389,7 +390,7 @@ router.get("/campaigns/:campaignId", requireRole("super_admin", "admin"), async 
 
     res.json({ campaign });
   } catch (error: any) {
-    console.error("[Customer.io] Get campaign error:", error);
+    logger.error("[Customer.io] Get campaign error:", error);
     res.status(500).json({ error: error.message || "Failed to get campaign" });
   }
 });
@@ -421,7 +422,7 @@ router.post("/campaigns/:campaignId/pause", requireRole("super_admin"), async (r
 
     res.json({ success: true, message: `Campaign ${campaignId} paused` });
   } catch (error: any) {
-    console.error("[Customer.io] Pause campaign error:", error);
+    logger.error("[Customer.io] Pause campaign error:", error);
     res.status(500).json({ error: error.message || "Failed to pause campaign" });
   }
 });
@@ -453,7 +454,7 @@ router.post("/campaigns/:campaignId/resume", requireRole("super_admin"), async (
 
     res.json({ success: true, message: `Campaign ${campaignId} resumed` });
   } catch (error: any) {
-    console.error("[Customer.io] Resume campaign error:", error);
+    logger.error("[Customer.io] Resume campaign error:", error);
     res.status(500).json({ error: error.message || "Failed to resume campaign" });
   }
 });
@@ -494,7 +495,7 @@ router.post("/campaigns/:campaignId/trigger", requireRole("super_admin"), async 
 
     res.json({ success: true, message: `Campaign ${campaignId} triggered` });
   } catch (error: any) {
-    console.error("[Customer.io] Trigger campaign error:", error);
+    logger.error("[Customer.io] Trigger campaign error:", error);
     res.status(500).json({ error: error.message || "Failed to trigger campaign" });
   }
 });
@@ -526,7 +527,7 @@ router.get("/campaigns/:campaignId/metrics", requireRole("super_admin", "admin")
 
     res.json({ metrics });
   } catch (error: any) {
-    console.error("[Customer.io] Campaign metrics error:", error);
+    logger.error("[Customer.io] Campaign metrics error:", error);
     res.status(500).json({ error: error.message || "Failed to get campaign metrics" });
   }
 });
@@ -590,7 +591,7 @@ router.get("/user/:userId/preview", async (req: AdminRequest, res: Response) => 
       configured: !!CUSTOMERIO_APP_API_KEY,
     });
   } catch (error: any) {
-    console.error("[Customer.io] User preview error:", error);
+    logger.error("[Customer.io] User preview error:", error);
     res.status(500).json({ error: error.message || "Failed to preview user" });
   }
 });
@@ -633,7 +634,7 @@ router.get("/delivery-metrics", requireRole("super_admin", "admin"), async (req:
       actions: customerioActions,
     });
   } catch (error) {
-    console.error("[Customer.io] Delivery metrics error:", error);
+    logger.error("[Customer.io] Delivery metrics error:", error);
     res.status(500).json({ error: "Failed to fetch delivery metrics" });
   }
 });

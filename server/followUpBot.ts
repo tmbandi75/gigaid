@@ -1,4 +1,5 @@
 import { sendSMS } from "./twilio";
+import { logger } from "./lib/logger";
 
 const CHECK_INTERVAL_MS = 300000;
 
@@ -119,7 +120,7 @@ async function checkFollowUps() {
                 });
 
                 if (success) {
-                  console.log(`[FollowUpBot] Sent no_reply follow-up for lead ${lead.id}`);
+                  logger.info(`[FollowUpBot] Sent no_reply follow-up for lead ${lead.id}`);
                 }
               }
             }
@@ -177,7 +178,7 @@ async function checkFollowUps() {
                 });
 
                 if (success) {
-                  console.log(`[FollowUpBot] Sent quote_pending follow-up for lead ${pc.leadId}`);
+                  logger.info(`[FollowUpBot] Sent quote_pending follow-up for lead ${pc.leadId}`);
                 }
               }
             }
@@ -235,31 +236,31 @@ async function checkFollowUps() {
                 });
 
                 if (success) {
-                  console.log(`[FollowUpBot] Sent unpaid_invoice follow-up for invoice ${invoice.id}`);
+                  logger.info(`[FollowUpBot] Sent unpaid_invoice follow-up for invoice ${invoice.id}`);
                 }
               }
             }
           } catch (ruleError) {
-            console.error(`[FollowUpBot] Error processing rule ${rule.ruleType} for user ${user.id}:`, ruleError);
+            logger.error(`[FollowUpBot] Error processing rule ${rule.ruleType} for user ${user.id}:`, ruleError);
           }
         }
       } catch (userError) {
-        console.error(`[FollowUpBot] Error processing user ${user.id}:`, userError);
+        logger.error(`[FollowUpBot] Error processing user ${user.id}:`, userError);
       }
     }
   } catch (error) {
-    console.error("[FollowUpBot] Error in checkFollowUps:", error);
+    logger.error("[FollowUpBot] Error in checkFollowUps:", error);
   }
 }
 
 export function startFollowUpBot() {
-  console.log("[FollowUpBot] Starting scheduler (checks every 5 minutes)");
+  logger.info("[FollowUpBot] Starting scheduler (checks every 5 minutes)");
 
   setInterval(async () => {
     try {
       await checkFollowUps();
     } catch (error) {
-      console.error("[FollowUpBot] Scheduler error:", error);
+      logger.error("[FollowUpBot] Scheduler error:", error);
     }
   }, CHECK_INTERVAL_MS);
 

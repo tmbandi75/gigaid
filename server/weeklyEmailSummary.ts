@@ -1,6 +1,7 @@
 import { storage } from "./storage";
 import { sendEmail } from "./sendgrid";
 import type { User } from "@shared/schema";
+import { logger } from "./lib/logger";
 
 interface WeeklyMetrics {
   weeklyRevenue: number;
@@ -191,22 +192,22 @@ export async function sendWeeklySummaryToUser(
     const user = await storage.getUser(userId);
     
     if (!user) {
-      console.log(`[WeeklySummary] User ${userId} not found`);
+      logger.info(`[WeeklySummary] User ${userId} not found`);
       return false;
     }
 
     if (!user.isPro) {
-      console.log(`[WeeklySummary] Skipping ${userId} - not a Pro user`);
+      logger.info(`[WeeklySummary] Skipping ${userId} - not a Pro user`);
       return false;
     }
 
     if (!user.email) {
-      console.log(`[WeeklySummary] Skipping ${userId} - no email`);
+      logger.info(`[WeeklySummary] Skipping ${userId} - no email`);
       return false;
     }
 
     if (user.notifyByEmail === false) {
-      console.log(`[WeeklySummary] Skipping ${userId} - email notifications disabled`);
+      logger.info(`[WeeklySummary] Skipping ${userId} - email notifications disabled`);
       return false;
     }
 
@@ -224,24 +225,24 @@ export async function sendWeeklySummaryToUser(
     });
 
     if (success) {
-      console.log(`[WeeklySummary] Sent weekly summary to user ${userId}`);
+      logger.info(`[WeeklySummary] Sent weekly summary to user ${userId}`);
     }
 
     return success;
   } catch (error) {
-    console.error(`[WeeklySummary] Error sending to ${userId}:`, error);
+    logger.error(`[WeeklySummary] Error sending to ${userId}:`, error);
     return false;
   }
 }
 
 export async function sendWeeklySummaryToAllProUsers(baseUrl: string): Promise<void> {
-  console.log("[WeeklySummary] Starting weekly summary job...");
+  logger.info("[WeeklySummary] Starting weekly summary job...");
   
   try {
     const users = await storage.getAllUsers();
     const proUsers = users.filter((u: User) => u.isPro && u.email && u.notifyByEmail !== false);
     
-    console.log(`[WeeklySummary] Found ${proUsers.length} Pro users with email notifications enabled`);
+    logger.info(`[WeeklySummary] Found ${proUsers.length} Pro users with email notifications enabled`);
     
     let sent = 0;
     let failed = 0;
@@ -256,16 +257,16 @@ export async function sendWeeklySummaryToAllProUsers(baseUrl: string): Promise<v
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     
-    console.log(`[WeeklySummary] Completed: ${sent} sent, ${failed} failed`);
+    logger.info(`[WeeklySummary] Completed: ${sent} sent, ${failed} failed`);
   } catch (error) {
-    console.error("[WeeklySummary] Error in weekly summary job:", error);
+    logger.error("[WeeklySummary] Error in weekly summary job:", error);
   }
 }
 
 let weeklySchedulerInterval: NodeJS.Timeout | null = null;
 
 export function startWeeklySummaryScheduler(baseUrl: string): void {
-  console.log("[WeeklySummary] Starting weekly summary scheduler (Monday 8am check)");
+  logger.info("[WeeklySummary] Starting weekly summary scheduler (Monday 8am check)");
   
   const checkInterval = 60 * 60 * 1000;
   
@@ -275,7 +276,7 @@ export function startWeeklySummaryScheduler(baseUrl: string): void {
     const hour = now.getHours();
     
     if (dayOfWeek === 1 && hour === 8) {
-      console.log("[WeeklySummary] It's Monday 8am - sending weekly summaries");
+      logger.info("[WeeklySummary] It's Monday 8am - sending weekly summaries");
       sendWeeklySummaryToAllProUsers(baseUrl);
     }
   };
@@ -289,6 +290,6 @@ export function stopWeeklySummaryScheduler(): void {
   if (weeklySchedulerInterval) {
     clearInterval(weeklySchedulerInterval);
     weeklySchedulerInterval = null;
-    console.log("[WeeklySummary] Stopped weekly summary scheduler");
+    logger.info("[WeeklySummary] Stopped weekly summary scheduler");
   }
 }

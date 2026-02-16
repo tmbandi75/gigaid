@@ -12,6 +12,7 @@ import {
 import { eq, desc, and, gte, count, sql } from "drizzle-orm";
 import { adminMiddleware } from "./adminMiddleware";
 import { computeMetricsSnapshot, runCopilotEvaluation } from "./engine";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -104,7 +105,7 @@ router.get("/summary", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("[Cockpit] Summary error:", error);
+    logger.error("[Cockpit] Summary error:", error);
     res.status(500).json({ error: "Failed to fetch summary" });
   }
 });
@@ -150,7 +151,7 @@ router.get("/growth-activation", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("[Cockpit] Growth-activation error:", error);
+    logger.error("[Cockpit] Growth-activation error:", error);
     res.status(500).json({ error: "Failed to fetch growth data" });
   }
 });
@@ -204,7 +205,7 @@ router.get("/revenue-payments", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("[Cockpit] Revenue error:", error);
+    logger.error("[Cockpit] Revenue error:", error);
     res.status(500).json({ error: "Failed to fetch revenue data" });
   }
 });
@@ -239,7 +240,7 @@ router.get("/risk-leakage", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("[Cockpit] Risk error:", error);
+    logger.error("[Cockpit] Risk error:", error);
     res.status(500).json({ error: "Failed to fetch risk data" });
   }
 });
@@ -264,7 +265,7 @@ router.get("/alerts", async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error("[Cockpit] Alerts error:", error);
+    logger.error("[Cockpit] Alerts error:", error);
     res.status(500).json({ error: "Failed to fetch alerts" });
   }
 });
@@ -318,7 +319,7 @@ router.get("/focus", async (req, res) => {
       createdAt: activeRec.createdAt,
     });
   } catch (error) {
-    console.error("[Cockpit] Focus error:", error);
+    logger.error("[Cockpit] Focus error:", error);
     res.status(500).json({ error: "Failed to fetch focus recommendation" });
   }
 });
@@ -335,7 +336,7 @@ router.post("/refresh", async (req, res) => {
     await runCopilotEvaluation();
     res.json({ success: true, message: "Co-Pilot evaluation refreshed" });
   } catch (error) {
-    console.error("[Cockpit] Refresh error:", error);
+    logger.error("[Cockpit] Refresh error:", error);
     res.status(500).json({ error: "Failed to refresh" });
   }
 });
@@ -552,7 +553,7 @@ router.get("/activation-funnel", async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("[Cockpit] Activation funnel error:", error);
+    logger.error("[Cockpit] Activation funnel error:", error);
     res.status(500).json({ error: "Failed to fetch activation funnel" });
   }
 });
@@ -560,7 +561,7 @@ router.get("/activation-funnel", async (req, res) => {
 // Manual refresh endpoint - re-runs copilot evaluation and recomputes metrics
 router.post("/refresh", async (req, res) => {
   try {
-    console.log("[Cockpit] Manual refresh triggered");
+    logger.debug("[Cockpit] Manual refresh triggered");
     
     // Recompute metrics snapshot
     await computeMetricsSnapshot();
@@ -570,7 +571,7 @@ router.post("/refresh", async (req, res) => {
     
     res.json({ success: true, message: "Data refreshed successfully" });
   } catch (error) {
-    console.error("[Cockpit] Refresh error:", error);
+    logger.error("[Cockpit] Refresh error:", error);
     res.status(500).json({ error: "Failed to refresh data" });
   }
 });

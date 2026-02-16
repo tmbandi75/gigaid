@@ -5,6 +5,7 @@ import { storage } from './storage';
 import { eq, or } from 'drizzle-orm';
 import { users } from '@shared/schema';
 import { db } from './db';
+import { logger } from "./lib/logger";
 
 const router = Router();
 
@@ -56,7 +57,7 @@ router.post('/mobile/firebase', async (req: Request, res: Response) => {
     const name = decoded.name;
     const photo = decoded.picture;
 
-    console.log('[MobileAuth] Processing Firebase auth, provider:', decoded.firebase.sign_in_provider);
+    logger.info('[MobileAuth] Processing Firebase auth, provider:', decoded.firebase.sign_in_provider);
 
     let existingUser = null;
     let linkedBy: 'email' | 'phone' | 'new_user' = 'new_user';
@@ -70,7 +71,7 @@ router.post('/mobile/firebase', async (req: Request, res: Response) => {
     if (existingByFirebaseUid.length > 0) {
       existingUser = existingByFirebaseUid[0];
       linkedBy = 'email';
-      console.log('[MobileAuth] Found existing user by Firebase UID match');
+      logger.info('[MobileAuth] Found existing user by Firebase UID match');
     }
 
     if (!existingUser && emailNormalized) {
@@ -83,7 +84,7 @@ router.post('/mobile/firebase', async (req: Request, res: Response) => {
       if (existingByEmail.length > 0) {
         existingUser = existingByEmail[0];
         linkedBy = 'email';
-        console.log('[MobileAuth] Linking Firebase to existing user by email match');
+        logger.info('[MobileAuth] Linking Firebase to existing user by email match');
       }
     }
 
@@ -97,7 +98,7 @@ router.post('/mobile/firebase', async (req: Request, res: Response) => {
       if (existingByPhone.length > 0) {
         existingUser = existingByPhone[0];
         linkedBy = 'phone';
-        console.log('[MobileAuth] Linking Firebase to existing user by phone match');
+        logger.info('[MobileAuth] Linking Firebase to existing user by phone match');
       }
     }
 
@@ -111,7 +112,7 @@ router.post('/mobile/firebase', async (req: Request, res: Response) => {
       if (existingByRawEmail.length > 0) {
         existingUser = existingByRawEmail[0];
         linkedBy = 'email';
-        console.log('[MobileAuth] Linking Firebase to existing user by raw email match');
+        logger.info('[MobileAuth] Linking Firebase to existing user by raw email match');
       }
     }
 
@@ -149,7 +150,7 @@ router.post('/mobile/firebase', async (req: Request, res: Response) => {
 
       if (Object.keys(updates).length > 1) {
         await db.update(users).set(updates).where(eq(users.id, userId));
-        console.log('[MobileAuth] Updated user with Firebase data:', updates);
+        logger.info('[MobileAuth] Updated user with Firebase data:', updates);
       }
     } else {
       const username = emailNormalized || `firebase_${firebaseUid}`;
@@ -175,7 +176,7 @@ router.post('/mobile/firebase', async (req: Request, res: Response) => {
 
       userId = newUser.id;
       linkedBy = 'new_user';
-      console.log('[MobileAuth] Created new user from Firebase:', userId);
+      logger.info('[MobileAuth] Created new user from Firebase:', userId);
     }
 
     const appToken = signAppJwt({
@@ -196,10 +197,10 @@ router.post('/mobile/firebase', async (req: Request, res: Response) => {
       linkedBy,
     };
 
-    console.log('[MobileAuth] Auth successful:', { userId, linkedBy });
+    logger.info('[MobileAuth] Auth successful:', { userId, linkedBy });
     return res.json(response);
   } catch (error) {
-    console.error('[MobileAuth] Error:', error);
+    logger.error('[MobileAuth] Error:', error);
     return res.status(500).json({ error: 'Internal server error during authentication' });
   }
 });
@@ -232,7 +233,7 @@ router.post('/web/firebase', async (req: Request, res: Response) => {
     }
 
     if (!isAppJwtConfigured()) {
-      console.error('[WebAuth] APP_JWT_SECRET not configured');
+      logger.error('[WebAuth] APP_JWT_SECRET not configured');
       return res.status(503).json({ 
         error: 'Authentication is not fully configured. Please contact support.' 
       });
@@ -242,13 +243,13 @@ router.post('/web/firebase', async (req: Request, res: Response) => {
     try {
       decoded = await verifyFirebaseIdToken(idToken);
     } catch (verifyErr: any) {
-      console.error('[WebAuth] Firebase token verification threw:', verifyErr?.message);
+      logger.error('[WebAuth] Firebase token verification threw:', verifyErr?.message);
       return res.status(503).json({ 
         error: 'Authentication service error. Please try again or contact support.' 
       });
     }
     if (!decoded) {
-      console.error('[WebAuth] Token verification returned null — token may be expired or malformed');
+      logger.error('[WebAuth] Token verification returned null — token may be expired or malformed');
       return res.status(401).json({ error: 'Invalid or expired login session. Please try again.' });
     }
 
@@ -259,7 +260,7 @@ router.post('/web/firebase', async (req: Request, res: Response) => {
     const name = decoded.name;
     const photo = decoded.picture;
 
-    console.log('[WebAuth] Processing Firebase auth, provider:', decoded.firebase.sign_in_provider);
+    logger.info('[WebAuth] Processing Firebase auth, provider:', decoded.firebase.sign_in_provider);
 
     let existingUser = null;
     let linkedBy: 'email' | 'phone' | 'new_user' = 'new_user';
@@ -274,7 +275,7 @@ router.post('/web/firebase', async (req: Request, res: Response) => {
     if (existingByFirebaseUid.length > 0) {
       existingUser = existingByFirebaseUid[0];
       linkedBy = 'email';
-      console.log('[WebAuth] Found existing user by Firebase UID match');
+      logger.info('[WebAuth] Found existing user by Firebase UID match');
     }
 
     // Check by normalized email
@@ -288,7 +289,7 @@ router.post('/web/firebase', async (req: Request, res: Response) => {
       if (existingByEmail.length > 0) {
         existingUser = existingByEmail[0];
         linkedBy = 'email';
-        console.log('[WebAuth] Linking Firebase to existing user by email match');
+        logger.info('[WebAuth] Linking Firebase to existing user by email match');
       }
     }
 
@@ -303,7 +304,7 @@ router.post('/web/firebase', async (req: Request, res: Response) => {
       if (existingByPhone.length > 0) {
         existingUser = existingByPhone[0];
         linkedBy = 'phone';
-        console.log('[WebAuth] Linking Firebase to existing user by phone match');
+        logger.info('[WebAuth] Linking Firebase to existing user by phone match');
       }
     }
 
@@ -318,7 +319,7 @@ router.post('/web/firebase', async (req: Request, res: Response) => {
       if (existingByRawEmail.length > 0) {
         existingUser = existingByRawEmail[0];
         linkedBy = 'email';
-        console.log('[WebAuth] Linking Firebase to existing user by raw email match');
+        logger.info('[WebAuth] Linking Firebase to existing user by raw email match');
       }
     }
 
@@ -356,7 +357,7 @@ router.post('/web/firebase', async (req: Request, res: Response) => {
 
       if (Object.keys(updates).length > 1) {
         await db.update(users).set(updates).where(eq(users.id, userId));
-        console.log('[WebAuth] Updated user with Firebase data:', updates);
+        logger.info('[WebAuth] Updated user with Firebase data:', updates);
       }
     } else {
       // Create new user
@@ -383,7 +384,7 @@ router.post('/web/firebase', async (req: Request, res: Response) => {
 
       userId = newUser.id;
       linkedBy = 'new_user';
-      console.log('[WebAuth] Created new user from Firebase:', userId);
+      logger.info('[WebAuth] Created new user from Firebase:', userId);
     }
 
     const appToken = signAppJwt({
@@ -404,10 +405,10 @@ router.post('/web/firebase', async (req: Request, res: Response) => {
       linkedBy,
     };
 
-    console.log('[WebAuth] Auth successful:', { userId, linkedBy });
+    logger.info('[WebAuth] Auth successful:', { userId, linkedBy });
     return res.json(response);
   } catch (error) {
-    console.error('[WebAuth] Error:', error);
+    logger.error('[WebAuth] Error:', error);
     return res.status(500).json({ error: 'Internal server error during authentication' });
   }
 });

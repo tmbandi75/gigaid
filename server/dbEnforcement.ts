@@ -17,6 +17,7 @@
  */
 
 import { pool } from "./db";
+import { logger } from "./lib/logger";
 
 /**
  * Creates the database trigger that enforces job resolution requirement.
@@ -27,7 +28,7 @@ export async function createJobResolutionEnforcementTrigger(): Promise<void> {
   const RETRY_DELAY_MS = 1000;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    console.log(`[DBEnforcement] Creating/verifying job resolution trigger (attempt ${attempt}/${MAX_RETRIES})...`);
+    logger.info(`[DBEnforcement] Creating/verifying job resolution trigger (attempt ${attempt}/${MAX_RETRIES})...`);
 
     const client = await pool.connect();
     try {
@@ -82,20 +83,20 @@ export async function createJobResolutionEnforcementTrigger(): Promise<void> {
         EXECUTE FUNCTION enforce_job_resolution_on_insert();
       `);
 
-      console.log("[DBEnforcement] Job resolution triggers (INSERT + UPDATE) created successfully");
+      logger.info("[DBEnforcement] Job resolution triggers (INSERT + UPDATE) created successfully");
       return;
     } catch (error: any) {
       const isRetryable = error?.message?.includes('tuple concurrently updated') ||
         error?.code === 'XX000';
 
       if (isRetryable && attempt < MAX_RETRIES) {
-        console.warn(`[DBEnforcement] Transient error on attempt ${attempt}, retrying in ${RETRY_DELAY_MS}ms...`);
+        logger.warn(`[DBEnforcement] Transient error on attempt ${attempt}, retrying in ${RETRY_DELAY_MS}ms...`);
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
         continue;
       }
 
-      console.error("[DBEnforcement] CRITICAL: Failed to create job resolution trigger:", error);
-      console.error("[DBEnforcement] The application CANNOT run without revenue protection enforcement!");
+      logger.error("[DBEnforcement] CRITICAL: Failed to create job resolution trigger:", error);
+      logger.error("[DBEnforcement] The application CANNOT run without revenue protection enforcement!");
       throw error;
     } finally {
       client.release();
@@ -117,7 +118,7 @@ export async function repairUnresolvedCompletedJobs(): Promise<{
   checked: number;
   repaired: number;
 }> {
-  console.log("[DBEnforcement] Checking for unresolved completed jobs...");
+  logger.info("[DBEnforcement] Checking for unresolved completed jobs...");
   
   const client = await pool.connect();
   try {
@@ -144,18 +145,18 @@ export async function repairUnresolvedCompletedJobs(): Promise<{
       `, [job.id, resolvedAt, userId, new Date().toISOString()]);
       
       repaired++;
-      console.log(`[DBEnforcement] Repaired job ${job.id} with internal waiver`);
+      logger.info(`[DBEnforcement] Repaired job ${job.id} with internal waiver`);
     }
     
     if (repaired > 0) {
-      console.log(`[DBEnforcement] Repaired ${repaired} unresolved completed jobs`);
+      logger.info(`[DBEnforcement] Repaired ${repaired} unresolved completed jobs`);
     } else {
-      console.log("[DBEnforcement] No unresolved completed jobs found");
+      logger.info("[DBEnforcement] No unresolved completed jobs found");
     }
     
     return { checked: unresolvedJobs.length, repaired };
   } catch (error) {
-    console.error("[DBEnforcement] Error repairing jobs:", error);
+    logger.error("[DBEnforcement] Error repairing jobs:", error);
     return { checked: 0, repaired: 0 };
   } finally {
     client.release();
@@ -167,7 +168,7 @@ export async function repairUnresolvedCompletedJobs(): Promise<{
  * Call this on server startup BEFORE any job operations.
  */
 export async function initializeDbEnforcement(): Promise<void> {
-  console.log("[DBEnforcement] Initializing database enforcement...");
+  logger.info("[DBEnforcement] Initializing database enforcement...");
   
   // First repair any existing violations (before trigger is active)
   await repairUnresolvedCompletedJobs();
@@ -175,5 +176,5 @@ export async function initializeDbEnforcement(): Promise<void> {
   // Then create the trigger to prevent future violations
   await createJobResolutionEnforcementTrigger();
   
-  console.log("[DBEnforcement] Database enforcement initialized");
+  logger.info("[DBEnforcement] Database enforcement initialized");
 }

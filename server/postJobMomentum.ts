@@ -11,6 +11,7 @@ import {
   type Client
 } from "@shared/schema";
 import { eq, and, lte, inArray } from "drizzle-orm";
+import { logger } from "./lib/logger";
 
 // Template rendering utility - simple string replacement, no code execution
 export function renderTemplate(template: string, context: Record<string, string | undefined>): string {
@@ -98,7 +99,7 @@ export async function schedulePostJobMessages(job: Job, previousStatus: string):
   // Determine contact channel and address
   const toAddress = job.clientPhone || job.clientEmail;
   if (!toAddress) {
-    console.log(`[PostJobMomentum] No contact info for job ${job.id}, skipping`);
+    logger.info(`[PostJobMomentum] No contact info for job ${job.id}, skipping`);
     return;
   }
   
@@ -118,7 +119,7 @@ export async function schedulePostJobMessages(job: Job, previousStatus: string):
   
   // Rate limit: max 2 messages per job (followup + payment_reminder)
   if (existingMessages.length >= 2) {
-    console.log(`[PostJobMomentum] Job ${job.id} already has ${existingMessages.length} messages, skipping`);
+    logger.info(`[PostJobMomentum] Job ${job.id} already has ${existingMessages.length} messages, skipping`);
     return;
   }
   
@@ -158,7 +159,7 @@ export async function schedulePostJobMessages(job: Job, previousStatus: string):
       createdAt: now.toISOString(),
     });
     
-    console.log(`[PostJobMomentum] Scheduled followup for job ${job.id} at ${scheduledFor.toISOString()}`);
+    logger.info(`[PostJobMomentum] Scheduled followup for job ${job.id} at ${scheduledFor.toISOString()}`);
   }
   
   // Schedule payment reminder if enabled, job is unpaid, and not already scheduled
@@ -204,7 +205,7 @@ export async function schedulePostJobMessages(job: Job, previousStatus: string):
         createdAt: now.toISOString(),
       });
       
-      console.log(`[PostJobMomentum] Scheduled payment reminder for job ${job.id} at ${scheduledFor.toISOString()}`);
+      logger.info(`[PostJobMomentum] Scheduled payment reminder for job ${job.id} at ${scheduledFor.toISOString()}`);
     }
   }
 }
@@ -213,13 +214,13 @@ export async function schedulePostJobMessages(job: Job, previousStatus: string):
 export async function scheduleJobConfirmation(job: Job, isReschedule: boolean = false): Promise<void> {
   // Only for jobs with scheduled date/time and contact info
   if (!job.scheduledDate || !job.scheduledTime) {
-    console.log(`[PostJobMomentum] Job ${job.id} has no scheduled date/time, skipping confirmation`);
+    logger.info(`[PostJobMomentum] Job ${job.id} has no scheduled date/time, skipping confirmation`);
     return;
   }
   
   const toAddress = job.clientPhone || job.clientEmail;
   if (!toAddress) {
-    console.log(`[PostJobMomentum] Job ${job.id} has no contact info, skipping confirmation`);
+    logger.info(`[PostJobMomentum] Job ${job.id} has no contact info, skipping confirmation`);
     return;
   }
   
@@ -230,7 +231,7 @@ export async function scheduleJobConfirmation(job: Job, isReschedule: boolean = 
   const settings = await getOrCreateAutomationSettings(userId);
   
   if (!settings.autoConfirmEnabled) {
-    console.log(`[PostJobMomentum] Auto-confirm disabled for user ${userId}`);
+    logger.info(`[PostJobMomentum] Auto-confirm disabled for user ${userId}`);
     return;
   }
   
@@ -258,10 +259,10 @@ export async function scheduleJobConfirmation(job: Job, isReschedule: boolean = 
           updatedAt: new Date().toISOString(),
         })
         .where(eq(outboundMessages.id, msg.id));
-      console.log(`[PostJobMomentum] Canceled old confirmation ${msg.id} for reschedule`);
+      logger.info(`[PostJobMomentum] Canceled old confirmation ${msg.id} for reschedule`);
     }
   } else if (!isReschedule && existingConfirmations.length > 0) {
-    console.log(`[PostJobMomentum] Confirmation already exists for job ${job.id}, skipping`);
+    logger.info(`[PostJobMomentum] Confirmation already exists for job ${job.id}, skipping`);
     return;
   }
   
@@ -326,7 +327,7 @@ export async function scheduleJobConfirmation(job: Job, isReschedule: boolean = 
     createdAt: now.toISOString(),
   });
   
-  console.log(`[PostJobMomentum] Scheduled ${isReschedule ? "reschedule " : ""}confirmation for job ${job.id}`);
+  logger.info(`[PostJobMomentum] Scheduled ${isReschedule ? "reschedule " : ""}confirmation for job ${job.id}`);
 }
 
 // Cancel a scheduled message
@@ -348,7 +349,7 @@ export async function cancelOutboundMessage(messageId: string, userId: string): 
     .returning();
   
   if (result.length > 0) {
-    console.log(`[PostJobMomentum] Canceled message ${messageId}`);
+    logger.info(`[PostJobMomentum] Canceled message ${messageId}`);
     return true;
   }
   return false;
@@ -419,7 +420,7 @@ export async function processScheduledMessages(): Promise<number> {
           })
           .where(eq(outboundMessages.id, message.id));
         
-        console.log(`[PostJobMomentum] Sent ${message.type} message ${message.id}`);
+        logger.info(`[PostJobMomentum] Sent ${message.type} message ${message.id}`);
       }
       // If not sent, stays as "queued" for manual review
       
@@ -435,7 +436,7 @@ export async function processScheduledMessages(): Promise<number> {
         })
         .where(eq(outboundMessages.id, message.id));
       
-      console.error(`[PostJobMomentum] Failed to send message ${message.id}:`, errorMessage);
+      logger.error(`[PostJobMomentum] Failed to send message ${message.id}:`, errorMessage);
     }
   }
   
@@ -458,7 +459,7 @@ async function attemptSendMessage(message: OutboundMessage): Promise<boolean> {
       
       return true;
     } catch (error) {
-      console.error(`[PostJobMomentum] Twilio send failed:`, error);
+      logger.error(`[PostJobMomentum] Twilio send failed:`, error);
       throw error;
     }
   }
@@ -478,13 +479,13 @@ async function attemptSendMessage(message: OutboundMessage): Promise<boolean> {
       
       return true;
     } catch (error) {
-      console.error(`[PostJobMomentum] SendGrid send failed:`, error);
+      logger.error(`[PostJobMomentum] SendGrid send failed:`, error);
       throw error;
     }
   }
   
   // No provider available - leave as queued for manual send
-  console.log(`[PostJobMomentum] No provider for ${message.channel}, leaving as queued`);
+  logger.info(`[PostJobMomentum] No provider for ${message.channel}, leaving as queued`);
   return false;
 }
 
@@ -496,16 +497,16 @@ export function startMomentumScheduler(intervalMs: number = 60000): void {
     return; // Already running
   }
   
-  console.log(`[PostJobMomentum] Starting scheduler with ${intervalMs}ms interval`);
+  logger.info(`[PostJobMomentum] Starting scheduler with ${intervalMs}ms interval`);
   
   schedulerInterval = setInterval(async () => {
     try {
       const processed = await processScheduledMessages();
       if (processed > 0) {
-        console.log(`[PostJobMomentum] Processed ${processed} messages`);
+        logger.info(`[PostJobMomentum] Processed ${processed} messages`);
       }
     } catch (error) {
-      console.error(`[PostJobMomentum] Scheduler error:`, error);
+      logger.error(`[PostJobMomentum] Scheduler error:`, error);
     }
   }, intervalMs);
 }
@@ -514,6 +515,6 @@ export function stopMomentumScheduler(): void {
   if (schedulerInterval) {
     clearInterval(schedulerInterval);
     schedulerInterval = null;
-    console.log(`[PostJobMomentum] Scheduler stopped`);
+    logger.info(`[PostJobMomentum] Scheduler stopped`);
   }
 }

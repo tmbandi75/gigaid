@@ -3,18 +3,19 @@ import { sendSMS } from "./twilio";
 import { canUseAutoFollowups } from "@shared/planLimits";
 import { Plan } from "@shared/plans";
 import { isDeveloper } from "@shared/entitlements";
+import { logger } from "./lib/logger";
 
 const FOLLOW_UP_DELAY_HOURS = 4;
 const CHECK_INTERVAL_MS = 5 * 60 * 1000; // Check every 5 minutes
 
 export function startIntentFollowUpScheduler() {
-  console.log("[IntentFollowUp] Starting scheduler (checks every 5 minutes)");
+  logger.info("[IntentFollowUp] Starting scheduler (checks every 5 minutes)");
   
   setInterval(async () => {
     try {
       await checkAndSendFollowUps();
     } catch (error) {
-      console.error("[IntentFollowUp] Scheduler error:", error);
+      logger.error("[IntentFollowUp] Scheduler error:", error);
     }
   }, CHECK_INTERVAL_MS);
   
@@ -84,10 +85,10 @@ async function sendFollowUpNudge(invoice: {
       const success = await sendSMS(invoice.clientPhone, nudgeMessage);
       if (success) {
         sent = true;
-        console.log(`[IntentFollowUp] Sent SMS nudge for invoice ${invoice.id}`);
+        logger.info(`[IntentFollowUp] Sent SMS nudge for invoice ${invoice.id}`);
       }
     } catch (err) {
-      console.error(`[IntentFollowUp] SMS failed for invoice ${invoice.id}:`, err);
+      logger.error(`[IntentFollowUp] SMS failed for invoice ${invoice.id}:`, err);
     }
   }
   
@@ -109,10 +110,10 @@ async function sendFollowUpNudge(invoice: {
           html: `<p>Just sent this over so we can lock in the time.</p>${invoiceUrl ? `<p><a href="${invoiceUrl}">View Invoice</a></p>` : ""}`,
         });
         sent = true;
-        console.log(`[IntentFollowUp] Sent email nudge for invoice ${invoice.id}`);
+        logger.info(`[IntentFollowUp] Sent email nudge for invoice ${invoice.id}`);
       }
     } catch (err) {
-      console.error(`[IntentFollowUp] Email failed for invoice ${invoice.id}:`, err);
+      logger.error(`[IntentFollowUp] Email failed for invoice ${invoice.id}:`, err);
     }
   }
   
@@ -123,8 +124,8 @@ async function sendFollowUpNudge(invoice: {
   });
   
   if (sent) {
-    console.log(`[IntentFollowUp] Successfully sent one-time nudge for invoice ${invoice.id}`);
+    logger.info(`[IntentFollowUp] Successfully sent one-time nudge for invoice ${invoice.id}`);
   } else {
-    console.log(`[IntentFollowUp] Could not send nudge for invoice ${invoice.id} (no contact method available)`);
+    logger.info(`[IntentFollowUp] Could not send nudge for invoice ${invoice.id} (no contact method available)`);
   }
 }

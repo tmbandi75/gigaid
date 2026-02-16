@@ -4,6 +4,7 @@ import { leadEmails, leads, users } from "@shared/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { getUncachableSendGridClient } from "./sendgrid";
 import { randomUUID } from "crypto";
+import { logger } from "./lib/logger";
 
 const router = Router();
 
@@ -75,7 +76,7 @@ router.get("/leads/:leadId/emails", async (req: Request, res: Response) => {
     
     res.json(emails);
   } catch (error) {
-    console.error("Error fetching lead emails:", error);
+    logger.error("Error fetching lead emails:", error);
     res.status(500).json({ error: "Failed to fetch emails" });
   }
 });
@@ -180,7 +181,7 @@ router.post("/leads/:leadId/emails", async (req: Request, res: Response) => {
       message: `Email sent to ${lead.clientEmail}`
     });
   } catch (error) {
-    console.error("Error sending email to lead:", error);
+    logger.error("Error sending email to lead:", error);
     res.status(500).json({ error: "Failed to send email" });
   }
 });
@@ -200,7 +201,7 @@ router.get("/user/email-signature", async (req: Request, res: Response) => {
       emailSignatureIncludeLogo: user.emailSignatureIncludeLogo ?? true
     });
   } catch (error) {
-    console.error("Error fetching email signature:", error);
+    logger.error("Error fetching email signature:", error);
     res.status(500).json({ error: "Failed to fetch email signature" });
   }
 });
@@ -221,7 +222,7 @@ router.put("/user/email-signature", async (req: Request, res: Response) => {
     
     res.json({ success: true, message: "Email signature updated" });
   } catch (error) {
-    console.error("Error updating email signature:", error);
+    logger.error("Error updating email signature:", error);
     res.status(500).json({ error: "Failed to update email signature" });
   }
 });
@@ -230,7 +231,7 @@ router.post("/webhooks/sendgrid/inbound", async (req: Request, res: Response) =>
   try {
     const { from, to, subject, text, html, headers } = req.body;
     
-    console.log("Received inbound email webhook"); // pii-safe
+    logger.info("Received inbound email webhook"); // pii-safe
     
     let trackingId: string | null = null;
     let leadId: string | null = null;
@@ -240,7 +241,7 @@ router.post("/webhooks/sendgrid/inbound", async (req: Request, res: Response) =>
       const toMatch = to.match(/lead-([a-f0-9-]+)@replies\.gigaid\.ai/i);
       if (toMatch) {
         leadId = toMatch[1];
-        console.log("Extracted leadId from to address:", leadId);
+        logger.info("Extracted leadId from to address:", leadId);
       }
     }
     
@@ -317,15 +318,15 @@ router.post("/webhooks/sendgrid/inbound", async (req: Request, res: Response) =>
           })
           .where(eq(leads.id, leadId));
         
-        console.log(`Inbound email saved for lead ${leadId}`);
+        logger.info(`Inbound email saved for lead ${leadId}`);
       }
     } else {
-      console.log("Could not match inbound email to a lead");
+      logger.info("Could not match inbound email to a lead");
     }
     
     res.status(200).send("OK");
   } catch (error) {
-    console.error("Error processing inbound email:", error);
+    logger.error("Error processing inbound email:", error);
     res.status(200).send("OK");
   }
 });

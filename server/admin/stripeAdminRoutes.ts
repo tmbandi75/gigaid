@@ -4,6 +4,7 @@ import { processRetryableWebhooks, reconcileStuckPayments } from "../stripeWebho
 import { adminMiddleware, requireRole, type AdminRequest } from "../copilot/adminMiddleware";
 import type { StripeWebhookEvent, StripePaymentState, StripeDispute } from "@shared/schema";
 import Stripe from "stripe";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -19,7 +20,7 @@ router.get("/webhooks", adminMiddleware, async (req: Request, res: Response) => 
     
     res.json({ events, total: events.length });
   } catch (error) {
-    console.error("[StripeAdmin] Get webhooks error:", error);
+    logger.error("[StripeAdmin] Get webhooks error:", error);
     res.status(500).json({ error: "Failed to fetch webhook events" });
   }
 });
@@ -32,7 +33,7 @@ router.get("/webhooks/:id", adminMiddleware, async (req: Request, res: Response)
     }
     res.json(event);
   } catch (error) {
-    console.error("[StripeAdmin] Get webhook event error:", error);
+    logger.error("[StripeAdmin] Get webhook event error:", error);
     res.status(500).json({ error: "Failed to fetch webhook event" });
   }
 });
@@ -59,7 +60,7 @@ router.post("/webhooks/:id/retry", adminMiddleware, async (req: Request, res: Re
     const updatedEvent = await storage.getStripeWebhookEvent(req.params.id);
     res.json({ success: true, event: updatedEvent });
   } catch (error) {
-    console.error("[StripeAdmin] Retry webhook error:", error);
+    logger.error("[StripeAdmin] Retry webhook error:", error);
     res.status(500).json({ error: "Failed to retry webhook event" });
   }
 });
@@ -76,7 +77,7 @@ router.get("/payments", adminMiddleware, async (req: Request, res: Response) => 
     
     res.json({ payments, total: payments.length });
   } catch (error) {
-    console.error("[StripeAdmin] Get payments error:", error);
+    logger.error("[StripeAdmin] Get payments error:", error);
     res.status(500).json({ error: "Failed to fetch payment states" });
   }
 });
@@ -89,7 +90,7 @@ router.get("/payments/:paymentIntentId", adminMiddleware, async (req: Request, r
     }
     res.json(payment);
   } catch (error) {
-    console.error("[StripeAdmin] Get payment error:", error);
+    logger.error("[StripeAdmin] Get payment error:", error);
     res.status(500).json({ error: "Failed to fetch payment state" });
   }
 });
@@ -99,7 +100,7 @@ router.post("/reconcile", requireRole("super_admin"), async (req: Request, res: 
     const result = await reconcileStuckPayments(storage);
     res.json({ success: true, result });
   } catch (error) {
-    console.error("[StripeAdmin] Reconcile error:", error);
+    logger.error("[StripeAdmin] Reconcile error:", error);
     res.status(500).json({ error: "Failed to run reconciliation" });
   }
 });
@@ -145,7 +146,7 @@ router.get("/stats", adminMiddleware, async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("[StripeAdmin] Get stats error:", error);
+    logger.error("[StripeAdmin] Get stats error:", error);
     res.status(500).json({ error: "Failed to fetch stats" });
   }
 });
@@ -162,7 +163,7 @@ router.get("/disputes", adminMiddleware, async (req: Request, res: Response) => 
     
     res.json({ disputes, total: disputes.length });
   } catch (error) {
-    console.error("[StripeAdmin] Get disputes error:", error);
+    logger.error("[StripeAdmin] Get disputes error:", error);
     res.status(500).json({ error: "Failed to fetch disputes" });
   }
 });
@@ -172,7 +173,7 @@ router.get("/disputes/active", adminMiddleware, async (req: Request, res: Respon
     const disputes = await storage.getActiveStripeDisputes();
     res.json({ disputes, total: disputes.length });
   } catch (error) {
-    console.error("[StripeAdmin] Get active disputes error:", error);
+    logger.error("[StripeAdmin] Get active disputes error:", error);
     res.status(500).json({ error: "Failed to fetch active disputes" });
   }
 });
@@ -185,7 +186,7 @@ router.get("/disputes/:id", adminMiddleware, async (req: Request, res: Response)
     }
     res.json(dispute);
   } catch (error) {
-    console.error("[StripeAdmin] Get dispute error:", error);
+    logger.error("[StripeAdmin] Get dispute error:", error);
     res.status(500).json({ error: "Failed to fetch dispute" });
   }
 });
@@ -220,7 +221,7 @@ router.post("/disputes/:id/evidence", requireRole("super_admin"), async (req: Re
 
     res.json({ success: true, dispute: updatedDispute });
   } catch (error: any) {
-    console.error("[StripeAdmin] Submit evidence error:", error);
+    logger.error("[StripeAdmin] Submit evidence error:", error);
     res.status(500).json({ error: error.message || "Failed to submit evidence" });
   }
 });
@@ -250,7 +251,7 @@ router.post("/disputes/:id/close", requireRole("super_admin"), async (req: Reque
 
     res.json({ success: true, dispute: closedDispute });
   } catch (error: any) {
-    console.error("[StripeAdmin] Close dispute error:", error);
+    logger.error("[StripeAdmin] Close dispute error:", error);
     res.status(500).json({ error: error.message || "Failed to close dispute" });
   }
 });
@@ -298,7 +299,7 @@ router.post("/invoices/:id/refund", requireRole("super_admin"), async (req: Requ
 
     res.json({ success: true, refund });
   } catch (error: any) {
-    console.error("[StripeAdmin] Refund invoice error:", error);
+    logger.error("[StripeAdmin] Refund invoice error:", error);
     res.status(500).json({ error: error.message || "Failed to process refund" });
   }
 });
@@ -346,7 +347,7 @@ router.post("/jobs/:id/refund", requireRole("super_admin"), async (req: Request,
 
     res.json({ success: true, refund });
   } catch (error: any) {
-    console.error("[StripeAdmin] Refund job error:", error);
+    logger.error("[StripeAdmin] Refund job error:", error);
     res.status(500).json({ error: error.message || "Failed to process refund" });
   }
 });

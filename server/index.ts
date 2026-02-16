@@ -15,6 +15,7 @@ import { startAccountDeletionScheduler } from "./accountDeletionScheduler";
 import { startChurnScheduler } from "./churn/churnScheduler";
 import { initSentry, setupProcessHandlers } from "./sentry";
 import { centralErrorHandler } from "./errorHandler";
+import { logger } from "./lib/logger";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -45,12 +46,12 @@ function validateRequiredEnv(): void {
   }
 
   if (missing.length > 0) {
-    console.error(`[startup] Missing required environment variables:\n  - ${missing.join("\n  - ")}`);
+    logger.error(`[startup] Missing required environment variables:\n  - ${missing.join("\n  - ")}`);
     if (isProduction) {
-      console.error("[startup] Cannot start in production with missing required vars. Exiting.");
+      logger.error("[startup] Cannot start in production with missing required vars. Exiting.");
       process.exit(1);
     } else {
-      console.warn("[startup] Continuing in development mode despite missing vars.");
+      logger.warn("[startup] Continuing in development mode despite missing vars.");
     }
   }
 }
@@ -132,7 +133,7 @@ export function log(message: string, source = "express") {
     hour12: true,
   });
 
-  console.log(`${formattedTime} [${source}] ${message}`);
+  logger.info(`${formattedTime} [${source}] ${message}`);
 }
 
 app.use((req, res, next) => {
@@ -169,8 +170,8 @@ app.use((req, res, next) => {
   const { selfTestFirebaseAdmin } = await import("./firebaseAdmin");
   const fbTest = await selfTestFirebaseAdmin();
   if (!fbTest.ok) {
-    console.error(`[STARTUP] Firebase Admin self-test FAILED: ${fbTest.error}`);
-    console.error('[STARTUP] Email/password signup and login will NOT work until this is fixed.');
+    logger.error(`[STARTUP] Firebase Admin self-test FAILED: ${fbTest.error}`);
+    logger.error('[STARTUP] Email/password signup and login will NOT work until this is fixed.');
   }
 
   await registerRoutes(httpServer, app);

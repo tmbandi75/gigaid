@@ -11,6 +11,7 @@ import { db } from "../db";
 import { growthLeads, onboardingCalls, acquisitionAttribution, growthReferrals, referralRewards, outreachQueue, users } from "@shared/schema";
 import { eq, sql, desc, and, gte, count } from "drizzle-orm";
 import { storage } from "../storage";
+import { logger } from "../lib/logger";
 
 async function requireFeatureFlag(flagKey: string, req: Request, res: Response): Promise<boolean> {
   try {
@@ -96,7 +97,7 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
       const lead = await createGrowthLead(parsed.data);
       res.status(201).json(lead);
     } catch (err: any) {
-      console.error("[Growth] Failed to create lead:", err);
+      logger.error("[Growth] Failed to create lead:", err);
       res.status(500).json({ error: "Failed to create lead" });
     }
   });
@@ -127,7 +128,7 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
       if (err.message === "Lead not found") {
         return res.status(404).json({ error: "Lead not found" });
       }
-      console.error("[Growth] Failed to book call:", err);
+      logger.error("[Growth] Failed to book call:", err);
       res.status(500).json({ error: "Failed to book call" });
     }
   });
@@ -167,7 +168,7 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
       if (err.message === "Lead already converted") {
         return res.status(409).json({ error: "Lead already converted" });
       }
-      console.error("[Growth] Failed to convert lead:", err);
+      logger.error("[Growth] Failed to convert lead:", err);
       res.status(500).json({ error: "Failed to convert lead" });
     }
   });
@@ -202,7 +203,7 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
 
       res.json(result);
     } catch (err: any) {
-      console.error("[Attribution] Failed to track:", err);
+      logger.error("[Attribution] Failed to track:", err);
       res.status(500).json({ error: "Failed to track attribution" });
     }
   });
@@ -215,7 +216,7 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
       const attr = await getAttributionForUser(userId);
       res.json(attr || {});
     } catch (err: any) {
-      console.error("[Attribution] Failed to get:", err);
+      logger.error("[Attribution] Failed to get:", err);
       res.status(500).json({ error: "Failed to get attribution" });
     }
   });
@@ -230,7 +231,7 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
       await trackReferralClick(code);
       res.json({ tracked: true });
     } catch (err: any) {
-      console.error("[Referral] Failed to track click:", err);
+      logger.error("[Referral] Failed to track click:", err);
       res.status(500).json({ error: "Failed to track referral click" });
     }
   });
@@ -243,7 +244,7 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
       const code = await ensureUserReferralCode(userId);
       res.json({ code });
     } catch (err: any) {
-      console.error("[Referral] Failed to get code:", err);
+      logger.error("[Referral] Failed to get code:", err);
       res.status(500).json({ error: "Failed to get referral code" });
     }
   });
@@ -256,7 +257,7 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
       const referrals = await getReferralsForUser(userId);
       res.json(referrals);
     } catch (err: any) {
-      console.error("[Referral] Failed to get referrals:", err);
+      logger.error("[Referral] Failed to get referrals:", err);
       res.status(500).json({ error: "Failed to get referrals" });
     }
   });
@@ -356,7 +357,7 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
         topCampaigns,
       });
     } catch (err: any) {
-      console.error("[AdminGrowth] Overview error:", err);
+      logger.error("[AdminGrowth] Overview error:", err);
       res.status(500).json({ error: "Failed to get growth overview" });
     }
   });
@@ -371,7 +372,7 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
       const leads = await getLeads({ status, source, limit, offset });
       res.json(leads);
     } catch (err: any) {
-      console.error("[AdminGrowth] Leads error:", err);
+      logger.error("[AdminGrowth] Leads error:", err);
       res.status(500).json({ error: "Failed to get leads" });
     }
   });
@@ -388,7 +389,7 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
 
       res.json({ ...lead, calls });
     } catch (err: any) {
-      console.error("[AdminGrowth] Lead detail error:", err);
+      logger.error("[AdminGrowth] Lead detail error:", err);
       res.status(500).json({ error: "Failed to get lead" });
     }
   });
@@ -399,7 +400,7 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
       const updated = await updateLeadNotes(req.params.id, notes || "");
       res.json(updated);
     } catch (err: any) {
-      console.error("[AdminGrowth] Notes update error:", err);
+      logger.error("[AdminGrowth] Notes update error:", err);
       res.status(500).json({ error: "Failed to update notes" });
     }
   });
@@ -431,7 +432,7 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
       if (err.message === "Call not found") {
         return res.status(404).json({ error: "Call not found" });
       }
-      console.error("[AdminGrowth] Call outcome error:", err);
+      logger.error("[AdminGrowth] Call outcome error:", err);
       res.status(500).json({ error: "Failed to update call outcome" });
     }
   });
@@ -447,7 +448,7 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
       });
       res.json(items);
     } catch (err: any) {
-      console.error("[AdminGrowth] Outreach error:", err);
+      logger.error("[AdminGrowth] Outreach error:", err);
       res.status(500).json({ error: "Failed to get outreach items" });
     }
   });
@@ -462,7 +463,7 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
       const item = await createOutreachItem(parsed.data);
       res.status(201).json(item);
     } catch (err: any) {
-      console.error("[AdminGrowth] Outreach create error:", err);
+      logger.error("[AdminGrowth] Outreach create error:", err);
       res.status(500).json({ error: "Failed to create outreach item" });
     }
   });
@@ -480,7 +481,7 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
       if (err.message === "Outreach item not found") {
         return res.status(404).json({ error: "Outreach item not found" });
       }
-      console.error("[AdminGrowth] Outreach update error:", err);
+      logger.error("[AdminGrowth] Outreach update error:", err);
       res.status(500).json({ error: "Failed to update outreach item" });
     }
   });
@@ -491,7 +492,7 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
       if (!deleted) return res.status(404).json({ error: "Outreach item not found" });
       res.json({ deleted: true });
     } catch (err: any) {
-      console.error("[AdminGrowth] Outreach delete error:", err);
+      logger.error("[AdminGrowth] Outreach delete error:", err);
       res.status(500).json({ error: "Failed to delete outreach item" });
     }
   });
@@ -506,7 +507,7 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
       const rewards = await getRewardsForUser(userId);
       res.json(rewards);
     } catch (err: any) {
-      console.error("[Referral] Failed to get rewards:", err);
+      logger.error("[Referral] Failed to get rewards:", err);
       res.status(500).json({ error: "Failed to get rewards" });
     }
   });
@@ -524,7 +525,7 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
       }
       res.json(result);
     } catch (err: any) {
-      console.error("[AdminGrowth] Failed to apply reward:", err);
+      logger.error("[AdminGrowth] Failed to apply reward:", err);
       res.status(500).json({ error: "Failed to apply reward" });
     }
   });
@@ -550,7 +551,7 @@ export function registerGrowthRoutes(app: Express, requireAuth: (req: Request, r
 
       res.json(campaigns.rows || []);
     } catch (err: any) {
-      console.error("[AdminGrowth] Channels error:", err);
+      logger.error("[AdminGrowth] Channels error:", err);
       res.status(500).json({ error: "Failed to get channel data" });
     }
   });

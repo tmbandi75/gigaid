@@ -4,6 +4,7 @@ import { users, jobs, leads, invoices, eventsCanonical } from "@shared/schema";
 import { eq, gte, count, sql } from "drizzle-orm";
 import { adminMiddleware } from "../copilot/adminMiddleware";
 import { getUncachableStripeClient } from "../stripeClient";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -69,7 +70,7 @@ router.get("/status", async (req, res) => {
       checks,
     });
   } catch (error) {
-    console.error("[System Health] Error:", error);
+    logger.error("[System Health] Error:", error);
     res.status(500).json({ error: "Failed to check system health" });
   }
 });
@@ -114,7 +115,7 @@ router.get("/jobs", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("[System Health] Jobs error:", error);
+    logger.error("[System Health] Jobs error:", error);
     res.status(500).json({ error: "Failed to get job status" });
   }
 });
@@ -155,7 +156,7 @@ router.get("/errors", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("[System Health] Errors check failed:", error);
+    logger.error("[System Health] Errors check failed:", error);
     res.status(500).json({ error: "Failed to get error rates" });
   }
 });

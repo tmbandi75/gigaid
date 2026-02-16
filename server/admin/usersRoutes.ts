@@ -16,6 +16,7 @@ import {
 import { eq, desc, and, or, ilike, gte, count, sql, isNull, isNotNull, lte } from "drizzle-orm";
 import { adminMiddleware, AdminRequest } from "../copilot/adminMiddleware";
 import { getUncachableStripeClient } from "../stripeClient";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -54,7 +55,7 @@ router.get("/search", async (req, res) => {
 
     res.json({ users: results });
   } catch (error) {
-    console.error("[Admin Users] Search error:", error);
+    logger.error("[Admin Users] Search error:", error);
     res.status(500).json({ error: "Failed to search users" });
   }
 });
@@ -399,7 +400,7 @@ router.get("/views", async (req, res) => {
       view,
     });
   } catch (error) {
-    console.error("[Admin Users] Views error:", error);
+    logger.error("[Admin Users] Views error:", error);
     res.status(500).json({ error: "Failed to fetch view" });
   }
 });
@@ -496,7 +497,7 @@ router.get("/:userId", async (req, res) => {
       context: from === "cockpit" ? { from, metric, alert } : null,
     });
   } catch (error) {
-    console.error("[Admin Users] User detail error:", error);
+    logger.error("[Admin Users] User detail error:", error);
     res.status(500).json({ error: "Failed to fetch user" });
   }
 });
@@ -522,7 +523,7 @@ router.get("/:userId/timeline", async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error("[Admin Users] Timeline error:", error);
+    logger.error("[Admin Users] Timeline error:", error);
     res.status(500).json({ error: "Failed to fetch timeline" });
   }
 });
@@ -568,7 +569,7 @@ router.get("/:userId/messaging", async (req, res) => {
       } : null,
     });
   } catch (error) {
-    console.error("[Admin Users] Messaging error:", error);
+    logger.error("[Admin Users] Messaging error:", error);
     res.status(500).json({ error: "Failed to fetch messaging status" });
   }
 });
@@ -608,7 +609,7 @@ router.get("/:userId/payments", async (req, res) => {
       note: "For full payment details, use Stripe Dashboard",
     });
   } catch (error) {
-    console.error("[Admin Users] Payments error:", error);
+    logger.error("[Admin Users] Payments error:", error);
     res.status(500).json({ error: "Failed to fetch payments" });
   }
 });
@@ -636,7 +637,7 @@ router.get("/:userId/audit", async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error("[Admin Users] Audit error:", error);
+    logger.error("[Admin Users] Audit error:", error);
     res.status(500).json({ error: "Failed to fetch audit log" });
   }
 });
@@ -740,12 +741,12 @@ router.post("/:userId/actions", async (req, res) => {
       }
 
       case "trigger_webhook_retry": {
-        console.log(`[Admin] Webhook retry triggered for user ${userId} - stub implementation`);
+        logger.info(`[Admin] Webhook retry triggered for user ${userId} - stub implementation`);
         break;
       }
 
       case "send_one_off_push": {
-        console.log(`[Admin] One-off push sent to user ${userId}: ${payload?.message}`);
+        logger.info(`[Admin] One-off push sent to user ${userId}: ${payload?.message}`);
         break;
       }
 
@@ -778,9 +779,9 @@ router.post("/:userId/actions", async (req, res) => {
           });
           
           const newPlan = action_key === "billing_upgrade" ? "upgraded" : "downgraded";
-          console.log(`[Admin] User ${userId} ${newPlan} to price ${newPriceId}`);
+          logger.info(`[Admin] User ${userId} ${newPlan} to price ${newPriceId}`);
         } catch (stripeError: any) {
-          console.error("[Admin] Stripe plan change error:", stripeError);
+          logger.error("[Admin] Stripe plan change error:", stripeError);
           return res.status(500).json({ error: `Stripe error: ${stripeError.message}` });
         }
         break;
@@ -799,7 +800,7 @@ router.post("/:userId/actions", async (req, res) => {
           })
           .where(eq(users.id, userId));
         
-        console.log(`[Admin] Granted ${compMonths} month(s) comp access to user ${userId}`);
+        logger.info(`[Admin] Granted ${compMonths} month(s) comp access to user ${userId}`);
         break;
       }
 
@@ -812,7 +813,7 @@ router.post("/:userId/actions", async (req, res) => {
           })
           .where(eq(users.id, userId));
         
-        console.log(`[Admin] Revoked comp access for user ${userId}`);
+        logger.info(`[Admin] Revoked comp access for user ${userId}`);
         break;
       }
 
@@ -832,9 +833,9 @@ router.post("/:userId/actions", async (req, res) => {
               behavior: 'void',
             },
           });
-          console.log(`[Admin] Paused subscription for user ${userId}`);
+          logger.info(`[Admin] Paused subscription for user ${userId}`);
         } catch (stripeError: any) {
-          console.error("[Admin] Stripe pause error:", stripeError);
+          logger.error("[Admin] Stripe pause error:", stripeError);
           return res.status(500).json({ error: `Stripe error: ${stripeError.message}` });
         }
         break;
@@ -854,9 +855,9 @@ router.post("/:userId/actions", async (req, res) => {
           await stripe.subscriptions.update(targetUser.stripeSubscriptionId, {
             pause_collection: null,
           });
-          console.log(`[Admin] Resumed subscription for user ${userId}`);
+          logger.info(`[Admin] Resumed subscription for user ${userId}`);
         } catch (stripeError: any) {
-          console.error("[Admin] Stripe resume error:", stripeError);
+          logger.error("[Admin] Stripe resume error:", stripeError);
           return res.status(500).json({ error: `Stripe error: ${stripeError.message}` });
         }
         break;
@@ -882,9 +883,9 @@ router.post("/:userId/actions", async (req, res) => {
               cancel_at_period_end: true,
             });
           }
-          console.log(`[Admin] Cancelled subscription for user ${userId} (immediate: ${cancelImmediately})`);
+          logger.info(`[Admin] Cancelled subscription for user ${userId} (immediate: ${cancelImmediately})`);
         } catch (stripeError: any) {
-          console.error("[Admin] Stripe cancel error:", stripeError);
+          logger.error("[Admin] Stripe cancel error:", stripeError);
           return res.status(500).json({ error: `Stripe error: ${stripeError.message}` });
         }
         break;
@@ -909,9 +910,9 @@ router.post("/:userId/actions", async (req, res) => {
           await stripe.customers.update(targetUser.stripeCustomerId, {
             balance: -Math.abs(creditAmountCents),
           });
-          console.log(`[Admin] Applied $${(creditAmountCents / 100).toFixed(2)} credit to user ${userId}`);
+          logger.info(`[Admin] Applied $${(creditAmountCents / 100).toFixed(2)} credit to user ${userId}`);
         } catch (stripeError: any) {
-          console.error("[Admin] Stripe credit error:", stripeError);
+          logger.error("[Admin] Stripe credit error:", stripeError);
           return res.status(500).json({ error: `Stripe error: ${stripeError.message}` });
         }
         break;
@@ -933,9 +934,9 @@ router.post("/:userId/actions", async (req, res) => {
           }
           
           await stripe.refunds.create(refundParams);
-          console.log(`[Admin] Refunded charge ${chargeId} for user ${userId}`);
+          logger.info(`[Admin] Refunded charge ${chargeId} for user ${userId}`);
         } catch (stripeError: any) {
-          console.error("[Admin] Stripe refund error:", stripeError);
+          logger.error("[Admin] Stripe refund error:", stripeError);
           return res.status(500).json({ error: `Stripe error: ${stripeError.message}` });
         }
         break;
@@ -950,7 +951,7 @@ router.post("/:userId/actions", async (req, res) => {
             disabledReason: reason.trim(),
           })
           .where(eq(users.id, userId));
-        console.log(`[Admin] Disabled account for user ${userId}`);
+        logger.info(`[Admin] Disabled account for user ${userId}`);
         break;
       }
 
@@ -962,7 +963,7 @@ router.post("/:userId/actions", async (req, res) => {
             enabledBy: actorUserId,
           })
           .where(eq(users.id, userId));
-        console.log(`[Admin] Enabled account for user ${userId}`);
+        logger.info(`[Admin] Enabled account for user ${userId}`);
         break;
       }
     }
@@ -980,7 +981,7 @@ router.post("/:userId/actions", async (req, res) => {
 
     res.json({ success: true, message: `Action '${action_key}' completed and logged.` });
   } catch (error) {
-    console.error("[Admin Users] Action error:", error);
+    logger.error("[Admin Users] Action error:", error);
     res.status(500).json({ error: "Failed to execute action" });
   }
 });
@@ -1051,7 +1052,7 @@ router.post("/:userId/notes", async (req: AdminRequest, res) => {
 
     res.json({ note: newNote });
   } catch (error) {
-    console.error("[Admin Users] Add note error:", error);
+    logger.error("[Admin Users] Add note error:", error);
     res.status(500).json({ error: "Failed to add note" });
   }
 });
@@ -1071,7 +1072,7 @@ router.get("/:userId/notes", async (req: AdminRequest, res) => {
 
     res.json({ notes });
   } catch (error) {
-    console.error("[Admin Users] Get notes error:", error);
+    logger.error("[Admin Users] Get notes error:", error);
     res.status(500).json({ error: "Failed to get notes" });
   }
 });
@@ -1130,7 +1131,7 @@ router.post("/:userId/flag", async (req: AdminRequest, res) => {
 
     res.json({ flag: newFlag });
   } catch (error) {
-    console.error("[Admin Users] Flag user error:", error);
+    logger.error("[Admin Users] Flag user error:", error);
     res.status(500).json({ error: "Failed to flag user" });
   }
 });
@@ -1172,7 +1173,7 @@ router.delete("/:userId/flag", async (req: AdminRequest, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error("[Admin Users] Unflag user error:", error);
+    logger.error("[Admin Users] Unflag user error:", error);
     res.status(500).json({ error: "Failed to unflag user" });
   }
 });
@@ -1271,7 +1272,7 @@ router.get("/:userId/impersonate", async (req: AdminRequest, res) => {
       viewedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("[Admin Users] Impersonate error:", error);
+    logger.error("[Admin Users] Impersonate error:", error);
     res.status(500).json({ error: "Failed to load user view" });
   }
 });
@@ -1349,7 +1350,7 @@ router.post("/:userId/retry-payment", async (req: AdminRequest, res) => {
       }
     });
   } catch (error: any) {
-    console.error("[Admin Users] Retry payment error:", error);
+    logger.error("[Admin Users] Retry payment error:", error);
     res.status(500).json({ error: error.message || "Failed to retry payment" });
   }
 });
@@ -1414,7 +1415,7 @@ router.get("/:userId/failed-invoices", async (req: AdminRequest, res) => {
 
     res.json({ invoices: allInvoices });
   } catch (error) {
-    console.error("[Admin Users] Failed invoices error:", error);
+    logger.error("[Admin Users] Failed invoices error:", error);
     res.status(500).json({ error: "Failed to fetch invoices" });
   }
 });
