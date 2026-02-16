@@ -687,9 +687,10 @@ export function SubscriptionSettings() {
           </h3>
           <div className="space-y-3 text-sm text-muted-foreground">
             <p data-testid="text-subscription-disclosure">
-              Gig Aid subscriptions are for business management services (job scheduling,
-              invoicing, client management, and automation tools) — not digital content
-              or media. Payments are processed securely through Stripe via our website.
+              Subscriptions are managed externally via our website. Gig Aid subscriptions
+              are for business management services (job scheduling, invoicing, client
+              management, and automation tools) — not digital content or media. Payments
+              are processed securely through Stripe.
             </p>
 
             <div className="space-y-2">
