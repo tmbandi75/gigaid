@@ -68,7 +68,8 @@ import type { Referral, WeeklyAvailability } from "@shared/schema";
 import { useFeatureFlag, useUpdateFeatureFlag } from "@/hooks/use-nudges";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { getAnalyticsConsent, setAnalyticsConsent } from "@/lib/consent/analyticsConsent";
-import { initAnalytics, shutdownAnalytics } from "@/lib/analytics/initAnalytics";
+import { initAnalyticsSafely, disableAnalytics, persistAnalyticsPreferences } from "@/lib/analytics/initAnalytics";
+import { requestATTUserInitiated, isIOSNative, type AnalyticsProfile } from "@/lib/att/attManager";
 
 interface ReferralData {
   referralCode: string;
@@ -98,17 +99,123 @@ export default function Settings() {
   const isMobile = useIsMobile();
   const [bookingLinkCopied, setBookingLinkCopied] = useState(false);
   const { isAuthenticated } = useAuth();
-  const [analyticsEnabled, setAnalyticsEnabled] = useState(() => getAnalyticsConsent() === "granted");
+  const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
+  const [attBlocked, setAttBlocked] = useState(false);
 
-  const handleAnalyticsToggle = (checked: boolean) => {
-    setAnalyticsEnabled(checked);
-    if (checked) {
-      setAnalyticsConsent("granted");
-      initAnalytics();
-    } else {
-      setAnalyticsConsent("denied");
-      shutdownAnalytics();
+  const profileQuery = useQuery<any>({ queryKey: ["/api/profile"] });
+  useEffect(() => {
+    if (profileQuery.data) {
+      setAnalyticsEnabled(profileQuery.data.analyticsEnabled ?? false);
+      const status = profileQuery.data.attStatus;
+      if (isIOSNative() && (status === "denied" || status === "restricted")) {
+        setAttBlocked(true);
+      }
     }
+  }, [profileQuery.data]);
+
+  const handleAnalyticsToggle = async (checked: boolean) => {
+    if (!profileQuery.data) {
+      toast({ title: "Loading", description: "Please wait while your profile loads." });
+      return;
+    }
+
+    setAnalyticsEnabled(checked);
+    const currentProfile = profileQuery.data;
+
+    if (!checked) {
+      setAnalyticsConsent("denied");
+      disableAnalytics();
+      await persistAnalyticsPreferences({
+        analyticsEnabled: false,
+        attStatus: currentProfile.attStatus ?? "unknown",
+        attPromptedAt: currentProfile.attPromptedAt ?? null,
+        analyticsDisabledReason: "user_disabled",
+      });
+      return;
+    }
+
+    setAnalyticsConsent("granted");
+
+    if (isIOSNative()) {
+      const currentAttStatus = currentProfile.attStatus ?? "unknown";
+
+      if (currentAttStatus === "denied" || currentAttStatus === "restricted") {
+        setAttBlocked(true);
+        setAnalyticsEnabled(false);
+        setAnalyticsConsent("denied");
+        toast({
+          title: "Tracking disabled in iOS Settings",
+          description: "To enable analytics, allow tracking in Settings > Privacy & Security > Tracking.",
+        });
+        await persistAnalyticsPreferences({
+          analyticsEnabled: false,
+          attStatus: currentAttStatus,
+          attPromptedAt: currentProfile.attPromptedAt ?? null,
+          analyticsDisabledReason: currentAttStatus === "denied" ? "att_denied" : "restricted",
+        });
+        return;
+      }
+
+      if (currentAttStatus === "unknown" || currentAttStatus === "not_determined") {
+        const profileForATT: AnalyticsProfile = {
+          analyticsEnabled: true,
+          attStatus: currentAttStatus,
+          attPromptedAt: currentProfile.attPromptedAt ?? null,
+          analyticsDisabledReason: currentProfile.analyticsDisabledReason ?? null,
+        };
+        const result = await requestATTUserInitiated(profileForATT);
+        const now = new Date().toISOString();
+
+        if (result === "authorized") {
+          const updatedProfile: AnalyticsProfile = {
+            analyticsEnabled: true,
+            attStatus: "authorized",
+            attPromptedAt: now,
+            analyticsDisabledReason: null,
+          };
+          await persistAnalyticsPreferences(updatedProfile);
+          await initAnalyticsSafely(updatedProfile);
+          return;
+        }
+
+        const reason = result === "denied" ? "att_denied" : result === "restricted" ? "restricted" : "not_supported";
+        setAnalyticsEnabled(false);
+        setAnalyticsConsent("denied");
+        setAttBlocked(result === "denied" || result === "restricted");
+        await persistAnalyticsPreferences({
+          analyticsEnabled: false,
+          attStatus: result === "unavailable" ? "unavailable" : result,
+          attPromptedAt: now,
+          analyticsDisabledReason: reason,
+        });
+        toast({
+          title: "Analytics not enabled",
+          description: "Tracking permission was not granted. Analytics will remain off.",
+        });
+        return;
+      }
+
+      if (currentAttStatus === "authorized") {
+        const updatedProfile: AnalyticsProfile = {
+          analyticsEnabled: true,
+          attStatus: "authorized",
+          attPromptedAt: currentProfile.attPromptedAt ?? null,
+          analyticsDisabledReason: null,
+        };
+        await persistAnalyticsPreferences(updatedProfile);
+        await initAnalyticsSafely(updatedProfile);
+        return;
+      }
+    }
+
+    const updatedProfile: AnalyticsProfile = {
+      analyticsEnabled: true,
+      attStatus: currentProfile.attStatus ?? "unavailable",
+      attPromptedAt: currentProfile.attPromptedAt ?? null,
+      analyticsDisabledReason: null,
+    };
+    await persistAnalyticsPreferences(updatedProfile);
+    await initAnalyticsSafely(updatedProfile);
   };
 
   const handleAuthenticatedDownload = async (url: string, filename: string) => {
@@ -928,11 +1035,11 @@ export default function Settings() {
                 <BarChart3 className="h-4 w-4 text-indigo-500" />
                 Analytics
               </h4>
-              <div className="pl-6">
-                <div className="flex items-center justify-between">
+              <div className="pl-6 space-y-3">
+                <div className="flex items-center justify-between gap-2">
                   <div>
-                    <p className="font-medium text-sm">Usage analytics</p>
-                    <p className="text-xs text-muted-foreground">Help improve GigAid by sharing anonymous usage data</p>
+                    <p className="font-medium text-sm">Enable usage analytics</p>
+                    <p className="text-xs text-muted-foreground">We use anonymous usage data to improve reliability and features. You can change this anytime.</p>
                   </div>
                   <Switch
                     checked={analyticsEnabled}
@@ -940,6 +1047,11 @@ export default function Settings() {
                     data-testid="switch-analytics"
                   />
                 </div>
+                {attBlocked && (
+                  <div className="p-3 text-xs text-muted-foreground bg-muted rounded-md" data-testid="text-att-blocked">
+                    <p>Tracking is disabled in your iOS settings. To enable analytics, allow tracking in <strong>Settings &gt; Privacy &amp; Security &gt; Tracking</strong>.</p>
+                  </div>
+                )}
               </div>
             </div>
 

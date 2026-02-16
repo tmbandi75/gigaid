@@ -143,7 +143,24 @@ export const users = pgTable("users", {
   activationLinkDone: boolean("activation_link_done").default(false),
   activationQuoteDone: boolean("activation_quote_done").default(false),
   activationCompletedAt: text("activation_completed_at"),
+
+  // Analytics & ATT privacy preferences (DB-persisted)
+  analyticsEnabled: boolean("analytics_enabled").default(false),
+  attStatus: text("att_status").default("unknown"),
+  attPromptedAt: text("att_prompted_at"),
+  analyticsDisabledReason: text("analytics_disabled_reason"),
 });
+
+// Privacy events table (internal logging without external analytics)
+export const privacyEvents = pgTable("privacy_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  eventName: text("event_name").notNull(),
+  payload: jsonb("payload").default({}),
+  createdAt: text("created_at").notNull(),
+});
+
+export type PrivacyEvent = typeof privacyEvents.$inferSelect;
 
 // Availability type for frontend use
 export interface TimeRange {

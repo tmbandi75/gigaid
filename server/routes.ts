@@ -546,6 +546,11 @@ export async function registerRoutes(
         // Messaging fields
         personalPhone: user.personalPhone,
         inAppInboxEnabled: user.inAppInboxEnabled,
+        // Analytics & ATT privacy preferences
+        analyticsEnabled: user.analyticsEnabled ?? false,
+        attStatus: user.attStatus ?? "unknown",
+        attPromptedAt: user.attPromptedAt ?? null,
+        analyticsDisabledReason: user.analyticsDisabledReason ?? null,
       });
     } catch (error) {
       console.error("[Profile] Error fetching profile:", error);
@@ -679,6 +684,79 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Profile update error:", error);
       res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
+  // PATCH /api/profile/analytics-preferences - Persist ATT/analytics state
+  app.patch("/api/profile/analytics-preferences", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { analyticsEnabled, attStatus, attPromptedAt, analyticsDisabledReason } = req.body;
+
+      const allowedAttStatuses = ["authorized", "denied", "restricted", "not_determined", "unavailable", "unknown"];
+      const allowedDisabledReasons = ["att_denied", "restricted", "user_disabled", "not_supported", "unknown", null];
+
+      if (analyticsEnabled !== undefined && typeof analyticsEnabled !== "boolean") {
+        return res.status(400).json({ error: "analytics_enabled must be boolean" });
+      }
+      if (attStatus !== undefined && !allowedAttStatuses.includes(attStatus)) {
+        return res.status(400).json({ error: "Invalid att_status value" });
+      }
+      if (analyticsDisabledReason !== undefined && !allowedDisabledReasons.includes(analyticsDisabledReason)) {
+        return res.status(400).json({ error: "Invalid analytics_disabled_reason value" });
+      }
+
+      let user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const updates: Record<string, any> = {};
+      if (analyticsEnabled !== undefined) updates.analyticsEnabled = analyticsEnabled;
+      if (attStatus !== undefined) updates.attStatus = attStatus;
+      if (attPromptedAt !== undefined) updates.attPromptedAt = attPromptedAt;
+      if (analyticsDisabledReason !== undefined) updates.analyticsDisabledReason = analyticsDisabledReason;
+
+      const updatedUser = await storage.updateUser(userId, updates);
+
+      const meaningfulChanges = attStatus === "denied" || attStatus === "restricted" ||
+        analyticsEnabled === false || analyticsEnabled === true;
+      if (meaningfulChanges) {
+        try {
+          const { db } = await import("./db");
+          const { privacyEvents } = await import("@shared/schema");
+          let eventName = "analytics_preferences_updated";
+          if (attStatus === "denied") eventName = "analytics_disabled_att_denied";
+          else if (attStatus === "restricted") eventName = "analytics_disabled_restricted";
+          else if (analyticsEnabled === false) eventName = "analytics_disabled_user";
+          else if (analyticsEnabled === true) eventName = "analytics_reenable_attempt";
+
+          await db.insert(privacyEvents).values({
+            userId,
+            eventName,
+            payload: {
+              analyticsEnabled: analyticsEnabled ?? user.analyticsEnabled,
+              attStatus: attStatus ?? user.attStatus,
+              previousAttStatus: user.attStatus,
+              previousAnalyticsEnabled: user.analyticsEnabled,
+              timestamp: new Date().toISOString(),
+            },
+            createdAt: new Date().toISOString(),
+          });
+        } catch (err) {
+          console.error("[PrivacyEvent] Failed to log privacy event:", err);
+        }
+      }
+
+      res.json({
+        analyticsEnabled: updatedUser?.analyticsEnabled ?? false,
+        attStatus: updatedUser?.attStatus ?? "unknown",
+        attPromptedAt: updatedUser?.attPromptedAt ?? null,
+        analyticsDisabledReason: updatedUser?.analyticsDisabledReason ?? null,
+      });
+    } catch (error) {
+      console.error("[AnalyticsPrefs] Error updating analytics preferences:", error);
+      res.status(500).json({ error: "Failed to update analytics preferences" });
     }
   });
 
