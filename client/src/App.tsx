@@ -11,6 +11,8 @@ import { DriveModeProvider } from "@/components/drivemode/DriveModeProvider";
 import { OptimisticCapabilityProvider, useOptimisticCapability } from "@/contexts/OptimisticCapabilityContext";
 import { FirebaseAuthProvider, useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useEffect } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { useSubscriptionRestore } from "@/hooks/useSubscriptionRestore";
 import SplashPage from "@/pages/SplashPage";
 import ForceLogout from "@/pages/force-logout";
 
@@ -184,6 +186,8 @@ function SubscriptionHandler() {
 function AuthenticatedApp() {
   const [location, setLocation] = useLocation();
   const { firebaseUser, authLoading, lastAuthEventTs, callbackCount } = useFirebaseAuth();
+  const { user } = useAuth();
+  useSubscriptionRestore(user);
   
   // CRITICAL: Block ALL routing decisions until Firebase auth state is resolved
   // No redirects, no rendering decisions until authLoading === false

@@ -132,6 +132,11 @@ export function SubscriptionSettings() {
   const [showCloseAccountDialog, setShowCloseAccountDialog] = useState(false);
   const [showChangePlanDialog, setShowChangePlanDialog] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [restoreResult, setRestoreResult] = useState<{
+    restored: boolean;
+    reason?: string;
+    message: string;
+  } | null>(null);
 
   const { data: subscription, isLoading } = useQuery<SubscriptionStatus>({
     queryKey: QUERY_KEYS.subscriptionStatus(),
@@ -295,6 +300,39 @@ export function SubscriptionSettings() {
         toast({
           title: "Error",
           description: error.message || "Failed to restore account. Please try again.",
+          variant: "destructive",
+        });
+      },
+    }
+  );
+
+  const restoreMutation = useApiMutation(
+    () => apiFetch<any>("/api/subscription/restore", { method: "POST" }),
+    [QUERY_KEYS.subscriptionStatus(), QUERY_KEYS.profile(), QUERY_KEYS.authUser()],
+    {
+      onSuccess: (data: any) => {
+        setRestoreResult({
+          restored: data.restored,
+          reason: data.reason,
+          message: data.message,
+        });
+        if (data.restored) {
+          toast({
+            title: "Access restored",
+            description: data.message || "Your subscription has been restored successfully",
+          });
+        } else {
+          toast({
+            title: "Restore incomplete",
+            description: data.message || "Could not restore subscription",
+            variant: data.reason === "no_subscription" ? "default" : "destructive",
+          });
+        }
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to restore subscription. Please try again.",
           variant: "destructive",
         });
       },
@@ -735,6 +773,52 @@ export function SubscriptionSettings() {
               </a>.
             </p>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Restore Access */}
+      <Card data-testid="card-restore-access">
+        <CardContent className="p-4">
+          <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
+            <RotateCcw className="h-4 w-4 text-muted-foreground" />
+            Restore Access
+          </h3>
+          <p className="text-xs text-muted-foreground mb-3">
+            Reinstalled the app or switched devices? Tap below to restore your subscription.
+          </p>
+
+          {restoreResult && (
+            <div
+              className={`p-3 rounded-lg mb-3 text-sm ${
+                restoreResult.restored
+                  ? "bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-200"
+                  : restoreResult.reason === "payment_failed"
+                  ? "bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200"
+                  : "bg-muted text-muted-foreground"
+              }`}
+              data-testid="text-restore-result"
+            >
+              {restoreResult.message}
+            </div>
+          )}
+
+          <Button
+            variant="outline"
+            onClick={() => {
+              setRestoreResult(null);
+              restoreMutation.mutate();
+            }}
+            disabled={restoreMutation.isPending}
+            className="w-full"
+            data-testid="button-restore-access"
+          >
+            {restoreMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <RefreshCcw className="h-4 w-4 mr-2" />
+            )}
+            Restore Access
+          </Button>
         </CardContent>
       </Card>
 

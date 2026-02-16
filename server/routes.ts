@@ -7642,6 +7642,179 @@ Return ONLY the message text, no JSON or formatting.`
     }
   });
 
+  // Restore subscription access (after reinstall or new device)
+  app.post("/api/subscription/restore", isAuthenticated, async (req, res) => {
+    try {
+      const user = await storage.getUser((req as any).userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const { STRIPE_ENABLED } = await import("@shared/stripeConfig");
+
+      if (!STRIPE_ENABLED) {
+        return res.json({
+          restored: false,
+          reason: "stripe_disabled",
+          plan: user.plan || "free",
+          message: "Subscription services are temporarily unavailable",
+        });
+      }
+
+      const stripe = await getUncachableStripeClient();
+
+      // Helper: handle terminal/non-restorable subscription states
+      const handleTerminalStatus = async (subscription: any, customerId?: string) => {
+        const status = subscription.status;
+        const stripePlan = subscription.metadata?.plan || user.plan || "free";
+
+        if (status === "active" || status === "trialing") {
+          const plan = subscription.metadata?.plan || "pro_plus";
+          const updates: Record<string, any> = {};
+          if (plan !== user.plan) { updates.plan = plan; updates.isPro = plan !== "free"; }
+          if (customerId && customerId !== user.stripeCustomerId) { updates.stripeCustomerId = customerId; }
+          if (subscription.id !== user.stripeSubscriptionId) { updates.stripeSubscriptionId = subscription.id; }
+          if (Object.keys(updates).length > 0) {
+            await storage.updateUser(user.id, updates);
+          }
+          return res.json({
+            restored: true,
+            plan,
+            status,
+            currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+            cancelAtPeriodEnd: subscription.cancel_at_period_end,
+            message: "Your subscription has been restored successfully",
+          });
+        }
+
+        if (status === "past_due") {
+          const updates: Record<string, any> = { stripeSubscriptionId: subscription.id };
+          if (customerId && customerId !== user.stripeCustomerId) { updates.stripeCustomerId = customerId; }
+          await storage.updateUser(user.id, updates);
+          return res.json({
+            restored: false,
+            reason: "payment_failed",
+            plan: stripePlan,
+            status: "past_due",
+            message: "Your subscription has a payment issue. Please update your payment method.",
+          });
+        }
+
+        if (status === "canceled" || status === "unpaid") {
+          await storage.updateUser(user.id, {
+            plan: "free",
+            isPro: false,
+            stripeSubscriptionId: null,
+          });
+          return res.json({
+            restored: false,
+            reason: status === "canceled" ? "cancelled" : "unpaid",
+            plan: "free",
+            status,
+            message: status === "canceled"
+              ? "Your subscription was cancelled. You can subscribe again from the pricing page."
+              : "Your subscription was suspended due to non-payment. Please subscribe again.",
+          });
+        }
+
+        if (status === "incomplete" || status === "incomplete_expired" || status === "paused") {
+          return res.json({
+            restored: false,
+            reason: status,
+            plan: user.plan || "free",
+            status,
+            message: status === "paused"
+              ? "Your subscription is paused. Please reactivate it from your billing portal."
+              : "Your subscription setup was not completed. Please subscribe again from the pricing page.",
+          });
+        }
+
+        return res.json({
+          restored: false,
+          reason: "unknown_status",
+          plan: user.plan || "free",
+          status,
+          message: "Your subscription is in an unexpected state. Please contact support.",
+        });
+      };
+
+      // Helper: search customer subscriptions across multiple statuses
+      const searchCustomerSubs = async (customerId: string) => {
+        const statusesToCheck = ["active", "trialing", "past_due", "canceled", "unpaid", "paused", "incomplete", "incomplete_expired"] as const;
+        for (const status of statusesToCheck) {
+          const subs = await stripe.subscriptions.list({
+            customer: customerId,
+            status,
+            limit: 1,
+          });
+          if (subs.data.length > 0) {
+            return { subscription: subs.data[0], customerId };
+          }
+        }
+        return null;
+      };
+
+      // Strategy 1: Check existing subscription ID on user record
+      if (user.stripeSubscriptionId) {
+        try {
+          const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+          const customerId = typeof subscription.customer === "string"
+            ? subscription.customer
+            : (subscription.customer as any)?.id;
+          const result = await handleTerminalStatus(subscription, customerId);
+          if (result) return;
+        } catch (subErr: any) {
+          if (subErr?.statusCode !== 404) {
+            throw subErr;
+          }
+        }
+      }
+
+      // Strategy 2: Look up by Stripe customer ID
+      if (user.stripeCustomerId) {
+        try {
+          const found = await searchCustomerSubs(user.stripeCustomerId);
+          if (found) {
+            const result = await handleTerminalStatus(found.subscription, found.customerId);
+            if (result) return;
+          }
+        } catch (custErr: any) {
+          if (custErr?.statusCode !== 404) {
+            throw custErr;
+          }
+        }
+      }
+
+      // Strategy 3: Search by email
+      if (user.email) {
+        const customers = await stripe.customers.list({
+          email: user.email,
+          limit: 5,
+        });
+
+        for (const customer of customers.data) {
+          const found = await searchCustomerSubs(customer.id);
+          if (found) {
+            const result = await handleTerminalStatus(found.subscription, customer.id);
+            if (result) return;
+          }
+        }
+      }
+
+      // No subscription found anywhere
+      return res.json({
+        restored: false,
+        reason: "no_subscription",
+        plan: user.plan || "free",
+        message: "No active subscription found. You can subscribe from the pricing page.",
+      });
+    } catch (error: any) {
+      console.error("Subscription restore error:", error?.message || "Unknown error");
+      res.status(500).json({ error: "Failed to restore subscription" });
+    }
+  });
+
   // Cancel subscription at period end
   app.post("/api/subscription/cancel", isAuthenticated, async (req, res) => {
     try {
