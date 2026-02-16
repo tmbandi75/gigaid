@@ -52,3 +52,44 @@ Emoji usage is restricted to user-facing presentation layers, limited to one per
 - **Communication Services**: Twilio (SMS), SendGrid (Email)
 - **AI**: OpenAI (gpt-4o-mini)
 - **Analytics**: PostHog
+- **Security**: Firebase App Check (reCAPTCHA v3 for web)
+
+## Firebase App Check Setup
+
+### Web (Already Implemented)
+- Module: `client/src/lib/security/initAppCheck.ts`
+- Initialized in `client/src/lib/firebase.ts` right after `initializeApp()`
+- Uses `ReCaptchaV3Provider` with `VITE_RECAPTCHA_SITE_KEY`
+- Debug tokens auto-enabled in development
+- Fails safely if key not set
+
+### iOS — App Attest / DeviceCheck (Firebase Console + Xcode)
+1. In Firebase Console → App Check → select the iOS app → register with **App Attest** provider
+2. In Xcode, enable the **App Attest** capability under Signing & Capabilities
+3. Add `FirebaseAppCheck` pod to `ios/App/Podfile` (included in Firebase iOS SDK 10+)
+4. In native Swift code (`AppDelegate.swift`), before `FirebaseApp.configure()`:
+   ```swift
+   let providerFactory = AppCheckDebugProviderFactory() // debug
+   // let providerFactory = AppAttestProviderFactory() // production
+   AppCheck.setAppCheckProviderFactory(providerFactory)
+   ```
+
+### Android — Play Integrity API (Firebase Console + Gradle)
+1. In Firebase Console → App Check → select Android app → register with **Play Integrity** provider
+2. Add `com.google.firebase:firebase-appcheck-playintegrity` to `android/app/build.gradle`
+3. Initialize in `MainActivity.java` or `Application` class before `FirebaseApp.initializeApp()`:
+   ```java
+   FirebaseAppCheck.getInstance().installAppCheckProviderFactory(
+       PlayIntegrityAppCheckProviderFactory.getInstance()
+   );
+   ```
+
+### Enforcement (Firebase Console)
+To enforce App Check (block requests without valid tokens):
+- Firebase Console → App Check → select each service (Auth, Firestore, etc.) → click **Enforce**
+- Recommendation: Monitor unverified traffic for 1-2 weeks before enforcing
+
+### Versioning (App Store)
+- File: `ios/App/App.xcodeproj/project.pbxproj`
+- `MARKETING_VERSION`: User-facing version (e.g., 1.0.0). Update for new App Store versions.
+- `CURRENT_PROJECT_VERSION`: Build number (e.g., 1). Increment for every App Store upload.

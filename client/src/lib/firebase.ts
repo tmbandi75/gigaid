@@ -18,6 +18,7 @@ import {
 } from "firebase/auth";
 import { isNativePlatform } from "./platform";
 import { logger } from "@/lib/logger";
+import { initAppCheck } from "@/lib/security/initAppCheck";
 
 const REQUIRED_ENV_KEYS = [
   'VITE_FIREBASE_API_KEY',
@@ -50,6 +51,7 @@ try {
     firebaseInitError = msg;
   } else {
     app = initializeApp(firebaseConfig);
+    initAppCheck(app);
     _auth = getAuth(app);
     logger.info("[Firebase] Initialized successfully");
   }
