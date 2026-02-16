@@ -87,7 +87,7 @@ export function DataTable<T>({
                   <div className="flex items-center gap-1">
                     {column.header}
                     {column.sortable && (
-                      <button className="ml-1 hover:text-foreground">
+                      <button className="ml-1 hover:text-foreground" aria-label={`Sort by ${column.header}`}>
                         <ChevronDown className="h-3 w-3" />
                       </button>
                     )}
@@ -109,9 +109,8 @@ export function DataTable<T>({
                 onClick={() => onRowClick?.(item)}
                 {...(onRowClick ? {
                   tabIndex: 0,
-                  role: "button",
                   onKeyDown: (e: React.KeyboardEvent) => {
-                    if (e.key === "Enter" || e.key === " ") {
+                    if (e.key === "Enter" && e.target === e.currentTarget) {
                       e.preventDefault();
                       onRowClick(item);
                     }

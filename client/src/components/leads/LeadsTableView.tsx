@@ -83,10 +83,9 @@ function LeadTableRow({ lead }: { lead: Lead }) {
       className="border-b last:border-b-0 transition-colors hover:bg-muted/30 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
       onClick={() => navigate(`/leads/${lead.id}`)}
       tabIndex={0}
-      role="button"
       aria-label={`View lead ${lead.clientName}`}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
+        if (e.key === "Enter" && e.target === e.currentTarget) {
           e.preventDefault();
           navigate(`/leads/${lead.id}`);
         }

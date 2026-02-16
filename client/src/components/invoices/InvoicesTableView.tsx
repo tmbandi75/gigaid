@@ -103,10 +103,9 @@ function InvoiceTableRow({ invoice }: { invoice: Invoice }) {
       className="border-b last:border-b-0 transition-colors hover:bg-muted/30 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
       onClick={() => navigate(`/invoices/${invoice.id}`)}
       tabIndex={0}
-      role="button"
       aria-label={`View invoice ${invoice.invoiceNumber || invoice.id.slice(0, 8)}`}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
+        if (e.key === "Enter" && e.target === e.currentTarget) {
           e.preventDefault();
           navigate(`/invoices/${invoice.id}`);
         }

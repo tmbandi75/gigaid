@@ -128,10 +128,9 @@ function JobTableRow({ job }: { job: Job }) {
       className="border-b last:border-b-0 transition-colors hover:bg-muted/30 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
       onClick={() => navigate(`/jobs/${job.id}`)}
       tabIndex={0}
-      role="button"
       aria-label={`View job ${job.title}`}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
+        if (e.key === "Enter" && e.target === e.currentTarget) {
           e.preventDefault();
           navigate(`/jobs/${job.id}`);
         }
