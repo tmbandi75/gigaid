@@ -1,0 +1,175 @@
+You are a senior iOS compliance engineer.
+
+Implement full App Tracking Transparency (ATT) + analytics consent gating for GigAid.
+
+CRITICAL RULE:
+PostHog MUST NOT initialize before:
+1) User has explicitly opted into analytics
+2) On iOS, ATT status is authorized (if required)
+
+-----------------------------------------
+STEP 1 — Add iOS ATT Permission String
+-----------------------------------------
+
+In ios/App/App/Info.plist add:
+
+<key>NSUserTrackingUsageDescription</key>
+<string>GigAid would like permission to use analytics to improve features and performance. We do not sell your data.</string>
+
+Ensure it appears exactly once.
+
+-----------------------------------------
+STEP 2 — Install / Implement ATT (Capacitor)
+-----------------------------------------
+
+If not already present, use @capacitor/app or a compatible ATT plugin.
+
+Create a helper:
+
+src/lib/platform/isIOSNative.ts
+
+export function isIOSNative() {
+  return (
+    window?.Capacitor?.getPlatform?.() === "ios"
+  );
+}
+
+Create:
+
+src/lib/att/requestATT.ts
+
+Logic:
+- If not iOS → return "not_required"
+- If iOS:
+   - Request tracking authorization
+   - Return status: authorized | denied | restricted | not_determined
+
+Do NOT request ATT until user has opted into analytics.
+
+-----------------------------------------
+STEP 3 — Create Analytics Consent Store
+-----------------------------------------
+
+Create:
+
+src/lib/consent/analyticsConsent.ts
+
+Store state in localStorage:
+
+key: "gigaid_analytics_consent"
+
+Possible values:
+- "granted"
+- "denied"
+- null (unknown)
+
+Export:
+- getAnalyticsConsent()
+- setAnalyticsConsent(value)
+- hasConsentedToAnalytics()
+
+-----------------------------------------
+STEP 4 — Create Consent Modal
+-----------------------------------------
+
+Create a lightweight modal component:
+
+src/components/AnalyticsConsentModal.tsx
+
+Requirements:
+- Shows on first launch if consent is null
+- Text:
+   "Allow GigAid to use analytics to improve the app experience?"
+- Buttons:
+   [Allow]  [No Thanks]
+- Link to Privacy Policy
+- Clean, minimal UI
+- Must block analytics initialization until choice made
+
+On Allow:
+   setAnalyticsConsent("granted")
+On No Thanks:
+   setAnalyticsConsent("denied")
+
+-----------------------------------------
+STEP 5 — Refactor PostHog Initialization
+-----------------------------------------
+
+Find where PostHog is initialized.
+
+Move initialization into:
+
+src/lib/analytics/initAnalytics.ts
+
+Function:
+
+export async function initAnalytics() {
+   if (!hasConsentedToAnalytics()) return;
+
+   if (isIOSNative()) {
+      const attStatus = await requestATT();
+      if (attStatus !== "authorized") return;
+   }
+
+   // Only here initialize PostHog
+   posthog.init(...)
+}
+
+CRITICAL:
+- Remove any automatic PostHog initialization from root App.tsx
+- Ensure no capture_pageview or capture_pageleave happens before initAnalytics()
+
+-----------------------------------------
+STEP 6 — App Bootstrap Update
+-----------------------------------------
+
+In App.tsx or root layout:
+
+On mount:
+- If consent === null → show AnalyticsConsentModal
+- If consent === "granted" → call initAnalytics()
+- If consent === "denied" → do nothing
+
+-----------------------------------------
+STEP 7 — Settings Toggle
+-----------------------------------------
+
+Add in Settings:
+
+Analytics:
+[ Toggle Switch ]
+
+If toggled OFF:
+- setAnalyticsConsent("denied")
+- Disable further tracking
+- If PostHog loaded, call posthog.opt_out_capturing()
+
+If toggled ON:
+- setAnalyticsConsent("granted")
+- Call initAnalytics()
+
+-----------------------------------------
+STEP 8 — SAFETY CHECK
+-----------------------------------------
+
+Add a console log during development:
+
+"Analytics initialized"
+
+Verify:
+- On first app load → NO analytics init before user choice
+- If denied → never initializes
+- If granted + ATT authorized → initializes
+- If ATT denied → never initializes
+
+-----------------------------------------
+OUTPUT FORMAT
+-----------------------------------------
+
+Return:
+- Files created
+- Files modified
+- Exact code blocks added
+- Verification steps
+- Any required npm installs
+- iOS-specific build notes
