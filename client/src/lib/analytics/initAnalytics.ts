@@ -7,6 +7,23 @@ const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST || "https://us.i.posthog.
 
 let analyticsInitialized = false;
 
+const PII_BLOCKED_KEYS = [
+  "email", "phone", "mobile", "address", "token", "uid",
+  "authorization", "bearer", "firebase", "zipcode", "ssn",
+  "personalphone", "clientphone", "clientemail", "phonee164",
+  "emailnormalized", "firebaseuid", "password", "secret",
+];
+
+function sanitizeProperties(props: Record<string, any>): Record<string, any> {
+  const clean: Record<string, any> = {};
+  for (const k in props) {
+    if (!PII_BLOCKED_KEYS.some(b => k.toLowerCase().includes(b))) {
+      clean[k] = props[k];
+    }
+  }
+  return clean;
+}
+
 export async function persistAnalyticsPreferences(prefs: Partial<AnalyticsProfile>): Promise<void> {
   try {
     const token = getAuthToken();
@@ -19,8 +36,8 @@ export async function persistAnalyticsPreferences(prefs: Partial<AnalyticsProfil
       },
       body: JSON.stringify(prefs),
     });
-  } catch (err) {
-    console.warn("[Analytics] Failed to persist preferences:", err);
+  } catch {
+    // pii-safe
   }
 }
 
@@ -29,25 +46,30 @@ function doInit(): void {
   posthog.init(POSTHOG_KEY, {
     api_host: POSTHOG_HOST,
     person_profiles: "identified_only",
-    capture_pageview: true,
-    capture_pageleave: true,
+
+    autocapture: false,
+    capture_pageview: false,
+    capture_pageleave: false,
+    disable_session_recording: true,
     disable_surveys: true,
+
+    mask_all_text: true,
+    mask_all_element_attributes: true,
+
+    sanitize_properties: sanitizeProperties,
   });
   posthog.opt_in_capturing();
   analyticsInitialized = true;
-  console.log("[Analytics] Initialized successfully");
 }
 
 export async function initAnalyticsSafely(profile: AnalyticsProfile): Promise<boolean> {
   if (analyticsInitialized) return true;
 
   if (profile.analyticsEnabled !== true) {
-    console.log("[Analytics] analytics_enabled=false — skipping");
     return false;
   }
 
   if (!POSTHOG_KEY) {
-    console.log("[Analytics] No PostHog API key — skipping");
     return false;
   }
 
@@ -58,7 +80,6 @@ export async function initAnalyticsSafely(profile: AnalyticsProfile): Promise<bo
     }
 
     if (profile.attStatus === "denied" || profile.attStatus === "restricted") {
-      console.log("[Analytics] ATT previously", profile.attStatus, "— not prompting, analytics disabled");
       return false;
     }
 
@@ -83,11 +104,9 @@ export async function initAnalyticsSafely(profile: AnalyticsProfile): Promise<bo
         analyticsEnabled: false,
         analyticsDisabledReason: reason,
       });
-      console.log("[Analytics] ATT result:", result, "— analytics disabled, reason:", reason);
       return false;
     }
 
-    console.log("[Analytics] Unhandled ATT state for iOS — fail closed");
     return false;
   }
 
@@ -98,7 +117,6 @@ export async function initAnalyticsSafely(profile: AnalyticsProfile): Promise<bo
 export function disableAnalytics(): void {
   if (analyticsInitialized && POSTHOG_KEY) {
     posthog.opt_out_capturing();
-    console.log("[Analytics] Opted out of capturing");
   }
   analyticsInitialized = false;
 }

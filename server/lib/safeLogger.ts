@@ -1,3 +1,14 @@
+/**
+ * safeLogger — Only approved logging interface for production code.
+ *
+ * DO NOT log PII (email, phone, UID, token, address, etc.) directly.
+ * Use the mask* functions below when identifiers must appear in logs.
+ *
+ * Usage:
+ *   import { maskPhone, maskEmail } from "@/lib/safeLogger";
+ *   console.log("Sent SMS to", maskPhone(user.phone));
+ */
+
 export function maskPhone(phone: string | null | undefined): string {
   if (!phone) return "[no-phone]";
   const digits = phone.replace(/\D/g, "");

@@ -230,7 +230,7 @@ router.post("/webhooks/sendgrid/inbound", async (req: Request, res: Response) =>
   try {
     const { from, to, subject, text, html, headers } = req.body;
     
-    console.log("Received inbound email:", { from, to, subject });
+    console.log("Received inbound email webhook"); // pii-safe
     
     let trackingId: string | null = null;
     let leadId: string | null = null;

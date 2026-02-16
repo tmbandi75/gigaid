@@ -8,6 +8,23 @@ import type { AnalyticsProfile } from "@/lib/att/attManager";
 
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_API_KEY;
 
+const PII_BLOCKED_KEYS = [
+  "email", "phone", "mobile", "address", "token", "uid",
+  "authorization", "bearer", "firebase", "zipcode", "ssn",
+  "password", "secret", "personalphone", "clientphone", "clientemail",
+];
+
+function stripPII(properties?: Record<string, unknown>): Record<string, unknown> {
+  if (!properties) return {};
+  const clean: Record<string, unknown> = {};
+  for (const k in properties) {
+    if (!PII_BLOCKED_KEYS.some(b => k.toLowerCase().includes(b))) {
+      clean[k] = properties[k];
+    }
+  }
+  return clean;
+}
+
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   const [showConsent, setShowConsent] = useState(false);
 
@@ -63,13 +80,13 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
 
 export function identifyUser(userId: string, properties?: Record<string, unknown>) {
   if (POSTHOG_KEY && isAnalyticsInitialized()) {
-    posthog.identify(userId, properties);
+    posthog.identify(userId, stripPII(properties));
   }
 }
 
 export function trackEvent(eventName: string, properties?: Record<string, unknown>) {
   if (POSTHOG_KEY && isAnalyticsInitialized()) {
-    posthog.capture(eventName, properties);
+    posthog.capture(eventName, stripPII(properties));
   }
 }
 

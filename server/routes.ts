@@ -3916,7 +3916,7 @@ export async function registerRoutes(
       const { From, Body, MessageSid } = req.body;
       
       if (!From || !Body) {
-        console.error("Missing required fields in Twilio webhook:", req.body);
+        console.error("Missing required fields in Twilio webhook (From or Body absent)");
         return res.status(400).send("Missing required fields");
       }
 
