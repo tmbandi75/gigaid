@@ -1,0 +1,257 @@
+REPLIT MASTER PROMPT — GigAid (Capacitor + PostgreSQL + PostHog) ATT “Denied = No Re-Prompt” + DB-Persisted Analytics Consent
+
+You are a senior privacy + full-stack engineer. Implement an Apple-friendly ATT + analytics consent upgrade for a Capacitor app using PostgreSQL and PostHog. The app currently stores consent in localStorage; we must persist consent/ATT state in the database and prevent repeated ATT prompts.
+
+GOAL
+Upgrade the current flow so that:
+- If ATT returns DENIED: log “analytics disabled due to ATT denied”, persist it, and NEVER auto re-prompt
+- ATT is ONLY re-requested when the user manually toggles Analytics ON again in Settings (the only allowed re-prompt path)
+- Analytics bootstrap must respect persisted state (fail closed; no tracking until explicitly allowed + authorized where required)
+
+STACK CONSTRAINTS
+- Frontend: Capacitor (web app in native shell)
+- Backend: Node/Express (or equivalent) + PostgreSQL
+- Analytics: PostHog
+- Consent currently: localStorage-based
+Adapt to the repo’s actual structure and conventions without asking questions.
+
+──────────────────────────────────────────────────────────────────────────────
+A) DATABASE CHANGES (PostgreSQL)
+──────────────────────────────────────────────────────────────────────────────
+1) Add new columns to the user profile table (likely users or user_profiles).
+Create a migration (SQL file) that adds:
+
+- analytics_enabled           boolean NOT NULL DEFAULT false
+- att_status                 text NOT NULL DEFAULT 'unknown'
+- att_prompted_at            timestamptz NULL
+- analytics_disabled_reason  text NULL
+
+Allowed values:
+att_status: 'authorized' | 'denied' | 'restricted' | 'not_determined' | 'unavailable' | 'unknown'
+analytics_disabled_reason: 'att_denied' | 'restricted' | 'user_disabled' | 'not_supported' | 'unknown'
+
+If the table name differs, locate the canonical user profile table and apply there.
+Add a lightweight index if there’s an existing profile fetch path where it matters (optional).
+
+2) (Optional but recommended) Add an internal privacy events table to log consent state changes without using PostHog.
+Create migration:
+
+CREATE TABLE IF NOT EXISTS privacy_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  event_name text NOT NULL,
+  payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+Add FK if the project uses them; otherwise keep it simple.
+
+──────────────────────────────────────────────────────────────────────────────
+B) API CHANGES (Persist Preferences Server-Side)
+──────────────────────────────────────────────────────────────────────────────
+Create or update endpoints to read/write these preferences.
+
+1) GET /api/profile (or existing profile endpoint)
+Ensure the response includes:
+- analytics_enabled
+- att_status
+- att_prompted_at
+- analytics_disabled_reason
+
+2) PATCH /api/profile/analytics-preferences
+Implement a secure endpoint that:
+- Requires auth
+- Validates payload
+- Updates ONLY the fields provided (partial update)
+- Writes an internal privacy_events record for meaningful changes (see section D)
+
+Payload example:
+{
+  "analytics_enabled": true,
+  "att_status": "authorized",
+  "att_prompted_at": "2026-02-15T22:00:00Z",
+  "analytics_disabled_reason": null
+}
+
+Validation rules:
+- analytics_enabled must be boolean if provided
+- att_status must be one of allowed enum values if provided
+- analytics_disabled_reason must be one of allowed enum values or null
+- att_prompted_at must be ISO timestamp or null
+
+FAIL CLOSED:
+If user is missing profile, create defaults (analytics_enabled=false, att_status='unknown') and return it.
+
+──────────────────────────────────────────────────────────────────────────────
+C) FRONTEND — ATT MANAGER (Capacitor)
+──────────────────────────────────────────────────────────────────────────────
+Implement a single source of truth module, for example:
+src/privacy/attManager.ts (or closest equivalent)
+
+Expose:
+- getATTStatus(): Promise<'authorized'|'denied'|'restricted'|'not_determined'|'unavailable'>
+- requestATT(): Promise<same statuses>
+- shouldRequestATT(profile): boolean
+- requestATTIfAllowed(profile): Promise<same statuses>  (requests ONLY when safe)
+
+Important constraints:
+- ATT only exists on iOS. On Android/Web return 'unavailable'.
+- NEVER automatically request ATT if profile.att_status is 'denied' or 'restricted'
+- NEVER automatically request ATT if profile.att_prompted_at is set AND status is not 'not_determined'
+- Only request ATT automatically when ALL are true:
+  (a) profile.analytics_enabled === true
+  (b) platform is iOS
+  (c) profile.att_status is 'unknown' or 'not_determined'
+  (d) profile.att_prompted_at is null (never prompted)
+
+Implementation detail:
+- Use existing Capacitor plugin(s) if already present.
+- If none exist, implement a safe fallback:
+  - For iOS: call native bridge (Capacitor plugin) only if already in repo
+  - If not available, treat as 'unavailable' and do not prompt; keep analytics off
+DO NOT add new native dependencies unless absolutely necessary. Prefer what exists.
+
+──────────────────────────────────────────────────────────────────────────────
+D) FRONTEND — ANALYTICS BOOTSTRAP (PostHog)
+──────────────────────────────────────────────────────────────────────────────
+Refactor analytics initialization to obey persisted preferences.
+
+Create/update:
+src/analytics/initAnalytics.ts (or equivalent)
+
+Add:
+- initAnalyticsSafely(profile): Promise<void>
+- disableAnalytics(): void
+
+Rules:
+1) If profile.analytics_enabled !== true:
+   - disableAnalytics()
+   - do NOT init PostHog
+2) If iOS:
+   - If profile.att_status === 'authorized': init PostHog
+   - If 'denied' or 'restricted': disableAnalytics() (do NOT prompt)
+   - If 'unknown' or 'not_determined':
+       - Only prompt via requestATTIfAllowed(profile)
+       - Persist results to server
+       - If authorized: init PostHog
+       - If denied/restricted: disable + persist analytics_disabled_reason
+3) If Android/Web:
+   - init PostHog only if analytics_enabled === true (no ATT)
+
+Disable means “no events sent”:
+- If you already create the PostHog client, call opt-out/disable APIs OR don’t instantiate client until allowed.
+- Ensure no identify/capture calls happen when disabled. If needed, wrap capture in a guard.
+
+──────────────────────────────────────────────────────────────────────────────
+E) FRONTEND — SETTINGS TOGGLE (Only Manual Re-Prompt Path)
+──────────────────────────────────────────────────────────────────────────────
+In Settings → Privacy (or wherever consent lives), add:
+
+Toggle: “Enable Usage Analytics” (default OFF)
+
+Helper text:
+“We use anonymous usage data to improve reliability and features. You can change this anytime.”
+
+Behavior:
+1) Toggle OFF:
+- Immediately set profile.analytics_enabled = false
+- Set analytics_disabled_reason = 'user_disabled'
+- Persist via PATCH /api/profile/analytics-preferences
+- Call disableAnalytics()
+
+2) Toggle ON:
+- Persist analytics_enabled = true (optimistic UI ok)
+- If iOS:
+   a) If att_status is 'denied' or 'restricted':
+      - DO NOT request ATT again automatically (Apple-safe)
+      - Show a non-blocking modal/toast:
+        “Tracking is disabled in iOS settings. To enable analytics, allow tracking in Settings → Privacy & Security → Tracking.”
+      - Provide “Open Settings” button using Capacitor (App.openUrl / Linking.openSettings equivalent if available)
+      - Keep analytics disabled until status becomes authorized (which requires OS settings change)
+      - Record internal event: analytics_reenable_attempt (see section F)
+   b) If att_status is 'unknown' or 'not_determined':
+      - This is the ONLY allowed re-prompt path:
+        - Call requestATT() once as the direct result of the user action
+        - Persist att_prompted_at=now, att_status=result
+        - If authorized: init PostHog
+        - If denied/restricted: set analytics_disabled_reason accordingly and keep disabled
+      - Record internal event: analytics_reenable_attempt
+- If Android/Web:
+   - init PostHog immediately after persisting analytics_enabled=true
+
+CRITICAL:
+- Do not re-prompt ATT on app start if previously denied.
+- The only time requestATT() can be called is:
+  - user toggles analytics ON AND status is 'unknown' or 'not_determined' AND previously not prompted (or prompted but still not_determined)
+  - OR first-time enable with not_determined (still user-driven if your product treats enable as consent)
+
+──────────────────────────────────────────────────────────────────────────────
+F) INTERNAL PRIVACY EVENT LOGGING (No External Analytics While Disabled)
+──────────────────────────────────────────────────────────────────────────────
+When ATT is denied:
+- Persist: att_status='denied', analytics_disabled_reason='att_denied'
+- Create privacy_events row:
+  event_name='analytics_disabled_att_denied'
+  payload includes: { platform:'ios', att_status:'denied', timestamp, app_version/build if available }
+
+When user attempts enable analytics (toggle ON):
+- Create privacy_events row:
+  event_name='analytics_reenable_attempt'
+  payload: { platform, previous_att_status, timestamp }
+
+IMPORTANT:
+Do NOT send these events to PostHog when analytics is disabled.
+
+──────────────────────────────────────────────────────────────────────────────
+G) APP STARTUP WIRING
+──────────────────────────────────────────────────────────────────────────────
+Update the app bootstrap (e.g., App.tsx / main.ts / provider setup):
+1) Fetch profile from server at startup (or use existing profile fetch)
+2) Call initAnalyticsSafely(profile)
+3) Ensure initAnalyticsSafely is idempotent and does not prompt ATT when denied/restricted
+
+If profile fetch fails:
+- default to analytics disabled (fail closed)
+- do not initialize PostHog
+- do not prompt ATT
+
+──────────────────────────────────────────────────────────────────────────────
+H) TESTS (Minimum Coverage)
+──────────────────────────────────────────────────────────────────────────────
+Add tests using the repo’s existing framework (Jest/Vitest/etc.):
+
+1) Startup: iOS + att_status='denied' + analytics_enabled=true
+   - requestATT NOT called
+   - PostHog NOT initialized
+
+2) Settings toggle ON: iOS + att_status='unknown'
+   - requestATT called exactly once
+   - result persisted (PATCH called)
+   - if denied: analytics_disabled_reason='att_denied', PostHog not init
+
+3) Settings toggle ON: iOS + att_status='denied'
+   - requestATT NOT called
+   - guidance UI shown (toast/modal)
+   - PostHog not init
+
+4) Toggle OFF always:
+   - PostHog disabled
+   - analytics_enabled=false persisted
+
+──────────────────────────────────────────────────────────────────────────────
+I) OUTPUT REQUIREMENTS
+──────────────────────────────────────────────────────────────────────────────
+When done, print:
+1) Files changed (paths)
+2) SQL migration(s) added
+3) New/updated functions + where they’re used
+4) Manual verification steps (3–5 bullets)
+5) Notes on any platform limitations (e.g., ATT plugin availability)
+
+DO NOT
+- Add repeated ATT prompts
+- Prompt ATT on startup if previously denied
+- Send any analytics events while analytics is disabled
+- Introduce large refactors unless required
+
+Proceed now: scan the repo, implement end-to-end, and keep changes minimal and safe.

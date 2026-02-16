@@ -1,0 +1,57 @@
+REPLIT MASTER PROMPT — GigAid (Supabase + RN/Expo) ATT “Denied = No Re-Prompt” + Analytics Toggle
+
+You are a senior privacy + mobile engineer. Implement an Apple-friendly ATT flow upgrade in GigAid.
+
+GOAL
+Upgrade the current flow:
+  Consent granted → request ATT → if authorized → init analytics
+to the safer flow:
+  - If ATT returns denied: explicitly record “analytics disabled due to ATT denied”
+  - NEVER re-request ATT automatically on app launch or future sessions
+  - Only re-request ATT if the user manually toggles Analytics ON again in Settings
+Apple dislikes repeated ATT prompts.
+
+ASSUMPTIONS (confirm by searching repo and adapting)
+- App is React Native / Expo (or RN without Expo).
+- Supabase is used for auth + user profile storage.
+- There is an existing analytics client (PostHog/Segment/Amplitude/etc.) OR a custom analytics wrapper.
+- There is a Settings screen with toggles.
+If any assumption is wrong, adapt implementation to the closest equivalent without asking me questions.
+
+IMPLEMENTATION REQUIREMENTS
+
+1) Add Supabase columns (persisted per user)
+Find the user profile table (likely: public.profiles or public.users_profile).
+Add these columns via a safe migration:
+- analytics_enabled boolean NOT NULL DEFAULT false
+- att_status text NOT NULL DEFAULT 'unknown'
+- att_prompted_at timestamptz NULL
+- analytics_disabled_reason text NULL   (values like 'att_denied', 'restricted', 'user_disabled')
+
+If your schema already has similar fields, reuse them and do not duplicate.
+
+2) Add a single source of truth: Privacy/Analytics manager
+Create a module (or update existing):
+- src/privacy/attManager.ts (or closest existing folder structure)
+Expose:
+- getATTStatus(): Promise<'authorized'|'denied'|'restricted'|'not_determined'|'unavailable'>
+- requestATTIfAllowed(): Promise<same statuses>
+- shouldRequestATT(userProfile): boolean
+Rules:
+- If platform != iOS, return 'unavailable' and do nothing else.
+- If userProfile.att_status === 'denied' OR 'restricted': NEVER request again automatically.
+- If userProfile.att_prompted_at is set and status != 'not_determined': do not request.
+- Only request automatically when status is 'not_determined' AND user has analytics_enabled = true AND has never been prompted.
+
+Implementation detail:
+- Use the proper ATT library already present in repo.
+  - If Expo: use `expo-tracking-transparency` (TrackingTransparency.getTrackingPermissionsAsync / requestTrackingPermissionsAsync)
+  - If bare RN: use `react-native-tracking-transparency` or existing dependency.
+Do NOT add a new dependency unless absolutely necessary; prefer what’s already installed.
+
+3) Refactor analytics bootstrap to obey gating
+Find where analytics initializes (e.g., app startup, providers, analytics.ts).
+Implement a wrapper:
+- initAnalyticsSafely(userProfile)
+Behavior:
+- If userProfile.analytics_enab_
