@@ -267,6 +267,7 @@ export function AvailabilityEditor({ availability, slotDuration, onChange }: Ava
                     <Switch
                       checked={currentAvailability[expandedDay].enabled}
                       onCheckedChange={(enabled) => updateDay(expandedDay, { enabled })}
+                      aria-label={`Toggle ${DAYS.find(d => d.key === expandedDay)?.fullLabel} availability`}
                       data-testid={`switch-${expandedDay}`}
                     />
                   </div>

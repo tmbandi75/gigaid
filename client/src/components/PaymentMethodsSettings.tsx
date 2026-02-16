@@ -319,6 +319,7 @@ export function PaymentMethodsSettings({ onStripeToggle }: PaymentMethodsSetting
                     <Switch
                       checked={methodStates[selectedMethod].isEnabled}
                       onCheckedChange={() => toggleMethod(selectedMethod)}
+                      aria-label={`Toggle ${PAYMENT_METHODS.find(m => m.type === selectedMethod)?.label} enabled`}
                       data-testid={`switch-${selectedMethod}`}
                     />
                   </div>

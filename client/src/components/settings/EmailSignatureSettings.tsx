@@ -149,6 +149,7 @@ export function EmailSignatureSettings() {
             <Switch
               checked={includeLogo}
               onCheckedChange={(checked) => handleChange("includeLogo", checked)}
+              aria-label="Toggle Include Logo in Emails"
               data-testid="switch-include-logo"
             />
           </div>

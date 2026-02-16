@@ -179,6 +179,7 @@ export default function PublicReview() {
                           id="photos-public"
                           checked={photosPublic}
                           onCheckedChange={setPhotosPublic}
+                          aria-label="Toggle Make photos public on review"
                           data-testid="switch-photos-public"
                         />
                       </div>

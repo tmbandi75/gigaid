@@ -646,6 +646,7 @@ export default function BookingRequests() {
                             }
                           }}
                           disabled={selectedBooking.waiveRescheduleFee || waiveFeeMutation.isPending}
+                          aria-label="Toggle Waive reschedule fee"
                           data-testid="switch-waive-fee"
                         />
                       </div>

@@ -137,6 +137,7 @@ export function AutomationSettings() {
               <Switch
                 checked={confirmEnabled}
                 onCheckedChange={setConfirmEnabled}
+                aria-label="Toggle Auto Booking Confirmation"
                 data-testid="switch-confirm-enabled"
               />
             </div>
@@ -177,6 +178,7 @@ export function AutomationSettings() {
               <Switch
                 checked={followupEnabled}
                 onCheckedChange={setFollowupEnabled}
+                aria-label="Toggle Auto Follow-up"
                 data-testid="switch-followup-enabled"
               />
             </div>
@@ -226,6 +228,7 @@ export function AutomationSettings() {
               <Switch
                 checked={reminderEnabled}
                 onCheckedChange={setReminderEnabled}
+                aria-label="Toggle Payment Reminder"
                 data-testid="switch-reminder-enabled"
               />
             </div>

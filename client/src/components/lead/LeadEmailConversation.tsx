@@ -294,6 +294,7 @@ export function LeadEmailConversation({ leadId, clientEmail, clientName, service
                   id="include-signature"
                   checked={includeSignature}
                   onCheckedChange={setIncludeSignature}
+                  aria-label="Toggle Include signature"
                   data-testid="switch-include-signature"
                 />
                 <Label htmlFor="include-signature" className="text-sm">Include signature</Label>

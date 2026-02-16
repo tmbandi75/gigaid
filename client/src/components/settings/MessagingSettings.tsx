@@ -210,6 +210,7 @@ export function MessagingSettings() {
                     }
                   }}
                   disabled={updateProfileMutation.isPending}
+                  aria-label="Toggle Keep replies inside GigAid"
                   data-testid="switch-in-app-inbox"
                 />
               </div>
@@ -242,7 +243,7 @@ export function MessagingSettings() {
                       Replies will appear in GigAid instead of your phone.
                     </p>
                   </div>
-                  <Switch checked={false} disabled />
+                  <Switch checked={false} disabled aria-label="Toggle Keep replies inside GigAid" />
                 </div>
               </div>
               <div className="absolute top-1 right-1 h-5 w-5 rounded-full bg-muted/80 flex items-center justify-center z-10" aria-hidden="true">

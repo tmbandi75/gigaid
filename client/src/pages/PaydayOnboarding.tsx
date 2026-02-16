@@ -383,6 +383,7 @@ function StepDeposits({ onNext }: { onNext: () => void }) {
           <Switch
             checked={enabled}
             onCheckedChange={handleToggle}
+            aria-label="Toggle Enable deposits"
             data-testid="switch-deposit-enabled"
           />
         </div>

@@ -699,6 +699,7 @@ export default function Settings() {
                     <Switch
                       checked={settings.noShowProtectionEnabled}
                       onCheckedChange={(checked) => setSettings({ ...settings, noShowProtectionEnabled: checked })}
+                      aria-label="Toggle Protect me from no-shows"
                       data-testid="switch-no-show-protection"
                     />
                   </div>
@@ -751,6 +752,7 @@ export default function Settings() {
               <Switch
                 checked={settings.publicProfileEnabled}
                 onCheckedChange={(checked) => setSettings({ ...settings, publicProfileEnabled: checked })}
+                aria-label="Toggle Enable Public Profile"
                 data-testid="switch-public-profile"
               />
             </div>
@@ -852,6 +854,7 @@ export default function Settings() {
                   <Switch
                     checked={settings.showReviewsOnBooking}
                     onCheckedChange={(checked) => setSettings({ ...settings, showReviewsOnBooking: checked })}
+                    aria-label="Toggle Show Reviews"
                     data-testid="switch-show-reviews"
                   />
                 </div>
@@ -869,6 +872,7 @@ export default function Settings() {
                   <Switch
                     checked={settings.publicEstimationEnabled}
                     onCheckedChange={(checked) => setSettings({ ...settings, publicEstimationEnabled: checked })}
+                    aria-label="Toggle Public Price Estimates"
                     data-testid="switch-public-estimation"
                   />
                 </div>
@@ -969,6 +973,7 @@ export default function Settings() {
                   <Switch
                     checked={settings.notifyBySms}
                     onCheckedChange={(checked) => setSettings({ ...settings, notifyBySms: checked })}
+                    aria-label="Toggle SMS Notifications"
                     data-testid="switch-notify-sms"
                   />
                 </div>
@@ -980,6 +985,7 @@ export default function Settings() {
                   <Switch
                     checked={settings.notifyByEmail}
                     onCheckedChange={(checked) => setSettings({ ...settings, notifyByEmail: checked })}
+                    aria-label="Toggle Email Notifications"
                     data-testid="switch-notify-email"
                   />
                 </div>
@@ -1006,6 +1012,7 @@ export default function Settings() {
                       updateFeatureFlag.mutate({ key: "ai_micro_nudges", enabled: checked });
                     }}
                     disabled={updateFeatureFlag.isPending}
+                    aria-label="Toggle Smart Action Nudges"
                     data-testid="switch-ai-nudges"
                   />
                 </div>
@@ -1055,6 +1062,7 @@ export default function Settings() {
                   <Switch
                     checked={analyticsEnabled}
                     onCheckedChange={handleAnalyticsToggle}
+                    aria-label="Toggle Enable usage analytics"
                     data-testid="switch-analytics"
                   />
                 </div>

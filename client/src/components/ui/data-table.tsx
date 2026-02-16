@@ -120,7 +120,7 @@ export function DataTable<T>({
                   <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Open row actions menu">
+                        <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" aria-label="Open row actions menu">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>

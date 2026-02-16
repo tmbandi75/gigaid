@@ -113,6 +113,7 @@ export default function FollowUpSettingsPage() {
                   <Switch
                     checked={rule.enabled}
                     onCheckedChange={(checked) => updateRule(index, "enabled", checked)}
+                    aria-label={`Toggle ${meta?.name}`}
                     data-testid={`switch-enabled-${rule.ruleType}`}
                   />
                 </div>

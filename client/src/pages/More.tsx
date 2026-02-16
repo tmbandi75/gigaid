@@ -298,6 +298,7 @@ export default function More() {
               <Switch 
                 checked={darkMode} 
                 onCheckedChange={toggleDarkMode}
+                aria-label="Toggle Dark mode"
                 data-testid="switch-dark-mode"
               />
             </div>

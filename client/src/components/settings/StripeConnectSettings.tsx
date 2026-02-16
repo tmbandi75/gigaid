@@ -287,6 +287,7 @@ export function StripeConnectSettings() {
               <Switch
                 checked={depositSettings.depositEnabled}
                 onCheckedChange={(checked) => setDepositSettings({ ...depositSettings, depositEnabled: checked })}
+                aria-label="Toggle Require Deposits"
                 data-testid="switch-deposit-enabled"
               />
             </div>
