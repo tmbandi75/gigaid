@@ -678,6 +678,55 @@ export function SubscriptionSettings() {
         </CardContent>
       </Card>
 
+      {/* Subscription & Billing Disclosure */}
+      <Card data-testid="card-subscription-disclosure">
+        <CardContent className="p-4">
+          <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
+            Subscription Info
+          </h3>
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <p data-testid="text-subscription-disclosure">
+              Gig Aid subscriptions are for business management services (job scheduling,
+              invoicing, client management, and automation tools) — not digital content
+              or media. Payments are processed securely through Stripe via our website.
+            </p>
+
+            <div className="space-y-2">
+              <p className="font-medium text-foreground text-xs">How to manage your subscription:</p>
+              <ul className="list-disc pl-5 space-y-1 text-xs">
+                <li>
+                  <strong>Upgrade</strong> — Tap "Upgrade" above or visit the Pricing page to
+                  choose a higher plan. You'll be directed to a secure checkout on our website.
+                </li>
+                <li>
+                  <strong>Cancel</strong> — Use the "Cancel subscription" option below. Your access
+                  continues until the end of your current billing period.
+                </li>
+                <li>
+                  <strong>Manage billing</strong> — Tap "Manage Billing" above to update your payment
+                  method, view invoices, or change your plan through the Stripe billing portal.
+                </li>
+              </ul>
+            </div>
+
+            <p className="text-xs">
+              If you previously subscribed through Apple's App Store, you can manage that
+              subscription at{" "}
+              <a
+                href="https://apps.apple.com/account/subscriptions"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+                data-testid="link-apple-subscriptions"
+              >
+                Apple Subscription Settings
+              </a>.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Account Management */}
       <Card>
         <CardContent className="p-4">

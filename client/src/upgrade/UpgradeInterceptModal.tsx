@@ -96,6 +96,9 @@ export function UpgradeInterceptModal({
           >
             Not now
           </Button>
+          <p className="text-[10px] text-muted-foreground text-center mt-1" data-testid="text-upgrade-intercept-disclosure">
+            Payment is for business management tools, processed via Stripe on our website.
+          </p>
         </DialogFooter>
       </DialogContent>
     </Dialog>

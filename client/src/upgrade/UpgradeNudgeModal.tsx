@@ -146,6 +146,9 @@ export function UpgradeNudgeModal({
           >
             {secondaryCta}
           </Button>
+          <p className="text-[10px] text-muted-foreground text-center mt-1" data-testid="text-upgrade-nudge-disclosure">
+            Payment is for business management tools, processed via Stripe on our website.
+          </p>
         </DialogFooter>
       </DialogContent>
     </Dialog>
