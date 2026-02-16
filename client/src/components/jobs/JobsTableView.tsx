@@ -125,8 +125,17 @@ function JobTableRow({ job }: { job: Job }) {
 
   return (
     <tr
-      className="border-b last:border-b-0 transition-colors hover:bg-muted/30 cursor-pointer"
+      className="border-b last:border-b-0 transition-colors hover:bg-muted/30 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
       onClick={() => navigate(`/jobs/${job.id}`)}
+      tabIndex={0}
+      role="button"
+      aria-label={`View job ${job.title}`}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          navigate(`/jobs/${job.id}`);
+        }
+      }}
       data-testid={`table-row-job-${job.id}`}
     >
       <td className="px-4 py-4">
@@ -237,7 +246,7 @@ function JobTableRow({ job }: { job: Job }) {
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" aria-label="Job actions">
+              <Button variant="ghost" size="icon" aria-label="Job actions">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>

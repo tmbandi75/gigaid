@@ -80,8 +80,17 @@ function LeadTableRow({ lead }: { lead: Lead }) {
 
   return (
     <tr
-      className="border-b last:border-b-0 transition-colors hover:bg-muted/30 cursor-pointer"
+      className="border-b last:border-b-0 transition-colors hover:bg-muted/30 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
       onClick={() => navigate(`/leads/${lead.id}`)}
+      tabIndex={0}
+      role="button"
+      aria-label={`View lead ${lead.clientName}`}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          navigate(`/leads/${lead.id}`);
+        }
+      }}
       data-testid={`table-row-lead-${lead.id}`}
     >
       <td className="px-4 py-4">
@@ -149,7 +158,7 @@ function LeadTableRow({ lead }: { lead: Lead }) {
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" aria-label="Lead actions">
+              <Button variant="ghost" size="icon" aria-label="Lead actions">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>

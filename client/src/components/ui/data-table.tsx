@@ -104,9 +104,19 @@ export function DataTable<T>({
               <tr
                 key={getRowId(item)}
                 className={`border-b last:border-b-0 transition-colors hover:bg-muted/30 ${
-                  onRowClick ? "cursor-pointer" : ""
+                  onRowClick ? "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" : ""
                 }`}
                 onClick={() => onRowClick?.(item)}
+                {...(onRowClick ? {
+                  tabIndex: 0,
+                  role: "button",
+                  onKeyDown: (e: React.KeyboardEvent) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onRowClick(item);
+                    }
+                  },
+                } : {})}
                 data-testid={`table-row-${getRowId(item)}`}
               >
                 {columns.map((column) => (
@@ -120,7 +130,7 @@ export function DataTable<T>({
                   <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" aria-label="Open row actions menu">
+                        <Button variant="ghost" size="icon" aria-label="Open row actions menu">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>

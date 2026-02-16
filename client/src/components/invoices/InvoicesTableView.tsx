@@ -100,8 +100,17 @@ function InvoiceTableRow({ invoice }: { invoice: Invoice }) {
 
   return (
     <tr
-      className="border-b last:border-b-0 transition-colors hover:bg-muted/30 cursor-pointer"
+      className="border-b last:border-b-0 transition-colors hover:bg-muted/30 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
       onClick={() => navigate(`/invoices/${invoice.id}`)}
+      tabIndex={0}
+      role="button"
+      aria-label={`View invoice ${invoice.invoiceNumber || invoice.id.slice(0, 8)}`}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          navigate(`/invoices/${invoice.id}`);
+        }
+      }}
       data-testid={`table-row-invoice-${invoice.id}`}
     >
       <td className="px-4 py-4">
@@ -166,7 +175,7 @@ function InvoiceTableRow({ invoice }: { invoice: Invoice }) {
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" aria-label="Invoice actions">
+              <Button variant="ghost" size="icon" aria-label="Invoice actions">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
