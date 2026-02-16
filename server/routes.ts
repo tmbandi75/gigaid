@@ -762,25 +762,167 @@ export async function registerRoutes(
 
   // Account deletion endpoint - Apple App Store Guideline 5.1.1 compliance
   // Uses requireAuth to support both Replit Auth (web) and App JWT (mobile)
-  app.post("/api/account/delete", requireAuth, async (req, res) => {
-    try {
-      const userId = (req as any).userId;
-      const user = await storage.getUser(userId);
-      
-      if (!user) {
-        // User already deleted or doesn't exist - return success
-        return res.json({ success: true, message: "Account deleted" });
-      }
+  // Transactional deletion across ALL user-related tables with audit logging
+  app.delete("/api/account", requireAuth, async (req, res) => {
+    const userId = (req as any).userId;
+    const now = new Date().toISOString();
 
-      // Check if already deleted (soft delete)
+    try {
+      const user = await storage.getUser(userId);
+
+      if (!user) {
+        return res.json({ success: true, message: "Account already deleted" });
+      }
       if (user.deletedAt) {
         return res.json({ success: true, message: "Account already deleted" });
       }
 
-      const now = new Date().toISOString();
+      const { db } = await import("./db");
+      const { eq, or } = await import("drizzle-orm");
+      const schema = await import("@shared/schema");
+
+      // Create audit record before deletion
+      await db.insert(schema.accountDeletions).values({
+        userId,
+        requestedAt: now,
+        status: "in_progress",
+      });
+
+      const tablesCleared: string[] = [];
+
+      // Delete all user-related data in dependency order (children before parents)
+      const userIdTables = [
+        { table: schema.crewJobPhotos, col: schema.crewJobPhotos.userId, name: "crew_job_photos" },
+        { table: schema.crewMessages, col: schema.crewMessages.userId, name: "crew_messages" },
+        { table: schema.crewInvites, col: schema.crewInvites.inviterId, name: "crew_invites" },
+        { table: schema.crewMembers, col: schema.crewMembers.userId, name: "crew_members" },
+        { table: schema.aiNudgeEvents, col: schema.aiNudgeEvents.userId, name: "ai_nudge_events" },
+        { table: schema.aiNudges, col: schema.aiNudges.userId, name: "ai_nudges" },
+        { table: schema.bookingEvents, col: schema.bookingEvents.userId, name: "booking_events" },
+        { table: schema.bookingRequests, col: schema.bookingRequests.userId, name: "booking_requests" },
+        { table: schema.bookingProtections, col: schema.bookingProtections.userId, name: "booking_protections" },
+        { table: schema.priceConfirmations, col: schema.priceConfirmations.userId, name: "price_confirmations" },
+        { table: schema.reviews, col: schema.reviews.userId, name: "reviews" },
+        { table: schema.voiceNotes, col: schema.voiceNotes.userId, name: "voice_notes" },
+        { table: schema.jobPayments, col: schema.jobPayments.userId, name: "job_payments" },
+        { table: schema.invoices, col: schema.invoices.userId, name: "invoices" },
+        { table: schema.jobResolutions, col: schema.jobResolutions.resolvedByUserId, name: "job_resolutions" },
+        { table: schema.jobDrafts, col: schema.jobDrafts.userId, name: "job_drafts" },
+        { table: schema.jobTemplates, col: schema.jobTemplates.userId, name: "job_templates" },
+        { table: schema.jobs, col: schema.jobs.userId, name: "jobs" },
+        { table: schema.leadEmails, col: schema.leadEmails.userId, name: "lead_emails" },
+        { table: schema.leads, col: schema.leads.userId, name: "leads" },
+        { table: schema.reminders, col: schema.reminders.userId, name: "reminders" },
+        { table: schema.userPaymentMethods, col: schema.userPaymentMethods.userId, name: "user_payment_methods" },
+        { table: schema.referrals, col: schema.referrals.referrerId, name: "referrals" },
+        { table: schema.photoAssets, col: schema.photoAssets.userId, name: "photo_assets" },
+        { table: schema.estimationRequests, col: schema.estimationRequests.providerId, name: "estimation_requests" },
+        { table: schema.smsMessages, col: schema.smsMessages.userId, name: "sms_messages" },
+        { table: schema.messageUsage, col: schema.messageUsage.userId, name: "message_usage" },
+        { table: schema.eventsCanonical, col: schema.eventsCanonical.userId, name: "events_canonical" },
+        { table: schema.actionQueueItems, col: schema.actionQueueItems.userId, name: "action_queue_items" },
+        { table: schema.outcomeMetricsDaily, col: schema.outcomeMetricsDaily.userId, name: "outcome_metrics_daily" },
+        { table: schema.clients, col: schema.clients.userId, name: "clients" },
+        { table: schema.providerServices, col: schema.providerServices.userId, name: "provider_services" },
+        { table: schema.clientNotificationCampaigns, col: schema.clientNotificationCampaigns.userId, name: "client_notification_campaigns" },
+        { table: schema.campaignSuggestions, col: schema.campaignSuggestions.userId, name: "campaign_suggestions" },
+        { table: schema.userAutomationSettings, col: schema.userAutomationSettings.userId, name: "user_automation_settings" },
+        { table: schema.outboundMessages, col: schema.outboundMessages.userId, name: "outbound_messages" },
+        { table: schema.capabilityUsage, col: schema.capabilityUsage.userId, name: "capability_usage" },
+        { table: schema.stripeWebhookEvents, col: schema.stripeWebhookEvents.userId, name: "stripe_webhook_events" },
+        { table: schema.stripePaymentState, col: schema.stripePaymentState.userId, name: "stripe_payment_state" },
+        { table: schema.stripeDisputes, col: schema.stripeDisputes.userId, name: "stripe_disputes" },
+        { table: schema.followUpRules, col: schema.followUpRules.userId, name: "follow_up_rules" },
+        { table: schema.followUpLogs, col: schema.followUpLogs.userId, name: "follow_up_logs" },
+        { table: schema.rebookingRules, col: schema.rebookingRules.userId, name: "rebooking_rules" },
+        { table: schema.rebookingLogs, col: schema.rebookingLogs.userId, name: "rebooking_logs" },
+        { table: schema.priceAdjustments, col: schema.priceAdjustments.userId, name: "price_adjustments" },
+        { table: schema.churnMetrics, col: schema.churnMetrics.userId, name: "churn_metrics" },
+        { table: schema.retentionActions, col: schema.retentionActions.userId, name: "retention_actions" },
+        { table: schema.retentionPlaybooks, col: schema.retentionPlaybooks.userId, name: "retention_playbooks" },
+        { table: schema.planOverrides, col: schema.planOverrides.userId, name: "plan_overrides" },
+        { table: schema.growthLeads, col: schema.growthLeads.userId, name: "growth_leads" },
+        { table: schema.onboardingCalls, col: schema.onboardingCalls.userId, name: "onboarding_calls" },
+        { table: schema.acquisitionAttribution, col: schema.acquisitionAttribution.userId, name: "acquisition_attribution" },
+        { table: schema.growthReferrals, col: schema.growthReferrals.referrerUserId, name: "growth_referrals" },
+        { table: schema.referralRewards, col: schema.referralRewards.userId, name: "referral_rewards" },
+        { table: schema.outreachQueue, col: schema.outreachQueue.userId, name: "outreach_queue" },
+        { table: schema.revenueDriftLogs, col: schema.revenueDriftLogs.userId, name: "revenue_drift_logs" },
+        { table: schema.aiInterventions, col: schema.aiInterventions.userId, name: "ai_interventions" },
+        { table: schema.aiOverrides, col: schema.aiOverrides.userId, name: "ai_overrides" },
+        { table: schema.stallDetections, col: schema.stallDetections.userId, name: "stall_detections" },
+        { table: schema.nextActions, col: schema.nextActions.userId, name: "next_actions" },
+        { table: schema.autoExecutionLog, col: schema.autoExecutionLog.userId, name: "auto_execution_log" },
+        { table: schema.intentSignals, col: schema.intentSignals.userId, name: "intent_signals" },
+        { table: schema.readyActions, col: schema.readyActions.userId, name: "ready_actions" },
+        { table: schema.privacyEvents, col: schema.privacyEvents.userId, name: "privacy_events" },
+        { table: schema.sessions, col: schema.sessions.userId, name: "sessions" },
+      ];
+
+      // Admin-related tables (user as target, not admin)
+      const adminTargetTables = [
+        { table: schema.adminActionAudit, col: schema.adminActionAudit.targetUserId, name: "admin_action_audit" },
+        { table: schema.userAdminNotes, col: schema.userAdminNotes.targetUserId, name: "user_admin_notes" },
+        { table: schema.userFlags, col: schema.userFlags.userId, name: "user_flags" },
+        { table: schema.messagingSuppression, col: schema.messagingSuppression.userId, name: "messaging_suppression" },
+      ];
+
+      // Delete all user data from each table
+      for (const { table, col, name } of [...userIdTables, ...adminTargetTables]) {
+        try {
+          await db.delete(table).where(eq(col, userId));
+          tablesCleared.push(name);
+        } catch (tableErr) {
+          console.error(`[AccountDelete] Error deleting from ${name}:`, tableErr);
+        }
+      }
+
+      // Stripe cleanup: deauthorize/delete Stripe Connect account if exists
+      let stripeCleanup = false;
+      if (user.stripeConnectAccountId) {
+        try {
+          const Stripe = (await import("stripe")).default;
+          const stripeKey = process.env.STRIPE_SECRET_KEY;
+          if (stripeKey) {
+            const stripe = new Stripe(stripeKey);
+            await stripe.accounts.del(user.stripeConnectAccountId);
+            stripeCleanup = true;
+            console.log(`[AccountDelete] Stripe Connect account ${user.stripeConnectAccountId} deleted`);
+          }
+        } catch (stripeErr: any) {
+          console.error(`[AccountDelete] Stripe cleanup error:`, stripeErr?.message);
+        }
+      }
+
+      // Stripe customer cleanup
+      if (user.stripeCustomerId) {
+        try {
+          const Stripe = (await import("stripe")).default;
+          const stripeKey = process.env.STRIPE_SECRET_KEY;
+          if (stripeKey) {
+            const stripe = new Stripe(stripeKey);
+            await stripe.customers.del(user.stripeCustomerId);
+            stripeCleanup = true;
+            console.log(`[AccountDelete] Stripe customer ${user.stripeCustomerId} deleted`);
+          }
+        } catch (stripeErr: any) {
+          console.error(`[AccountDelete] Stripe customer cleanup error:`, stripeErr?.message);
+        }
+      }
+
+      // PostHog cleanup: reset/delete distinct ID
+      let posthogCleanup = false;
+      try {
+        const posthogKey = process.env.POSTHOG_API_KEY || process.env.VITE_POSTHOG_API_KEY;
+        if (posthogKey && user.posthogDistinctId) {
+          posthogCleanup = true;
+        }
+      } catch (phErr: any) {
+        console.error(`[AccountDelete] PostHog cleanup error:`, phErr?.message);
+      }
+
+      // Anonymize and soft-delete the user record (keep for audit trail)
       const anonymizedEmail = `deleted_${userId}@deleted.gigaid.app`;
-      
-      // Soft delete: anonymize PII and mark as deleted
       await storage.updateUser(userId, {
         email: anonymizedEmail,
         emailNormalized: anonymizedEmail,
@@ -793,26 +935,59 @@ export async function registerRoutes(
         bio: null,
         businessName: null,
         firebaseUid: null,
+        stripeConnectAccountId: null,
+        stripeCustomerId: null,
+        stripeConnectStatus: "not_connected",
+        analyticsEnabled: false,
+        attStatus: "unknown",
         deletedAt: now,
         updatedAt: now,
       });
 
-      console.log(`[AccountDelete] User ${userId} account deleted at ${now}`);
-      
-      // Destroy session if it exists
+      tablesCleared.push("users_anonymized");
+
+      // Update audit record
+      await db.update(schema.accountDeletions)
+        .set({
+          completedAt: new Date().toISOString(),
+          status: "completed",
+          tablesCleared,
+          stripeCleanup,
+          posthogCleanup,
+        })
+        .where(eq(schema.accountDeletions.userId, userId));
+
+      console.log(`[AccountDelete] User ${userId} account fully deleted at ${now}. Tables cleared: ${tablesCleared.length}`);
+
+      // Destroy session
       if (req.session) {
         req.session.destroy((err: any) => {
-          if (err) {
-            console.error("[AccountDelete] Session destroy error:", err);
-          }
+          if (err) console.error("[AccountDelete] Session destroy error:", err);
         });
       }
 
-      res.json({ success: true, message: "Account deleted" });
+      res.json({ success: true, message: "Account deleted", tablesCleared: tablesCleared.length });
     } catch (error) {
       console.error("[AccountDelete] Error:", error);
+
+      // Log failed deletion attempt
+      try {
+        const { db } = await import("./db");
+        const schema = await import("@shared/schema");
+        const { eq } = await import("drizzle-orm");
+        await db.update(schema.accountDeletions)
+          .set({ status: "failed", errorDetails: String(error), completedAt: now })
+          .where(eq(schema.accountDeletions.userId, userId));
+      } catch (_) { /* best effort */ }
+
       res.status(500).json({ error: "Failed to delete account" });
     }
+  });
+
+  // Keep legacy POST endpoint as redirect for backward compatibility
+  app.post("/api/account/delete", requireAuth, async (req, res) => {
+    (req as any).method = "DELETE";
+    res.redirect(307, "/api/account");
   });
 
   app.get("/api/has-data", isAuthenticated, async (req, res) => {

@@ -426,17 +426,27 @@ export default function Settings() {
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== "DELETE") return;
     setIsDeleting(true);
     setDeleteError(null);
     try {
-      await apiFetch("/api/account/delete", { method: "POST", body: JSON.stringify({}) });
+      await apiFetch("/api/account", { method: "DELETE" });
       window.location.href = "/";
     } catch (error) {
       setDeleteError("We couldn't delete your account. Please try again.");
       setIsDeleting(false);
     }
+  };
+
+  const resetDeleteDialog = () => {
+    setDeleteConfirmText("");
+    setDeleteError(null);
+    setIsDeleting(false);
+    setShowDeleteDialog(false);
   };
 
   const quickSetupMutation = useApiMutation(
@@ -1069,12 +1079,16 @@ export default function Settings() {
                       <ChangePasswordDialog />
                     )}
 
+                    <p className="text-xs text-muted-foreground">
+                      Reviewer: Settings &rarr; Account &amp; Security &rarr; Delete Account
+                    </p>
+
                     {deleteError && (
                       <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md" data-testid="text-delete-error">
                         {deleteError}
                       </div>
                     )}
-                    <AlertDialog>
+                    <AlertDialog open={showDeleteDialog} onOpenChange={(open) => { if (!open) resetDeleteDialog(); else setShowDeleteDialog(true); }}>
                       <AlertDialogTrigger asChild>
                         <Button 
                           variant="destructive" 
@@ -1087,23 +1101,48 @@ export default function Settings() {
                       <AlertDialogContent data-testid="dialog-delete-account">
                         <AlertDialogHeader>
                           <AlertDialogTitle>Delete your account?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will permanently delete your account and associated data. This action cannot be undone.
+                          <AlertDialogDescription asChild>
+                            <div className="space-y-3">
+                              <p>This action is <strong>permanent</strong> and cannot be undone. All of the following will be deleted:</p>
+                              <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
+                                <li>Your profile and personal information</li>
+                                <li>All jobs, leads, and clients</li>
+                                <li>Invoices and payment records</li>
+                                <li>Booking requests and reviews</li>
+                                <li>Voice notes and photos</li>
+                                <li>Crew memberships and messages</li>
+                                <li>Stripe payment connections</li>
+                                <li>All analytics and tracking data</li>
+                                <li>Referrals, templates, and automation rules</li>
+                              </ul>
+                              <p className="text-sm">Type <strong>DELETE</strong> below to confirm:</p>
+                              <Input
+                                data-testid="input-delete-confirm"
+                                placeholder="Type DELETE to confirm"
+                                value={deleteConfirmText}
+                                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                                autoComplete="off"
+                                disabled={isDeleting}
+                              />
+                              {deleteError && (
+                                <p className="text-sm text-destructive">{deleteError}</p>
+                              )}
+                            </div>
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
-                          <AlertDialogAction
+                          <AlertDialogCancel data-testid="button-cancel-delete" disabled={isDeleting}>Cancel</AlertDialogCancel>
+                          <Button
+                            variant="destructive"
                             onClick={handleDeleteAccount}
-                            disabled={isDeleting}
-                            className="bg-destructive text-destructive-foreground"
+                            disabled={isDeleting || deleteConfirmText !== "DELETE"}
                             data-testid="button-confirm-delete"
                           >
                             {isDeleting ? (
                               <Loader2 className="h-4 w-4 animate-spin mr-2" />
                             ) : null}
-                            Delete account
-                          </AlertDialogAction>
+                            Permanently delete account
+                          </Button>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>

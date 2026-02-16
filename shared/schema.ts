@@ -162,6 +162,20 @@ export const privacyEvents = pgTable("privacy_events", {
 
 export type PrivacyEvent = typeof privacyEvents.$inferSelect;
 
+export const accountDeletions = pgTable("account_deletions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  requestedAt: text("requested_at").notNull(),
+  completedAt: text("completed_at"),
+  status: text("status").notNull().default("requested"),
+  tablesCleared: text("tables_cleared").array(),
+  stripeCleanup: boolean("stripe_cleanup").default(false),
+  posthogCleanup: boolean("posthog_cleanup").default(false),
+  errorDetails: text("error_details"),
+});
+
+export type AccountDeletion = typeof accountDeletions.$inferSelect;
+
 // Availability type for frontend use
 export interface TimeRange {
   start: string; // "09:00"
