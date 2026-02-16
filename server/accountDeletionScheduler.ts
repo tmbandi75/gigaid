@@ -21,7 +21,7 @@ async function processAccountDeletions() {
     // Get all users with pending_deletion status
     const users = await storage.getAllUsers();
     const pendingDeletionUsers = users.filter(
-      (u) => u.accountStatus === "pending_deletion" && u.scheduledDeletionAt
+      (u) => u.accountStatus === "pending_deletion" && u.scheduledDeletionAt && !u.isReviewAccount
     );
     
     if (pendingDeletionUsers.length === 0) {

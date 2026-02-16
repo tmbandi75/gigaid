@@ -149,6 +149,9 @@ export const users = pgTable("users", {
   attStatus: text("att_status").default("unknown"),
   attPromptedAt: text("att_prompted_at"),
   analyticsDisabledReason: text("analytics_disabled_reason"),
+
+  // Apple Review demo account protection
+  isReviewAccount: boolean("is_review_account").default(false),
 });
 
 // Privacy events table (internal logging without external analytics)

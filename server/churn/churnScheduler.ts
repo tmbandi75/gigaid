@@ -21,6 +21,7 @@ export async function runChurnComputation(): Promise<{
   const tiers = { Healthy: 0, Drifting: 0, AtRisk: 0, Critical: 0 };
 
   for (const user of allUsers) {
+    if (user.isReviewAccount) continue;
     try {
       const signals = await extractSignals(user.id);
       const result = computeChurnScore(signals);

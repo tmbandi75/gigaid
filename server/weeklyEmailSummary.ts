@@ -240,7 +240,7 @@ export async function sendWeeklySummaryToAllProUsers(baseUrl: string): Promise<v
   
   try {
     const users = await storage.getAllUsers();
-    const proUsers = users.filter((u: User) => u.isPro && u.email && u.notifyByEmail !== false);
+    const proUsers = users.filter((u: User) => u.isPro && u.email && u.notifyByEmail !== false && !u.isReviewAccount);
     
     logger.info(`[WeeklySummary] Found ${proUsers.length} Pro users with email notifications enabled`);
     
