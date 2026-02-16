@@ -236,7 +236,7 @@ export async function registerRoutes(
       userEmail = dbUser?.email || null;
     }
     
-    console.log("[AdminStatus] Checking admin for:", { userId, userEmail });
+    console.log("[AdminStatus] Checking admin for user");
     
     if (!userId && !userEmail) {
       console.log("[AdminStatus] No userId or email found, returning false");
@@ -246,7 +246,7 @@ export async function registerRoutes(
     // Import isAdminUser dynamically to check admin status
     const { isAdminUser } = await import("./copilot/adminMiddleware");
     const isAdmin = isAdminUser(userId || undefined, userEmail || undefined);
-    console.log("[AdminStatus] Bootstrap admin check:", { userId, userEmail, isAdmin });
+    console.log("[AdminStatus] Bootstrap admin check: isAdmin=", isAdmin);
     
     if (isAdmin) {
       return res.json({ isAdmin: true, role: "super_admin" });
@@ -1706,7 +1706,7 @@ export async function registerRoutes(
         if (coords) {
           jobWithCoords.customerLat = coords.lat;
           jobWithCoords.customerLng = coords.lng;
-          console.log(`[Jobs] Geocoded address for new job: ${validated.location} -> (${coords.lat}, ${coords.lng})`);
+          console.log(`[Jobs] Geocoded address for new job -> (${coords.lat}, ${coords.lng})`);
         }
       }
       
@@ -1769,7 +1769,7 @@ export async function registerRoutes(
           if (coords) {
             updates.customerLat = coords.lat;
             updates.customerLng = coords.lng;
-            console.log(`[Jobs] Geocoded updated address: ${updates.location} -> (${coords.lat}, ${coords.lng})`);
+            console.log(`[Jobs] Geocoded updated address -> (${coords.lat}, ${coords.lng})`);
           }
         }
       }
@@ -4225,9 +4225,9 @@ export async function registerRoutes(
           if (fwdResult.success) {
             await storage.incrementInboundForwarded(userId);
             if (usageExceeded) {
-              console.log(`[Twilio Inbound] Forwarded to ${user.personalPhone} (usage_exceeded=true, count=${usage.inboundForwarded + 1})`);
+              console.log(`[Twilio Inbound] Forwarded (usage_exceeded=true, count=${usage.inboundForwarded + 1})`);
             } else {
-              console.log(`[Twilio Inbound] Forwarded to ${user.personalPhone}`);
+              console.log(`[Twilio Inbound] Forwarded successfully`);
             }
           } else {
             console.error(`[Twilio Inbound] Forward failed: ${fwdResult.error}`);

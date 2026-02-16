@@ -56,12 +56,7 @@ router.post('/mobile/firebase', async (req: Request, res: Response) => {
     const name = decoded.name;
     const photo = decoded.picture;
 
-    console.log('[MobileAuth] Processing Firebase auth:', {
-      firebaseUid,
-      emailNormalized,
-      phoneE164,
-      signInProvider: decoded.firebase.sign_in_provider,
-    });
+    console.log('[MobileAuth] Processing Firebase auth, provider:', decoded.firebase.sign_in_provider);
 
     let existingUser = null;
     let linkedBy: 'email' | 'phone' | 'new_user' = 'new_user';
@@ -75,7 +70,7 @@ router.post('/mobile/firebase', async (req: Request, res: Response) => {
     if (existingByFirebaseUid.length > 0) {
       existingUser = existingByFirebaseUid[0];
       linkedBy = 'email';
-      console.log('[MobileAuth] Found existing user by Firebase UID:', existingUser.id);
+      console.log('[MobileAuth] Found existing user by Firebase UID match');
     }
 
     if (!existingUser && emailNormalized) {
@@ -88,7 +83,7 @@ router.post('/mobile/firebase', async (req: Request, res: Response) => {
       if (existingByEmail.length > 0) {
         existingUser = existingByEmail[0];
         linkedBy = 'email';
-        console.log('[MobileAuth] Linking Firebase to existing user by email:', existingUser.id);
+        console.log('[MobileAuth] Linking Firebase to existing user by email match');
       }
     }
 
@@ -102,7 +97,7 @@ router.post('/mobile/firebase', async (req: Request, res: Response) => {
       if (existingByPhone.length > 0) {
         existingUser = existingByPhone[0];
         linkedBy = 'phone';
-        console.log('[MobileAuth] Linking Firebase to existing user by phone:', existingUser.id);
+        console.log('[MobileAuth] Linking Firebase to existing user by phone match');
       }
     }
 
@@ -116,7 +111,7 @@ router.post('/mobile/firebase', async (req: Request, res: Response) => {
       if (existingByRawEmail.length > 0) {
         existingUser = existingByRawEmail[0];
         linkedBy = 'email';
-        console.log('[MobileAuth] Linking Firebase to existing user by raw email:', existingUser.id);
+        console.log('[MobileAuth] Linking Firebase to existing user by raw email match');
       }
     }
 
@@ -264,12 +259,7 @@ router.post('/web/firebase', async (req: Request, res: Response) => {
     const name = decoded.name;
     const photo = decoded.picture;
 
-    console.log('[WebAuth] Processing Firebase auth:', {
-      firebaseUid,
-      emailNormalized,
-      phoneE164,
-      signInProvider: decoded.firebase.sign_in_provider,
-    });
+    console.log('[WebAuth] Processing Firebase auth, provider:', decoded.firebase.sign_in_provider);
 
     let existingUser = null;
     let linkedBy: 'email' | 'phone' | 'new_user' = 'new_user';
@@ -284,7 +274,7 @@ router.post('/web/firebase', async (req: Request, res: Response) => {
     if (existingByFirebaseUid.length > 0) {
       existingUser = existingByFirebaseUid[0];
       linkedBy = 'email';
-      console.log('[WebAuth] Found existing user by Firebase UID:', existingUser.id);
+      console.log('[WebAuth] Found existing user by Firebase UID match');
     }
 
     // Check by normalized email
@@ -298,7 +288,7 @@ router.post('/web/firebase', async (req: Request, res: Response) => {
       if (existingByEmail.length > 0) {
         existingUser = existingByEmail[0];
         linkedBy = 'email';
-        console.log('[WebAuth] Linking Firebase to existing user by email:', existingUser.id);
+        console.log('[WebAuth] Linking Firebase to existing user by email match');
       }
     }
 
@@ -313,7 +303,7 @@ router.post('/web/firebase', async (req: Request, res: Response) => {
       if (existingByPhone.length > 0) {
         existingUser = existingByPhone[0];
         linkedBy = 'phone';
-        console.log('[WebAuth] Linking Firebase to existing user by phone:', existingUser.id);
+        console.log('[WebAuth] Linking Firebase to existing user by phone match');
       }
     }
 
@@ -328,7 +318,7 @@ router.post('/web/firebase', async (req: Request, res: Response) => {
       if (existingByRawEmail.length > 0) {
         existingUser = existingByRawEmail[0];
         linkedBy = 'email';
-        console.log('[WebAuth] Linking Firebase to existing user by raw email:', existingUser.id);
+        console.log('[WebAuth] Linking Firebase to existing user by raw email match');
       }
     }
 

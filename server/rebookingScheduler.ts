@@ -153,7 +153,7 @@ async function checkRebookings() {
               });
 
               if (success) {
-                console.log(`[RebookingScheduler] Sent rebooking for job ${job.id} to ${job.clientPhone}`);
+                console.log(`[RebookingScheduler] Sent rebooking for job ${job.id}`);
               }
             }
           } catch (ruleError) {

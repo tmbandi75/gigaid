@@ -22,41 +22,25 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   const [callbackCount, setCallbackCount] = useState(0);
   const previousFirebaseUidRef = useRef<string | null>(null);
   
-  // Track token readiness with React state synced to module-level state
-  // Initialize as false - will be updated based on current Firebase user
   const [isTokenReady, setIsTokenReady] = useState(false);
 
   const setTokenReady = (ready: boolean) => {
-    console.log("[FirebaseAuth] setTokenReady called:", ready, "timestamp:", Date.now());
-    // Note: setAuthToken() automatically sets module-level readiness with UID
-    // This just syncs React state for UI updates
     setIsTokenReady(ready);
   };
   
-  // Check token readiness whenever Firebase user changes
-  // This ensures token is only "ready" if it was issued for the current user
   useEffect(() => {
     const uid = firebaseUser?.uid || null;
     const ready = isTokenReadyForUser(uid);
-    console.log("[FirebaseAuth] Checking token readiness for user:", uid, "ready:", ready);
     setIsTokenReady(ready);
   }, [firebaseUser]);
 
   useEffect(() => {
     if (firebaseInitError) {
-      console.error("[FirebaseAuth] Firebase failed to initialize:", firebaseInitError);
+      console.error("[FirebaseAuth] Firebase failed to initialize");
       setAuthLoading(false);
       return;
     }
 
-    const setupTs = Date.now();
-    console.log("[FirebaseAuth] Setting up onAuthStateChanged listener, timestamp:", setupTs);
-    console.log("AUTH STATE CHANGE (initial)", {
-      authLoading: true,
-      firebaseUser: null,
-      timestamp: setupTs
-    });
-    
     const unsubscribe = onFirebaseAuthChange((user) => {
       const callbackTs = Date.now();
       callbackCountRef.current += 1;
@@ -65,45 +49,19 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
       const currentUid = user?.uid || null;
       const previousUid = previousFirebaseUidRef.current;
       
-      console.log("[FirebaseAuth] ===== CALLBACK FIRED =====");
-      console.log("[FirebaseAuth] onAuthStateChanged callback #" + count);
-      console.log("[FirebaseAuth] user:", user ? user.email : "null");
-      console.log("[FirebaseAuth] uid:", currentUid);
-      console.log("[FirebaseAuth] previousUid:", previousUid);
-      console.log("[FirebaseAuth] timestamp:", callbackTs);
-      console.log("[FirebaseAuth] time since setup:", callbackTs - setupTs, "ms");
-      
-      // CRITICAL: Reset isTokenReady when user changes or signs out
-      // This prevents using stale tokens from a previous user session
       if (currentUid !== previousUid) {
-        console.log("[FirebaseAuth] User changed from", previousUid, "to", currentUid, "- resetting token readiness");
-        
-        // Reset both module-level and React state token readiness
-        // This forces fresh token exchange for new user
         resetTokenReadiness();
         setIsTokenReady(false);
-        
         previousFirebaseUidRef.current = currentUid;
       }
-      
-      console.log("AUTH STATE CHANGE", {
-        authLoading: false,
-        firebaseUser: user ? user.uid : null,
-        email: user ? user.email : null,
-        callbackNumber: count,
-        timestamp: callbackTs
-      });
       
       setLastAuthEventTs(callbackTs);
       setCallbackCount(count);
       setFirebaseUser(user);
       setAuthLoading(false);
-      
-      console.log("[FirebaseAuth] State updated: authLoading=false, firebaseUser=" + (user ? "present" : "null"));
     });
 
     return () => {
-      console.log("[FirebaseAuth] Cleaning up onAuthStateChanged listener");
       unsubscribe();
     };
   }, []);

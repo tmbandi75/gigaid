@@ -224,7 +224,7 @@ export async function sendWeeklySummaryToUser(
     });
 
     if (success) {
-      console.log(`[WeeklySummary] Sent weekly summary to ${user.email}`);
+      console.log(`[WeeklySummary] Sent weekly summary to user ${userId}`);
     }
 
     return success;

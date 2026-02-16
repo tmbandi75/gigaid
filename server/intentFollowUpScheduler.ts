@@ -84,7 +84,7 @@ async function sendFollowUpNudge(invoice: {
       const success = await sendSMS(invoice.clientPhone, nudgeMessage);
       if (success) {
         sent = true;
-        console.log(`[IntentFollowUp] Sent SMS nudge for invoice ${invoice.id} to ${invoice.clientPhone}`);
+        console.log(`[IntentFollowUp] Sent SMS nudge for invoice ${invoice.id}`);
       }
     } catch (err) {
       console.error(`[IntentFollowUp] SMS failed for invoice ${invoice.id}:`, err);
@@ -109,7 +109,7 @@ async function sendFollowUpNudge(invoice: {
           html: `<p>Just sent this over so we can lock in the time.</p>${invoiceUrl ? `<p><a href="${invoiceUrl}">View Invoice</a></p>` : ""}`,
         });
         sent = true;
-        console.log(`[IntentFollowUp] Sent email nudge for invoice ${invoice.id} to ${invoice.clientEmail}`);
+        console.log(`[IntentFollowUp] Sent email nudge for invoice ${invoice.id}`);
       }
     } catch (err) {
       console.error(`[IntentFollowUp] Email failed for invoice ${invoice.id}:`, err);

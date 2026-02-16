@@ -198,7 +198,7 @@ function AuthenticatedApp() {
   }
   
   // authLoading === false: Firebase has definitively resolved auth state
-  console.log("[AuthenticatedApp] authLoading === false, firebaseUser:", firebaseUser?.email ?? "null");
+  // Auth state resolved
   
   // Unauthenticated users see SplashPage (which has login UI)
   if (!firebaseUser) {

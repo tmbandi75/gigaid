@@ -53,28 +53,28 @@ export async function geocodeAddressExtended(address: string): Promise<GeocodeEx
     const data = await response.json();
     
     if (data.status === "ZERO_RESULTS") {
-      console.warn("[Geocode] No results for address:", address);
+      console.warn("[Geocode] No results for provided address");
       return { success: false, status: "ZERO_RESULTS" };
     }
     
     if (data.status === "REQUEST_DENIED") {
-      console.warn("[Geocode] Request denied for address:", address, "Error:", data.error_message);
+      console.warn("[Geocode] Request denied for address. Error:", data.error_message);
       return { success: false, status: "REQUEST_DENIED" };
     }
     
     if (data.status !== "OK" || !data.results || data.results.length === 0) {
-      console.warn("[Geocode] Unexpected status for address:", address, "Status:", data.status);
+      console.warn("[Geocode] Unexpected status for address. Status:", data.status);
       return { success: false, status: data.status || "UNKNOWN_ERROR" };
     }
 
     const location = data.results[0].geometry?.location;
     
     if (!location || typeof location.lat !== "number" || typeof location.lng !== "number") {
-      console.warn("[Geocode] Invalid location data for address:", address);
+      console.warn("[Geocode] Invalid location data for address");
       return { success: false, status: "UNKNOWN_ERROR" };
     }
 
-    console.log(`[Geocode] Successfully geocoded "${address}" to (${location.lat}, ${location.lng})`);
+    console.log(`[Geocode] Successfully geocoded address to (${location.lat}, ${location.lng})`);
     
     return {
       success: true,
