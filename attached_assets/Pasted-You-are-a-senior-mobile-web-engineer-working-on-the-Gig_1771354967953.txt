@@ -1,0 +1,245 @@
+You are a senior mobile + web engineer working on the GigAid codebase.
+
+Your task is to refactor the Home screen UI to emphasize ONE primary revenue-driving action:
+
+"Send Invoice → Get Paid"
+
+While preserving all existing functionality.
+
+⚠️ CRITICAL CONSTRAINTS
+- Do NOT delete any business logic
+- Do NOT remove API calls
+- Do NOT break navigation
+- Do NOT change entitlements
+- Do NOT remove secondary features
+- This is a UI/UX re-prioritization only
+
+All existing features must remain accessible.
+
+────────────────────────────
+GOAL
+────────────────────────────
+
+Transform Home into a “Single Primary Action” layout:
+
+Primary CTA (Above the fold):
+
+[ Send Invoice → Get Paid ]
+
+Optional dynamic example:
+"Send $50 Invoice → Get Paid"
+
+All other cards become secondary.
+
+────────────────────────────
+A) DETECT HOME SCREEN
+────────────────────────────
+
+Locate the Home screen component, typically named:
+
+- Home.tsx / Home.jsx
+- Dashboard.tsx
+- Main.tsx
+- routes/home/*
+- components/Home*
+
+Identify:
+- Primary container
+- Existing card grid
+- Revenue / invoice actions
+- Navigation handlers
+
+Document existing click handlers before changing UI.
+
+────────────────────────────
+B) CREATE PRIMARY ACTION COMPONENT
+────────────────────────────
+
+Create a new reusable component:
+
+PrimaryMoneyAction.tsx
+
+Features:
+- Large button
+- Full-width
+- High contrast
+- Sticky above fold
+- Mobile-first
+
+Props:
+- defaultAmount (optional)
+- onPress → existing invoice flow
+
+Example structure:
+
+<PrimaryMoneyAction
+  label="Send Invoice → Get Paid"
+  onPress={goToInvoiceFlow}
+/>
+
+Wire onPress to the existing invoice creation route.
+
+DO NOT create new routes.
+
+────────────────────────────
+C) DYNAMIC AMOUNT (SAFE MODE)
+────────────────────────────
+
+If previous invoice data exists:
+
+Pull last invoice amount OR average invoice.
+
+Fallback:
+Use placeholder: "$50"
+
+Never block rendering if data missing.
+
+Implement with try/catch + fallback.
+
+────────────────────────────
+D) RESTRUCTURE HOME LAYOUT
+────────────────────────────
+
+Current layout:
+[ Many Cards ]
+[ Stats ]
+[ Shortcuts ]
+[ Promotions ]
+
+New layout:
+
+1. PrimaryMoneyAction (top)
+2. Spacer
+3. SecondarySection (collapsible)
+
+Wrap existing cards inside:
+
+<SecondaryActionsAccordion />
+
+or
+
+<SecondaryActionsPanel collapsed={true} />
+
+Default: collapsed on load.
+
+User can expand manually.
+
+────────────────────────────
+E) SECONDARY ACTIONS PANEL
+────────────────────────────
+
+Move ALL existing cards into:
+
+SecondaryActionsPanel
+
+Features:
+- Expand / Collapse
+- “More tools” button
+- Preserves all navigation
+- No logic changes
+
+Never hide permanently.
+
+────────────────────────────
+F) ENTITLEMENT + PAYWALL SAFETY
+────────────────────────────
+
+If Primary CTA requires paid plan:
+
+Respect existing CapabilityGate.
+
+Wrap with:
+
+<CapabilityGate feature="invoice">
+
+If locked:
+Show upgrade modal (existing logic).
+
+DO NOT implement new paywalls.
+
+────────────────────────────
+G) ANALYTICS (IF PRESENT)
+────────────────────────────
+
+If analytics exists:
+
+Add event:
+
+home_primary_action_clicked
+
+But do not break existing telemetry.
+
+Optional only.
+
+────────────────────────────
+H) RESPONSIVE + PWA SAFETY
+────────────────────────────
+
+Ensure works on:
+
+- Mobile
+- Tablet
+- Desktop
+- WebView
+- PWA
+- iOS/Android
+
+Test:
+- Keyboard open
+- Small screens
+- Offline mode
+
+Primary CTA must never be hidden.
+
+────────────────────────────
+I) VISUAL PRIORITY RULES
+────────────────────────────
+
+Primary CTA:
+
+- Min height: 56px
+- Border radius: 12px+
+- Brand color
+- Subtle shadow
+- Centered text
+
+Secondary panel:
+- Muted
+- Gray background
+- Smaller typography
+
+────────────────────────────
+J) MIGRATION SAFETY
+────────────────────────────
+
+Before commit:
+
+1. Run existing tests
+2. Manually verify:
+   - Invoice flow works
+   - Payments work
+   - Upgrades work
+   - Deep links work
+3. No console errors
+
+If anything breaks:
+Rollback UI only.
+
+────────────────────────────
+OUTPUT
+────────────────────────────
+
+Deliver:
+
+1. New PrimaryMoneyAction component
+2. Updated Home layout
+3. SecondaryActionsPanel wrapper
+4. Zero broken routes
+5. Zero removed logic
+
+Produce clean, commented code.
+
+No TODOs.
+No placeholders.
+
+Ship-ready.
