@@ -1,0 +1,196 @@
+REPLIT MASTER PROMPT — Google Play Readiness Audit for GigAid (Android)
+
+You are a senior Android release + compliance engineer.
+Run a full Google Play submission readiness audit.
+
+GOAL
+Identify any blockers that could cause rejection, delay, or suspension.
+
+STACK
+- Android: Capacitor → Android build
+- Payments: Stripe (external)
+- Analytics: PostHog
+- Backend: Node + PostgreSQL
+
+────────────────────────────────────────────
+A) BUILD & SIGNING
+────────────────────────────────────────────
+
+Verify:
+
+1) Android App Bundle (.aab) builds successfully
+   - No missing keystore
+   - No debug signing
+   - No hardcoded secrets
+
+2) Versioning
+   - versionCode increments
+   - versionName matches release notes
+
+3) Target SDK
+   - targetSdkVersion >= current Play requirement
+   - compileSdkVersion up to date
+
+4) Min SDK compatibility
+   - No unsupported devices
+
+Report failures.
+
+────────────────────────────────────────────
+B) PERMISSIONS & MANIFEST
+────────────────────────────────────────────
+
+Scan AndroidManifest.xml.
+
+Verify:
+
+- No unused permissions
+- No forbidden high-risk permissions
+- All sensitive permissions have justification
+
+Specifically flag:
+
+READ_SMS
+READ_CALL_LOG
+ACCESS_FINE_LOCATION
+RECORD_AUDIO
+READ_CONTACTS
+CAMERA
+
+If present, confirm:
+- In-app disclosure exists
+- Play Console declaration required
+
+If unused → recommend removal.
+
+────────────────────────────────────────────
+C) PRIVACY POLICY & DATA SAFETY
+────────────────────────────────────────────
+
+Verify:
+
+1) Privacy policy URL exists
+2) Is reachable
+3) Matches actual data use
+
+Check consistency with:
+
+- Analytics
+- Auth
+- Payments
+- Location
+- Logs
+
+Map collected data → Play Data Safety Form fields.
+
+Produce table:
+Data Type | Collected | Shared | Encrypted | Purpose
+
+────────────────────────────────────────────
+D) BILLING COMPLIANCE
+────────────────────────────────────────────
+
+Verify:
+
+- No Google Play Billing Library usage
+- No digital goods for sale
+- Subscriptions handled externally
+
+Confirm compliance with:
+Play Payments Policy → Physical services exemption
+
+Ensure no hidden monetization flows.
+
+────────────────────────────────────────────
+E) APP STABILITY & CRASH RISK
+────────────────────────────────────────────
+
+Run:
+
+- Android cold start
+- Background → resume
+- Network loss
+- Token expiration
+- Offline mode
+
+Check for:
+
+- Fatal crashes
+- White screens
+- WebView failures
+- Missing env vars
+
+Report blockers.
+
+────────────────────────────────────────────
+F) ACCOUNT & REVIEW ACCESS
+────────────────────────────────────────────
+
+Verify:
+
+1) Demo/test account exists
+2) Credentials documented
+3) Login works
+4) Sample data present
+
+Check if special reviewer instructions are needed.
+
+────────────────────────────────────────────
+G) STORE LISTING ASSETS
+────────────────────────────────────────────
+
+Verify:
+
+- App name compliance
+- Description policy compliance
+- No misleading claims
+- Screenshots match UI
+- Feature graphics present
+- No trademark violations
+
+Check dimensions.
+
+────────────────────────────────────────────
+H) ANDROID-SPECIFIC REQUIREMENTS
+────────────────────────────────────────────
+
+Verify:
+
+- WebView latest version compatibility
+- File access scoped storage compliance
+- No cleartext traffic (unless justified)
+- ProGuard/R8 config safe
+- No deprecated APIs
+
+────────────────────────────────────────────
+I) COMPLIANCE FLAGS
+────────────────────────────────────────────
+
+Scan for:
+
+- Scraping behavior
+- SMS automation
+- Background services
+- VPN/proxy features
+- Accessibility misuse
+- Overlay windows
+
+Flag high-risk areas.
+
+────────────────────────────────────────────
+J) OUTPUT
+────────────────────────────────────────────
+
+Produce:
+
+1) Pass/fail checklist
+2) High-risk blockers
+3) Medium-risk warnings
+4) Low-risk cleanup
+5) Fix instructions
+6) Estimated approval probability
+
+DO NOT gloss over issues.
+Be strict.
+
+Proceed now.

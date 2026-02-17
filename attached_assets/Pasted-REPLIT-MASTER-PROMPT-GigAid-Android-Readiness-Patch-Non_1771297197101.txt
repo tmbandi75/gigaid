@@ -1,0 +1,153 @@
+REPLIT MASTER PROMPT — GigAid Android Readiness Patch (Non-Invasive)
+
+You are a senior mobile release engineer.
+Apply Android-only fixes required for Google Play submission.
+Do NOT refactor shared logic.
+Do NOT change iOS behavior.
+Do NOT modify ATT, analytics gating, or App Store compliance paths.
+
+GOAL
+Fix Android readiness gaps while preserving Apple submission stability.
+
+SCOPE
+Only touch:
+- android/
+- capacitor.config.*
+- build scripts
+- asset generation helpers (if any)
+
+Do NOT touch:
+- client/src/**
+- server/**
+- shared analytics/consent code
+- iOS project files
+
+────────────────────────────────────────────
+A) ANDROID MANIFEST — PERMISSIONS (ADD ONLY IF FEATURES EXIST)
+────────────────────────────────────────────
+
+Inspect Android UI and feature usage.
+
+If the app exposes:
+- Photo capture/upload → add CAMERA + READ_MEDIA_IMAGES
+- Voice notes → add RECORD_AUDIO
+- Location/directions → add ACCESS_FINE_LOCATION
+
+Then add to:
+
+android/app/src/main/AndroidManifest.xml
+
+<uses-permission android:name="android.permission.CAMERA" />
+<uses-permission android:name="android.permission.RECORD_AUDIO" />
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
+Do NOT remove existing permissions.
+Do NOT add unused permissions.
+
+Ensure runtime permission requests are handled by existing Capacitor plugins.
+Do NOT implement new permission logic unless strictly required.
+
+────────────────────────────────────────────
+B) FIREBASE CONFIG (google-services.json PLACEHOLDER)
+────────────────────────────────────────────
+
+Check if android/app/google-services.json exists.
+
+If missing:
+- Add .gitignore entry if not present
+- Add README_ANDROID_RELEASE.md with instructions:
+
+  1) Download google-services.json from Firebase Console
+  2) Place in android/app/
+  3) Do not commit
+
+Do NOT hardcode any credentials.
+
+────────────────────────────────────────────
+C) RELEASE SIGNING SETUP (NO KEYS COMMITTED)
+────────────────────────────────────────────
+
+Add template:
+
+android/keystore.properties.example
+
+With:
+
+storeFile=gigaid-release.keystore
+storePassword=CHANGE_ME
+keyAlias=gigaid
+keyPassword=CHANGE_ME
+
+Update gradle build to read from keystore.properties
+IF NOT already present.
+
+Do NOT generate keys.
+Do NOT commit real secrets.
+
+────────────────────────────────────────────
+D) BACKUP SECURITY (OPTIONAL SAFE HARDENING)
+────────────────────────────────────────────
+
+If android:allowBackup="true":
+
+Change to:
+
+android:allowBackup="false"
+
+ONLY if no backup policy exists.
+
+If fullBackupContent exists → leave unchanged.
+
+────────────────────────────────────────────
+E) PLAY STORE ASSET CHECKLIST
+────────────────────────────────────────────
+
+Create:
+
+android/PLAY_STORE_ASSETS.md
+
+With:
+
+- Screenshot requirements
+- Feature graphic specs
+- Naming rules
+- Export instructions
+
+(No actual assets required in repo.)
+
+────────────────────────────────────────────
+F) BUILD VALIDATION
+────────────────────────────────────────────
+
+Add script:
+
+scripts/android-release-check.sh
+
+Which verifies:
+- google-services.json present
+- keystore.properties present
+- versionCode > previous
+- gradlew bundleRelease succeeds
+
+Script must fail clearly if missing.
+
+────────────────────────────────────────────
+G) OUTPUT
+────────────────────────────────────────────
+
+After completion, print:
+
+1) Files added/modified (android-only)
+2) Any permissions added
+3) Release preparation steps
+4) Confirmation that iOS paths untouched
+
+CRITICAL RULES
+- No refactors
+- No cross-platform changes
+- No consent/analytics changes
+- No iOS edits
+- No breaking builds
+
+Proceed carefully.
