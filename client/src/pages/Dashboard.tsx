@@ -13,6 +13,8 @@ import { GoldenPathGuide } from "@/components/onboarding/GoldenPathGuide";
 import FollowUpCheckIn from "@/components/FollowUpCheckIn";
 import { TodaysGamePlan } from "@/components/TodaysGamePlan";
 import { AIAssistantHero } from "@/components/nudges/AIAssistantHero";
+import { PrimaryMoneyAction } from "@/components/PrimaryMoneyAction";
+import { SecondaryActionsPanel } from "@/components/SecondaryActionsPanel";
 import { GigAidImpact } from "@/components/GigAidImpact";
 import { MoneyPlanWidget } from "@/components/MoneyPlanWidget";
 import { useRecentActivityFeedback } from "@/hooks/useRecentActivityFeedback";
@@ -334,6 +336,9 @@ export default function Dashboard() {
 
         <AIAssistantHero onHasNudges={setHasNudges} />
 
+        <PrimaryMoneyAction />
+
+        <SecondaryActionsPanel>
         <div data-testid="section-money-summary">
           {isMoneyLoading ? (
             <div className="grid grid-cols-2 gap-3">
@@ -708,6 +713,7 @@ export default function Dashboard() {
             </Card>
           )
         )}
+        </SecondaryActionsPanel>
 
         <div className={isMobile ? "h-20" : "h-8"} />
       </div>
