@@ -37,6 +37,7 @@ import { useDriveModeContext } from "@/components/drivemode/DriveModeProvider";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { isNativePlatform } from "@/lib/platform";
 
 interface UserProfile {
   id: string;
@@ -117,6 +118,8 @@ export default function More() {
   const { enterDriveMode, gpsStatus, currentSpeed } = useDriveModeContext();
   const { logout } = useAuth();
   const isMobile = useIsMobile();
+
+  const disableDownloads = isNativePlatform() && import.meta.env.PROD === true;
 
   const { data: profile } = useQuery<UserProfile>({
     queryKey: QUERY_KEYS.profile(),
@@ -346,7 +349,7 @@ export default function More() {
             </h3>
             <Card className="border-0 shadow-md overflow-hidden">
               <CardContent className="p-0">
-                {section.items.map((item, index) => {
+                {section.items.filter(item => !(disableDownloads && item.href === "/downloads")).map((item, index) => {
                   const Icon = item.icon;
                   return (
                     <div key={item.label}>

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Download, FileJson, FileCode, Loader2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { isNativePlatform } from "@/lib/platform";
 
 interface DownloadFile {
   id: string;
@@ -16,6 +17,7 @@ interface DownloadFile {
 }
 
 export default function Downloads() {
+  const disableDownloads = isNativePlatform() && import.meta.env.PROD === true;
   const isMobile = useIsMobile();
   const { data, isLoading } = useQuery<{ files: DownloadFile[] }>({
     queryKey: QUERY_KEYS.downloads(),
@@ -71,6 +73,10 @@ export default function Downloads() {
       </div>
     </div>
   );
+
+  if (disableDownloads) {
+    return null;
+  }
 
   if (isLoading) {
     return (
