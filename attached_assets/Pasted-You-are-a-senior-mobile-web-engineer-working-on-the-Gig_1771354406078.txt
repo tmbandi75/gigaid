@@ -1,0 +1,128 @@
+You are a senior mobile + web engineer working on the GigAid codebase.
+
+Your task is to promote the existing “Smart Suggestions / AI Nudges” system
+to become the primary hero section on the Dashboard.
+
+CRITICAL CONSTRAINTS (DO NOT VIOLATE):
+
+- Do NOT modify any backend services
+- Do NOT modify nudge generation logic
+- Do NOT modify GPT integration
+- Do NOT modify entitlement / plan logic
+- Do NOT add new SDKs
+- Do NOT touch iOS native wrappers
+- Do NOT add new permissions
+- Do NOT affect analytics schemas
+- Do NOT refactor shared business logic
+- Do NOT rename API fields
+- Do NOT change any network contracts
+
+This is a UI/Composition change ONLY.
+
+---------------------------------------
+GOAL
+---------------------------------------
+
+Replace the static marketing banner and “Smart Suggestions” placement
+with a unified “AI Assistant” hero card at the top of the Dashboard,
+using existing nudge data.
+
+---------------------------------------
+IMPLEMENTATION
+---------------------------------------
+
+A) DASHBOARD LAYOUT
+
+1) Locate the main Dashboard/Home screen component
+   (likely: Dashboard.tsx, Home.tsx, or similar)
+
+2) Identify:
+   - Marketing banner component
+   - “Smart Suggestions” / nudges component
+   - “Do This First” card
+
+3) Create a new container component:
+
+   <AIAssistantHero />
+
+   that composes:
+
+   - Top 1–2 active nudges
+   - Existing action chips
+   - Existing tap handlers
+   - Existing deep links
+
+4) Move existing nudge rendering into this container.
+   Do NOT duplicate logic.
+
+---------------------------------------
+B) UI BEHAVIOR
+
+AIAssistantHero must:
+
+- Appear immediately below the app header
+- Replace the marketing banner when nudges exist
+- Collapse when no nudges are available
+- Preserve existing dismiss behavior
+- Preserve “View All” navigation
+
+If no nudges exist:
+- Show existing banner as fallback
+
+---------------------------------------
+C) COPY (STATIC ONLY)
+
+Add a lightweight header:
+
+"Your Business Assistant"
+
+Subtext (static, non-AI):
+"I’m watching your jobs and payments."
+
+Do NOT modify AI-generated copy.
+
+---------------------------------------
+D) PERFORMANCE & SAFETY
+
+- No new state stores
+- No new effects
+- No polling changes
+- Reuse existing selectors/hooks
+- Maintain memoization
+- Do not increase render depth
+
+---------------------------------------
+E) IOS / ANDROID SAFETY
+
+Verify:
+
+- No new WebView bridges
+- No new window APIs
+- No new storage
+- No permission prompts
+- No ATT text changes
+- No URL scheme changes
+
+---------------------------------------
+F) TESTING
+
+Add UI-only tests (if present):
+
+- Renders hero when nudges exist
+- Falls back when empty
+- Preserves tap actions
+- Does not duplicate events
+
+---------------------------------------
+OUTPUT
+
+Return:
+
+1) Files modified
+2) Components created
+3) Confirmation no business logic touched
+4) Diff summary
+
+Do NOT produce speculative code.
+Do NOT refactor unrelated components.
+Proceed incrementally.
