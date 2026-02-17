@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ANDROID_DIR="$(cd "$(dirname "$0")/../android" && pwd)"
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+ANDROID_DIR="$ROOT_DIR/android"
 ERRORS=0
+PII_MATCHES=0
 
 echo "=== Gig Aid — Android Release Pre-Flight Check ==="
+echo ""
+
+# ──────────────────────────────────────────
+# SECTION 1: Android build prerequisites
+# ──────────────────────────────────────────
+
+echo "--- Build Prerequisites ---"
 echo ""
 
 # 1. google-services.json
@@ -79,20 +88,75 @@ else
   echo "[WARN] Web assets not synced — run: npm run build && npx cap sync android"
 fi
 
-# 8. No hardcoded secrets
+# 8. No hardcoded secrets in Android source
 SECRETS_FOUND=$(grep -rn "sk_live\|sk_test\|AIza" "$ANDROID_DIR/app/src/main/" 2>/dev/null | grep -v "Binary" | grep -v "\.png" || true)
 if [ -z "$SECRETS_FOUND" ]; then
-  echo "[PASS] No hardcoded secrets detected"
+  echo "[PASS] No hardcoded secrets in Android source"
 else
   echo "[FAIL] Possible hardcoded secrets found:"
   echo "$SECRETS_FOUND"
   ERRORS=$((ERRORS + 1))
 fi
 
+# ──────────────────────────────────────────
+# SECTION 2: PII logging scan
+# ──────────────────────────────────────────
+
+echo ""
+echo "--- PII Logging Scan ---"
+echo ""
+
+SCAN_DIRS=("server" "client" "scripts")
+EXCLUDE_DIRS="node_modules|dist|build|www|android/app/src/main/assets|\.git"
+
+TMPFILE=$(mktemp)
+trap "rm -f $TMPFILE" EXIT
+
+for DIR in "${SCAN_DIRS[@]}"; do
+  SCAN_PATH="$ROOT_DIR/$DIR"
+  if [ ! -d "$SCAN_PATH" ]; then
+    continue
+  fi
+
+  grep -rn \
+    --include="*.js" \
+    --include="*.ts" \
+    --include="*.tsx" \
+    -E "(console\.(log|warn|error|info|debug)|logger\.(log|warn|error|info|debug))" \
+    "$SCAN_PATH" 2>/dev/null \
+    | grep -v -E "($EXCLUDE_DIRS)" \
+    | grep -i -E "(email|phone|token|uid|address|authorization|bearer)" \
+    >> "$TMPFILE" || true
+done
+
+PII_MATCHES=$(wc -l < "$TMPFILE" | tr -d '[:space:]')
+
+if [ "$PII_MATCHES" -eq 0 ]; then
+  echo "[PASS] No PII logging patterns detected"
+else
+  echo "[FAIL] Found $PII_MATCHES potential PII logging pattern(s):"
+  echo ""
+  while IFS= read -r line; do
+    echo "  $line"
+  done < "$TMPFILE"
+  echo ""
+  echo "       Review each match and ensure PII is not logged in production."
+  ERRORS=$((ERRORS + PII_MATCHES))
+fi
+
+# ──────────────────────────────────────────
+# SUMMARY
+# ──────────────────────────────────────────
+
 echo ""
 echo "=== Summary ==="
+echo "  Build checks:    $(if [ "$ERRORS" -gt "$PII_MATCHES" ]; then echo "ISSUES FOUND"; else echo "OK"; fi)"
+echo "  PII scan:        $PII_MATCHES match(es)"
+echo "  Total issues:    $ERRORS"
+echo ""
+
 if [ "$ERRORS" -gt 0 ]; then
-  echo "$ERRORS error(s) found. Fix before submitting to Google Play."
+  echo "Fix all issues before submitting to Google Play."
   exit 1
 else
   echo "All checks passed. Ready to build release."
