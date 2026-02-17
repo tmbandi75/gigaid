@@ -12,7 +12,7 @@ import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist
 import { GoldenPathGuide } from "@/components/onboarding/GoldenPathGuide";
 import FollowUpCheckIn from "@/components/FollowUpCheckIn";
 import { TodaysGamePlan } from "@/components/TodaysGamePlan";
-import { NudgeCard } from "@/components/nudges/NudgeCard";
+import { AIAssistantHero } from "@/components/nudges/AIAssistantHero";
 import { GigAidImpact } from "@/components/GigAidImpact";
 import { MoneyPlanWidget } from "@/components/MoneyPlanWidget";
 import { useRecentActivityFeedback } from "@/hooks/useRecentActivityFeedback";
@@ -105,6 +105,7 @@ export default function Dashboard() {
   const [period, setPeriod] = useState<"weekly" | "monthly">("weekly");
   const [showWelcome, setShowWelcome] = useState(false);
   const [showInactivityModal, setShowInactivityModal] = useState(false);
+  const [hasNudges, setHasNudges] = useState(false);
   const isMobile = useIsMobile();
   
   useRecentActivityFeedback();
@@ -331,6 +332,8 @@ export default function Dashboard() {
       <div className={`flex-1 px-4 md:px-6 lg:px-8 py-6 space-y-6 max-w-7xl mx-auto w-full ${isMobile ? "-mt-4" : ""}`}>
         <ActivationChecklist />
 
+        <AIAssistantHero onHasNudges={setHasNudges} />
+
         <div data-testid="section-money-summary">
           {isMoneyLoading ? (
             <div className="grid grid-cols-2 gap-3">
@@ -498,9 +501,6 @@ export default function Dashboard() {
           </div>
 
           <div className="space-y-6">
-            {/* AI Micro-Nudges - contextual action suggestions */}
-            <NudgeCard maxNudges={3} />
-
             {/* GigAid Impact - outcomes attribution */}
             <GigAidImpact />
 
@@ -661,50 +661,52 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {isMobile ? (
-          <Card className="bg-gradient-to-br from-primary/5 to-violet-500/5 border-primary/20" data-testid="card-ai-tip-mobile">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center flex-shrink-0 shadow-lg">
-                  <Zap className="h-5 w-5 text-white" />
+        {!hasNudges && (
+          isMobile ? (
+            <Card className="bg-gradient-to-br from-primary/5 to-violet-500/5 border-primary/20" data-testid="card-ai-tip-mobile">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+                    <Zap className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-sm mb-1">AI Assistant Ready</p>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Use voice commands to create jobs, send invoices, and manage your business hands-free.
+                    </p>
+                    <Link href="/ai-tools">
+                      <Button size="sm" variant="outline" className="h-8" data-testid="button-try-ai-mobile">
+                        <Sparkles className="h-3 w-3 mr-2" />
+                        Explore AI Tools
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-sm mb-1">AI Assistant Ready</p>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Use voice commands to create jobs, send invoices, and manage your business hands-free.
-                  </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="bg-gradient-to-br from-primary/5 to-violet-500/5 border-primary/20" data-testid="card-ai-tip">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-6">
+                  <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+                    <Zap className="h-7 w-7 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-base mb-1">AI Assistant Ready</p>
+                    <p className="text-sm text-muted-foreground">
+                      Use voice commands to create jobs, send invoices, and manage your business hands-free.
+                    </p>
+                  </div>
                   <Link href="/ai-tools">
-                    <Button size="sm" variant="outline" className="h-8" data-testid="button-try-ai-mobile">
-                      <Sparkles className="h-3 w-3 mr-2" />
+                    <Button variant="outline" data-testid="button-try-ai">
+                      <Sparkles className="h-4 w-4 mr-2" />
                       Explore AI Tools
                     </Button>
                   </Link>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="bg-gradient-to-br from-primary/5 to-violet-500/5 border-primary/20" data-testid="card-ai-tip">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-6">
-                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center flex-shrink-0 shadow-lg">
-                  <Zap className="h-7 w-7 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-base mb-1">AI Assistant Ready</p>
-                  <p className="text-sm text-muted-foreground">
-                    Use voice commands to create jobs, send invoices, and manage your business hands-free.
-                  </p>
-                </div>
-                <Link href="/ai-tools">
-                  <Button variant="outline" data-testid="button-try-ai">
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Explore AI Tools
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )
         )}
 
         <div className={isMobile ? "h-20" : "h-8"} />
