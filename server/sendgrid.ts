@@ -1,6 +1,7 @@
 // SendGrid integration for email notifications
 import sgMail from '@sendgrid/mail';
 import { logger } from "./lib/logger";
+import { maskEmail } from "./lib/safeLogger";
 
 let connectionSettings: any;
 
@@ -68,7 +69,7 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
       html: options.html || options.text,
     });
 
-    logger.info(`Email sent successfully to ${options.to}`);
+    logger.info(`Email sent successfully to ${maskEmail(options.to)}`);
     return true;
   } catch (error) {
     logger.error('Failed to send email:', error);

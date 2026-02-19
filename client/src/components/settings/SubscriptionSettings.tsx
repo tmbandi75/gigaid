@@ -730,7 +730,9 @@ export function SubscriptionSettings() {
               Subscriptions are managed externally via our website. Gig Aid subscriptions
               are for business management services (job scheduling, invoicing, client
               management, and automation tools) — not digital content or media. Payments
-              are processed securely through Stripe.
+              are processed securely through Stripe. Paid plans auto-renew at the stated
+              price each month until cancelled. Cancellation takes effect at the end of
+              the current billing period.
             </p>
 
             <div className="space-y-2">

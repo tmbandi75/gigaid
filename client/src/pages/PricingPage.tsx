@@ -439,9 +439,12 @@ export default function PricingPage() {
             </CardContent>
           </Card>
 
-          {/* Fine Print */}
+          {/* Fine Print — Apple-required auto-renewal disclosure */}
           <p className="text-xs text-muted-foreground max-w-xl mx-auto" data-testid="text-fine-print">
-            All prices in USD. Subscriptions renew automatically. You can cancel or change your plan anytime from Settings.
+            All prices in USD. Paid subscriptions auto-renew at the stated price each
+            month until cancelled. You may cancel at any time from Settings — cancellation
+            takes effect at the end of the current billing period. No partial refunds for
+            unused time. Payment is processed securely through Stripe.
           </p>
         </div>
       </div>
