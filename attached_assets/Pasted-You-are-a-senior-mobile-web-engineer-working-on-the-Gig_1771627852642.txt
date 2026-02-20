@@ -1,0 +1,172 @@
+You are a senior mobile/web engineer working on the GigAid codebase.
+
+Your task is to fix confusing location-permission error messaging when Drive Mode is restricted.
+
+Currently, users always see:
+
+“Please enable location access in your browser settings for automatic detection.”
+
+This is incorrect on mobile and standalone app builds.
+
+⚠️ STRICT CONSTRAINTS
+
+You MUST:
+
+❌ Do NOT refactor any existing business logic
+
+❌ Do NOT change permission handling
+
+❌ Do NOT move files
+
+❌ Do NOT rename existing functions
+
+❌ Do NOT modify Drive Mode behavior
+
+❌ Do NOT affect iOS/Android build configs
+
+❌ Do NOT change error-trigger conditions
+
+❌ Do NOT touch CapabilityGate, ATT, or entitlements
+
+You MAY:
+
+✅ Add a small utility/helper function
+
+✅ Replace hardcoded strings with a dynamic message
+
+✅ Update only UI-facing copy
+
+✅ Import a helper where needed
+
+🎯 GOAL
+
+Show correct location-permission instructions based on runtime:
+
+Desktop / Laptop
+
+“Please enable location access in your browser settings for automatic detection.”
+
+Mobile Browser
+
+“Please allow location access in your browser when prompted to enable automatic detection.”
+
+iOS / Android Standalone App
+
+“Please enable location access for GigAid in your phone’s settings to allow automatic detection.”
+
+📌 IMPLEMENTATION STEPS
+1️⃣ Create Helper (If Not Already Present)
+
+Add a new file:
+
+/src/utils/locationPermissionMessage.ts
+
+or nearest existing utils folder.
+
+Insert:
+
+export function getLocationPermissionMessage(): string {
+  const ua = navigator.userAgent.toLowerCase();
+
+  const isIOS = /iphone|ipad|ipod/.test(ua);
+  const isAndroid = /android/.test(ua);
+  const isMobile = isIOS || isAndroid;
+
+  const isStandalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    // @ts-ignore
+    window.navigator.standalone === true;
+
+  if (isMobile && isStandalone) {
+    return 'Please enable location access for GigAid in your phone’s settings to allow automatic detection.';
+  }
+
+  if (isMobile) {
+    return 'Please allow location access in your browser when prompted to enable automatic detection.';
+  }
+
+  return 'Please enable location access in your browser settings for automatic detection.';
+}
+2️⃣ Replace Hardcoded Copy ONLY
+
+Search for this exact string:
+
+Please enable location access in your browser settings for automatic detection.
+
+Wherever it appears:
+
+❌ Do NOT change surrounding logic.
+
+Replace ONLY the string with:
+
+getLocationPermissionMessage()
+
+And add import if missing:
+
+import { getLocationPermissionMessage } from '@/utils/locationPermissionMessage';
+
+(or nearest relative path)
+
+3️⃣ Preserve All Existing Behavior
+
+Ensure:
+
+Existing toast/alert/modal systems stay intact
+
+Same error triggers
+
+Same permission checks
+
+Same UX flow
+
+Only the displayed message changes.
+
+🧪 VALIDATION
+
+After implementation, verify:
+
+Desktop
+
+Shows browser message ✅
+
+Mobile Chrome/Safari
+
+Shows mobile browser message ✅
+
+PWA / iOS Wrapper / APK
+
+Shows phone settings message ✅
+
+TestFlight / Store Builds
+
+No crashes, no permission regressions ✅
+
+🚫 DO NOT
+
+Do NOT introduce new state
+
+Do NOT modify permission APIs
+
+Do NOT change hooks
+
+Do NOT wrap existing functions
+
+Do NOT centralize permissions
+
+Do NOT refactor components
+
+✅ SUCCESS CRITERIA
+
+This change must be:
+
+Copy-only
+
+Non-breaking
+
+Review-safe
+
+Backwards-compatible
+
+Zero behavioral change
+
+Implement now.

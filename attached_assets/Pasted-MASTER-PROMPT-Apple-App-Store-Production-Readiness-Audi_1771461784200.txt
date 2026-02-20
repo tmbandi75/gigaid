@@ -1,0 +1,208 @@
+MASTER PROMPT — Apple App Store Production Readiness Audit (GigAid)
+
+You are a senior iOS App Store compliance auditor.
+
+Perform a FULL production-readiness audit for an iOS submission under Apple App Store Review Guidelines (latest version).
+
+Audit across the following categories:
+
+1️⃣ Privacy & Data (Guideline 5.1.x)
+
+Verify:
+
+No PII logged in production (client + server)
+
+No console logs containing:
+
+email
+
+phone
+
+tokens
+
+user IDs
+
+payment info
+
+Privacy Policy:
+
+Publicly accessible URL
+
+Lists all SDKs (Firebase, Stripe, PostHog, Twilio, etc.)
+
+Lists data categories collected
+
+Lists retention periods
+
+GDPR rights included
+
+CCPA/CPRA rights included
+
+Data deletion flow exists in-app
+
+Account deletion actually deletes backend records
+
+ATT prompt implemented correctly (if tracking)
+
+No fingerprinting
+
+No hidden analytics
+
+No undeclared SDK usage
+
+Return PASS / FAIL with reasons.
+
+2️⃣ Payments Compliance (3.1.x)
+
+Check:
+
+No external payment links for digital goods
+
+Stripe used only for:
+
+real-world services
+
+gig payments
+
+No mention of Venmo, Zelle, CashApp for app fees
+
+No “Pay outside the app” language
+
+Subscriptions (if any):
+
+Restore purchases present
+
+Terms linked
+
+Auto-renewal disclosure
+
+Pricing clear
+
+Return PASS / FAIL.
+
+3️⃣ Login / Account Requirements
+
+Verify:
+
+App does not require login before explaining purpose
+
+Sign up works without crash
+
+Password reset works
+
+No forced demo data
+
+No broken deep links
+
+All primary flows usable
+
+Return PASS / FAIL.
+
+4️⃣ Stability & Performance
+
+Check:
+
+No white screens
+
+No blocking spinners
+
+Graceful offline handling
+
+No unhandled promise errors
+
+No console red errors in production
+
+App loads under 3 seconds
+
+Navigation stack stable
+
+Return PASS / FAIL.
+
+5️⃣ UI / UX Compliance (4.2 Design Guideline)
+
+Check:
+
+No placeholder text
+
+No lorem ipsum
+
+No broken icons
+
+No pixelated logos
+
+Splash screen correct resolution
+
+App icon correct size (1024x1024 no transparency for App Store)
+
+No web-looking UI artifacts
+
+Safe area respected
+
+No debug menus visible
+
+Return PASS / FAIL.
+
+6️⃣ Required Apple Metadata
+
+Confirm:
+
+App description complete
+
+Keywords provided
+
+Support URL
+
+Privacy Policy URL
+
+Contact email
+
+Screenshots:
+
+6.7"
+
+6.5"
+
+5.5"
+
+App Preview optional but recommended
+
+No prohibited claims (e.g., “#1”, “Best App Ever”)
+
+Return PASS / FAIL.
+
+7️⃣ Legal & Regulatory
+
+Check:
+
+No financial claims requiring license
+
+No lending features without compliance
+
+No gambling elements
+
+No crypto payments (unless disclosed)
+
+No hidden AI data usage
+
+No scraping violations embedded
+
+Return PASS / FAIL.
+
+8️⃣ Overall Risk Assessment
+
+Return:
+
+Risk Level: LOW / MEDIUM / HIGH
+
+Probability of Rejection (% estimate)
+
+Top 5 rejection risks
+
+Immediate blockers (if any)
+
+Final Readiness Score (1–10)
+
+Be brutally honest.
+Do not inflate score.
+Do not assume best case.
+Flag anything ambiguous.
