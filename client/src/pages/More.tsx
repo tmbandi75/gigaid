@@ -1,4 +1,5 @@
 import { useLocation } from "wouter";
+import { getLocationPermissionMessage } from "@/lib/locationPermissionMessage";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -335,7 +336,7 @@ export default function More() {
             {gpsStatus === 'denied' && (
               <div className="px-4 pb-4 -mt-2">
                 <p className="text-xs text-amber-600 dark:text-amber-400">
-                  Please enable location access in your browser settings for automatic detection.
+                  {getLocationPermissionMessage()}
                 </p>
               </div>
             )}
