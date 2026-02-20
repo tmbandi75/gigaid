@@ -12,18 +12,19 @@ const env = getEnv();
 
 async function dismissOverlays(page: Page): Promise<void> {
   const overlaySelectors = [
-    '[data-testid="modal-analytics-consent"] button:has-text("Accept")',
-    '[data-testid="modal-analytics-consent"] button:has-text("Decline")',
-    '[data-testid="modal-analytics-consent"] button:has-text("Continue")',
+    '[data-testid="button-consent-allow"]',
+    '[data-testid="button-consent-deny"]',
+    '[data-testid="modal-analytics-consent"] button:has-text("Allow")',
+    '[data-testid="modal-analytics-consent"] button:has-text("No Thanks")',
     '[data-testid="button-accept-cookies"]',
     '[data-testid="button-dismiss"]',
   ];
 
   for (const sel of overlaySelectors) {
     const btn = page.locator(sel).first();
-    if (await btn.isVisible({ timeout: 500 }).catch(() => false)) {
+    if (await btn.isVisible({ timeout: 1000 }).catch(() => false)) {
       await btn.click().catch(() => {});
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(500);
       uatLogger.info("Dismissed overlay/consent modal");
       break;
     }
@@ -55,8 +56,14 @@ export async function executeStep(
 
       case "click": {
         const sel = step.selector || "";
+        await dismissOverlays(page);
         await page.waitForSelector(sel, { state: "visible", timeout: stepTimeout });
-        await page.click(sel, { timeout: stepTimeout });
+        try {
+          await page.click(sel, { timeout: 5000 });
+        } catch {
+          await dismissOverlays(page);
+          await page.click(sel, { timeout: stepTimeout });
+        }
         break;
       }
 
@@ -113,8 +120,10 @@ export async function executeStep(
         await passwordInput.fill(env.UAT_TEST_PASSWORD);
 
         const submitBtn = page.locator('[data-testid="button-submit"], [data-testid="button-login"], button[type="submit"]').first();
+        await dismissOverlays(page);
         await submitBtn.click();
         await page.waitForTimeout(2000);
+        await dismissOverlays(page);
         break;
       }
 
@@ -122,9 +131,11 @@ export async function executeStep(
         const jobTitle = step.value || "UAT Test Job";
         await page.goto(`${env.UAT_BASE_URL}/jobs`, { waitUntil: "domcontentloaded", timeout: stepTimeout });
         await page.waitForTimeout(1000);
+        await dismissOverlays(page);
 
         const addBtn = page.locator('[data-testid="button-add-job"], [data-testid="button-create-job"], button:has-text("Add Job"), button:has-text("New Job")').first();
         if (await addBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await dismissOverlays(page);
           await addBtn.click();
           await page.waitForTimeout(500);
         }
@@ -145,6 +156,7 @@ export async function executeStep(
       case "send_invoice": {
         await page.goto(`${env.UAT_BASE_URL}/invoices`, { waitUntil: "domcontentloaded", timeout: stepTimeout });
         await page.waitForTimeout(1000);
+        await dismissOverlays(page);
 
         const createBtn = page.locator('[data-testid="button-create-invoice"], [data-testid="button-add-invoice"], button:has-text("New Invoice"), button:has-text("Create Invoice")').first();
         if (await createBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
@@ -186,6 +198,7 @@ export async function executeStep(
       case "upgrade_plan": {
         await page.goto(`${env.UAT_BASE_URL}/pricing`, { waitUntil: "domcontentloaded", timeout: stepTimeout });
         await page.waitForTimeout(1000);
+        await dismissOverlays(page);
 
         const upgradeBtn = page.locator('[data-testid="button-upgrade"], [data-testid*="upgrade"], button:has-text("Upgrade"), button:has-text("Get Pro")').first();
         if (await upgradeBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
