@@ -1,0 +1,65 @@
+{
+  "name": "Churn Recovery",
+  "description": "Tests the subscription restore and churn recovery flow for returning users",
+  "viewport": "mobile",
+  "tags": ["churn", "retention", "subscription"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "timeout": 3000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/settings",
+      "description": "Navigate to settings page"
+    },
+    {
+      "action": "wait",
+      "timeout": 2000,
+      "description": "Wait for settings page to load"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='tab-subscription'], [data-testid='link-subscription'], a[href*='subscription'], button:has-text('Subscription')",
+      "description": "Navigate to subscription settings"
+    },
+    {
+      "action": "wait",
+      "timeout": 3000,
+      "description": "Wait for subscription settings to load"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='card-restore-access']",
+      "timeout": 5000,
+      "description": "Wait for restore access card to appear"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='button-restore-access']",
+      "description": "Click restore access button"
+    },
+    {
+      "action": "wait",
+      "timeout": 5000,
+      "description": "Wait for restore result"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='card-restore-access']",
+      "description": "Restore Access card should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='button-restore-access'], [data-testid='text-restore-result']",
+      "description": "Restore button or result message should be visible"
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "name": "Book and Pay",
+  "description": "Tests the full booking and payment flow: login, create job, send invoice, and verify invoice status",
+  "viewport": "desktop",
+  "tags": ["booking", "payment", "revenue", "critical"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "timeout": 3000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/jobs",
+      "description": "Navigate to jobs page"
+    },
+    {
+      "action": "wait",
+      "timeout": 2000,
+      "description": "Wait for jobs page to load"
+    },
+    {
+      "action": "create_job",
+      "value": "UAT Plumbing Repair",
+      "description": "Create a new test job"
+    },
+    {
+      "action": "wait",
+      "timeout": 3000,
+      "description": "Wait for job creation to complete"
+    },
+    {
+      "action": "goto",
+      "url": "/invoices",
+      "description": "Navigate to invoices page"
+    },
+    {
+      "action": "wait",
+      "timeout": 2000,
+      "description": "Wait for invoices page to load"
+    },
+    {
+      "action": "send_invoice",
+      "description": "Create and send an invoice"
+    },
+    {
+      "action": "wait",
+      "timeout": 3000,
+      "description": "Wait for invoice to be sent"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "url",
+      "expected": "/invoices",
+      "description": "Should be on the invoices page"
+    },
+    {
+      "type": "text_present",
+      "expected": "Invoice",
+      "description": "Invoice content should be visible"
+    }
+  ]
+}

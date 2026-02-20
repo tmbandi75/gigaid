@@ -1,0 +1,85 @@
+{
+  "name": "Mobile PWA Flow",
+  "description": "Tests the mobile-first experience including navigation, dashboard, and key actions on a mobile viewport",
+  "viewport": "mobile",
+  "tags": ["mobile", "pwa", "navigation", "critical"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials on mobile"
+    },
+    {
+      "action": "wait",
+      "timeout": 3000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='dashboard-container'], [data-testid='activation-checklist'], main",
+      "timeout": 5000,
+      "description": "Wait for main content to appear"
+    },
+    {
+      "action": "goto",
+      "url": "/jobs",
+      "description": "Navigate to jobs page"
+    },
+    {
+      "action": "wait",
+      "timeout": 2000,
+      "description": "Wait for jobs page to load"
+    },
+    {
+      "action": "goto",
+      "url": "/leads",
+      "description": "Navigate to leads page"
+    },
+    {
+      "action": "wait",
+      "timeout": 2000,
+      "description": "Wait for leads page to load"
+    },
+    {
+      "action": "goto",
+      "url": "/invoices",
+      "description": "Navigate to invoices page"
+    },
+    {
+      "action": "wait",
+      "timeout": 2000,
+      "description": "Wait for invoices page to load"
+    },
+    {
+      "action": "goto",
+      "url": "/more",
+      "description": "Navigate to More page (settings menu)"
+    },
+    {
+      "action": "wait",
+      "timeout": 2000,
+      "description": "Wait for More page to load"
+    },
+    {
+      "action": "goto",
+      "url": "/pricing",
+      "description": "Navigate to pricing page"
+    },
+    {
+      "action": "wait",
+      "timeout": 2000,
+      "description": "Wait for pricing page to load"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "text_present",
+      "expected": "Pro",
+      "description": "Pricing page should show Pro plan"
+    },
+    {
+      "type": "text_present",
+      "expected": "auto-renew",
+      "description": "Auto-renewal disclosure should be visible"
+    }
+  ]
+}

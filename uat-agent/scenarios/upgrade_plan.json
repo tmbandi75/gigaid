@@ -1,0 +1,54 @@
+{
+  "name": "Upgrade Plan",
+  "description": "Tests the subscription upgrade flow from Free to Pro tier via the pricing page",
+  "viewport": "desktop",
+  "tags": ["subscription", "pricing", "revenue", "critical"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "timeout": 3000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/pricing",
+      "description": "Navigate to pricing page"
+    },
+    {
+      "action": "wait",
+      "timeout": 2000,
+      "description": "Wait for pricing page to load"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid*='pricing'], [data-testid*='plan'], .pricing-card",
+      "timeout": 5000,
+      "description": "Wait for pricing cards to appear"
+    },
+    {
+      "action": "upgrade_plan",
+      "description": "Click upgrade button on Pro plan"
+    },
+    {
+      "action": "wait",
+      "timeout": 5000,
+      "description": "Wait for Stripe checkout or upgrade modal"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "text_present",
+      "expected": "Pro",
+      "description": "Pro plan details should be visible"
+    },
+    {
+      "type": "text_present",
+      "expected": "auto-renew",
+      "description": "Auto-renewal disclosure should be present (App Store compliance)"
+    }
+  ]
+}

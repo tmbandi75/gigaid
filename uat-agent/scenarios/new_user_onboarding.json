@@ -1,0 +1,45 @@
+{
+  "name": "New User Onboarding",
+  "description": "Tests the complete new user signup and onboarding flow including profile setup",
+  "viewport": "mobile",
+  "tags": ["onboarding", "signup", "critical"],
+  "steps": [
+    {
+      "action": "goto",
+      "url": "/",
+      "description": "Navigate to the landing page"
+    },
+    {
+      "action": "wait",
+      "timeout": 2000,
+      "description": "Wait for page to fully load"
+    },
+    {
+      "action": "signup",
+      "description": "Create a new test account"
+    },
+    {
+      "action": "wait",
+      "timeout": 3000,
+      "description": "Wait for post-signup redirect"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='onboarding-step'], [data-testid='dashboard-container'], [data-testid='activation-checklist']",
+      "timeout": 10000,
+      "description": "Wait for onboarding or dashboard to appear"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "url",
+      "expected": "/",
+      "description": "User should be redirected to a logged-in page"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='onboarding-step'], [data-testid='dashboard-container'], [data-testid='activation-checklist']",
+      "description": "Onboarding step or dashboard should be visible"
+    }
+  ]
+}
