@@ -1,0 +1,222 @@
+You are a senior QA automation architect and full-stack engineer.
+
+Your task is to implement a COMPLETE automated UAT agent for this application
+using Playwright, WITHOUT refactoring any existing production code.
+
+DO NOT modify existing business logic.
+DO NOT change API contracts.
+DO NOT change UI behavior.
+DO NOT remove features.
+DO NOT alter payment logic.
+
+You may ONLY ADD new files under /uat-agent.
+
+────────────────────────────────────────────
+GOAL
+────────────────────────────────────────────
+
+Create a self-contained UAT automation system that:
+
+1. Runs real browser-based user journeys
+2. Tests critical revenue and onboarding flows
+3. Emulates mobile + desktop
+4. Uses Stripe test mode for payments
+5. Captures screenshots on failure
+6. Records network + console errors
+7. Produces JSON + HTML reports
+8. Is runnable via: `npm run uat`
+
+────────────────────────────────────────────
+PROJECT STRUCTURE
+────────────────────────────────────────────
+
+Create:
+
+/uat-agent
+  /scenarios
+  /runner
+  /reports
+  /utils
+
+────────────────────────────────────────────
+DEPENDENCIES
+────────────────────────────────────────────
+
+Install and configure:
+
+- playwright
+- zod
+- fs-extra
+- dotenv
+
+Run:
+
+npm install playwright zod fs-extra dotenv
+npx playwright install
+
+────────────────────────────────────────────
+SCENARIO SYSTEM
+────────────────────────────────────────────
+
+Create JSON-based scenario definitions.
+
+Each scenario must include:
+
+- name
+- description
+- viewport (mobile|desktop)
+- steps[]
+- assertions[]
+
+Steps must support:
+
+- goto
+- click
+- fill
+- wait
+- signup
+- login
+- create_job
+- send_invoice
+- pay_invoice (Stripe test mode)
+- upgrade_plan
+- logout
+
+Example format:
+
+/uat-agent/scenarios/book_and_pay.json
+
+────────────────────────────────────────────
+RUNNER ENGINE
+────────────────────────────────────────────
+
+Create a TypeScript runner that:
+
+- Loads all scenarios
+- Executes them sequentially
+- Creates isolated browser contexts
+- Applies viewport emulation
+- Logs every step
+- Times execution
+- Captures screenshots on failure
+- Saves console + network errors
+
+Runner entry:
+
+/uat-agent/runner/index.ts
+
+────────────────────────────────────────────
+ASSERTION ENGINE
+────────────────────────────────────────────
+
+Implement assertions for:
+
+- URL validation
+- Text presence
+- Element visibility
+- Payment success
+- Job status
+- Invoice status
+- Subscription status
+
+Each assertion must fail loudly and log evidence.
+
+────────────────────────────────────────────
+REPORTING SYSTEM
+────────────────────────────────────────────
+
+Generate after each run:
+
+1. /reports/uat-results.json
+2. /reports/uat-results.html
+
+HTML must show:
+
+- Pass/fail summary
+- Scenario breakdown
+- Screenshots
+- Error stacks
+- Execution time
+
+────────────────────────────────────────────
+DEFAULT SCENARIOS
+────────────────────────────────────────────
+
+Create at least 5 ready scenarios:
+
+1. new_user_onboarding.json
+2. book_and_pay.json
+3. upgrade_plan.json
+4. churn_recovery.json
+5. mobile_pwa_flow.json
+
+Each must reflect real GigAid flows.
+
+Use placeholder credentials in .env.
+
+────────────────────────────────────────────
+CONFIGURATION
+────────────────────────────────────────────
+
+Create:
+
+/uat-agent/.env.example
+
+With:
+
+UAT_BASE_URL=
+UAT_TEST_EMAIL=
+UAT_TEST_PASSWORD=
+STRIPE_TEST_CARD=4242424242424242
+
+Runner must load env safely.
+
+────────────────────────────────────────────
+NPM SCRIPT
+────────────────────────────────────────────
+
+Add to package.json:
+
+"scripts": {
+  "uat": "ts-node uat-agent/runner/index.ts"
+}
+
+────────────────────────────────────────────
+SAFETY RULES
+────────────────────────────────────────────
+
+- No destructive actions on production
+- Block real payments
+- Never touch prod databases
+- Enforce test mode
+- Mask credentials in logs
+
+────────────────────────────────────────────
+DELIVERABLE
+────────────────────────────────────────────
+
+Return:
+
+- Fully working UAT agent
+- All folders created
+- All scenarios implemented
+- Runner functional
+- Reports generated
+- Instructions in README
+
+────────────────────────────────────────────
+QUALITY STANDARD
+────────────────────────────────────────────
+
+This must be enterprise-grade:
+- Clean architecture
+- Typed interfaces
+- Error isolation
+- Resumable runs
+- Extensible scenarios
+
+No shortcuts.
+No placeholders.
+No TODOs.
+
+Proceed.
