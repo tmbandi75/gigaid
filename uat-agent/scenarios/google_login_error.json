@@ -1,0 +1,53 @@
+{
+  "name": "Google Login Error",
+  "description": "Tests that clicking Google sign-in shows a user-friendly error toast when the popup fails (headless environment simulates popup closure)",
+  "viewport": "mobile",
+  "tags": ["auth", "login", "google", "error-handling"],
+  "steps": [
+    {
+      "action": "goto",
+      "url": "/",
+      "description": "Navigate to login page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='splash-page']",
+      "timeout": 15000,
+      "description": "Wait for login page to render (including service worker reload)"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='button-google-signin']",
+      "timeout": 5000,
+      "description": "Wait for Google sign-in button to be visible"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='button-google-signin']",
+      "description": "Click Google sign-in button"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='toast-destructive']",
+      "timeout": 20000,
+      "description": "Wait for error toast to appear after sign-in failure"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='toast-destructive']",
+      "description": "Error toast should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='toast-title']",
+      "description": "Toast title should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='splash-page']",
+      "description": "Should remain on the login page"
+    }
+  ]
+}

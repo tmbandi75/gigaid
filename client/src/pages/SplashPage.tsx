@@ -53,12 +53,22 @@ export default function SplashPage() {
     setIsLoading(true);
     
     try {
-      const idToken = await signInWithGoogle();
+      const timeoutMs = 30000;
+      const idTokenPromise = signInWithGoogle();
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Google sign-in timed out. Please try again.")), timeoutMs)
+      );
+      const idToken = await Promise.race([idTokenPromise, timeoutPromise]);
       await exchangeTokenAndNavigate(idToken);
     } catch (err: any) {
+      const code = err?.code || "";
+      const isPopupClosed = code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request";
+      const description = isPopupClosed
+        ? "The sign-in popup was closed. Please try again."
+        : err.message || "Something went wrong. Please try again.";
       toast({
         title: "Sign in failed",
-        description: err.message || "Please try again",
+        description,
         variant: "destructive",
       });
     } finally {
