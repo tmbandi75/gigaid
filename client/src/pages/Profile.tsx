@@ -160,10 +160,10 @@ export default function Profile() {
   });
 
   const updateMutation = useApiMutation(
-    async (data: Partial<{ name: string; email: string; phone: string; photo: string; businessName: string; bio: string; serviceArea: string; services: string[] }>) => {
+    async (data: Partial<{ name: string; firstName: string; lastName: string; email: string; phone: string; photo: string; businessName: string; bio: string; serviceArea: string; services: string[] }>) => {
       return apiFetch("/api/profile", { method: "PATCH", body: JSON.stringify(data) });
     },
-    [QUERY_KEYS.profile()],
+    [QUERY_KEYS.profile(), QUERY_KEYS.authUser()],
     {
       onSuccess: () => {
         toast({ title: "Profile updated successfully" });
@@ -179,6 +179,8 @@ export default function Profile() {
     const fullName = `${data.firstName} ${data.lastName}`.trim();
     updateMutation.mutate({
       name: fullName,
+      firstName: data.firstName,
+      lastName: data.lastName,
       email: data.email || "",
       phone: data.phone || "",
       businessName: data.companyName || "",
