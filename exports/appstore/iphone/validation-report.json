@@ -1,0 +1,50 @@
+{
+  "timestamp": "2026-02-21T14:21:27.030Z",
+  "resolution": "1290x2796",
+  "format": "PNG",
+  "results": [
+    {
+      "file": "01-hero.png",
+      "caption": "Book Jobs. Send Invoices. Get Paid.",
+      "pass": true,
+      "issues": []
+    },
+    {
+      "file": "02-booking.png",
+      "caption": "Let Clients Book You in Seconds",
+      "pass": true,
+      "issues": []
+    },
+    {
+      "file": "03-payments.png",
+      "caption": "Send Invoices & Collect Payments Instantly",
+      "pass": true,
+      "issues": []
+    },
+    {
+      "file": "04-jobs.png",
+      "caption": "Track Jobs in One Place",
+      "pass": true,
+      "issues": []
+    },
+    {
+      "file": "05-nudges.png",
+      "caption": "Never Miss Follow-Ups",
+      "pass": true,
+      "issues": []
+    },
+    {
+      "file": "06-clients.png",
+      "caption": "Manage Clients Effortlessly",
+      "pass": true,
+      "issues": []
+    },
+    {
+      "file": "07-overview.png",
+      "caption": "Run Your Business Like a Pro",
+      "pass": true,
+      "issues": []
+    }
+  ],
+  "allPass": true
+}
