@@ -1160,10 +1160,10 @@ export async function registerRoutes(
       const todaysPayments = invoices.filter(inv => 
         inv.status === "paid" && inv.paidAt && inv.paidAt.startsWith(today)
       );
-      const moneyCollectedToday = todaysPayments.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+      const moneyCollectedToday = todaysPayments.reduce((sum, inv) => sum + (inv.amount || 0) + (inv.tax || 0) - (inv.discount || 0), 0);
       
       const pendingInvoices = invoices.filter(inv => inv.status === "sent");
-      const moneyWaiting = pendingInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+      const moneyWaiting = pendingInvoices.reduce((sum, inv) => sum + (inv.amount || 0) + (inv.tax || 0) - (inv.discount || 0), 0);
       
       const pendingReminders = reminders.filter(r => r.status === "pending").length;
 
@@ -1309,8 +1309,8 @@ export async function registerRoutes(
           new Date(inv.paidAt) >= twoWeeksAgo &&
           new Date(inv.paidAt) < oneWeekAgo
       );
-      const weeklyEarnings = thisWeekPaid.reduce((s, i) => s + (i.amount || 0), 0);
-      const lastWeekEarnings = lastWeekPaid.reduce((s, i) => s + (i.amount || 0), 0);
+      const weeklyEarnings = thisWeekPaid.reduce((s, i) => s + (i.amount || 0) + (i.tax || 0) - (i.discount || 0), 0);
+      const lastWeekEarnings = lastWeekPaid.reduce((s, i) => s + (i.amount || 0) + (i.tax || 0) - (i.discount || 0), 0);
 
       const jobsCompletedThisWeek = jobs.filter(
         (j) => j.status === "completed" && j.completedAt && new Date(j.completedAt) >= oneWeekAgo
@@ -1318,10 +1318,10 @@ export async function registerRoutes(
 
       const collectedToday = invoices
         .filter((inv) => inv.status === "paid" && inv.paidAt && inv.paidAt.startsWith(today))
-        .reduce((s, i) => s + (i.amount || 0), 0);
+        .reduce((s, i) => s + (i.amount || 0) + (i.tax || 0) - (i.discount || 0), 0);
 
       const outstandingInvoices = invoices.filter((inv) => inv.status === "sent");
-      const moneyWaiting = outstandingInvoices.reduce((s, i) => s + (i.amount || 0), 0);
+      const moneyWaiting = outstandingInvoices.reduce((s, i) => s + (i.amount || 0) + (i.tax || 0) - (i.discount || 0), 0);
 
       const latestPaid = thisWeekPaid.sort(
         (a, b) => new Date(b.paidAt!).getTime() - new Date(a.paidAt!).getTime()
@@ -1425,7 +1425,7 @@ export async function registerRoutes(
       const unpaidInvoices = invoices.filter(inv => inv.status === "pending" || inv.status === "sent");
       const outstandingInvoices = {
         count: unpaidInvoices.length,
-        totalCents: unpaidInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0),
+        totalCents: unpaidInvoices.reduce((sum, inv) => sum + (inv.amount || 0) + (inv.tax || 0) - (inv.discount || 0), 0),
       };
 
       const upcomingJobs = jobs
@@ -13486,11 +13486,11 @@ Return ONLY the message text, no JSON or formatting.`
       
       const weeklyRevenue = allInvoices
         .filter(inv => inv.status === "paid" && inv.paidAt && inv.paidAt >= weekStartISO)
-        .reduce((sum, inv) => sum + (inv.amount || 0), 0);
+        .reduce((sum, inv) => sum + (inv.amount || 0) + (inv.tax || 0) - (inv.discount || 0), 0);
       
       const pendingRevenue = allInvoices
         .filter(inv => inv.status === "sent" || inv.status === "viewed")
-        .reduce((sum, inv) => sum + (inv.amount || 0), 0);
+        .reduce((sum, inv) => sum + (inv.amount || 0) + (inv.tax || 0) - (inv.discount || 0), 0);
       
       const atRiskJobs = allJobs.filter(job => {
         if (job.status !== "scheduled") return false;
@@ -13948,8 +13948,8 @@ Respond in JSON format only:
       
       for (const job of completedJobs) {
         const jobInvoices = allInvoices.filter(inv => inv.jobId === job.id);
-        const totalInvoiced = jobInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
-        const totalPaid = jobInvoices.filter(inv => inv.status === "paid").reduce((sum, inv) => sum + (inv.amount || 0), 0);
+        const totalInvoiced = jobInvoices.reduce((sum, inv) => sum + (inv.amount || 0) + (inv.tax || 0) - (inv.discount || 0), 0);
+        const totalPaid = jobInvoices.filter(inv => inv.status === "paid").reduce((sum, inv) => sum + (inv.amount || 0) + (inv.tax || 0) - (inv.discount || 0), 0);
         
         if (job.price && job.duration) {
           const hourlyRate = (job.price / job.duration) * 60;
