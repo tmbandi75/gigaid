@@ -1,0 +1,158 @@
+You are a senior front-end engineer and release designer.
+
+Your task is to generate 7 App Store–ready screenshots for the GigAid app,
+each embedded inside a realistic iPhone 17 Pro device frame.
+
+DO NOT modify business logic.
+DO NOT refactor core components.
+DO NOT change app behavior.
+DO NOT affect production or test flows.
+
+This task is UI-only and export-only.
+
+────────────────────────────────────────────
+GOAL
+────────────────────────────────────────────
+
+Produce 7 marketing screenshots for Apple App Store submission:
+
+• Resolution: 1290 × 2796 px (portrait)
+• Device Frame: iPhone 17 Pro (6.7")
+• Format: PNG
+• DPI: 2x / Retina
+• Clean, professional layout
+• No watermarks
+• No stock images
+• Use real in-app screens only
+
+────────────────────────────────────────────
+SOURCE SCREENS
+────────────────────────────────────────────
+
+Capture the following real GigAid screens:
+
+1. Dashboard / Booking Home
+2. Client Booking Page / Calendar
+3. Invoice + Stripe Checkout
+4. Jobs List / Job Detail
+5. AI Nudge (“I’m watching out for you”)
+6. Client Profile / History
+7. Business Stats / Settings
+
+Use Playwright or Puppeteer to navigate and capture.
+
+Ensure all screens load with real seeded data.
+
+────────────────────────────────────────────
+CAPTION OVERLAYS
+────────────────────────────────────────────
+
+For each screenshot, overlay the following headline text
+in a clean, Apple-style SF Pro font:
+
+1️⃣ "Book Jobs. Send Invoices. Get Paid."
+2️⃣ "Let Clients Book You in Seconds"
+3️⃣ "Send Invoices & Collect Payments Instantly"
+4️⃣ "Track Jobs in One Place"
+5️⃣ "Never Miss Follow-Ups"
+6️⃣ "Manage Clients Effortlessly"
+7️⃣ "Run Your Business Like a Pro"
+
+Position: Top-center
+Contrast: High
+Background: Subtle gradient overlay
+
+Do NOT obscure core UI elements.
+
+────────────────────────────────────────────
+DEVICE FRAME
+────────────────────────────────────────────
+
+Wrap each screen inside a high-fidelity
+iPhone 17 Pro mockup frame:
+
+• Thin bezels
+• Dynamic Island visible
+• Status bar intact
+• No branding
+• Neutral background
+
+Use SVG/PNG device frame assets
+stored in /assets/device-frames/.
+
+If missing, generate vector frame.
+
+────────────────────────────────────────────
+EXPORT PIPELINE
+────────────────────────────────────────────
+
+Implement an export script:
+
+/scripts/generate-appstore-screenshots.ts
+
+Pipeline:
+
+1. Launch headless browser
+2. Load target page
+3. Set viewport: 430 × 932 (iPhone 17 Pro)
+4. Capture screen
+5. Insert into device frame
+6. Apply caption overlay
+7. Resize to 1290 × 2796
+8. Export PNG
+
+Save to:
+
+/exports/appstore/iphone/
+
+Naming:
+
+01-hero.png
+02-booking.png
+03-payments.png
+04-jobs.png
+05-nudges.png
+06-clients.png
+07-overview.png
+
+────────────────────────────────────────────
+QUALITY RULES
+────────────────────────────────────────────
+
+• No placeholder content
+• No debug banners
+• No test labels
+• No console errors
+• No loading spinners
+• No mock data tags
+• Production theme enabled
+
+────────────────────────────────────────────
+VALIDATION
+────────────────────────────────────────────
+
+Before finishing:
+
+✔ Verify resolution = 1290×2796
+✔ Verify PNG format
+✔ Verify captions
+✔ Verify frame alignment
+✔ Verify legibility
+
+Output a validation report.
+
+────────────────────────────────────────────
+DELIVERABLE
+────────────────────────────────────────────
+
+Return:
+
+• 7 exported images
+• Export script
+• Validation summary
+
+Do NOT deploy.
+Do NOT change configs.
+Do NOT alter env vars.
+
+This is an asset-generation task only.
