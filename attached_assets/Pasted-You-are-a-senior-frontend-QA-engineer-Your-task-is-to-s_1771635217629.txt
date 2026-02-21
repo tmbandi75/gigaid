@@ -1,0 +1,138 @@
+You are a senior frontend QA engineer.
+
+Your task is to stabilize Playwright UAT selectors
+WITHOUT refactoring business logic or changing behavior.
+
+────────────────────────────────────────────
+STRICT RULES
+────────────────────────────────────────────
+- DO NOT refactor components
+- DO NOT modify logic
+- DO NOT change routes
+- DO NOT rename existing props
+- DO NOT alter CSS classes
+- DO NOT remove any element
+- Only ADD data-testid attributes where missing
+- Only update UAT scenario JSON targets (if necessary)
+- Preserve visual output 100%
+
+This is a selector stabilization task only.
+
+────────────────────────────────────────────
+STEP 1 — IDENTIFY CRITICAL FLOWS
+────────────────────────────────────────────
+Search the codebase for components related to:
+
+- Login submit button
+- Signup submit button
+- Pricing cards
+- Upgrade plan buttons
+- Subscription settings tab
+- Onboarding steps
+- Pay invoice button
+- Invoice status badge
+- Dashboard success confirmation
+
+These are business-critical elements referenced by UAT scenarios.
+
+────────────────────────────────────────────
+STEP 2 — ADD STABLE TESTIDS
+────────────────────────────────────────────
+If NOT already present, safely add:
+
+Login:
+<button data-testid="login-submit" />
+
+Signup:
+<button data-testid="signup-submit" />
+
+Pricing:
+<div data-testid="pricing-card-free" />
+<div data-testid="pricing-card-pro" />
+<div data-testid="pricing-card-business" />
+
+Upgrade:
+<button data-testid="upgrade-plan-btn" />
+
+Subscription:
+<a data-testid="subscription-settings-link" />
+
+Invoice:
+<button data-testid="pay-invoice-btn" />
+<div data-testid="invoice-status-paid" />
+
+Onboarding:
+<div data-testid="onboarding-step-1" />
+<div data-testid="onboarding-step-2" />
+<div data-testid="onboarding-step-3" />
+<div data-testid="onboarding-step-4" />
+<div data-testid="onboarding-step-5" />
+
+IMPORTANT:
+- Add attributes inline
+- Do not restructure JSX/HTML
+- Do not wrap elements
+- Do not move elements
+- If component is reused, add testid conditionally only if safe
+
+────────────────────────────────────────────
+STEP 3 — ENSURE MOBILE + DESKTOP PARITY
+────────────────────────────────────────────
+If mobile renders different markup:
+Ensure both variants include identical testids.
+
+Do not alter responsive logic.
+
+────────────────────────────────────────────
+STEP 4 — UPDATE UAT SCENARIOS
+────────────────────────────────────────────
+Modify scenario JSON files in /uat-agent/scenarios
+
+Replace fragile CSS/class selectors with:
+
+{
+  "action": "click",
+  "target": "[data-testid='pricing-card-pro']"
+}
+
+Use data-testid selectors wherever possible.
+
+Do not change scenario step order.
+Do not alter business assertions.
+
+────────────────────────────────────────────
+STEP 5 — ADD WAIT STABILIZATION
+────────────────────────────────────────────
+Where timeouts occurred previously,
+add a safe pre-step:
+
+{ "action": "wait", "value": "networkidle" }
+
+Only add where necessary.
+
+Do not add arbitrary delays.
+
+────────────────────────────────────────────
+STEP 6 — RE-RUN VALIDATION
+────────────────────────────────────────────
+After updates:
+Run the UAT runner in headed mode.
+
+If failures persist:
+Log which selectors still mismatch.
+
+Do NOT guess.
+Do NOT refactor.
+Only align selectors to actual DOM.
+
+────────────────────────────────────────────
+FINAL OUTPUT
+────────────────────────────────────────────
+Provide:
+1. List of files modified
+2. List of testids added
+3. List of scenario JSON updates
+4. Confirmation that no business logic changed
+5. Summary of UAT pass rate after stabilization
+
+End.
