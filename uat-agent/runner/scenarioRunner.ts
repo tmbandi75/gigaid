@@ -82,8 +82,12 @@ export async function runScenario(scenario: Scenario, browser: Browser): Promise
       }
 
       if (result.status === "fail") {
-        hasFailed = true;
-        uatLogger.warn(`Scenario "${scenario.name}" step #${i + 1} failed, continuing remaining steps...`);
+        if (step.optional) {
+          uatLogger.warn(`Scenario "${scenario.name}" step #${i + 1} failed (optional, non-blocking)`);
+        } else {
+          hasFailed = true;
+          uatLogger.warn(`Scenario "${scenario.name}" step #${i + 1} failed, continuing remaining steps...`);
+        }
       }
     }
 

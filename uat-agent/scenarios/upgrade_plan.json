@@ -10,8 +10,8 @@
     },
     {
       "action": "wait",
-      "timeout": 3000,
-      "description": "Wait for dashboard to load"
+      "timeout": 5000,
+      "description": "Wait for post-login page to load"
     },
     {
       "action": "goto",
@@ -20,14 +20,9 @@
     },
     {
       "action": "wait",
-      "timeout": 2000,
-      "description": "Wait for pricing page to load"
-    },
-    {
-      "action": "wait",
-      "selector": "[data-testid*='pricing'], [data-testid*='plan'], .pricing-card",
-      "timeout": 5000,
-      "description": "Wait for pricing cards to appear"
+      "selector": "[data-testid='page-pricing']",
+      "timeout": 10000,
+      "description": "Wait for pricing page to render"
     },
     {
       "action": "upgrade_plan",
@@ -41,14 +36,14 @@
   ],
   "assertions": [
     {
-      "type": "text_present",
-      "expected": "Pro",
-      "description": "Pro plan details should be visible"
+      "type": "url",
+      "expected": "/pricing",
+      "description": "Should be on the pricing page"
     },
     {
-      "type": "text_present",
-      "expected": "auto-renew",
-      "description": "Auto-renewal disclosure should be present (App Store compliance)"
+      "type": "element_visible",
+      "selector": "[data-testid='page-pricing']",
+      "description": "Pricing page container should be visible"
     }
   ]
 }

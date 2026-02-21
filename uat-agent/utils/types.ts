@@ -38,6 +38,7 @@ export const StepSchema = z.object({
   url: z.string().optional(),
   timeout: z.number().optional(),
   description: z.string().optional(),
+  optional: z.boolean().optional(),
 });
 export type Step = z.infer<typeof StepSchema>;
 

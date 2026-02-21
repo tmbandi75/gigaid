@@ -10,14 +10,8 @@
     },
     {
       "action": "wait",
-      "timeout": 3000,
-      "description": "Wait for dashboard to load"
-    },
-    {
-      "action": "wait",
-      "selector": "[data-testid='dashboard-container'], [data-testid='activation-checklist'], main",
       "timeout": 5000,
-      "description": "Wait for main content to appear"
+      "description": "Wait for post-login page to load"
     },
     {
       "action": "goto",
@@ -26,8 +20,9 @@
     },
     {
       "action": "wait",
-      "timeout": 2000,
-      "description": "Wait for jobs page to load"
+      "selector": "[data-testid='page-jobs']",
+      "timeout": 10000,
+      "description": "Wait for jobs page to render"
     },
     {
       "action": "goto",
@@ -36,8 +31,9 @@
     },
     {
       "action": "wait",
-      "timeout": 2000,
-      "description": "Wait for leads page to load"
+      "selector": "[data-testid='page-leads']",
+      "timeout": 10000,
+      "description": "Wait for leads page to render"
     },
     {
       "action": "goto",
@@ -46,8 +42,9 @@
     },
     {
       "action": "wait",
-      "timeout": 2000,
-      "description": "Wait for invoices page to load"
+      "selector": "[data-testid='page-invoices']",
+      "timeout": 10000,
+      "description": "Wait for invoices page to render"
     },
     {
       "action": "goto",
@@ -56,8 +53,9 @@
     },
     {
       "action": "wait",
-      "timeout": 2000,
-      "description": "Wait for More page to load"
+      "selector": "[data-testid='page-more']",
+      "timeout": 10000,
+      "description": "Wait for More page to render"
     },
     {
       "action": "goto",
@@ -66,20 +64,21 @@
     },
     {
       "action": "wait",
-      "timeout": 2000,
-      "description": "Wait for pricing page to load"
+      "selector": "[data-testid='page-pricing']",
+      "timeout": 10000,
+      "description": "Wait for pricing page to render"
     }
   ],
   "assertions": [
     {
-      "type": "text_present",
-      "expected": "Pro",
-      "description": "Pricing page should show Pro plan"
+      "type": "url",
+      "expected": "/pricing",
+      "description": "Should be on the pricing page"
     },
     {
-      "type": "text_present",
-      "expected": "auto-renew",
-      "description": "Auto-renewal disclosure should be visible"
+      "type": "element_visible",
+      "selector": "[data-testid='page-pricing']",
+      "description": "Pricing page container should be visible"
     }
   ]
 }

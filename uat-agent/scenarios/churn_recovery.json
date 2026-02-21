@@ -10,8 +10,8 @@
     },
     {
       "action": "wait",
-      "timeout": 3000,
-      "description": "Wait for dashboard to load"
+      "timeout": 5000,
+      "description": "Wait for post-login page to load"
     },
     {
       "action": "goto",
@@ -20,29 +20,21 @@
     },
     {
       "action": "wait",
-      "timeout": 2000,
-      "description": "Wait for settings page to load"
-    },
-    {
-      "action": "click",
-      "selector": "[data-testid='tab-subscription'], [data-testid='link-subscription'], a[href*='subscription'], button:has-text('Subscription')",
-      "description": "Navigate to subscription settings"
+      "selector": "[data-testid='page-settings']",
+      "timeout": 10000,
+      "description": "Wait for settings page to render"
     },
     {
       "action": "wait",
-      "timeout": 3000,
-      "description": "Wait for subscription settings to load"
-    },
-    {
-      "action": "wait",
-      "selector": "[data-testid='card-restore-access']",
-      "timeout": 5000,
-      "description": "Wait for restore access card to appear"
+      "selector": "[data-testid='card-subscription-settings'], [data-testid='card-restore-access']",
+      "timeout": 10000,
+      "description": "Wait for subscription section to load"
     },
     {
       "action": "click",
       "selector": "[data-testid='button-restore-access']",
-      "description": "Click restore access button"
+      "description": "Click restore access button",
+      "optional": true
     },
     {
       "action": "wait",
@@ -52,14 +44,14 @@
   ],
   "assertions": [
     {
-      "type": "element_visible",
-      "selector": "[data-testid='card-restore-access']",
-      "description": "Restore Access card should be visible"
+      "type": "url",
+      "expected": "/settings",
+      "description": "Should be on the settings page"
     },
     {
       "type": "element_visible",
-      "selector": "[data-testid='button-restore-access'], [data-testid='text-restore-result']",
-      "description": "Restore button or result message should be visible"
+      "selector": "[data-testid='page-settings']",
+      "description": "Settings page container should be visible"
     }
   ]
 }

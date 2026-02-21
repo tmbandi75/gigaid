@@ -93,3 +93,17 @@ To enforce App Check (block requests without valid tokens):
 - File: `ios/App/App.xcodeproj/project.pbxproj`
 - `MARKETING_VERSION`: User-facing version (e.g., 1.0.0). Update for new App Store versions.
 - `CURRENT_PROJECT_VERSION`: Build number (e.g., 1). Increment for every App Store upload.
+
+## UAT Automation
+
+### Architecture
+- Runner: `uat-agent/runner/` (Playwright-based, headless Chromium)
+- Scenarios: `uat-agent/scenarios/*.json` (5 scenarios: book_and_pay, upgrade_plan, churn_recovery, new_user_onboarding, mobile_pwa_flow)
+- Reports: `uat-agent/reports/` (JSON + HTML)
+- Run: `npx tsx uat-agent/runner/index.ts` (all) or `npx tsx uat-agent/runner/index.ts "Scenario Name"` (filtered)
+
+### Key Technical Details
+- **Service Worker Reload**: Fresh browser contexts trigger SW install which reloads the page ~3-5s after initial load. Login/signup steps wait for the second `load` event before interacting.
+- **Analytics Consent Modal**: Pre-set via `addInitScript` to localStorage before navigation to prevent modal from rendering at z-[9999].
+- **Optional Steps**: Steps with `"optional": true` in JSON don't fail the scenario. Used for conditional UI elements (e.g., restore-access button in churn recovery).
+- **Test User**: `uat-test@gigaid.ai` / `UatTest123!` — needs `onboarding_completed=true`, `payday_onboarding_completed=true`, and `default_price` set in DB to avoid ActivationGate redirects.

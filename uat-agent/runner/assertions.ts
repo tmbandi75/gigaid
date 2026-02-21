@@ -2,6 +2,20 @@ import type { Page } from "playwright";
 import type { Assertion, AssertionResult } from "../utils/types";
 import { uatLogger } from "../utils/logger";
 
+async function dismissOverlaysForAssertion(page: Page): Promise<void> {
+  const selectors = [
+    '[data-testid="button-consent-deny"]',
+    '[data-testid="button-consent-allow"]',
+  ];
+  for (const sel of selectors) {
+    const btn = page.locator(sel).first();
+    if (await btn.isVisible({ timeout: 300 }).catch(() => false)) {
+      await btn.click({ force: true }).catch(() => {});
+      await page.waitForTimeout(300);
+    }
+  }
+}
+
 export async function runAssertion(page: Page, assertion: Assertion, timeout: number): Promise<AssertionResult> {
   const start = Date.now();
   const desc = assertion.description || `${assertion.type}: ${assertion.expected || assertion.selector || ""}`;
@@ -29,14 +43,14 @@ export async function runAssertion(page: Page, assertion: Assertion, timeout: nu
         const text = assertion.expected || "";
         try {
           await page.waitForFunction(
-            (t: string) => document.body.innerText.includes(t),
+            (t: string) => (document.body.textContent || "").includes(t),
             text,
-            { timeout }
+            { timeout: Math.min(timeout, 10000) }
           );
           uatLogger.pass(`Text present: "${text}"`);
           return { type: assertion.type, description: desc, status: "pass", expected: text };
         } catch {
-          const bodyText = await page.evaluate(() => document.body.innerText.slice(0, 500));
+          const bodyText = await page.evaluate(() => (document.body.textContent || "").slice(0, 500));
           return {
             type: assertion.type,
             description: desc,
@@ -51,7 +65,8 @@ export async function runAssertion(page: Page, assertion: Assertion, timeout: nu
       case "element_visible": {
         const sel = assertion.selector || "";
         try {
-          await page.waitForSelector(sel, { state: "visible", timeout });
+          await dismissOverlaysForAssertion(page);
+          await page.locator(sel).first().waitFor({ state: "visible", timeout: Math.min(timeout, 10000) });
           uatLogger.pass(`Element visible: ${sel}`);
           return { type: assertion.type, description: desc, status: "pass" };
         } catch {

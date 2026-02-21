@@ -10,8 +10,8 @@
     },
     {
       "action": "wait",
-      "timeout": 3000,
-      "description": "Wait for dashboard to load"
+      "timeout": 5000,
+      "description": "Wait for post-login page to load"
     },
     {
       "action": "goto",
@@ -20,8 +20,9 @@
     },
     {
       "action": "wait",
-      "timeout": 2000,
-      "description": "Wait for jobs page to load"
+      "selector": "[data-testid='page-jobs']",
+      "timeout": 10000,
+      "description": "Wait for jobs page to render"
     },
     {
       "action": "create_job",
@@ -40,8 +41,9 @@
     },
     {
       "action": "wait",
-      "timeout": 2000,
-      "description": "Wait for invoices page to load"
+      "selector": "[data-testid='page-invoices']",
+      "timeout": 10000,
+      "description": "Wait for invoices page to render"
     },
     {
       "action": "send_invoice",
@@ -60,9 +62,9 @@
       "description": "Should be on the invoices page"
     },
     {
-      "type": "text_present",
-      "expected": "Invoice",
-      "description": "Invoice content should be visible"
+      "type": "element_visible",
+      "selector": "[data-testid='page-invoices'], [data-testid='page-invoice-form']",
+      "description": "Invoices or invoice form page should be visible"
     }
   ]
 }
