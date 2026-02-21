@@ -57,10 +57,23 @@ async function main(): Promise<void> {
     mkdirSync(REPORTS_DIR, { recursive: true });
   }
 
-  const scenarios = await loadScenarios();
+  let scenarios = await loadScenarios();
   if (scenarios.length === 0) {
     uatLogger.error("No scenarios found. Exiting.");
     process.exit(1);
+  }
+
+  const filterArg = process.argv[2];
+  if (filterArg) {
+    const names = filterArg.split(",").map((n) => n.trim().toLowerCase());
+    scenarios = scenarios.filter((s) =>
+      names.some((n) => s.name.toLowerCase().includes(n))
+    );
+    uatLogger.info(`Filter: "${filterArg}" → ${scenarios.length} scenario(s) matched`);
+    if (scenarios.length === 0) {
+      uatLogger.error("No scenarios matched the filter. Exiting.");
+      process.exit(1);
+    }
   }
 
   uatLogger.info(`Found ${scenarios.length} scenarios to run`);
