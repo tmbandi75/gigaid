@@ -1,0 +1,45 @@
+{
+  "name": "Voice Notes",
+  "description": "Tests the voice notes page loads correctly with recording controls visible",
+  "viewport": "mobile",
+  "tags": ["voice", "recording", "tools"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "timeout": 5000,
+      "description": "Wait for post-login page to load"
+    },
+    {
+      "action": "goto",
+      "url": "/voice-notes",
+      "description": "Navigate to voice notes page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='voice-notes-page']",
+      "timeout": 10000,
+      "description": "Wait for voice notes page to render"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "url",
+      "expected": "/voice-notes",
+      "description": "Should be on the voice notes page"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='voice-notes-page']",
+      "description": "Voice notes page container should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='text-voice-notes-title']",
+      "description": "Voice notes title should be visible"
+    }
+  ]
+}

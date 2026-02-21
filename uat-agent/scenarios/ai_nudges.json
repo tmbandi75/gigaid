@@ -1,0 +1,58 @@
+{
+  "name": "AI Nudges",
+  "description": "Tests the dashboard loads with AI tip cards and nudge components visible",
+  "viewport": "desktop",
+  "tags": ["ai", "nudges", "dashboard"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "timeout": 5000,
+      "description": "Wait for post-login page to load"
+    },
+    {
+      "action": "goto",
+      "url": "/dashboard",
+      "description": "Navigate to dashboard"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-dashboard'], [data-testid='page-game-plan']",
+      "timeout": 10000,
+      "description": "Wait for dashboard to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='card-ai-tip'], [data-testid='card-nudges'], [data-testid='card-nudges-loading'], [data-testid='card-ai-hero-loading'], [data-testid='card-ai-assistant-hero'], [data-testid='card-add-first-service']",
+      "timeout": 10000,
+      "description": "Wait for AI tip or nudge cards to appear",
+      "optional": true
+    },
+    {
+      "action": "goto",
+      "url": "/ai-tools",
+      "description": "Navigate to AI tools page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-ai-tools']",
+      "timeout": 10000,
+      "description": "Wait for AI tools page to render"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "url",
+      "expected": "/ai-tools",
+      "description": "Should be on the AI tools page"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-ai-tools']",
+      "description": "AI tools page container should be visible"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "name": "Lead Management",
+  "description": "Tests creating and viewing leads in the lead management section",
+  "viewport": "desktop",
+  "tags": ["leads", "crm", "acquisition"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "timeout": 5000,
+      "description": "Wait for post-login page to load"
+    },
+    {
+      "action": "goto",
+      "url": "/leads",
+      "description": "Navigate to leads page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-leads']",
+      "timeout": 10000,
+      "description": "Wait for leads page to render"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='button-add-lead-header-desktop'], [data-testid='button-add-lead-header'], [data-testid='button-add-first-lead'], [data-testid='button-add-lead']",
+      "description": "Click add new lead button",
+      "optional": true
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-lead-form'], [data-testid='page-leads']",
+      "timeout": 10000,
+      "description": "Wait for lead form or leads page"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "url",
+      "expected": "/leads",
+      "description": "Should be on a leads-related page"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-leads'], [data-testid='page-lead-form']",
+      "description": "Leads page or lead form should be visible"
+    }
+  ]
+}

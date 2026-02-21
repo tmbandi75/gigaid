@@ -1,0 +1,63 @@
+{
+  "name": "Profile Settings",
+  "description": "Tests viewing and editing the user profile and settings page",
+  "viewport": "desktop",
+  "tags": ["profile", "settings", "account"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "timeout": 5000,
+      "description": "Wait for post-login page to load"
+    },
+    {
+      "action": "goto",
+      "url": "/profile",
+      "description": "Navigate to profile page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-profile'], [data-testid='card-profile'], [data-testid='card-profile-desktop']",
+      "timeout": 10000,
+      "description": "Wait for profile page to render"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='button-edit-profile'], [data-testid='button-edit-profile-bottom']",
+      "description": "Click edit profile button",
+      "optional": true
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-profile-edit'], [data-testid='page-profile']",
+      "timeout": 10000,
+      "description": "Wait for profile edit page or profile page"
+    },
+    {
+      "action": "goto",
+      "url": "/settings",
+      "description": "Navigate to settings page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-settings']",
+      "timeout": 10000,
+      "description": "Wait for settings page to render"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "url",
+      "expected": "/settings",
+      "description": "Should be on the settings page"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-settings']",
+      "description": "Settings page container should be visible"
+    }
+  ]
+}

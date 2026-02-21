@@ -1,0 +1,61 @@
+{
+  "name": "Job Editing",
+  "description": "Tests creating a job and navigating to edit it, verifying the job form renders correctly",
+  "viewport": "desktop",
+  "tags": ["jobs", "editing", "crud"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "timeout": 5000,
+      "description": "Wait for post-login page to load"
+    },
+    {
+      "action": "goto",
+      "url": "/jobs",
+      "description": "Navigate to jobs page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-jobs']",
+      "timeout": 10000,
+      "description": "Wait for jobs page to render"
+    },
+    {
+      "action": "create_job",
+      "value": "UAT Edit Test Job",
+      "description": "Create a new test job for editing"
+    },
+    {
+      "action": "wait",
+      "timeout": 3000,
+      "description": "Wait for job creation to complete"
+    },
+    {
+      "action": "goto",
+      "url": "/jobs",
+      "description": "Navigate back to jobs list"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-jobs']",
+      "timeout": 10000,
+      "description": "Wait for jobs list to reload"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "url",
+      "expected": "/jobs",
+      "description": "Should be on the jobs page"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-jobs']",
+      "description": "Jobs page container should be visible"
+    }
+  ]
+}

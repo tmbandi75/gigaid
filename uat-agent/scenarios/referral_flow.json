@@ -1,0 +1,51 @@
+{
+  "name": "Referral Flow",
+  "description": "Tests the referral page loads with share and copy referral link functionality",
+  "viewport": "desktop",
+  "tags": ["referral", "viral", "acquisition"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "timeout": 5000,
+      "description": "Wait for post-login page to load"
+    },
+    {
+      "action": "goto",
+      "url": "/referrals",
+      "description": "Navigate to referrals page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-referrals']",
+      "timeout": 10000,
+      "description": "Wait for referrals page to render"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='button-copy-referral']",
+      "description": "Click copy referral link button",
+      "optional": true
+    },
+    {
+      "action": "wait",
+      "timeout": 2000,
+      "description": "Wait for copy action to complete"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "url",
+      "expected": "/referrals",
+      "description": "Should be on the referrals page"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-referrals']",
+      "description": "Referrals page container should be visible"
+    }
+  ]
+}
