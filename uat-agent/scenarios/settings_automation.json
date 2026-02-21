@@ -1,0 +1,64 @@
+{
+  "name": "Settings Public Profile & Booking",
+  "description": "Tests the public profile toggle, booking link, and services edit button in Settings",
+  "viewport": "desktop",
+  "tags": ["more", "settings", "profile", "booking"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/settings",
+      "description": "Navigate to Settings page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-settings']",
+      "timeout": 10000,
+      "description": "Wait for Settings page to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='switch-public-profile']",
+      "timeout": 10000,
+      "description": "Wait for public profile toggle"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='button-copy-booking']",
+      "timeout": 5000,
+      "description": "Wait for copy booking link button"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='button-edit-services']",
+      "timeout": 5000,
+      "description": "Wait for edit services button"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-settings']",
+      "description": "Settings page should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='switch-public-profile']",
+      "description": "Public profile toggle should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='button-copy-booking']",
+      "description": "Copy booking link button should be visible"
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "name": "Settings Booking Link",
+  "description": "Tests the booking link section in Settings including public profile toggle, slug input, and copy button",
+  "viewport": "mobile",
+  "tags": ["more", "settings", "booking-link"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/settings",
+      "description": "Navigate to Settings page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-settings']",
+      "timeout": 10000,
+      "description": "Wait for Settings page to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='switch-public-profile']",
+      "timeout": 5000,
+      "description": "Wait for public profile toggle"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='input-profile-slug']",
+      "timeout": 5000,
+      "description": "Wait for profile slug input"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='button-copy-booking']",
+      "timeout": 5000,
+      "description": "Wait for copy booking link button"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-settings']",
+      "description": "Settings page should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='switch-public-profile']",
+      "description": "Public profile toggle should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='input-profile-slug']",
+      "description": "Profile slug input should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='button-copy-booking']",
+      "description": "Copy booking link button should be visible"
+    }
+  ]
+}

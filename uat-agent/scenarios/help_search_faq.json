@@ -1,0 +1,75 @@
+{
+  "name": "Help Search and FAQ",
+  "description": "Tests the search input and FAQ accordion on the Help & Support page",
+  "viewport": "mobile",
+  "tags": ["more", "help", "search", "faq"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/help",
+      "description": "Navigate to Help page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-help-support']",
+      "timeout": 10000,
+      "description": "Wait for Help page to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='input-search-help']",
+      "timeout": 5000,
+      "description": "Wait for search input"
+    },
+    {
+      "action": "fill",
+      "selector": "[data-testid='input-search-help']",
+      "value": "payment",
+      "description": "Type a search query into the help search"
+    },
+    {
+      "action": "wait",
+      "timeout": 1000,
+      "description": "Wait for search results to filter"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='card-faqs']",
+      "timeout": 5000,
+      "description": "Wait for FAQ section"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='link-view-plans']",
+      "timeout": 5000,
+      "description": "Wait for view plans link"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-help-support']",
+      "description": "Help page should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='input-search-help']",
+      "description": "Search input should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='card-faqs']",
+      "description": "FAQ section should be visible"
+    }
+  ]
+}

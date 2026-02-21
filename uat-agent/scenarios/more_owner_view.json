@@ -1,0 +1,54 @@
+{
+  "name": "Owner View Page",
+  "description": "Tests navigating to Owner View from the More page and verifying business snapshot renders",
+  "viewport": "mobile",
+  "tags": ["more", "owner", "business"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/more",
+      "description": "Navigate to More page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-more']",
+      "timeout": 10000,
+      "description": "Wait for More page to render"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='menu-owner-view']",
+      "description": "Click Owner View menu item"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-owner-view']",
+      "timeout": 10000,
+      "description": "Wait for Owner View page to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='card-deposit-metrics']",
+      "timeout": 10000,
+      "description": "Wait for deposit metrics card to load",
+      "optional": true
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-owner-view']",
+      "description": "Owner View page should be visible"
+    }
+  ]
+}

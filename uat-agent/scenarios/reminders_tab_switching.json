@@ -1,0 +1,101 @@
+{
+  "name": "Reminders Tab Switching",
+  "description": "Tests switching between All, Pending, Sent, and Failed tabs on the Reminders page",
+  "viewport": "mobile",
+  "tags": ["more", "reminders", "tabs"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/reminders",
+      "description": "Navigate to Reminders page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-reminders']",
+      "timeout": 10000,
+      "description": "Wait for Reminders page to render"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='tab-all']",
+      "description": "Click All tab"
+    },
+    {
+      "action": "wait",
+      "timeout": 1000,
+      "description": "Wait for tab content"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='tab-pending']",
+      "description": "Click Pending tab"
+    },
+    {
+      "action": "wait",
+      "timeout": 1000,
+      "description": "Wait for tab content"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='tab-sent']",
+      "description": "Click Sent tab"
+    },
+    {
+      "action": "wait",
+      "timeout": 1000,
+      "description": "Wait for tab content"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='tab-failed']",
+      "description": "Click Failed tab"
+    },
+    {
+      "action": "wait",
+      "timeout": 1000,
+      "description": "Wait for tab content"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='tab-all']",
+      "description": "Click back to All tab"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-reminders']",
+      "description": "Reminders page should remain visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='tab-all']",
+      "description": "All tab should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='tab-pending']",
+      "description": "Pending tab should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='tab-sent']",
+      "description": "Sent tab should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='tab-failed']",
+      "description": "Failed tab should be visible"
+    }
+  ]
+}

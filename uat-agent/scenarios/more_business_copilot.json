@@ -1,0 +1,47 @@
+{
+  "name": "Business Co-Pilot Page",
+  "description": "Tests navigating to Business Co-Pilot (AI Tools) from the More page",
+  "viewport": "mobile",
+  "tags": ["more", "ai-tools", "copilot"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/more",
+      "description": "Navigate to More page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-more']",
+      "timeout": 10000,
+      "description": "Wait for More page to render"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='menu-business-co-pilot']",
+      "description": "Click Business Co-Pilot menu item"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-ai-tools']",
+      "timeout": 10000,
+      "description": "Wait for AI Tools page to render"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-ai-tools']",
+      "description": "AI Tools page should be visible"
+    }
+  ]
+}

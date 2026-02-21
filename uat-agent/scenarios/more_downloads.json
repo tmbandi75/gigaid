@@ -1,0 +1,58 @@
+{
+  "name": "Downloads Page",
+  "description": "Tests navigating to Downloads from the More page and verifying download cards render",
+  "viewport": "mobile",
+  "tags": ["more", "downloads"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/more",
+      "description": "Navigate to More page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-more']",
+      "timeout": 10000,
+      "description": "Wait for More page to render"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='menu-downloads']",
+      "description": "Click Downloads menu item"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-downloads']",
+      "timeout": 10000,
+      "description": "Wait for Downloads page to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='text-downloads-title']",
+      "timeout": 5000,
+      "description": "Wait for downloads title"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-downloads']",
+      "description": "Downloads page should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='text-downloads-title']",
+      "description": "Downloads title should be visible"
+    }
+  ]
+}

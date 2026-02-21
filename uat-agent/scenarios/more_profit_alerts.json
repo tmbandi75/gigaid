@@ -1,0 +1,58 @@
+{
+  "name": "Profit Alerts Page",
+  "description": "Tests navigating to Profit Alerts from the More page and verifying warnings page renders",
+  "viewport": "mobile",
+  "tags": ["more", "profit-alerts", "warnings"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/more",
+      "description": "Navigate to More page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-more']",
+      "timeout": 10000,
+      "description": "Wait for More page to render"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='menu-profit-alerts']",
+      "description": "Click Profit Alerts menu item"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-profit-warnings']",
+      "timeout": 10000,
+      "description": "Wait for Profit Warnings page to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='text-page-title']",
+      "timeout": 5000,
+      "description": "Wait for page title"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-profit-warnings']",
+      "description": "Profit Warnings page should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='text-page-title']",
+      "description": "Page title should be visible"
+    }
+  ]
+}

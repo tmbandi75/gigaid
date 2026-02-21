@@ -1,0 +1,42 @@
+{
+  "name": "Settings Deposit Configuration",
+  "description": "Tests that the no-show protection toggle and deposit percent selector render in Settings",
+  "viewport": "desktop",
+  "tags": ["more", "settings", "deposit"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/settings",
+      "description": "Navigate to Settings page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-settings']",
+      "timeout": 10000,
+      "description": "Wait for Settings page to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='switch-no-show-protection']",
+      "timeout": 10000,
+      "description": "Wait for no-show protection toggle"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-settings']",
+      "description": "Settings page should be visible"
+    }
+  ]
+}

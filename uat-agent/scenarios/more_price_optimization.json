@@ -1,0 +1,58 @@
+{
+  "name": "Price Optimization Page",
+  "description": "Tests navigating to Price Optimization from the More page and verifying analytics render",
+  "viewport": "mobile",
+  "tags": ["more", "price-optimization", "analytics"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/more",
+      "description": "Navigate to More page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-more']",
+      "timeout": 10000,
+      "description": "Wait for More page to render"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='menu-price-optimization']",
+      "description": "Click Price Optimization menu item"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-price-optimization']",
+      "timeout": 10000,
+      "description": "Wait for Price Optimization page to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='text-page-title']",
+      "timeout": 5000,
+      "description": "Wait for page title"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-price-optimization']",
+      "description": "Price Optimization page should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='text-page-title']",
+      "description": "Page title should be visible"
+    }
+  ]
+}

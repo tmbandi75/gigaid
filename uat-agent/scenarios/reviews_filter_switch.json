@@ -1,0 +1,84 @@
+{
+  "name": "Reviews Filter Switching",
+  "description": "Tests switching between filter buttons on the Reviews page",
+  "viewport": "mobile",
+  "tags": ["more", "reviews", "filters"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/reviews",
+      "description": "Navigate to Reviews page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-reviews']",
+      "timeout": 10000,
+      "description": "Wait for Reviews page to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='card-review-stats']",
+      "timeout": 5000,
+      "description": "Wait for review stats card"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='button-filter-all']",
+      "description": "Click All filter"
+    },
+    {
+      "action": "wait",
+      "timeout": 1000,
+      "description": "Wait for filter to apply"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='button-filter-positive']",
+      "description": "Click Positive filter",
+      "optional": true
+    },
+    {
+      "action": "wait",
+      "timeout": 1000,
+      "description": "Wait for filter to apply"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='button-filter-negative']",
+      "description": "Click Negative filter",
+      "optional": true
+    },
+    {
+      "action": "wait",
+      "timeout": 1000,
+      "description": "Wait for filter to apply"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='button-filter-all']",
+      "description": "Click All filter again"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-reviews']",
+      "description": "Reviews page should remain visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='card-review-stats']",
+      "description": "Review stats should remain visible"
+    }
+  ]
+}

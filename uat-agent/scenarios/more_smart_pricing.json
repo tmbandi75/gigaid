@@ -1,0 +1,75 @@
+{
+  "name": "Smart Pricing Page",
+  "description": "Tests navigating to Smart Pricing from the More page and verifying the estimate form renders",
+  "viewport": "mobile",
+  "tags": ["more", "smart-pricing", "auto-quote"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/more",
+      "description": "Navigate to More page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-more']",
+      "timeout": 10000,
+      "description": "Wait for More page to render"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='menu-smart-pricing']",
+      "description": "Click Smart Pricing menu item"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='text-page-title']",
+      "timeout": 10000,
+      "description": "Wait for Smart Pricing page title"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='select-job-type']",
+      "timeout": 5000,
+      "description": "Wait for job type selector"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='input-location']",
+      "timeout": 3000,
+      "description": "Wait for location input"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='button-get-estimate']",
+      "timeout": 3000,
+      "description": "Wait for get estimate button"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='text-page-title']",
+      "description": "Page title should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='select-job-type']",
+      "description": "Job type selector should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='button-get-estimate']",
+      "description": "Get estimate button should be visible"
+    }
+  ]
+}

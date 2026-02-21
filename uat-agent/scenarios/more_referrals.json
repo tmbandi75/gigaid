@@ -1,0 +1,58 @@
+{
+  "name": "Referrals from More Page",
+  "description": "Tests navigating to Referrals from the More page and verifying referral stats and code render",
+  "viewport": "desktop",
+  "tags": ["more", "referrals", "growth"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/referrals",
+      "description": "Navigate directly to Referrals page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-referrals']",
+      "timeout": 15000,
+      "description": "Wait for Referrals page to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='text-total-referred']",
+      "timeout": 10000,
+      "description": "Wait for total referred stat"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='text-total-rewards']",
+      "timeout": 5000,
+      "description": "Wait for total rewards stat"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-referrals']",
+      "description": "Referrals page should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='text-total-referred']",
+      "description": "Total referred stat should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='text-total-rewards']",
+      "description": "Total rewards stat should be visible"
+    }
+  ]
+}
