@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useLocation } from "wouter";
 import { trackEvent } from "@/components/PostHogProvider";
+import { isScreenshotMode } from "@/lib/screenshotMode";
 import { FreeSetupCta } from "@/components/growth/FreeSetupCta";
 import {
   Briefcase,
@@ -75,6 +76,7 @@ const STEPS = [
 const DISMISS_KEY = "gigaid_activation_checklist_dismissed";
 
 export function ActivationChecklist() {
+  if (isScreenshotMode) return null;
   const [, navigate] = useLocation();
   const confettiShownRef = useRef(false);
   const [dismissed, setDismissed] = useState(() => {

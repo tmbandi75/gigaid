@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BarChart3 } from "lucide-react";
 import { setAnalyticsConsent } from "@/lib/consent/analyticsConsent";
+import { isScreenshotMode } from "@/lib/screenshotMode";
 
 interface AnalyticsConsentModalProps {
   onChoice: (granted: boolean) => void;
@@ -10,6 +11,8 @@ interface AnalyticsConsentModalProps {
 
 export function AnalyticsConsentModal({ onChoice }: AnalyticsConsentModalProps) {
   const [choosing, setChoosing] = useState(false);
+
+  if (isScreenshotMode) return null;
 
   const handleAllow = () => {
     setChoosing(true);

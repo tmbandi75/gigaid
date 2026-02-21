@@ -4,6 +4,7 @@ import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useLocation } from "wouter";
 import { Target, CheckCircle2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { isScreenshotMode } from "@/lib/screenshotMode";
 
 const LS_KEY_DISMISSED_AT = "activation_nudge_dismissed_at";
 const LS_KEY_DISMISSED_PROGRESS = "activation_nudge_dismissed_progress";
@@ -55,6 +56,8 @@ interface ActivationStatus {
 export function FirstDollarBanner() {
   const [location, navigate] = useLocation();
   const [dismissed, setDismissed] = useState(false);
+
+  if (isScreenshotMode) return null;
 
   const { data: activation, isLoading } = useQuery<ActivationStatus>({
     queryKey: QUERY_KEYS.activation(),
