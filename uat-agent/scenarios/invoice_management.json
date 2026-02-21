@@ -1,0 +1,73 @@
+{
+  "name": "Invoice Management",
+  "description": "Tests navigating to invoices page, verifying invoice list renders with filters and stats",
+  "viewport": "mobile",
+  "tags": ["invoices", "billing", "management"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "timeout": 5000,
+      "description": "Wait for post-login page to load"
+    },
+    {
+      "action": "goto",
+      "url": "/invoices",
+      "description": "Navigate to invoices page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-invoices']",
+      "timeout": 10000,
+      "description": "Wait for invoices page to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='filter-all']",
+      "timeout": 5000,
+      "description": "Wait for invoice filter tabs to render"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='button-add-invoice-header-desktop'], [data-testid='button-add-first-invoice']",
+      "description": "Click add new invoice button",
+      "optional": true
+    },
+    {
+      "action": "wait",
+      "timeout": 2000,
+      "description": "Wait for invoice creation action"
+    },
+    {
+      "action": "goto",
+      "url": "/invoices",
+      "description": "Navigate back to invoices list"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-invoices']",
+      "timeout": 10000,
+      "description": "Wait for invoices page to render again"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "url",
+      "expected": "/invoices",
+      "description": "Should be on the invoices page"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-invoices']",
+      "description": "Invoices page container should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='filter-all'], [data-testid='filter-draft'], [data-testid='filter-sent'], [data-testid='filter-paid']",
+      "description": "Invoice filter tabs should be visible"
+    }
+  ]
+}

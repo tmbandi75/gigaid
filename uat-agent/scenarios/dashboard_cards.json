@@ -1,0 +1,59 @@
+{
+  "name": "Dashboard Cards",
+  "description": "Tests that key dashboard widgets and action buttons render correctly after login",
+  "viewport": "mobile",
+  "tags": ["dashboard", "widgets", "cards"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='text-greeting']",
+      "timeout": 5000,
+      "description": "Wait for greeting text to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='button-add-job'], [data-testid='button-ask-payment'], [data-testid='button-voice-fab']",
+      "timeout": 5000,
+      "description": "Wait for quick action buttons to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='activation-checklist'], [data-testid='card-add-first-service']",
+      "timeout": 5000,
+      "description": "Wait for activation checklist or first service card",
+      "optional": true
+    }
+  ],
+  "assertions": [
+    {
+      "type": "url",
+      "expected": "/dashboard",
+      "description": "Should be on the dashboard"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "description": "Dashboard page should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='text-greeting']",
+      "description": "Greeting text should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='button-add-job'], [data-testid='button-ask-payment'], [data-testid='button-voice-fab']",
+      "description": "Quick action buttons should be visible"
+    }
+  ]
+}

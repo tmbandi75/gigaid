@@ -1,0 +1,52 @@
+{
+  "name": "Logout Flow",
+  "description": "Tests logging in, then logging out via the user menu and verifying redirect to login page",
+  "viewport": "desktop",
+  "tags": ["auth", "logout", "navigation"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load after login"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='header-user-menu']",
+      "description": "Open header user menu"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='header-dropdown-logout']",
+      "timeout": 5000,
+      "description": "Wait for logout menu item to appear"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='header-dropdown-logout']",
+      "description": "Click logout"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='splash-page'], [data-testid='input-email']",
+      "timeout": 15000,
+      "description": "Wait for redirect to login page"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='splash-page'], [data-testid='input-email']",
+      "description": "Login page should be visible after logout"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='button-email-submit']",
+      "description": "Login submit button should be visible"
+    }
+  ]
+}
