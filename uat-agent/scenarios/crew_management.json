@@ -1,0 +1,97 @@
+{
+  "name": "Crew Management",
+  "description": "Tests navigating to Crew from the More page, verifying stats and the add crew member dialog",
+  "viewport": "mobile",
+  "tags": ["more", "crew", "team"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/more",
+      "description": "Navigate to More page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-more']",
+      "timeout": 10000,
+      "description": "Wait for More page to render"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='menu-crew']",
+      "description": "Click Crew menu item"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-crew']",
+      "timeout": 10000,
+      "description": "Wait for Crew page to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='stat-total'], [data-testid='button-add-crew'], [data-testid='button-invite-first']",
+      "timeout": 5000,
+      "description": "Wait for crew stats or add button"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='button-add-crew'], [data-testid='button-invite-first'], [data-testid='button-add-crew-header']",
+      "description": "Click add crew member button"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='dialog-add-crew']",
+      "timeout": 5000,
+      "description": "Wait for add crew dialog to open"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='input-crew-first-name']",
+      "timeout": 5000,
+      "description": "Wait for first name input in dialog"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='input-crew-phone']",
+      "timeout": 3000,
+      "description": "Wait for phone input"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='select-crew-role']",
+      "timeout": 3000,
+      "description": "Wait for role selector"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-crew']",
+      "description": "Crew page should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='dialog-add-crew']",
+      "description": "Add crew dialog should be open"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='input-crew-first-name']",
+      "description": "First name input should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='select-crew-role']",
+      "description": "Role selector should be visible"
+    }
+  ]
+}

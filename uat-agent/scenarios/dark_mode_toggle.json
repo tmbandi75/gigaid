@@ -1,0 +1,67 @@
+{
+  "name": "Dark Mode Toggle",
+  "description": "Tests toggling dark mode on and off from the More page",
+  "viewport": "mobile",
+  "tags": ["more", "dark-mode", "appearance"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/more",
+      "description": "Navigate to More page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-more']",
+      "timeout": 10000,
+      "description": "Wait for More page to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='switch-dark-mode']",
+      "timeout": 5000,
+      "description": "Wait for dark mode switch"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='switch-dark-mode']",
+      "description": "Toggle dark mode on"
+    },
+    {
+      "action": "wait",
+      "timeout": 1000,
+      "description": "Wait for dark mode to apply"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='switch-dark-mode']",
+      "description": "Toggle dark mode off"
+    },
+    {
+      "action": "wait",
+      "timeout": 1000,
+      "description": "Wait for light mode to apply"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-more']",
+      "description": "More page should remain visible after toggling"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='switch-dark-mode']",
+      "description": "Dark mode switch should remain visible"
+    }
+  ]
+}

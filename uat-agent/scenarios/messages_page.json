@@ -1,0 +1,47 @@
+{
+  "name": "Messages Page",
+  "description": "Tests navigating to Messages from the More page and verifying the page renders",
+  "viewport": "mobile",
+  "tags": ["more", "messages", "conversations"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/more",
+      "description": "Navigate to More page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-more']",
+      "timeout": 10000,
+      "description": "Wait for More page to render"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='menu-messages']",
+      "description": "Click Messages menu item"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-messages']",
+      "timeout": 10000,
+      "description": "Wait for Messages page to render"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-messages']",
+      "description": "Messages page should be visible"
+    }
+  ]
+}

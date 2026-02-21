@@ -1,0 +1,69 @@
+{
+  "name": "Reviews Page",
+  "description": "Tests navigating to Reviews from the More page and verifying stats card and filter buttons",
+  "viewport": "mobile",
+  "tags": ["more", "reviews", "business"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/more",
+      "description": "Navigate to More page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-more']",
+      "timeout": 10000,
+      "description": "Wait for More page to render"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='menu-reviews']",
+      "description": "Click Reviews menu item"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-reviews']",
+      "timeout": 10000,
+      "description": "Wait for Reviews page to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='card-review-stats']",
+      "timeout": 5000,
+      "description": "Wait for review stats card"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='button-filter-all']",
+      "timeout": 5000,
+      "description": "Wait for filter buttons"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-reviews']",
+      "description": "Reviews page should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='card-review-stats']",
+      "description": "Review stats card should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='button-filter-all']",
+      "description": "All filter button should be visible"
+    }
+  ]
+}

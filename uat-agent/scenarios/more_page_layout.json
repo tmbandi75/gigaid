@@ -1,0 +1,119 @@
+{
+  "name": "More Page Layout",
+  "description": "Tests that the More page renders with profile card, all menu sections (Tools, Business, Account), dark mode toggle, drive mode, and logout button",
+  "viewport": "mobile",
+  "tags": ["more", "layout", "menu"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/more",
+      "description": "Navigate to More page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-more']",
+      "timeout": 10000,
+      "description": "Wait for More page to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='card-profile']",
+      "timeout": 5000,
+      "description": "Wait for profile card to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='badge-user-plan']",
+      "timeout": 5000,
+      "description": "Wait for plan badge to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='toggle-dark-mode']",
+      "timeout": 5000,
+      "description": "Wait for dark mode toggle section"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='drive-mode-section']",
+      "timeout": 5000,
+      "description": "Wait for drive mode section"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='menu-quick-capture']",
+      "timeout": 5000,
+      "description": "Wait for Quick Capture menu item (Tools section)"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='menu-owner-view']",
+      "timeout": 5000,
+      "description": "Wait for Owner View menu item (Business section)"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='menu-profile']",
+      "timeout": 5000,
+      "description": "Wait for Profile menu item (Account section)"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='logout-button']",
+      "timeout": 5000,
+      "description": "Wait for logout button"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-more']",
+      "description": "More page should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='card-profile']",
+      "description": "Profile card should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='toggle-dark-mode']",
+      "description": "Dark mode toggle should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='drive-mode-section']",
+      "description": "Drive mode section should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='menu-quick-capture']",
+      "description": "Tools section items should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='menu-reviews']",
+      "description": "Business section items should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='menu-settings']",
+      "description": "Account section items should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='logout-button']",
+      "description": "Logout button should be visible"
+    }
+  ]
+}

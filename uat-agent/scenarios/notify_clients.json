@@ -1,0 +1,47 @@
+{
+  "name": "Notify Clients",
+  "description": "Tests navigating to Notify Clients from the More page and verifying event selection and message composition form",
+  "viewport": "mobile",
+  "tags": ["more", "notify", "clients", "sms"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/more",
+      "description": "Navigate to More page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-more']",
+      "timeout": 10000,
+      "description": "Wait for More page to render"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='menu-notify-clients']",
+      "description": "Click Notify Clients menu item"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-notify-clients']",
+      "timeout": 10000,
+      "description": "Wait for Notify Clients page to render"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-notify-clients']",
+      "description": "Notify Clients page should be visible"
+    }
+  ]
+}

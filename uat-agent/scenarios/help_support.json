@@ -1,0 +1,91 @@
+{
+  "name": "Help & Support",
+  "description": "Tests navigating to Help & Support from the More page and verifying FAQ, contact form, and support cards",
+  "viewport": "mobile",
+  "tags": ["more", "help", "support"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/more",
+      "description": "Navigate to More page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-more']",
+      "timeout": 10000,
+      "description": "Wait for More page to render"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='menu-help-&-support']",
+      "description": "Click Help & Support menu item"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-help-support']",
+      "timeout": 10000,
+      "description": "Wait for Help & Support page to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='input-search-help']",
+      "timeout": 5000,
+      "description": "Wait for search input"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='card-faqs']",
+      "timeout": 5000,
+      "description": "Wait for FAQ section"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='card-contact']",
+      "timeout": 5000,
+      "description": "Wait for contact form section"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='card-email-support']",
+      "timeout": 5000,
+      "description": "Wait for email support card"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-help-support']",
+      "description": "Help & Support page should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='input-search-help']",
+      "description": "Search input should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='card-faqs']",
+      "description": "FAQ section should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='card-contact']",
+      "description": "Contact form section should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='card-email-support']",
+      "description": "Email support card should be visible"
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "name": "Reminders Page",
+  "description": "Tests navigating to Reminders from the More page, verifying tabs and create reminder dialog",
+  "viewport": "mobile",
+  "tags": ["more", "reminders", "notifications"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/more",
+      "description": "Navigate to More page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-more']",
+      "timeout": 10000,
+      "description": "Wait for More page to render"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='menu-reminders']",
+      "description": "Click Reminders menu item"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-reminders']",
+      "timeout": 10000,
+      "description": "Wait for Reminders page to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='tab-all']",
+      "timeout": 5000,
+      "description": "Wait for All tab"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='tab-pending']",
+      "timeout": 3000,
+      "description": "Wait for Pending tab"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='button-add-reminder'], [data-testid='button-create-first-reminder']",
+      "description": "Click add reminder button"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='dialog-create-reminder']",
+      "timeout": 5000,
+      "description": "Wait for create reminder dialog"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='input-client-name']",
+      "timeout": 3000,
+      "description": "Wait for client name input"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='input-message']",
+      "timeout": 3000,
+      "description": "Wait for message textarea"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='button-save-reminder']",
+      "timeout": 3000,
+      "description": "Wait for save button"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-reminders']",
+      "description": "Reminders page should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='dialog-create-reminder']",
+      "description": "Create reminder dialog should be open"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='input-client-name']",
+      "description": "Client name input should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='button-save-reminder']",
+      "description": "Save button should be visible"
+    }
+  ]
+}

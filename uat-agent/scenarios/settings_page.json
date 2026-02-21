@@ -1,0 +1,91 @@
+{
+  "name": "Settings Page",
+  "description": "Tests navigating to Settings from the More page, verifying booking link, notification toggles, and account section",
+  "viewport": "mobile",
+  "tags": ["more", "settings", "account"],
+  "steps": [
+    {
+      "action": "login",
+      "description": "Log in with test credentials"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-game-plan'], [data-testid='page-dashboard']",
+      "timeout": 15000,
+      "description": "Wait for dashboard to load"
+    },
+    {
+      "action": "goto",
+      "url": "/more",
+      "description": "Navigate to More page"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-more']",
+      "timeout": 10000,
+      "description": "Wait for More page to render"
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid='menu-settings']",
+      "description": "Click Settings menu item"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='page-settings']",
+      "timeout": 10000,
+      "description": "Wait for Settings page to render"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='switch-public-profile']",
+      "timeout": 5000,
+      "description": "Wait for public profile toggle"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='switch-notify-sms']",
+      "timeout": 5000,
+      "description": "Wait for SMS notification toggle"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='switch-notify-email']",
+      "timeout": 5000,
+      "description": "Wait for email notification toggle"
+    },
+    {
+      "action": "wait",
+      "selector": "[data-testid='button-delete-account']",
+      "timeout": 5000,
+      "description": "Wait for delete account button"
+    }
+  ],
+  "assertions": [
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='page-settings']",
+      "description": "Settings page should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='switch-public-profile']",
+      "description": "Public profile toggle should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='switch-notify-sms']",
+      "description": "SMS notification toggle should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='switch-notify-email']",
+      "description": "Email notification toggle should be visible"
+    },
+    {
+      "type": "element_visible",
+      "selector": "[data-testid='button-delete-account']",
+      "description": "Delete account button should be visible"
+    }
+  ]
+}
