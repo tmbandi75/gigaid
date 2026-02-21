@@ -1,0 +1,201 @@
+REPLIT MASTER PROMPT — Recreate GigAid App Store Screenshots (Jobber-Style)
+
+You are a senior front-end engineer + release designer.
+
+TASK:
+Recreate 7 App Store marketing screenshots for GigAid in a Jobber-like visual system
+using REAL in-app screens, embedded in an iPhone 17 Pro frame, with consistent typography,
+background textures, and single-focus highlights.
+
+ABSOLUTE RULES:
+- DO NOT refactor business logic.
+- DO NOT change app behavior, flows, routes, or data models.
+- DO NOT change production config or env vars.
+- Only add asset-generation code and (if needed) minimal, isolated CSS for screenshot mode.
+- Any UI changes must be behind a “screenshot mode” flag and must not affect normal users.
+
+OUTPUT SPECS:
+- 7 images
+- PNG
+- 1290 × 2796 px (portrait)
+- sRGB
+- Saved to /exports/appstore/iphone/
+- Filenames:
+  01-hero.png
+  02-booking.png
+  03-payments.png
+  04-jobs.png
+  05-ai.png
+  06-clients.png
+  07-overview.png
+
+────────────────────────────────────────────
+1) CREATE A SCREENSHOT MODE (SAFE / ISOLATED)
+────────────────────────────────────────────
+Implement a "screenshot mode" that is only active when a query param is present:
+  ?ss=1
+
+In screenshot mode ONLY:
+- Hide nav chrome that could distract (optional but recommended)
+- Disable live toasts/popups
+- Ensure seeded demo data is visible and stable
+- Remove any debug banners
+
+Important: This MUST be gated by ss=1 only. Normal app must look identical.
+
+────────────────────────────────────────────
+2) DEFINE THE 7 TARGET ROUTES
+────────────────────────────────────────────
+Create a config file:
+  /scripts/appstore/routes.ts
+
+Include 7 route entries, each with:
+- name
+- path (URL)
+- headline (2 lines max)
+- optional subheadline (1 line max)
+- highlight selector (CSS selector for the element to emphasize)
+- phone placement (rotation, scale, x/y offsets)
+- background preset (bg1/bg2/bg3/bg4)
+
+Use these headlines (exact):
+
+01 HERO
+Headline:
+  RUN YOUR BUSINESS
+  FROM ONE APP
+Sub:
+  Booking • Invoicing • Payments • Clients
+
+02 BOOKING
+Headline:
+  CLIENTS BOOK YOU
+  AUTOMATICALLY
+
+03 PAYMENTS
+Headline:
+  INVOICE & GET PAID
+  INSTANTLY
+
+04 JOBS
+Headline:
+  NEVER LOSE TRACK
+  OF JOBS
+
+05 AI
+Headline:
+  AI KEEPS YOU
+  ON TRACK
+Sub:
+  Smart reminders & follow-ups
+
+06 CLIENTS
+Headline:
+  EVERY CUSTOMER.
+  ONE PLACE.
+
+07 OVERVIEW
+Headline:
+  GROW WITHOUT
+  THE CHAOS
+
+For each, map to the closest REAL screen route in the app. If you can’t find a route, search
+the router definitions and choose the closest equivalent without building new features.
+
+────────────────────────────────────────────
+3) CAPTURE REAL UI WITH PLAYWRIGHT
+────────────────────────────────────────────
+Add a script:
+  /scripts/appstore/capture.ts
+
+Use Playwright to:
+- Launch chromium
+- Set viewport to iPhone 17 Pro logical size: 430 × 932
+- Navigate to each route with ?ss=1
+- Wait for network idle + stable UI
+- Capture a clean screenshot of the app viewport
+
+Save raw captures to:
+  /exports/appstore/raw/<name>.png
+
+Quality requirements:
+- No spinners
+- No empty states
+- No popups
+- No cookie banners
+
+────────────────────────────────────────────
+4) COMPOSE JOBBER-STYLE POSTERS (CANVAS)
+────────────────────────────────────────────
+Add a compositor:
+  /scripts/appstore/compose.ts
+
+Use node-canvas (or sharp + svg overlays) to create the final poster:
+- Create canvas: 1290 × 2796
+- Draw background preset (textured gradient + subtle noise)
+- Place iPhone 17 Pro device frame
+- Insert the raw app screenshot into the device screen cutout
+- Apply phone rotation/scale/offset per route
+- Add soft shadow beneath phone
+- Add headline text (SF Pro / Inter) with strong hierarchy
+- Add green underline brush under ONE key word (Jobber style)
+- Add one highlight element pointing at the key UI area:
+   - arrow, circle, or soft glow around highlight selector
+
+IMPORTANT: Only ONE highlight per image.
+
+Assets:
+- Add or create:
+  /assets/appstore/backgrounds/bg1.png ... bg4.png (textured gradients)
+  /assets/appstore/accents/underline.svg
+  /assets/appstore/accents/arrow.svg
+  /assets/device-frames/iphone-17-pro.png (or svg)
+
+If device frame asset is missing, generate a clean vector frame with:
+- thin bezels
+- dynamic island
+- neutral color
+
+────────────────────────────────────────────
+5) AUTO-HIGHLIGHT THE UI ELEMENT (OPTIONAL BUT IDEAL)
+────────────────────────────────────────────
+If feasible, use Playwright to:
+- Compute bounding box for highlight selector on each screen
+- Export bbox coordinates into JSON
+Then in compose.ts:
+- Draw a subtle glow/outline at that bbox area on the phone screen
+
+If selector bounding box fails, fallback to a manual bbox per route in routes.ts.
+
+────────────────────────────────────────────
+6) RUN COMMAND + VALIDATION
+────────────────────────────────────────────
+Add:
+  /scripts/appstore/run.ts
+
+This should:
+- Capture all 7 raws
+- Compose all 7 posters
+- Validate:
+   - dimensions 1290×2796
+   - PNG format
+   - files exist
+- Print a short report listing file paths
+
+Add npm scripts:
+  "appstore:screens": "ts-node scripts/appstore/run.ts"
+
+DO NOT deploy. Do not change production build pipeline.
+
+────────────────────────────────────────────
+DELIVERABLES
+────────────────────────────────────────────
+Return:
+- New scripts under /scripts/appstore/
+- New assets under /assets/appstore/ and /assets/device-frames/
+- Final 7 exported PNGs at /exports/appstore/iphone/
+- A short README: /scripts/appstore/README.md with how to run
+
+Remember:
+No refactors, no feature changes, no breaking UI.
+Screenshot mode only triggers with ?ss=1.
