@@ -783,46 +783,50 @@ export default function TodaysGamePlanPage() {
         {/* Quick Actions - thumb-friendly grid */}
         <motion.section variants={itemVariants}>
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">Quick Actions</h2>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => navigate("/jobs/new")}
-              className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover-elevate"
+              className="flex flex-col items-center justify-center gap-1.5 p-4 min-h-[96px] rounded-xl bg-card shadow-sm hover-elevate border"
               data-testid="button-add-job"
             >
               <div className="h-11 w-11 rounded-xl bg-blue-500/10 flex items-center justify-center">
                 <Plus className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
-              <span className="text-xs font-medium text-foreground">New Job</span>
+              <span className="text-xs font-semibold text-foreground">New Job</span>
+              <span className="text-[11px] text-muted-foreground -mt-1">Create a job</span>
             </button>
             <button
               onClick={() => navigate("/invoices/new")}
-              className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover-elevate"
+              className="flex flex-col items-center justify-center gap-1.5 p-4 min-h-[96px] rounded-xl bg-card shadow-sm hover-elevate border"
               data-testid="button-ask-payment"
             >
               <div className="h-11 w-11 rounded-xl bg-emerald-500/10 flex items-center justify-center">
                 <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <span className="text-xs font-medium text-foreground">Invoice</span>
+              <span className="text-xs font-semibold text-foreground">Invoice</span>
+              <span className="text-[11px] text-muted-foreground -mt-1">Send & get paid</span>
             </button>
             <button
               onClick={() => navigate("/reminders")}
-              className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover-elevate"
+              className="flex flex-col items-center justify-center gap-1.5 p-4 min-h-[96px] rounded-xl bg-card shadow-sm hover-elevate border"
               data-testid="button-message-client"
             >
               <div className="h-11 w-11 rounded-xl bg-violet-500/10 flex items-center justify-center">
                 <MessageSquare className="h-5 w-5 text-violet-600 dark:text-violet-400" />
               </div>
-              <span className="text-xs font-medium text-foreground">Message</span>
+              <span className="text-xs font-semibold text-foreground">Message</span>
+              <span className="text-[11px] text-muted-foreground -mt-1">Text clients</span>
             </button>
             <button
               onClick={() => setShowVoiceNotes(true)}
-              className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover-elevate"
+              className="flex flex-col items-center justify-center gap-1.5 p-4 min-h-[96px] rounded-xl bg-card shadow-sm hover-elevate border"
               data-testid="button-talk-it-in"
             >
               <div className="h-11 w-11 rounded-xl bg-amber-500/10 flex items-center justify-center">
                 <Mic className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
-              <span className="text-xs font-medium text-foreground">Voice</span>
+              <span className="text-xs font-semibold text-foreground">Voice</span>
+              <span className="text-[11px] text-muted-foreground -mt-1">Speak notes</span>
             </button>
           </div>
         </motion.section>
