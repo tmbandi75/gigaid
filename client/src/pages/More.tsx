@@ -50,35 +50,53 @@ interface UserProfile {
   plan?: string | null;
 }
 
-const menuSections = [
+interface MenuItem {
+  icon: typeof Share2;
+  label: string;
+  description: string;
+  href: string;
+  badge?: string;
+  gradient: string;
+}
+
+interface MenuSection {
+  title: string;
+  layout: "grid" | "list";
+  items: MenuItem[];
+}
+
+const menuSections: MenuSection[] = [
   {
-    title: "Tools",
+    title: "Grow Your Business",
+    layout: "grid",
+    items: [
+      { icon: Bot, label: "Auto Follow-Ups", description: "Follow-up message rules", href: "/follow-up-settings", gradient: "from-blue-500 to-cyan-500" },
+      { icon: MapPin, label: "Price Estimator", description: "AI-powered price estimates", href: "/auto-quote", gradient: "from-emerald-500 to-green-500" },
+      { icon: Calendar, label: "Smart Scheduling", description: "Customer bookings", href: "/booking-requests", gradient: "from-green-500 to-emerald-500" },
+      { icon: Sparkles, label: "AI Co-Pilot", description: "See what works. Get paid faster.", href: "/ai-tools", gradient: "from-violet-500 to-purple-500" },
+      { icon: Crown, label: "Owner View", description: "Business snapshot", href: "/owner", gradient: "from-amber-500 to-yellow-500" },
+      { icon: Menu, label: "Price Optimization", description: "Pricing analytics & tips", href: "/price-optimization", gradient: "from-blue-500 to-indigo-500" },
+      { icon: Shield, label: "Profit Alerts", description: "Spot profitability issues", href: "/profit-warnings", gradient: "from-red-500 to-orange-500" },
+      { icon: Star, label: "Reviews", description: "Client feedback", href: "/reviews", gradient: "from-yellow-500 to-amber-500" },
+      { icon: Gift, label: "Referrals", description: "Earn rewards", href: "/referrals", gradient: "from-pink-500 to-rose-500" },
+      { icon: Share2, label: "Booking Link", description: "Share your page", href: "/settings", gradient: "from-emerald-500 to-teal-500" },
+    ]
+  },
+  {
+    title: "Create & Manage",
+    layout: "grid",
     items: [
       { icon: Share2, label: "Quick Capture", description: "Save leads from any app", href: "/share", badge: "New", gradient: "from-emerald-500 to-teal-500" },
-      { icon: Sparkles, label: "Business Co-Pilot", description: "See what works. Get paid faster.", href: "/ai-tools", gradient: "from-violet-500 to-purple-500" },
-      { icon: MapPin, label: "Smart Pricing", description: "AI-powered price estimates", href: "/auto-quote", gradient: "from-emerald-500 to-green-500" },
       { icon: MessageSquare, label: "Messages", description: "Client conversations", href: "/messages", gradient: "from-indigo-500 to-blue-500" },
       { icon: Send, label: "Notify Clients", description: "Send event-driven updates", href: "/notify-clients", gradient: "from-cyan-500 to-blue-500" },
       { icon: Users, label: "Crew", description: "Manage team members", href: "/crew", gradient: "from-blue-500 to-cyan-500" },
       { icon: Bell, label: "Reminders", description: "SMS & voice alerts", href: "/reminders", gradient: "from-amber-500 to-orange-500" },
-      { icon: Calendar, label: "Booking Requests", description: "Customer bookings", href: "/booking-requests", gradient: "from-green-500 to-emerald-500" },
-      { icon: Bot, label: "Auto Follow-Ups", description: "Follow-up message rules", href: "/follow-up-settings", gradient: "from-blue-500 to-cyan-500" },
       { icon: Download, label: "Downloads", description: "Architecture & data model files", href: "/downloads", gradient: "from-slate-500 to-gray-500" },
     ]
   },
   {
-    title: "Business",
-    items: [
-      { icon: Crown, label: "Owner View", description: "Business snapshot", href: "/owner", gradient: "from-amber-500 to-yellow-500" },
-      { icon: Menu, label: "Price Optimization", description: "Pricing analytics & tips", href: "/price-optimization", gradient: "from-blue-500 to-indigo-500" },
-      { icon: Shield, label: "Profit Alerts", description: "Spot profitability issues", href: "/profit-warnings", gradient: "from-red-500 to-orange-500" },
-      { icon: Share2, label: "Booking Link", description: "Share your page", href: "/settings", gradient: "from-emerald-500 to-teal-500" },
-      { icon: Star, label: "Reviews", description: "Client feedback", href: "/reviews", gradient: "from-yellow-500 to-amber-500" },
-      { icon: Gift, label: "Referrals", description: "Earn rewards", href: "/referrals", gradient: "from-pink-500 to-rose-500" },
-    ]
-  },
-  {
-    title: "Account",
+    title: "Account & Settings",
+    layout: "list",
     items: [
       { icon: User, label: "Profile", description: "Your info", href: "/profile", gradient: "from-slate-500 to-gray-500" },
       { icon: Settings, label: "Settings", description: "App preferences", href: "/settings", gradient: "from-slate-500 to-gray-500" },
@@ -343,50 +361,82 @@ export default function More() {
           </CardContent>
         </Card>
 
-        {menuSections.map((section) => (
-          <div key={section.title}>
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-              {section.title}
-            </h3>
-            <Card className="border-0 shadow-md overflow-hidden">
-              <CardContent className="p-0">
-                {section.items.filter(item => !(disableDownloads && item.href === "/downloads")).map((item, index) => {
-                  const Icon = item.icon;
-                  return (
-                    <div key={item.label}>
-                      <div 
-                        className="flex items-center justify-between p-4 hover-elevate cursor-pointer"
+        {menuSections.map((section) => {
+          const filteredItems = section.items.filter(item => !(disableDownloads && item.href === "/downloads"));
+          if (filteredItems.length === 0) return null;
+
+          return (
+            <div key={section.title}>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
+                {section.title}
+              </h3>
+
+              {section.layout === "grid" ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {filteredItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Card
+                        key={item.label}
+                        className="border-0 shadow-md overflow-hidden hover-elevate cursor-pointer"
                         data-testid={`menu-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
                         onClick={() => item.href !== "#" && navigate(item.href)}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center shadow-sm`}>
-                            <Icon className="h-5 w-5 text-white" />
+                        <CardContent className="p-4 flex flex-col gap-2.5">
+                          <div className="flex items-center justify-between">
+                            <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center shadow-sm`}>
+                              <Icon className="h-5 w-5 text-white" />
+                            </div>
+                            {item.badge && (
+                              <Badge className="text-[10px] px-1.5 py-0 bg-gradient-to-r from-violet-500 to-purple-500 border-0">
+                                {item.badge}
+                              </Badge>
+                            )}
                           </div>
                           <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium text-foreground">{item.label}</p>
-                              {item.badge && (
-                                <Badge className="text-[10px] px-1.5 py-0 bg-gradient-to-r from-violet-500 to-purple-500 border-0">
-                                  {item.badge}
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground">{item.description}</p>
+                            <p className="font-medium text-foreground text-sm leading-tight">{item.label}</p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug line-clamp-2">{item.description}</p>
                           </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              ) : (
+                <Card className="border-0 shadow-md overflow-hidden">
+                  <CardContent className="p-0">
+                    {filteredItems.map((item, index) => {
+                      const Icon = item.icon;
+                      return (
+                        <div key={item.label}>
+                          <div
+                            className="flex items-center justify-between p-4 hover-elevate cursor-pointer"
+                            data-testid={`menu-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+                            onClick={() => item.href !== "#" && navigate(item.href)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center shadow-sm`}>
+                                <Icon className="h-5 w-5 text-white" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-foreground">{item.label}</p>
+                                <p className="text-xs text-muted-foreground">{item.description}</p>
+                              </div>
+                            </div>
+                            <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+                          </div>
+                          {index < filteredItems.length - 1 && (
+                            <div className="mx-4 border-b border-border/50" />
+                          )}
                         </div>
-                        <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
-                      </div>
-                      {index < section.items.length - 1 && (
-                        <div className="mx-4 border-b border-border/50" />
-                      )}
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
-          </div>
-        ))}
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          );
+        })}
 
         <Card className="border-0 shadow-md border-destructive/10 overflow-hidden">
           <CardContent className="p-0">
