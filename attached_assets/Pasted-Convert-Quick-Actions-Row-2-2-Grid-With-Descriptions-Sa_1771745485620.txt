@@ -1,0 +1,186 @@
+Convert Quick Actions Row → 2×2 Grid With Descriptions (Safe UI Upgrade)
+
+Copy this into Replit AI:
+
+You are a senior React + Tailwind engineer.
+
+We are upgrading the “Quick Actions” section on the Home/Dashboard screen.
+
+IMPORTANT:
+
+Do NOT refactor routing
+
+Do NOT change business logic
+
+Do NOT modify any existing click handlers
+
+Do NOT rename functions
+
+Do NOT alter state logic
+
+UI layer changes only
+
+Must remain mobile-first
+
+Must not impact iOS WebView behavior
+
+🎯 GOAL
+
+Replace the current horizontal Quick Actions row:
+
+New Job | Invoice | Message | Voice
+
+With a 2×2 responsive grid layout, and add short descriptions under each title.
+
+📐 LAYOUT REQUIREMENTS
+
+Use a responsive grid:
+
+2 columns
+
+2 rows
+
+gap-3 or gap-4
+
+Full width container
+
+Mobile optimized
+
+No horizontal scroll
+
+Use:
+
+grid grid-cols-2 gap-4
+🧱 CARD STRUCTURE (Each Button)
+
+Each action card should contain:
+
+Icon (existing icon component)
+
+Title (existing label)
+
+New short description (small gray text)
+
+Vertical stack layout:
+
+flex flex-col items-center justify-center
+
+Card styling:
+
+rounded-xl
+
+bg-white (or existing background style)
+
+shadow-sm
+
+hover:bg-gray-50 (if hover already exists)
+
+p-4
+
+min-h-[96px]
+
+📝 COPY TO ADD
+
+Add these descriptions under each title:
+
+New Job
+→ "Create a job"
+
+Invoice
+→ "Send & get paid"
+
+Message
+→ "Text clients"
+
+Voice
+→ "Speak notes"
+
+Descriptions must use:
+
+text-xs text-gray-500 mt-1
+
+Do NOT increase title font size.
+Keep titles font-semibold.
+
+🔐 PRESERVE FUNCTIONALITY
+
+For each card:
+
+Keep existing onClick handler
+
+Keep existing navigation logic
+
+Keep existing icon component
+
+Keep existing test-id attributes (if present)
+
+Keep existing data-testid values
+
+Do NOT convert to new component unless absolutely required.
+If converting to reusable component, wrap existing logic.
+
+🧪 SAFE IMPLEMENTATION RULES
+
+No new dependencies
+
+No layout shift outside Quick Actions container
+
+No change to parent padding
+
+No change to header
+
+No change to bottom nav
+
+Must not affect other breakpoints
+
+📱 MOBILE SAFETY CHECK
+
+Ensure:
+
+Tap target ≥ 48px height
+
+No overflow on iPhone 17 Pro dimensions
+
+No horizontal scroll
+
+No clipping in PWA standalone mode
+
+🧠 OPTIONAL (ONLY IF SAFE)
+
+If Quick Actions container is currently flex-row:
+
+Replace:
+
+flex flex-row overflow-x-auto
+
+With:
+
+grid grid-cols-2 gap-4
+
+Without altering parent layout.
+
+🚫 DO NOT:
+
+Refactor entire page
+
+Change route names
+
+Modify state logic
+
+Rename handlers
+
+Remove any existing accessibility attributes
+
+Break test selectors
+
+✅ OUTPUT
+
+Return only:
+
+Updated QuickActions JSX block
+
+Any small Tailwind class additions
+
+Nothing else
+
+Do not rewrite unrelated code.
