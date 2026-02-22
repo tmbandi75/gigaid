@@ -1,0 +1,124 @@
+✅ REPLIT MASTER PROMPT — Redesign “More” Page into Sectioned Feature Blocks (UI-Only, Safe)
+You are a senior frontend/mobile engineer working on the GigAid codebase.
+
+Your task is to redesign the **More page UI only** to use a sectioned, block-style layout for feature discovery.
+
+────────────────────────────────────────
+CRITICAL SAFETY RULES (DO NOT VIOLATE)
+────────────────────────────────────────
+
+- DO NOT refactor existing logic.
+- DO NOT modify business rules.
+- DO NOT change routing, auth, API calls, or state management.
+- DO NOT rename files, folders, or exports.
+- DO NOT delete any feature.
+- DO NOT modify shared components.
+- DO NOT alter navigation behavior.
+- DO NOT impact iOS / Android build configs.
+- DO NOT change analytics or tracking.
+- DO NOT touch backend code.
+
+This is a UI-layout-only change scoped to the More page.
+
+────────────────────────────────────────
+SCOPE
+────────────────────────────────────────
+
+Only modify the files responsible for rendering the “More” screen.
+
+If multiple files are involved, limit changes strictly to layout and styling within that page.
+
+────────────────────────────────────────
+GOAL
+────────────────────────────────────────
+
+Replace the current list-style “More” screen with a structured card/grid layout:
+
+1️⃣ Section: “Grow Your Business”
+   (Top of page, revenue-focused tools)
+
+   Example cards:
+   - Auto Follow-Ups
+   - Price Estimator
+   - Smart Scheduling
+   - AI Co-Pilot
+
+2️⃣ Section: “Create & Manage”
+   (Workflow tools)
+
+   Example cards:
+   - Build Services
+   - Voice Notes
+   - Text → Job
+   - Templates (if present)
+
+3️⃣ Section: “Account & Settings”
+   (Keep as list-style at bottom)
+
+   Include:
+   - Profile
+   - Billing
+   - Notifications
+   - Support
+   - Legal
+   - Logout
+
+Do NOT convert account/settings items into cards.
+
+────────────────────────────────────────
+UI REQUIREMENTS
+────────────────────────────────────────
+
+- Use a responsive 2-column grid for feature cards.
+- Maintain existing icons.
+- Maintain existing navigation targets.
+- Maintain existing tap handlers.
+- Cards must be fully accessible (tap area intact).
+- Preserve dark/light mode behavior.
+- Preserve spacing/margins from global theme.
+
+Each card must include:
+- Existing icon
+- Short title
+- Optional subtitle (if already present)
+
+No new text strings unless required for section headers.
+
+────────────────────────────────────────
+IMPLEMENTATION GUIDELINES
+────────────────────────────────────────
+
+- Reuse existing components wherever possible.
+- Wrap existing feature items in card containers.
+- Do NOT create new shared components.
+- Do NOT extract logic.
+- Do NOT move business code.
+
+Only reorganize existing render output.
+
+────────────────────────────────────────
+QUALITY CHECKS
+────────────────────────────────────────
+
+Before finishing, verify:
+
+✅ All features still navigate correctly  
+✅ No console errors introduced  
+✅ No build warnings added  
+✅ No tests broken  
+✅ No functionality changed  
+✅ Mobile layout works on iOS + Android  
+✅ Tablet layout remains stable  
+
+────────────────────────────────────────
+DELIVERABLE
+────────────────────────────────────────
+
+Produce a clean implementation that:
+
+- Improves feature discoverability
+- Preserves all existing behavior
+- Is safe for App Store submission
+- Requires no regression testing
+
+Proceed carefully and conservatively.
