@@ -508,18 +508,29 @@ export default function PublicBooking() {
                   Deposit Amount: <span className="text-primary">${(depositPaymentInfo.amount / 100).toFixed(2)}</span>
                 </p>
               </div>
-              <Elements stripe={stripePromise} options={{ clientSecret: depositPaymentInfo.clientSecret }}>
-                <DepositPaymentForm
-                  onSuccess={() => {
-                    setDepositPaymentComplete(true);
-                    setShowConfetti(true);
-                    toast({ title: "Deposit paid successfully!" });
-                  }}
-                  onError={(msg) => {
-                    toast({ title: "Payment failed", description: msg, variant: "destructive" });
-                  }}
-                />
-              </Elements>
+              {stripePromise ? (
+                <Elements stripe={stripePromise} options={{ clientSecret: depositPaymentInfo.clientSecret }}>
+                  <DepositPaymentForm
+                    onSuccess={() => {
+                      setDepositPaymentComplete(true);
+                      setShowConfetti(true);
+                      toast({ title: "Deposit paid successfully!" });
+                    }}
+                    onError={(msg) => {
+                      toast({ title: "Payment failed", description: msg, variant: "destructive" });
+                    }}
+                  />
+                </Elements>
+              ) : (
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                      Online payment is temporarily unavailable. Your booking has been created — the provider will follow up about payment.
+                    </p>
+                  </div>
+                </div>
+              )}
               <div className="mt-4 p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
                 <div className="flex items-start gap-2">
                   <Shield className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />

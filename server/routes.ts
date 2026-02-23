@@ -5284,9 +5284,15 @@ export async function registerRoutes(
               if (stripeConnectActive && user.stripeConnectStatus !== "active") {
                 await storage.updateUser(user.id, { stripeConnectStatus: "active" });
               }
-            } catch (stripeErr) {
+            } catch (stripeErr: any) {
               logger.error("Failed to verify Stripe Connect status for booking deposit:", stripeErr);
-              stripeConnectActive = user.stripeConnectStatus === "active";
+              const sErrMsg = String(stripeErr?.message || stripeErr || "");
+              if (sErrMsg.includes("does not have access to account") || sErrMsg.includes("does not exist") || sErrMsg.includes("revoked")) {
+                stripeConnectActive = false;
+                await storage.updateUser(user.id, { stripeConnectStatus: "revoked" }).catch(() => {});
+              } else {
+                stripeConnectActive = user.stripeConnectStatus === "active";
+              }
             }
           }
 
@@ -5867,15 +5873,21 @@ export async function registerRoutes(
           if (stripeConnected) {
             stripePublishableKey = await getStripePublishableKey();
           }
-        } catch (err) {
+        } catch (err: any) {
           logger.error("Failed to check Stripe Connect status:", err);
-          stripeConnected = user.stripeConnectStatus === "active";
-          if (stripeConnected) {
-            try {
-              const { getStripePublishableKey } = await import("./stripeClient");
-              stripePublishableKey = await getStripePublishableKey();
-            } catch (err2) {
-              logger.error("Failed to get Stripe publishable key:", err2);
+          const errMsg = String(err?.message || err || "");
+          if (errMsg.includes("does not have access to account") || errMsg.includes("does not exist") || errMsg.includes("revoked")) {
+            stripeConnected = false;
+            await storage.updateUser(user.id, { stripeConnectStatus: "revoked" }).catch(() => {});
+          } else {
+            stripeConnected = user.stripeConnectStatus === "active";
+            if (stripeConnected) {
+              try {
+                const { getStripePublishableKey } = await import("./stripeClient");
+                stripePublishableKey = await getStripePublishableKey();
+              } catch (err2) {
+                logger.error("Failed to get Stripe publishable key:", err2);
+              }
             }
           }
         }
@@ -8601,8 +8613,22 @@ Return ONLY the message text, no JSON or formatting.`
         payoutsEnabled,
         accountId: user.stripeConnectAccountId,
       });
-    } catch (error) {
+    } catch (error: any) {
       logger.error("Stripe Connect status error:", error);
+      const errMsg = String(error?.message || error || "");
+      if (errMsg.includes("does not have access to account") || errMsg.includes("does not exist") || errMsg.includes("revoked")) {
+        const user = await storage.getUser((req as any).userId);
+        if (user) {
+          await storage.updateUser(user.id, { stripeConnectStatus: "revoked" }).catch(() => {});
+        }
+        return res.json({
+          connected: false,
+          onboardingComplete: false,
+          chargesEnabled: false,
+          payoutsEnabled: false,
+          revoked: true,
+        });
+      }
       res.status(500).json({ error: "Failed to get Connect status" });
     }
   });
