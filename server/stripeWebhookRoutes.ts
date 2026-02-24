@@ -634,6 +634,11 @@ async function handleCheckoutSessionCompleted(session: any, storage: IStorage) {
   const subscriptionId = session.subscription;
   const customerId = session.customer;
 
+  if (!subscriptionId || !customerId) {
+    logger.warn(`[Stripe Webhook] checkout.session.completed missing subscriptionId=${subscriptionId} or customerId=${customerId}, skipping`);
+    return;
+  }
+
   const resolved = await resolveUserFromStripeData(
     session.metadata, customerId, subscriptionId, storage, "checkout.session.completed"
   );
