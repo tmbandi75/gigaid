@@ -589,104 +589,121 @@ export async function reconcileStuckPayments(storage: IStorage): Promise<{
   return result;
 }
 
+async function resolveUserFromStripeData(
+  metadata: any,
+  customerId: string | null,
+  subscriptionId: string | null,
+  storage: IStorage,
+  context: string
+): Promise<{ userId: string; user: any } | null> {
+  if (metadata?.user_id) {
+    const user = await storage.getUser(metadata.user_id);
+    if (user) return { userId: metadata.user_id, user };
+    logger.warn(`[Stripe Webhook] ${context}: user_id ${metadata.user_id} from metadata not found in DB`);
+  }
+
+  if (customerId) {
+    const allUsers = await storage.getAllUsers();
+    const byCustomer = allUsers.find((u: any) => u.stripeCustomerId === customerId);
+    if (byCustomer) {
+      logger.info(`[Stripe Webhook] ${context}: resolved user ${byCustomer.id} via stripeCustomerId`);
+      return { userId: byCustomer.id, user: byCustomer };
+    }
+  }
+
+  if (subscriptionId) {
+    const allUsers = await storage.getAllUsers();
+    const bySub = allUsers.find((u: any) => u.stripeSubscriptionId === subscriptionId);
+    if (bySub) {
+      logger.info(`[Stripe Webhook] ${context}: resolved user ${bySub.id} via stripeSubscriptionId`);
+      return { userId: bySub.id, user: bySub };
+    }
+  }
+
+  logger.warn(`[Stripe Webhook] ${context}: could not resolve user (metadata=${JSON.stringify(metadata)}, customer=${customerId}, subscription=${subscriptionId})`);
+  return null;
+}
+
 async function handleCheckoutSessionCompleted(session: any, storage: IStorage) {
   if (session.mode !== "subscription") {
     logger.info(`[Stripe Webhook] checkout.session.completed mode=${session.mode}, skipping subscription logic`);
     return;
   }
 
-  const userId = session.metadata?.user_id;
   const plan = session.metadata?.plan;
   const subscriptionId = session.subscription;
   const customerId = session.customer;
 
-  if (!userId) {
-    logger.error("[Stripe Webhook] checkout.session.completed missing user_id in metadata");
-    return;
-  }
+  const resolved = await resolveUserFromStripeData(
+    session.metadata, customerId, subscriptionId, storage, "checkout.session.completed"
+  );
+  if (!resolved) return;
 
-  logger.info(`[Stripe Webhook] Checkout completed for user ${userId}, plan=${plan}, subscription=${subscriptionId}`);
-
-  const user = await storage.getUser(userId);
-  if (!user) {
-    logger.warn(`[Stripe Webhook] No user found for checkout session user_id=${userId}`);
-    return;
-  }
-
+  const { userId, user } = resolved;
   const targetPlan = plan || "pro_plus";
 
-  if (user.plan !== targetPlan) {
-    await storage.updateUser(userId, {
-      plan: targetPlan,
-      isPro: true,
-      stripeSubscriptionId: subscriptionId,
-      stripeCustomerId: customerId,
-    });
+  logger.info(`[Stripe Webhook] Checkout completed for user ${userId}, plan=${targetPlan}, subscription=${subscriptionId}`);
 
+  const oldPlan = user.plan;
+  await storage.updateUser(userId, {
+    plan: targetPlan,
+    isPro: true,
+    stripeSubscriptionId: subscriptionId,
+    stripeCustomerId: customerId,
+  });
+
+  if (oldPlan !== targetPlan) {
     emitCanonicalEvent({
       eventName: "user_became_paying",
       userId,
       context: {
         subscriptionId,
         customerId,
-        oldPlan: user.plan,
+        oldPlan,
         newPlan: targetPlan,
         source: "checkout_session",
       },
       source: "system",
     });
-
-    logger.info(`[Stripe Webhook] User ${userId} upgraded to ${targetPlan} via checkout session`);
-  } else {
-    logger.info(`[Stripe Webhook] User ${userId} already on ${targetPlan}, updating Stripe IDs`);
-    await storage.updateUser(userId, {
-      stripeSubscriptionId: subscriptionId,
-      stripeCustomerId: customerId,
-    });
   }
+
+  logger.info(`[Stripe Webhook] User ${userId} upgraded to ${targetPlan} via checkout session`);
 }
 
 async function handleSubscriptionEvent(eventType: string, subscription: any, storage: IStorage) {
-  const userId = subscription.metadata?.user_id;
-  if (!userId) {
-    logger.info(`[Stripe Webhook] ${eventType} missing user_id in metadata, skipping`);
-    return;
-  }
+  const customerId = typeof subscription.customer === "string" ? subscription.customer : subscription.customer?.id || null;
 
-  const user = await storage.getUser(userId);
-  if (!user) {
-    logger.warn(`[Stripe Webhook] No user found for ${eventType}, user_id=${userId}`);
-    return;
-  }
+  const resolved = await resolveUserFromStripeData(
+    subscription.metadata, customerId, subscription.id, storage, eventType
+  );
+  if (!resolved) return;
 
-  const customerId = subscription.customer;
+  const { userId, user } = resolved;
 
   switch (eventType) {
     case "customer.subscription.created": {
       const plan = subscription.metadata?.plan || "pro_plus";
-      if (user.plan !== plan) {
-        await storage.updateUser(userId, {
-          plan,
-          isPro: true,
-          stripeSubscriptionId: subscription.id,
-          stripeCustomerId: customerId,
-        });
+      const oldPlan = user.plan;
 
+      await storage.updateUser(userId, {
+        plan,
+        isPro: true,
+        stripeSubscriptionId: subscription.id,
+        stripeCustomerId: customerId,
+      });
+
+      if (oldPlan !== plan) {
         emitCanonicalEvent({
           eventName: "user_became_paying",
           userId,
           context: {
             subscriptionId: subscription.id,
             customerId,
-            oldPlan: user.plan,
+            oldPlan,
             newPlan: plan,
           },
           source: "system",
         });
-
-        logger.info(`[Stripe Webhook] User ${userId} upgraded to ${plan} via subscription.created`);
-      } else {
-        logger.info(`[Stripe Webhook] User ${userId} already on ${plan} - skipping`);
       }
 
       emitCanonicalEvent({
@@ -701,6 +718,8 @@ async function handleSubscriptionEvent(eventType: string, subscription: any, sto
         },
         source: "system",
       });
+
+      logger.info(`[Stripe Webhook] User ${userId} upgraded to ${plan} via subscription.created`);
       break;
     }
 
@@ -708,24 +727,38 @@ async function handleSubscriptionEvent(eventType: string, subscription: any, sto
       const newPlan = subscription.metadata?.plan || "pro_plus";
       const status = subscription.status;
 
-      if (user.stripeSubscriptionId && user.stripeSubscriptionId !== subscription.id) {
-        logger.warn(`[Stripe Webhook] Subscription mismatch for user ${userId}: expected ${user.stripeSubscriptionId}, got ${subscription.id}`);
-        break;
-      }
-
-      if (status === "active" && user.plan !== newPlan) {
-        await storage.updateUser(userId, {
-          plan: newPlan,
-          isPro: true,
+      if (status === "active") {
+        const updates: any = {
           stripeSubscriptionId: subscription.id,
-        });
-        logger.info(`[Stripe Webhook] User ${userId} plan changed to ${newPlan}`);
+          stripeCustomerId: customerId,
+        };
+        if (user.plan !== newPlan) {
+          updates.plan = newPlan;
+          updates.isPro = true;
+        }
+        if (!user.isPro && newPlan !== "free") {
+          updates.isPro = true;
+        }
+        await storage.updateUser(userId, updates);
+        logger.info(`[Stripe Webhook] User ${userId} subscription.updated: plan=${newPlan}, status=${status}`);
       } else if (status === "canceled" || status === "unpaid" || status === "past_due") {
         await storage.updateUser(userId, {
           plan: "free",
           isPro: false,
           stripeSubscriptionId: null,
         });
+
+        emitCanonicalEvent({
+          eventName: "subscription_canceled",
+          userId,
+          context: {
+            subscriptionId: subscription.id,
+            status,
+            reason: "subscription_status_change",
+          },
+          source: "system",
+        });
+
         logger.info(`[Stripe Webhook] User ${userId} subscription ${status}, downgraded to free`);
       }
       break;
