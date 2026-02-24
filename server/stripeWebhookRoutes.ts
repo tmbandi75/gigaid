@@ -2,6 +2,7 @@ import { Express, Request, Response } from "express";
 import Stripe from "stripe";
 import { IStorage } from "./storage";
 import { logger } from "./lib/logger";
+import { emitCanonicalEvent } from "./copilot/canonicalEvents";
 
 const WEBHOOK_EVENT_TYPES = [
   "payment_intent.succeeded",
@@ -16,6 +17,10 @@ const WEBHOOK_EVENT_TYPES = [
   "charge.dispute.updated",
   "charge.dispute.closed",
   "account.updated",
+  "checkout.session.completed",
+  "customer.subscription.created",
+  "customer.subscription.updated",
+  "customer.subscription.deleted",
 ];
 
 function getBackoffMs(attemptCount: number): number {
@@ -199,6 +204,20 @@ async function handleStripeEvent(
     case "charge.dispute.closed": {
       const dispute = event.data.object as Stripe.Dispute;
       await handleDisputeEvent(event, dispute, connectedAccountId, storage);
+      break;
+    }
+
+    case "checkout.session.completed": {
+      const session = event.data.object as any;
+      await handleCheckoutSessionCompleted(session, storage);
+      break;
+    }
+
+    case "customer.subscription.created":
+    case "customer.subscription.updated":
+    case "customer.subscription.deleted": {
+      const subscription = event.data.object as any;
+      await handleSubscriptionEvent(eventType, subscription, storage);
       break;
     }
 
@@ -568,4 +587,170 @@ export async function reconcileStuckPayments(storage: IStorage): Promise<{
   }
 
   return result;
+}
+
+async function handleCheckoutSessionCompleted(session: any, storage: IStorage) {
+  if (session.mode !== "subscription") {
+    logger.info(`[Stripe Webhook] checkout.session.completed mode=${session.mode}, skipping subscription logic`);
+    return;
+  }
+
+  const userId = session.metadata?.user_id;
+  const plan = session.metadata?.plan;
+  const subscriptionId = session.subscription;
+  const customerId = session.customer;
+
+  if (!userId) {
+    logger.error("[Stripe Webhook] checkout.session.completed missing user_id in metadata");
+    return;
+  }
+
+  logger.info(`[Stripe Webhook] Checkout completed for user ${userId}, plan=${plan}, subscription=${subscriptionId}`);
+
+  const user = await storage.getUser(userId);
+  if (!user) {
+    logger.warn(`[Stripe Webhook] No user found for checkout session user_id=${userId}`);
+    return;
+  }
+
+  const targetPlan = plan || "pro_plus";
+
+  if (user.plan !== targetPlan) {
+    await storage.updateUser(userId, {
+      plan: targetPlan,
+      isPro: true,
+      stripeSubscriptionId: subscriptionId,
+      stripeCustomerId: customerId,
+    });
+
+    emitCanonicalEvent({
+      eventName: "user_became_paying",
+      userId,
+      context: {
+        subscriptionId,
+        customerId,
+        oldPlan: user.plan,
+        newPlan: targetPlan,
+        source: "checkout_session",
+      },
+      source: "system",
+    });
+
+    logger.info(`[Stripe Webhook] User ${userId} upgraded to ${targetPlan} via checkout session`);
+  } else {
+    logger.info(`[Stripe Webhook] User ${userId} already on ${targetPlan}, updating Stripe IDs`);
+    await storage.updateUser(userId, {
+      stripeSubscriptionId: subscriptionId,
+      stripeCustomerId: customerId,
+    });
+  }
+}
+
+async function handleSubscriptionEvent(eventType: string, subscription: any, storage: IStorage) {
+  const userId = subscription.metadata?.user_id;
+  if (!userId) {
+    logger.info(`[Stripe Webhook] ${eventType} missing user_id in metadata, skipping`);
+    return;
+  }
+
+  const user = await storage.getUser(userId);
+  if (!user) {
+    logger.warn(`[Stripe Webhook] No user found for ${eventType}, user_id=${userId}`);
+    return;
+  }
+
+  const customerId = subscription.customer;
+
+  switch (eventType) {
+    case "customer.subscription.created": {
+      const plan = subscription.metadata?.plan || "pro_plus";
+      if (user.plan !== plan) {
+        await storage.updateUser(userId, {
+          plan,
+          isPro: true,
+          stripeSubscriptionId: subscription.id,
+          stripeCustomerId: customerId,
+        });
+
+        emitCanonicalEvent({
+          eventName: "user_became_paying",
+          userId,
+          context: {
+            subscriptionId: subscription.id,
+            customerId,
+            oldPlan: user.plan,
+            newPlan: plan,
+          },
+          source: "system",
+        });
+
+        logger.info(`[Stripe Webhook] User ${userId} upgraded to ${plan} via subscription.created`);
+      } else {
+        logger.info(`[Stripe Webhook] User ${userId} already on ${plan} - skipping`);
+      }
+
+      emitCanonicalEvent({
+        eventName: "subscription_started",
+        userId,
+        context: {
+          subscriptionId: subscription.id,
+          customerId,
+          planId: subscription.items?.data?.[0]?.price?.id,
+          amount: subscription.items?.data?.[0]?.price?.unit_amount,
+          plan,
+        },
+        source: "system",
+      });
+      break;
+    }
+
+    case "customer.subscription.updated": {
+      const newPlan = subscription.metadata?.plan || "pro_plus";
+      const status = subscription.status;
+
+      if (user.stripeSubscriptionId && user.stripeSubscriptionId !== subscription.id) {
+        logger.warn(`[Stripe Webhook] Subscription mismatch for user ${userId}: expected ${user.stripeSubscriptionId}, got ${subscription.id}`);
+        break;
+      }
+
+      if (status === "active" && user.plan !== newPlan) {
+        await storage.updateUser(userId, {
+          plan: newPlan,
+          isPro: true,
+          stripeSubscriptionId: subscription.id,
+        });
+        logger.info(`[Stripe Webhook] User ${userId} plan changed to ${newPlan}`);
+      } else if (status === "canceled" || status === "unpaid" || status === "past_due") {
+        await storage.updateUser(userId, {
+          plan: "free",
+          isPro: false,
+          stripeSubscriptionId: null,
+        });
+        logger.info(`[Stripe Webhook] User ${userId} subscription ${status}, downgraded to free`);
+      }
+      break;
+    }
+
+    case "customer.subscription.deleted": {
+      await storage.updateUser(userId, {
+        plan: "free",
+        isPro: false,
+        stripeSubscriptionId: null,
+      });
+
+      emitCanonicalEvent({
+        eventName: "subscription_canceled",
+        userId,
+        context: {
+          subscriptionId: subscription.id,
+          canceledAt: subscription.canceled_at,
+          reason: subscription.cancellation_details?.reason,
+        },
+        source: "system",
+      });
+
+      logger.info(`[Stripe Webhook] User ${userId} subscription deleted, downgraded to free`);
+      break;
+    }
+  }
 }
