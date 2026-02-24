@@ -18,7 +18,7 @@ The backend is built with Node.js and Express.js, using TypeScript and ESM modul
 Drizzle ORM is used with a PostgreSQL dialect. The schema is defined in `shared/schema.ts` with Zod validation. Data is stored in-memory for development and in PostgreSQL for production. Key entities include Users, Jobs, Leads, Invoices, and various growth/tracking-related data.
 
 ### Core Features
-- **Payment Processing**: Integrates Stripe Connect for secure payments, deposits, and dispute resolution.
+- **Payment Processing**: Integrates Stripe Connect for secure payments, deposits, and dispute resolution. Stripe credentials are sourced from `STRIPE_SECRET_KEY` and `STRIPE_PUBLISHABLE_KEY` environment secrets (live mode), falling back to the Replit Stripe connector if not set.
 - **Mapping Integration**: Utilizes Google Maps for geocoding, location tracking, and navigation.
 - **AI Micro-Nudges System**: Provides contextual AI recommendations for task management.
 - **Today's Money Plan**: A global action queue prioritizing revenue-generating tasks.
