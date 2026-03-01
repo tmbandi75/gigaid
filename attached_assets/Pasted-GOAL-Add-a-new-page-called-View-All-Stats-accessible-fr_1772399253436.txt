@@ -1,0 +1,137 @@
+GOAL:
+Add a new page called "View All Stats" accessible from the More section.
+
+CRITICAL RULES:
+- DO NOT refactor any existing files.
+- DO NOT modify existing dashboard reporting logic.
+- DO NOT change routing structure.
+- DO NOT change state management.
+- DO NOT alter database schema.
+- DO NOT rename or move any existing components.
+- ONLY create new files and read existing data.
+- If something is missing, gracefully fallback to placeholder values.
+
+-----------------------------------------
+STEP 1 — CREATE NEW PAGE COMPONENT
+-----------------------------------------
+
+Create a new page:
+
+/src/pages/ViewAllStats.tsx
+
+This page must:
+- Be standalone
+- Import existing data selectors/hooks used by Dashboard
+- Read data only (no new queries)
+- Fail gracefully if data undefined
+
+-----------------------------------------
+STEP 2 — PAGE STRUCTURE
+-----------------------------------------
+
+Layout sections vertically:
+
+1) Earnings Section
+- Revenue This Week
+- Revenue This Month
+- Avg Job Value
+- Weekly Revenue Chart (last 8 weeks, simple line chart using existing chart library if available; if not, use lightweight inline SVG)
+
+2) Performance Section
+- Jobs Completed
+- Conversion Rate (Inquiry → Booking)
+- Cancellation Rate
+
+3) Customer Health Section
+- Repeat Customer %
+- Unpaid Invoices
+
+4) Upgrade Insights Section (static logic-based messages only, no backend changes)
+
+-----------------------------------------
+STEP 3 — DATA RULES
+-----------------------------------------
+
+Use existing booking + invoice data already used on Dashboard.
+
+DO NOT create new API calls.
+
+Calculations must be computed locally in this component only.
+
+If there is insufficient data:
+Display:
+"Complete more jobs to unlock detailed insights."
+
+-----------------------------------------
+STEP 4 — UI RULES
+-----------------------------------------
+
+- Use existing Tailwind styling patterns.
+- Match GigAid spacing + typography.
+- Keep design clean and minimal.
+- No new global styles.
+- No new dependencies.
+
+Cards layout:
+- Each metric inside a soft card
+- Consistent padding
+- Mobile-first responsive layout
+
+-----------------------------------------
+STEP 5 — ROUTING
+-----------------------------------------
+
+Add route entry:
+
+/view-all-stats
+
+DO NOT alter existing route structure.
+Only append this route.
+
+-----------------------------------------
+STEP 6 — MORE PAGE UPDATE
+-----------------------------------------
+
+In More page:
+Add a new menu item:
+
+Icon: BarChart or TrendingUp (use existing icon library)
+Label: View All Stats
+Navigation: push to /view-all-stats
+
+DO NOT change layout of other More items.
+
+-----------------------------------------
+STEP 7 — UPGRADE INSIGHT LOGIC (FRONTEND ONLY)
+-----------------------------------------
+
+Add simple conditional messaging:
+
+If unpaidInvoices > 3:
+Show:
+"You have unpaid invoices. Auto reminders available in Pro."
+
+If cancellationRate > 15%:
+Show:
+"High cancellation rate. Deposits reduce cancellations."
+
+If conversionRate < 40%:
+Show:
+"Automated follow-ups increase conversion."
+
+No backend changes.
+
+-----------------------------------------
+STEP 8 — SAFETY CHECK
+-----------------------------------------
+
+Before finishing:
+- Confirm Dashboard remains unchanged.
+- Confirm no existing feature behavior altered.
+- Confirm build compiles without errors.
+- Confirm mobile view works.
+
+If anything requires modification to core logic:
+STOP and request clarification instead of refactoring.
+
+END.
