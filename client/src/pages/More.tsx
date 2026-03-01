@@ -30,6 +30,7 @@ import {
   Menu,
   Download,
   Bot,
+  BarChart3,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
@@ -78,6 +79,7 @@ const menuSections: MenuSection[] = [
       { icon: Menu, label: "Price Optimization", description: "Pricing analytics & tips", href: "/price-optimization", gradient: "from-blue-500 to-indigo-500" },
       { icon: Shield, label: "Profit Alerts", description: "Spot profitability issues", href: "/profit-warnings", gradient: "from-red-500 to-orange-500" },
       { icon: Star, label: "Reviews", description: "Client feedback", href: "/reviews", gradient: "from-yellow-500 to-amber-500" },
+      { icon: BarChart3, label: "View All Stats", description: "Your key business metrics", href: "/view-all-stats", gradient: "from-teal-500 to-cyan-500" },
       { icon: Gift, label: "Referrals", description: "Earn rewards", href: "/referrals", gradient: "from-pink-500 to-rose-500" },
       { icon: Share2, label: "Booking Link", description: "Share your page", href: "/settings", gradient: "from-emerald-500 to-teal-500" },
     ]

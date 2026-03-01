@@ -78,6 +78,7 @@ import FollowUpSettingsPage from "@/pages/FollowUpSettingsPage";
 import AutoQuotePage from "@/pages/AutoQuotePage";
 import PriceOptimizationPage from "@/pages/PriceOptimizationPage";
 import ProfitWarningsPage from "@/pages/ProfitWarningsPage";
+import ViewAllStats from "@/pages/ViewAllStats";
 import NotFound from "@/pages/not-found";
 import { AppErrorBoundary } from "@/components/ErrorBoundary";
 import { logClientEnv } from "./debug/envProbe";
@@ -116,6 +117,7 @@ function Router() {
       <Route path="/auto-quote" component={AutoQuotePage} />
       <Route path="/price-optimization" component={PriceOptimizationPage} />
       <Route path="/profit-warnings" component={ProfitWarningsPage} />
+      <Route path="/view-all-stats" component={ViewAllStats} />
       <Route path="/voice-notes" component={VoiceNotesPage} />
       <Route path="/booking-requests" component={BookingRequests} />
       <Route path="/share" component={ShareCapture} />
