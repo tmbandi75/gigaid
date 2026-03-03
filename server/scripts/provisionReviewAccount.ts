@@ -1,6 +1,6 @@
 import admin from "firebase-admin";
 import { db } from "../db";
-import { users, clients, jobs, invoices } from "@shared/schema";
+import { users, clients, jobs, invoices, jobResolutions } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 const REVIEW_EMAIL = "reviewer@gigaid.ai";
@@ -284,6 +284,10 @@ async function main() {
       jobIds = existingJobs.map((j) => j.id);
       pass("Jobs already seeded", `${existingJobs.length} jobs`);
     } else {
+      const oldJobIds = existingJobs.map((j) => j.id);
+      for (const oldId of oldJobIds) {
+        await db.delete(jobResolutions).where(eq(jobResolutions.jobId, oldId));
+      }
       await db.delete(jobs).where(eq(jobs.userId, userId));
 
       const jobData = [
@@ -296,14 +300,13 @@ async function main() {
           scheduledDate: dateStr(-5),
           scheduledTime: "09:00",
           duration: 90,
-          status: "completed",
+          status: "scheduled",
           price: 15000,
           clientName: "Sarah Thompson",
           clientPhone: "+15551234001",
           clientEmail: "sarah.t@example.com",
           paymentStatus: "paid",
           paidAt: daysAgo(5),
-          completedAt: daysAgo(5),
           createdAt: daysAgo(7),
         },
         {
@@ -344,7 +347,21 @@ async function main() {
 
       const inserted = await db.insert(jobs).values(jobData).returning();
       jobIds = inserted.map((j) => j.id);
-      pass("Jobs seeded", "3 jobs (1 completed, 2 scheduled)");
+
+      const completedJobId = jobIds[0];
+      await db.insert(jobResolutions).values({
+        jobId: completedJobId,
+        resolutionType: "invoiced",
+        resolvedAt: daysAgo(5),
+        resolvedByUserId: userId,
+        createdAt: daysAgo(5),
+      });
+      await db.update(jobs).set({
+        status: "completed",
+        completedAt: daysAgo(5),
+      }).where(eq(jobs.id, completedJobId));
+
+      pass("Jobs seeded", "3 jobs (1 completed with resolution, 2 scheduled)");
     }
   } catch (err: any) {
     fail("Job seeding", err.message);
