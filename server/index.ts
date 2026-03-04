@@ -191,17 +191,49 @@ app.use((req, res, next) => {
       }
     }
 
-    // Fix photo + seed reviews for Heinz Plumbing
-    const [heinzUser] = await db.select({ id: users.id, photo: users.photo })
+    // Fix profile data + seed reviews for Heinz Plumbing
+    const [heinzUser] = await db.select({
+      id: users.id,
+      photo: users.photo,
+      availability: users.availability,
+      services: users.services,
+      bio: users.bio,
+      serviceArea: users.serviceArea,
+    })
       .from(users)
       .where(eq(users.publicProfileSlug, "heinz-plumbing"))
       .limit(1);
     if (heinzUser) {
+      const profileUpdates: Record<string, unknown> = {};
       if (!heinzUser.photo) {
-        await db.update(users)
-          .set({ photo: "/objects/uploads/e1135fa1-88e6-41bd-a148-43381fae80df" })
-          .where(eq(users.id, heinzUser.id));
-        logger.info("[DataFix] Set photo for Heinz Plumbing");
+        profileUpdates.photo = "/objects/uploads/e1135fa1-88e6-41bd-a148-43381fae80df";
+      }
+      if (!heinzUser.availability) {
+        profileUpdates.availability = JSON.stringify({
+          monday: { enabled: true, ranges: [{ start: "09:00", end: "13:30" }, { start: "15:00", end: "18:30" }] },
+          tuesday: { enabled: true, ranges: [{ start: "09:00", end: "17:00" }] },
+          wednesday: { enabled: true, ranges: [{ start: "09:00", end: "17:00" }] },
+          thursday: { enabled: true, ranges: [{ start: "09:00", end: "17:00" }] },
+          friday: { enabled: true, ranges: [{ start: "09:00", end: "17:00" }] },
+          saturday: { enabled: true, ranges: [{ start: "09:00", end: "17:00" }] },
+          sunday: { enabled: false, ranges: [{ start: "09:00", end: "17:00" }] },
+        });
+      }
+      if (!heinzUser.services || heinzUser.services.length === 0) {
+        profileUpdates.services = [
+          "General Handyman Work", "TV Mounting", "Furniture Assembly",
+          "Picture / Shelf Hanging", "Door & Lock Repair", "Drywall Repair", "Small Home Repairs",
+        ];
+      }
+      if (!heinzUser.bio) {
+        profileUpdates.bio = "At Heinz Plumbing, I bring years of experience in general handyman work, from TV mounting to drywall repair. You can rely on me for all your small home repairs with a friendly touch. Let's get started on your next project today!";
+      }
+      if (!heinzUser.serviceArea) {
+        profileUpdates.serviceArea = "Greater Chicago area";
+      }
+      if (Object.keys(profileUpdates).length > 0) {
+        await db.update(users).set(profileUpdates).where(eq(users.id, heinzUser.id));
+        logger.info(`[DataFix] Updated profile fields for Heinz Plumbing: ${Object.keys(profileUpdates).join(", ")}`);
       }
 
       const [{ count: reviewCount }] = await db.select({ count: sql<number>`count(*)::int` })
