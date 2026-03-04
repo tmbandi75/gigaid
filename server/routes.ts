@@ -3876,7 +3876,16 @@ export async function registerRoutes(
         }
       }
       
-      const smsResult = await sendSMS(to, message);
+      const firstName = user?.firstName?.trim() || user?.name?.split(' ')[0] || '';
+      const businessName = user?.businessName?.trim() || '';
+      let signedMessage = message;
+      const signatureParts = [firstName, businessName].filter(Boolean);
+      if (signatureParts.length > 0) {
+        const signature = signatureParts.join(', ');
+        signedMessage = `${message}\n\n— ${signature}`;
+      }
+
+      const smsResult = await sendSMS(to, signedMessage);
       if (smsResult.success) {
         // Increment SMS usage after successful send
         if (!isDeveloper(user)) {
@@ -3897,7 +3906,7 @@ export async function registerRoutes(
           clientPhone: to,
           clientName: clientName || null,
           direction: "outbound",
-          body: message,
+          body: signedMessage,
           relatedJobId: relatedJobId || null,
           relatedLeadId: relatedLeadId || null,
         });
