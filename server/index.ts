@@ -166,7 +166,32 @@ app.use((req, res, next) => {
   // Initialize database enforcement (triggers + data repair) BEFORE routes
   // CRITICAL: This ensures no job can be completed without resolution
   await initializeDbEnforcement();
-  
+
+  // One-time slug fix: update Heinz Plumbing slug in production
+  try {
+    const { db } = await import("./db");
+    const { users } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+    const [target] = await db.select({ id: users.id, slug: users.publicProfileSlug })
+      .from(users)
+      .where(eq(users.publicProfileSlug, "thierry-mbandi-outlook-com"))
+      .limit(1);
+    if (target) {
+      const [conflict] = await db.select({ id: users.id })
+        .from(users)
+        .where(eq(users.publicProfileSlug, "heinz-plumbing"))
+        .limit(1);
+      if (!conflict) {
+        await db.update(users)
+          .set({ publicProfileSlug: "heinz-plumbing" })
+          .where(eq(users.id, target.id));
+        logger.info(`[SlugFix] Updated slug for ${target.id}: thierry-mbandi-outlook-com → heinz-plumbing`);
+      }
+    }
+  } catch (e) {
+    logger.warn("[SlugFix] Skipped:", e instanceof Error ? e.message : String(e));
+  }
+
   const { selfTestFirebaseAdmin } = await import("./firebaseAdmin");
   const fbTest = await selfTestFirebaseAdmin();
   if (!fbTest.ok) {
