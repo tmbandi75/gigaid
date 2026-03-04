@@ -2184,10 +2184,10 @@ export async function registerRoutes(
       
       // Send SMS
       const { sendSMS } = await import("./twilio");
-      const success = await sendSMS(job.clientPhone, message);
+      const smsRes = await sendSMS(job.clientPhone, message);
       
-      if (!success) {
-        return res.status(500).json({ error: "Failed to send SMS" });
+      if (!smsRes.success) {
+        return res.status(500).json({ error: smsRes.errorMessage || "Failed to send SMS" });
       }
       
       // Update job notes to track that deposit request was sent
@@ -3876,8 +3876,8 @@ export async function registerRoutes(
         }
       }
       
-      const success = await sendSMS(to, message);
-      if (success) {
+      const smsResult = await sendSMS(to, message);
+      if (smsResult.success) {
         // Increment SMS usage after successful send
         if (!isDeveloper(user)) {
           await storage.incrementCapabilityUsage(userId, 'sms.two_way');
@@ -3903,11 +3903,15 @@ export async function registerRoutes(
         });
         res.json({ success: true, message: "SMS sent successfully", isFirstSend });
       } else {
-        res.status(500).json({ error: "Failed to send SMS" });
+        const statusCode = smsResult.errorCode === 'INVALID_PHONE' ? 422 : 500;
+        res.status(statusCode).json({ 
+          error: smsResult.errorCode || "SEND_FAILED", 
+          message: smsResult.errorMessage || "Failed to send SMS" 
+        });
       }
     } catch (error) {
       logger.error("SMS send error:", error);
-      res.status(500).json({ error: "Failed to send SMS" });
+      res.status(500).json({ error: "SEND_FAILED", message: "Failed to send SMS" });
     }
   });
 
@@ -10673,7 +10677,7 @@ Return ONLY the message text, no JSON or formatting.`
       if (job.clientPhone) {
         try {
           const sent = await sendSMS(job.clientPhone, message);
-          smsSent = sent;
+          smsSent = sent.success;
         } catch (e) {
           logger.error("Review request SMS error:", e);
         }
@@ -11660,8 +11664,8 @@ Return ONLY the message text, no JSON or formatting.`
             ? `Invoice for $${amountFormatted}: ${invoiceUrl}\n\nReady to book? ${bookingLink}`
             : `Invoice for $${amountFormatted}: ${invoiceUrl}`;
           
-          const success = await sendSMS(action.prefilledClientPhone, smsMessage);
-          if (success) {
+          const smsRes2 = await sendSMS(action.prefilledClientPhone, smsMessage);
+          if (smsRes2.success) {
             sent = true;
             sendMessage = "Invoice sent via SMS";
           }

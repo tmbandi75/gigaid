@@ -104,7 +104,7 @@ async function checkFollowUps() {
                 if (existingLog.length > 0) continue;
 
                 const message = renderTemplate(rule.messageTemplate, lead.clientName);
-                const success = await sendSMS(lead.clientPhone, message);
+                const smsRes = await sendSMS(lead.clientPhone, message);
 
                 await db.insert(followUpLogs).values({
                   userId: user.id,
@@ -115,11 +115,11 @@ async function checkFollowUps() {
                   channel: "sms",
                   toAddress: lead.clientPhone,
                   message,
-                  status: success ? "sent" : "failed",
-                  failureReason: success ? null : "SMS delivery failed",
+                  status: smsRes.success ? "sent" : "failed",
+                  failureReason: smsRes.success ? null : (smsRes.errorMessage || "SMS delivery failed"),
                 });
 
-                if (success) {
+                if (smsRes.success) {
                   logger.info(`[FollowUpBot] Sent no_reply follow-up for lead ${lead.id}`);
                 }
               }
@@ -162,7 +162,7 @@ async function checkFollowUps() {
                 if (!lead || !lead.clientPhone) continue;
 
                 const message = renderTemplate(rule.messageTemplate, lead.clientName);
-                const success = await sendSMS(lead.clientPhone, message);
+                const smsRes2 = await sendSMS(lead.clientPhone, message);
 
                 await db.insert(followUpLogs).values({
                   userId: user.id,
@@ -173,11 +173,11 @@ async function checkFollowUps() {
                   channel: "sms",
                   toAddress: lead.clientPhone,
                   message,
-                  status: success ? "sent" : "failed",
-                  failureReason: success ? null : "SMS delivery failed",
+                  status: smsRes2.success ? "sent" : "failed",
+                  failureReason: smsRes2.success ? null : (smsRes2.errorMessage || "SMS delivery failed"),
                 });
 
-                if (success) {
+                if (smsRes2.success) {
                   logger.info(`[FollowUpBot] Sent quote_pending follow-up for lead ${pc.leadId}`);
                 }
               }
@@ -220,7 +220,7 @@ async function checkFollowUps() {
                   : undefined;
 
                 const message = renderTemplate(rule.messageTemplate, invoice.clientName, invoiceLink);
-                const success = await sendSMS(invoice.clientPhone, message);
+                const smsRes3 = await sendSMS(invoice.clientPhone, message);
 
                 await db.insert(followUpLogs).values({
                   userId: user.id,
@@ -231,11 +231,11 @@ async function checkFollowUps() {
                   channel: "sms",
                   toAddress: invoice.clientPhone,
                   message,
-                  status: success ? "sent" : "failed",
-                  failureReason: success ? null : "SMS delivery failed",
+                  status: smsRes3.success ? "sent" : "failed",
+                  failureReason: smsRes3.success ? null : (smsRes3.errorMessage || "SMS delivery failed"),
                 });
 
-                if (success) {
+                if (smsRes3.success) {
                   logger.info(`[FollowUpBot] Sent unpaid_invoice follow-up for invoice ${invoice.id}`);
                 }
               }

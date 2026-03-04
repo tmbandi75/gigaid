@@ -136,9 +136,9 @@ export async function executeRetentionForUser(userId: string, tier: string): Pro
         if (!user?.phone) {
           sendError = "User has no phone number";
         } else {
-          const result = await sendSMS(user.phone, template.body);
-          sendSuccess = result === true;
-          if (!sendSuccess) sendError = "SMS send returned false";
+          const smsRes = await sendSMS(user.phone, template.body);
+          sendSuccess = smsRes.success;
+          if (!sendSuccess) sendError = smsRes.errorMessage || "SMS send failed";
         }
       } else {
         sendError = `Unknown channel: ${playbook.channel}`;

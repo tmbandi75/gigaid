@@ -49,20 +49,19 @@ export async function getTwilioFromPhoneNumber() {
   return phoneNumber;
 }
 
-export async function sendSMS(to: string, message: string): Promise<boolean> {
+export async function sendSMS(to: string, message: string): Promise<{ success: boolean; errorCode?: string; errorMessage?: string }> {
   try {
     const client = await getTwilioClient();
     const fromNumber = await getTwilioFromPhoneNumber();
     
     if (!fromNumber) {
       logger.error('No Twilio phone number configured');
-      return false;
+      return { success: false, errorCode: 'NO_FROM_NUMBER', errorMessage: 'SMS service is not fully configured' };
     }
 
-    // Clean the phone number - ensure it has country code
     let cleanTo = to.replace(/\D/g, '');
     if (cleanTo.length === 10) {
-      cleanTo = '1' + cleanTo; // Add US country code
+      cleanTo = '1' + cleanTo;
     }
     cleanTo = '+' + cleanTo;
 
@@ -73,10 +72,17 @@ export async function sendSMS(to: string, message: string): Promise<boolean> {
     });
 
     logger.info(`SMS sent successfully to ${cleanTo}`);
-    return true;
-  } catch (error) {
+    return { success: true };
+  } catch (error: any) {
     logger.error('Failed to send SMS:', error);
-    return false;
+    const msg = error?.message || '';
+    if (msg.includes("Invalid 'To' Phone Number") || error?.code === 21211 || error?.code === 21614) {
+      return { success: false, errorCode: 'INVALID_PHONE', errorMessage: 'This phone number is invalid or cannot receive SMS' };
+    }
+    if (msg.includes('unverified') || error?.code === 21608) {
+      return { success: false, errorCode: 'UNVERIFIED_NUMBER', errorMessage: 'This number cannot be reached in trial mode' };
+    }
+    return { success: false, errorCode: 'SEND_FAILED', errorMessage: 'Failed to send SMS' };
   }
 }
 

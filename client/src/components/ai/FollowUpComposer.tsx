@@ -150,10 +150,16 @@ export function FollowUpComposer() {
       },
       onError: (error: any) => {
         const errorMessage = error?.message || "Failed to send message";
-        if (errorMessage.includes("SMS_LIMIT_EXCEEDED")) {
+        if (errorMessage.includes("SMS_LIMIT_EXCEEDED") || errorMessage.includes("message_limit_reached")) {
           toast({ 
             title: "Message limit reached", 
             description: "Upgrade to send more messages this month.",
+            variant: "destructive" 
+          });
+        } else if (errorMessage.includes("INVALID_PHONE") || errorMessage.includes("invalid")) {
+          toast({ 
+            title: "Invalid phone number", 
+            description: "This number can't receive SMS. Try \"Copy & send via phone\" instead.",
             variant: "destructive" 
           });
         } else {

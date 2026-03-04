@@ -82,8 +82,8 @@ async function sendFollowUpNudge(invoice: {
   // Try SMS first
   if (invoice.clientPhone) {
     try {
-      const success = await sendSMS(invoice.clientPhone, nudgeMessage);
-      if (success) {
+      const smsRes = await sendSMS(invoice.clientPhone, nudgeMessage);
+      if (smsRes.success) {
         sent = true;
         logger.info(`[IntentFollowUp] Sent SMS nudge for invoice ${invoice.id}`);
       }

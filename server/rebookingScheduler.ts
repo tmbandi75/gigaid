@@ -141,7 +141,7 @@ async function checkRebookings() {
               if (existingLog.length > 0) continue;
 
               const message = renderTemplate(rule.messageTemplate, job.clientName || "");
-              const success = await sendSMS(job.clientPhone, message);
+              const smsRes = await sendSMS(job.clientPhone, message);
 
               await db.insert(rebookingLogs).values({
                 userId: user.id,
@@ -150,10 +150,10 @@ async function checkRebookings() {
                 clientName: job.clientName,
                 clientPhone: job.clientPhone,
                 clientEmail: job.clientEmail,
-                status: success ? "sent" : "failed",
+                status: smsRes.success ? "sent" : "failed",
               });
 
-              if (success) {
+              if (smsRes.success) {
                 logger.info(`[RebookingScheduler] Sent rebooking for job ${job.id}`);
               }
             }

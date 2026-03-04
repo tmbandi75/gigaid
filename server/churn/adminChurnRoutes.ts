@@ -8,7 +8,7 @@ import { emitCanonicalEvent } from "../copilot/canonicalEvents";
 import { sendEmail } from "../sendgrid";
 import { logger } from "../lib/logger";
 
-let sendSMS: ((to: string, message: string) => Promise<boolean>) | undefined;
+let sendSMS: ((to: string, message: string) => Promise<{ success: boolean; errorCode?: string; errorMessage?: string }>) | undefined;
 import("../twilio").then((mod) => {
   sendSMS = mod.sendSMS;
 }).catch(() => {
@@ -349,8 +349,8 @@ router.post("/action", async (req, res) => {
             sendStatus = "Failed";
             sendError = "User has no phone number";
           } else {
-            const result = await sendSMS(user.phone, notes || `GigAid: A ${actionType} action has been triggered for your account.`);
-            if (!result) {
+            const smsRes = await sendSMS(user.phone, notes || `GigAid: A ${actionType} action has been triggered for your account.`);
+            if (!smsRes.success) {
               sendStatus = "Failed";
               sendError = "SMS send failed";
             }
