@@ -80,6 +80,24 @@ function isRoutineApiError(err: unknown): boolean {
   return false;
 }
 
+function isNonCriticalError(message: string | Event, source?: string, error?: Error): boolean {
+  const msg = typeof message === "string" ? message : error?.message || "";
+  if (msg === "Script error." || msg === "Script error") return true;
+  if (/ResizeObserver/i.test(msg)) return true;
+  if (/Loading chunk .* failed/i.test(msg)) return true;
+  if (/dynamically imported module/i.test(msg)) return true;
+  if (/Failed to fetch/i.test(msg)) return true;
+  if (/NetworkError/i.test(msg)) return true;
+  if (/Load failed/i.test(msg)) return true;
+  if (/google.*maps/i.test(msg)) return true;
+  if (/gmpx/i.test(msg)) return true;
+  if (/posthog/i.test(msg)) return true;
+  if (/^(401|403):/.test(msg)) return true;
+  if (/Unauthorized|Forbidden/i.test(msg)) return true;
+  if (source && !/localhost|replit\.app|replit\.dev/.test(source)) return true;
+  return false;
+}
+
 function safeLog(prefix: string, err: unknown) {
   try {
     if (import.meta.env.DEV) {
@@ -102,6 +120,10 @@ export function initGlobalErrorHandlers() {
     _colno?: number,
     error?: Error,
   ) => {
+    if (isNonCriticalError(_message, _source, error)) {
+      safeLog("GlobalError (suppressed)", error || _message);
+      return true;
+    }
     safeLog("GlobalError", error || _message);
     showRecoveryOverlay();
     return true;
@@ -109,11 +131,17 @@ export function initGlobalErrorHandlers() {
 
   window.addEventListener("unhandledrejection", (event: PromiseRejectionEvent) => {
     event.preventDefault();
-    if (isRoutineApiError(event.reason)) {
-      safeLog("UnhandledRejection (suppressed)", event.reason);
+    const reason = event.reason;
+    if (isRoutineApiError(reason)) {
+      safeLog("UnhandledRejection (suppressed)", reason);
       return;
     }
-    safeLog("UnhandledRejection", event.reason);
+    const reasonMsg = reason instanceof Error ? reason.message : String(reason || "");
+    if (isNonCriticalError(reasonMsg, undefined, reason instanceof Error ? reason : undefined)) {
+      safeLog("UnhandledRejection (suppressed)", reason);
+      return;
+    }
+    safeLog("UnhandledRejection", reason);
     showRecoveryOverlay();
   });
 }
