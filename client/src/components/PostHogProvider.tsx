@@ -5,6 +5,7 @@ import { getAnalyticsConsent } from "@/lib/consent/analyticsConsent";
 import { initAnalyticsSafely, isAnalyticsInitialized } from "@/lib/analytics/initAnalytics";
 import { AnalyticsConsentModal } from "@/components/AnalyticsConsentModal";
 import type { AnalyticsProfile } from "@/lib/att/attManager";
+import { getQueryFn } from "@/lib/queryClient";
 
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_API_KEY;
 
@@ -30,6 +31,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
 
   const profileQuery = useQuery<any>({
     queryKey: ["/api/profile"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
     retry: false,
     staleTime: 60_000,
   });

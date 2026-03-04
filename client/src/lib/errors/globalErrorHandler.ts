@@ -67,6 +67,19 @@ function captureToSentry(err: unknown) {
   }
 }
 
+function isRoutineApiError(err: unknown): boolean {
+  if (err instanceof Error) {
+    const msg = err.message;
+    if (/^(401|403):/.test(msg)) return true;
+    if (/Unauthorized|Forbidden/i.test(msg)) return true;
+  }
+  if (typeof err === "string") {
+    if (/^(401|403):/.test(err)) return true;
+    if (/Unauthorized|Forbidden/i.test(err)) return true;
+  }
+  return false;
+}
+
 function safeLog(prefix: string, err: unknown) {
   try {
     if (import.meta.env.DEV) {
@@ -96,6 +109,10 @@ export function initGlobalErrorHandlers() {
 
   window.addEventListener("unhandledrejection", (event: PromiseRejectionEvent) => {
     event.preventDefault();
+    if (isRoutineApiError(event.reason)) {
+      safeLog("UnhandledRejection (suppressed)", event.reason);
+      return;
+    }
     safeLog("UnhandledRejection", event.reason);
     showRecoveryOverlay();
   });
