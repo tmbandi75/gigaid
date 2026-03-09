@@ -49,6 +49,7 @@ export function ReplyComposer({ lead }: ReplyComposerProps) {
           clientName: lead.clientName,
           serviceType: lead.serviceType,
           description: lead.description,
+          channel: "sms",
         }),
       });
     },

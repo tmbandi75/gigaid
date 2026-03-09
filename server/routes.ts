@@ -3796,6 +3796,14 @@ export async function registerRoutes(
         daysSinceInteraction: validated.daysSinceInteraction,
         tone: validated.tone,
       });
+      const userId = (req as any).userId;
+      const user = await storage.getUser(userId);
+      const sigFirstName = user?.firstName?.trim() || user?.name?.split(' ')[0] || '';
+      const sigBusiness = user?.businessName?.trim() || '';
+      const sigParts = [sigFirstName, sigBusiness].filter(Boolean);
+      if (sigParts.length > 0 && followUp.message) {
+        followUp.message = `${followUp.message}\n\n— ${sigParts.join(', ')}`;
+      }
       res.json(followUp);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -3876,16 +3884,7 @@ export async function registerRoutes(
         }
       }
       
-      const firstName = user?.firstName?.trim() || user?.name?.split(' ')[0] || '';
-      const businessName = user?.businessName?.trim() || '';
-      let signedMessage = message;
-      const signatureParts = [firstName, businessName].filter(Boolean);
-      if (signatureParts.length > 0) {
-        const signature = signatureParts.join(', ');
-        signedMessage = `${message}\n\n— ${signature}`;
-      }
-
-      const smsResult = await sendSMS(to, signedMessage);
+      const smsResult = await sendSMS(to, message);
       if (smsResult.success) {
         // Increment SMS usage after successful send
         if (!isDeveloper(user)) {
@@ -3906,7 +3905,7 @@ export async function registerRoutes(
           clientPhone: to,
           clientName: clientName || null,
           direction: "outbound",
-          body: signedMessage,
+          body: message,
           relatedJobId: relatedJobId || null,
           relatedLeadId: relatedLeadId || null,
         });
@@ -7219,8 +7218,20 @@ Return ONLY the message text, no JSON or formatting.`
         temperature: 0.7,
       });
       
-      const reply = response.choices[0]?.message?.content?.trim() || 
+      let reply = response.choices[0]?.message?.content?.trim() || 
         `Hi ${clientName || "there"}! Just following up on your ${serviceType || "service"} request. Let me know if you're still interested!`;
+      
+      const { channel } = req.body;
+      if (channel === "sms") {
+        const negUserId = (req as any).userId;
+        const negUser = await storage.getUser(negUserId);
+        const negFirstName = negUser?.firstName?.trim() || negUser?.name?.split(' ')[0] || '';
+        const negBusiness = negUser?.businessName?.trim() || '';
+        const negSigParts = [negFirstName, negBusiness].filter(Boolean);
+        if (negSigParts.length > 0) {
+          reply = `${reply}\n\n— ${negSigParts.join(', ')}`;
+        }
+      }
       
       res.json({ reply });
     } catch (error) {

@@ -43,6 +43,7 @@ export function LeadTextComposer({ leadId, clientPhone, clientName, serviceType,
           clientName,
           serviceType: serviceType || "service",
           description: description || "",
+          channel: "sms",
         }),
       });
     },
