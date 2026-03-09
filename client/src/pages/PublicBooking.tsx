@@ -1259,7 +1259,7 @@ export default function PublicBooking() {
             rel="noopener noreferrer"
             data-testid="link-gigaid"
           >
-            <img src="/gigaid-logo.png" alt="GigAid" className="h-12 inline-block" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
+            <img src="/gigaid-logo.png" alt="GigAid" className="h-24 inline-block" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
           </a>
           <span>Powered by <a href="http://gigaid.ai" target="_blank" rel="noopener noreferrer" className="hover:underline font-medium">GigAid</a></span>
           {profile?.referralCode && (
