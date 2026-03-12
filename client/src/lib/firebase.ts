@@ -111,9 +111,25 @@ export async function signInWithGoogle(): Promise<string> {
     throw new Error("Redirect initiated - waiting for redirect result");
   }
 
-  const result = await signInWithPopup(a, googleProvider);
-  const idToken = await result.user.getIdToken();
-  return idToken;
+  try {
+    const result = await signInWithPopup(a, googleProvider);
+    const idToken = await result.user.getIdToken();
+    return idToken;
+  } catch (popupError: any) {
+    if (
+      popupError?.code === "auth/popup-closed-by-user" ||
+      popupError?.code === "auth/popup-blocked" ||
+      popupError?.code === "auth/cancelled-popup-request"
+    ) {
+      logger.debug(
+        "[Firebase] Popup failed, falling back to redirect:",
+        popupError.code,
+      );
+      await signInWithRedirect(a, googleProvider);
+      throw new Error("Redirect initiated - waiting for redirect result");
+    }
+    throw popupError;
+  }
 }
 
 export async function firebaseSignOut(): Promise<void> {

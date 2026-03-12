@@ -134,7 +134,7 @@ export default function Login() {
       const idToken = await signInWithGoogle();
       await exchangeTokenAndNavigate(idToken);
     } catch (error: any) {
-      if (isNativePlatform() && error.message?.includes("Redirect initiated")) {
+      if (error.message?.includes("Redirect initiated")) {
         return;
       }
       toast({
