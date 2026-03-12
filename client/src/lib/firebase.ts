@@ -85,15 +85,25 @@ export function initializeRedirectResultHandler(): Promise<string | null> {
 
   redirectResultPromise = getRedirectResult(_auth)
     .then(async (result) => {
+      console.log("[GoogleSignIn] getRedirectResult resolved:", {
+        hasResult: !!result,
+        hasUser: !!result?.user,
+        email: result?.user?.email,
+        providerId: result?.providerId,
+      });
       if (result && result.user) {
-        logger.debug("[Firebase] Redirect result received, getting ID token");
         const idToken = await result.user.getIdToken();
+        console.log("[GoogleSignIn] Redirect ID token obtained, length:", idToken.length);
         return idToken;
       }
       return null;
     })
-    .catch((error) => {
-      logger.error("[Firebase] Redirect result error:", error);
+    .catch((error: any) => {
+      console.error("[GoogleSignIn] getRedirectResult error:", {
+        code: error?.code,
+        message: error?.message,
+        customData: error?.customData,
+      });
       return null;
     });
 
@@ -102,28 +112,44 @@ export function initializeRedirectResultHandler(): Promise<string | null> {
 
 export async function signInWithGoogle(): Promise<string> {
   const a = requireAuth();
+  console.log("[GoogleSignIn] Starting sign-in flow", {
+    isNative: isNativePlatform(),
+    authDomain: firebaseConfig.authDomain,
+    currentUrl: window.location.href,
+    userAgent: navigator.userAgent,
+  });
+
   if (isNativePlatform()) {
-    logger.debug(
-      "[Firebase] Native platform detected, using signInWithRedirect",
-    );
+    console.log("[GoogleSignIn] Native platform detected, using signInWithRedirect");
     await signInWithRedirect(a, googleProvider);
     throw new Error("Redirect initiated - waiting for redirect result");
   }
 
   try {
+    console.log("[GoogleSignIn] Attempting signInWithPopup...");
     const result = await signInWithPopup(a, googleProvider);
+    console.log("[GoogleSignIn] Popup succeeded", {
+      uid: result.user.uid,
+      email: result.user.email,
+      providerId: result.providerId,
+    });
     const idToken = await result.user.getIdToken();
+    console.log("[GoogleSignIn] Got ID token, length:", idToken.length);
     return idToken;
   } catch (popupError: any) {
+    console.error("[GoogleSignIn] Popup error details:", {
+      code: popupError?.code,
+      message: popupError?.message,
+      customData: popupError?.customData,
+      name: popupError?.name,
+      stack: popupError?.stack?.substring(0, 500),
+    });
     if (
       popupError?.code === "auth/popup-closed-by-user" ||
       popupError?.code === "auth/popup-blocked" ||
       popupError?.code === "auth/cancelled-popup-request"
     ) {
-      logger.debug(
-        "[Firebase] Popup failed, falling back to redirect:",
-        popupError.code,
-      );
+      console.log("[GoogleSignIn] Falling back to redirect flow...");
       await signInWithRedirect(a, googleProvider);
       throw new Error("Redirect initiated - waiting for redirect result");
     }
