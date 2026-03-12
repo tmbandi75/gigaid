@@ -61,11 +61,10 @@ export default function SplashPage() {
       const idToken = await Promise.race([idTokenPromise, timeoutPromise]);
       await exchangeTokenAndNavigate(idToken);
     } catch (err: any) {
-      const code = err?.code || "";
-      const isPopupClosed = code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request";
-      const description = isPopupClosed
-        ? "The sign-in popup was closed. Please try again."
-        : err.message || "Something went wrong. Please try again.";
+      if (err.message?.includes("Redirect initiated")) {
+        return;
+      }
+      const description = err.message || "Something went wrong. Please try again.";
       toast({
         title: "Sign in failed",
         description,

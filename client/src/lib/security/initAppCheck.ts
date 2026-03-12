@@ -23,16 +23,26 @@ export function initAppCheck(app: FirebaseApp): AppCheck | null {
       import.meta.env.MODE === "development" ||
       window.location.hostname === "localhost";
 
-    if (isDev) {
-      (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-      logger.info("[AppCheck] Debug mode enabled for development");
-    }
-
     const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
     if (!siteKey) {
       logger.warn("[AppCheck] VITE_RECAPTCHA_SITE_KEY not set — App Check disabled");
       return null;
+    }
+
+    // In dev, only activate App Check when a specific debug token is provided.
+    // Setting FIREBASE_APPCHECK_DEBUG_TOKEN = true generates a random token
+    // that must be registered in the Firebase Console; if it isn't, App Check
+    // silently blocks auth operations like signInWithPopup.
+    if (isDev) {
+      const debugToken = import.meta.env.VITE_APPCHECK_DEBUG_TOKEN;
+      if (debugToken) {
+        (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = debugToken;
+        logger.info("[AppCheck] Using explicit debug token for development");
+      } else {
+        logger.info("[AppCheck] Skipped in development (set VITE_APPCHECK_DEBUG_TOKEN to enable)");
+        return null;
+      }
     }
 
     appCheckInstance = initializeAppCheck(app, {

@@ -13,7 +13,10 @@ if (import.meta.env.DEV) {
   });
 }
 
-if ('serviceWorker' in navigator) {
+// Service worker registration is disabled in development because the SW's
+// fetch handler can return undefined from respondWith(), which violates the
+// spec and breaks Firebase signInWithPopup's cross-origin communication.
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/service-worker.js', { updateViaCache: 'none' }).then((registration) => {
       registration.addEventListener('updatefound', () => {
@@ -57,6 +60,11 @@ if ('serviceWorker' in navigator) {
       logger.debug('[SW] Controller changed, reloading page for fresh content...');
       window.location.reload();
     }
+  });
+} else if ('serviceWorker' in navigator && import.meta.env.DEV) {
+  // In dev, unregister any previously registered SW to avoid stale interference
+  navigator.serviceWorker.getRegistrations().then((regs) => {
+    regs.forEach((r) => r.unregister());
   });
 }
 

@@ -72,11 +72,23 @@ declare module "http" {
 
 app.use(
   helmet({
+    // COOP same-origin (helmet's default) blocks cross-origin popup communication,
+    // which breaks Firebase signInWithPopup. Disabled so the Google sign-in popup
+    // can postMessage the auth result back to the opener window.
+    crossOriginOpenerPolicy: false,
     contentSecurityPolicy: isProduction
       ? {
           directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "https://apis.google.com"],
+            scriptSrc: [
+              "'self'",
+              "'unsafe-inline'",
+              "https://apis.google.com",
+              "https://www.google.com",
+              "https://www.gstatic.com",
+              "https://js.stripe.com",
+              "https://www.googletagmanager.com",
+            ],
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             imgSrc: ["'self'", "data:", "https:", "blob:"],
@@ -95,6 +107,8 @@ app.use(
               "https://firebase.googleapis.com",
               "https://apis.google.com",
               "https://accounts.google.com",
+              "https://www.google.com",
+              "https://content-firebaseappcheck.googleapis.com",
             ],
             frameSrc: [
               "'self'",
@@ -102,6 +116,8 @@ app.use(
               "https://connect.stripe.com",
               "https://*.firebaseapp.com",
               "https://accounts.google.com",
+              "https://www.google.com",
+              "https://www.recaptcha.net",
             ],
             formAction: [
               "'self'",

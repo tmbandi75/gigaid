@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
-import { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, initializeRedirectResultHandler, getFirebaseAuth } from "@/lib/firebase";
+import { signInWithEmail, signUpWithEmail, resetPassword, initializeRedirectResultHandler, getFirebaseAuth } from "@/lib/firebase";
 import { setAuthToken, clearAuthToken } from "@/lib/authToken";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -36,7 +36,7 @@ export default function Login() {
   const [, navigate] = useLocation();
   const { isAuthenticated, isLoggingOut, refetchUser } = useAuth();
   const { toast } = useToast();
-  const { setTokenReady } = useFirebaseAuth();
+  const { setTokenReady, signInWithGoogle } = useFirebaseAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [isCheckingRedirect, setIsCheckingRedirect] = useState(isNativePlatform());
@@ -134,7 +134,7 @@ export default function Login() {
       const idToken = await signInWithGoogle();
       await exchangeTokenAndNavigate(idToken);
     } catch (error: any) {
-      if (isNativePlatform() && error.message?.includes("Redirect initiated")) {
+      if (error.message?.includes("Redirect initiated")) {
         return;
       }
       toast({

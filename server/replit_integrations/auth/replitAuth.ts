@@ -30,8 +30,9 @@ export function getSession() {
     ttl: sessionTtl,
     tableName: "session",
   });
+  const secret = process.env.SESSION_SECRET || "dev-session-secret-not-for-production";
   return session({
-    secret: process.env.SESSION_SECRET!,
+    secret,
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
@@ -70,69 +71,78 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  const config = await getOidcConfig();
-
-  const verify: VerifyFunction = async (
-    tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
-    verified: passport.AuthenticateCallback
-  ) => {
-    const user = {};
-    updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
-    verified(null, user);
-  };
-
-  // Keep track of registered strategies
-  const registeredStrategies = new Set<string>();
-
-  // Helper function to ensure strategy exists for a domain
-  const ensureStrategy = (domain: string) => {
-    const strategyName = `replitauth:${domain}`;
-    if (!registeredStrategies.has(strategyName)) {
-      const strategy = new Strategy(
-        {
-          name: strategyName,
-          config,
-          scope: "openid email profile offline_access",
-          callbackURL: `https://${domain}/api/callback`,
-        },
-        verify
-      );
-      passport.use(strategy);
-      registeredStrategies.add(strategyName);
-    }
-  };
-
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
-  app.get("/api/login", (req, res, next) => {
-    logger.debug("[Auth] /api/login requested, hostname:", req.hostname);
-    try {
-      ensureStrategy(req.hostname);
-      logger.debug("[Auth] Strategy ensured for:", req.hostname);
-      passport.authenticate(`replitauth:${req.hostname}`, {
-        prompt: "login consent",
-        scope: ["openid", "email", "profile", "offline_access"],
-      })(req, res, (err: any) => {
-        if (err) {
-          logger.error("[Auth] Passport authenticate error:", err);
-        }
-        next(err);
-      });
-    } catch (error) {
-      logger.error("[Auth] Error in /api/login:", error);
-      next(error);
-    }
-  });
+  // Replit OIDC auth only works when REPL_ID is available (deployed on Replit)
+  const hasReplitEnv = !!process.env.REPL_ID;
 
-  app.get("/api/callback", (req, res, next) => {
-    ensureStrategy(req.hostname);
-    passport.authenticate(`replitauth:${req.hostname}`, {
-      successReturnToOrRedirect: "/",
-      failureRedirect: "/api/login",
-    })(req, res, next);
-  });
+  if (hasReplitEnv) {
+    const config = await getOidcConfig();
+
+    const verify: VerifyFunction = async (
+      tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
+      verified: passport.AuthenticateCallback
+    ) => {
+      const user = {};
+      updateUserSession(user, tokens);
+      await upsertUser(tokens.claims());
+      verified(null, user);
+    };
+
+    const registeredStrategies = new Set<string>();
+
+    const ensureStrategy = (domain: string) => {
+      const strategyName = `replitauth:${domain}`;
+      if (!registeredStrategies.has(strategyName)) {
+        const strategy = new Strategy(
+          {
+            name: strategyName,
+            config,
+            scope: "openid email profile offline_access",
+            callbackURL: `https://${domain}/api/callback`,
+          },
+          verify
+        );
+        passport.use(strategy);
+        registeredStrategies.add(strategyName);
+      }
+    };
+
+    app.get("/api/login", (req, res, next) => {
+      logger.debug("[Auth] /api/login requested, hostname:", req.hostname);
+      try {
+        ensureStrategy(req.hostname);
+        logger.debug("[Auth] Strategy ensured for:", req.hostname);
+        passport.authenticate(`replitauth:${req.hostname}`, {
+          prompt: "login consent",
+          scope: ["openid", "email", "profile", "offline_access"],
+        })(req, res, (err: any) => {
+          if (err) {
+            logger.error("[Auth] Passport authenticate error:", err);
+          }
+          next(err);
+        });
+      } catch (error) {
+        logger.error("[Auth] Error in /api/login:", error);
+        next(error);
+      }
+    });
+
+    app.get("/api/callback", (req, res, next) => {
+      ensureStrategy(req.hostname);
+      passport.authenticate(`replitauth:${req.hostname}`, {
+        successReturnToOrRedirect: "/",
+        failureRedirect: "/api/login",
+      })(req, res, next);
+    });
+  } else {
+    logger.info("[Auth] REPL_ID not set — skipping Replit OIDC setup (local dev)");
+
+    app.get("/api/login", (_req, res) => {
+      res.redirect("/");
+    });
+  }
 
   app.get("/api/logout", (req, res) => {
     req.logout(() => {
