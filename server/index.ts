@@ -75,7 +75,15 @@ app.use(
       ? {
           directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "https://apis.google.com"],
+            scriptSrc: [
+              "'self'",
+              "'unsafe-inline'",
+              "https://apis.google.com",
+              "https://www.google.com",
+              "https://www.gstatic.com",
+              "https://js.stripe.com",
+              "https://www.googletagmanager.com",
+            ],
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             imgSrc: ["'self'", "data:", "https:", "blob:"],
@@ -94,6 +102,8 @@ app.use(
               "https://firebase.googleapis.com",
               "https://apis.google.com",
               "https://accounts.google.com",
+              "https://www.google.com",
+              "https://content-firebaseappcheck.googleapis.com",
             ],
             frameSrc: [
               "'self'",
@@ -101,6 +111,8 @@ app.use(
               "https://connect.stripe.com",
               "https://*.firebaseapp.com",
               "https://accounts.google.com",
+              "https://www.google.com",
+              "https://www.recaptcha.net",
             ],
             formAction: [
               "'self'",
