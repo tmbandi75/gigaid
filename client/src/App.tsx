@@ -11,6 +11,7 @@ import { DriveModeProvider } from "@/components/drivemode/DriveModeProvider";
 import { OptimisticCapabilityProvider, useOptimisticCapability } from "@/contexts/OptimisticCapabilityContext";
 import { FirebaseAuthProvider, useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useEffect } from "react";
+import { getPlatform } from "@/lib/platform";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscriptionRestore } from "@/hooks/useSubscriptionRestore";
 import SplashPage from "@/pages/SplashPage";
@@ -157,6 +158,16 @@ function ThemeInitializer() {
       document.documentElement.classList.remove('dark');
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const platform = getPlatform();
+    if (platform === 'android') {
+      document.documentElement.style.setProperty('--safe-area-inset-top', '28px');
+    } else if (platform === 'ios') {
+      document.documentElement.style.setProperty('--safe-area-inset-top', '0px');
+    }
+  }, []);
   
   return null;
 }
@@ -269,6 +280,7 @@ function App() {
               <TooltipProvider>
                 <ThemeInitializer />
                 <SubscriptionHandler />
+                <div className="min-h-screen safe-area-top bg-background">
                 <Switch>
                 <Route path="/free-setup" component={FreeSetup} />
                 <Route path="/book/:slug" component={PublicBooking} />
@@ -291,6 +303,7 @@ function App() {
                 </Route>
                 </Switch>
                 <Toaster />
+                </div>
               </TooltipProvider>
             </OptimisticCapabilityProvider>
           </PostHogProvider>

@@ -10,7 +10,8 @@
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "run:android": "npm run build && npx cap sync android && npx cap run android",
-    "run:ios": "npm run build && npx cap sync ios && npx cap run ios"
+    "run:ios": "npm run build && npx cap sync ios && npx cap run ios",
+    "android:apk": "npm run build && npx cap sync android && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
     "@capacitor-firebase/authentication": "^8.1.0",

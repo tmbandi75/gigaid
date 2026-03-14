@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* iOS Safe Area Support for Capacitor - exposed as CSS variables for use in components */
+/* Safe area support for iOS and Android (Capacitor). Fallback for Android where env() is often 0. */
 :root {
   --safe-area-inset-top: env(safe-area-inset-top, 0px);
   --safe-area-inset-right: env(safe-area-inset-right, 0px);
