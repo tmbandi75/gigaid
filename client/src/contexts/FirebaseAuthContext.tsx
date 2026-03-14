@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from "react";
-import { onFirebaseAuthChange, firebaseInitError } from "@/lib/firebase";
+import { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from "react";
+import { onFirebaseAuthChange, firebaseInitError, signInWithGoogle as firebaseSignInWithGoogle, firebaseSignOut } from "@/lib/firebase";
 import type { User as FirebaseUser } from "firebase/auth";
 import { isTokenReadyForUser, resetTokenReadiness } from "@/lib/authToken";
 import { logger } from "@/lib/logger";
@@ -11,6 +11,8 @@ interface FirebaseAuthContextValue {
   callbackCount: number;
   isTokenReady: boolean;
   setTokenReady: (ready: boolean) => void;
+  signInWithGoogle: () => Promise<string>;
+  logout: () => Promise<void>;
 }
 
 const FirebaseAuthContext = createContext<FirebaseAuthContextValue | null>(null);
@@ -67,8 +69,11 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const signInWithGoogle = useCallback(() => firebaseSignInWithGoogle(), []);
+  const logout = useCallback(() => firebaseSignOut(), []);
+
   return (
-    <FirebaseAuthContext.Provider value={{ firebaseUser, authLoading, lastAuthEventTs, callbackCount, isTokenReady, setTokenReady }}>
+    <FirebaseAuthContext.Provider value={{ firebaseUser, authLoading, lastAuthEventTs, callbackCount, isTokenReady, setTokenReady, signInWithGoogle, logout }}>
       {children}
     </FirebaseAuthContext.Provider>
   );

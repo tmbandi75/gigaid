@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
-import { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, getFirebaseAuth } from "@/lib/firebase";
+import { signInWithEmail, signUpWithEmail, resetPassword, getFirebaseAuth } from "@/lib/firebase";
 import { setAuthToken } from "@/lib/authToken";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -17,7 +17,7 @@ export default function SplashPage() {
   const [, navigate] = useLocation();
   const { refetchUser } = useAuth();
   const { toast } = useToast();
-  const { setTokenReady } = useFirebaseAuth();
+  const { setTokenReady, signInWithGoogle } = useFirebaseAuth();
 
   const [isLoading, setIsLoading] = useState(false);
   const [isEmailLoading, setIsEmailLoading] = useState(false);
@@ -53,7 +53,7 @@ export default function SplashPage() {
     setIsLoading(true);
     
     try {
-      const timeoutMs = 30000;
+      const timeoutMs = 60000;
       const idTokenPromise = signInWithGoogle();
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error("Google sign-in timed out. Please try again.")), timeoutMs)
@@ -61,9 +61,6 @@ export default function SplashPage() {
       const idToken = await Promise.race([idTokenPromise, timeoutPromise]);
       await exchangeTokenAndNavigate(idToken);
     } catch (err: any) {
-      if (err.message?.includes("Redirect initiated")) {
-        return;
-      }
       const description = err.message || "Something went wrong. Please try again.";
       toast({
         title: "Sign in failed",

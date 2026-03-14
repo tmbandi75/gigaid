@@ -3,8 +3,7 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithCredential,
   signOut,
   onAuthStateChanged,
   createUserWithEmailAndPassword,
@@ -76,42 +75,6 @@ export function getFirebaseAuth() {
 
 const googleProvider = new GoogleAuthProvider();
 
-let redirectResultPromise: Promise<string | null> | null = null;
-
-export function initializeRedirectResultHandler(): Promise<string | null> {
-  if (firebaseInitError || !_auth) return Promise.resolve(null);
-
-  if (redirectResultPromise) {
-    return redirectResultPromise;
-  }
-
-  redirectResultPromise = getRedirectResult(_auth)
-    .then(async (result) => {
-      console.log("[GoogleSignIn] getRedirectResult resolved:", {
-        hasResult: !!result,
-        hasUser: !!result?.user,
-        email: result?.user?.email,
-        providerId: result?.providerId,
-      });
-      if (result && result.user) {
-        const idToken = await result.user.getIdToken();
-        console.log("[GoogleSignIn] Redirect ID token obtained, length:", idToken.length);
-        return idToken;
-      }
-      return null;
-    })
-    .catch((error: any) => {
-      console.error("[GoogleSignIn] getRedirectResult error:", {
-        code: error?.code,
-        message: error?.message,
-        customData: error?.customData,
-      });
-      return null;
-    });
-
-  return redirectResultPromise;
-}
-
 export async function signInWithGoogle(): Promise<string> {
   const a = requireAuth();
   logger.info("[GoogleSignIn] Starting sign-in flow", {
@@ -119,14 +82,32 @@ export async function signInWithGoogle(): Promise<string> {
     authDomain: firebaseConfig.authDomain,
   });
 
-  // Native Capacitor apps use redirect because in-app browsers block popups
+  // Native platforms use the Capacitor Firebase plugin which invokes the
+  // platform's native Google Sign-In SDK, avoiding WKWebView sessionStorage
+  // partitioning issues that break signInWithRedirect on iOS.
   if (isNativePlatform()) {
-    logger.info("[GoogleSignIn] Native platform — using signInWithRedirect");
-    await signInWithRedirect(a, googleProvider);
-    throw new Error("Redirect initiated - waiting for redirect result");
+    logger.info("[GoogleSignIn] Native platform — using Capacitor Firebase plugin");
+    const { FirebaseAuthentication } = await import(
+      "@capacitor-firebase/authentication"
+    );
+    const result = await FirebaseAuthentication.signInWithGoogle();
+
+    if (!result.credential?.idToken) {
+      throw new Error("Google Sign-In did not return a credential. The user may have cancelled.");
+    }
+
+    const credential = GoogleAuthProvider.credential(
+      result.credential.idToken,
+      result.credential.accessToken,
+    );
+    const userCredential = await signInWithCredential(a, credential);
+    logger.info("[GoogleSignIn] Native sign-in succeeded", {
+      email: userCredential.user.email,
+    });
+    return await userCredential.user.getIdToken();
   }
 
-  // Web always uses popup — redirect won't return to localhost in dev
+  // Web uses popup — works with the COOP fix already in server/index.ts
   try {
     const result = await signInWithPopup(a, googleProvider);
     logger.info("[GoogleSignIn] Popup succeeded", { email: result.user.email });

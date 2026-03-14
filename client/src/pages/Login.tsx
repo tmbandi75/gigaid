@@ -1,14 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
-import { signInWithEmail, signUpWithEmail, resetPassword, initializeRedirectResultHandler, getFirebaseAuth } from "@/lib/firebase";
+import { signInWithEmail, signUpWithEmail, resetPassword, getFirebaseAuth } from "@/lib/firebase";
 import { setAuthToken, clearAuthToken } from "@/lib/authToken";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { isNativePlatform } from "@/lib/platform";
 import { queryClient } from "@/lib/queryClient";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
@@ -39,14 +38,14 @@ export default function Login() {
   const { setTokenReady, signInWithGoogle } = useFirebaseAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isEmailLoading, setIsEmailLoading] = useState(false);
-  const [isCheckingRedirect, setIsCheckingRedirect] = useState(isNativePlatform());
+  const [isCheckingRedirect] = useState(false);
   const [mode, setMode] = useState<AuthMode>(getInitialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const redirectHandledRef = useRef(false);
+
 
   const exchangeTokenAndNavigate = async (idToken: string) => {
     const response = await fetch("/api/auth/web/firebase", {
@@ -84,33 +83,6 @@ export default function Login() {
     }
   }, []);
 
-  useEffect(() => {
-    if (!isNativePlatform() || redirectHandledRef.current) {
-      setIsCheckingRedirect(false);
-      return;
-    }
-
-    redirectHandledRef.current = true;
-
-    const handleRedirectResult = async () => {
-      try {
-        const idToken = await initializeRedirectResultHandler();
-        if (idToken) {
-          await exchangeTokenAndNavigate(idToken);
-        }
-      } catch (error: any) {
-        toast({
-          title: "Sign in failed",
-          description: error.message || "Please try again",
-          variant: "destructive",
-        });
-      } finally {
-        setIsCheckingRedirect(false);
-      }
-    };
-
-    handleRedirectResult();
-  }, []);
 
   if (isAuthenticated && !isLoggingOut && !isExplicitNavigation()) {
     navigate("/");
@@ -134,9 +106,6 @@ export default function Login() {
       const idToken = await signInWithGoogle();
       await exchangeTokenAndNavigate(idToken);
     } catch (error: any) {
-      if (error.message?.includes("Redirect initiated")) {
-        return;
-      }
       toast({
         title: "Sign in failed",
         description: error.message || "Please try again",
