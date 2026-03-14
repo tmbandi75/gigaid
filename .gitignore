@@ -9,3 +9,4 @@ backups/
 .env
 .env.*
 test.txt
+GoogleService-Info.plist
