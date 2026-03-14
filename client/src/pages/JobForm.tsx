@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { getCurrentPosition } from "@/lib/nativeGeolocation";
 import { useLocation, useParams, useSearch, Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/apiFetch";
@@ -579,22 +580,17 @@ export default function JobForm() {
   );
 
   const handleUpdateMyLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      toast({ title: "Geolocation not supported", variant: "destructive" });
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        updateLocationMutation.mutate({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        });
-      },
-      () => {
+    getCurrentPosition({
+      enableHighAccuracy: false,
+      maximumAge: 60000,
+      timeout: 10000,
+    })
+      .then(({ latitude, longitude }) => {
+        updateLocationMutation.mutate({ lat: latitude, lng: longitude });
+      })
+      .catch(() => {
         toast({ title: "Location permission denied", variant: "destructive" });
-      },
-      { enableHighAccuracy: false, maximumAge: 60000, timeout: 10000 }
-    );
+      });
   }, [updateLocationMutation, toast]);
 
   const parsedExisting = existingJob ? parseClientName(existingJob.clientName || "") : { firstName: "", lastName: "" };

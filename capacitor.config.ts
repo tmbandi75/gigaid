@@ -9,7 +9,7 @@ const config: CapacitorConfig = {
   appName: 'Gig Aid',
   webDir: 'dist/public',
   server: {
-    url: isProduction ? 'https://gig-aid--thierrymbandi.replit.app' : 'http://192.168.100.92:3000',
+    url:'https://gig-aid--thierrymbandi.replit.app',
     androidScheme: 'https',
     iosScheme: 'https',
     cleartext: !isProduction,

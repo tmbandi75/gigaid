@@ -42,6 +42,7 @@ import { GetPaidDialog } from "@/components/job/GetPaidDialog";
 import { NextActionBanner } from "@/components/NextActionBanner";
 import { IntentActionCard } from "@/components/IntentActionCard";
 import { ScheduledMessagesPanel } from "@/components/ScheduledMessagesPanel";
+import { getCurrentPosition } from "@/lib/nativeGeolocation";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -294,28 +295,19 @@ export default function JobSummary() {
 
   const updateLocationMutation = useApiMutation(
     async () => {
-      return new Promise<{ lat: number; lng: number }>((resolve, reject) => {
-        if (!navigator.geolocation) {
-          reject(new Error("Geolocation not supported"));
-          return;
-        }
-        navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            const { latitude, longitude } = position.coords;
-            await apiFetch(`/api/jobs/${id}`, {
-              method: "PATCH",
-              body: JSON.stringify({
-                providerLat: latitude,
-                providerLng: longitude,
-                providerLocationUpdatedAt: new Date().toISOString(),
-              }),
-            });
-            resolve({ lat: latitude, lng: longitude });
-          },
-          (error) => reject(error),
-          { enableHighAccuracy: true, timeout: 10000 }
-        );
+      const { latitude, longitude } = await getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 10000,
       });
+      await apiFetch(`/api/jobs/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          providerLat: latitude,
+          providerLng: longitude,
+          providerLocationUpdatedAt: new Date().toISOString(),
+        }),
+      });
+      return { lat: latitude, lng: longitude };
     },
     [QUERY_KEYS.job(id!)],
     {

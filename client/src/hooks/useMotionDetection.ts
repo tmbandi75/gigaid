@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { setMovementState, getMovementState, MovementState } from '@/lib/offlineDb';
+import { watchPosition, type GeoPosition } from '@/lib/nativeGeolocation';
 
 const SPEED_THRESHOLD_MPH = 12;
 const SUSTAINED_DURATION_MS = 5000; // 5 seconds for testing (was 50 seconds)
@@ -22,7 +23,7 @@ export function useMotionDetection(options: MotionDetectionOptions = {}) {
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>('inactive');
   const [currentSpeed, setCurrentSpeed] = useState<number | null>(null);
   
-  const watchIdRef = useRef<number | null>(null);
+  const stopWatchRef = useRef<(() => void) | null>(null);
   const speedHistoryRef = useRef<number[]>([]);
   const movementStartRef = useRef<number | null>(null);
   const belowThresholdCountRef = useRef<number>(0);
@@ -47,9 +48,9 @@ export function useMotionDetection(options: MotionDetectionOptions = {}) {
     setLocalMovementState(updated);
   }, []);
 
-  const handlePosition = useCallback((position: GeolocationPosition) => {
+  const handlePosition = useCallback((position: GeoPosition) => {
     setGpsStatus('active');
-    const speedMps = position.coords.speed;
+    const speedMps = position.speed;
     
     if (speedMps === null || speedMps < 0) {
       setCurrentSpeed(null);
@@ -103,8 +104,8 @@ export function useMotionDetection(options: MotionDetectionOptions = {}) {
     }
   }, [calculateConfidence, updateState, movementState.isMoving]);
 
-  const handleError = useCallback((error: GeolocationPositionError) => {
-    if (error.code === error.PERMISSION_DENIED) {
+  const handleError = useCallback((error: { code: number; message: string }) => {
+    if (error.code === 1) {
       setGpsStatus('denied');
     } else {
       setGpsStatus('error');
@@ -112,7 +113,7 @@ export function useMotionDetection(options: MotionDetectionOptions = {}) {
   }, []);
 
   useEffect(() => {
-    if (!enabled || !('geolocation' in navigator)) {
+    if (!enabled) {
       setGpsStatus('inactive');
       return;
     }
@@ -120,24 +121,24 @@ export function useMotionDetection(options: MotionDetectionOptions = {}) {
     getMovementState().then(setLocalMovementState);
 
     const startWatching = () => {
-      if (watchIdRef.current === null) {
+      if (stopWatchRef.current === null) {
         setGpsStatus('requesting');
-        watchIdRef.current = navigator.geolocation.watchPosition(
+        stopWatchRef.current = watchPosition(
           handlePosition,
           handleError,
           {
             enableHighAccuracy: true,
             maximumAge: 5000,
             timeout: 10000,
-          }
+          },
         );
       }
     };
 
     const stopWatching = () => {
-      if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-        watchIdRef.current = null;
+      if (stopWatchRef.current !== null) {
+        stopWatchRef.current();
+        stopWatchRef.current = null;
         setGpsStatus('inactive');
       }
     };
