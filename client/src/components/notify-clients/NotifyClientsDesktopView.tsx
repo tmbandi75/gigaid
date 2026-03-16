@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +34,9 @@ import {
   Eye,
   Hash,
   Target,
+  UsersRound,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import type { ServiceCategory, NotificationEventType } from "@shared/schema";
 import { categoryEventMapping } from "@shared/schema";
 
@@ -153,8 +155,20 @@ export default function NotifyClientsDesktopView(props: DesktopViewProps) {
     EVENT_COLORS, EVENT_ICON_BG, MAX_SMS_LENGTH, MAX_REASON_LENGTH,
   } = props;
 
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [selectionFeedback, setSelectionFeedback] = useState<string | null>(null);
+
+  const prevServiceId = useRef(selectedServiceId);
+  useEffect(() => {
+    if (selectedServiceId && selectedServiceId !== prevServiceId.current) {
+      setSelectionFeedback(`${selectedServiceName} selected`);
+      const timer = setTimeout(() => setSelectionFeedback(null), 2500);
+      prevServiceId.current = selectedServiceId;
+      return () => clearTimeout(timer);
+    }
+  }, [selectedServiceId, selectedServiceName]);
 
   const filteredServices = useMemo(() => {
     return services.filter((s) => {
@@ -183,6 +197,20 @@ export default function NotifyClientsDesktopView(props: DesktopViewProps) {
     <div className="space-y-5">
       {step === "service" && (
         <>
+          <div
+            className="rounded-xl border border-dashed border-muted-foreground/20 bg-muted/10 p-3 flex items-center gap-3 opacity-50 cursor-not-allowed"
+            title="Broad audience messaging requires selecting a specific service"
+            data-testid="notify-all-clients-disabled"
+          >
+            <div className="w-9 h-9 rounded-lg bg-muted/30 flex items-center justify-center flex-shrink-0">
+              <UsersRound className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-xs text-muted-foreground">Notify All Clients</div>
+              <div className="text-[10px] text-muted-foreground/70">Coming soon — select a service below</div>
+            </div>
+          </div>
+
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -448,6 +476,33 @@ export default function NotifyClientsDesktopView(props: DesktopViewProps) {
                   <Zap className="h-3 w-3 text-amber-500" />
                   <span>Delivery: immediate via {channel === "sms" ? "SMS" : "email"}</span>
                 </div>
+              )}
+
+              {selectionFeedback && (
+                <div className="rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 text-xs text-primary font-medium flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  {selectionFeedback}
+                </div>
+              )}
+
+              {step === "service" && selectedServiceId && (
+                <Button
+                  className="w-full rounded-xl h-9 text-sm font-semibold"
+                  onClick={() => setStep("event")}
+                  data-testid="button-continue-to-event"
+                >
+                  Continue <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
+              )}
+
+              {step === "event" && selectedEventType && (
+                <Button
+                  className="w-full rounded-xl h-9 text-sm font-semibold"
+                  onClick={() => setStep("compose")}
+                  data-testid="button-continue-to-compose"
+                >
+                  Continue <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
               )}
             </div>
           ) : (

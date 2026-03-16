@@ -813,6 +813,7 @@ export default function NotifyClientsPage() {
                   size="icon" 
                   onClick={handleBackNavigation}
                   className="h-10 w-10"
+                  aria-label="Go back"
                   data-testid="button-back"
                 >
                   <ArrowLeft className="h-5 w-5" />
