@@ -1,0 +1,333 @@
+Implement a Webview and Tablet enhancement for the GigAid Reminders page that introduces Smart Event-Based Reminders and an improved desktop/tablet layout.
+
+CRITICAL RULES
+
+1. Do NOT change the smartphone experience.
+2. Smartphone view (<768px) must remain visually and functionally identical.
+3. All new UI should only render for tablet and webview users.
+4. Do NOT modify backend API contracts.
+5. Do NOT modify database schemas.
+6. Do NOT remove or change existing reminder functionality.
+7. The existing reminder list and reminder creation logic must remain intact.
+8. Prefer additive components rather than refactoring existing components.
+9. Verify mobile UI renders exactly as before when complete.
+
+TECH STACK
+
+React
+Tailwind
+ShadCN UI
+Existing GigAid component system
+
+RESPONSIVE RULES
+
+Mobile (<768px)
+Render existing Reminders page exactly as it is.
+
+Tablet / Webview (>=768px)
+Render enhanced reminders dashboard.
+
+Use Tailwind breakpoints:
+
+block md:hidden → existing mobile layout
+hidden md:block → enhanced web/tablet layout
+
+IMPLEMENTATION STRATEGY
+
+1. Keep the existing Reminders component intact for mobile.
+
+2. Create a new component:
+
+RemindersDesktopView.tsx
+
+3. Wrap the page like this:
+
+<div className="block md:hidden">
+  <ExistingRemindersPage />
+</div>
+
+<div className="hidden md:block">
+  <RemindersDesktopView />
+</div>
+
+4. Reuse existing reminder data and actions.
+
+5. The enhanced UI should only change layout and add optional smart suggestion logic.
+
+6. No breaking changes to reminder creation, sending, editing, or deletion.
+
+GOAL
+
+Transform the Reminders page into a communication dashboard for tablet/web users while maintaining the existing smartphone experience.
+
+The page should help users quickly:
+
+• see overdue reminders
+• view reminder details
+• send reminders faster
+• see smart reminder suggestions
+
+DESKTOP/TABLET PAGE STRUCTURE
+
+1. PAGE HEADER
+
+Title:
+Reminders
+
+Subtitle:
+SMS & voice alerts
+
+Right side actions:
+
+Add Reminder button (reuse existing functionality)
+
+Reminder counters:
+
+Pending
+Sent
+Failed
+
+Style counters as small status cards instead of inline numbers.
+
+2. REMINDER OVERVIEW PANEL
+
+Add a summary section at the top.
+
+Example cards:
+
+Pending Reminders
+Sent Messages
+Failed Messages
+
+Each card should be clickable and filter the reminder list.
+
+Use subtle card styling:
+
+rounded-xl
+shadow-sm
+border border-slate-200
+
+3. SMART SUGGESTIONS PANEL
+
+Add a new section above the reminder list titled:
+
+Smart Suggestions
+
+This section suggests reminders based on job events.
+
+Examples:
+
+Appointment Reminder
+Client: Sarah Johnson
+Tomorrow at 10:00 AM
+
+Review Request
+Client: David Kim
+Job completed recently
+
+Payment Reminder
+Client: Michael Chen
+Invoice still unpaid
+
+Each suggestion card should include:
+
+Send Reminder
+Dismiss
+
+IMPORTANT:
+
+If real event data does not exist yet, implement the UI structure but leave placeholders.
+
+Do NOT fabricate backend data.
+
+Structure the component so real suggestions can be injected later.
+
+4. REMINDER LIST LAYOUT
+
+Convert the stacked reminder list into a two-panel layout.
+
+Left side:
+
+Reminder list
+
+Right side:
+
+Reminder details preview.
+
+Example layout:
+
+| Reminder List | Reminder Preview |
+
+When a reminder card is clicked, populate the preview panel.
+
+5. REMINDER CARD IMPROVEMENTS
+
+Improve visual hierarchy while keeping existing data.
+
+Each reminder card should show:
+
+Client name
+Reminder type (SMS, Email)
+Reminder message
+Scheduled time
+Status
+
+Status badges:
+
+Pending
+Sent
+Overdue
+Failed
+
+Overdue reminders should have stronger visual styling:
+
+border-red-400
+bg-red-50
+
+Add quick actions:
+
+Send Now
+Edit
+Delete
+
+Reuse existing handlers.
+
+6. SEARCH AND FILTERS
+
+Add a search input above the reminder list.
+
+Search reminders by:
+
+client name
+message text
+
+Add filter chips:
+
+All
+Pending
+Sent
+Failed
+Overdue
+SMS
+Email
+
+Filtering should work locally using existing reminder data.
+
+7. REMINDER PREVIEW PANEL
+
+Add a right side panel displaying reminder details.
+
+Show:
+
+Client name
+Channel (SMS, Email, Voice)
+Scheduled time
+Reminder message
+
+Buttons:
+
+Send Now
+Edit Reminder
+Delete Reminder
+
+Reuse existing functionality.
+
+Do not create new backend calls.
+
+8. BULK ACTIONS (DESKTOP ONLY)
+
+Allow selecting reminders using checkboxes.
+
+Bulk actions:
+
+Send Selected
+Delete Selected
+Reschedule
+
+These should reuse existing reminder logic where possible.
+
+If bulk actions are not currently supported by backend APIs, disable the buttons and add TODO comments.
+
+9. AI SUGGESTION MESSAGE
+
+If there are overdue reminders, show a small suggestion banner:
+
+Example:
+
+3 reminders are overdue.
+
+Buttons:
+
+Send All
+Reschedule
+
+If backend logic cannot support bulk sending, only show suggestion UI.
+
+10. CARD STYLING
+
+Use improved card visuals for desktop/tablet.
+
+Styles:
+
+rounded-xl
+shadow-sm
+hover:shadow-lg
+transition
+hover:border-blue-400
+
+Icons should represent reminder channel:
+
+Email
+SMS
+Voice
+
+11. COMPONENT STRUCTURE
+
+Create a new folder:
+
+components/reminders/
+
+Components:
+
+RemindersDesktopView.tsx
+ReminderOverviewCards.tsx
+SmartSuggestionsPanel.tsx
+ReminderListPanel.tsx
+ReminderPreviewPanel.tsx
+ReminderSearchBar.tsx
+
+Keep components modular.
+
+Do NOT refactor the mobile component.
+
+12. DATA SAFETY
+
+Do NOT:
+
+change APIs
+change database schema
+rename reminder fields
+invent new backend endpoints
+
+If data is unavailable for a feature, render a placeholder or hide the section.
+
+13. ACCESSIBILITY
+
+Ensure:
+
+Keyboard navigation works
+Focus states visible
+ARIA labels added for buttons
+Color contrast maintained
+
+14. FINAL VERIFICATION
+
+Before completing implementation verify:
+
+Mobile reminders page unchanged
+Tablet/webview show enhanced layout
+Reminder actions still work
+Add Reminder button works
+No TypeScript errors
+No console errors
+No API changes
