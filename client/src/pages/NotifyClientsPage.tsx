@@ -44,6 +44,7 @@ import {
   type NotificationEventType,
 } from "@shared/schema";
 import { findCategoryForService } from "@shared/service-categories";
+import NotifyClientsDesktopView from "@/components/notify-clients/NotifyClientsDesktopView";
 
 const categoryIdToSchemaCategory: Record<string, ServiceCategory> = {
   "handyman": "handyman_repairs",
@@ -231,7 +232,9 @@ export default function NotifyClientsPage() {
 
   const { data: eligibleClients } = useQuery<{ count: number; clients: any[] }>({
     queryKey: QUERY_KEYS.eligibleClients(channel),
-    enabled: step === "compose" || step === "review",
+    enabled: isMobile
+      ? (step === "compose" || step === "review")
+      : !!selectedServiceId,
   });
 
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -741,87 +744,143 @@ export default function NotifyClientsPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background" data-testid="page-notify-clients">
       {isMobile ? (
-        <div 
-          className="relative overflow-hidden text-white px-4 pt-5 pb-8"
-          style={{ 
-            background: 'linear-gradient(135deg, #1a56db 0%, #3b82f6 50%, #6366f1 100%)',
-          }}
-        >
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute -top-16 -right-16 w-48 h-48 bg-white/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 -left-12 w-36 h-36 bg-indigo-400/20 rounded-full blur-2xl" />
-          </div>
-          <div className="relative">
-            <div className="flex items-center gap-3 mb-4">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={handleBackNavigation}
-                className="text-white hover:bg-white/20 -ml-1 h-9 w-9"
-                data-testid="button-back"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <h1 className="text-lg font-bold tracking-tight">Notify Clients</h1>
-                <p className="text-xs text-white/70">Send targeted, event-based notifications</p>
+        <>
+          <div 
+            className="relative overflow-hidden text-white px-4 pt-5 pb-8"
+            style={{ 
+              background: 'linear-gradient(135deg, #1a56db 0%, #3b82f6 50%, #6366f1 100%)',
+            }}
+          >
+            <div className="absolute inset-0 overflow-hidden">
+              <div className="absolute -top-16 -right-16 w-48 h-48 bg-white/10 rounded-full blur-3xl" />
+              <div className="absolute bottom-0 -left-12 w-36 h-36 bg-indigo-400/20 rounded-full blur-2xl" />
+            </div>
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-4">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={handleBackNavigation}
+                  className="text-white hover:bg-white/20 -ml-1 h-9 w-9"
+                  data-testid="button-back"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <div>
+                  <h1 className="text-lg font-bold tracking-tight">Notify Clients</h1>
+                  <p className="text-xs text-white/70">Send targeted, event-based notifications</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+
+          <div className="max-w-2xl px-4 -mt-4 mx-auto w-full relative z-10">
+            <div className="bg-card rounded-xl border shadow-sm p-4 mb-5">
+              <StepIndicator currentStep={step} />
+            </div>
+          </div>
+
+          <div className="flex-1 max-w-2xl px-4 pb-24 mx-auto w-full">
+            {notifyUpgrade.bannerPayload && (
+              <div className="mb-4">
+                <UpgradeBanner
+                  capabilityKey={notifyUpgrade.bannerPayload.capabilityKey}
+                  remaining={notifyUpgrade.bannerPayload.remaining}
+                  limit={notifyUpgrade.bannerPayload.limit}
+                  current={notifyUpgrade.bannerPayload.current}
+                  variant={notifyUpgrade.variant}
+                  thresholdLevel={notifyUpgrade.bannerPayload.thresholdLevel || "warn"}
+                  surface="notifications"
+                  plan={notifyUpgrade.bannerPayload.plan}
+                  recommendedPlan={notifyUpgrade.bannerPayload.recommendedPlan}
+                />
+              </div>
+            )}
+
+            {step === "service" && renderServiceStep()}
+            {step === "event" && renderEventStep()}
+            {step === "compose" && renderComposeStep()}
+            {step === "review" && renderReviewStep()}
+          </div>
+        </>
       ) : (
-        <div className="border-b bg-background sticky top-0 z-[999]">
-          <div className="max-w-4xl mx-auto px-6 lg:px-8 py-5">
-            <div className="flex items-center gap-4">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={handleBackNavigation}
-                className="h-10 w-10"
-                data-testid="button-back"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-violet-500/20 flex items-center justify-center flex-shrink-0">
-                <Bell className="h-6 w-6 text-primary" />
-              </div>
-              <div className="flex-1">
-                <h1 className="text-2xl font-semibold">Notify Clients</h1>
-                <p className="text-sm text-muted-foreground">Send targeted, event-based notifications</p>
+        <>
+          <div className="border-b bg-background sticky top-0 z-[999]">
+            <div className="max-w-7xl mx-auto px-6 lg:px-8 py-4">
+              <div className="flex items-center gap-4">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={handleBackNavigation}
+                  className="h-10 w-10"
+                  data-testid="button-back"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-primary/20 to-violet-500/20 flex items-center justify-center flex-shrink-0">
+                  <Bell className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <h1 className="text-xl font-semibold">Notify Clients</h1>
+                  <p className="text-xs text-muted-foreground">Send targeted, event-based notifications</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+
+          {notifyUpgrade.bannerPayload && (
+            <div className="max-w-7xl mx-auto px-6 lg:px-8 mt-4">
+              <UpgradeBanner
+                capabilityKey={notifyUpgrade.bannerPayload.capabilityKey}
+                remaining={notifyUpgrade.bannerPayload.remaining}
+                limit={notifyUpgrade.bannerPayload.limit}
+                current={notifyUpgrade.bannerPayload.current}
+                variant={notifyUpgrade.variant}
+                thresholdLevel={notifyUpgrade.bannerPayload.thresholdLevel || "warn"}
+                surface="notifications"
+                plan={notifyUpgrade.bannerPayload.plan}
+                recommendedPlan={notifyUpgrade.bannerPayload.recommendedPlan}
+              />
+            </div>
+          )}
+
+          <NotifyClientsDesktopView
+            step={step}
+            setStep={setStep}
+            services={services}
+            servicesLoading={servicesLoading}
+            selectedServiceId={selectedServiceId}
+            selectedServiceName={selectedServiceName}
+            selectedServiceCategory={selectedServiceCategory}
+            selectedEventType={selectedEventType}
+            eventReason={eventReason}
+            setEventReason={setEventReason}
+            channel={channel}
+            setChannel={setChannel}
+            bookingLink={bookingLink}
+            setBookingLink={setBookingLink}
+            messageContent={messageContent}
+            setMessageContent={setMessageContent}
+            validationResult={validationResult}
+            validationError={validationError}
+            eligibleClients={eligibleClients}
+            handleServiceSelect={handleServiceSelect}
+            handleEventSelect={handleEventSelect}
+            handleValidate={handleValidate}
+            handleSend={handleSend}
+            validateMutationPending={validateMutation.isPending}
+            sendMutationPending={sendMutation.isPending}
+            CATEGORY_LABELS={CATEGORY_LABELS}
+            EVENT_LABELS={EVENT_LABELS}
+            EVENT_DESCRIPTIONS={EVENT_DESCRIPTIONS}
+            EVENT_ICONS={EVENT_ICONS}
+            EVENT_COLORS={EVENT_COLORS}
+            EVENT_ICON_BG={EVENT_ICON_BG}
+            MAX_SMS_LENGTH={MAX_SMS_LENGTH}
+            MAX_REASON_LENGTH={MAX_REASON_LENGTH}
+          />
+        </>
       )}
-
-      <div className={`${isMobile ? "max-w-2xl px-4 -mt-4" : "max-w-4xl px-6 lg:px-8 mt-6"} mx-auto w-full relative z-10`}>
-        <div className="bg-card rounded-xl border shadow-sm p-4 mb-5">
-          <StepIndicator currentStep={step} />
-        </div>
-      </div>
-
-      <div className={`flex-1 ${isMobile ? "max-w-2xl px-4 pb-24" : "max-w-4xl px-6 lg:px-8 pb-8"} mx-auto w-full`}>
-        {notifyUpgrade.bannerPayload && (
-          <div className="mb-4">
-            <UpgradeBanner
-              capabilityKey={notifyUpgrade.bannerPayload.capabilityKey}
-              remaining={notifyUpgrade.bannerPayload.remaining}
-              limit={notifyUpgrade.bannerPayload.limit}
-              current={notifyUpgrade.bannerPayload.current}
-              variant={notifyUpgrade.variant}
-              thresholdLevel={notifyUpgrade.bannerPayload.thresholdLevel || "warn"}
-              surface="notifications"
-              plan={notifyUpgrade.bannerPayload.plan}
-              recommendedPlan={notifyUpgrade.bannerPayload.recommendedPlan}
-            />
-          </div>
-        )}
-
-        {step === "service" && renderServiceStep()}
-        {step === "event" && renderEventStep()}
-        {step === "compose" && renderComposeStep()}
-        {step === "review" && renderReviewStep()}
-      </div>
 
       <UpgradeInterceptModal
         open={interceptModalOpen}

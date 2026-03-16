@@ -1,0 +1,465 @@
+Implement a premium desktop/tablet redesign for the GigAid “Notify Clients” page WITHOUT breaking existing functionality.
+
+CRITICAL RULES
+1. Do NOT break current mobile behavior.
+2. All redesigned UI should only apply to tablet and desktop.
+3. Mobile view below 768px must remain exactly as it is today unless absolutely required for shared logic.
+4. Do NOT change database schema.
+5. Do NOT change existing API contracts unless necessary for already-available data reads.
+6. Reuse existing services, campaign, and notification data where possible.
+7. Preserve the existing wizard logic and step progression unless explicitly replaced by a safer presentation layer.
+8. Build this behind a clean responsive split:
+   - mobile: existing UI
+   - tablet/desktop: enhanced UI
+9. Avoid large refactors. Prefer additive changes and wrapper components.
+10. Before finishing, verify that the current mobile layout still renders unchanged.
+
+TECH STACK
+- React
+- Tailwind
+- ShadCN UI
+- Existing GigAid design system / theme
+
+GOAL
+Redesign the “Notify Clients” experience so it feels like a premium SaaS campaign builder for desktop and tablet users.
+The page should feel fast, strategic, and intuitive, not like a generic stacked form.
+
+RESPONSIVE REQUIREMENTS
+- Mobile (< 768px): keep current experience
+- Tablet/Desktop (>= 768px): render enhanced experience
+- Use Tailwind responsive classes:
+  - block md:hidden for existing mobile
+  - hidden md:block for new enhanced layout
+
+SAFE IMPLEMENTATION STRATEGY
+1. Keep the existing mobile page/component intact.
+2. Create a new component for desktop/tablet only, for example:
+   - NotifyClientsDesktopView.tsx
+3. If helpful, extract shared state into a parent container:
+   - selected services
+   - selected audience
+   - current step
+   - campaign reason
+   - composed message
+   - recipient count
+4. Keep all existing submission logic and step validation.
+5. If current page already owns the logic, pass the required props into the desktop/tablet view instead of rewriting backend interactions.
+
+DESKTOP/TABLET REDESIGN REQUIREMENTS
+
+====================================
+1. OVERALL LAYOUT
+====================================
+
+Create a premium 3-column campaign builder layout for tablet/desktop:
+
+Column 1: Services / Audience selection
+Column 2: Audience Summary
+Column 3: Message Preview / Campaign Preview
+
+Suggested structure:
+
+-------------------------------------------------------------
+Notify Clients
+Send targeted, event-based notifications to past customers
+-------------------------------------------------------------
+
+[progress header]
+
+| Services / Audience | Audience Summary | Message Preview |
+|---------------------|------------------|-----------------|
+| search + filters    | recipient count  | live preview    |
+| suggested campaigns | service summary  | template text   |
+| service cards       | insights         | send readiness  |
+
+The layout should feel spacious but efficient.
+
+Use modern styling:
+- rounded-2xl containers
+- soft shadow-sm / shadow-md on hover
+- border border-slate-200 or theme equivalent
+- subtle background sections
+- clean typography hierarchy
+- good spacing for tablet and desktop
+
+====================================
+2. HEADER REDESIGN
+====================================
+
+Keep existing title and subtitle, but make desktop/tablet header more premium.
+
+Include:
+- page title: Notify Clients
+- subtitle: Send targeted, event-based notifications
+- a compact step indicator styled more clearly
+
+Replace weak stepper presentation with a clearer step UX for desktop/tablet:
+- Audience
+- Campaign
+- Review & Send
+
+If the existing flow still uses 4 internal steps, that is okay.
+The visual presentation can simplify to 3 bigger labels while still mapping to existing logic.
+
+Example labels:
+1. Choose Audience
+2. Build Message
+3. Review & Send
+
+The current active step should be visually prominent.
+
+====================================
+3. LIVE RECIPIENT COUNTER
+====================================
+
+Add a live recipient counter that updates instantly on tablet/desktop as services/audience selections change.
+
+Show it prominently in the Audience Summary panel:
+- Recipients Selected
+- X clients
+- Estimated delivery: fast / approximate count if available
+
+If exact recipient count is already available from existing data, use it.
+If not, compute based on filtered audience associated with the selected service(s).
+If exact counts are not available yet, gracefully show:
+- “Estimated recipients”
+Do not fake backend data.
+
+====================================
+4. SEARCH + FILTERS
+====================================
+
+Add search and filtering for services in the left panel.
+
+Required:
+- Search input: “Search services...”
+- Search should filter in real time
+- Search fields:
+  - service name
+  - category
+- Add category/service filter chips if categories are already available
+  - All
+  - Handyman
+  - Repairs
+  - Installations
+  - etc. only if backed by existing data
+
+Do not invent categories unless data already supports them.
+If categories are not readily available, implement only:
+- All
+- Popular
+- Selected
+
+Add debounce only if needed; otherwise instant local filtering is fine.
+
+====================================
+5. SUGGESTED CAMPAIGNS SECTION
+====================================
+
+At the top of the left panel, add a “Suggested Campaigns” section for desktop/tablet.
+
+This is a UI enhancement that should be data-safe.
+
+If real recommendation data does not exist yet, generate lightweight suggestions from existing service history using safe heuristics:
+- services with most clients
+- services with most bookings
+- most recently active services
+- services with meaningful audience size
+
+Each suggested campaign card should include:
+- service name
+- audience count if available
+- short recommendation label, such as:
+  - Reminder
+  - Promo
+  - Seasonal Outreach
+  - Re-engagement
+
+Do not claim AI generated unless there is already an AI recommendations framework.
+Instead label as:
+- Suggested Campaign
+- Recommended
+- Popular Outreach
+
+Clicking a suggested campaign should preselect the associated service and campaign type/template if applicable.
+
+====================================
+6. SERVICE CARDS
+====================================
+
+Replace the simple stacked rows on desktop/tablet with more useful service cards.
+
+Each service card should show:
+- service icon (if available)
+- service name
+- category/subcategory if available
+- recipient count or past client count if available
+- optional secondary insight such as:
+  - last booked recently
+  - repeat clients count
+  - active audience
+Only show insights when data exists.
+
+Each card should be clearly selectable.
+Selected state should be highly visible:
+- border highlight
+- background tint
+- check icon or badge
+
+Use desktop/tablet hover states:
+- hover:shadow-md
+- hover:border-primary
+- transition-all
+
+Do not remove the existing click behavior; enhance it.
+
+====================================
+7. MULTI-SELECT SUPPORT
+====================================
+
+Allow selecting multiple services on desktop/tablet if the underlying logic can safely support it without breaking existing flow.
+
+If multi-select is already supported or easy to support:
+- allow checkbox/card selection for multiple services
+- update live recipient count accordingly
+- show selected services in Audience Summary
+
+If multi-select is not supported by current backend/flow:
+- do NOT force it
+- instead keep single-select and structure code so multi-select could be added later
+
+Prefer safety over forcing new behavior.
+
+====================================
+8. AUDIENCE SUMMARY PANEL
+====================================
+
+Create a middle panel for Audience Summary.
+
+Show:
+- selected service(s)
+- recipients selected
+- any audience insights available
+- optional notes such as:
+  - repeat customers
+  - recently booked
+  - inactive clients
+Only if such data already exists or can be safely derived.
+
+Audience Summary panel should update live when the user selects a service or suggested campaign.
+
+Add a CTA button at the bottom:
+- Next Step
+or
+- Continue
+
+This button should trigger the same existing workflow progression as the current page.
+
+====================================
+9. MESSAGE PREVIEW PANEL
+====================================
+
+Create a right-side preview panel.
+
+This should display a live campaign preview on desktop/tablet.
+
+Show:
+- selected service name
+- campaign type or reason if selected
+- message preview text
+- placeholders if compose step is not yet complete
+
+If the user has not yet written a message, show a smart placeholder state such as:
+- “Select a service and campaign type to preview your message.”
+
+When message content exists, render a styled preview card like a text message / outbound campaign preview.
+
+Add supporting info if available:
+- recipients
+- campaign type
+- sending readiness
+- estimated message length quality (only if simple to calculate locally)
+
+Do not fabricate deliverability metrics.
+
+====================================
+10. ONE-CLICK CAMPAIGN TEMPLATES
+====================================
+
+Add quick campaign templates for desktop/tablet.
+
+Examples:
+- Promotion
+- Reminder
+- Seasonal
+- Announcement
+- Re-engagement
+
+Each template should:
+- set the reason/campaign type
+- optionally prefill compose text with editable starter copy
+
+Starter copy should be safe and generic.
+Use placeholders like:
+{{first_name}}
+{{booking_link}}
+
+Do not auto-send anything.
+
+Each template card/button should make the flow faster without changing existing backend behavior.
+
+====================================
+11. SMART TIMING RECOMMENDATION
+====================================
+
+Add a lightweight recommendation block in the preview or summary area.
+
+This should be framed carefully.
+Do NOT claim ML/AI if there is no real AI model.
+
+Allowed wording:
+- Recommended send time
+- Suggested timing
+
+If there is no real timing data, use a neutral fallback:
+- “Choose a time when your clients are most likely to see the message.”
+If you can derive a simple recommendation from existing settings or past activity, show it.
+If not, use a placeholder informational card only.
+
+Do not invent data.
+
+====================================
+12. NOTIFY ALL CLIENTS OPTION
+====================================
+
+If the current flow and permissions allow broad notification safely, add a desktop/tablet-only option/card near the top of the service list:
+
+- Notify All Clients
+- Send announcement to your full audience
+
+This should only appear if there is an existing backend-safe pathway for broad messaging.
+If broad audience messaging is not currently supported, do not add a broken CTA.
+Instead leave a commented TODO or disabled card with proper rationale only if consistent with current UX patterns.
+
+====================================
+13. MICRO-UX IMPROVEMENTS
+====================================
+
+Add subtle premium UX improvements on desktop/tablet:
+
+- Hover states on cards
+- Smooth transitions
+- Selected-state checkmarks
+- Better empty states
+- Sticky summary/preview panels on larger screens if appropriate
+- Toast or inline feedback when service is selected:
+  - “TV Mounting selected”
+  - “18 clients added”
+Only show this if not noisy.
+
+Add loading/skeleton states if service data loads asynchronously.
+
+====================================
+14. VISUAL STYLE
+====================================
+
+Use a clean premium SaaS look:
+- rounded-2xl cards/containers
+- soft borders
+- subtle shadows
+- restrained accent color usage
+- high readability
+- better use of horizontal space
+- tighter but elegant vertical rhythm
+
+The page should feel like a polished contractor growth tool.
+
+====================================
+15. ACCESSIBILITY + USABILITY
+====================================
+
+Ensure:
+- keyboard navigable cards/buttons
+- visible focus states
+- proper aria labels where needed
+- sufficient contrast
+- no hidden functionality behind hover only
+
+====================================
+16. CODE ORGANIZATION
+====================================
+
+Prefer this structure if helpful:
+
+- NotifyClientsPage.tsx
+  - existing mobile render unchanged
+  - desktop/tablet render wrapper
+
+- components/notify-clients/
+  - NotifyClientsDesktopView.tsx
+  - ServiceSearchBar.tsx
+  - SuggestedCampaigns.tsx
+  - ServiceSelectionPanel.tsx
+  - AudienceSummaryPanel.tsx
+  - MessagePreviewPanel.tsx
+  - CampaignTemplatePicker.tsx
+
+Keep components small and composable.
+Avoid rewriting business logic if present.
+
+====================================
+17. DATA SAFETY RULES
+====================================
+
+Do not:
+- change schema
+- rename API responses
+- remove existing state fields
+- break current step submit handlers
+- fabricate analytics
+- fabricate AI recommendations
+- assume fields exist without checking types
+
+If data is missing:
+- gracefully omit that sub-feature
+- fall back to simpler UI
+
+====================================
+18. IMPLEMENTATION NOTES
+====================================
+
+When possible:
+- derive recipient counts from existing client/service associations
+- derive “popular” services from existing usage/bookings if already available
+- use memoized filtering for performance
+- keep all new desktop/tablet logic isolated
+
+If necessary, add TypeScript-safe optional chaining and fallback handling.
+
+====================================
+19. ACCEPTANCE CRITERIA
+====================================
+
+The work is complete when:
+
+1. Mobile view remains unchanged.
+2. Tablet/desktop shows a premium multi-panel campaign builder.
+3. Users can search services.
+4. Users can select a service and see a live audience summary.
+5. Users can see a campaign/message preview.
+6. Suggested campaigns and templates improve speed without breaking existing flow.
+7. Existing submit/send functionality still works.
+8. No backend contracts are broken.
+9. No console errors or type errors are introduced.
+
+====================================
+20. FINAL VERIFICATION
+====================================
+
+Before finishing:
+- verify mobile renders exactly like before
+- verify desktop/tablet enhanced UI renders correctly
+- verify step progression still works
+- verify selecting a service updates summary and preview
+- verify no API or schema changes were introduced
+- verify TypeScript/build passes
