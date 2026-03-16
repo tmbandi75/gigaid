@@ -14,16 +14,12 @@ import {
   Mail,
   AlertCircle,
   CheckCircle2,
-  Info,
   Link2,
   Send,
   ChevronRight,
   Zap,
-  CloudSnow,
   Calendar,
   Clock,
-  ShieldAlert,
-  Heart,
   Sparkles,
   RotateCcw,
   Search,
@@ -36,7 +32,6 @@ import {
   Target,
   UsersRound,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import type { ServiceCategory, NotificationEventType } from "@shared/schema";
 import { categoryEventMapping } from "@shared/schema";
 
@@ -155,7 +150,6 @@ export default function NotifyClientsDesktopView(props: DesktopViewProps) {
     EVENT_COLORS, EVENT_ICON_BG, MAX_SMS_LENGTH, MAX_REASON_LENGTH,
   } = props;
 
-  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [selectionFeedback, setSelectionFeedback] = useState<string | null>(null);
