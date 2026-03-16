@@ -43,7 +43,6 @@ import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
 import { useAttributionSync } from "@/hooks/useUtmCapture";
-import { DashboardDesktopView } from "@/components/dashboard/DashboardDesktopView";
 
 interface MoneyDashboardData {
   weeklyRevenue: number;
@@ -128,16 +127,6 @@ export default function Dashboard() {
 
   const { data: moneyDashboard, isLoading: isMoneyLoading } = useQuery<MoneyDashboardData>({
     queryKey: QUERY_KEYS.moneyDashboard(),
-  });
-
-  const { data: gamePlan } = useQuery<{
-    priorityItem: any;
-    upNextItems: any[];
-    stats: { jobsToday: number; moneyCollectedToday: number; moneyWaiting: number; messagesToSend: number };
-    recentlyCompleted: { id: string; type: string; title: string; completedAt: string }[];
-  }>({
-    queryKey: QUERY_KEYS.dashboardGamePlan(),
-    enabled: !isMobile,
   });
 
   useEffect(() => {
@@ -338,17 +327,10 @@ export default function Dashboard() {
     </div>
   );
 
-  const allUpNextItems = gamePlan
-    ? [gamePlan.priorityItem, ...gamePlan.upNextItems].filter(Boolean)
-    : [];
-
-  const outstandingInvoiceCount = summary?.sentInvoices ?? 0;
-
   return (
     <div className="flex flex-col min-h-full bg-background" data-testid="page-dashboard">
       {isMobile ? renderMobileHeader() : renderDesktopHeader()}
 
-      <div className="block md:hidden">
       <div className={`flex-1 px-4 py-6 space-y-6 max-w-7xl mx-auto w-full -mt-4`}>
         <ActivationChecklist />
 
@@ -734,26 +716,6 @@ export default function Dashboard() {
         </SecondaryActionsPanel>
 
         <div className="h-20" />
-      </div>
-      </div>
-
-      <div className="hidden md:block">
-        <div className="flex-1 px-6 lg:px-8 py-6 max-w-7xl mx-auto w-full">
-          <DashboardDesktopView
-            gamePlanStats={gamePlan?.stats ?? null}
-            upNextItems={allUpNextItems}
-            recentlyCompleted={gamePlan?.recentlyCompleted ?? []}
-            bookingSlug={profile?.publicProfileSlug}
-            pendingRevenue={moneyDashboard?.pendingRevenue ?? 0}
-            pendingInvoiceCount={outstandingInvoiceCount}
-            upcomingJobs={upcomingJobs}
-            recentLeads={recentLeads}
-            navigate={navigate}
-            isLoading={isLoading}
-            aiNudges={allUpNextItems}
-          />
-          <div className="h-8" />
-        </div>
       </div>
 
       <WelcomeModal
