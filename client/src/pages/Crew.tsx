@@ -34,7 +34,11 @@ import {
   Calendar,
   TrendingUp,
   Copy,
-  MoreVertical
+  MoreVertical,
+  Search,
+  MessageSquare,
+  PhoneCall,
+  ClipboardList,
 } from "lucide-react";
 import type { CrewMember } from "@shared/schema";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -61,6 +65,8 @@ export default function Crew() {
   const isMobile = useIsMobile();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [expandedMember, setExpandedMember] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "joined" | "invited" | "inactive">("all");
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -303,10 +309,41 @@ export default function Crew() {
     </div>
   );
 
-  // Calculate stats
   const activeCount = crew.filter(m => m.status === "joined").length;
+  const inactiveCount = crew.filter(m => m.status === "inactive").length;
   const invitedCount = crew.filter(m => m.status === "invited").length;
   const totalCount = crew.length;
+
+  const filteredCrew = crew.filter((member) => {
+    if (statusFilter !== "all" && member.status !== statusFilter) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      return (
+        member.name.toLowerCase().includes(q) ||
+        (member.phone && member.phone.toLowerCase().includes(q)) ||
+        (member.role && member.role.toLowerCase().includes(q))
+      );
+    }
+    return true;
+  });
+
+  const statusFilters = [
+    { key: "all" as const, label: "All", count: totalCount },
+    { key: "joined" as const, label: "Active", count: activeCount },
+    { key: "invited" as const, label: "Invited", count: invitedCount },
+    { key: "inactive" as const, label: "Inactive", count: inactiveCount },
+  ];
+
+  const getDesktopStatusBadge = (status: string) => {
+    switch (status) {
+      case "joined":
+        return <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0"><UserCheck className="h-3 w-3 mr-1" />Available</Badge>;
+      case "inactive":
+        return <Badge className="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border-0"><UserX className="h-3 w-3 mr-1" />Inactive</Badge>;
+      default:
+        return <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0"><Clock className="h-3 w-3 mr-1" />Invited</Badge>;
+    }
+  };
 
   if (isLoading) {
     return (
@@ -344,6 +381,60 @@ export default function Crew() {
 
       {/* Main Content */}
       <div className={`flex-1 ${isMobile ? "px-4 py-6 -mt-4" : "max-w-7xl mx-auto px-6 lg:px-8 py-8 w-full"}`}>
+        {/* Desktop/Tablet: Summary Stats */}
+        {!isMobile && crew.length > 0 && (
+          <div className="grid grid-cols-4 gap-4 mb-6" data-testid="desktop-crew-stats">
+            {[
+              { label: "Total Crew", value: totalCount, icon: Users, color: "text-primary", bg: "bg-primary/10" },
+              { label: "Active", value: activeCount, icon: UserCheck, color: "text-emerald-600", bg: "bg-emerald-100 dark:bg-emerald-900/30" },
+              { label: "Invited", value: invitedCount, icon: Clock, color: "text-amber-600", bg: "bg-amber-100 dark:bg-amber-900/30" },
+              { label: "Inactive", value: inactiveCount, icon: UserX, color: "text-gray-500", bg: "bg-gray-100 dark:bg-gray-800" },
+            ].map((stat) => (
+              <Card key={stat.label} className="border shadow-sm hover:shadow-md transition-shadow">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className={`h-10 w-10 rounded-xl ${stat.bg} flex items-center justify-center flex-shrink-0`}>
+                    <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold" data-testid={`desktop-stat-${stat.label.toLowerCase().replace(' ', '-')}`}>{stat.value}</p>
+                    <p className="text-xs text-muted-foreground">{stat.label}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Desktop/Tablet: Search + Filters */}
+        {!isMobile && crew.length > 0 && (
+          <div className="mb-6 space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search crew by name, phone, or role..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-11 rounded-xl"
+                data-testid="input-crew-search"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              {statusFilters.map((f) => (
+                <Button
+                  key={f.key}
+                  variant={statusFilter === f.key ? "default" : "outline"}
+                  size="sm"
+                  className={`rounded-full text-xs ${statusFilter === f.key ? "" : "hover:bg-muted"}`}
+                  onClick={() => setStatusFilter(f.key)}
+                  data-testid={`filter-${f.key}`}
+                >
+                  {f.label} ({f.count})
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Add Crew Button */}
         <Button 
           onClick={() => setIsDialogOpen(true)}
@@ -355,7 +446,6 @@ export default function Crew() {
         </Button>
 
         {crew.length === 0 ? (
-          /* Empty State */
           <Card className="border-0 shadow-md overflow-hidden">
             <CardContent className="py-12 text-center">
               <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-primary/20 to-violet-500/20 flex items-center justify-center mx-auto mb-6">
@@ -376,226 +466,288 @@ export default function Crew() {
             </CardContent>
           </Card>
         ) : (
-          /* Crew List */
-          <div className="space-y-3">
-            {crew.map((member) => {
-              const statusConfig = getStatusConfig(member.status);
-              const StatusIcon = statusConfig.icon;
-              const isExpanded = expandedMember === member.id;
-              
-              return (
-                <Card 
-                  key={member.id} 
-                  className="border-0 shadow-md overflow-hidden transition-all duration-200"
-                  data-testid={`card-crew-${member.id}`}
-                >
-                  <Collapsible open={isExpanded} onOpenChange={() => toggleExpand(member.id)}>
-                    <CardContent className="p-0">
-                      <div className="flex items-stretch">
-                        {/* Role Color Bar */}
-                        <div className={`w-1.5 bg-gradient-to-b ${getRoleColor(member.role)}`} />
-                        
-                        <div className="flex-1 p-4">
-                          <div className="flex items-center gap-3">
-                            {/* Avatar */}
-                            <Avatar className="h-14 w-14 rounded-2xl">
-                              <AvatarFallback className={`bg-gradient-to-br ${getRoleColor(member.role)} text-white text-lg font-semibold rounded-2xl`}>
-                                {getInitials(member.name)}
-                              </AvatarFallback>
-                            </Avatar>
-                            
-                            {/* Info */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-semibold text-foreground truncate">{member.name}</h3>
-                              </div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <Badge variant="secondary" className="text-xs capitalize border-0">
-                                  {member.role}
-                                </Badge>
-                                <Badge variant="secondary" className={`text-xs border-0 ${statusConfig.color}`}>
-                                  <StatusIcon className="h-3 w-3 mr-1" />
-                                  {statusConfig.label}
-                                </Badge>
-                              </div>
-                              
-                              {/* Contact Info */}
-                              <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                                {member.phone && (
-                                  <a 
-                                    href={`tel:${member.phone}`} 
-                                    className="flex items-center gap-1 hover:text-primary"
-                                    aria-label={`Call ${member.name}`}
-                                    data-testid={`link-phone-${member.id}`}
-                                  >
-                                    <Phone className="h-3 w-3" />
-                                    {member.phone}
-                                  </a>
-                                )}
-                                {member.email && (
-                                  <a 
-                                    href={`mailto:${member.email}`} 
-                                    className="flex items-center gap-1 hover:text-primary truncate"
-                                    aria-label={`Email ${member.name}`}
-                                    data-testid={`link-email-${member.id}`}
-                                  >
-                                    <Mail className="h-3 w-3" />
-                                    <span className="truncate max-w-[120px]">{member.email}</span>
-                                  </a>
-                                )}
-                              </div>
-                            </div>
-                            
-                            {/* Actions */}
-                            <div className="flex items-center gap-1">
-                              <CollapsibleTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-9 w-9"
-                                  aria-label={isExpanded ? "Collapse job assignments" : "Expand job assignments"}
-                                  data-testid={`button-expand-${member.id}`}
-                                >
-                                  {isExpanded ? (
-                                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
-                                  ) : (
-                                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                                  )}
-                                </Button>
-                              </CollapsibleTrigger>
-                              
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="h-9 w-9" 
-                                    aria-label={`Actions for ${member.name}`}
-                                    data-testid={`button-menu-${member.id}`}
-                                  >
-                                    <MoreVertical className="h-5 w-5 text-muted-foreground" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  {member.status === "invited" && (
-                                    <DropdownMenuItem 
-                                      onClick={() => updateMutation.mutate({ id: member.id, status: "joined" })}
-                                      data-testid={`menu-join-${member.id}`}
-                                    >
-                                      <UserCheck className="h-4 w-4 mr-2" />
-                                      Mark as Joined
-                                    </DropdownMenuItem>
-                                  )}
-                                  {member.status === "joined" && (
-                                    <DropdownMenuItem 
-                                      onClick={() => updateMutation.mutate({ id: member.id, status: "inactive" })}
-                                      data-testid={`menu-inactive-${member.id}`}
-                                    >
-                                      <UserX className="h-4 w-4 mr-2" />
-                                      Mark as Inactive
-                                    </DropdownMenuItem>
-                                  )}
-                                  {member.status === "inactive" && (
-                                    <DropdownMenuItem 
-                                      onClick={() => updateMutation.mutate({ id: member.id, status: "joined" })}
-                                      data-testid={`menu-reactivate-${member.id}`}
-                                    >
-                                      <UserCheck className="h-4 w-4 mr-2" />
-                                      Reactivate
-                                    </DropdownMenuItem>
-                                  )}
-                                  <DropdownMenuItem 
-                                    onClick={() => deleteMutation.mutate(member.id)}
-                                    className="text-destructive focus:text-destructive"
-                                    data-testid={`menu-remove-${member.id}`}
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Remove
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Expandable Job Assignments */}
-                      <CollapsibleContent>
-                        <div className="border-t bg-muted/30 p-4">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Briefcase className="h-4 w-4 text-primary" />
-                            <h4 className="text-sm font-medium">Job Assignments</h4>
-                          </div>
+          <>
+            {/* Desktop/Tablet: No results */}
+            {!isMobile && filteredCrew.length === 0 && (searchQuery || statusFilter !== "all") && (
+              <Card className="border shadow-sm">
+                <CardContent className="py-10 text-center">
+                  <Search className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+                  <h3 className="font-semibold mb-1">No crew members found</h3>
+                  <p className="text-sm text-muted-foreground">Try adjusting your search or filters</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-4"
+                    onClick={() => { setSearchQuery(""); setStatusFilter("all"); }}
+                    data-testid="button-clear-filters"
+                  >
+                    Clear Filters
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Crew List — mobile uses original crew array, desktop uses filtered */}
+            <div className={isMobile ? "space-y-3" : "grid grid-cols-1 lg:grid-cols-2 gap-4"}>
+              {(isMobile ? crew : filteredCrew).map((member) => {
+                const statusConfig = getStatusConfig(member.status);
+                const StatusIcon = statusConfig.icon;
+                const isExpanded = expandedMember === member.id;
+                
+                return (
+                  <Card 
+                    key={member.id} 
+                    className={`overflow-hidden transition-all duration-200 ${isMobile ? "border-0 shadow-md" : "border shadow-sm hover:shadow-md rounded-xl"}`}
+                    data-testid={`card-crew-${member.id}`}
+                  >
+                    <Collapsible open={isExpanded} onOpenChange={() => toggleExpand(member.id)}>
+                      <CardContent className="p-0">
+                        <div className="flex items-stretch">
+                          <div className={`w-1.5 bg-gradient-to-b ${getRoleColor(member.role)}`} />
                           
-                          {crewInvites.length === 0 ? (
-                            <div className="text-center py-6">
-                              <Calendar className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
-                              <p className="text-sm text-muted-foreground">No jobs assigned yet</p>
-                              <p className="text-xs text-muted-foreground/70 mt-1">
-                                Assign this crew member to a job to see their assignments here
-                              </p>
-                            </div>
-                          ) : (
-                            <div className="space-y-2">
-                              {crewInvites.map((invite) => (
-                                <div 
-                                  key={invite.id}
-                                  className="flex items-center justify-between p-3 rounded-xl bg-background border"
-                                  data-testid={`invite-${invite.id}`}
-                                >
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium truncate">
-                                      {invite.jobTitle || `Job #${invite.jobId}`}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                      <Calendar className="h-3 w-3" />
-                                      {invite.jobDate ? new Date(invite.jobDate).toLocaleDateString('en-US', { 
-                                        month: 'short', 
-                                        day: 'numeric',
-                                        year: 'numeric'
-                                      }) : "Date TBD"}
-                                    </p>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {getInviteStatusBadge(invite.status)}
-                                    {(invite.status === "pending" || invite.status === "viewed") && (
-                                      <div className="flex gap-1">
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8"
-                                          onClick={() => copyInviteLink(invite.token)}
-                                          aria-label="Copy invite link"
-                                          data-testid={`button-copy-${invite.id}`}
-                                        >
-                                          <Copy className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 text-destructive hover:text-destructive"
-                                          onClick={() => revokeMutation.mutate(invite.id)}
-                                          disabled={revokeMutation.isPending}
-                                          aria-label="Revoke invite"
-                                          data-testid={`button-revoke-${invite.id}`}
-                                        >
-                                          <Link2Off className="h-4 w-4" />
-                                        </Button>
-                                      </div>
+                          <div className="flex-1 p-4">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-14 w-14 rounded-2xl">
+                                <AvatarFallback className={`bg-gradient-to-br ${getRoleColor(member.role)} text-white text-lg font-semibold rounded-2xl`}>
+                                  {getInitials(member.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="font-semibold text-foreground truncate">{member.name}</h3>
+                                </div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Badge variant="secondary" className="text-xs capitalize border-0">
+                                    {member.role}
+                                  </Badge>
+                                  {isMobile ? (
+                                    <Badge variant="secondary" className={`text-xs border-0 ${statusConfig.color}`}>
+                                      <StatusIcon className="h-3 w-3 mr-1" />
+                                      {statusConfig.label}
+                                    </Badge>
+                                  ) : (
+                                    getDesktopStatusBadge(member.status)
+                                  )}
+                                </div>
+                                
+                                <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                                  {member.phone && (
+                                    <a 
+                                      href={`tel:${member.phone}`} 
+                                      className="flex items-center gap-1 hover:text-primary"
+                                      aria-label={`Call ${member.name}`}
+                                      data-testid={`link-phone-${member.id}`}
+                                    >
+                                      <Phone className="h-3 w-3" />
+                                      {member.phone}
+                                    </a>
+                                  )}
+                                  {member.email && (
+                                    <a 
+                                      href={`mailto:${member.email}`} 
+                                      className="flex items-center gap-1 hover:text-primary truncate"
+                                      aria-label={`Email ${member.name}`}
+                                      data-testid={`link-email-${member.id}`}
+                                    >
+                                      <Mail className="h-3 w-3" />
+                                      <span className="truncate max-w-[120px]">{member.email}</span>
+                                    </a>
+                                  )}
+                                </div>
+
+                                {/* Desktop/Tablet: Quick Action Buttons */}
+                                {!isMobile && (
+                                  <div className="flex items-center gap-2 mt-3">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 text-xs rounded-lg"
+                                      onClick={() => toast({ title: "Assign job feature coming soon" })}
+                                      data-testid={`button-assign-${member.id}`}
+                                    >
+                                      <ClipboardList className="h-3 w-3 mr-1" />
+                                      Assign Job
+                                    </Button>
+                                    {member.email && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 text-xs rounded-lg"
+                                        asChild
+                                      >
+                                        <a href={`mailto:${member.email}`} data-testid={`button-message-${member.id}`}>
+                                          <MessageSquare className="h-3 w-3 mr-1" />
+                                          Message
+                                        </a>
+                                      </Button>
+                                    )}
+                                    {member.phone && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 text-xs rounded-lg"
+                                        asChild
+                                      >
+                                        <a href={`tel:${member.phone}`} data-testid={`button-call-${member.id}`}>
+                                          <PhoneCall className="h-3 w-3 mr-1" />
+                                          Call
+                                        </a>
+                                      </Button>
                                     )}
                                   </div>
-                                </div>
-                              ))}
+                                )}
+                              </div>
+                              
+                              <div className="flex items-center gap-1">
+                                <CollapsibleTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-9 w-9"
+                                    aria-label={isExpanded ? "Collapse job assignments" : "Expand job assignments"}
+                                    data-testid={`button-expand-${member.id}`}
+                                  >
+                                    {isExpanded ? (
+                                      <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                                    ) : (
+                                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                                    )}
+                                  </Button>
+                                </CollapsibleTrigger>
+                                
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="h-9 w-9" 
+                                      aria-label={`Actions for ${member.name}`}
+                                      data-testid={`button-menu-${member.id}`}
+                                    >
+                                      <MoreVertical className="h-5 w-5 text-muted-foreground" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    {member.status === "invited" && (
+                                      <DropdownMenuItem 
+                                        onClick={() => updateMutation.mutate({ id: member.id, status: "joined" })}
+                                        data-testid={`menu-join-${member.id}`}
+                                      >
+                                        <UserCheck className="h-4 w-4 mr-2" />
+                                        Mark as Joined
+                                      </DropdownMenuItem>
+                                    )}
+                                    {member.status === "joined" && (
+                                      <DropdownMenuItem 
+                                        onClick={() => updateMutation.mutate({ id: member.id, status: "inactive" })}
+                                        data-testid={`menu-inactive-${member.id}`}
+                                      >
+                                        <UserX className="h-4 w-4 mr-2" />
+                                        Mark as Inactive
+                                      </DropdownMenuItem>
+                                    )}
+                                    {member.status === "inactive" && (
+                                      <DropdownMenuItem 
+                                        onClick={() => updateMutation.mutate({ id: member.id, status: "joined" })}
+                                        data-testid={`menu-reactivate-${member.id}`}
+                                      >
+                                        <UserCheck className="h-4 w-4 mr-2" />
+                                        Reactivate
+                                      </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuItem 
+                                      onClick={() => deleteMutation.mutate(member.id)}
+                                      className="text-destructive focus:text-destructive"
+                                      data-testid={`menu-remove-${member.id}`}
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Remove
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
                             </div>
-                          )}
+                          </div>
                         </div>
-                      </CollapsibleContent>
-                    </CardContent>
-                  </Collapsible>
-                </Card>
-              );
-            })}
-          </div>
+                        
+                        <CollapsibleContent>
+                          <div className="border-t bg-muted/30 p-4">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Briefcase className="h-4 w-4 text-primary" />
+                              <h4 className="text-sm font-medium">Job Assignments</h4>
+                            </div>
+                            
+                            {crewInvites.length === 0 ? (
+                              <div className="text-center py-6">
+                                <Calendar className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
+                                <p className="text-sm text-muted-foreground">No jobs assigned yet</p>
+                                <p className="text-xs text-muted-foreground/70 mt-1">
+                                  Assign this crew member to a job to see their assignments here
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                {crewInvites.map((invite) => (
+                                  <div 
+                                    key={invite.id}
+                                    className="flex items-center justify-between p-3 rounded-xl bg-background border"
+                                    data-testid={`invite-${invite.id}`}
+                                  >
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium truncate">
+                                        {invite.jobTitle || `Job #${invite.jobId}`}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                        <Calendar className="h-3 w-3" />
+                                        {invite.jobDate ? new Date(invite.jobDate).toLocaleDateString('en-US', { 
+                                          month: 'short', 
+                                          day: 'numeric',
+                                          year: 'numeric'
+                                        }) : "Date TBD"}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      {getInviteStatusBadge(invite.status)}
+                                      {(invite.status === "pending" || invite.status === "viewed") && (
+                                        <div className="flex gap-1">
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8"
+                                            onClick={() => copyInviteLink(invite.token)}
+                                            aria-label="Copy invite link"
+                                            data-testid={`button-copy-${invite.id}`}
+                                          >
+                                            <Copy className="h-4 w-4" />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-destructive hover:text-destructive"
+                                            onClick={() => revokeMutation.mutate(invite.id)}
+                                            disabled={revokeMutation.isPending}
+                                            aria-label="Revoke invite"
+                                            data-testid={`button-revoke-${invite.id}`}
+                                          >
+                                            <Link2Off className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </CollapsibleContent>
+                      </CardContent>
+                    </Collapsible>
+                  </Card>
+                );
+              })}
+            </div>
+          </>
         )}
         
         <div className={isMobile ? "h-6" : "h-8"} />

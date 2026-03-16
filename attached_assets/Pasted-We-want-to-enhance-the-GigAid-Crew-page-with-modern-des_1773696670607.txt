@@ -1,0 +1,205 @@
+We want to enhance the GigAid Crew page with modern desktop/tablet features WITHOUT breaking the existing functionality.
+
+CRITICAL RULES
+1. Do NOT remove or modify existing mobile behavior.
+2. All new UI elements must ONLY appear on tablet and desktop screens.
+3. Mobile view (below 768px) must remain exactly the same as today.
+4. Do not change existing data models or API calls.
+5. Reuse existing crew data already being fetched.
+6. Keep existing actions like add crew, edit crew, etc.
+
+--------------------------------
+
+SCREEN TARGETING
+
+Only show the new features when screen width >= 768px.
+
+Use Tailwind breakpoints:
+
+mobile: <768px
+tablet: md (768px+)
+desktop: lg (1024px+)
+
+Wrap the new UI in:
+
+hidden md:block
+
+Existing layout must remain for mobile.
+
+--------------------------------
+
+FEATURES TO ADD (DESKTOP/TABLET ONLY)
+
+1. Crew Search Bar
+Add a search input above the crew list.
+
+UI:
+
+Search crew...
+
+Functionality:
+Filter crew members in real time.
+
+Search fields:
+- name
+- phone
+- role
+
+Implementation:
+Use React state filtering.
+
+--------------------------------
+
+2. Crew Status Filters
+
+Add filter chips under the search bar:
+
+[All] [Available] [On Job] [Invited]
+
+Behavior:
+Clicking a filter updates the visible crew list.
+
+Default = All
+
+--------------------------------
+
+3. Crew Summary Stats
+
+Add a summary row above the search bar.
+
+Example:
+
+Crew Overview
+
+Active: X
+Available: X
+On Job: X
+Invited: X
+
+Use existing crew status data if available.
+
+--------------------------------
+
+4. Desktop Crew Card Enhancements
+
+Enhance the visual layout of crew cards only on desktop/tablet.
+
+Keep existing card data.
+
+Add quick action buttons:
+
+Assign Job
+Message
+Call
+
+Layout example:
+
+--------------------------------
+Avatar   Name                  ⋮
+         Role
+
+Status Badge
+
+Phone number
+
+[Assign Job] [Message] [Call]
+--------------------------------
+
+Use Tailwind styling:
+
+rounded-xl
+shadow-sm
+hover:shadow-md
+transition
+
+--------------------------------
+
+5. Availability Badge
+
+Add a colored badge based on status:
+
+Available → green
+On Job → yellow
+Invited → gray
+
+Use ShadCN Badge component.
+
+--------------------------------
+
+6. Do NOT modify mobile layout
+
+Important:
+
+Mobile screens must continue to render the existing Crew page exactly as before.
+
+Implementation approach:
+
+if (window width < 768px)
+render existing layout
+
+if (>=768px)
+render enhanced layout
+
+--------------------------------
+
+IMPLEMENTATION STRATEGY
+
+1. Detect screen size with Tailwind responsive classes
+2. Create a new component:
+
+DesktopCrewView.tsx
+
+3. Keep existing CrewList component for mobile
+4. Render conditionally based on breakpoint
+
+Example:
+
+<div className="block md:hidden">
+  <ExistingCrewList />
+</div>
+
+<div className="hidden md:block">
+  <DesktopCrewView />
+</div>
+
+--------------------------------
+
+CODE SAFETY
+
+Do NOT:
+- change database schema
+- modify API endpoints
+- refactor crew data fetching
+- remove existing props
+
+Only enhance the UI layer.
+
+--------------------------------
+
+DESIGN STYLE
+
+Use existing GigAid UI patterns:
+- ShadCN components
+- Tailwind
+- soft shadows
+- rounded corners
+- subtle hover animations
+
+--------------------------------
+
+FINAL RESULT
+
+Mobile:
+unchanged
+
+Tablet/Desktop:
+Search bar
+Filter chips
+Crew stats
+Improved crew cards
+Quick action buttons
+
+--------------------------------
+
+Before finishing:
+Verify the mobile layout is unchanged.
