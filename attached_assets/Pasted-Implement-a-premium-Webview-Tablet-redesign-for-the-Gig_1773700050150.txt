@@ -1,0 +1,306 @@
+Implement a premium Webview/Tablet redesign for the GigAid “Business Co-Pilot” page.
+
+CRITICAL RULES
+
+1. Do NOT break the existing mobile UI.
+2. All new UI should only render on tablet and desktop screens.
+3. Mobile (<768px) must remain visually and functionally identical.
+4. Do NOT change any backend API contracts.
+5. Do NOT modify database schemas.
+6. Do NOT remove existing tools or actions.
+7. All logic that currently powers the page must remain intact.
+8. Prefer additive UI changes over refactoring.
+9. The new design should only enhance layout and UX for larger screens.
+10. Before finishing, verify mobile still renders exactly as before.
+
+TECH STACK
+
+React
+Tailwind
+ShadCN UI
+Existing GigAid components
+
+RESPONSIVE RULES
+
+Mobile (<768px)
+Use existing UI exactly as is.
+
+Tablet/Desktop (>=768px)
+Render the redesigned AI dashboard.
+
+Use Tailwind breakpoints:
+
+block md:hidden → existing mobile UI
+hidden md:block → enhanced UI
+
+IMPLEMENTATION APPROACH
+
+1. Keep the existing BusinessCoPilot component intact for mobile.
+
+2. Create a new component:
+
+BusinessCoPilotDesktopView.tsx
+
+3. Wrap rendering logic like this:
+
+<div className="block md:hidden">
+  <ExistingBusinessCoPilot />
+</div>
+
+<div className="hidden md:block">
+  <BusinessCoPilotDesktopView />
+</div>
+
+4. Reuse existing tool data and actions.
+
+5. Do NOT move logic that interacts with backend services.
+
+6. The new desktop/tablet UI should be purely a layout enhancement.
+
+GOAL
+
+Convert the Business Co-Pilot page from a tool list into an AI dashboard for larger screens.
+
+Instead of showing tools first, show:
+
+Insights
+Recommended Actions
+AI Assistant
+Tools
+
+This makes the page feel like a proactive AI business advisor.
+
+DESKTOP/TABLET PAGE STRUCTURE
+
+The redesigned layout should contain the following sections.
+
+1. PAGE HEADER
+
+Title:
+Business Co-Pilot
+
+Subtitle:
+See what works. Fix what doesn't. Get paid faster.
+
+Use a slightly larger header layout for desktop/tablet.
+
+Add spacing and a subtle divider below.
+
+2. TODAY IN YOUR BUSINESS PANEL
+
+Add a new panel at the top of the page.
+
+Title:
+Today in Your Business
+
+Show business insights using existing data where possible.
+
+Example insight cards:
+
+• Leads waiting for follow-up
+• Reviews waiting for response
+• Clients who haven't booked recently
+
+Each insight should include an action button.
+
+Example:
+
+3 leads need follow-up
+[Send Follow-Up]
+
+2 new reviews waiting
+[Respond to Reviews]
+
+5 clients haven't booked recently
+[Notify Clients]
+
+If real data is not available yet, render placeholder insights but structure the code so real data can easily populate later.
+
+Do NOT fabricate backend data.
+
+3. RECOMMENDED ACTIONS SECTION
+
+Below the insights panel create a section titled:
+
+Recommended Actions
+
+This should display actionable cards that trigger existing tools.
+
+Examples:
+
+Follow Up With Leads
+Open Follow-Up Messages tool.
+
+Reply to Reviews
+Open Review Responses tool.
+
+Send Reminder Campaign
+Open Notify Clients flow.
+
+These cards should route to existing tool functionality.
+
+Do NOT change underlying logic.
+
+4. AI ASSISTANT PANEL
+
+Add a card titled:
+
+Ask GigAid
+
+Include:
+
+An input field for asking questions.
+
+Example placeholder text:
+Ask about your business…
+
+Below it show suggested prompts:
+
+How can I get more jobs this week?
+What should I charge for drywall repair?
+Which leads should I follow up with?
+
+This can initially be UI only if the AI chat backend does not exist yet.
+
+5. TOOLS SECTION
+
+Move the existing tools grid below the insights and actions sections.
+
+Group tools into categories:
+
+Create
+Text to Job
+Voice Notes
+Service Builder
+Price Estimator
+
+Automate
+Smart Scheduling
+Follow-Up Messages
+Review Responses
+
+Grow
+Referral Generator
+Get More Bookings
+Know Who's Serious
+Grow My Business
+
+Use existing tools and routes.
+
+Do NOT rename tools or change navigation.
+
+6. GRID LAYOUT FOR WEBVIEW/TABLET
+
+Use a responsive dashboard grid.
+
+Example:
+
+grid-cols-1
+md:grid-cols-2
+lg:grid-cols-3
+
+Insights section spans full width.
+
+Recommended actions spans full width.
+
+Tools grid below.
+
+Ensure spacing looks balanced on tablet and desktop.
+
+7. CARD STYLING
+
+Upgrade tool cards visually for larger screens.
+
+Use Tailwind styles:
+
+rounded-xl
+shadow-sm
+hover:shadow-lg
+hover:-translate-y-1
+transition
+
+Add subtle hover states for desktop users.
+
+8. TOOL CARD ENHANCEMENTS
+
+Keep existing icons and descriptions.
+
+Improve visual hierarchy:
+
+Icon
+Title
+Short description
+
+Optional small tag if relevant:
+
+Recommended
+Popular
+
+Do NOT change the click behavior.
+
+9. OPTIONAL BUSINESS HEALTH PANEL
+
+Add a small panel titled:
+
+Business Health
+
+Show simple metrics if available.
+
+Example:
+
+Bookings
+Follow-ups
+Reviews
+
+If real metrics are not available yet, leave placeholders.
+
+This component should be optional and easily removable.
+
+10. CODE ORGANIZATION
+
+Create the following components inside a new folder:
+
+components/business-copilot/
+
+BusinessCoPilotDesktopView.tsx
+TodayInsightsPanel.tsx
+RecommendedActionsPanel.tsx
+AiAssistantPanel.tsx
+ToolGridSection.tsx
+
+Each component should be small and reusable.
+
+Do NOT refactor the existing mobile component.
+
+11. DATA SAFETY
+
+Do NOT:
+
+Change backend APIs
+Change database models
+Invent data structures
+Remove existing props
+Break navigation routes
+
+If required data is missing, show a graceful empty state.
+
+12. ACCESSIBILITY
+
+Ensure:
+
+Keyboard navigation works
+Focus states are visible
+Buttons have aria labels
+Color contrast remains accessible
+
+13. FINAL VERIFICATION
+
+Before completing implementation verify:
+
+Mobile UI unchanged
+Tablet/Desktop render redesigned dashboard
+Existing tools still function
+Navigation still works
+No TypeScript errors
+No console errors
+No backend calls modified
