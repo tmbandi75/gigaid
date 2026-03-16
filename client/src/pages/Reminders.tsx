@@ -86,6 +86,25 @@ export default function Reminders() {
     }
   );
 
+  const updateMutation = useApiMutation(
+    ({ id, data }: { id: string; data: typeof formData }) =>
+      apiFetch(`/api/reminders/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+    [QUERY_KEYS.reminders(), QUERY_KEYS.dashboardGamePlan()],
+    {
+      onSuccess: () => {
+        setIsDialogOpen(false);
+        resetForm();
+        toast({ title: "Reminder updated successfully" });
+      },
+      onError: () => {
+        toast({ title: "Failed to update reminder", variant: "destructive" });
+      },
+    }
+  );
+
   const deleteMutation = useApiMutation(
     (id: string) =>
       apiFetch(`/api/reminders/${id}`, { method: "DELETE" }),
@@ -132,7 +151,11 @@ export default function Reminders() {
       toast({ title: "Please fill all required fields", variant: "destructive" });
       return;
     }
-    createMutation.mutate(formData);
+    if (selectedReminder) {
+      updateMutation.mutate({ id: selectedReminder.id, data: formData });
+    } else {
+      createMutation.mutate(formData);
+    }
   };
 
   const getChannelIcon = (channel: string) => {
@@ -610,11 +633,11 @@ export default function Reminders() {
               </Button>
               <Button 
                 type="submit" 
-                disabled={createMutation.isPending} 
+                disabled={createMutation.isPending || updateMutation.isPending} 
                 className="bg-violet-500 hover:bg-violet-600"
                 data-testid="button-save-reminder"
               >
-                {createMutation.isPending ? (
+                {(createMutation.isPending || updateMutation.isPending) ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 ) : (
                   <Send className="h-4 w-4 mr-2" />
