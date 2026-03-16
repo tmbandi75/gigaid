@@ -21,8 +21,11 @@ import {
   Navigation,
   Loader2,
   LayoutGrid,
-  List
+  List,
+  Search,
+  X
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Link, useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import type { Job, AiNudge, Invoice } from "@shared/schema";
@@ -455,6 +458,7 @@ export default function Jobs() {
   const [selectedNudge, setSelectedNudge] = useState<AiNudge | null>(null);
   const [viewMode, setViewMode] = useState<"cards" | "table" | "calendar">("table");
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const isMobile = useIsMobile();
   
   useEffect(() => {
@@ -487,9 +491,21 @@ export default function Jobs() {
     setSelectedNudge(nudge);
   };
 
-  const filteredJobs = filter === "all" 
+  const statusFilteredJobs = filter === "all" 
     ? jobs 
     : jobs.filter(job => job.status === filter);
+
+  const filteredJobs = searchQuery.trim()
+    ? statusFilteredJobs.filter(job => {
+        const q = searchQuery.toLowerCase();
+        return (
+          (job.title && job.title.toLowerCase().includes(q)) ||
+          (job.clientName && job.clientName.toLowerCase().includes(q)) ||
+          (job.serviceType && job.serviceType.toLowerCase().includes(q)) ||
+          (job.location && job.location.toLowerCase().includes(q))
+        );
+      })
+    : statusFilteredJobs;
 
   const upcomingJobs = filteredJobs.filter(j => j.status === "scheduled" || j.status === "in_progress");
   const pastJobs = filteredJobs.filter(j => j.status === "completed" || j.status === "cancelled");
@@ -688,7 +704,7 @@ export default function Jobs() {
       </div>
       
       <div className="flex-1 max-w-7xl mx-auto w-full px-6 lg:px-8 py-6">
-        <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="flex items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg">
             {filters.map((f) => (
               <Button
@@ -704,37 +720,63 @@ export default function Jobs() {
             ))}
           </div>
 
-          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
-            <Button
-              variant={viewMode === "calendar" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("calendar")}
-              className="h-9"
-              data-testid="view-mode-calendar"
-            >
-              <Calendar className="h-4 w-4 mr-1" />
-              Calendar
-            </Button>
-            <Button
-              variant={viewMode === "cards" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("cards")}
-              className="h-9"
-              data-testid="view-mode-cards"
-            >
-              <LayoutGrid className="h-4 w-4 mr-1" />
-              Cards
-            </Button>
-            <Button
-              variant={viewMode === "table" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("table")}
-              className="h-9"
-              data-testid="view-mode-table"
-            >
-              <List className="h-4 w-4 mr-1" />
-              Table
-            </Button>
+          <div className="flex items-center gap-3">
+            <div className="relative w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search jobs..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-10 h-9"
+                data-testid="input-job-search"
+                aria-label="Search jobs"
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                  onClick={() => setSearchQuery("")}
+                  aria-label="Clear search"
+                  data-testid="button-clear-job-search"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
+              <Button
+                variant={viewMode === "calendar" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("calendar")}
+                className="h-9"
+                data-testid="view-mode-calendar"
+              >
+                <Calendar className="h-4 w-4 mr-1" />
+                Calendar
+              </Button>
+              <Button
+                variant={viewMode === "cards" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("cards")}
+                className="h-9"
+                data-testid="view-mode-cards"
+              >
+                <LayoutGrid className="h-4 w-4 mr-1" />
+                Cards
+              </Button>
+              <Button
+                variant={viewMode === "table" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("table")}
+                className="h-9"
+                data-testid="view-mode-table"
+              >
+                <List className="h-4 w-4 mr-1" />
+                Table
+              </Button>
+            </div>
           </div>
         </div>
 
