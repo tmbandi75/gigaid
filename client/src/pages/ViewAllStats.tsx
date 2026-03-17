@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { QUERY_KEYS } from "@/lib/queryKeys";
@@ -12,7 +11,6 @@ import {
   DollarSign,
   TrendingUp,
   Briefcase,
-  Users,
   FileText,
   AlertTriangle,
   BarChart3,
@@ -20,6 +18,7 @@ import {
   UserCheck,
   Zap,
 } from "lucide-react";
+import { StatsDesktopView } from "@/components/stats/StatsDesktopView";
 import {
   LineChart,
   Line,
@@ -262,6 +261,8 @@ export default function ViewAllStats() {
     return messages;
   }, [stats]);
 
+  const paidJobsCount = (jobs ?? []).filter((j) => j.status === "completed" && j.price).length;
+
   if (isLoading) {
     return (
       <div
@@ -273,13 +274,14 @@ export default function ViewAllStats() {
             className={
               isMobile
                 ? "px-4 py-3 flex items-center gap-3"
-                : "max-w-3xl mx-auto px-6 py-4 flex items-center gap-3"
+                : "max-w-6xl mx-auto px-6 lg:px-8 py-4 flex items-center gap-3"
             }
           >
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate("/more")}
+              aria-label="Go back"
               data-testid="button-back"
             >
               <ArrowLeft className="h-5 w-5" />
@@ -289,11 +291,51 @@ export default function ViewAllStats() {
             </h1>
           </div>
         </div>
-        <div className={isMobile ? "px-4 py-6 space-y-4" : "max-w-3xl mx-auto w-full px-6 py-6 space-y-4"}>
+        <div className={isMobile ? "px-4 py-6 space-y-4" : "max-w-6xl mx-auto w-full px-6 lg:px-8 py-6 space-y-4"}>
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-24 w-full rounded-xl" />
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (!isMobile) {
+    return (
+      <div
+        className="flex flex-col min-h-full bg-background"
+        data-testid="page-view-all-stats"
+      >
+        <div className="border-b bg-background sticky top-0 z-[999]">
+          <div className="max-w-6xl mx-auto px-6 lg:px-8 py-5">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/more")}
+                aria-label="Go back"
+                data-testid="desktop-button-back"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/10 to-blue-500/10 flex items-center justify-center">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-foreground" data-testid="text-stats-title">Statistics</h1>
+                  <p className="text-sm text-muted-foreground">Your business performance at a glance</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <StatsDesktopView
+          stats={stats}
+          insights={insights}
+          paidJobsCount={paidJobsCount}
+        />
       </div>
     );
   }
@@ -304,17 +346,12 @@ export default function ViewAllStats() {
       data-testid="page-view-all-stats"
     >
       <div className="border-b bg-background sticky top-0 z-10">
-        <div
-          className={
-            isMobile
-              ? "px-4 py-3 flex items-center gap-3"
-              : "max-w-3xl mx-auto px-6 py-4 flex items-center gap-3"
-          }
-        >
+        <div className="px-4 py-3 flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate("/more")}
+            aria-label="Go back"
             data-testid="button-back"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -325,13 +362,7 @@ export default function ViewAllStats() {
         </div>
       </div>
 
-      <div
-        className={
-          isMobile
-            ? "flex-1 px-4 py-6 space-y-6"
-            : "flex-1 max-w-3xl mx-auto w-full px-6 py-6 space-y-6"
-        }
-      >
+      <div className="flex-1 px-4 py-6 space-y-6">
         {!stats.hasEnoughData ? (
           <Card className="border-0 shadow-md" data-testid="card-insufficient-data">
             <CardContent className="p-8 text-center">
@@ -368,7 +399,7 @@ export default function ViewAllStats() {
                   value={formatCurrency(stats.avgJobValue)}
                   gradient="from-violet-500 to-purple-500"
                   testId="stat-avg-job"
-                  subtext={`Based on ${(jobs ?? []).filter((j) => j.status === "completed" && j.price).length} paid jobs`}
+                  subtext={`Based on ${paidJobsCount} paid jobs`}
                 />
               </div>
 
@@ -497,7 +528,7 @@ export default function ViewAllStats() {
           </>
         )}
 
-        <div className={isMobile ? "h-20" : "h-8"} />
+        <div className="h-20" />
       </div>
     </div>
   );

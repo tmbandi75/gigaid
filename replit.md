@@ -11,6 +11,15 @@ Preferred communication style: Simple, everyday language.
 ### Frontend
 The frontend uses React 18 with TypeScript, leveraging shadcn/ui (built on Radix UI) and Tailwind CSS for styling, supporting both light and dark modes. The design adheres to mobile-first principles and Material Design 3, utilizing Roboto typography. The web application is packaged into native iOS and Android apps using Capacitor.
 
+### Desktop/Tablet Layout Pattern
+Pages use `isMobile ? <MobileView> : <DesktopView>` or `block md:hidden` / `hidden md:block` CSS to render separate layouts. Mobile is always untouched. Desktop views live in dedicated component files:
+- `client/src/components/game-plan/GamePlanDesktopView.tsx` — Game Plan two-column (8+4) dashboard
+- `client/src/components/quickbook/QuickBookDesktopView.tsx` — QuickBook two-panel AI workspace
+- `client/src/components/voice-notes/VoiceNotesDesktopView.tsx` — Voice Notes two-panel (recorder + history)
+- `client/src/components/stats/StatsDesktopView.tsx` — Statistics multi-column dashboard (8+4 grid)
+- `client/src/components/booking-requests/BookingRequestsDesktopView.tsx` — Booking Requests desktop layout
+- Jobs and Invoices pages have inline desktop layouts with search bars in `renderDesktopLayout()`
+
 ### Backend
 The backend is built with Node.js and Express.js, using TypeScript and ESM modules. It exposes a RESTful JSON API. esbuild is used for server builds, while Vite handles client-side builds.
 
