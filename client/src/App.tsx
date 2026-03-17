@@ -104,6 +104,7 @@ function Router() {
       <Route path="/invoices/new" component={InvoiceForm} />
       <Route path="/invoices/:id/edit" component={InvoiceForm} />
       <Route path="/invoices/:id/view" component={InvoiceView} />
+      <Route path="/invoices/:id" component={InvoiceView} />
       <Route path="/reminders" component={Reminders} />
       <Route path="/crew" component={Crew} />
       <Route path="/settings" component={Settings} />
