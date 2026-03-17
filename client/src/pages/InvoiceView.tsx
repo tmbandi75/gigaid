@@ -5,7 +5,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { getPostActionMessage } from "@/encouragement/encouragementToast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useCelebration } from "@/hooks/use-celebration";
@@ -45,15 +44,12 @@ import {
   Share2,
   Copy,
   Check,
-  DollarSign,
   Edit,
   Trash2,
   User,
   Calendar,
   CreditCard,
   Sparkles,
-  ChevronRight,
-  ExternalLink,
   Undo2,
   MessageSquare,
   Link,
@@ -63,6 +59,7 @@ import { useNudges, useFeatureFlag } from "@/hooks/use-nudges";
 import { NudgeChips } from "@/components/nudges/NudgeChip";
 import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
 import { NextActionBanner } from "@/components/NextActionBanner";
+import { InvoiceViewDesktopView } from "@/components/invoices/InvoiceViewDesktopView";
 
 interface JobPayment {
   id: string;
@@ -415,226 +412,8 @@ export default function InvoiceView() {
     </div>
   );
 
-  return (
-    <div className="flex flex-col min-h-full bg-background" data-testid="page-invoice-view">
-      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
-      <div className={`flex-1 ${isMobile ? 'px-4 pt-4 pb-6' : 'max-w-7xl mx-auto w-full px-6 lg:px-8 pt-6 pb-8'} space-y-4`}>
-        <NextActionBanner entityType="invoice" entityId={id!} />
-        
-        {featureFlag?.enabled && nudges.length > 0 && (
-          <Card className="border-0 shadow-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10" data-testid="card-nudges">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles className="h-4 w-4 text-amber-500" />
-                <h3 className="font-semibold text-sm">AI Suggestions</h3>
-              </div>
-              <NudgeChips nudges={nudges} onNudgeClick={handleNudgeClick} />
-            </CardContent>
-          </Card>
-        )}
-
-        <Card className="border-0 shadow-xl overflow-hidden">
-          <CardContent className="p-0">
-            <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6 text-center border-b">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Total Amount</p>
-              <p className="text-4xl font-bold text-foreground tracking-tight">
-                {formatCurrency(total)}
-              </p>
-              {(tax > 0 || discount > 0) && (
-                <div className="flex items-center justify-center gap-4 mt-3 text-xs text-muted-foreground">
-                  <span>Subtotal: {formatCurrency(subtotal)}</span>
-                  {tax > 0 && <span>Tax: +{formatCurrency(tax)}</span>}
-                  {discount > 0 && <span className="text-emerald-600">Discount: -{formatCurrency(discount)}</span>}
-                </div>
-              )}
-            </div>
-            
-            <div className="p-5 space-y-4">
-              <div className="flex items-start gap-4">
-                <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                  <User className="h-5 w-5 text-blue-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground mb-0.5">Client</p>
-                  <p className="font-semibold text-foreground">{invoice.clientName}</p>
-                  <div className="flex flex-wrap gap-3 mt-2">
-                    {invoice.clientEmail && (
-                      <a 
-                        href={`mailto:${invoice.clientEmail}`}
-                        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-blue-600 transition-colors"
-                        data-testid="link-client-email"
-                      >
-                        <Mail className="h-3.5 w-3.5" />
-                        {invoice.clientEmail}
-                      </a>
-                    )}
-                    {invoice.clientPhone && (
-                      <a 
-                        href={`tel:${invoice.clientPhone}`}
-                        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-blue-600 transition-colors"
-                        data-testid="link-client-phone"
-                      >
-                        <Phone className="h-3.5 w-3.5" />
-                        {invoice.clientPhone}
-                      </a>
-                    )}
-                    {invoice.clientPhone && (
-                      <button 
-                        onClick={() => {
-                          const token = invoice.publicToken || invoice.shareLink;
-                          const payLink = token
-                            ? `${window.location.origin}/invoice/${token}`
-                            : null;
-                          const linkText = payLink ? ` You can view and pay it here: ${payLink}` : "";
-                          sendText({ 
-                            phoneNumber: invoice.clientPhone!, 
-                            message: `Hi ${invoice.clientName}, this is a reminder about invoice #${invoice.invoiceNumber} for ${formatCurrency(total)}.${linkText} Please let me know if you have any questions!`
-                          });
-                          if (invoice.status !== "paid") {
-                            incrementStallCounter("unpaid_invoice");
-                          }
-                        }}
-                        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-emerald-600 transition-colors"
-                        data-testid="button-text-client"
-                      >
-                        <MessageSquare className="h-3.5 w-3.5" />
-                        Send Text
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="h-px bg-border" />
-              
-              <div className="flex items-start gap-4">
-                <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center flex-shrink-0">
-                  <FileText className="h-5 w-5 text-purple-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground mb-0.5">Description</p>
-                  <p className="text-sm text-foreground">{invoice.serviceDescription || "No description provided"}</p>
-                </div>
-              </div>
-              
-              <div className="h-px bg-border" />
-              
-              <div className="flex items-start gap-4">
-                <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-                  <Calendar className="h-5 w-5 text-amber-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground mb-0.5">Created</p>
-                  <p className="text-sm font-medium text-foreground">{formatDate(invoice.createdAt)}</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {invoice.status === "paid" && invoice.paidAt && (
-          <Card className="border-0 shadow-lg overflow-hidden bg-gradient-to-r from-emerald-500 to-teal-500 text-white">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-4">
-                <div className="h-14 w-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
-                  <CheckCircle className="h-7 w-7" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-bold text-lg">Payment Received</p>
-                  <p className="text-white/80 text-sm">
-                    {formatDate(invoice.paidAt)}
-                    {invoice.paymentMethod && ` via ${invoice.paymentMethod.charAt(0).toUpperCase() + invoice.paymentMethod.slice(1)}`}
-                  </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowRevertDialog(true)}
-                  className="text-white/80 hover:text-white hover:bg-white/20"
-                  data-testid="button-revert-paid"
-                >
-                  <Undo2 className="h-4 w-4 mr-1" />
-                  Undo
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {(invoice.publicToken || invoice.shareLink) && (
-          <Card className="border-0 shadow-md overflow-hidden">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                  <Share2 className="h-5 w-5 text-blue-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">Share with Client</p>
-                  <p className="text-xs text-muted-foreground">Send a link to view this invoice</p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={copyShareLink}
-                  className="gap-2"
-                  data-testid="button-copy-link"
-                >
-                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  {copied ? "Copied" : "Copy"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        <PaymentConfirmation 
-          invoice={invoice} 
-          payments={payments}
-          onPaymentConfirmed={() => {
-            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.invoices.detail(id!) });
-            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.invoicePayments(id!) });
-          }}
-        />
-
-        <div className="space-y-3 pt-2">
-          {invoice.status === "draft" && (
-            <Button
-              onClick={handleSendClick}
-              className="w-full h-14 text-base font-semibold bg-gradient-to-r from-blue-500 to-cyan-500 shadow-lg shadow-blue-500/20 rounded-xl"
-              data-testid="button-send-invoice"
-            >
-              <div className="h-8 w-8 rounded-lg bg-white/20 flex items-center justify-center mr-3">
-                <Send className="h-4 w-4" />
-              </div>
-              Send Invoice to Client
-            </Button>
-          )}
-
-          {invoice.status === "sent" && (
-            <>
-              <Button
-                onClick={() => setShowPaymentDialog(true)}
-                className="w-full h-14 text-base font-semibold bg-gradient-to-r from-emerald-500 to-teal-500 shadow-lg shadow-emerald-500/20 rounded-xl"
-                data-testid="button-mark-paid"
-              >
-                <div className="h-8 w-8 rounded-lg bg-white/20 flex items-center justify-center mr-3">
-                  <CheckCircle className="h-4 w-4" />
-                </div>
-                Mark as Paid
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleSendClick}
-                className="w-full h-12 rounded-xl"
-                data-testid="button-resend"
-              >
-                <Send className="h-4 w-4 mr-2" />
-                Resend Invoice
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
+  const renderDialogs = () => (
+    <>
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -856,6 +635,267 @@ export default function InvoiceView() {
         type={celebration.type}
         onDismiss={dismissCelebration}
       />
+    </>
+  );
+
+  if (!isMobile) {
+    return (
+      <div className="flex flex-col min-h-full bg-background" data-testid="page-invoice-view">
+        {renderDesktopHeader()}
+        <InvoiceViewDesktopView
+          invoice={invoice}
+          payments={payments}
+          nudges={nudges}
+          featureFlag={featureFlag}
+          copied={copied}
+          statusConfig={config}
+          subtotal={subtotal}
+          tax={tax}
+          discount={discount}
+          total={total}
+          onSendClick={handleSendClick}
+          onMarkPaid={() => setShowPaymentDialog(true)}
+          onEdit={() => navigate(`/invoices/${id}/edit`)}
+          onDelete={() => setShowDeleteDialog(true)}
+          onRevert={() => setShowRevertDialog(true)}
+          onCopyShareLink={copyShareLink}
+          onNudgeClick={handleNudgeClick}
+          onSendText={sendText}
+          onPaymentConfirmed={() => {
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.invoices.detail(id!) });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.invoicePayments(id!) });
+          }}
+          onIncrementStall={() => incrementStallCounter("unpaid_invoice")}
+          formatCurrency={formatCurrency}
+          formatDate={formatDate}
+          formatShortDate={formatShortDate}
+        />
+        {renderDialogs()}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col min-h-full bg-background" data-testid="page-invoice-view">
+      {renderMobileHeader()}
+      <div className="flex-1 px-4 pt-4 pb-6 space-y-4">
+        <NextActionBanner entityType="invoice" entityId={id!} />
+        
+        {featureFlag?.enabled && nudges.length > 0 && (
+          <Card className="border-0 shadow-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10" data-testid="card-nudges">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                <h3 className="font-semibold text-sm">AI Suggestions</h3>
+              </div>
+              <NudgeChips nudges={nudges} onNudgeClick={handleNudgeClick} />
+            </CardContent>
+          </Card>
+        )}
+
+        <Card className="border-0 shadow-xl overflow-hidden">
+          <CardContent className="p-0">
+            <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6 text-center border-b">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Total Amount</p>
+              <p className="text-4xl font-bold text-foreground tracking-tight">
+                {formatCurrency(total)}
+              </p>
+              {(tax > 0 || discount > 0) && (
+                <div className="flex items-center justify-center gap-4 mt-3 text-xs text-muted-foreground">
+                  <span>Subtotal: {formatCurrency(subtotal)}</span>
+                  {tax > 0 && <span>Tax: +{formatCurrency(tax)}</span>}
+                  {discount > 0 && <span className="text-emerald-600">Discount: -{formatCurrency(discount)}</span>}
+                </div>
+              )}
+            </div>
+            
+            <div className="p-5 space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                  <User className="h-5 w-5 text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground mb-0.5">Client</p>
+                  <p className="font-semibold text-foreground">{invoice.clientName}</p>
+                  <div className="flex flex-wrap gap-3 mt-2">
+                    {invoice.clientEmail && (
+                      <a 
+                        href={`mailto:${invoice.clientEmail}`}
+                        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-blue-600 transition-colors"
+                        data-testid="link-client-email"
+                      >
+                        <Mail className="h-3.5 w-3.5" />
+                        {invoice.clientEmail}
+                      </a>
+                    )}
+                    {invoice.clientPhone && (
+                      <a 
+                        href={`tel:${invoice.clientPhone}`}
+                        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-blue-600 transition-colors"
+                        data-testid="link-client-phone"
+                      >
+                        <Phone className="h-3.5 w-3.5" />
+                        {invoice.clientPhone}
+                      </a>
+                    )}
+                    {invoice.clientPhone && (
+                      <button 
+                        onClick={() => {
+                          const token = invoice.publicToken || invoice.shareLink;
+                          const payLink = token
+                            ? `${window.location.origin}/invoice/${token}`
+                            : null;
+                          const linkText = payLink ? ` You can view and pay it here: ${payLink}` : "";
+                          sendText({ 
+                            phoneNumber: invoice.clientPhone!, 
+                            message: `Hi ${invoice.clientName}, this is a reminder about invoice #${invoice.invoiceNumber} for ${formatCurrency(total)}.${linkText} Please let me know if you have any questions!`
+                          });
+                          if (invoice.status !== "paid") {
+                            incrementStallCounter("unpaid_invoice");
+                          }
+                        }}
+                        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-emerald-600 transition-colors"
+                        data-testid="button-text-client"
+                      >
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        Send Text
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="h-px bg-border" />
+              
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                  <FileText className="h-5 w-5 text-purple-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground mb-0.5">Description</p>
+                  <p className="text-sm text-foreground">{invoice.serviceDescription || "No description provided"}</p>
+                </div>
+              </div>
+              
+              <div className="h-px bg-border" />
+              
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                  <Calendar className="h-5 w-5 text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground mb-0.5">Created</p>
+                  <p className="text-sm font-medium text-foreground">{formatDate(invoice.createdAt)}</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {invoice.status === "paid" && invoice.paidAt && (
+          <Card className="border-0 shadow-lg overflow-hidden bg-gradient-to-r from-emerald-500 to-teal-500 text-white">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
+                  <CheckCircle className="h-7 w-7" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-lg">Payment Received</p>
+                  <p className="text-white/80 text-sm">
+                    {formatDate(invoice.paidAt)}
+                    {invoice.paymentMethod && ` via ${invoice.paymentMethod.charAt(0).toUpperCase() + invoice.paymentMethod.slice(1)}`}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowRevertDialog(true)}
+                  className="text-white/80 hover:text-white hover:bg-white/20"
+                  data-testid="button-revert-paid"
+                >
+                  <Undo2 className="h-4 w-4 mr-1" />
+                  Undo
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {(invoice.publicToken || invoice.shareLink) && (
+          <Card className="border-0 shadow-md overflow-hidden">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                  <Share2 className="h-5 w-5 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">Share with Client</p>
+                  <p className="text-xs text-muted-foreground">Send a link to view this invoice</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={copyShareLink}
+                  className="gap-2"
+                  data-testid="button-copy-link"
+                >
+                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  {copied ? "Copied" : "Copy"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <PaymentConfirmation 
+          invoice={invoice} 
+          payments={payments}
+          onPaymentConfirmed={() => {
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.invoices.detail(id!) });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.invoicePayments(id!) });
+          }}
+        />
+
+        <div className="space-y-3 pt-2">
+          {invoice.status === "draft" && (
+            <Button
+              onClick={handleSendClick}
+              className="w-full h-14 text-base font-semibold bg-gradient-to-r from-blue-500 to-cyan-500 shadow-lg shadow-blue-500/20 rounded-xl"
+              data-testid="button-send-invoice"
+            >
+              <div className="h-8 w-8 rounded-lg bg-white/20 flex items-center justify-center mr-3">
+                <Send className="h-4 w-4" />
+              </div>
+              Send Invoice to Client
+            </Button>
+          )}
+
+          {invoice.status === "sent" && (
+            <>
+              <Button
+                onClick={() => setShowPaymentDialog(true)}
+                className="w-full h-14 text-base font-semibold bg-gradient-to-r from-emerald-500 to-teal-500 shadow-lg shadow-emerald-500/20 rounded-xl"
+                data-testid="button-mark-paid"
+              >
+                <div className="h-8 w-8 rounded-lg bg-white/20 flex items-center justify-center mr-3">
+                  <CheckCircle className="h-4 w-4" />
+                </div>
+                Mark as Paid
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleSendClick}
+                className="w-full h-12 rounded-xl"
+                data-testid="button-resend"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Resend Invoice
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+      {renderDialogs()}
     </div>
   );
 }

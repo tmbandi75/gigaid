@@ -1,0 +1,244 @@
+Implement a modern desktop/tablet layout for the Invoice page in GigAid.
+
+The goal is to create a beautiful invoice + payment dashboard for web users while keeping the smartphone UI exactly the same.
+
+CRITICAL RULES
+
+1. DO NOT change the smartphone UI.
+2. Mobile layout (<768px) must render exactly as it does today.
+3. DO NOT refactor existing components.
+4. DO NOT rename props, hooks, handlers, or state variables.
+5. DO NOT modify backend APIs or database schema.
+6. DO NOT change payment logic.
+7. DO NOT change invoice calculation logic.
+8. DO NOT change payment status logic.
+9. Only add UI layout improvements for desktop/tablet screens.
+10. Reuse existing invoice data and handlers.
+
+TECH STACK
+
+React
+Tailwind CSS
+ShadCN UI
+Existing GigAid component patterns
+
+RESPONSIVE STRATEGY
+
+Mobile (<768px)
+
+Render the current invoice page unchanged.
+
+Desktop / Tablet (>=768px)
+
+Render a redesigned invoice layout.
+
+Use Tailwind responsive visibility rules.
+
+Example:
+
+<div className="block md:hidden">
+  <ExistingInvoicePage />
+</div>
+
+<div className="hidden md:block">
+  <InvoiceDesktopView />
+</div>
+
+DO NOT modify ExistingInvoicePage.
+
+Instead create a new component.
+
+Create file:
+
+InvoiceDesktopView.tsx
+
+DESKTOP/TABLET LAYOUT STRUCTURE
+
+Use a two-panel layout.
+
+Container:
+
+max-w-7xl
+mx-auto
+grid grid-cols-12
+gap-6
+mt-6
+
+COLUMN STRUCTURE
+
+Left Column
+col-span-8
+
+Right Column
+col-span-4
+
+LEFT PANEL — INVOICE DETAILS
+
+Create a card titled:
+
+Invoice Details
+
+Display existing invoice fields.
+
+Client
+Client Name
+Email
+Phone
+
+Add quick actions if handlers exist:
+
+Call
+Send Text
+Email
+
+Reuse existing client data fields.
+
+Below this section display:
+
+Job Description
+
+Example:
+
+Kitchen sink repair and faucet replacement
+
+Below description display:
+
+Invoice Metadata
+
+Invoice Number
+Created Date
+Service Name
+
+Reuse the same fields currently used on the mobile invoice page.
+
+RIGHT PANEL — PAYMENT SUMMARY
+
+Create a prominent card titled:
+
+Payment Summary
+
+Display large invoice total.
+
+Example:
+
+Total Amount
+$163.50
+
+Breakdown:
+
+Subtotal $150.00
+Tax $13.50
+
+Use larger typography:
+
+text-4xl font-semibold
+
+If invoice status is paid:
+
+Show green badge:
+
+Paid
+
+If unpaid:
+
+Show:
+
+Unpaid
+
+PAYMENT STATUS CARD
+
+Below Payment Summary create another card titled:
+
+Payment Status
+
+Display payment state.
+
+Example:
+
+Payment Received
+Mar 9, 2026
+via Cash
+
+Reuse the same payment status logic currently used.
+
+PAYMENT HISTORY SECTION
+
+Under Payment Status display payment history.
+
+Example:
+
+Completed Payments
+
+Cash
+Paid Mar 9, 5:18 PM
+$163.50
+
+Reuse existing payment records data.
+
+INVOICE ACTIONS
+
+Add optional action buttons if handlers already exist.
+
+Examples:
+
+Download Invoice
+Send Invoice
+Share Invoice
+
+Only render these if the handlers exist in the codebase.
+
+STYLE GUIDELINES
+
+Cards should use:
+
+rounded-xl
+border border-gray-200
+shadow-sm
+p-6
+space-y-4
+
+Spacing between cards:
+
+gap-6
+
+Typography must follow existing GigAid style tokens.
+
+ACCESSIBILITY
+
+Ensure:
+
+Buttons have aria-labels
+Keyboard navigation works
+Focus states visible
+
+DATA SAFETY
+
+DO NOT:
+
+Change invoice database structure
+Modify payment APIs
+Rename invoice fields
+Modify tax calculation logic
+Modify payment recording logic
+
+Only improve UI layout.
+
+FINAL VERIFICATION
+
+Before finishing confirm:
+
+Mobile invoice page unchanged.
+
+Desktop users see the new two-column layout.
+
+Payment status still renders correctly.
+
+Payment history still loads correctly.
+
+Invoice totals still display correctly.
+
+No console errors.
+
+No TypeScript errors.
+
+No backend changes.

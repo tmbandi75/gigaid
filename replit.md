@@ -22,7 +22,8 @@ Pages use `isMobile ? <MobileView> : <DesktopView>` or `block md:hidden` / `hidd
 - `client/src/components/messages/CustomerContextPanel.tsx` — Messages right-panel customer context
 - `client/src/components/lead-detail/LeadSummaryDesktopView.tsx` — Lead/Request Detail 3-column workspace (3+6+3: customer overview, conversation, actions)
 - `client/src/components/job-detail/JobDetailDesktopView.tsx` — Job Detail 3-column workspace (4+5+3: job summary, client & location, actions & payment)
-- Invoices page has inline desktop layout with search bar in `renderDesktopLayout()`
+- `client/src/components/invoices/InvoiceViewDesktopView.tsx` — Invoice Detail two-column (8+4: invoice details + payment confirmation left, payment summary + status + actions right)
+- Invoices list page has inline desktop layout with search bar in `renderDesktopLayout()`
 
 ### Backend
 The backend is built with Node.js and Express.js, using TypeScript and ESM modules. It exposes a RESTful JSON API. esbuild is used for server builds, while Vite handles client-side builds.
