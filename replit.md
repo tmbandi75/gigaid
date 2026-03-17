@@ -17,6 +17,7 @@ Pages use `isMobile ? <MobileView> : <DesktopView>` or `block md:hidden` / `hidd
 - `client/src/components/quickbook/QuickBookDesktopView.tsx` — QuickBook two-panel AI workspace
 - `client/src/components/voice-notes/VoiceNotesDesktopView.tsx` — Voice Notes two-panel (recorder + history)
 - `client/src/components/stats/StatsDesktopView.tsx` — Statistics multi-column dashboard (8+4 grid)
+- `client/src/components/money-plan/MoneyPlanDesktopView.tsx` — Money Plan revenue command center (12-col grid: 8+4)
 - `client/src/components/booking-requests/BookingRequestsDesktopView.tsx` — Booking Requests desktop layout
 - Jobs and Invoices pages have inline desktop layouts with search bars in `renderDesktopLayout()`
 
