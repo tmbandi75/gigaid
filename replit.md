@@ -20,6 +20,7 @@ Pages use `isMobile ? <MobileView> : <DesktopView>` or `block md:hidden` / `hidd
 - `client/src/components/money-plan/MoneyPlanDesktopView.tsx` — Money Plan revenue command center (12-col grid: 8+4)
 - `client/src/components/booking-requests/BookingRequestsDesktopView.tsx` — Booking Requests desktop layout
 - `client/src/components/messages/CustomerContextPanel.tsx` — Messages right-panel customer context
+- `client/src/components/lead-detail/LeadSummaryDesktopView.tsx` — Lead/Request Detail 3-column workspace (3+6+3: customer overview, conversation, actions)
 - Jobs and Invoices pages have inline desktop layouts with search bars in `renderDesktopLayout()`
 
 ### Backend

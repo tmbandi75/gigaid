@@ -1,0 +1,286 @@
+Implement a desktop/tablet optimized layout for the "New Request Detail" page in GigAid while keeping the smartphone UI completely unchanged.
+
+The goal is to convert the page into a professional workspace layout for web users without modifying existing logic or APIs.
+
+CRITICAL RULES
+
+1. DO NOT change the smartphone UI.
+2. Mobile layout (<768px width) must render exactly the same as today.
+3. DO NOT refactor any existing components.
+4. DO NOT rename props, hooks, or state variables.
+5. DO NOT modify backend APIs or database schema.
+6. DO NOT change request conversion logic.
+7. DO NOT change message sending logic.
+8. Only add UI enhancements for desktop/tablet layouts.
+9. Reuse all existing request data and handlers.
+10. Avoid modifying existing files except for responsive wrappers.
+
+TECH STACK
+
+React  
+Tailwind CSS  
+ShadCN UI  
+Existing GigAid component patterns
+
+RESPONSIVE RULES
+
+Mobile (<768px)
+Render the existing Request Detail page unchanged.
+
+Desktop/Tablet (>=768px)
+Render a new workspace layout.
+
+Use Tailwind visibility rules:
+
+block md:hidden → existing mobile layout  
+hidden md:block → new desktop/tablet layout
+
+IMPLEMENTATION STRATEGY
+
+1. Leave the existing RequestDetail component unchanged.
+
+2. Create a new component:
+
+RequestDetailDesktopView.tsx
+
+3. In the request detail page wrap rendering:
+
+<div className="block md:hidden">
+  <ExistingRequestDetail />
+</div>
+
+<div className="hidden md:block">
+  <RequestDetailDesktopView />
+</div>
+
+4. Reuse the same request data already used in the mobile component.
+
+5. Reuse existing handlers for:
+
+Send message  
+Convert to job  
+Edit lead  
+Send price confirmation  
+
+6. Do NOT introduce new APIs.
+
+DESKTOP/TABLET LAYOUT
+
+Convert the page into a 3-column workspace.
+
+Container:
+
+max-w-7xl  
+mx-auto  
+grid grid-cols-12  
+gap-6
+
+COLUMN STRUCTURE
+
+Left Column — Customer Overview
+
+col-span-3
+
+Center Column — Conversation Thread
+
+col-span-6
+
+Right Column — Conversion & Actions
+
+col-span-3
+
+LEFT PANEL — CUSTOMER OVERVIEW
+
+Card title:
+
+Customer
+
+Display:
+
+Customer name  
+Phone number  
+Email address  
+
+Add quick actions:
+
+Call  
+Send Message  
+Email  
+
+Reuse existing handlers if available.
+
+Below this display request details.
+
+SECTION: Client Request
+
+Title:
+
+Client Request
+
+Display request text such as:
+
+Weekly cleaning service inquiry
+
+Add badge:
+
+From booking form
+
+SECTION: Service Details
+
+Display:
+
+Service type  
+Created date
+
+Reuse existing data fields.
+
+CENTER PANEL — CONVERSATION THREAD
+
+Card title:
+
+Conversation
+
+Display the existing message bubbles exactly as they render today.
+
+Wrap conversation container with:
+
+overflow-y-auto  
+flex flex-col gap-4  
+max-h-[600px]
+
+Ensure messages scroll independently.
+
+MESSAGE COMPOSER
+
+Sticky composer at the bottom of this panel.
+
+Container:
+
+border-t  
+p-4  
+flex items-center gap-2
+
+Input placeholder:
+
+Type a message...
+
+Buttons:
+
+Templates  
+Insert Booking Link  
+Send
+
+Send button must trigger the existing message send handler.
+
+Allow multi-line input with:
+
+Shift + Enter.
+
+RIGHT PANEL — ACTIONS PANEL
+
+Card title:
+
+Next Steps
+
+Display conversion and workflow actions.
+
+Buttons:
+
+Send Price Confirmation  
+Convert to Job  
+Edit Lead Details
+
+Primary action:
+
+Convert to Job
+
+Style as full-width button.
+
+Secondary actions:
+
+Send Price Confirmation  
+Edit Lead Details
+
+Reuse the existing handlers.
+
+OPTIONAL STATUS SECTION
+
+If request status exists, display:
+
+Request Status
+
+New  
+Contacted  
+Quoted  
+Booked
+
+If status field does not exist, hide this section.
+
+OPTIONAL TIMELINE
+
+If request events exist, display simple timeline:
+
+Request created  
+Message sent  
+Follow-up sent
+
+If event data unavailable hide this section.
+
+STYLE REQUIREMENTS
+
+Use GigAid UI style tokens.
+
+Cards:
+
+rounded-xl  
+border border-gray-200  
+shadow-sm  
+p-6
+
+Spacing:
+
+gap-6
+
+Ensure layout matches other redesigned pages.
+
+ACCESSIBILITY
+
+Ensure:
+
+Buttons have aria-labels  
+Keyboard navigation works  
+Focus states visible
+
+DATA SAFETY
+
+DO NOT:
+
+Change database structure  
+Modify APIs  
+Rename request fields  
+Modify conversion logic  
+Modify messaging logic
+
+Only enhance UI presentation.
+
+FINAL VERIFICATION
+
+Before completing implementation verify:
+
+Mobile request detail page unchanged.
+
+Desktop/tablet users see the 3-column workspace layout.
+
+Messages still send correctly.
+
+Convert to Job still works.
+
+Send Price Confirmation still works.
+
+Edit Lead Details still works.
+
+No console errors.
+
+No TypeScript errors.
+
+No backend changes.
