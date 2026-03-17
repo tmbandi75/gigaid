@@ -1,0 +1,265 @@
+Implement a desktop/tablet optimized layout for the GigAid Messages page while keeping the smartphone UI completely unchanged.
+
+The goal is to convert the messages page into a professional messaging workspace for web users without modifying any existing logic or APIs.
+
+CRITICAL RULES
+
+1. DO NOT change the smartphone UI.
+2. Mobile layout (<768px width) must render exactly the same as today.
+3. DO NOT refactor existing messaging logic.
+4. DO NOT modify backend APIs.
+5. DO NOT rename props, hooks, or state variables.
+6. DO NOT change message sending or receiving logic.
+7. Only add UI enhancements for desktop/tablet layouts.
+8. Reuse all existing conversation data and handlers.
+9. Avoid modifying existing files except for responsive wrappers.
+
+TECH STACK
+
+React  
+Tailwind CSS  
+ShadCN UI  
+Existing GigAid messaging components
+
+RESPONSIVE RULES
+
+Mobile (<768px)
+Render the existing Messages page unchanged.
+
+Desktop/Tablet (>=768px)
+Render the new messaging workspace layout.
+
+Use Tailwind visibility rules:
+
+block md:hidden → existing mobile layout  
+hidden md:block → new desktop/tablet layout
+
+IMPLEMENTATION STRATEGY
+
+1. Leave the existing Messages component untouched.
+
+2. Create a new component:
+
+MessagesDesktopView.tsx
+
+3. In the Messages page file wrap rendering:
+
+<div className="block md:hidden">
+  <ExistingMessages />
+</div>
+
+<div className="hidden md:block">
+  <MessagesDesktopView />
+</div>
+
+4. Reuse the same conversation data already used by the mobile component.
+
+5. Reuse the same sendMessage handler.
+
+6. Do NOT introduce new APIs.
+
+DESKTOP/TABLET LAYOUT
+
+Convert the page into a three-column messaging workspace.
+
+Container:
+
+max-w-7xl  
+mx-auto  
+grid grid-cols-12  
+gap-6
+
+COLUMN STRUCTURE
+
+Left Column (Conversation List)
+
+col-span-3
+
+Center Column (Chat Thread)
+
+col-span-6
+
+Right Column (Customer Context Panel)
+
+col-span-3
+
+LEFT PANEL — CONVERSATION LIST
+
+Title:
+
+Messages
+
+Add a search input above the conversation list.
+
+Placeholder:
+
+Search conversations...
+
+Reuse the existing conversation list items.
+
+Each item should display:
+
+Avatar  
+Customer name  
+Last message preview  
+Timestamp
+
+Style conversation cards:
+
+flex items-center gap-3  
+px-3 py-3  
+rounded-md  
+hover:bg-slate-100  
+cursor-pointer
+
+Highlight active conversation using:
+
+bg-slate-200
+
+If unread count exists, display badge:
+
+bg-emerald-500 text-white text-xs rounded-full px-2
+
+CENTER PANEL — CHAT THREAD
+
+Header section:
+
+Display customer name and phone number.
+
+Example:
+
+Michelle Clark  
+(312) 343-2663
+
+Add quick action buttons:
+
+Create Job  
+Send Booking Link  
+Call
+
+Reuse existing handlers if available.
+
+CHAT AREA
+
+Display existing message bubbles exactly as they render today.
+
+Wrap chat area with:
+
+overflow-y-auto  
+flex flex-col gap-4
+
+Add timestamp separators if available.
+
+MESSAGE COMPOSER
+
+Sticky message input at bottom.
+
+Container:
+
+border-t  
+p-4  
+flex items-center gap-2
+
+Input placeholder:
+
+Type a message...
+
+Buttons:
+
+Attach  
+Templates  
+Send
+
+Send button must trigger existing sendMessage handler.
+
+Allow multi-line input using:
+
+Shift + Enter for new line.
+
+RIGHT PANEL — CUSTOMER CONTEXT
+
+Card title:
+
+Customer Details
+
+Display:
+
+Customer name  
+Phone number
+
+Add quick actions:
+
+Create Job  
+Send Invoice  
+Send Booking Link  
+Add Note
+
+Reuse existing handlers if available.
+
+RECENT ACTIVITY
+
+If job or invoice history exists, show:
+
+Recent Jobs  
+Recent Invoices
+
+Example list item:
+
+Cleaning – Mar 2  
+Invoice Paid – $120
+
+If data unavailable hide this section.
+
+STYLE REQUIREMENTS
+
+Use GigAid UI style tokens.
+
+Cards:
+
+rounded-xl  
+border border-gray-200  
+shadow-sm  
+p-6
+
+Spacing:
+
+gap-6
+
+Ensure UI matches other redesigned pages.
+
+ACCESSIBILITY
+
+Ensure:
+
+Buttons have aria-labels  
+Keyboard navigation works  
+Focus states visible
+
+DATA SAFETY
+
+DO NOT:
+
+change database structure  
+modify messaging APIs  
+rename fields  
+change existing message state
+
+Only enhance UI presentation.
+
+FINAL VERIFICATION
+
+Before completing implementation verify:
+
+Mobile Messages page unchanged.
+
+Desktop/tablet users see the three-column messaging layout.
+
+Messages still send correctly.
+
+Conversation switching still works.
+
+No console errors.
+
+No TypeScript errors.
+
+No backend changes.
