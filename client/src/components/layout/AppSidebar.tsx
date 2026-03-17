@@ -40,6 +40,7 @@ import {
   Send,
   CreditCard,
   Shield,
+  BarChart3,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -84,6 +85,7 @@ const toolsItems = [
 const businessItems = [
   { path: "/owner", icon: Crown, label: "Owner View", badge: "Pro" },
   { path: "/money-plan", icon: Zap, label: "Money Plan" },
+  { path: "/view-all-stats", icon: BarChart3, label: "Statistics" },
   { path: "/reviews", icon: Star, label: "Reviews" },
   { path: "/referrals", icon: Gift, label: "Referrals" },
 ];
