@@ -13,7 +13,6 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
   LayoutDashboard,
@@ -27,10 +26,6 @@ import {
   Crown,
   Star,
   Gift,
-  User,
-  Settings,
-  HelpCircle,
-  LogOut,
   Share2,
   ChevronUp,
   ChevronDown,
@@ -39,34 +34,16 @@ import {
   MessageSquare,
   Mic,
   Send,
-  CreditCard,
   Shield,
   BarChart3,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/use-auth";
 import { QUERY_KEYS } from "@/lib/queryKeys";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-
-interface UserProfile {
-  id: string;
-  name: string | null;
-  email: string | null;
-  phone: string | null;
-  photo: string | null;
-  businessName?: string | null;
-}
 
 const mainNavItems = [
   { path: "/", icon: LayoutDashboard, label: "Game Plan" },
@@ -104,12 +81,6 @@ export function AppSidebar() {
   const [aiOpen, setAiOpen] = useState(true);
   const [opsOpen, setOpsOpen] = useState(true);
   const [bizOpen, setBizOpen] = useState(true);
-  const { logout } = useAuth();
-
-  const { data: profile } = useQuery<UserProfile>({
-    queryKey: QUERY_KEYS.profile(),
-    staleTime: 300000,
-  });
 
   const { data: unreadSmsData } = useQuery<{ count: number }>({
     queryKey: QUERY_KEYS.smsUnreadCount(),
@@ -124,14 +95,7 @@ export function AppSidebar() {
     refetchOnWindowFocus: true,
   });
 
-  const { data: subscription } = useQuery<{ plan: string; hasSubscription: boolean }>({
-    queryKey: QUERY_KEYS.subscriptionStatus(),
-    retry: 1,
-    staleTime: 60000,
-  });
-
   const isAdmin = adminStatus?.isAdmin === true;
-  const isBusinessPlan = subscription !== undefined && subscription.plan === "business";
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains("dark");
@@ -149,15 +113,6 @@ export function AppSidebar() {
       localStorage.setItem("theme", "light");
     }
   };
-
-  const displayName = profile?.name || "Gig Worker";
-  const businessName = profile?.businessName || "Your Business";
-  const initials = displayName
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
 
   const isActive = (path: string) => {
     if (path === "/") return location === "/";
@@ -390,75 +345,6 @@ export function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
 
-        <SidebarSeparator className="my-2" />
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="w-full transition-colors duration-150 rounded-md"
-              data-testid="sidebar-user-menu"
-            >
-              <Avatar className="h-8 w-8">
-                {profile?.photo ? (
-                  <AvatarImage src={profile.photo} alt="Profile" />
-                ) : null}
-                <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-xs font-semibold">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col items-start text-left">
-                <span className="text-sm font-medium truncate max-w-[120px] text-sidebar-foreground">
-                  {displayName}
-                </span>
-                <span className="text-xs text-sidebar-foreground/60 truncate max-w-[120px]">
-                  {businessName}
-                </span>
-              </div>
-              <ChevronUp className="ml-auto h-4 w-4 text-sidebar-foreground/50" />
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            side="top"
-            align="start"
-            className="w-[--radix-dropdown-menu-trigger-width]"
-          >
-            <DropdownMenuItem onClick={() => navigate("/profile")} data-testid="dropdown-profile">
-              <User className="h-4 w-4 mr-2" />
-              Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/settings")} data-testid="dropdown-settings">
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/pricing")} data-testid="dropdown-pricing">
-              <CreditCard className="h-4 w-4 mr-2" />
-              Billing
-            </DropdownMenuItem>
-            {!isBusinessPlan && (
-              <DropdownMenuItem onClick={() => navigate("/pricing")} data-testid="dropdown-upgrade">
-                <Star className="h-4 w-4 mr-2 text-amber-500" />
-                Upgrade Plan
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate("/help")} data-testid="dropdown-help">
-              <HelpCircle className="h-4 w-4 mr-2" />
-              Help & Support
-            </DropdownMenuItem>
-            {isAdmin && (
-              <DropdownMenuItem onClick={() => navigate("/admin/cockpit")} data-testid="dropdown-admin">
-                <Shield className="h-4 w-4 mr-2" />
-                Admin Cockpit
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => logout()} className="text-destructive" data-testid="dropdown-logout">
-              <LogOut className="h-4 w-4 mr-2" />
-              Log Out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </SidebarFooter>
     </Sidebar>
   );
