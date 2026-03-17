@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "3F9D2TNZ94.com.gigaid.app",
+        "paths": ["*"]
+      }
+    ]
+  }
+}

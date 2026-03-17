@@ -7524,7 +7524,7 @@ Return ONLY the message text, no JSON or formatting.`
   // Create Pro+ subscription checkout session
   app.post("/api/subscription/checkout", isAuthenticated, async (req, res) => {
     try {
-      const { plan, returnTo } = req.body;
+      const { plan, returnTo, nativeReturn } = req.body;
       
       // Plan configuration with pricing
       const planConfigs: Record<string, { name: string; description: string; amount: number }> = {
@@ -7545,8 +7545,18 @@ Return ONLY the message text, no JSON or formatting.`
         },
       };
 
-      logger.info("[API] Checkout session endpoint hit", { plan, returnTo });
-      
+      const requestOrigin = (req.get("origin") || req.get("host") || "").toLowerCase();
+      const isLikelyNativeAppFromDevice =
+        requestOrigin.includes("192.168.") || requestOrigin.includes("10.") || requestOrigin.includes("172.");
+
+      logger.info("[API] Checkout session endpoint hit", {
+        plan,
+        returnTo,
+        nativeReturn: !!nativeReturn,
+        requestOrigin: requestOrigin || "(none)",
+        isLikelyNativeAppFromDevice,
+      });
+
       const planConfig = planConfigs[plan];
       if (!planConfig) {
         return res.status(400).json({ error: "Invalid plan. Valid plans: pro, pro_plus, business" });
@@ -7564,7 +7574,29 @@ Return ONLY the message text, no JSON or formatting.`
 
       const stripe = await getUncachableStripeClient();
       const baseUrl = process.env.FRONTEND_URL || `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
-      
+      const returnPath = (returnTo || "/").replace(/^\//, "") || "pricing";
+      const useNativeReturn = Boolean(nativeReturn) || isLikelyNativeAppFromDevice;
+      const deepLinkDomain = process.env.APP_DEEP_LINK_DOMAIN?.replace(/\/$/, "");
+      const useHttpsDeepLink = Boolean(useNativeReturn && deepLinkDomain && deepLinkDomain.startsWith("https://"));
+
+      if (!useNativeReturn && (!baseUrl || baseUrl.includes("localhost"))) {
+        logger.warn("[API] Stripe success_url will use localhost — set FRONTEND_URL to your LAN URL (e.g. http://192.168.x.x:3000) when testing on a device browser");
+      }
+
+      if (useNativeReturn && !useHttpsDeepLink) {
+        logger.error("[API] Native checkout requested but APP_DEEP_LINK_DOMAIN is not configured for https Universal/App Links");
+        return res.status(500).json({ error: "Native deep link domain not configured" });
+      }
+
+      const successUrl = useNativeReturn
+        ? `${deepLinkDomain}/${returnPath}?subscription=success`
+        : `${baseUrl}${returnTo || "/"}?subscription=success`;
+      const cancelUrl = useNativeReturn
+        ? `${deepLinkDomain}/${returnPath}?subscription=cancelled`
+        : `${baseUrl}${returnTo || "/"}?subscription=cancelled`;
+
+      logger.info("[API] Stripe return URLs", { useNativeReturn, useHttpsDeepLink, successUrl, cancelUrl });
+
       // Get user for checkout metadata
       const user = await storage.getUser((req as any).userId);
 
@@ -7585,8 +7617,8 @@ Return ONLY the message text, no JSON or formatting.`
           },
         ],
         mode: "subscription",
-        success_url: `${baseUrl}${returnTo || "/"}?subscription=success`,
-        cancel_url: `${baseUrl}${returnTo || "/"}?subscription=cancelled`,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
         metadata: {
           plan,
           user_id: user?.id || (req as any).userId,

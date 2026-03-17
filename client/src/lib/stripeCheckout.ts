@@ -1,5 +1,7 @@
+import { Capacitor } from "@capacitor/core";
 import { apiFetch } from "./apiFetch";
 import { logger } from "@/lib/logger";
+import { openExternalUrl } from "./openExternalUrl";
 
 // Cache bust: 2026-02-03T23:25:00Z
 // Single source of truth for Stripe enablement
@@ -40,15 +42,16 @@ export async function startStripeCheckout({
 
   try {
     logger.debug("[Stripe] Creating checkout session");
+    const nativeReturn = Capacitor.isNativePlatform();
     const data = await apiFetch<{ url?: string; error?: string }>("/api/subscription/checkout", {
       method: "POST",
-      body: JSON.stringify({ plan, returnTo }),
+      body: JSON.stringify({ plan, returnTo, nativeReturn }),
     });
     logger.debug("[Stripe] Checkout session data", data);
     
     if (data.url) {
       logger.debug("[Stripe] Redirecting to Stripe Checkout", data.url);
-      window.open(data.url, '_blank');
+      await openExternalUrl(data.url);
       return { success: true };
     } else {
       logger.error("[Stripe] No checkout URL returned", data);

@@ -43,6 +43,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { emitChurnEvent } from "@/lib/churnEvents";
+import { openExternalUrl } from "@/lib/openExternalUrl";
 
 interface SubscriptionStatus {
   plan: string;
@@ -210,7 +211,7 @@ export function SubscriptionSettings() {
     {
       onSuccess: (data: any) => {
         if (data?.url) {
-          window.open(data.url, '_blank');
+          openExternalUrl(data.url);
         }
       },
       onError: () => {
@@ -349,7 +350,7 @@ export function SubscriptionSettings() {
     {
       onSuccess: (data: any) => {
         if (data?.checkoutUrl) {
-          window.open(data.checkoutUrl, '_blank');
+          openExternalUrl(data.checkoutUrl);
           return;
         }
         toast({
@@ -727,7 +728,7 @@ export function SubscriptionSettings() {
           </h3>
           <div className="space-y-3 text-sm text-muted-foreground">
             <p data-testid="text-subscription-disclosure">
-              Subscriptions are managed externally via our website. Gig Aid subscriptions
+            Subscriptions are managed externally via our website. Gig Aid subscriptions
               are for business management services (job scheduling, invoicing, client
               management, and automation tools) — not digital content or media. Payments
               are processed securely through Stripe. Paid plans auto-renew at the stated

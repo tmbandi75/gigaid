@@ -10,7 +10,7 @@ import { PostHogProvider } from "@/components/PostHogProvider";
 import { DriveModeProvider } from "@/components/drivemode/DriveModeProvider";
 import { OptimisticCapabilityProvider, useOptimisticCapability } from "@/contexts/OptimisticCapabilityContext";
 import { FirebaseAuthProvider, useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { getPlatform } from "@/lib/platform";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscriptionRestore } from "@/hooks/useSubscriptionRestore";
@@ -84,6 +84,7 @@ import NotFound from "@/pages/not-found";
 import { AppErrorBoundary } from "@/components/ErrorBoundary";
 import { logClientEnv } from "./debug/envProbe";
 import { logger } from "@/lib/logger";
+import { registerNativeDeepLinkHandler } from "@/lib/nativeDeepLink";
 
 logClientEnv();
 
@@ -196,6 +197,19 @@ function SubscriptionHandler() {
   return null;
 }
 
+/**
+ * Registers native deep link handling at the default route so launch URLs
+ * are processed as soon as the app loads (cold start from Stripe return).
+ * Wraps AuthenticatedApp so we do not depend on auth state to handle the link.
+ */
+function NativeDeepLinkHandler({ children }: { children: ReactNode }) {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    return registerNativeDeepLinkHandler((path) => setLocation(path));
+  }, [setLocation]);
+  return <>{children}</>;
+}
+
 function AuthenticatedApp() {
   const [location, setLocation] = useLocation();
   const { firebaseUser, authLoading, lastAuthEventTs, callbackCount } = useFirebaseAuth();
@@ -299,7 +313,9 @@ function App() {
                 <Route path="/login" component={SplashPage} />
                 <Route path="/force-logout" component={ForceLogout} />
                 <Route>
-                  <AuthenticatedApp />
+                  <NativeDeepLinkHandler>
+                    <AuthenticatedApp />
+                  </NativeDeepLinkHandler>
                 </Route>
                 </Switch>
                 <Toaster />

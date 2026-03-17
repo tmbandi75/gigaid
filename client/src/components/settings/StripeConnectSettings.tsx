@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { logger } from "@/lib/logger";
+import { openExternalUrl } from "@/lib/openExternalUrl";
 
 interface ConnectStatus {
   connected: boolean;
@@ -83,7 +84,7 @@ export function StripeConnectSettings() {
     {
       onSuccess: (data: any) => {
         if (data?.url) {
-          window.open(data.url, "_blank");
+          openExternalUrl(data.url);
           toast({ 
             title: "Stripe Setup", 
             description: "Complete your Stripe setup in the new tab. Return here when finished." 
@@ -105,7 +106,7 @@ export function StripeConnectSettings() {
     {
       onSuccess: (data: any) => {
         if (data?.url) {
-          window.open(data.url, "_blank");
+          openExternalUrl(data.url);
         } else {
           toast({ title: "Failed to get dashboard URL", variant: "destructive" });
         }
