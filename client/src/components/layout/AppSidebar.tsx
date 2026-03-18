@@ -127,7 +127,9 @@ export function AppSidebar() {
       <SidebarHeader className="px-4 py-5 border-b border-sidebar-border">
         <Link href="/">
           <div className="flex flex-col cursor-pointer" data-testid="sidebar-header">
-            <img src={newLogoPath} alt="GigAid" className="h-[120px] w-auto object-contain" />
+            <div className="rounded-xl overflow-hidden" style={{ background: 'linear-gradient(160deg, #1a1f4e 0%, #0d1333 50%, #111a52 100%)' }}>
+              <img src={newLogoPath} alt="GigAid" className="h-[120px] w-auto object-contain mx-auto" />
+            </div>
             <span className="text-xs text-sidebar-foreground/60 mt-1">Pro Dashboard</span>
           </div>
         </Link>
