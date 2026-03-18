@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import newLogoPath from "@assets/image_1773837241283.png";
+import newLogoPath from "@assets/image_1773837818786.png";
 import { useQuery } from "@tanstack/react-query";
 import {
   Sidebar,
