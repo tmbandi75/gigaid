@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { signInWithEmail, signUpWithEmail, resetPassword, getFirebaseAuth } from "@/lib/firebase";
@@ -45,6 +46,7 @@ export default function Login() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
 
   const exchangeTokenAndNavigate = async (idToken: string) => {
@@ -269,12 +271,48 @@ export default function Login() {
             )}
           </div>
 
+          {mode === "signup" && (
+            <div className="flex items-start space-x-3 bg-white/10 backdrop-blur rounded-xl p-3" data-testid="terms-agreement">
+              <Checkbox
+                id="termsAccepted"
+                checked={termsAccepted}
+                onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                className="border-white/50 data-[state=checked]:bg-white data-[state=checked]:text-[#4F46E5] mt-0.5"
+                data-testid="checkbox-terms"
+              />
+              <label htmlFor="termsAccepted" className="text-xs text-white/80 leading-relaxed cursor-pointer">
+                I have read and agree to the{' '}
+                <a
+                  href="/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline text-white hover:text-white/90"
+                  data-testid="link-terms"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Terms of Service
+                </a>
+                {' '}and{' '}
+                <a
+                  href="/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline text-white hover:text-white/90"
+                  data-testid="link-privacy"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Privacy Policy
+                </a>
+              </label>
+            </div>
+          )}
+
           {/* Google Sign In - not shown in forgot mode */}
           {mode !== "forgot" && (
             <>
               <Button
                 onClick={handleGoogleSignIn}
-                disabled={isDisabled}
+                disabled={isDisabled || (mode === "signup" && !termsAccepted)}
                 className="w-full h-12 gap-3 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-full shadow-lg"
                 data-testid="button-google-signin"
               >
@@ -362,7 +400,7 @@ export default function Login() {
 
             <Button
               type="submit"
-              disabled={isDisabled}
+              disabled={isDisabled || (mode === "signup" && !termsAccepted)}
               className="w-full h-12 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold rounded-full shadow-lg"
               data-testid="button-email-submit"
             >
