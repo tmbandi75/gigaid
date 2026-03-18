@@ -427,6 +427,18 @@ Return ONLY valid JSON.`
   return JSON.parse(content) as PriceEstimate;
 }
 
+// Transcribe audio to text with OpenAI Whisper so voice notes work on iOS, Android, Firefox, Safari (no Speech Recognition).
+export async function transcribeVoiceNote(audioBuffer: Buffer, mimeType: string): Promise<string> {
+  const { toFile } = await import("openai");
+  const ext = mimeType.includes("mp4") ? "mp4" : mimeType.includes("webm") ? "webm" : "ogg";
+  const file = await toFile(audioBuffer, `audio.${ext}`);
+  const response = await getOpenAI().audio.transcriptions.create({
+    file,
+    model: "whisper-1",
+  });
+  return response.text ?? "";
+}
+
 // Voice Note Summarizer
 export interface VoiceNoteSummary {
   transcript: string;

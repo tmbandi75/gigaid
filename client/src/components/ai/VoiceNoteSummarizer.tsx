@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useLocation } from "wouter";
@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
+import { getSupportedAudioMimeType } from "@/lib/audioUtils";
+import { getAuthToken } from "@/lib/authToken";
 import { 
   Mic, 
   MicOff, 
@@ -21,9 +23,17 @@ import {
   Save,
   Plus,
   Link as LinkIcon,
-  CheckCircle
+  CheckCircle,
+  Volume2
 } from "lucide-react";
 import type { Job } from "@shared/schema";
+
+/** Web Speech API (SpeechRecognition) is supported only in Chrome and some Chromium browsers. */
+const hasSpeechRecognition = () =>
+  typeof window !== "undefined" && ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
+
+/** MediaRecorder is supported in Firefox, Safari, iOS, Android, and Chrome — use it as fallback for recording. */
+const hasMediaRecorder = () => typeof window !== "undefined" && typeof MediaRecorder !== "undefined";
 
 interface VoiceNoteSummary {
   transcript: string;
@@ -49,7 +59,38 @@ export function VoiceNoteSummarizer({ onSummaryComplete, onNoteSaved }: VoiceNot
   const [savedNoteId, setSavedNoteId] = useState<string | null>(null);
   const [showJobSelector, setShowJobSelector] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string>("");
+  /** When recording via MediaRecorder (Firefox/Safari/iOS), playback URL after server transcribes. */
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+
+  useEffect(() => {
+    return () => {
+      if (recordedAudioUrl) URL.revokeObjectURL(recordedAudioUrl);
+    };
+  }, [recordedAudioUrl]);
+
+  const uploadAndTranscribe = useCallback(async (blob: Blob): Promise<string> => {
+    const formData = new FormData();
+    const ext = blob.type.includes("webm") ? "webm" : blob.type.includes("mp4") ? "mp4" : "ogg";
+    formData.append("audio", blob, `recording.${ext}`);
+    const token = getAuthToken();
+    const res = await fetch("/api/ai/transcribe-voice-note", {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: "include",
+      body: formData,
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || "Transcription failed");
+    }
+    const data = await res.json();
+    return data.transcript ?? "";
+  }, []);
 
   const { data: jobs = [] } = useQuery<Job[]>({
     queryKey: QUERY_KEYS.jobs(),
@@ -116,51 +157,105 @@ export function VoiceNoteSummarizer({ onSummaryComplete, onNoteSaved }: VoiceNot
     }
   );
 
-  const startRecording = () => {
-    if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
-      toast({ title: "Voice input not supported", variant: "destructive" });
+  const startRecording = useCallback(() => {
+    if (hasSpeechRecognition()) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+      let finalTranscript = "";
+      recognitionRef.current.onresult = (event: any) => {
+        let interimTranscript = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const result = event.results[i];
+          if (result.isFinal) {
+            finalTranscript += result[0].transcript + " ";
+          } else {
+            interimTranscript += result[0].transcript;
+          }
+        }
+        setTranscript(finalTranscript + interimTranscript);
+      };
+      recognitionRef.current.onerror = () => {
+        setIsRecording(false);
+        toast({ title: "Recording error", variant: "destructive" });
+      };
+      recognitionRef.current.start();
+      setIsRecording(true);
+      toast({ title: "Recording started..." });
       return;
     }
 
-    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    recognitionRef.current = new SpeechRecognition();
-    recognitionRef.current.continuous = true;
-    recognitionRef.current.interimResults = true;
+    if (hasMediaRecorder()) {
+      setRecordedAudioUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+      chunksRef.current = [];
+      navigator.mediaDevices
+        .getUserMedia({ audio: true })
+        .then((stream) => {
+          streamRef.current = stream;
+          const mimeType = getSupportedAudioMimeType();
+          const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+          mediaRecorderRef.current = recorder;
+          recorder.ondataavailable = (e) => {
+            if (e.data.size > 0) chunksRef.current.push(e.data);
+          };
+          recorder.onstop = async () => {
+            stream.getTracks().forEach((t) => t.stop());
+            streamRef.current = null;
+            const blobType = recorder.mimeType || mimeType || "audio/webm";
+            const blob = new Blob(chunksRef.current, { type: blobType });
+            if (blob.size === 0) {
+              toast({ title: "No audio recorded", variant: "destructive" });
+              setIsRecording(false);
+              return;
+            }
+            setRecordedAudioUrl(URL.createObjectURL(blob));
+            setIsTranscribing(true);
+            try {
+              const text = await uploadAndTranscribe(blob);
+              setTranscript(text);
+              if (text.trim()) summarizeMutation.mutate(text);
+              else toast({ title: "No speech detected", variant: "destructive" });
+            } catch {
+              toast({ title: "Transcription failed", variant: "destructive" });
+            } finally {
+              setIsTranscribing(false);
+              setIsRecording(false);
+            }
+          };
+          recorder.start();
+          setIsRecording(true);
+          toast({ title: "Recording started..." });
+        })
+        .catch(() => {
+          toast({ title: "Could not access microphone", variant: "destructive" });
+        });
+      return;
+    }
 
-    let finalTranscript = "";
+    toast({
+      title: "Voice input not supported",
+      description: "This browser does not support recording. Try Chrome, Firefox, Safari, or the iOS/Android app.",
+      variant: "destructive",
+    });
+  }, [toast, uploadAndTranscribe, summarizeMutation]);
 
-    recognitionRef.current.onresult = (event: any) => {
-      let interimTranscript = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result.isFinal) {
-          finalTranscript += result[0].transcript + " ";
-        } else {
-          interimTranscript += result[0].transcript;
-        }
-      }
-      setTranscript(finalTranscript + interimTranscript);
-    };
-
-    recognitionRef.current.onerror = () => {
-      setIsRecording(false);
-      toast({ title: "Recording error", variant: "destructive" });
-    };
-
-    recognitionRef.current.start();
-    setIsRecording(true);
-    toast({ title: "Recording started..." });
-  };
-
-  const stopRecording = () => {
+  const stopRecording = useCallback(() => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
+      recognitionRef.current = null;
+      setIsRecording(false);
+      if (transcript.trim()) summarizeMutation.mutate(transcript);
+      return;
     }
-    setIsRecording(false);
-    if (transcript.trim()) {
-      summarizeMutation.mutate(transcript);
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current = null;
     }
-  };
+  }, [transcript, summarizeMutation]);
 
   const handleCopy = async () => {
     if (summary) {
@@ -206,6 +301,10 @@ export function VoiceNoteSummarizer({ onSummaryComplete, onNoteSaved }: VoiceNot
   };
 
   const handleNewRecording = () => {
+    setRecordedAudioUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
     setTranscript("");
     setSummary(null);
     setSavedNoteId(null);
@@ -242,10 +341,10 @@ export function VoiceNoteSummarizer({ onSummaryComplete, onNoteSaved }: VoiceNot
             variant={isRecording ? "destructive" : "default"}
             className="rounded-full"
             onClick={isRecording ? stopRecording : startRecording}
-            disabled={summarizeMutation.isPending}
+            disabled={summarizeMutation.isPending || isTranscribing}
             data-testid="button-record-voice"
           >
-            {summarizeMutation.isPending ? (
+            {summarizeMutation.isPending || isTranscribing ? (
               <Loader2 className="h-6 w-6 animate-spin" />
             ) : isRecording ? (
               <MicOff className="h-6 w-6" />
@@ -254,9 +353,23 @@ export function VoiceNoteSummarizer({ onSummaryComplete, onNoteSaved }: VoiceNot
             )}
           </Button>
           <p className="text-sm text-muted-foreground">
-            {isRecording ? "Tap to stop recording" : "Tap to start recording"}
+            {isTranscribing
+              ? "Transcribing..."
+              : isRecording
+                ? "Tap to stop recording"
+                : "Tap to start recording"}
           </p>
         </div>
+
+        {recordedAudioUrl && (
+          <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+            <p className="text-sm font-medium flex items-center gap-2">
+              <Volume2 className="h-4 w-4 text-muted-foreground" />
+              Your recording
+            </p>
+            <audio controls src={recordedAudioUrl} className="w-full max-w-md" data-testid="audio-playback" />
+          </div>
+        )}
 
         {transcript && (
           <div className="space-y-2">

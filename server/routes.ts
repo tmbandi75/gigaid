@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import crypto, { randomUUID } from "crypto";
 import path from "path";
 import fs from "fs";
+import multer from "multer";
 import { storage } from "./storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { 
@@ -7092,6 +7093,31 @@ Final price confirmed onsite.`;
       res.json({ rewrittenBio: req.body.bio });
     }
   });
+
+  // AI Voice Note: transcribe audio to text (for iOS, Android, Firefox, Safari — no Speech Recognition)
+  const voiceNoteUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 25 * 1024 * 1024 },
+  });
+  app.post(
+    "/api/ai/transcribe-voice-note",
+    isAuthenticated,
+    voiceNoteUpload.single("audio"),
+    async (req: Request, res: Response) => {
+      try {
+        const file = (req as Request & { file?: { buffer: Buffer; mimetype: string } }).file;
+        if (!file || !file.buffer) {
+          return res.status(400).json({ error: "Audio file is required" });
+        }
+        const { transcribeVoiceNote } = await import("./ai/aiService");
+        const transcript = await transcribeVoiceNote(file.buffer, file.mimetype || "audio/webm");
+        res.json({ transcript });
+      } catch (error) {
+        logger.error("Error transcribing voice note:", error);
+        res.status(500).json({ error: "Failed to transcribe voice note" });
+      }
+    }
+  );
 
   // AI Voice Note Summarizer
   app.post("/api/ai/summarize-voice-note", async (req, res) => {

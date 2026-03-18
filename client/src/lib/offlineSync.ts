@@ -8,6 +8,7 @@ import {
   OfflineAsset,
 } from './offlineDb';
 import { apiFetch } from './apiFetch';
+import { getAudioExtensionFromMime } from './audioUtils';
 
 let isSyncing = false;
 let networkStatus: 'online' | 'offline' = navigator.onLine ? 'online' : 'offline';
@@ -40,8 +41,9 @@ window.addEventListener('offline', () => {
 
 async function uploadAsset(asset: OfflineAsset): Promise<boolean> {
   try {
+    const ext = asset.assetType === 'photo' ? 'jpg' : getAudioExtensionFromMime(asset.blob.type || '');
     const formData = new FormData();
-    formData.append('file', asset.blob, `${asset.id}.${asset.assetType === 'photo' ? 'jpg' : 'webm'}`);
+    formData.append('file', asset.blob, `${asset.id}.${ext}`);
     formData.append('assetId', asset.id);
     formData.append('assetType', asset.assetType);
     formData.append('linkedActionId', asset.linkedActionId);

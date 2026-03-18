@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDriveModeContext } from './DriveModeProvider';
 import { cn } from '@/lib/utils';
+import { getSupportedAudioMimeType } from '@/lib/audioUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface DriveModeViewProps {
@@ -75,7 +76,8 @@ export function DriveModeView({ onExit }: DriveModeViewProps) {
     if (!activeJob) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      const mimeType = getSupportedAudioMimeType();
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       const chunks: Blob[] = [];
 
       recorder.ondataavailable = (e) => {
@@ -85,25 +87,26 @@ export function DriveModeView({ onExit }: DriveModeViewProps) {
       };
 
       recorder.onstop = async () => {
-        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const blobType = recorder.mimeType || mimeType || "audio/webm";
+        const blob = new Blob(chunks, { type: blobType });
         stream.getTracks().forEach(track => track.stop());
-        
-        await saveVoiceNote('job', String(activeJob.id), blob, recordingDuration * 1000);
-        showFeedback('success');
+
+        await saveVoiceNote("job", String(activeJob.id), blob, recordingDuration * 1000);
+        showFeedback("success");
         toast({
-          description: isOffline ? 'Voice note saved - will sync when online' : 'Voice note saved',
+          description: isOffline ? "Voice note saved - will sync when online" : "Voice note saved",
         });
       };
 
       recorder.start();
       setMediaRecorder(recorder);
       setIsRecording(true);
-      setActionFeedback('recording');
+      setActionFeedback("recording");
     } catch {
-      showFeedback('error');
+      showFeedback("error");
       toast({
-        variant: 'destructive',
-        description: 'Could not access microphone',
+        variant: "destructive",
+        description: "Could not access microphone",
       });
     }
   }, [activeJob, saveVoiceNote, toast, isOffline, recordingDuration, showFeedback]);
