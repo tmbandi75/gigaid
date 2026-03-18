@@ -140,7 +140,7 @@ export default function More() {
   const { logout } = useAuth();
   const isMobile = useIsMobile();
 
-  const disableDownloads = isNativePlatform() && import.meta.env.PROD === true;
+  const disableDownloads = import.meta.env.PROD === true;
 
   const { data: profile } = useQuery<UserProfile>({
     queryKey: QUERY_KEYS.profile(),
