@@ -62,3 +62,7 @@ VITE_FIREBASE_API_KEY = "AIzaSyBdyS79wNb_GBqARmJmzrBr2ZsdsC_51l8"
 
 [userenv.development]
 GIGAID_ADMIN_API_KEY = "test-admin-key-local"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 60000
