@@ -127,7 +127,7 @@ export function AppSidebar() {
       <SidebarHeader className="px-4 py-5 border-b border-sidebar-border">
         <Link href="/">
           <div className="flex flex-col cursor-pointer" data-testid="sidebar-header">
-            <img src={newLogoPath} alt="GigAid" className="h-[80px] w-auto object-contain" />
+            <img src={newLogoPath} alt="GigAid" className="h-[120px] w-auto object-contain" />
             <span className="text-xs text-sidebar-foreground/60 mt-1">Pro Dashboard</span>
           </div>
         </Link>
