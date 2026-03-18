@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import newLogoPath from "@assets/image_1773837818786.png";
+import newLogoPath from "@assets/logo_no_bg.png";
 import { useQuery } from "@tanstack/react-query";
 import {
   Sidebar,
@@ -127,7 +127,7 @@ export function AppSidebar() {
       <SidebarHeader className="px-4 py-5 border-b border-sidebar-border bg-background">
         <Link href="/">
           <div className="flex flex-col cursor-pointer" data-testid="sidebar-header">
-            <img src={newLogoPath} alt="GigAid" className="h-[120px]" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
+            <img src={newLogoPath} alt="GigAid" className="h-[80px] w-auto object-contain" />
             <span className="text-xs text-sidebar-foreground/60 mt-1">Pro Dashboard</span>
           </div>
         </Link>
