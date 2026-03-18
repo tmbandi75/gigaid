@@ -1,0 +1,320 @@
+Implement a desktop/tablet dashboard layout for the GigAid Home page that improves usability for Webview and Tablet users ONLY.
+
+CRITICAL RULES
+
+1. DO NOT change the smartphone UI.
+2. Mobile view (<768px) must render exactly the same as it currently does.
+3. Do NOT refactor existing components.
+4. Do NOT modify backend APIs or data models.
+5. Do NOT rename props or existing state variables.
+6. Do NOT remove any existing UI logic.
+7. Implement desktop/tablet layout as an ADDITIVE layer only.
+8. Reuse existing data sources and components.
+9. Ensure mobile users see the exact same layout as before.
+
+TECH STACK
+
+React
+Tailwind
+ShadCN UI
+Existing GigAid component structure
+
+RESPONSIVE RULE
+
+Mobile (<768px)
+Render the existing dashboard exactly as it is today.
+
+Tablet/Webview (>=768px)
+Render a new grid-based dashboard layout.
+
+Use Tailwind breakpoints:
+
+block md:hidden → current mobile dashboard
+hidden md:block → new desktop/tablet dashboard
+
+IMPLEMENTATION STRATEGY
+
+1. Keep the existing HomeDashboard component unchanged.
+
+2. Create a new component:
+
+DashboardDesktopView.tsx
+
+3. Wrap the rendering in the dashboard page:
+
+<div className="block md:hidden">
+  <ExistingDashboard />
+</div>
+
+<div className="hidden md:block">
+  <DashboardDesktopView />
+</div>
+
+4. The new desktop component must reuse the same data already passed to the dashboard.
+
+5. No new backend calls should be added.
+
+6. If data is unavailable for a section, hide that section gracefully.
+
+DESKTOP/TABLET DASHBOARD STRUCTURE
+
+The desktop layout should use a responsive grid system.
+
+Example grid structure:
+
+grid-cols-12
+gap-6
+
+SECTION 1 — BUSINESS OVERVIEW (TOP ROW)
+
+Create three metric cards:
+
+Jobs Today
+Messages To Send
+Payments Waiting
+
+Layout:
+
+col-span-4 each
+
+Card contents:
+
+Icon
+Large metric number
+Label text
+
+Example:
+
+💼 Jobs Today
+0
+
+💬 Messages To Send
+3
+
+💰 Payments Waiting
+$611
+
+Reuse existing data values already displayed on mobile.
+
+SECTION 2 — BOOKING LINK PANEL
+
+Place below overview metrics.
+
+Card layout:
+
+col-span-6
+
+Contents:
+
+Title
+Your Booking Link
+
+Display booking URL.
+
+Buttons:
+
+Copy Link
+Share
+
+Optional button:
+
+Preview Booking Page
+
+Reuse existing booking link data.
+
+SECTION 3 — PAYMENTS PANEL
+
+Place next to booking link.
+
+col-span-6
+
+Card contents:
+
+Title
+Payments Waiting
+
+Large value:
+
+$611 waiting to be collected
+
+Primary button:
+
+Collect Payment
+
+Below the main amount optionally show:
+
+X invoices overdue
+
+Reuse the same payment values already displayed in the mobile view.
+
+SECTION 4 — QUICK ACTIONS GRID
+
+Create a grid of action cards.
+
+Place under the top panels.
+
+Grid:
+
+grid-cols-2 or grid-cols-4 depending on width.
+
+Cards:
+
+New Job
+Invoice
+Message
+Voice Note
+
+Each card should contain:
+
+Icon
+Title
+Short description
+
+Example:
+
+🧾 Invoice
+Send & get paid
+
+These cards must trigger the same handlers currently used in the mobile layout.
+
+Do NOT create new actions.
+
+SECTION 5 — UP NEXT TASK PANEL
+
+Place on the right side of the layout.
+
+col-span-5
+
+Card title:
+
+Up Next
+
+Display items currently shown in the mobile "Up Next" section:
+
+Send invoice to customer
+Payment overdue reminders
+
+Each item should include:
+
+Title
+Amount
+Time overdue
+Action button
+
+Examples:
+
+Send Invoice
+Send Reminder
+
+Make the panel scrollable if the list grows.
+
+SECTION 6 — SMART SUGGESTIONS PANEL
+
+Place below the payments or quick actions section.
+
+col-span-7
+
+Card title:
+
+Smart Suggestions
+
+Display the existing AI suggestion card currently shown in the mobile view.
+
+Example:
+
+Invoice unpaid for 3+ days
+
+Buttons:
+
+Send Reminder
+Dismiss
+
+Reuse the same logic already implemented.
+
+Do NOT create new AI functionality.
+
+SECTION 7 — RECENT ACTIVITY PANEL
+
+Place below the "Up Next" panel.
+
+col-span-5
+
+Title:
+
+Recent Activity
+
+Reuse the existing "Done Recently" items.
+
+Display entries such as:
+
+Payment from Sarah Johnson
+Payment from David Kim
+Finished Electrical Panel Upgrade
+
+Each item should display:
+
+Event text
+Timestamp
+
+STYLE REQUIREMENTS
+
+Use existing GigAid design language.
+
+Card styling:
+
+rounded-xl
+border border-slate-200
+shadow-sm
+hover:shadow-md
+transition
+
+Spacing:
+
+p-6
+
+Icons should match the icon set already used in the app.
+
+Do NOT introduce new design libraries.
+
+RESPONSIVE BEHAVIOR
+
+Desktop grid should collapse gracefully on tablet widths.
+
+Suggested breakpoints:
+
+lg:grid-cols-12
+md:grid-cols-6
+
+Cards should stack appropriately on smaller tablets.
+
+DATA SAFETY
+
+Do NOT:
+
+create new APIs
+change backend logic
+change state management
+rename props
+move existing functions
+
+The new desktop view should only reorganize the UI using existing data.
+
+ACCESSIBILITY
+
+Ensure:
+
+buttons have aria labels
+keyboard navigation works
+focus states visible
+color contrast preserved
+
+FINAL VERIFICATION
+
+Before completing implementation verify:
+
+Mobile dashboard looks exactly the same.
+Desktop/tablet users see the new grid dashboard.
+All buttons still trigger existing actions.
+No console errors.
+No TypeScript errors.
+No backend changes.

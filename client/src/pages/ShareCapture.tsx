@@ -49,6 +49,7 @@ import {
   SiLinkedin
 } from "react-icons/si";
 import { AddressAutocomplete } from "@/components/booking/AddressAutocomplete";
+import { QuickCaptureDesktopView } from "@/components/quick-capture/QuickCaptureDesktopView";
 
 interface ParsedLead {
   clientName: string;
@@ -371,7 +372,33 @@ export default function ShareCapture() {
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/30" data-testid="page-share-capture">
       {isMobile ? renderMobileHeader() : renderDesktopHeader()}
 
-      <div className={`${isMobile ? "px-4 py-6 max-w-lg mx-auto pb-8" : "px-6 lg:px-8 py-8 max-w-7xl mx-auto pb-12"}`}>
+      {!isMobile ? (
+        <div className="px-6 lg:px-8 py-8 max-w-7xl mx-auto pb-12">
+          <QuickCaptureDesktopView
+            sharedText={sharedText}
+            onTextChange={setSharedText}
+            onParse={handleParse}
+            isParsing={parseMutation.isPending}
+            parsedLead={parsedLead}
+            editedLead={editedLead}
+            onEditedLeadChange={setEditedLead}
+            onCreateLead={handleCreateAndReply}
+            isCreating={createLeadMutation.isPending}
+            step={step}
+            quickReplies={quickReplies}
+            selectedReply={selectedReply}
+            onSelectReply={setSelectedReply}
+            onCopyReply={handleCopyReply}
+            copiedReply={copiedReply}
+            isLoadingReplies={replyMutation.isPending}
+            onNavigateLeads={() => navigate("/leads")}
+            serviceTypes={SERVICE_TYPES}
+            sources={SOURCES}
+            sourceConfigMap={SOURCE_CONFIG}
+          />
+        </div>
+      ) : (
+      <div className="px-4 py-6 max-w-lg mx-auto pb-8">
         <AnimatePresence mode="wait">
           {/* STEP 1: Input */}
           {step === "input" && (
@@ -824,6 +851,7 @@ Hi, I need a plumber to fix a leaky faucet. My name is Sarah, call me at 555-123
           )}
         </AnimatePresence>
       </div>
+      )}
     </div>
   );
 }

@@ -1,0 +1,270 @@
+Implement a modern desktop/tablet layout for the Job Detail page in GigAid.
+
+The goal is to transform the page into a professional job workspace for web users while leaving the smartphone UI completely unchanged.
+
+CRITICAL RULES
+
+1. DO NOT change the smartphone UI.
+2. Mobile layout (<768px) must render exactly as it currently does.
+3. DO NOT refactor existing components.
+4. DO NOT rename props, hooks, handlers, or state variables.
+5. DO NOT modify backend APIs or database schema.
+6. DO NOT change payment logic.
+7. DO NOT change job status logic.
+8. DO NOT change navigation logic.
+9. Only introduce new layout wrappers and UI enhancements for desktop/tablet screens.
+10. Reuse existing job data and handlers.
+
+TECH STACK
+
+React
+Tailwind CSS
+ShadCN UI
+Existing GigAid component patterns
+
+RESPONSIVE STRATEGY
+
+Mobile (<768px)
+
+Render the current Job Detail page exactly as it is today.
+
+Desktop / Tablet (>=768px)
+
+Render a redesigned workspace layout.
+
+Use Tailwind responsive visibility rules.
+
+Example:
+
+<div className="block md:hidden">
+  <ExistingJobDetail />
+</div>
+
+<div className="hidden md:block">
+  <JobDetailDesktopView />
+</div>
+
+DO NOT modify ExistingJobDetail.
+
+Instead create a new component.
+
+Create file:
+
+JobDetailDesktopView.tsx
+
+DESKTOP/TABLET LAYOUT STRUCTURE
+
+Convert the page into a three-column workspace.
+
+Container:
+
+max-w-7xl
+mx-auto
+grid grid-cols-12
+gap-6
+mt-6
+
+COLUMN STRUCTURE
+
+Left Column
+col-span-4
+
+Center Column
+col-span-5
+
+Right Column
+col-span-3
+
+LEFT PANEL — JOB SUMMARY
+
+Create a card titled:
+
+Job Summary
+
+Display existing job fields:
+
+Date
+Time
+Duration
+Service
+
+Example layout:
+
+Date
+Tue Mar 3, 2026
+
+Time
+10:00 AM
+
+Duration
+90 min
+
+Service
+Faucet Repair / Replacement
+
+Reuse existing job data variables.
+
+Style:
+
+rounded-xl
+border
+shadow-sm
+p-6
+space-y-4
+
+CENTER PANEL — CLIENT & LOCATION
+
+Create a card titled:
+
+Client
+
+Display existing fields:
+
+Client Name
+Phone
+Email
+
+Add action buttons:
+
+Call
+Text
+Email
+
+Reuse existing handlers if available.
+
+Below client info display location section.
+
+Location
+
+Show:
+
+Address
+Map container (reuse existing map component if present)
+
+Add buttons:
+
+Directions
+Google Maps
+Apple Maps
+
+Reuse the same URL generation already used in the mobile view.
+
+RIGHT PANEL — JOB ACTIONS
+
+Create card titled:
+
+Job Actions
+
+Primary action button:
+
+Start Job
+
+If job status indicates started:
+
+Show
+
+Complete Job
+
+Secondary actions:
+
+On The Way
+Edit Job Details
+Cancel Job
+
+These must reuse the existing event handlers.
+
+Do NOT modify the existing logic.
+
+PAYMENT CARD
+
+Under Job Actions add a second card titled:
+
+Payment
+
+Display:
+
+Total Price
+$150.00 (reuse job price field)
+
+Add button:
+
+Collect Payment
+
+Trigger the same handler currently used by "Get Paid".
+
+DESCRIPTION SECTION
+
+Below the main grid add a full width section.
+
+Card title:
+
+Job Notes
+
+Display job description text.
+
+Example:
+
+Fix leaking kitchen sink and replace faucet.
+
+Allow edit button if edit functionality already exists.
+
+STYLE GUIDELINES
+
+Cards:
+
+rounded-xl
+border border-gray-200
+shadow-sm
+p-6
+
+Spacing:
+
+gap-6
+
+Background:
+
+bg-background
+
+Typography must match existing GigAid style tokens.
+
+ACCESSIBILITY
+
+Ensure:
+
+Buttons have aria-labels
+Keyboard navigation works
+Focus states visible
+
+DATA SAFETY
+
+DO NOT:
+
+Change APIs
+Modify backend logic
+Rename job fields
+Change payment flows
+Change job status logic
+
+Only update UI layout.
+
+FINAL VERIFICATION
+
+Before finishing confirm:
+
+Mobile job detail page unchanged.
+
+Desktop users see the new 3-column layout.
+
+Start Job button still works.
+
+On The Way button still works.
+
+Edit Job Details still works.
+
+Collect Payment still works.
+
+No console errors.
+
+No TypeScript errors.
+
+No backend changes.

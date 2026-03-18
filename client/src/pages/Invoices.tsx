@@ -14,8 +14,11 @@ import {
   Sparkles,
   Receipt,
   List,
-  LayoutGrid
+  LayoutGrid,
+  Search,
+  X
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import type { Invoice, AiNudge, JobPayment } from "@shared/schema";
@@ -306,6 +309,7 @@ export default function Invoices() {
   const [filter, setFilter] = useState<string>("all");
   const [selectedNudge, setSelectedNudge] = useState<AiNudge | null>(null);
   const [viewMode, setViewMode] = useState<"cards" | "table">("table");
+  const [searchQuery, setSearchQuery] = useState("");
   const [, navigate] = useLocation();
   const isMobile = useIsMobile();
   
@@ -323,9 +327,19 @@ export default function Invoices() {
 
   const showTableView = !isMobile && viewMode === "table";
 
-  const filteredInvoices = filter === "all" 
+  const statusFilteredInvoices = filter === "all" 
     ? invoices 
     : invoices.filter(inv => inv.status === filter);
+
+  const filteredInvoices = searchQuery.trim()
+    ? statusFilteredInvoices.filter(inv => {
+        const q = searchQuery.toLowerCase();
+        return (
+          (inv.clientName && inv.clientName.toLowerCase().includes(q)) ||
+          (inv.invoiceNumber && String(inv.invoiceNumber).includes(q))
+        );
+      })
+    : statusFilteredInvoices;
 
   const stats = {
     total: invoices.reduce((sum, inv) => sum + inv.amount + (inv.tax || 0) - (inv.discount || 0), 0),
@@ -517,7 +531,7 @@ export default function Invoices() {
       </div>
       
       <div className="flex-1 max-w-7xl mx-auto w-full px-6 lg:px-8 py-6">
-        <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="flex items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg">
             {filters.map((f) => (
               <Button
@@ -538,27 +552,53 @@ export default function Invoices() {
             ))}
           </div>
 
-          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
-            <Button
-              variant={viewMode === "table" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("table")}
-              className="h-9"
-              data-testid="view-mode-table"
-            >
-              <List className="h-4 w-4 mr-1" />
-              Table
-            </Button>
-            <Button
-              variant={viewMode === "cards" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("cards")}
-              className="h-9"
-              data-testid="view-mode-cards"
-            >
-              <LayoutGrid className="h-4 w-4 mr-1" />
-              Cards
-            </Button>
+          <div className="flex items-center gap-3">
+            <div className="relative w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search invoices..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-10 h-9"
+                data-testid="input-invoice-search"
+                aria-label="Search invoices"
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                  onClick={() => setSearchQuery("")}
+                  aria-label="Clear search"
+                  data-testid="button-clear-invoice-search"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg">
+              <Button
+                variant={viewMode === "table" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("table")}
+                className="h-9"
+                data-testid="view-mode-table"
+              >
+                <List className="h-4 w-4 mr-1" />
+                Table
+              </Button>
+              <Button
+                variant={viewMode === "cards" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("cards")}
+                className="h-9"
+                data-testid="view-mode-cards"
+              >
+                <LayoutGrid className="h-4 w-4 mr-1" />
+                Cards
+              </Button>
+            </div>
           </div>
         </div>
 

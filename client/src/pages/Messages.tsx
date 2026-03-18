@@ -17,6 +17,9 @@ import {
   AlertCircle
 } from "lucide-react";
 import { PriorityBadge, inferMessagePriority } from "@/components/priority/PriorityBadge";
+import { CustomerContextPanel } from "@/components/messages/CustomerContextPanel";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 import { useUpgradeOrchestrator, UpgradeBanner, UpgradeNudgeModal, incrementStallCounter, UpgradeInterceptModal } from "@/upgrade";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -232,6 +235,7 @@ function MessageThread({
           size="icon" 
           onClick={onBack}
           className="md:hidden"
+          aria-label="Back to conversations"
           data-testid="button-back-conversations"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -340,6 +344,7 @@ function MessageThread({
             onClick={handleSend}
             disabled={!reply.trim() && !isAtLimit || sendMutation.isPending}
             size="icon"
+            aria-label="Send message"
             data-testid="button-send-reply"
           >
             {sendMutation.isPending ? (
@@ -384,6 +389,7 @@ function MessageThread({
 export default function Messages() {
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const [selectedName, setSelectedName] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const isMobile = useIsMobile();
 
   const { data: conversations = [], isLoading } = useQuery<Conversation[]>({
@@ -472,45 +478,95 @@ export default function Messages() {
     </div>
   );
 
+  const filteredConversations = searchQuery.trim()
+    ? conversations.filter((c) => {
+        const q = searchQuery.toLowerCase();
+        return (
+          (c.clientName && c.clientName.toLowerCase().includes(q)) ||
+          c.clientPhone.includes(q) ||
+          c.lastMessage.toLowerCase().includes(q)
+        );
+      })
+    : conversations;
+
   const renderDesktopLayout = () => (
     <div className="flex flex-col h-screen bg-background" data-testid="page-messages">
       {renderDesktopHeader()}
 
-      <div className="flex-1 flex overflow-hidden max-w-7xl mx-auto w-full px-6 lg:px-8 py-6">
-        <div className="w-80 border-r flex-shrink-0 overflow-y-auto">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-32">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <div className="p-2">
-              <ConversationList
-                conversations={conversations}
-                onSelect={handleSelectConversation}
-                selectedPhone={selectedPhone}
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="flex-1 flex items-center justify-center">
-          {selectedPhone ? (
-            <MessageThread
-              phone={selectedPhone}
-              clientName={selectedName}
-              onBack={handleBack}
-            />
-          ) : (
-            <div className="text-center p-6">
-              <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                <MessageSquare className="h-8 w-8 text-muted-foreground" />
+      <div className="flex-1 overflow-hidden max-w-7xl mx-auto w-full px-6 lg:px-8 py-6">
+        <div className="grid grid-cols-12 gap-6 h-full">
+          <div className="col-span-3 flex flex-col border rounded-xl shadow-sm overflow-hidden" data-testid="panel-conversation-list">
+            <div className="p-3 border-b">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search conversations..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-9 text-sm"
+                  aria-label="Search conversations"
+                  data-testid="input-search-conversations"
+                />
               </div>
-              <h3 className="font-medium text-foreground mb-2">Select a conversation</h3>
-              <p className="text-sm text-muted-foreground">
-                Choose a conversation from the list to view messages
-              </p>
             </div>
-          )}
+            <div className="flex-1 overflow-y-auto">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="p-2">
+                  <ConversationList
+                    conversations={filteredConversations}
+                    onSelect={handleSelectConversation}
+                    selectedPhone={selectedPhone}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="col-span-6 flex flex-col border rounded-xl shadow-sm overflow-hidden" data-testid="panel-chat-thread">
+            {selectedPhone ? (
+              <MessageThread
+                phone={selectedPhone}
+                clientName={selectedName}
+                onBack={handleBack}
+              />
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center p-6">
+                  <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                    <MessageSquare className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="font-medium text-foreground mb-2">Select a conversation</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Choose a conversation from the list to view messages
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="col-span-3 overflow-y-auto" data-testid="panel-customer-sidebar">
+            {selectedPhone ? (
+              <CustomerContextPanel
+                clientPhone={selectedPhone}
+                clientName={selectedName}
+              />
+            ) : (
+              <Card className="rounded-xl border shadow-sm">
+                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                    <User className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Select a conversation to see customer details
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
       </div>
     </div>

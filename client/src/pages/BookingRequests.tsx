@@ -58,6 +58,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { BookingLinkShare } from "@/components/booking-link";
 import { useUpgradeOrchestrator, UpgradeBanner, UpgradeNudgeModal, incrementStallCounter, UpgradeInterceptModal } from "@/upgrade";
+import { BookingRequestsDesktopView } from "@/components/booking-requests/BookingRequestsDesktopView";
 
 interface BookingRequest {
   id: number;
@@ -325,127 +326,142 @@ export default function BookingRequests() {
     <div className={`min-h-screen bg-background ${isMobile ? "pb-20" : ""}`} data-testid="page-booking-requests">
       {isMobile ? renderMobileHeader() : renderDesktopHeader()}
       
-      <div className={`${isMobile ? "content-container -mt-4 relative z-10" : "max-w-7xl mx-auto px-6 lg:px-8 py-8"}`}>
-        <Card className="border-0 shadow-lg mb-4">
-          <CardContent className="p-2">
-            <div className="flex gap-1 overflow-x-auto">
-              {statusFilters.map((filter) => {
-                const Icon = filter.icon;
-                const isActive = statusFilter === filter.value;
-                return (
-                  <Button
-                    key={filter.value}
-                    variant={isActive ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setStatusFilter(filter.value)}
-                    className={`flex-shrink-0 gap-1.5 ${isActive ? "" : "text-muted-foreground"}`}
-                    data-testid={`filter-${filter.value}`}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    {filter.label}
-                  </Button>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        <BookingLinkShare variant="inline" context="bookings" />
-
-        {bookingUpgrade.bannerPayload && (
-          <UpgradeBanner
-            capabilityKey={bookingUpgrade.bannerPayload.capabilityKey}
-            remaining={bookingUpgrade.bannerPayload.remaining}
-            limit={bookingUpgrade.bannerPayload.limit}
-            current={bookingUpgrade.bannerPayload.current}
-            variant={bookingUpgrade.variant}
-            thresholdLevel={bookingUpgrade.bannerPayload.thresholdLevel || "warn"}
-            surface="booking"
-            plan={bookingUpgrade.bannerPayload.plan}
-            recommendedPlan={bookingUpgrade.bannerPayload.recommendedPlan}
-          />
-        )}
-
-        {filteredBookings.length === 0 ? (
-          <Card className="border-0 shadow-md">
-            <CardContent className="py-16 text-center">
-              <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
-                <Calendar className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+      {isMobile ? (
+        <div className="content-container -mt-4 relative z-10">
+          <Card className="border-0 shadow-lg mb-4">
+            <CardContent className="p-2">
+              <div className="flex gap-1 overflow-x-auto">
+                {statusFilters.map((filter) => {
+                  const Icon = filter.icon;
+                  const isActive = statusFilter === filter.value;
+                  return (
+                    <Button
+                      key={filter.value}
+                      variant={isActive ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setStatusFilter(filter.value)}
+                      className={`flex-shrink-0 gap-1.5 ${isActive ? "" : "text-muted-foreground"}`}
+                      data-testid={`filter-${filter.value}`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      {filter.label}
+                    </Button>
+                  );
+                })}
               </div>
-              <h3 className="font-semibold text-lg mb-2">No bookings found</h3>
-              <p className="text-muted-foreground text-sm max-w-xs mx-auto">
-                {statusFilter === "all" 
-                  ? "When customers book your services, they'll appear here"
-                  : `No ${statusFilter} bookings at the moment`}
-              </p>
             </CardContent>
           </Card>
-        ) : (
-          <div className="space-y-3">
-            {filteredBookings.map((booking) => {
-              const depositConfig = depositStatusConfig[booking.depositStatus || "none"] || depositStatusConfig.none;
-              const completionConfig = completionStatusConfig[booking.completionStatus || "scheduled"] || completionStatusConfig.scheduled;
-              const CompletionIcon = completionConfig.icon;
 
-              return (
-                <Card
-                  key={booking.id}
-                  className="border-0 shadow-md cursor-pointer hover-elevate overflow-hidden"
-                  onClick={() => setSelectedBooking(booking)}
-                  data-testid={`booking-card-${booking.id}`}
-                >
-                  <CardContent className="p-0">
-                    <div className="flex">
-                      <div className={`w-1 ${booking.status === "pending" ? "bg-amber-500" : booking.status === "accepted" ? "bg-emerald-500" : booking.status === "completed" ? "bg-blue-500" : "bg-gray-300"}`} />
-                      <div className="flex-1 p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <h3 className="font-semibold truncate">{booking.clientName}</h3>
-                              <Badge variant="secondary" className={`text-xs ${completionConfig.color}`}>
-                                <CompletionIcon className="h-3 w-3 mr-1" />
-                                {completionConfig.label}
-                              </Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground capitalize mb-3">
-                              {booking.serviceType}
-                            </p>
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md">
-                                <Calendar className="h-3.5 w-3.5" />
-                                {formatDate(booking.preferredDate)}
-                              </span>
-                              <span className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md">
-                                <Clock className="h-3.5 w-3.5" />
-                                {formatTime(booking.preferredTime)}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="text-right shrink-0 flex flex-col items-end gap-2">
-                            {booking.depositAmountCents && booking.depositAmountCents > 0 && (
-                              <div>
-                                <p className="text-sm font-semibold" data-testid={`deposit-amount-${booking.id}`}>
-                                  {formatCurrency(booking.depositAmountCents, booking.depositCurrency || "usd")}
-                                </p>
-                                <Badge variant="secondary" className={`text-xs ${depositConfig.color}`}>
-                                  {depositConfig.label}
+          <BookingLinkShare variant="inline" context="bookings" />
+
+          {bookingUpgrade.bannerPayload && (
+            <UpgradeBanner
+              capabilityKey={bookingUpgrade.bannerPayload.capabilityKey}
+              remaining={bookingUpgrade.bannerPayload.remaining}
+              limit={bookingUpgrade.bannerPayload.limit}
+              current={bookingUpgrade.bannerPayload.current}
+              variant={bookingUpgrade.variant}
+              thresholdLevel={bookingUpgrade.bannerPayload.thresholdLevel || "warn"}
+              surface="booking"
+              plan={bookingUpgrade.bannerPayload.plan}
+              recommendedPlan={bookingUpgrade.bannerPayload.recommendedPlan}
+            />
+          )}
+
+          {filteredBookings.length === 0 ? (
+            <Card className="border-0 shadow-md">
+              <CardContent className="py-16 text-center">
+                <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+                  <Calendar className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <h3 className="font-semibold text-lg mb-2">No bookings found</h3>
+                <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+                  {statusFilter === "all" 
+                    ? "When customers book your services, they'll appear here"
+                    : `No ${statusFilter} bookings at the moment`}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {filteredBookings.map((booking) => {
+                const depositConfig = depositStatusConfig[booking.depositStatus || "none"] || depositStatusConfig.none;
+                const completionConfig = completionStatusConfig[booking.completionStatus || "scheduled"] || completionStatusConfig.scheduled;
+                const CompletionIcon = completionConfig.icon;
+
+                return (
+                  <Card
+                    key={booking.id}
+                    className="border-0 shadow-md cursor-pointer hover-elevate overflow-hidden"
+                    onClick={() => setSelectedBooking(booking)}
+                    data-testid={`booking-card-${booking.id}`}
+                  >
+                    <CardContent className="p-0">
+                      <div className="flex">
+                        <div className={`w-1 ${booking.status === "pending" ? "bg-amber-500" : booking.status === "accepted" ? "bg-emerald-500" : booking.status === "completed" ? "bg-blue-500" : "bg-gray-300"}`} />
+                        <div className="flex-1 p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <h3 className="font-semibold truncate">{booking.clientName}</h3>
+                                <Badge variant="secondary" className={`text-xs ${completionConfig.color}`}>
+                                  <CompletionIcon className="h-3 w-3 mr-1" />
+                                  {completionConfig.label}
                                 </Badge>
                               </div>
-                            )}
-                            <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+                              <p className="text-sm text-muted-foreground capitalize mb-3">
+                                {booking.serviceType}
+                              </p>
+                              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md">
+                                  <Calendar className="h-3.5 w-3.5" />
+                                  {formatDate(booking.preferredDate)}
+                                </span>
+                                <span className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md">
+                                  <Clock className="h-3.5 w-3.5" />
+                                  {formatTime(booking.preferredTime)}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0 flex flex-col items-end gap-2">
+                              {booking.depositAmountCents && booking.depositAmountCents > 0 && (
+                                <div>
+                                  <p className="text-sm font-semibold" data-testid={`deposit-amount-${booking.id}`}>
+                                    {formatCurrency(booking.depositAmountCents, booking.depositCurrency || "usd")}
+                                  </p>
+                                  <Badge variant="secondary" className={`text-xs ${depositConfig.color}`}>
+                                    {depositConfig.label}
+                                  </Badge>
+                                </div>
+                              )}
+                              <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        <BookingRequestsDesktopView
+          bookings={bookings || []}
+          selectedBooking={selectedBooking}
+          onSelectBooking={setSelectedBooking}
+          formatDate={formatDate}
+          formatTime={formatTime}
+          formatCurrency={formatCurrency}
+          onCopyLink={copyBookingLink}
+          onRecordPayment={() => setShowRemainderPaymentDialog(true)}
+          onWaiveFee={(bookingId) => waiveFeeMutation.mutate(bookingId)}
+          isWaiving={waiveFeeMutation.isPending}
+        />
+      )}
 
-      <Dialog open={!!selectedBooking} onOpenChange={() => setSelectedBooking(null)}>
+      <Dialog open={isMobile && !!selectedBooking} onOpenChange={() => setSelectedBooking(null)}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           {selectedBooking && (
             <>

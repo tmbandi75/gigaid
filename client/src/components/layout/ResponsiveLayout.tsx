@@ -371,7 +371,6 @@ export function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
         <AppSidebar />
         <SidebarInset className="flex flex-col flex-1 overflow-hidden">
           <DesktopHeader />
-          <FirstDollarBanner />
           <main className="flex-1 overflow-auto">{children}</main>
         </SidebarInset>
       </div>

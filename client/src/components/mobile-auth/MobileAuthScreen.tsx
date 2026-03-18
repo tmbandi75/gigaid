@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { SiApple, SiGoogle } from 'react-icons/si';
 import { Phone, Mail, ArrowLeft, Loader2 } from 'lucide-react';
 import { PhoneAuthFlow } from './PhoneAuthFlow';
@@ -26,6 +27,7 @@ export function MobileAuthScreen({
   const [currentScreen, setCurrentScreen] = useState<AuthScreen>('welcome');
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const handleAppleSignIn = async () => {
     if (!onAppleSignIn) return;
@@ -100,11 +102,44 @@ export function MobileAuthScreen({
             </div>
           )}
 
+          <div className="flex items-start space-x-3 pt-2 pb-1" data-testid="terms-agreement">
+            <Checkbox
+              id="termsAccepted"
+              checked={termsAccepted}
+              onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+              data-testid="checkbox-terms"
+            />
+            <label htmlFor="termsAccepted" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
+              I have read and agree to the{' '}
+              <a
+                href={termsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-foreground"
+                data-testid="link-terms"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Terms of Service
+              </a>
+              {' '}and{' '}
+              <a
+                href={privacyUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-foreground"
+                data-testid="link-privacy"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Privacy Policy
+              </a>
+            </label>
+          </div>
+
           <Button
             variant="outline"
             className="w-full h-12 justify-start gap-3 text-base font-medium bg-black text-white hover:bg-black/90 border-black"
             onClick={handleAppleSignIn}
-            disabled={isLoading !== null || !onAppleSignIn}
+            disabled={isLoading !== null || !onAppleSignIn || !termsAccepted}
             data-testid="button-apple-signin"
           >
             {isLoading === 'apple' ? (
@@ -119,7 +154,7 @@ export function MobileAuthScreen({
             variant="outline"
             className="w-full h-12 justify-start gap-3 text-base font-medium"
             onClick={handleGoogleSignIn}
-            disabled={isLoading !== null || !onGoogleSignIn}
+            disabled={isLoading !== null || !onGoogleSignIn || !termsAccepted}
             data-testid="button-google-signin"
           >
             {isLoading === 'google' ? (
@@ -134,7 +169,7 @@ export function MobileAuthScreen({
             variant="outline"
             className="w-full h-12 justify-start gap-3 text-base font-medium"
             onClick={() => setCurrentScreen('phone')}
-            disabled={isLoading !== null}
+            disabled={isLoading !== null || !termsAccepted}
             data-testid="button-phone-signin"
           >
             <Phone className="h-5 w-5" />
@@ -145,36 +180,12 @@ export function MobileAuthScreen({
             variant="outline"
             className="w-full h-12 justify-start gap-3 text-base font-medium"
             onClick={() => setCurrentScreen('email')}
-            disabled={isLoading !== null}
+            disabled={isLoading !== null || !termsAccepted}
             data-testid="button-email-signin"
           >
             <Mail className="h-5 w-5" />
             Continue with Email
           </Button>
-
-          <p className="text-xs text-center text-muted-foreground pt-4" data-testid="text-legal-footer">
-            By continuing, you agree to our{' '}
-            <a 
-              href={termsUrl} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="underline hover:text-foreground"
-              data-testid="link-terms"
-            >
-              Terms of Service
-            </a>
-            {' '}and{' '}
-            <a 
-              href={privacyUrl} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="underline hover:text-foreground"
-              data-testid="link-privacy"
-            >
-              Privacy Policy
-            </a>
-            .
-          </p>
         </CardContent>
       </Card>
     </div>

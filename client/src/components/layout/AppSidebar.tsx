@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import newLogoPath from "@assets/logo_no_bg.png";
 import { useQuery } from "@tanstack/react-query";
 import {
   Sidebar,
@@ -13,7 +14,6 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
   LayoutDashboard,
@@ -27,40 +27,24 @@ import {
   Crown,
   Star,
   Gift,
-  User,
-  Settings,
-  HelpCircle,
-  LogOut,
   Share2,
   ChevronUp,
+  ChevronDown,
   Moon,
   Sun,
   MessageSquare,
   Mic,
   Send,
-  CreditCard,
   Shield,
+  BarChart3,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/use-auth";
 import { QUERY_KEYS } from "@/lib/queryKeys";
-import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
-interface UserProfile {
-  id: string;
-  name: string | null;
-  email: string | null;
-  phone: string | null;
-  photo: string | null;
-  businessName?: string | null;
-}
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 const mainNavItems = [
   { path: "/", icon: LayoutDashboard, label: "Game Plan" },
@@ -69,21 +53,25 @@ const mainNavItems = [
   { path: "/invoices", icon: FileText, label: "Get Paid" },
 ];
 
-const toolsItems = [
+const aiToolsItems = [
   { path: "/quickbook", icon: Zap, label: "QuickBook", badge: "New" },
   { path: "/voice-notes", icon: Mic, label: "Voice Notes" },
   { path: "/ai-tools", icon: Sparkles, label: "AI Tools" },
+  { path: "/share", icon: Share2, label: "Quick Capture" },
+];
+
+const operationsItems = [
   { path: "/messages", icon: MessageSquare, label: "Messages" },
   { path: "/notify-clients", icon: Send, label: "Notify Clients" },
   { path: "/crew", icon: Users, label: "Crew" },
   { path: "/reminders", icon: Bell, label: "Reminders" },
   { path: "/booking-requests", icon: Calendar, label: "Bookings" },
-  { path: "/share", icon: Share2, label: "Quick Capture" },
 ];
 
 const businessItems = [
   { path: "/owner", icon: Crown, label: "Owner View", badge: "Pro" },
   { path: "/money-plan", icon: Zap, label: "Money Plan" },
+  { path: "/view-all-stats", icon: BarChart3, label: "Statistics" },
   { path: "/reviews", icon: Star, label: "Reviews" },
   { path: "/referrals", icon: Gift, label: "Referrals" },
 ];
@@ -91,12 +79,9 @@ const businessItems = [
 export function AppSidebar() {
   const [location, navigate] = useLocation();
   const [darkMode, setDarkMode] = useState(false);
-  const { logout } = useAuth();
-
-  const { data: profile } = useQuery<UserProfile>({
-    queryKey: QUERY_KEYS.profile(),
-    staleTime: 300000,
-  });
+  const [aiOpen, setAiOpen] = useState(true);
+  const [opsOpen, setOpsOpen] = useState(true);
+  const [bizOpen, setBizOpen] = useState(true);
 
   const { data: unreadSmsData } = useQuery<{ count: number }>({
     queryKey: QUERY_KEYS.smsUnreadCount(),
@@ -107,18 +92,11 @@ export function AppSidebar() {
   const { data: adminStatus } = useQuery<{ isAdmin: boolean; role?: string }>({
     queryKey: QUERY_KEYS.adminStatus(),
     retry: false,
-    staleTime: 60000, // Re-check every minute
+    staleTime: 60000,
     refetchOnWindowFocus: true,
   });
 
-  const { data: subscription } = useQuery<{ plan: string; hasSubscription: boolean }>({
-    queryKey: QUERY_KEYS.subscriptionStatus(),
-    retry: 1,
-    staleTime: 60000,
-  });
-
   const isAdmin = adminStatus?.isAdmin === true;
-  const isBusinessPlan = subscription !== undefined && subscription.plan === "business";
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains("dark");
@@ -137,26 +115,19 @@ export function AppSidebar() {
     }
   };
 
-  const displayName = profile?.name || "Gig Worker";
-  const businessName = profile?.businessName || "Your Business";
-  const initials = displayName
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-
   const isActive = (path: string) => {
     if (path === "/") return location === "/";
     return location.startsWith(path);
   };
 
+  const unreadCount = unreadSmsData?.count || 0;
+
   return (
     <Sidebar data-testid="sidebar-desktop">
-      <SidebarHeader className="p-4 border-b border-sidebar-border bg-background">
+      <SidebarHeader className="px-4 py-5 border-b border-sidebar-border">
         <Link href="/">
           <div className="flex flex-col cursor-pointer" data-testid="sidebar-header">
-            <img src="/gigaid-logo.png" alt="GigAid" className="h-[120px]" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
+            <img src={newLogoPath} alt="GigAid" className="h-[120px] w-auto object-contain" />
             <span className="text-xs text-sidebar-foreground/60 mt-1">Pro Dashboard</span>
           </div>
         </Link>
@@ -174,6 +145,7 @@ export function AppSidebar() {
                       isActive={location.startsWith("/admin")}
                       tooltip="Admin Cockpit"
                       data-testid="sidebar-admin-cockpit"
+                      className="relative transition-colors duration-150 rounded-md"
                     >
                       <Link href="/admin/cockpit">
                         <Shield className="h-4 w-4" />
@@ -189,56 +161,26 @@ export function AppSidebar() {
         )}
 
         <SidebarGroup>
+          <SidebarGroupLabel className="text-sidebar-foreground/50 uppercase text-xs tracking-wider font-semibold px-2">
+            Work
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainNavItems.map((item) => (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.path)}
-                    tooltip={item.label}
-                    data-testid={`sidebar-nav-${item.label.toLowerCase()}`}
-                  >
-                    <Link href={item.path}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarSeparator className="my-2" />
-
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/50 uppercase text-xs tracking-wider font-semibold px-2">Tools</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {toolsItems.map((item) => {
-                const unreadCount = item.path === "/messages" ? (unreadSmsData?.count || 0) : 0;
+              {mainNavItems.map((item) => {
+                const active = isActive(item.path);
+                const showRequestBadge = item.path === "/leads";
                 return (
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton
                       asChild
-                      isActive={isActive(item.path)}
+                      isActive={active}
                       tooltip={item.label}
-                      data-testid={`sidebar-tool-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+                      data-testid={`sidebar-nav-${item.label.toLowerCase()}`}
+                      className={`relative transition-colors duration-150 rounded-md ${active ? "before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:rounded-full before:bg-emerald-500" : ""}`}
                     >
                       <Link href={item.path}>
                         <item.icon className="h-4 w-4" />
                         <span className="flex-1">{item.label}</span>
-                        {item.badge && (
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                            {item.badge}
-                          </Badge>
-                        )}
-                        {unreadCount > 0 && (
-                          <Badge variant="default" className="text-[10px] px-1.5 py-0 min-w-5 flex items-center justify-center">
-                            {unreadCount}
-                          </Badge>
-                        )}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -250,42 +192,153 @@ export function AppSidebar() {
 
         <SidebarSeparator className="my-2" />
 
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/50 uppercase text-xs tracking-wider font-semibold px-2">Business</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {businessItems.map((item) => (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.path)}
-                    tooltip={item.label}
-                    data-testid={`sidebar-biz-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
-                  >
-                    <Link href={item.path}>
-                      <item.icon className="h-4 w-4" />
-                      <span className="flex-1">{item.label}</span>
-                      {item.badge && (
-                        <Badge className="text-[10px] px-1.5 py-0 bg-gradient-to-r from-amber-500 to-yellow-500 border-0">
-                          {item.badge}
-                        </Badge>
-                      )}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <Collapsible open={aiOpen} onOpenChange={setAiOpen}>
+          <SidebarGroup>
+            <CollapsibleTrigger asChild>
+              <SidebarGroupLabel
+                className="text-emerald-500 dark:text-emerald-400 uppercase text-xs tracking-wider font-semibold px-2 cursor-pointer select-none flex items-center justify-between hover:text-emerald-400 dark:hover:text-emerald-300 transition-colors"
+                data-testid="sidebar-section-ai"
+              >
+                <span>AI & Tools</span>
+                {aiOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3 rotate-90" />}
+              </SidebarGroupLabel>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {aiToolsItems.map((item) => {
+                    const active = isActive(item.path);
+                    return (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={active}
+                          tooltip={item.label}
+                          data-testid={`sidebar-tool-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+                          className={`relative transition-colors duration-150 rounded-md ${active ? "before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:rounded-full before:bg-emerald-500" : ""}`}
+                        >
+                          <Link href={item.path}>
+                            <item.icon className="h-4 w-4" />
+                            <span className="flex-1">{item.label}</span>
+                            {item.badge && (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                {item.badge}
+                              </Badge>
+                            )}
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </SidebarGroup>
+        </Collapsible>
+
+        <SidebarSeparator className="my-2" />
+
+        <Collapsible open={opsOpen} onOpenChange={setOpsOpen}>
+          <SidebarGroup>
+            <CollapsibleTrigger asChild>
+              <SidebarGroupLabel
+                className="text-sidebar-foreground/50 uppercase text-xs tracking-wider font-semibold px-2 cursor-pointer select-none flex items-center justify-between hover:text-sidebar-foreground/70 transition-colors"
+                data-testid="sidebar-section-operations"
+              >
+                <span>Operations</span>
+                {opsOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3 rotate-90" />}
+              </SidebarGroupLabel>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {operationsItems.map((item) => {
+                    const active = isActive(item.path);
+                    const itemUnreadCount = item.path === "/messages" ? unreadCount : 0;
+                    return (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={active}
+                          tooltip={item.label}
+                          data-testid={`sidebar-tool-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+                          className={`relative transition-colors duration-150 rounded-md ${active ? "before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:rounded-full before:bg-emerald-500" : ""}`}
+                        >
+                          <Link href={item.path}>
+                            <item.icon className="h-4 w-4" />
+                            <span className="flex-1">{item.label}</span>
+                            {itemUnreadCount > 0 && (
+                              <Badge className="ml-auto bg-emerald-500 text-white text-xs px-2 py-0.5 rounded-full border-0" data-testid={`badge-unread-${item.label.toLowerCase().replace(/\s+/g, "-")}`}>
+                                {itemUnreadCount}
+                              </Badge>
+                            )}
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </SidebarGroup>
+        </Collapsible>
+
+        <SidebarSeparator className="my-2" />
+
+        <Collapsible open={bizOpen} onOpenChange={setBizOpen}>
+          <SidebarGroup>
+            <CollapsibleTrigger asChild>
+              <SidebarGroupLabel
+                className="text-sidebar-foreground/50 uppercase text-xs tracking-wider font-semibold px-2 cursor-pointer select-none flex items-center justify-between hover:text-sidebar-foreground/70 transition-colors"
+                data-testid="sidebar-section-business"
+              >
+                <span>Business</span>
+                {bizOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3 rotate-90" />}
+              </SidebarGroupLabel>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {businessItems.map((item) => {
+                    const active = isActive(item.path);
+                    return (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={active}
+                          tooltip={item.label}
+                          data-testid={`sidebar-biz-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+                          className={`relative transition-colors duration-150 rounded-md ${active ? "before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:rounded-full before:bg-emerald-500" : ""}`}
+                        >
+                          <Link href={item.path}>
+                            <item.icon className="h-4 w-4" />
+                            <span className="flex-1">{item.label}</span>
+                            {item.badge && (
+                              <Badge className="text-[10px] px-1.5 py-0 bg-gradient-to-r from-amber-500 to-yellow-500 border-0">
+                                {item.badge}
+                              </Badge>
+                            )}
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </SidebarGroup>
+        </Collapsible>
 
       </SidebarContent>
 
       <SidebarFooter className="p-3 border-t border-sidebar-border">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton 
-              onClick={toggleDarkMode} 
+            <SidebarMenuButton
+              onClick={toggleDarkMode}
+              aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
               data-testid="sidebar-theme-toggle"
+              className="transition-colors duration-150 rounded-md"
             >
               {darkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
               <span>{darkMode ? "Dark Mode" : "Light Mode"}</span>
@@ -293,75 +346,6 @@ export function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
 
-        <SidebarSeparator className="my-2" />
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="w-full"
-              data-testid="sidebar-user-menu"
-            >
-              <Avatar className="h-8 w-8">
-                {profile?.photo ? (
-                  <AvatarImage src={profile.photo} alt="Profile" />
-                ) : null}
-                <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-xs font-semibold">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col items-start text-left">
-                <span className="text-sm font-medium truncate max-w-[120px] text-sidebar-foreground">
-                  {displayName}
-                </span>
-                <span className="text-xs text-sidebar-foreground/60 truncate max-w-[120px]">
-                  {businessName}
-                </span>
-              </div>
-              <ChevronUp className="ml-auto h-4 w-4 text-sidebar-foreground/50" />
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            side="top"
-            align="start"
-            className="w-[--radix-dropdown-menu-trigger-width]"
-          >
-            <DropdownMenuItem onClick={() => navigate("/profile")} data-testid="dropdown-profile">
-              <User className="h-4 w-4 mr-2" />
-              Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/settings")} data-testid="dropdown-settings">
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/pricing")} data-testid="dropdown-pricing">
-              <CreditCard className="h-4 w-4 mr-2" />
-              Billing
-            </DropdownMenuItem>
-            {!isBusinessPlan && (
-              <DropdownMenuItem onClick={() => navigate("/pricing")} data-testid="dropdown-upgrade">
-                <Star className="h-4 w-4 mr-2 text-amber-500" />
-                Upgrade Plan
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate("/help")} data-testid="dropdown-help">
-              <HelpCircle className="h-4 w-4 mr-2" />
-              Help & Support
-            </DropdownMenuItem>
-            {isAdmin && (
-              <DropdownMenuItem onClick={() => navigate("/admin/cockpit")} data-testid="dropdown-admin">
-                <Shield className="h-4 w-4 mr-2" />
-                Admin Cockpit
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => logout()} className="text-destructive" data-testid="dropdown-logout">
-              <LogOut className="h-4 w-4 mr-2" />
-              Log Out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </SidebarFooter>
     </Sidebar>
   );

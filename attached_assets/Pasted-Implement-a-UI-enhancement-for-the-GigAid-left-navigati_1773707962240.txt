@@ -1,0 +1,277 @@
+Implement a UI enhancement for the GigAid left navigation sidebar that improves usability for desktop and tablet users while keeping the mobile experience completely unchanged.
+
+CRITICAL RULES
+
+1. DO NOT change the smartphone UI.
+2. Mobile view (<768px width) must render exactly the same sidebar as today.
+3. DO NOT refactor existing navigation logic.
+4. DO NOT change routing or navigation handlers.
+5. DO NOT rename any components, props, or state variables.
+6. DO NOT remove existing menu items.
+7. Only enhance styling and structure for desktop/tablet layouts.
+8. Use additive UI improvements only.
+9. Existing functionality must remain intact.
+
+TECH STACK
+
+React  
+Tailwind CSS  
+ShadCN UI  
+Existing GigAid navigation components
+
+RESPONSIVE RULES
+
+Mobile (<768px)
+Render the current sidebar unchanged.
+
+Desktop / Tablet (>=768px)
+Apply the enhanced sidebar layout.
+
+Use Tailwind responsive classes:
+
+block md:hidden → existing sidebar  
+hidden md:block → enhanced sidebar
+
+IMPLEMENTATION STRATEGY
+
+1. Leave the existing Sidebar component intact.
+
+2. Create a new component:
+
+SidebarDesktopView.tsx
+
+3. Wrap rendering logic:
+
+<div className="block md:hidden">
+  <ExistingSidebar />
+</div>
+
+<div className="hidden md:block">
+  <SidebarDesktopView />
+</div>
+
+4. Reuse the same navigation items and routing logic currently used in the existing sidebar.
+
+5. Do NOT introduce new navigation state.
+
+SIDEBAR UI ENHANCEMENTS
+
+SECTION GROUPING
+
+Improve visual grouping of navigation sections.
+
+Current sections:
+
+Game Plan
+Jobs
+New Requests
+Get Paid
+
+TOOLS
+QuickBook
+Voice Notes
+AI Tools
+Messages
+Notify Clients
+Crew
+Reminders
+Bookings
+Quick Capture
+
+BUSINESS
+Owner View
+Money Plan
+Statistics
+Reviews
+Referrals
+
+Enhance section labels by making them visually stronger.
+
+Style:
+
+text-xs uppercase
+tracking-wider
+text-slate-400
+mt-6 mb-2
+
+Add divider spacing between sections:
+
+border-t border-slate-700
+pt-4
+
+ACTIVE ITEM HIGHLIGHT
+
+Improve current page highlight.
+
+Use a vertical accent bar for the active item.
+
+Style:
+
+relative
+before:absolute
+before:left-0
+before:h-full
+before:w-[3px]
+before:bg-emerald-400
+
+Maintain the current highlight color.
+
+HOVER STATE
+
+Add hover feedback to navigation items.
+
+Style:
+
+hover:bg-slate-800
+hover:text-white
+transition-colors
+rounded-md
+
+BADGE SUPPORT
+
+Add optional badge support for items like:
+
+Messages
+Reminders
+New Requests
+
+Example badge style:
+
+ml-auto
+bg-emerald-500
+text-white
+text-xs
+px-2
+py-0.5
+rounded-full
+
+Badge should only render if a count value already exists in state.
+
+DO NOT create new badge data.
+
+AI SECTION PROMOTION
+
+Move AI-related tools visually closer together.
+
+Group these under a stronger AI/TOOLS heading:
+
+QuickBook
+Voice Notes
+AI Tools
+Quick Capture
+
+Use a slightly brighter section label color:
+
+text-emerald-400
+
+This visually communicates AI features.
+
+NAVIGATION ITEM LAYOUT
+
+Improve spacing for readability.
+
+Navigation item container:
+
+flex items-center
+gap-3
+px-3 py-2
+text-sm
+rounded-md
+
+Icons remain unchanged.
+
+Add subtle left padding:
+
+pl-3
+
+SECTION COLLAPSIBLE SUPPORT (OPTIONAL)
+
+Allow sections to be collapsible using simple local state.
+
+Example:
+
+WORK ▾
+TOOLS ▾
+BUSINESS ▾
+
+Default state: expanded.
+
+If implementation requires significant refactoring, skip this feature.
+
+SIDEBAR HEADER IMPROVEMENT
+
+Improve logo area.
+
+Add subtle container styling:
+
+px-4 py-5
+border-b border-slate-700
+
+Ensure logo remains unchanged.
+
+USER PROFILE SECTION
+
+Enhance bottom profile area.
+
+Layout:
+
+flex items-center gap-3 px-4 py-4 border-t border-slate-700
+
+Display:
+
+User avatar
+User name
+Business name
+
+Add dropdown arrow icon.
+
+Dropdown actions (if already implemented):
+
+Account Settings
+Subscription
+Logout
+
+If dropdown functionality does not exist, display static layout.
+
+STYLE REQUIREMENTS
+
+Use existing GigAid theme colors.
+
+Cards and containers should use:
+
+rounded-lg
+transition
+duration-150
+
+Avoid introducing new design systems.
+
+ACCESSIBILITY
+
+Ensure:
+
+keyboard navigation works
+focus states visible
+buttons have aria labels
+
+DATA SAFETY
+
+DO NOT:
+
+change navigation routes
+modify navigation logic
+rename menu keys
+introduce new APIs
+
+Only modify UI presentation.
+
+FINAL VERIFICATION
+
+Before completing implementation verify:
+
+Mobile sidebar remains identical.
+Desktop/tablet sidebar shows enhanced grouping and hover states.
+Navigation still works correctly.
+Active item highlight works.
+No console errors.
+No TypeScript errors.
+No routing changes.

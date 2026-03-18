@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BookingLinkShare } from "@/components/booking-link";
+import { MoneyPlanDesktopView } from "@/components/money-plan/MoneyPlanDesktopView";
 import { useLocation } from "wouter";
 import { apiFetch } from "@/lib/apiFetch";
 import { QUERY_KEYS } from "@/lib/queryKeys";
@@ -154,6 +155,7 @@ export default function MoneyPlanPage() {
             variant="ghost"
             size="icon"
             onClick={() => navigate("/")}
+            aria-label="Go back"
             data-testid="button-back"
           >
             <ChevronLeft className="h-5 w-5" />
@@ -173,6 +175,7 @@ export default function MoneyPlanPage() {
           size="sm"
           onClick={() => generateMutation.mutate()}
           disabled={generateMutation.isPending}
+          aria-label="Refresh actions"
           data-testid="button-refresh"
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${generateMutation.isPending ? "animate-spin" : ""}`} />
@@ -199,6 +202,7 @@ export default function MoneyPlanPage() {
             variant="outline"
             onClick={() => generateMutation.mutate()}
             disabled={generateMutation.isPending}
+            aria-label="Refresh actions"
             data-testid="button-refresh"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${generateMutation.isPending ? "animate-spin" : ""}`} />
@@ -395,6 +399,7 @@ export default function MoneyPlanPage() {
             variant="ghost"
             size="icon"
             onClick={() => navigate("/")}
+            aria-label="Go back"
             data-testid="button-back"
           >
             <ChevronLeft className="h-5 w-5" />
@@ -415,9 +420,39 @@ export default function MoneyPlanPage() {
     );
   }
 
+  if (!isMobile) {
+    return (
+      <div className="flex flex-col min-h-full bg-background" data-testid="page-money-plan">
+        {renderDesktopHeader()}
+        <MoneyPlanDesktopView
+          openItems={openItems}
+          doneItems={doneItems}
+          isLoading={isLoading}
+          showCapabilityHint={showCapabilityHint}
+          onOpenUpgradeModal={() => setMoneyPlanInterceptOpen(true)}
+          onGenerate={() => generateMutation.mutate()}
+          onMarkDone={(id) => markDoneMutation.mutate(id)}
+          onDismiss={(id) => dismissMutation.mutate(id)}
+          onSnooze={(params) => snoozeMutation.mutate(params)}
+          onAction={handleAction}
+          generatePending={generateMutation.isPending}
+          markDonePending={markDoneMutation.isPending}
+          dismissPending={dismissMutation.isPending}
+          snoozePending={snoozeMutation.isPending}
+        />
+        <UpgradeInterceptModal
+          open={moneyPlanInterceptOpen}
+          onOpenChange={setMoneyPlanInterceptOpen}
+          featureKey="ai.money_plan"
+          featureName="Today's Money Plan"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col min-h-full bg-background" data-testid="page-money-plan">
-      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
+      {renderMobileHeader()}
       {renderContent()}
 
       <UpgradeInterceptModal

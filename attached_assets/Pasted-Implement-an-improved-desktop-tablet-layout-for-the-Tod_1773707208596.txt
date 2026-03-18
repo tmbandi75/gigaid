@@ -1,0 +1,255 @@
+Implement an improved desktop/tablet layout for the "Today's Money Plan" page in GigAid.
+
+The goal is to make the page feel like a revenue command center for webview and tablet users while keeping the smartphone experience completely unchanged.
+
+CRITICAL RULES
+
+1. DO NOT change the smartphone UI.
+2. Mobile layout (<768px width) must render EXACTLY the same as today.
+3. DO NOT refactor existing components.
+4. DO NOT rename props, hooks, or state variables.
+5. DO NOT modify backend APIs or database schema.
+6. DO NOT change existing AI logic for generating money plan actions.
+7. Only add new UI components for desktop/tablet layouts.
+8. Reuse all existing data and handlers.
+9. Avoid modifying existing files except to wrap them with responsive layout logic.
+
+TECH STACK
+
+React  
+Tailwind CSS  
+ShadCN UI  
+Existing GigAid component patterns
+
+RESPONSIVE RULES
+
+Mobile (<768px)
+Render the existing Money Plan page unchanged.
+
+Tablet/Webview (>=768px)
+Render a new dashboard layout.
+
+Use Tailwind visibility rules:
+
+block md:hidden → existing mobile UI  
+hidden md:block → new desktop/tablet layout
+
+IMPLEMENTATION STRATEGY
+
+1. Leave the existing MoneyPlan component unchanged.
+
+2. Create a new component:
+
+MoneyPlanDesktopView.tsx
+
+3. In the Money Plan page file wrap rendering like this:
+
+<div className="block md:hidden">
+  <ExistingMoneyPlan />
+</div>
+
+<div className="hidden md:block">
+  <MoneyPlanDesktopView />
+</div>
+
+4. Reuse all existing state and data used by the current mobile layout.
+
+5. Do NOT introduce new API calls.
+
+DESKTOP/TABLET PAGE STRUCTURE
+
+Use a grid dashboard layout.
+
+Container:
+
+max-w-6xl  
+mx-auto  
+grid grid-cols-12  
+gap-6
+
+SECTION 1 — PAGE HEADER
+
+Display existing page title:
+
+Today's Money Plan
+
+Subtitle:
+
+0 actions to grow your revenue
+
+Reuse existing values.
+
+Add refresh button on the right if it already exists.
+
+SECTION 2 — REVENUE SNAPSHOT
+
+Top row showing key metrics.
+
+Grid layout:
+
+col-span-4 each
+
+Cards:
+
+Outstanding Revenue  
+Unpaid Jobs  
+Follow-Ups Needed
+
+Each card should contain:
+
+Icon  
+Large number  
+Label
+
+Reuse existing values from the page.
+
+If values are not available, hide the card.
+
+SECTION 3 — TODAY'S OPPORTUNITIES PANEL
+
+Place below the snapshot cards.
+
+col-span-12
+
+Card title:
+
+Today's Opportunities
+
+Display the existing message currently shown on the page such as:
+
+Quiet day  
+Great time to follow up or send invoices.
+
+Primary button:
+
+Check for new actions
+
+Reuse the existing handler.
+
+SECTION 4 — ACTIONS TO MAKE MONEY
+
+Main actionable task list.
+
+col-span-8
+
+Card title:
+
+Actions to Make Money Today
+
+Display the same AI generated actions currently used in the mobile layout.
+
+Each item should show:
+
+Title  
+Customer name  
+Amount if available  
+Status label
+
+Example layout:
+
+Send invoice to Michael Chen  
+$450 overdue  
+[ Send Invoice ]
+
+Follow up with Sarah Johnson  
+[ Send Message ]
+
+Send payment reminder  
+$120 overdue  
+[ Send Reminder ]
+
+Buttons must call the same existing handlers already used in mobile UI.
+
+SECTION 5 — BOOKING LINK PANEL
+
+Place on the right side.
+
+col-span-4
+
+Card title:
+
+Your Booking Link
+
+Display existing booking URL.
+
+Buttons:
+
+Copy Link  
+Share
+
+Reuse existing handlers.
+
+Add small helper text:
+
+Most first jobs come from sharing this link by text.
+
+SECTION 6 — SUGGESTED MESSAGES (OPTIONAL)
+
+If AI suggestions exist in current logic, display them.
+
+Example:
+
+Suggested Follow-Up
+
+Hi Sarah — just checking if you still need help with the faucet repair.
+
+Button:
+
+Send Message
+
+Reuse existing message sending logic.
+
+If suggestion data is unavailable, hide this panel.
+
+STYLE REQUIREMENTS
+
+Use existing GigAid design tokens.
+
+Cards should use:
+
+rounded-xl  
+border border-gray-200  
+shadow-sm  
+p-6  
+
+Spacing:
+
+gap-6
+
+Ensure UI matches other pages.
+
+ACCESSIBILITY
+
+Ensure:
+
+Buttons have aria-labels  
+Keyboard navigation works  
+Focus states visible  
+Color contrast preserved
+
+DATA SAFETY
+
+Do NOT:
+
+Change database structure  
+Add new APIs  
+Rename fields  
+Modify AI revenue logic  
+
+Only enhance UI presentation.
+
+FINAL VERIFICATION
+
+Before completing implementation verify:
+
+Mobile Money Plan page is unchanged.
+
+Desktop/tablet users see the new dashboard layout.
+
+All action buttons still trigger existing handlers.
+
+No console errors.
+
+No TypeScript errors.
+
+No backend changes.

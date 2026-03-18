@@ -43,6 +43,7 @@ import { NextActionBanner } from "@/components/NextActionBanner";
 import { IntentActionCard } from "@/components/IntentActionCard";
 import { ScheduledMessagesPanel } from "@/components/ScheduledMessagesPanel";
 import { getCurrentPosition } from "@/lib/nativeGeolocation";
+import { JobDetailDesktopView } from "@/components/job-detail/JobDetailDesktopView";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -440,11 +441,132 @@ export default function JobSummary() {
     </div>
   );
 
-  return (
-    <div className={`min-h-screen bg-background ${isMobile ? "pb-24" : "pb-8"}`} data-testid="page-job-summary">
-      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
+  const renderDialogs = () => (
+    <>
+      <GetPaidDialog
+        open={showGetPaid}
+        onClose={() => setShowGetPaid(false)}
+        jobId={job.id}
+        jobTitle={job.title}
+        amount={job.price ?? undefined}
+      />
 
-      <div className={`${isMobile ? "px-4 -mt-8" : "max-w-7xl mx-auto px-6 lg:px-8 py-8"} relative z-10 space-y-4`}>
+      <Dialog open={showPostJobMomentum} onOpenChange={setShowPostJobMomentum}>
+        <DialogContent className="sm:max-w-md" data-testid="dialog-post-job-momentum">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <CheckCircle2 className="h-6 w-6 text-green-500" />
+              You're protected
+            </DialogTitle>
+            <DialogDescription>
+              Job done, payment secured. GigAid is watching your back. Now let's build on this win.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-3 pt-2">
+            <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
+              <p className="text-sm font-medium mb-1">Want a review?</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Reviews help you get more bookings. Happy customers are 3x more likely to leave one if asked right away.
+              </p>
+              <Button
+                className="w-full"
+                onClick={() => {
+                  requestReviewMutation.mutate();
+                  setShowPostJobMomentum(false);
+                }}
+                disabled={requestReviewMutation.isPending}
+                data-testid="button-momentum-request-review"
+              >
+                {requestReviewMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
+                Ask for a Review
+              </Button>
+            </div>
+
+            <div className="p-3 bg-muted/50 rounded-lg">
+              <p className="text-sm font-medium mb-1">I'll watch for repeat business</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                A check-in message 2 weeks later can lead to more work. I'll remind you.
+              </p>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  toast({
+                    title: "I'm on it",
+                    description: "I'll remind you to follow up with this client in 2 weeks. This stays on my radar."
+                  });
+                  setShowPostJobMomentum(false);
+                }}
+                data-testid="button-momentum-set-reminder"
+              >
+                <Clock className="h-4 w-4 mr-2" />
+                Remind Me in 2 Weeks
+              </Button>
+            </div>
+
+            <Button
+              variant="ghost"
+              className="w-full text-muted-foreground"
+              onClick={() => setShowPostJobMomentum(false)}
+              data-testid="button-momentum-skip"
+            >
+              Maybe later
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+
+  if (!isMobile) {
+    return (
+      <div className="min-h-screen bg-background pb-8" data-testid="page-job-summary">
+        {renderDesktopHeader()}
+        <JobDetailDesktopView
+          job={job}
+          jobPhotos={jobPhotos}
+          depositStatus={depositStatus}
+          clientData={clientData}
+          depositOverride={depositOverride}
+          statusConfig={statusConfig}
+          paymentStatusConfig={paymentStatusConfig}
+          onCall={handleCall}
+          onOpenMaps={handleOpenMaps}
+          onEdit={() => navigate(`/jobs/${id}/edit`)}
+          onStartJob={() => startJobMutation.mutate()}
+          onCompleteJob={() => completeJobMutation.mutate()}
+          onTheWay={() => onTheWayMutation.mutate()}
+          onGetPaid={() => setShowGetPaid(true)}
+          onRequestReview={() => requestReviewMutation.mutate()}
+          onSendDepositRequest={() => sendDepositRequestMutation.mutate()}
+          onDepositOverrideChange={handleDepositOverrideChange}
+          onUpdateLocation={() => updateLocationMutation.mutate()}
+          startJobPending={startJobMutation.isPending}
+          completeJobPending={completeJobMutation.isPending}
+          onTheWayPending={onTheWayMutation.isPending}
+          requestReviewPending={requestReviewMutation.isPending}
+          sendDepositRequestPending={sendDepositRequestMutation.isPending}
+          updateLocationPending={updateLocationMutation.isPending}
+          updateClientDepositPending={updateClientDepositMutation.isPending}
+          formatDate={formatDate}
+          formatTime={formatTime}
+          formatPrice={formatPrice}
+        />
+        {renderDialogs()}
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background pb-24" data-testid="page-job-summary">
+      {renderMobileHeader()}
+
+      <div className="px-4 -mt-8 relative z-10 space-y-4">
         <IntentActionCard entityType="job" entityId={id!} />
         <NextActionBanner entityType="job" entityId={id!} />
         
@@ -799,84 +921,7 @@ export default function JobSummary() {
         )}
       </div>
 
-      <GetPaidDialog
-        open={showGetPaid}
-        onClose={() => setShowGetPaid(false)}
-        jobId={job.id}
-        jobTitle={job.title}
-        amount={job.price ?? undefined}
-      />
-
-      {/* Post-Job Momentum Dialog */}
-      <Dialog open={showPostJobMomentum} onOpenChange={setShowPostJobMomentum}>
-        <DialogContent className="sm:max-w-md" data-testid="dialog-post-job-momentum">
-          <DialogHeader>
-            <DialogTitle className="text-xl flex items-center gap-2">
-              <CheckCircle2 className="h-6 w-6 text-green-500" />
-              You're protected
-            </DialogTitle>
-            <DialogDescription>
-              Job done, payment secured. GigAid is watching your back. Now let's build on this win.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-3 pt-2">
-            <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
-              <p className="text-sm font-medium mb-1">Want a review?</p>
-              <p className="text-xs text-muted-foreground mb-3">
-                Reviews help you get more bookings. Happy customers are 3x more likely to leave one if asked right away.
-              </p>
-              <Button
-                className="w-full"
-                onClick={() => {
-                  requestReviewMutation.mutate();
-                  setShowPostJobMomentum(false);
-                }}
-                disabled={requestReviewMutation.isPending}
-                data-testid="button-momentum-request-review"
-              >
-                {requestReviewMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4 mr-2" />
-                )}
-                Ask for a Review
-              </Button>
-            </div>
-
-            <div className="p-3 bg-muted/50 rounded-lg">
-              <p className="text-sm font-medium mb-1">I'll watch for repeat business</p>
-              <p className="text-xs text-muted-foreground mb-3">
-                A check-in message 2 weeks later can lead to more work. I'll remind you.
-              </p>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => {
-                  toast({
-                    title: "I'm on it",
-                    description: "I'll remind you to follow up with this client in 2 weeks. This stays on my radar."
-                  });
-                  setShowPostJobMomentum(false);
-                }}
-                data-testid="button-momentum-set-reminder"
-              >
-                <Clock className="h-4 w-4 mr-2" />
-                Remind Me in 2 Weeks
-              </Button>
-            </div>
-
-            <Button
-              variant="ghost"
-              className="w-full text-muted-foreground"
-              onClick={() => setShowPostJobMomentum(false)}
-              data-testid="button-momentum-skip"
-            >
-              Maybe later
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {renderDialogs()}
     </div>
   );
 }

@@ -46,6 +46,7 @@ import { useUpgradeOrchestrator, useStallSignals, UpgradeNudgeModal } from "@/up
 import { useAuth } from "@/hooks/use-auth";
 import { getSubtitleMessage, type EncouragementData } from "@/encouragement/encouragementEngine";
 import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
+import { GamePlanDesktopView } from "@/components/game-plan/GamePlanDesktopView";
 
 interface ActionItem {
   id: string;
@@ -317,7 +318,7 @@ export default function TodaysGamePlanPage() {
         </div>
       ) : (
         <div className="border-b bg-background sticky top-0 z-[999]">
-          <div className="max-w-3xl mx-auto px-6 lg:px-8 py-5">
+          <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
             <p className="text-sm text-muted-foreground mb-0.5" data-testid="text-greeting">{greeting}</p>
             <h1 className="text-xl font-bold text-foreground" data-testid="text-encouragement-subtitle-desktop">{subtitleText}</h1>
             <CoachingRenderer screen="dashboard" />
@@ -325,11 +326,40 @@ export default function TodaysGamePlanPage() {
         </div>
       )}
 
+      {/* Desktop layout */}
+      <div className="hidden md:block">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6">
+          <GamePlanDesktopView
+            priorityItem={priorityItem}
+            upNextItems={upNextItems}
+            stats={stats}
+            recentlyCompleted={recentlyCompleted}
+            nextActions={nextActions}
+            firstTimeUserState={firstTimeUserState}
+            stepsToGettingPaid={stepsToGettingPaid}
+            navigate={navigate}
+            onShowVoiceNotes={() => setShowVoiceNotes(true)}
+            onShowAddService={() => setShowAddService(true)}
+            onActMutation={(id) => actMutation.mutate(id)}
+            onDismissMutation={(id) => dismissMutation.mutate(id)}
+            onStallClick={() => stallOrchestrator.maybeShowStallPrompt(
+              stallSignals.topStall!.stallType,
+              stallSignals.topStall!.count,
+              stallSignals.topStall!.totalMoneyAtRisk
+            )}
+            hasActionableStall={stallSignals.hasActionableStall}
+            topStall={stallSignals.topStall}
+            invalidateGamePlan={() => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboardGamePlan() })}
+          />
+        </div>
+      </div>
+
+      {/* Mobile layout */}
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className={`space-y-4 ${isMobile ? "px-4 py-4 pb-28" : "max-w-3xl mx-auto px-6 lg:px-8 py-6"}`}
+        className="block md:hidden space-y-4 px-4 py-4 pb-28"
       >
 
         <ActivationChecklist />

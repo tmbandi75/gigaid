@@ -1,0 +1,276 @@
+Implement a redesigned Quick Capture AI workspace for GigAid that only applies to Webview and Tablet users.
+
+CRITICAL RULES
+
+1. Do NOT change the smartphone UI.
+2. Smartphone (<768px) must render exactly the same as today.
+3. All redesign work should only appear on tablet and webview screens.
+4. Do NOT refactor the existing Quick Capture component.
+5. Do NOT change backend APIs or database schemas.
+6. Do NOT change the existing lead extraction logic.
+7. Do NOT remove or rename existing props or handlers.
+8. Prefer additive UI layers instead of modifying the existing component.
+9. Ensure the mobile experience remains unchanged.
+
+TECH STACK
+
+React
+Tailwind
+ShadCN UI
+Existing GigAid design system
+
+RESPONSIVE RULES
+
+Mobile (<768px)
+Render the current Quick Capture page exactly as it is.
+
+Tablet / Webview (>=768px)
+Render the redesigned AI workspace layout.
+
+Use Tailwind breakpoints:
+
+block md:hidden → existing mobile UI
+hidden md:block → enhanced tablet/webview UI
+
+IMPLEMENTATION STRATEGY
+
+1. Keep the existing QuickCapture component intact.
+
+2. Create a new component:
+
+QuickCaptureDesktopView.tsx
+
+3. Wrap the page rendering:
+
+<div className="block md:hidden">
+  <ExistingQuickCapture />
+</div>
+
+<div className="hidden md:block">
+  <QuickCaptureDesktopView />
+</div>
+
+4. Reuse the existing extraction handler when users click Extract Lead.
+
+5. Do NOT move backend logic into the new component.
+
+6. The new layout should only change presentation and add preview functionality.
+
+GOAL
+
+Convert the Quick Capture page into an AI workspace for web/tablet users.
+
+Users should be able to:
+
+• paste a customer message
+• see AI-extracted lead data instantly
+• review extracted fields
+• edit them if necessary
+• create the lead
+
+DESKTOP/TABLET PAGE STRUCTURE
+
+1. PAGE HEADER
+
+Title:
+Quick Capture
+
+Subtitle:
+Save leads from any app
+
+Include the existing AI icon.
+
+Center the header above the workspace.
+
+2. TWO-PANEL WORKSPACE
+
+Create a two-column layout.
+
+Left Panel:
+Customer message input.
+
+Right Panel:
+AI extracted lead preview.
+
+Layout example:
+
+| Customer Message | Extracted Lead |
+
+Use responsive grid:
+
+grid-cols-1
+lg:grid-cols-2
+
+3. MESSAGE INPUT PANEL
+
+Left side contains:
+
+Large textarea.
+
+Placeholder text:
+
+Paste a message from SMS, Facebook, Craigslist, email, or WhatsApp.
+
+Example:
+Hi, I need a plumber to fix a leaking faucet.
+My name is Sarah. Call me at 555-1234.
+
+Add helper text above the textarea:
+
+Paste a customer message and GigAid will extract lead information.
+
+Below the textarea add example chips:
+
+Plumber request
+Cleaning request
+Electrical repair
+
+Clicking an example chip fills the textarea.
+
+4. PRIMARY ACTION BUTTON
+
+Below the textarea place the primary button:
+
+✨ Extract Lead
+
+This button must reuse the existing extraction function.
+
+Do NOT create new backend endpoints.
+
+5. AI PROCESSING STATE
+
+When extraction starts, show a loading state.
+
+Example:
+
+Analyzing message...
+Extracting contact information...
+Identifying service request...
+
+Use a spinner or subtle animation.
+
+6. EXTRACTED LEAD PREVIEW PANEL
+
+Right side panel displays AI extracted data.
+
+Fields:
+
+Name
+Phone
+Service
+Notes
+
+Use editable input fields so users can adjust values.
+
+Example layout:
+
+Name [ Sarah Johnson ]
+Phone [ 555-1234 ]
+Service [ Plumbing ]
+Notes [ Leaky faucet repair ]
+
+7. CONFIDENCE INDICATOR
+
+If extraction confidence is available from the extraction result, display:
+
+Extraction Confidence
+92%
+
+If not available, omit the confidence section.
+
+Do NOT fabricate confidence values.
+
+8. CREATE LEAD ACTION
+
+At the bottom of the preview panel show:
+
+Create Lead
+Edit Fields
+
+Create Lead must reuse the existing lead creation logic.
+
+9. HIGHLIGHTED TEXT EXTRACTION (OPTIONAL UI)
+
+If possible, highlight detected information inside the message text.
+
+Example:
+
+Sarah → Name
+555-1234 → Phone
+plumber → Service
+
+If this requires significant parsing changes, skip the feature.
+
+10. RECENT CAPTURES PANEL
+
+Below the preview panel optionally show:
+
+Recent Leads
+
+Display the last few created leads.
+
+If recent lead data is not readily available, hide the panel.
+
+11. CARD STYLING
+
+Use modern card styling:
+
+rounded-xl
+shadow-sm
+border border-slate-200
+hover:shadow-md
+transition
+
+Ensure the layout feels like an AI workspace rather than a form.
+
+12. COMPONENT STRUCTURE
+
+Create a new folder:
+
+components/quick-capture/
+
+Components:
+
+QuickCaptureDesktopView.tsx
+MessageInputPanel.tsx
+ExtractedLeadPanel.tsx
+ExampleMessageChips.tsx
+ExtractionLoadingState.tsx
+
+Each component should be modular and reusable.
+
+Do NOT modify the existing mobile component.
+
+13. DATA SAFETY
+
+Do NOT:
+
+modify lead database schema
+change extraction API
+rename lead fields
+create new backend endpoints
+
+Only enhance the UI layer.
+
+If required data is missing, hide that section.
+
+14. ACCESSIBILITY
+
+Ensure:
+
+keyboard navigation works
+focus states visible
+buttons have aria labels
+color contrast maintained
+
+15. FINAL VERIFICATION
+
+Before finishing implementation verify:
+
+Mobile Quick Capture page unchanged
+Tablet/Webview show the new AI workspace layout
+Extract Lead button still works
+Lead creation still works
+No TypeScript errors
+No console errors
+No backend modifications

@@ -1,0 +1,225 @@
+Implement a redesigned Quick Book page for GigAid that enhances the experience for Webview and Tablet users ONLY.
+
+CRITICAL RULES
+
+1. DO NOT modify the existing Quick Book mobile UI.
+2. Smartphone view (<768px width) must remain EXACTLY the same.
+3. DO NOT refactor existing components.
+4. DO NOT rename props, hooks, or state variables.
+5. DO NOT change backend APIs or database schemas.
+6. DO NOT move or restructure existing business logic.
+7. Only add new UI components for desktop/tablet layouts.
+8. Reuse all existing booking extraction and booking creation logic.
+9. Avoid touching existing files unless wrapping them with responsive layout conditions.
+
+TECH STACK
+
+React
+Tailwind
+ShadCN UI
+Existing GigAid components
+
+RESPONSIVE RULES
+
+Mobile (<768px)
+Render the existing Quick Book UI unchanged.
+
+Tablet/Webview (>=768px)
+Render a new AI workspace layout.
+
+Use Tailwind breakpoints:
+
+block md:hidden → existing mobile layout
+hidden md:block → new desktop/tablet layout
+
+IMPLEMENTATION STRATEGY
+
+1. Leave the existing QuickBook component untouched.
+
+2. Create a new component:
+
+QuickBookDesktopView.tsx
+
+3. In the QuickBook page file, wrap rendering like this:
+
+<div className="block md:hidden">
+  <ExistingQuickBook />
+</div>
+
+<div className="hidden md:block">
+  <QuickBookDesktopView />
+</div>
+
+4. Ensure all existing handlers for booking extraction and booking creation are reused.
+
+5. No new API calls should be introduced.
+
+DESKTOP/TABLET PAGE STRUCTURE
+
+Convert the Quick Book page into a two-panel AI booking workspace.
+
+Layout:
+
+Use grid layout:
+
+grid-cols-2
+gap-8
+max-w-6xl
+mx-auto
+
+LEFT PANEL — CLIENT MESSAGE
+
+Card Title:
+Client Message
+
+Description text:
+Paste what your client sent you and GigAid will turn it into a booking.
+
+Textarea:
+
+Reuse the existing input state used in the mobile version.
+
+Placeholder text:
+
+Paste a message from SMS, Facebook, email, or WhatsApp.
+
+Example:
+Hi I need help fixing a leaky faucet in my kitchen.
+Can you come tomorrow around 2pm?
+My address is 123 Main St.
+Looking to spend around $150.
+
+Add example quick-fill buttons below the textarea:
+
+Example chips:
+
+Plumbing request
+Electrical repair
+Cleaning job
+
+When clicked, these should simply populate the textarea value.
+
+PRIMARY BUTTON
+
+Below textarea show the existing action button.
+
+Label:
+
+✨ Generate Booking
+
+The button must trigger the existing booking extraction handler already used in the mobile UI.
+
+Do NOT create new logic.
+
+RIGHT PANEL — BOOKING PREVIEW
+
+Card Title:
+
+Booking Preview
+
+This panel shows extracted booking details after the AI parsing runs.
+
+Fields to display (if available):
+
+Customer Name
+Service Type
+Address
+Date / Time
+Estimated Price
+Notes
+
+Each field should be editable input fields so the user can correct data.
+
+Example:
+
+Customer Name
+[ Sarah Johnson ]
+
+Address
+[ 123 Main St ]
+
+Service
+[ Plumbing ]
+
+Date / Time
+[ Tomorrow 2 PM ]
+
+Price
+[ $150 ]
+
+CONFIRM ACTION
+
+At bottom of preview card include primary action button:
+
+Confirm Booking
+
+This must call the same booking creation handler used by the mobile UI.
+
+If preview data is not yet available, show placeholder message:
+
+Booking details will appear here after generating the booking.
+
+AI PROCESSING STATE
+
+While booking extraction is running show a loading indicator in the preview panel:
+
+Analyzing message...
+Extracting job details...
+Preparing booking...
+
+Use a spinner or subtle animation.
+
+OPTIONAL HIGHLIGHTED EXTRACTION
+
+If message parsing already returns mapped fields, highlight detected values in the preview panel.
+
+Do NOT implement new parsing logic.
+
+STYLE REQUIREMENTS
+
+Use the GigAid design system.
+
+Cards:
+
+rounded-xl
+border border-gray-200
+shadow-sm
+p-6
+
+Layout spacing:
+
+gap-8
+
+Ensure UI matches existing style tokens.
+
+ACCESSIBILITY
+
+Ensure:
+
+Buttons have aria-labels
+Keyboard navigation works
+Focus states visible
+
+DATA SAFETY
+
+Do NOT:
+
+Change database structure
+Add new APIs
+Rename fields
+Modify booking extraction logic
+Modify booking creation logic
+
+Only enhance the UI presentation layer.
+
+FINAL VERIFICATION
+
+Before completing implementation verify:
+
+Mobile Quick Book page is unchanged.
+Desktop/tablet users see the two-panel AI workspace.
+Generate Booking button still works.
+Confirm Booking still works.
+No console errors.
+No TypeScript errors.
+No backend changes.

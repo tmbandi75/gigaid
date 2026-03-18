@@ -21,6 +21,7 @@ import { ClientTags } from "@/components/ai/ClientTags";
 import { EstimationTool } from "@/components/ai/EstimationTool";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { BusinessCoPilotDesktopView } from "@/components/business-copilot/BusinessCoPilotDesktopView";
 import { 
   Sparkles, 
   Calendar, 
@@ -58,7 +59,7 @@ export default function AITools() {
   const [lockedFeatureModalOpen, setLockedFeatureModalOpen] = useState(false);
   const isMobile = useIsMobile();
 
-  const { data: summary } = useQuery<DashboardSummary>({
+  const { data: summary, isLoading: summaryLoading } = useQuery<DashboardSummary>({
     queryKey: QUERY_KEYS.dashboardSummary(),
   });
 
@@ -289,88 +290,99 @@ export default function AITools() {
 
   const activeFeatureData = features.find((f) => f.id === activeFeature);
 
+  const featuresMeta = features.map(({ component, ...rest }) => rest);
+
   return (
     <div className="flex flex-col min-h-full bg-background" data-testid="page-ai-tools">
       {isMobile ? renderMobileHeader() : renderDesktopHeader()}
 
-      <ScrollArea className={isMobile ? "flex-1 px-4 pb-24" : "flex-1 max-w-7xl mx-auto w-full px-6 lg:px-8 py-6"}>
-        <div className={isMobile ? "py-4 space-y-6" : "space-y-8"}>
-          {categories.map((category) => {
-            const categoryFeatures = features.filter((f) => f.category === category.id);
-            return (
-              <div key={category.id} className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <category.icon className={`h-4 w-4 ${category.color}`} />
-                  <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
-                    {category.label}
-                  </h2>
-                  <Badge variant="secondary" className="text-xs">
-                    {categoryFeatures.length}
-                  </Badge>
-                </div>
-                
-                <div className={isMobile ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 lg:grid-cols-3 gap-4"}>
-                  {categoryFeatures.map((feature) => {
-                    const isLocked = feature.requiresUnlock && !hasUnlockedAdvanced;
-                    return (
-                      <Card
-                        key={feature.id}
-                        className={`group overflow-visible border-0 shadow-sm cursor-pointer hover-elevate ${
-                          isLocked ? "opacity-60" : ""
-                        }`}
-                        onClick={() => isLocked ? setLockedFeatureModalOpen(true) : setActiveFeature(feature.id)}
-                        data-testid={`card-feature-${feature.id}`}
-                      >
-                        <CardContent className={isMobile ? "p-4" : "p-4"}>
-                          <div className={isMobile ? "flex items-center gap-4" : "flex flex-col gap-3"}>
-                            <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${isLocked ? "from-gray-400 to-gray-500" : feature.gradient} flex items-center justify-center shadow-md flex-shrink-0 relative`}>
-                              <feature.icon className="h-6 w-6 text-white" />
-                              {isLocked && (
-                                <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-muted border-2 border-background flex items-center justify-center" data-testid={`lock-indicator-${feature.id}`}>
-                                  <Lock className="h-3 w-3 text-muted-foreground" />
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-base mb-0.5">{feature.title}</h3>
-                              <p className={isMobile ? "text-sm text-muted-foreground line-clamp-1" : "text-sm text-muted-foreground line-clamp-2"} data-testid={isLocked ? `text-locked-${feature.id}` : undefined}>
-                                {isLocked ? "Unlocks after your first paid job" : feature.description}
-                              </p>
-                            </div>
-                            {isMobile && (
-                              isLocked ? (
+      {isMobile ? (
+        <ScrollArea className="flex-1 px-4 pb-24">
+          <div className="py-4 space-y-6">
+            {categories.map((category) => {
+              const categoryFeatures = features.filter((f) => f.category === category.id);
+              return (
+                <div key={category.id} className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <category.icon className={`h-4 w-4 ${category.color}`} />
+                    <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
+                      {category.label}
+                    </h2>
+                    <Badge variant="secondary" className="text-xs">
+                      {categoryFeatures.length}
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    {categoryFeatures.map((feature) => {
+                      const isLocked = feature.requiresUnlock && !hasUnlockedAdvanced;
+                      return (
+                        <Card
+                          key={feature.id}
+                          className={`group overflow-visible border-0 shadow-sm cursor-pointer hover-elevate ${
+                            isLocked ? "opacity-60" : ""
+                          }`}
+                          onClick={() => isLocked ? setLockedFeatureModalOpen(true) : setActiveFeature(feature.id)}
+                          data-testid={`card-feature-${feature.id}`}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-4">
+                              <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${isLocked ? "from-gray-400 to-gray-500" : feature.gradient} flex items-center justify-center shadow-md flex-shrink-0 relative`}>
+                                <feature.icon className="h-6 w-6 text-white" />
+                                {isLocked && (
+                                  <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-muted border-2 border-background flex items-center justify-center" data-testid={`lock-indicator-${feature.id}`}>
+                                    <Lock className="h-3 w-3 text-muted-foreground" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-base mb-0.5">{feature.title}</h3>
+                                <p className="text-sm text-muted-foreground line-clamp-1" data-testid={isLocked ? `text-locked-${feature.id}` : undefined}>
+                                  {isLocked ? "Unlocks after your first paid job" : feature.description}
+                                </p>
+                              </div>
+                              {isLocked ? (
                                 <Lock className="h-5 w-5 text-muted-foreground/50 flex-shrink-0" />
                               ) : (
                                 <ChevronRight className="h-5 w-5 text-muted-foreground/50 flex-shrink-0 group-hover:text-primary transition-colors" />
-                              )
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
 
-          <Card className="bg-gradient-to-br from-primary/5 to-violet-500/5 border-primary/20">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <Zap className="h-5 w-5 text-primary" />
+            <Card className="bg-gradient-to-br from-primary/5 to-violet-500/5 border-primary/20">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Zap className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-1">Pro Tip</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Use the voice button at the bottom of any screen to quickly create jobs, leads, or invoices hands-free.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold mb-1">Pro Tip</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Use the voice button at the bottom of any screen to quickly create jobs, leads, or invoices hands-free.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </ScrollArea>
+              </CardContent>
+            </Card>
+          </div>
+        </ScrollArea>
+      ) : (
+        <BusinessCoPilotDesktopView
+          summary={summary}
+          summaryLoading={summaryLoading}
+          features={featuresMeta}
+          hasUnlockedAdvanced={hasUnlockedAdvanced}
+          onOpenTool={(toolId) => setActiveFeature(toolId)}
+          onLockedClick={() => setLockedFeatureModalOpen(true)}
+        />
+      )}
 
       {activeFeature && activeFeatureData && (
         <Dialog open={!!activeFeature} onOpenChange={() => setActiveFeature(null)}>

@@ -1,0 +1,333 @@
+Implement an enhanced Booking Requests dashboard for GigAid that only applies to Webview and Tablet users.
+
+CRITICAL RULES
+
+1. Do NOT change the smartphone experience.
+2. Smartphone layout (<768px) must remain visually and functionally identical.
+3. All redesign work must only appear for tablet and desktop/webview screens.
+4. Do NOT refactor the existing Booking Requests component.
+5. Do NOT change backend API contracts.
+6. Do NOT modify database schemas.
+7. Do NOT change existing booking logic (accept, decline, edit, etc).
+8. Prefer additive UI layers instead of modifying current components.
+9. Verify the mobile UI renders exactly as before when finished.
+
+TECH STACK
+
+React
+Tailwind
+ShadCN UI
+Existing GigAid components
+
+RESPONSIVE RULES
+
+Mobile (<768px)
+Render the existing Booking Requests UI exactly as it is.
+
+Tablet / Webview (>=768px)
+Render the enhanced dashboard layout.
+
+Use Tailwind responsive classes:
+
+block md:hidden → existing mobile UI
+hidden md:block → new tablet/webview layout
+
+IMPLEMENTATION STRATEGY
+
+1. Keep the existing BookingRequests page intact for mobile.
+
+2. Create a new component:
+
+BookingRequestsDesktopView.tsx
+
+3. Render conditionally:
+
+<div className="block md:hidden">
+  <ExistingBookingRequests />
+</div>
+
+<div className="hidden md:block">
+  <BookingRequestsDesktopView />
+</div>
+
+4. The desktop/tablet component should reuse existing booking data and event handlers.
+
+5. Do NOT move backend calls into the new component unless they already exist.
+
+6. This implementation should only enhance layout and usability.
+
+GOAL
+
+Transform the Booking Requests page into a booking management dashboard for tablet and web users.
+
+The page should allow users to:
+
+• quickly scan booking requests
+• view booking details without navigating away
+• accept or decline bookings faster
+• see booking status clearly
+
+DESKTOP/TABLET PAGE STRUCTURE
+
+1. PAGE HEADER
+
+Title:
+Booking Requests
+
+Subtitle:
+Manage customer bookings
+
+Right side:
+
+Add Booking button (reuse existing button)
+
+Add overview stats:
+
+Pending
+Accepted
+Total
+
+Display these as small stat cards instead of plain numbers.
+
+Example:
+
+Pending
+1
+
+Accepted
+2
+
+Total
+3
+
+Clicking these cards should filter the list.
+
+2. FILTER BAR
+
+Reuse the existing filter tabs but enhance them visually.
+
+Filters:
+
+All
+Pending
+Accepted
+Completed
+Cancelled
+
+Add counts if data already exists.
+
+Example:
+
+Pending (1)
+
+Use a horizontal filter bar below the header.
+
+3. SEARCH BAR
+
+Add a search input above the booking list.
+
+Placeholder:
+
+Search bookings…
+
+Allow filtering by:
+
+client name
+service name
+date
+
+Use local filtering on the booking list.
+
+Do NOT add new backend calls.
+
+4. TWO-PANEL LAYOUT
+
+For desktop/tablet create a master-detail layout.
+
+Left side:
+
+Booking request list.
+
+Right side:
+
+Booking details preview.
+
+Layout example:
+
+| Booking List | Booking Details |
+
+5. BOOKING LIST PANEL
+
+Display booking cards similar to the mobile version but optimized for larger screens.
+
+Each booking card should show:
+
+Client name
+Service
+Date
+Time
+Price
+Deposit status
+Booking status
+
+Status badges:
+
+Pending
+Scheduled
+Completed
+Cancelled
+
+Pending bookings should have stronger visual styling:
+
+border-yellow-400
+bg-yellow-50
+
+Add hover effects:
+
+hover:shadow-lg
+hover:border-blue-400
+transition
+
+Add quick actions directly on the card:
+
+Accept
+Reschedule
+Decline
+
+Reuse existing event handlers.
+
+6. BOOKING DETAILS PANEL
+
+When a booking is clicked, populate the right side preview panel.
+
+Show:
+
+Client name
+Service name
+Date
+Time
+Price
+Deposit status
+Booking notes if available
+
+Actions:
+
+Accept Booking
+Reschedule
+Decline Booking
+Message Client
+
+These actions must reuse existing logic.
+
+Do NOT create new APIs.
+
+7. CLIENT CONTEXT PANEL
+
+Below the booking details show optional client info if available.
+
+Example:
+
+Client History
+
+Previous jobs
+Total revenue from client
+
+Only show these fields if data exists.
+
+Otherwise hide the section.
+
+8. BULK ACTIONS (OPTIONAL)
+
+If safe with current booking data structure:
+
+Allow selecting multiple bookings.
+
+Bulk actions:
+
+Accept Selected
+Decline Selected
+Reschedule Selected
+
+If bulk actions are not supported by backend APIs, disable these controls and leave TODO comments.
+
+9. SMART SUGGESTIONS PANEL
+
+Add a small panel above the booking list titled:
+
+Suggestions
+
+Example message:
+
+1 booking is awaiting approval.
+
+Accept now to confirm the job.
+
+Button:
+
+Accept Booking
+
+If suggestion logic cannot be derived from current data, render a simple placeholder suggestion.
+
+10. CARD STYLING
+
+Upgrade card visuals for desktop/tablet.
+
+Use Tailwind:
+
+rounded-xl
+shadow-sm
+hover:shadow-lg
+transition
+
+Spacing should allow multiple bookings to be visible simultaneously.
+
+11. COMPONENT STRUCTURE
+
+Create a folder:
+
+components/booking-requests/
+
+Add:
+
+BookingRequestsDesktopView.tsx
+BookingOverviewStats.tsx
+BookingSearchBar.tsx
+BookingListPanel.tsx
+BookingDetailsPanel.tsx
+BookingSuggestionsPanel.tsx
+
+Each component should be small and modular.
+
+Do NOT modify the mobile component.
+
+12. DATA SAFETY
+
+Do NOT:
+
+rename booking fields
+modify booking APIs
+create new backend endpoints
+change booking status enums
+
+If data is missing for a feature, hide that UI.
+
+13. ACCESSIBILITY
+
+Ensure:
+
+keyboard navigation works
+focus states visible
+aria labels added
+color contrast maintained
+
+14. FINAL VERIFICATION
+
+Before finishing implementation verify:
+
+Mobile UI unchanged
+Tablet/Webview show enhanced dashboard
+Booking actions still function
+Add Booking button works
+No console errors
+No TypeScript errors
+No backend changes

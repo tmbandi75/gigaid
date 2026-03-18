@@ -36,11 +36,12 @@ import { LeadEmailConversation } from "@/components/lead/LeadEmailConversation";
 import { LeadTextComposer } from "@/components/lead/LeadTextComposer";
 import { LeadSmsConversation } from "@/components/lead/LeadSmsConversation";
 import { useState, useEffect } from "react";
-import { useNudges, useGenerateNudges, useFeatureFlag } from "@/hooks/use-nudges";
+import { useNudges, useFeatureFlag } from "@/hooks/use-nudges";
 import { NudgeChips } from "@/components/nudges/NudgeChip";
 import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
 import { NextActionBanner } from "@/components/NextActionBanner";
 import { IntentActionCard } from "@/components/IntentActionCard";
+import { LeadSummaryDesktopView } from "@/components/lead-detail/LeadSummaryDesktopView";
 
 const statusConfig: Record<string, { label: string; color: string; bgColor: string }> = {
   new: { label: "New", color: "text-blue-600", bgColor: "bg-blue-500/10" },
@@ -63,11 +64,6 @@ const sourceConfig: Record<string, { label: string; color: string }> = {
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
   return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
-}
-
-function formatTime(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
 export default function LeadSummary() {
@@ -263,11 +259,44 @@ export default function LeadSummary() {
     </div>
   );
 
-  return (
-    <div className={`min-h-screen bg-background ${isMobile ? "pb-24" : "pb-8"}`} data-testid="page-lead-summary">
-      {isMobile ? renderMobileHeader() : renderDesktopHeader()}
+  if (!isMobile) {
+    return (
+      <div className="min-h-screen bg-background pb-8" data-testid="page-lead-summary">
+        {renderDesktopHeader()}
+        <LeadSummaryDesktopView
+          lead={lead}
+          activePriceConfirmation={activePriceConfirmation}
+          nudges={nudges}
+          nudgesEnabled={!!featureFlag?.enabled}
+          onCall={handleCall}
+          onEmail={handleEmail}
+          onEdit={() => navigate(`/leads/${id}/edit`)}
+          onConvert={() => convertToJobMutation.mutate()}
+          onSendPrice={() => navigate(`/leads/${id}/edit`)}
+          onViewJob={() => navigate(`/jobs/${lead.convertedJobId}`)}
+          onNudgeClick={handleNudgeClick}
+          convertPending={convertToJobMutation.isPending}
+          statusConfig={statusConfig}
+          sourceConfig={sourceConfig}
+        />
+        <NudgeActionSheet
+          nudge={selectedNudge}
+          open={nudgeSheetOpen}
+          onClose={() => {
+            setNudgeSheetOpen(false);
+            setSelectedNudge(null);
+          }}
+          onCreateJob={handleCreateJobFromNudge}
+        />
+      </div>
+    );
+  }
 
-      <div className={`${isMobile ? "px-4 -mt-8 relative z-10" : "max-w-7xl mx-auto px-6 lg:px-8 py-8"} space-y-4`}>
+  return (
+    <div className="min-h-screen bg-background pb-24" data-testid="page-lead-summary">
+      {renderMobileHeader()}
+
+      <div className="px-4 -mt-8 relative z-10 space-y-4">
         <IntentActionCard entityType="lead" entityId={id!} />
         <NextActionBanner entityType="lead" entityId={id!} />
         

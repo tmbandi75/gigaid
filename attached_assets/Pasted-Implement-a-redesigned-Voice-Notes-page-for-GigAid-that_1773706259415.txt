@@ -1,0 +1,235 @@
+Implement a redesigned Voice Notes page for GigAid that enhances the experience for Webview and Tablet users ONLY.
+
+CRITICAL RULES
+
+1. DO NOT change the smartphone UI.
+2. Mobile view (<768px width) must render EXACTLY the same as today.
+3. DO NOT refactor existing components.
+4. DO NOT rename props, hooks, or state variables.
+5. DO NOT change backend APIs or database schemas.
+6. DO NOT change the voice recording logic.
+7. DO NOT modify AI summarization logic.
+8. Only add new UI components for desktop/tablet layouts.
+9. Reuse all existing handlers and state used by the mobile Voice Notes page.
+10. Avoid modifying existing files unless wrapping them with responsive layout logic.
+
+TECH STACK
+
+React  
+Tailwind CSS  
+ShadCN UI  
+Existing GigAid component patterns
+
+RESPONSIVE RULES
+
+Mobile (<768px)
+Render the existing Voice Notes page unchanged.
+
+Tablet/Webview (>=768px)
+Render a new AI workspace layout.
+
+Use Tailwind breakpoints:
+
+block md:hidden → existing mobile UI  
+hidden md:block → new desktop/tablet UI
+
+IMPLEMENTATION STRATEGY
+
+1. Leave the existing VoiceNotes component completely unchanged.
+
+2. Create a new component:
+
+VoiceNotesDesktopView.tsx
+
+3. In the main Voice Notes page file wrap rendering like this:
+
+<div className="block md:hidden">
+  <ExistingVoiceNotes />
+</div>
+
+<div className="hidden md:block">
+  <VoiceNotesDesktopView />
+</div>
+
+4. Reuse all existing voice recording handlers and summarization logic already used in the mobile UI.
+
+5. Do NOT introduce new APIs or new backend calls.
+
+6. If data for transcript or summary is unavailable, show placeholder text.
+
+DESKTOP/TABLET PAGE STRUCTURE
+
+Convert the Voice Notes page into a two-panel workspace.
+
+Layout:
+
+max-w-6xl  
+mx-auto  
+grid grid-cols-2  
+gap-8
+
+LEFT PANEL — RECORDING INTERFACE
+
+Card title:
+
+Voice Recorder
+
+Subtitle:
+
+Record notes and GigAid will summarize them automatically.
+
+Card contents:
+
+Large record button centered in the card.
+
+Use the existing recording start/stop handler.
+
+Below the button display:
+
+Recording timer (reuse existing timer state if available)
+
+Example:
+
+Recording Time  
+00:00
+
+If recording is active, show:
+
+Recording... Tap again to stop
+
+OPTIONAL WAVEFORM
+
+If waveform or audio visualization already exists in the codebase, display it here.
+
+If not available, skip waveform.
+
+RIGHT PANEL — TRANSCRIPT + AI SUMMARY
+
+Card title:
+
+Voice Note Summary
+
+If a transcript exists from the AI summarization, display it.
+
+SECTION 1 — TRANSCRIPT
+
+Title:
+
+Transcript
+
+Display transcript text in a scrollable text container.
+
+Allow text editing using a textarea or editable field.
+
+If transcript does not yet exist, show placeholder:
+
+Transcript will appear here after recording.
+
+SECTION 2 — AI SUMMARY
+
+Title:
+
+AI Summary
+
+Display summarized notes returned by the existing AI summarization.
+
+Example format:
+
+• Customer: Sarah  
+• Issue: Leaking faucet  
+• Action: Schedule repair  
+• Time: Tomorrow afternoon
+
+If summary data is not available yet show placeholder:
+
+AI summary will appear here after processing.
+
+SECTION 3 — QUICK ACTIONS
+
+Below the summary add action buttons that reuse existing GigAid workflows.
+
+Buttons:
+
+Create Job  
+Send Message  
+Add Reminder  
+Save Note
+
+Each button must call the same existing functions used elsewhere in the app.
+
+Do NOT introduce new logic.
+
+OPTIONAL — HISTORY PANEL
+
+If voice note history already exists in the codebase, display it below the workspace.
+
+Card title:
+
+Recent Voice Notes
+
+Display list items:
+
+Note title  
+Timestamp
+
+Clicking a note should load its transcript and summary.
+
+If history functionality is not already implemented, hide this section.
+
+STYLE REQUIREMENTS
+
+Use existing GigAid UI styling.
+
+Cards should use:
+
+rounded-xl  
+border border-gray-200  
+shadow-sm  
+p-6
+
+Spacing:
+
+gap-8
+
+Ensure styling matches the rest of the app.
+
+Do NOT introduce new UI frameworks.
+
+ACCESSIBILITY
+
+Ensure:
+
+Buttons have aria-labels  
+Keyboard navigation works  
+Focus states visible  
+Color contrast preserved
+
+DATA SAFETY
+
+Do NOT:
+
+Change database structure  
+Add new APIs  
+Rename fields  
+Modify voice recording logic  
+Modify summarization logic
+
+Only improve UI presentation.
+
+FINAL VERIFICATION
+
+Before finishing implementation verify:
+
+Mobile Voice Notes page is unchanged.
+
+Desktop/tablet users see the two-panel workspace layout.
+
+Record button still triggers the existing recording logic.
+
+Transcript and AI summary still appear correctly.
+
+No console errors.
+
+No TypeScript errors.
+
+No backend modifications.

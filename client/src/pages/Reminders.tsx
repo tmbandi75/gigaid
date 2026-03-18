@@ -15,6 +15,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { RemindersDesktopView } from "@/components/reminders/RemindersDesktopView";
 import { 
   Bell, 
   Plus, 
@@ -85,6 +86,25 @@ export default function Reminders() {
     }
   );
 
+  const updateMutation = useApiMutation(
+    ({ id, data }: { id: string; data: typeof formData }) =>
+      apiFetch(`/api/reminders/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+    [QUERY_KEYS.reminders(), QUERY_KEYS.dashboardGamePlan()],
+    {
+      onSuccess: () => {
+        setIsDialogOpen(false);
+        resetForm();
+        toast({ title: "Reminder updated successfully" });
+      },
+      onError: () => {
+        toast({ title: "Failed to update reminder", variant: "destructive" });
+      },
+    }
+  );
+
   const deleteMutation = useApiMutation(
     (id: string) =>
       apiFetch(`/api/reminders/${id}`, { method: "DELETE" }),
@@ -131,7 +151,11 @@ export default function Reminders() {
       toast({ title: "Please fill all required fields", variant: "destructive" });
       return;
     }
-    createMutation.mutate(formData);
+    if (selectedReminder) {
+      updateMutation.mutate({ id: selectedReminder.id, data: formData });
+    } else {
+      createMutation.mutate(formData);
+    }
   };
 
   const getChannelIcon = (channel: string) => {
@@ -321,135 +345,142 @@ export default function Reminders() {
     <div className={isMobile ? "pb-24" : "pb-6"} data-testid="page-reminders">
       {isMobile ? renderMobileHeader() : renderDesktopHeader()}
 
-      <div className={isMobile ? "content-container space-y-4" : "max-w-7xl mx-auto px-6 lg:px-8 space-y-4"}>
-        {/* Filter tabs */}
-        <Tabs value={filterStatus} onValueChange={(v) => setFilterStatus(v as FilterStatus)}>
-          <TabsList className="w-full grid grid-cols-4">
-            <TabsTrigger value="all" data-testid="tab-all">
-              All
-            </TabsTrigger>
-            <TabsTrigger value="pending" data-testid="tab-pending">
-              Pending {pendingCount > 0 && `(${pendingCount})`}
-            </TabsTrigger>
-            <TabsTrigger value="sent" data-testid="tab-sent">
-              Sent
-            </TabsTrigger>
-            <TabsTrigger value="failed" data-testid="tab-failed">
-              Failed {failedCount > 0 && `(${failedCount})`}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+      {isMobile ? (
+        <div className="content-container space-y-4">
+          <Tabs value={filterStatus} onValueChange={(v) => setFilterStatus(v as FilterStatus)}>
+            <TabsList className="w-full grid grid-cols-4">
+              <TabsTrigger value="all" data-testid="tab-all">
+                All
+              </TabsTrigger>
+              <TabsTrigger value="pending" data-testid="tab-pending">
+                Pending {pendingCount > 0 && `(${pendingCount})`}
+              </TabsTrigger>
+              <TabsTrigger value="sent" data-testid="tab-sent">
+                Sent
+              </TabsTrigger>
+              <TabsTrigger value="failed" data-testid="tab-failed">
+                Failed {failedCount > 0 && `(${failedCount})`}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-        {filteredReminders.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="py-12 text-center">
-              <div className="w-16 h-16 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center mx-auto mb-4">
-                <Bell className="h-8 w-8 text-violet-500" />
-              </div>
-              <h3 className="font-semibold text-lg mb-2">
-                {filterStatus === "all" ? "No reminders yet" : `No ${filterStatus} reminders`}
-              </h3>
-              <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
-                {filterStatus === "all" 
-                  ? "Schedule SMS, voice, or email reminders to keep your clients informed about their appointments."
-                  : `You don't have any reminders with "${filterStatus}" status.`
-                }
-              </p>
-              {filterStatus === "all" && (
-                <Button onClick={() => setIsDialogOpen(true)} data-testid="button-create-first-reminder">
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Create Your First Reminder
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {filteredReminders.map((reminder) => {
-              const statusConfig = getStatusConfig(reminder.status);
-              const StatusIcon = statusConfig.icon;
-              const isPast = new Date(reminder.scheduledAt) < new Date();
-              
-              return (
-                <Card 
-                  key={reminder.id} 
-                  className={`overflow-hidden transition-all hover-elevate cursor-pointer ${isPast && reminder.status === "pending" ? "border-amber-300 dark:border-amber-700" : ""}`}
-                  onClick={() => handleReminderClick(reminder)}
-                  data-testid={`card-reminder-${reminder.id}`}
-                >
-                  <CardContent className="p-0">
-                    <div className="flex">
-                      {/* Left accent */}
-                      <div className={`w-1 ${statusConfig.dotColor}`} />
-                      
-                      <div className="flex-1 p-4">
-                        <div className="flex items-start gap-3">
-                          {/* Channel icon */}
-                          <div className={`p-2.5 rounded-xl ${
-                            reminder.channel === "sms" ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" :
-                            reminder.channel === "voice" ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" :
-                            "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400"
-                          }`}>
-                            {getChannelIcon(reminder.channel)}
-                          </div>
-                          
-                          <div className="flex-1 min-w-0">
-                            {/* Header row */}
-                            <div className="flex items-center justify-between gap-2 mb-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-semibold truncate">{reminder.clientName}</span>
-                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                                  {getChannelLabel(reminder.channel)}
-                                </Badge>
-                              </div>
-                              <Badge className={`${statusConfig.className} text-[10px] px-2 py-0.5 flex items-center gap-1`}>
-                                <StatusIcon className="h-3 w-3" />
-                                {statusConfig.label}
-                              </Badge>
+          {filteredReminders.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="py-12 text-center">
+                <div className="w-16 h-16 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center mx-auto mb-4">
+                  <Bell className="h-8 w-8 text-violet-500" />
+                </div>
+                <h3 className="font-semibold text-lg mb-2">
+                  {filterStatus === "all" ? "No reminders yet" : `No ${filterStatus} reminders`}
+                </h3>
+                <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
+                  {filterStatus === "all" 
+                    ? "Schedule SMS, voice, or email reminders to keep your clients informed about their appointments."
+                    : `You don't have any reminders with "${filterStatus}" status.`
+                  }
+                </p>
+                {filterStatus === "all" && (
+                  <Button onClick={() => setIsDialogOpen(true)} data-testid="button-create-first-reminder">
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Create Your First Reminder
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {filteredReminders.map((reminder) => {
+                const statusConfig = getStatusConfig(reminder.status);
+                const StatusIcon = statusConfig.icon;
+                const isPast = new Date(reminder.scheduledAt) < new Date();
+                
+                return (
+                  <Card 
+                    key={reminder.id} 
+                    className={`overflow-hidden transition-all hover-elevate cursor-pointer ${isPast && reminder.status === "pending" ? "border-amber-300 dark:border-amber-700" : ""}`}
+                    onClick={() => handleReminderClick(reminder)}
+                    data-testid={`card-reminder-${reminder.id}`}
+                  >
+                    <CardContent className="p-0">
+                      <div className="flex">
+                        <div className={`w-1 ${statusConfig.dotColor}`} />
+                        
+                        <div className="flex-1 p-4">
+                          <div className="flex items-start gap-3">
+                            <div className={`p-2.5 rounded-xl ${
+                              reminder.channel === "sms" ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" :
+                              reminder.channel === "voice" ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" :
+                              "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400"
+                            }`}>
+                              {getChannelIcon(reminder.channel)}
                             </div>
                             
-                            {/* Message */}
-                            <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                              {reminder.message}
-                            </p>
-                            
-                            {/* Footer */}
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <Calendar className="h-3 w-3" />
-                                <span>{formatDateTime(reminder.scheduledAt)}</span>
-                                {isPast && reminder.status === "pending" && (
-                                  <Badge variant="outline" className="text-[10px] ml-2 text-amber-600 border-amber-300">
-                                    Overdue
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2 mb-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold truncate">{reminder.clientName}</span>
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                    {getChannelLabel(reminder.channel)}
                                   </Badge>
-                                )}
+                                </div>
+                                <Badge className={`${statusConfig.className} text-[10px] px-2 py-0.5 flex items-center gap-1`}>
+                                  <StatusIcon className="h-3 w-3" />
+                                  {statusConfig.label}
+                                </Badge>
                               </div>
                               
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteMutation.mutate(reminder.id);
-                                }}
-                                disabled={deleteMutation.isPending}
-                                data-testid={`button-delete-reminder-${reminder.id}`}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                                {reminder.message}
+                              </p>
+                              
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <Calendar className="h-3 w-3" />
+                                  <span>{formatDateTime(reminder.scheduledAt)}</span>
+                                  {isPast && reminder.status === "pending" && (
+                                    <Badge variant="outline" className="text-[10px] ml-2 text-amber-600 border-amber-300">
+                                      Overdue
+                                    </Badge>
+                                  )}
+                                </div>
+                                
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteMutation.mutate(reminder.id);
+                                  }}
+                                  disabled={deleteMutation.isPending}
+                                  data-testid={`button-delete-reminder-${reminder.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        <RemindersDesktopView
+          reminders={reminders}
+          pendingCount={pendingCount}
+          sentCount={sentCount}
+          failedCount={failedCount}
+          onEdit={handleReminderClick}
+          onDelete={(id) => deleteMutation.mutate(id)}
+          isDeleting={deleteMutation.isPending}
+          formatDateTime={formatDateTime}
+        />
+      )}
 
       {/* Create/Edit Reminder Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={(open) => {
@@ -602,11 +633,11 @@ export default function Reminders() {
               </Button>
               <Button 
                 type="submit" 
-                disabled={createMutation.isPending} 
+                disabled={createMutation.isPending || updateMutation.isPending} 
                 className="bg-violet-500 hover:bg-violet-600"
                 data-testid="button-save-reminder"
               >
-                {createMutation.isPending ? (
+                {(createMutation.isPending || updateMutation.isPending) ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 ) : (
                   <Send className="h-4 w-4 mr-2" />

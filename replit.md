@@ -11,6 +11,20 @@ Preferred communication style: Simple, everyday language.
 ### Frontend
 The frontend uses React 18 with TypeScript, leveraging shadcn/ui (built on Radix UI) and Tailwind CSS for styling, supporting both light and dark modes. The design adheres to mobile-first principles and Material Design 3, utilizing Roboto typography. The web application is packaged into native iOS and Android apps using Capacitor.
 
+### Desktop/Tablet Layout Pattern
+Pages use `isMobile ? <MobileView> : <DesktopView>` or `block md:hidden` / `hidden md:block` CSS to render separate layouts. Mobile is always untouched. Desktop views live in dedicated component files:
+- `client/src/components/game-plan/GamePlanDesktopView.tsx` — Game Plan two-column (8+4) dashboard
+- `client/src/components/quickbook/QuickBookDesktopView.tsx` — QuickBook two-panel AI workspace
+- `client/src/components/voice-notes/VoiceNotesDesktopView.tsx` — Voice Notes two-panel (recorder + history)
+- `client/src/components/stats/StatsDesktopView.tsx` — Statistics multi-column dashboard (8+4 grid)
+- `client/src/components/money-plan/MoneyPlanDesktopView.tsx` — Money Plan revenue command center (12-col grid: 8+4)
+- `client/src/components/booking-requests/BookingRequestsDesktopView.tsx` — Booking Requests desktop layout
+- `client/src/components/messages/CustomerContextPanel.tsx` — Messages right-panel customer context
+- `client/src/components/lead-detail/LeadSummaryDesktopView.tsx` — Lead/Request Detail 3-column workspace (3+6+3: customer overview, conversation, actions)
+- `client/src/components/job-detail/JobDetailDesktopView.tsx` — Job Detail 3-column workspace (4+5+3: job summary, client & location, actions & payment)
+- `client/src/components/invoices/InvoiceViewDesktopView.tsx` — Invoice Detail two-column (8+4: invoice details + payment confirmation left, payment summary + status + actions right)
+- Invoices list page has inline desktop layout with search bar in `renderDesktopLayout()`
+
 ### Backend
 The backend is built with Node.js and Express.js, using TypeScript and ESM modules. It exposes a RESTful JSON API. esbuild is used for server builds, while Vite handles client-side builds.
 

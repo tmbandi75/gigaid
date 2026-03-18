@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Copy, Check, Edit2, DollarSign, Calendar, MapPin, Clock, User, Sparkles, Send, PartyPopper } from "lucide-react";
 import type { ParsedJobFields, FieldConfidence, PaymentConfig } from "@shared/schema";
 import { AddressAutocomplete } from "@/components/booking/AddressAutocomplete";
+import { QuickBookDesktopView } from "@/components/quickbook/QuickBookDesktopView";
 
 type Step = "paste" | "preview" | "sent";
 
@@ -34,7 +35,6 @@ interface SendLinkResponse {
 export default function QuickBook() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  
   const [step, setStep] = useState<Step>("paste");
   const [messageText, setMessageText] = useState("");
   const [draftId, setDraftId] = useState<string | null>(null);
@@ -180,7 +180,8 @@ export default function QuickBook() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="sticky top-0 z-10 bg-background border-b px-4 py-3 flex items-center gap-3">
+      {/* Header — mobile */}
+      <div className="block md:hidden sticky top-0 z-10 bg-background border-b px-4 py-3 flex items-center gap-3">
         <Button
           variant="ghost"
           size="icon"
@@ -193,7 +194,62 @@ export default function QuickBook() {
         <h1 className="font-semibold text-lg">QuickBook</h1>
       </div>
 
-      <div className="p-4 max-w-lg mx-auto">
+      {/* Header — desktop */}
+      <div className="hidden md:block border-b bg-background sticky top-0 z-[999]">
+        <div className="max-w-6xl mx-auto px-6 lg:px-8 py-5">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => step === "paste" ? navigate("/") : setStep(step === "sent" ? "preview" : "paste")}
+              aria-label="Go back"
+              data-testid="desktop-button-back"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Sparkles className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-foreground">QuickBook</h1>
+                <p className="text-sm text-muted-foreground">Turn client messages into bookings with AI</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop layout */}
+      <div className="hidden md:block">
+        <QuickBookDesktopView
+          step={step}
+          messageText={messageText}
+          setMessageText={setMessageText}
+          fields={fields}
+          confidence={confidence}
+          isEditing={isEditing}
+          setIsEditing={setIsEditing}
+          bookingLinkUrl={bookingLinkUrl}
+          paymentType={paymentType}
+          setPaymentType={setPaymentType}
+          depositAmount={depositAmount}
+          setDepositAmount={setDepositAmount}
+          copied={copied}
+          handleParse={handleParse}
+          handleFieldChange={handleFieldChange}
+          handleSaveEdits={handleSaveEdits}
+          handleCopyLink={handleCopyLink}
+          sendLinkMutation={sendLinkMutation}
+          parseMutation={parseMutation}
+          navigate={navigate}
+          formatPrice={formatPrice}
+          formatDateTime={formatDateTime}
+        />
+      </div>
+
+      {/* Mobile layout */}
+      <div className="block md:hidden p-4 max-w-lg mx-auto">
         {step === "paste" && (
           <div className="space-y-6">
             <div className="text-center py-4">
