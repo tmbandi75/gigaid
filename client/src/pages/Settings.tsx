@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { getAuthToken } from "@/lib/authToken";
+import { isNativePlatform } from "@/lib/platform";
 import { 
   Bell, 
   Crown, 
@@ -238,13 +239,18 @@ export default function Settings() {
       
       const blob = await response.blob();
       const downloadUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = downloadUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(downloadUrl);
+      if (isNativePlatform()) {
+        window.open(downloadUrl, "_blank");
+        setTimeout(() => URL.revokeObjectURL(downloadUrl), 15000);
+      } else {
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+      }
       
       toast({ title: "Download started", description: `${filename} is downloading` });
     } catch (error: any) {

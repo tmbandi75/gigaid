@@ -17,13 +17,22 @@ interface DownloadFile {
 }
 
 export default function Downloads() {
-  const disableDownloads = isNativePlatform() && import.meta.env.PROD === true;
   const isMobile = useIsMobile();
+  const disableDownloads = false;
   const { data, isLoading } = useQuery<{ files: DownloadFile[] }>({
     queryKey: QUERY_KEYS.downloads(),
   });
 
   const handleDownload = (file: DownloadFile) => {
+
+    if (isNativePlatform()) {
+      const absoluteUrl = file.path.startsWith("http")
+        ? file.path
+        : new URL(file.path, window.location.origin).toString();
+      window.open(absoluteUrl, "_blank");
+      return;
+    }
+
     const link = document.createElement("a");
     link.href = file.path;
     link.download = file.name;

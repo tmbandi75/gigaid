@@ -33,6 +33,7 @@ import { apiFetch } from "@/lib/apiFetch";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { PaymentConfirmation } from "@/components/PaymentConfirmation";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import { 
   ArrowLeft, 
   Send, 
@@ -271,11 +272,20 @@ export default function InvoiceView() {
     }
   );
 
-  const copyShareLink = () => {
+  const copyShareLink = async () => {
     const token = invoice?.publicToken || invoice?.shareLink;
     if (token) {
       const link = `${window.location.origin}/invoice/${token}`;
-      navigator.clipboard.writeText(link);
+      const ok = await copyTextToClipboard(link);
+      if (!ok) {
+        toast({
+          title: "Could not copy link",
+          description: "Please press and hold the link to copy it.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       toast({ title: "Invoice link copied!" });
@@ -809,8 +819,17 @@ export default function InvoiceView() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => {
-                      navigator.clipboard.writeText(invoiceUrl);
+                    onClick={async () => {
+                      const ok = await copyTextToClipboard(invoiceUrl);
+                      if (!ok) {
+                        toast({
+                          title: "Could not copy link",
+                          description: "Please press and hold the link to copy it.",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+
                       setLinkCopied(true);
                       setTimeout(() => setLinkCopied(false), 2000);
                     }}
