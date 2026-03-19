@@ -119,6 +119,8 @@ app.use(
               "https://www.google.com",
               "https://www.recaptcha.net",
             ],
+            mediaSrc: ["'self'", "blob:"],
+            workerSrc: ["'self'", "blob:"],
             formAction: [
               "'self'",
               "https://connect.stripe.com",
