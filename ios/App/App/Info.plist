@@ -41,6 +41,8 @@
 	<string>GigAid uses your location to find client addresses and provide directions to job sites.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>GigAid uses your microphone to record voice notes for job details.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>GigAid uses speech recognition to turn voice notes into text.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>GigAid saves photos of invoices and job records to your photo library for easy access.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

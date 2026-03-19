@@ -10,3 +10,5 @@ backups/
 .env.*
 test.txt
 GoogleService-Info.plist
+KEY-RELEASE.keystore
+keystore.properties

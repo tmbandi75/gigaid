@@ -5,7 +5,7 @@
       "namespace": "android_app",
       "package_name": "com.gigaid.app",
       "sha256_cert_fingerprints": [
-        "REPLACE_WITH_YOUR_RELEASE_KEYSTORE_SHA256_FINGERPRINT"
+        "73:53:F7:95:3D:AC:F7:E2:6E:69:8E:3A:FA:29:86:C7:52:30:A2:E5:C2:80:FC:D2:32:C3:67:68:50:91:45:31"
       ]
     }
   }
