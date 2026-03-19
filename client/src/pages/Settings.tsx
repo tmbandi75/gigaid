@@ -72,6 +72,7 @@ import { getAnalyticsConsent, setAnalyticsConsent } from "@/lib/consent/analytic
 import { logger } from "@/lib/logger";
 import { initAnalyticsSafely, disableAnalytics, persistAnalyticsPreferences } from "@/lib/analytics/initAnalytics";
 import { requestATTUserInitiated, isIOSNative, type AnalyticsProfile } from "@/lib/att/attManager";
+import { Directory } from "@capacitor/filesystem";
 
 interface ReferralData {
   referralCode: string;
@@ -236,22 +237,67 @@ export default function Settings() {
       if (!response.ok) {
         throw new Error(`Download failed: ${response.status}`);
       }
-      
+
       const blob = await response.blob();
-      const downloadUrl = URL.createObjectURL(blob);
+
       if (isNativePlatform()) {
-        window.open(downloadUrl, "_blank");
-        setTimeout(() => URL.revokeObjectURL(downloadUrl), 15000);
-      } else {
-        const a = document.createElement("a");
-        a.href = downloadUrl;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(downloadUrl);
+        const { Filesystem } = await import("@capacitor/filesystem");
+        const { Share } = await import("@capacitor/share");
+
+        const toBase64 = (source: Blob): Promise<string> =>
+          new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(new Error("Could not read file data"));
+            reader.onload = () => {
+              const result = reader.result;
+              if (typeof result !== "string") {
+                reject(new Error("Could not read file data"));
+                return;
+              }
+              const commaIndex = result.indexOf(",");
+              if (commaIndex === -1) {
+                reject(new Error("Could not read file data"));
+                return;
+              }
+              resolve(result.slice(commaIndex + 1));
+            };
+            reader.readAsDataURL(source);
+          });
+
+        const safeFilename = filename.replace(/[\\/:"*?<>|]+/g, "-");
+        const base64 = await toBase64(blob);
+
+        await Filesystem.writeFile({
+          path: safeFilename,
+          data: base64,
+          directory: Directory.Documents,
+        });
+
+        const uri = await Filesystem.getUri({
+          directory: Directory.Documents,
+          path: safeFilename,
+        });
+
+        await Share.share({
+          title: "Export data",
+          text: "Here is your GigAid export file.",
+          url: uri.uri,
+          dialogTitle: "Export data",
+        });
+
+        toast({ title: "Export ready", description: "Choose where to save or share your file." });
+        return;
       }
-      
+
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+
       toast({ title: "Download started", description: `${filename} is downloading` });
     } catch (error: any) {
       logger.error("Download error:", error);

@@ -12,6 +12,8 @@ import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { getSupportedAudioMimeType } from "@/lib/audioUtils";
 import { getAuthToken } from "@/lib/authToken";
+import { isNativePlatform } from "@/lib/platform";
+import { SpeechRecognition } from "@capacitor-community/speech-recognition";
 import { 
   Mic, 
   MicOff, 
@@ -66,6 +68,7 @@ export function VoiceNoteSummarizer({ onSummaryComplete, onNoteSaved }: VoiceNot
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const nativeFinalTranscriptRef = useRef<string>("");
 
   useEffect(() => {
     return () => {
@@ -158,6 +161,68 @@ export function VoiceNoteSummarizer({ onSummaryComplete, onNoteSaved }: VoiceNot
   );
 
   const startRecording = useCallback(() => {
+    if (isNativePlatform()) {
+      (async () => {
+        try {
+          const available = await SpeechRecognition.available();
+          if (!available.available) {
+            toast({ title: "Voice input not supported", variant: "destructive" });
+            return;
+          }
+
+          const currentPerms = await SpeechRecognition.checkPermissions();
+          const nextPerms =
+            currentPerms.speechRecognition === "granted"
+              ? currentPerms
+              : await SpeechRecognition.requestPermissions();
+          if (nextPerms.speechRecognition !== "granted") {
+            toast({
+              title: "Permission needed",
+              description: "Enable microphone and speech recognition access to use Voice Notes.",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          nativeFinalTranscriptRef.current = "";
+          setTranscript("");
+          setIsRecording(true);
+          toast({ title: "Recording started..." });
+
+          // Keep partial results so users see the text updating.
+          await SpeechRecognition.start({
+            language: "en-US",
+            maxResults: 1,
+            partialResults: true,
+            popup: false,
+          });
+
+          // Event listener emits partial and final matches; we keep a stable final buffer.
+          SpeechRecognition.addListener("partialResults", (data: any) => {
+            const matches: string[] = data?.matches || [];
+            const partial = matches.join(" ").trim();
+            setTranscript(`${nativeFinalTranscriptRef.current} ${partial}`.trim());
+          });
+          SpeechRecognition.addListener("results", (data: any) => {
+            const matches: string[] = data?.matches || [];
+            const nextFinal = matches.join(" ").trim();
+            if (nextFinal) {
+              nativeFinalTranscriptRef.current = nextFinal;
+              setTranscript(nextFinal);
+            }
+          });
+        } catch (err: any) {
+          setIsRecording(false);
+          toast({
+            title: "Recording error",
+            description: typeof err?.message === "string" ? err.message : String(err),
+            variant: "destructive",
+          });
+        }
+      })();
+      return;
+    }
+
     if (hasSpeechRecognition()) {
       const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
@@ -244,6 +309,22 @@ export function VoiceNoteSummarizer({ onSummaryComplete, onNoteSaved }: VoiceNot
   }, [toast, uploadAndTranscribe, summarizeMutation]);
 
   const stopRecording = useCallback(() => {
+    if (isNativePlatform()) {
+      (async () => {
+        try {
+          await SpeechRecognition.stop();
+          await SpeechRecognition.removeAllListeners();
+        } catch {
+          // ignore
+        } finally {
+          setIsRecording(false);
+          const text = transcript.trim() || nativeFinalTranscriptRef.current.trim();
+          if (text) summarizeMutation.mutate(text);
+        }
+      })();
+      return;
+    }
+
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       recognitionRef.current = null;
