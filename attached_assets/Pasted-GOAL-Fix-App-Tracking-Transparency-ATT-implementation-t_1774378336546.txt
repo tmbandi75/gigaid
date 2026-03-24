@@ -1,0 +1,110 @@
+GOAL:
+Fix App Tracking Transparency (ATT) implementation to comply with Apple Guideline 5.1.1(iv) WITHOUT refactoring existing architecture or breaking current consent / analytics logic.
+
+CRITICAL CONSTRAINTS:
+- DO NOT refactor existing files or logic outside ATT-related UI + copy
+- DO NOT change analytics pipeline, PostHog initialization, or consent storage structure
+- DO NOT change ATT manager logic except where explicitly required
+- ONLY make minimal, surgical updates
+
+--------------------------------------------------
+
+STEP 1: REMOVE ANY PERSUASIVE LANGUAGE
+
+Search entire codebase for any ATT-related pre-prompts or consent screens.
+
+REMOVE or REPLACE any text that:
+- Encourages acceptance
+- Mentions benefits to the user
+- Uses phrases like:
+  "improve your experience"
+  "get better results"
+  "personalized experience"
+  "we recommend enabling"
+
+--------------------------------------------------
+
+STEP 2: IMPLEMENT COMPLIANT PRE-PROMPT UI
+
+Create or update existing ATT pre-prompt screen with EXACT copy below:
+
+TITLE:
+"Privacy & Analytics"
+
+BODY:
+"We use analytics to understand how the app is used and improve features."
+
+BUTTONS:
+- Primary: "Continue"
+- Secondary: "Not now"
+
+RULES:
+- Both buttons must have equal visual weight (no bias styling)
+- Do NOT highlight or emphasize "Continue"
+- Do NOT add icons, colors, or animations that nudge acceptance
+
+--------------------------------------------------
+
+STEP 3: CONNECT BUTTON BEHAVIOR
+
+On "Continue":
+→ Call existing ATT request function:
+   ATTrackingManager.requestTrackingAuthorization(...)
+
+On "Not now":
+→ Skip ATT prompt entirely
+→ Set analytics to disabled (if not already handled)
+→ Continue app flow normally
+
+--------------------------------------------------
+
+STEP 4: ATT TRIGGER RULES
+
+Ensure ATT prompt:
+- ONLY triggers after user taps "Continue"
+- NEVER triggers automatically on app launch
+- NEVER re-prompts if status is denied or restricted
+- NEVER loops or retries
+
+--------------------------------------------------
+
+STEP 5: PRESERVE EXISTING CONSENT SYSTEM
+
+DO NOT MODIFY:
+- localStorage key: gigaid_analytics_consent
+- profile fields: analytics_enabled, att_status, att_prompted_at
+- ATT manager logic preventing re-prompt
+- PostHog initialization gating
+
+ONLY ensure:
+- analytics_enabled = true ONLY after ATT = authorized
+- analytics_enabled = false if user selects "Not now" or denies ATT
+
+--------------------------------------------------
+
+STEP 6: COPY COMPLIANCE CHECK
+
+Ensure final UI contains:
+✔ No persuasive language
+✔ No benefit framing
+✔ Neutral explanation only
+✔ Clear opt-out path
+
+--------------------------------------------------
+
+STEP 7: TEST SCENARIOS
+
+Verify:
+1. New user → sees pre-prompt → can skip or continue
+2. Continue → triggers native ATT prompt
+3. Not now → skips ATT, app continues normally
+4. Denied → no re-prompt
+5. Accepted → analytics enabled correctly
+6. PostHog only initializes AFTER consent + ATT approval
+
+--------------------------------------------------
+
+OUTPUT:
+- Minimal UI update
+- No regression to onboarding or activation flow
+- Fully Apple-compliant ATT implementation
