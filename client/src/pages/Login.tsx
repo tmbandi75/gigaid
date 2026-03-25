@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, ArrowLeft, Eye, EyeOff } from "lucide-react";
-import { SiGoogle } from "react-icons/si";
+import { SiGoogle, SiApple } from "react-icons/si";
 import { signInWithEmail, signUpWithEmail, resetPassword, getFirebaseAuth } from "@/lib/firebase";
 import { setAuthToken, clearAuthToken } from "@/lib/authToken";
 import { useAuth } from "@/hooks/use-auth";
@@ -36,8 +36,9 @@ export default function Login() {
   const [, navigate] = useLocation();
   const { isAuthenticated, isLoggingOut, refetchUser } = useAuth();
   const { toast } = useToast();
-  const { setTokenReady, signInWithGoogle } = useFirebaseAuth();
+  const { setTokenReady, signInWithGoogle, signInWithApple } = useFirebaseAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [isAppleLoading, setIsAppleLoading] = useState(false);
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [isCheckingRedirect] = useState(false);
   const [mode, setMode] = useState<AuthMode>(getInitialMode);
@@ -101,6 +102,22 @@ export default function Login() {
       </div>
     );
   }
+
+  const handleAppleSignIn = async () => {
+    setIsAppleLoading(true);
+    try {
+      const idToken = await signInWithApple();
+      await exchangeTokenAndNavigate(idToken);
+    } catch (error: any) {
+      toast({
+        title: "Sign in failed",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAppleLoading(false);
+    }
+  };
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -218,7 +235,7 @@ export default function Login() {
     }
   };
 
-  const isDisabled = isLoading || isEmailLoading;
+  const isDisabled = isLoading || isAppleLoading || isEmailLoading;
 
   return (
     <div className="min-h-screen relative overflow-hidden" data-testid="login-page">
@@ -307,9 +324,23 @@ export default function Login() {
             </div>
           )}
 
-          {/* Google Sign In - not shown in forgot mode */}
+          {/* Social Sign In - not shown in forgot mode */}
           {mode !== "forgot" && (
             <>
+              <Button
+                onClick={handleAppleSignIn}
+                disabled={isDisabled || (mode === "signup" && !termsAccepted)}
+                className="w-full h-12 gap-3 bg-black hover:bg-black/90 text-white font-semibold rounded-full shadow-lg"
+                data-testid="button-apple-signin"
+              >
+                {isAppleLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <SiApple className="h-5 w-5" />
+                )}
+                Continue with Apple
+              </Button>
+
               <Button
                 onClick={handleGoogleSignIn}
                 disabled={isDisabled || (mode === "signup" && !termsAccepted)}

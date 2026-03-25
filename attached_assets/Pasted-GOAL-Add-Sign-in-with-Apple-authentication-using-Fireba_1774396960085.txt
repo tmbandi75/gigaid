@@ -1,0 +1,87 @@
+GOAL:
+Add "Sign in with Apple" authentication using Firebase WITHOUT modifying or breaking any existing authentication logic (Google login, email/password, etc.).
+
+STRICT RULES:
+- DO NOT refactor or rewrite existing auth logic
+- DO NOT change existing providers
+- ONLY ADD Apple Sign-In as a new option
+- Keep all existing flows intact
+- Make minimal, surgical changes
+
+STEP 1: Add Apple Provider (Frontend Only)
+
+In the existing auth/login file:
+
+1. Import:
+import { OAuthProvider, signInWithPopup } from "firebase/auth";
+
+2. Add a new function (do not modify existing functions):
+
+const handleAppleSignIn = async () => {
+  try {
+    const provider = new OAuthProvider('apple.com');
+    provider.addScope('email');
+    provider.addScope('name');
+
+    const result = await signInWithPopup(auth, provider);
+
+    const user = result.user;
+
+    console.log("Apple sign-in success", user);
+
+  } catch (error) {
+    console.error("Apple sign-in error", error);
+  }
+};
+
+STEP 2: Add Apple Button to UI
+
+On the SAME login screen where Google login exists:
+
+- Add a new button ABOVE or EQUAL to Google login
+- Label EXACTLY: "Continue with Apple"
+
+Example:
+
+<button onClick={handleAppleSignIn} className="apple-btn">
+  Continue with Apple
+</button>
+
+STEP 3: Styling (IMPORTANT FOR APPLE REVIEW)
+
+Add styles (or Tailwind equivalent):
+
+.apple-btn {
+  background-color: black;
+  color: white;
+  border-radius: 8px;
+  padding: 12px;
+  font-weight: 600;
+  width: 100%;
+}
+
+- Button must be same size or larger than Google button
+- Do NOT hide or minimize Apple option
+
+STEP 4: DO NOT TOUCH BACKEND
+
+- No backend changes required
+- Firebase handles Apple auth tokens
+
+STEP 5: DO NOT ADD EXTRA PROMPTS
+
+- Do NOT ask for extra user info after login
+- Do NOT block users with hidden email
+
+STEP 6: TESTING
+
+Verify:
+- Apple button appears on login screen
+- Login completes successfully
+- User object is returned
+- No existing login methods are broken
+
+OUTPUT:
+- Updated login UI with Apple button
+- New Apple sign-in handler
+- No changes to existing auth flows
