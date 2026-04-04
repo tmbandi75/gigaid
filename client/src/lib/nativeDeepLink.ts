@@ -1,11 +1,11 @@
 import { Capacitor } from "@capacitor/core";
 import { logger } from "@/lib/logger";
 
-const APP_LINK_HOST = "gigaid.ai";
+const APP_LINK_HOST = "gig-aid--thierrymbandi.replit.app";
 
 /**
  * Extracts in-app path + search from a deep link URL (HTTPS Universal/App Link).
- * - https://gigaid.ai/pricing?subscription=success -> /pricing?subscription=success
+ * - https://gig-aid--thierrymbandi.replit.app/pricing?subscription=success -> /pricing?subscription=success
  */
 export function parseDeepLinkPath(url: string): string | null {
   if (!url || typeof url !== "string") return null;
@@ -25,7 +25,7 @@ export function parseDeepLinkPath(url: string): string | null {
 
 /**
  * Registers native deep link handling for Stripe return URLs.
- * Handles Universal Links (iOS) / App Links (Android): https://gigaid.ai/...
+ * Handles Universal Links (iOS) / App Links (Android): https://gig-aid--thierrymbandi.replit.app/...
  * When the app is opened after Stripe redirect, we navigate to the path and close the in-app browser.
  * Only runs on native (iOS/Android); no-op on web.
  */

@@ -11,7 +11,8 @@
     "db:push": "drizzle-kit push",
     "run:android": "npm run build && npx cap sync android && npx cap run android",
     "run:ios": "npm run build && npx cap sync ios && npx cap run ios",
-    "android:apk": "npm run build && npx cap sync android && cd android && ./gradlew assembleDebug"
+    "android:apk": "npm run build && npx cap sync android && cd android && ./gradlew assembleDebug",
+    "android:release": "npm run build && npx cap sync android && cd android && ./gradlew bundleRelease"
   },
   "dependencies": {
     "@capacitor-community/speech-recognition": "^7.0.1",

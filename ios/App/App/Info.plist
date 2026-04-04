@@ -39,6 +39,10 @@
 	<string>GigAid uses your camera to take photos of jobs, invoices, and client records.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>GigAid uses your location to find client addresses and provide directions to job sites.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>GigAid uses your location to find client addresses and provide directions to job sites. Location is only used when you are using the app.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>GigAid uses your location to find client addresses and provide directions to job sites. Location is only used when you are using the app.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>GigAid uses your microphone to record voice notes for job details.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
@@ -47,8 +51,6 @@
 	<string>GigAid saves photos of invoices and job records to your photo library for easy access.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>GigAid accesses your photo library to upload photos for jobs, invoices, and client records.</string>
-	<key>NSUserTrackingUsageDescription</key>
-	<string>GigAid would like permission to use analytics to improve features and performance. We do not sell your data.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
