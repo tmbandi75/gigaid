@@ -1,0 +1,88 @@
+XHRPOST
+https://gig-aid--thierrymbandi.replit.app/api/ai/transcribe-voice-note
+[HTTP/3 500  506ms]
+
+	
+POST
+	https://gig-aid--thierrymbandi.replit.app/api/ai/transcribe-voice-note
+Status
+500
+VersionHTTP/3
+Transferred1.88 kB (43 B size)
+Referrer Policyno-referrer
+DNS ResolutionSystem
+
+    	
+    alt-svc
+    	h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+    content-length
+    	43
+    content-security-policy
+    	default-src 'self';script-src 'self' 'unsafe-inline' https://apis.google.com https://www.google.com https://www.gstatic.com https://js.stripe.com https://www.googletagmanager.com;style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;font-src 'self' https://fonts.gstatic.com;img-src 'self' data: https: blob:;connect-src 'self' https://*.sentry.io https://*.stripe.com https://connect.stripe.com https://api.stripe.com https://maps.googleapis.com https://identitytoolkit.googleapis.com https://securetoke…https://apis.google.com https://accounts.google.com https://www.google.com https://content-firebaseappcheck.googleapis.com;frame-src 'self' https://*.stripe.com https://connect.stripe.com https://*.firebaseapp.com https://accounts.google.com https://www.google.com https://www.recaptcha.net;media-src 'self' blob:;worker-src 'self' blob:;form-action 'self' https://connect.stripe.com https://api.stripe.com;base-uri 'self';frame-ancestors 'self';object-src 'none';script-src-attr 'none';upgrade-insecure-requests
+    content-type
+    	application/json; charset=utf-8
+    cross-origin-resource-policy
+    	same-origin
+    date
+    	Thu, 19 Mar 2026 00:35:57 GMT
+    etag
+    	W/"2b-k+klmUS+WeNC7V+iXM+XUh7Op3Y"
+    origin-agent-cluster
+    	?1
+    referrer-policy
+    	no-referrer
+    server
+    	Google Frontend
+    strict-transport-security
+    	max-age=63072000; includeSubDomains
+    via
+    	1.1 google
+    x-cloud-trace-context
+    	6ee85babed131bb72294f4914d7c5be8
+    x-content-type-options
+    	nosniff
+    x-dns-prefetch-control
+    	off
+    x-download-options
+    	noopen
+    x-frame-options
+    	SAMEORIGIN
+    x-permitted-cross-domain-policies
+    	none
+    x-xss-protection
+    	0
+    	
+    Accept
+    	*/*
+    Accept-Encoding
+    	gzip, deflate, br, zstd
+    Accept-Language
+    	en-US,en;q=0.9
+    Alt-Used
+    	gig-aid--thierrymbandi.replit.app
+    Authorization
+    	Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZmUxOGNkOC0wZjBkLTQ1OTMtYWRmNC0zYWRmODVmNjNiMDUiLCJwcm92aWRlciI6ImZpcmViYXNlIiwiZW1haWxfbm9ybWFsaXplZCI6InJldmlld2VyQGdpZ2FpZC5haSIsImZpcmViYXNlX3VpZCI6InpLQzVOUUxCMkdNbzNsa1JGQVFiTTg5Y3dKRzMiLCJpYXQiOjE3NzM4ODAyNzEsImV4cCI6MTc3NjQ3MjI3MSwiaXNzIjoiZ2lnYWlkIn0.Xh6BBJG8tSbXbRYhI1qhlBKUbJaW5rZ-P00zA4M8Dz0
+    Connection
+    	keep-alive
+    Content-Length
+    	30726
+    Content-Type
+    	multipart/form-data; boundary=----geckoformboundary378e32f896d12aa8cd1d91a13a63865
+    Cookie
+    	GAESA=CpwBMDBkYTZjZDJjNDc4YzA2MGE2NzAxODhiYmM0MjQ4ODc5OWRkMWM0MWVjMzEyOTk3Y2MxYTc2MDE4NzBjNjNiNjc0NjA5ZTJjMzY3ZTU1NWIzY2MwZjJiYjZjMzE0ODg3OWZiYTIxNWQ5ODE0ZmI0YTdhZTE5ZWIyYTcwOTRhYjMxZGQ2ODFlMzRjNDY4ODU2NGRlMGY5MjllMjliEP-PgpzQMw; __stripe_mid=0d23a2a8-5f75-49b3-af4f-27abf4e6099edcac63; __stripe_sid=63fb4bbf-bdfd-4c4c-be9a-c3432a00be9e81c40c
+    Host
+    	gig-aid--thierrymbandi.replit.app
+    Origin
+    	https://gig-aid--thierrymbandi.replit.app
+    Priority
+    	u=4
+    Sec-Fetch-Dest
+    	empty
+    Sec-Fetch-Mode
+    	cors
+    Sec-Fetch-Site
+    	same-origin
+    TE
+    	trailers
+    User-Agent
+    	Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:148.0) Gecko/20100101 Firefox/148.0

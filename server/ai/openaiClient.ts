@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 
 let openaiInstance: OpenAI | null = null;
+let openaiDirectInstance: OpenAI | null = null;
 
 export function getOpenAI(): OpenAI {
   if (!openaiInstance) {
@@ -17,4 +18,19 @@ export function getOpenAI(): OpenAI {
     });
   }
   return openaiInstance;
+}
+
+export function getOpenAIDirect(): OpenAI {
+  if (!openaiDirectInstance) {
+    const apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+
+    if (!apiKey) {
+      throw new Error("OpenAI API key not configured. Please set up the AI integration.");
+    }
+
+    openaiDirectInstance = new OpenAI({
+      apiKey,
+    });
+  }
+  return openaiDirectInstance;
 }

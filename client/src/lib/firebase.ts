@@ -2,6 +2,7 @@ import { initializeApp, type FirebaseApp } from "firebase/app";
 import {
   getAuth,
   GoogleAuthProvider,
+  OAuthProvider,
   signInWithPopup,
   signInWithCredential,
   signOut,
@@ -114,6 +115,56 @@ export async function signInWithGoogle(): Promise<string> {
     return await result.user.getIdToken();
   } catch (popupError: any) {
     logger.error("[GoogleSignIn] Popup error:", popupError?.code, popupError?.message);
+
+    if (popupError?.code === "auth/popup-blocked") {
+      throw new Error("Popup was blocked by your browser. Please allow popups for this site and try again.");
+    }
+    if (popupError?.code === "auth/popup-closed-by-user" || popupError?.code === "auth/cancelled-popup-request") {
+      throw new Error("Sign-in was cancelled. Please try again.");
+    }
+    throw popupError;
+  }
+}
+
+const appleProvider = new OAuthProvider('apple.com');
+appleProvider.addScope('email');
+appleProvider.addScope('name');
+
+export async function signInWithApple(): Promise<string> {
+  const a = requireAuth();
+  logger.info("[AppleSignIn] Starting sign-in flow", {
+    isNative: isNativePlatform(),
+    authDomain: firebaseConfig.authDomain,
+  });
+
+  if (isNativePlatform()) {
+    logger.info("[AppleSignIn] Native platform — using Capacitor Firebase plugin");
+    const { FirebaseAuthentication } = await import(
+      "@capacitor-firebase/authentication"
+    );
+    const result = await FirebaseAuthentication.signInWithApple();
+
+    if (!result.credential?.idToken) {
+      throw new Error("Apple Sign-In did not return a credential. The user may have cancelled.");
+    }
+
+    const credential = appleProvider.credential({
+      idToken: result.credential.idToken,
+      rawNonce: result.credential.nonce,
+    });
+    const userCredential = await signInWithCredential(a, credential);
+    logger.info("[AppleSignIn] Native sign-in succeeded", {
+      email: userCredential.user.email,
+    });
+    return await userCredential.user.getIdToken();
+  }
+
+  try {
+    const result = await signInWithPopup(a, appleProvider);
+    logger.info("[AppleSignIn] Popup succeeded", { email: result.user.email });
+    return await result.user.getIdToken();
+  } catch (popupError: any) {
+    logger.error("[AppleSignIn] Popup error:", popupError?.code, popupError?.message);
 
     if (popupError?.code === "auth/popup-blocked") {
       throw new Error("Popup was blocked by your browser. Please allow popups for this site and try again.");

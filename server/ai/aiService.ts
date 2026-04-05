@@ -1,4 +1,4 @@
-import { getOpenAI } from "./openaiClient";
+import { getOpenAI, getOpenAIDirect } from "./openaiClient";
 import type { Job } from "@shared/schema";
 import { logger } from "../lib/logger";
 
@@ -432,7 +432,7 @@ export async function transcribeVoiceNote(audioBuffer: Buffer, mimeType: string)
   const { toFile } = await import("openai");
   const ext = mimeType.includes("mp4") ? "mp4" : mimeType.includes("webm") ? "webm" : "ogg";
   const file = await toFile(audioBuffer, `audio.${ext}`);
-  const response = await getOpenAI().audio.transcriptions.create({
+  const response = await getOpenAIDirect().audio.transcriptions.create({
     file,
     model: "whisper-1",
   });

@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import posthog from "posthog-js";
 import { useQuery } from "@tanstack/react-query";
 import { getAnalyticsConsent } from "@/lib/consent/analyticsConsent";
-import { initAnalyticsSafely, isAnalyticsInitialized } from "@/lib/analytics/initAnalytics";
+import { initAnalyticsSafely, isAnalyticsInitialized, persistAnalyticsPreferences } from "@/lib/analytics/initAnalytics";
 import { AnalyticsConsentModal } from "@/components/AnalyticsConsentModal";
-import type { AnalyticsProfile } from "@/lib/att/attManager";
+import { isIOSNative, type AnalyticsProfile } from "@/lib/att/attManager";
 import { getQueryFn } from "@/lib/queryClient";
 
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_API_KEY;
@@ -53,12 +53,25 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       analyticsDisabledReason: profileQuery.data.analyticsDisabledReason ?? null,
     };
 
+    // On iOS native, only initialize if ATT is already authorized.
+    // Never auto-trigger the ATT dialog from the background effect —
+    // it must only fire after the user taps "Continue" in the consent modal.
+    if (isIOSNative() && (profile.attStatus === "unknown" || profile.attStatus === "not_determined")) {
+      return;
+    }
+
     initAnalyticsSafely(profile);
   }, [profileQuery.data]);
 
   const handleConsentChoice = async (granted: boolean) => {
     setShowConsent(false);
-    if (!granted) return;
+
+    if (!granted) {
+      // "Not now" — explicitly disable analytics server-side so the profile
+      // reflects the user's choice, not just the localStorage consent flag.
+      await persistAnalyticsPreferences({ analyticsEnabled: false, analyticsDisabledReason: "user_denied" });
+      return;
+    }
 
     if (!profileQuery.data) return;
 

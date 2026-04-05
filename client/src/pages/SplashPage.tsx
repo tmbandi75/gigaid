@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, ArrowLeft } from "lucide-react";
-import { SiGoogle } from "react-icons/si";
+import { SiGoogle, SiApple } from "react-icons/si";
 import { signInWithEmail, signUpWithEmail, resetPassword, getFirebaseAuth } from "@/lib/firebase";
 import { setAuthToken } from "@/lib/authToken";
 import { useAuth } from "@/hooks/use-auth";
@@ -17,9 +17,10 @@ export default function SplashPage() {
   const [, navigate] = useLocation();
   const { refetchUser } = useAuth();
   const { toast } = useToast();
-  const { setTokenReady, signInWithGoogle } = useFirebaseAuth();
+  const { setTokenReady, signInWithGoogle, signInWithApple } = useFirebaseAuth();
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isAppleLoading, setIsAppleLoading] = useState(false);
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [mode, setMode] = useState<AuthMode>("signin");
   const [email, setEmail] = useState("");
@@ -47,6 +48,22 @@ export default function SplashPage() {
     
     await refetchUser();
     navigate("/dashboard");
+  };
+
+  const handleAppleSignIn = async () => {
+    setIsAppleLoading(true);
+    try {
+      const idToken = await signInWithApple();
+      await exchangeTokenAndNavigate(idToken);
+    } catch (err: any) {
+      toast({
+        title: "Sign in failed",
+        description: err.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAppleLoading(false);
+    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -172,7 +189,7 @@ export default function SplashPage() {
     }
   };
 
-  const isDisabled = isLoading || isEmailLoading;
+  const isDisabled = isLoading || isAppleLoading || isEmailLoading;
 
   return (
     <div className="min-h-screen relative overflow-hidden" data-testid="splash-page">
@@ -222,9 +239,23 @@ export default function SplashPage() {
             )}
           </div>
 
-          {/* Google Sign In - not shown in forgot mode */}
+          {/* Social Sign In - not shown in forgot mode */}
           {mode !== "forgot" && (
             <>
+              <Button
+                onClick={handleAppleSignIn}
+                disabled={isDisabled}
+                className="w-full h-12 gap-3 bg-black hover:bg-black/90 text-white font-semibold rounded-full shadow-lg"
+                data-testid="button-apple-signin"
+              >
+                {isAppleLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <SiApple className="h-5 w-5" />
+                )}
+                Continue with Apple
+              </Button>
+
               <Button
                 onClick={handleGoogleSignIn}
                 disabled={isDisabled}
