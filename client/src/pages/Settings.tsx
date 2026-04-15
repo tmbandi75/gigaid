@@ -68,10 +68,11 @@ import { isEmailPasswordUser } from "@/lib/firebase";
 import type { Referral, WeeklyAvailability } from "@shared/schema";
 import { useFeatureFlag, useUpdateFeatureFlag } from "@/hooks/use-nudges";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { getAnalyticsConsent, setAnalyticsConsent } from "@/lib/consent/analyticsConsent";
 import { logger } from "@/lib/logger";
 import { initAnalyticsSafely, disableAnalytics, persistAnalyticsPreferences } from "@/lib/analytics/initAnalytics";
-import { requestATTUserInitiated, isIOSNative, type AnalyticsProfile } from "@/lib/att/attManager";
+import { getATTStatus, requestATTUserInitiated, isIOSNative, type AnalyticsProfile } from "@/lib/att/attManager";
 import { Directory } from "@capacitor/filesystem";
 
 interface ReferralData {
@@ -101,7 +102,7 @@ export default function Settings() {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [bookingLinkCopied, setBookingLinkCopied] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, logoutAsync } = useAuth();
   const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
   const [attBlocked, setAttBlocked] = useState(false);
 
@@ -140,7 +141,7 @@ export default function Settings() {
     setAnalyticsConsent("granted");
 
     if (isIOSNative()) {
-      const currentAttStatus = currentProfile.attStatus ?? "unknown";
+      const currentAttStatus = await getATTStatus();
 
       if (currentAttStatus === "denied" || currentAttStatus === "restricted") {
         setAttBlocked(true);
@@ -481,15 +482,27 @@ export default function Settings() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const deleteKeyboardInset = useKeyboardInset(showDeleteDialog);
+  const isDeleteConfirmValid = deleteConfirmText.trim().toUpperCase() === "DELETE";
 
   const handleDeleteAccount = async () => {
-    if (deleteConfirmText !== "DELETE") return;
+    if (!isDeleteConfirmValid) return;
+    logger.info("[AccountDeleteFlow] step=client_start");
     setIsDeleting(true);
     setDeleteError(null);
     try {
-      await apiFetch("/api/account", { method: "DELETE" });
+      logger.info("[AccountDeleteFlow] step=client_api_delete_request");
+      const result = await apiFetch<{ success?: boolean; message?: string; tablesCleared?: number }>(
+        "/api/account",
+        { method: "DELETE" },
+      );
+      logger.info("[AccountDeleteFlow] step=client_api_delete_ok", result ?? {});
+      logger.info("[AccountDeleteFlow] step=client_logout_start");
+      await logoutAsync();
+      logger.info("[AccountDeleteFlow] step=client_logout_done redirect=/");
       window.location.href = "/";
     } catch (error) {
+      logger.error("[AccountDeleteFlow] step=client_failed", error);
       setDeleteError("We couldn't delete your account. Please try again.");
       setIsDeleting(false);
     }
@@ -1109,7 +1122,7 @@ export default function Settings() {
                 <div className="flex items-center justify-between gap-2">
                   <div>
                     <p className="font-medium text-sm">Enable usage analytics</p>
-                    <p className="text-xs text-muted-foreground">We use anonymous usage data to improve reliability and features. You can change this anytime.</p>
+                    <p className="text-xs text-muted-foreground">We use anonymous usage data to improve reliability and features.</p>
                   </div>
                   <Switch
                     checked={analyticsEnabled}
@@ -1123,6 +1136,30 @@ export default function Settings() {
                     <p>Tracking is disabled in your iOS settings. To enable analytics, allow tracking in <strong>Settings &gt; Privacy &amp; Security &gt; Tracking</strong>.</p>
                   </div>
                 )}
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-violet-500" />
+                AI features
+              </h4>
+              <div className="pl-6 space-y-2 text-xs text-muted-foreground">
+                <p>
+                  Some tools use <strong>OpenAI</strong> (<strong>gpt-4o-mini</strong>) to generate
+                  suggestions or summaries from text you enter and related job or business content in
+                  your account.
+                </p>
+                <p>
+                  Details on what categories of information may be sent and how OpenAI fits into our
+                  processing are in the{" "}
+                  <a href="/privacy#ai-third-parties" className="underline text-foreground">
+                    Privacy Policy (OpenAI)
+                  </a>
+                  .
+                </p>
               </div>
             </div>
 
@@ -1140,10 +1177,6 @@ export default function Settings() {
                       <ChangePasswordDialog />
                     )}
 
-                    <p className="text-xs text-muted-foreground">
-                      Reviewer: Settings &rarr; Account &amp; Security &rarr; Delete Account
-                    </p>
-
                     {deleteError && (
                       <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md" data-testid="text-delete-error">
                         {deleteError}
@@ -1159,11 +1192,32 @@ export default function Settings() {
                           Delete account
                         </Button>
                       </AlertDialogTrigger>
-                      <AlertDialogContent data-testid="dialog-delete-account">
+                      <AlertDialogContent
+                        className="w-[calc(100%-1rem)] sm:w-full max-h-[85vh] overflow-hidden"
+                        data-testid="dialog-delete-account"
+                        style={
+                          deleteKeyboardInset > 0
+                            ? {
+                                top: "auto",
+                                bottom: `calc(${deleteKeyboardInset}px + 1rem + env(safe-area-inset-bottom, 0px))`,
+                                transform: "translateX(-50%)",
+                                maxHeight: `calc(100dvh - ${deleteKeyboardInset}px - 2rem - env(safe-area-inset-bottom, 0px))`,
+                              }
+                            : undefined
+                        }
+                      >
                         <AlertDialogHeader>
                           <AlertDialogTitle>Delete your account?</AlertDialogTitle>
                           <AlertDialogDescription asChild>
-                            <div className="space-y-3">
+                            <div
+                              className="min-h-0 overflow-y-auto pr-1 space-y-3"
+                              style={{
+                                maxHeight:
+                                  deleteKeyboardInset > 0
+                                    ? `calc(100dvh - ${deleteKeyboardInset}px - 14rem)`
+                                    : "52vh",
+                              }}
+                            >
                               <p>This action is <strong>permanent</strong> and cannot be undone. All of the following will be deleted:</p>
                               <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
                                 <li>Your profile and personal information</li>
@@ -1196,7 +1250,7 @@ export default function Settings() {
                           <Button
                             variant="destructive"
                             onClick={handleDeleteAccount}
-                            disabled={isDeleting || deleteConfirmText !== "DELETE"}
+                            disabled={isDeleting || !isDeleteConfirmValid}
                             data-testid="button-confirm-delete"
                           >
                             {isDeleting ? (

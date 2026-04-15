@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import posthog from "posthog-js";
 import { useQuery } from "@tanstack/react-query";
-import { getAnalyticsConsent } from "@/lib/consent/analyticsConsent";
-import { initAnalyticsSafely, isAnalyticsInitialized, persistAnalyticsPreferences } from "@/lib/analytics/initAnalytics";
-import { AnalyticsConsentModal } from "@/components/AnalyticsConsentModal";
-import { isIOSNative, type AnalyticsProfile } from "@/lib/att/attManager";
+import { getAnalyticsConsent, setAnalyticsConsent } from "@/lib/consent/analyticsConsent";
+import { disableAnalytics, initAnalyticsSafely, isAnalyticsInitialized, persistAnalyticsPreferences } from "@/lib/analytics/initAnalytics";
+import { getATTStatus, requestATT, isIOSNative, type AnalyticsProfile } from "@/lib/att/attManager";
 import { getQueryFn } from "@/lib/queryClient";
+import { logger } from "@/lib/logger";
 
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_API_KEY;
 
@@ -27,8 +27,6 @@ function stripPII(properties?: Record<string, unknown>): Record<string, unknown>
 }
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
-  const [showConsent, setShowConsent] = useState(false);
-
   const profileQuery = useQuery<any>({
     queryKey: ["/api/profile"],
     queryFn: getQueryFn({ on401: "returnNull" }),
@@ -37,60 +35,109 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    const consent = getAnalyticsConsent();
-    if (consent === null) {
-      setShowConsent(true);
-      return;
-    }
-
-    if (consent !== "granted") return;
     if (!profileQuery.data) return;
 
-    const profile: AnalyticsProfile = {
-      analyticsEnabled: profileQuery.data.analyticsEnabled ?? false,
-      attStatus: profileQuery.data.attStatus ?? "unknown",
-      attPromptedAt: profileQuery.data.attPromptedAt ?? null,
-      analyticsDisabledReason: profileQuery.data.analyticsDisabledReason ?? null,
+    const runHomeConsent = async () => {
+      const profile: AnalyticsProfile = {
+        analyticsEnabled: profileQuery.data.analyticsEnabled ?? false,
+        attStatus: profileQuery.data.attStatus ?? "unknown",
+        attPromptedAt: profileQuery.data.attPromptedAt ?? null,
+        analyticsDisabledReason: profileQuery.data.analyticsDisabledReason ?? null,
+      };
+
+      // Android/web: no ATT. Use in-app preference and backend profile only.
+      if (!isIOSNative()) {
+        if (getAnalyticsConsent() === null) {
+          setAnalyticsConsent(profile.analyticsEnabled ? "granted" : "denied");
+        }
+        if (!profile.analyticsEnabled || getAnalyticsConsent() !== "granted") {
+          disableAnalytics();
+          return;
+        }
+        await initAnalyticsSafely(profile);
+        return;
+      }
+
+      // iOS: in-app analytics toggle is the master switch. If the user turned it off in
+      // Settings, do not re-enable analytics just because ATT is still authorized on device.
+      if (!profile.analyticsEnabled) {
+        if (getAnalyticsConsent() === null) {
+          setAnalyticsConsent("denied");
+        }
+        disableAnalytics();
+        return;
+      }
+
+      const liveStatus = await getATTStatus();
+      const now = new Date().toISOString();
+      logger.info("[ATT][Home] Live ATT status:", liveStatus);
+
+      if (liveStatus === "not_determined" || liveStatus === "unknown") {
+        logger.info("[ATT][Home] Requesting ATT permission dialog");
+        const result = await requestATT();
+        logger.info("[ATT][Home] ATT request result:", result);
+        if (result === "authorized") {
+          setAnalyticsConsent("granted");
+          await persistAnalyticsPreferences({
+            analyticsEnabled: true,
+            attStatus: "authorized",
+            attPromptedAt: now,
+            analyticsDisabledReason: null,
+          });
+          await initAnalyticsSafely({
+            ...profile,
+            analyticsEnabled: true,
+            attStatus: "authorized",
+            attPromptedAt: now,
+            analyticsDisabledReason: null,
+          });
+          return;
+        }
+
+        setAnalyticsConsent("denied");
+        disableAnalytics();
+        await persistAnalyticsPreferences({
+          analyticsEnabled: false,
+          attStatus: result === "unavailable" ? "unavailable" : result,
+          attPromptedAt: now,
+          analyticsDisabledReason:
+            result === "denied" ? "att_denied" :
+            result === "restricted" ? "restricted" : "not_supported",
+        });
+        return;
+      }
+
+      if (liveStatus === "authorized") {
+        logger.info("[ATT][Home] ATT already authorized");
+        setAnalyticsConsent("granted");
+        await persistAnalyticsPreferences({
+          analyticsEnabled: true,
+          attStatus: "authorized",
+          analyticsDisabledReason: null,
+        });
+        await initAnalyticsSafely({
+          ...profile,
+          analyticsEnabled: true,
+          attStatus: "authorized",
+          analyticsDisabledReason: null,
+        });
+        return;
+      }
+
+      setAnalyticsConsent("denied");
+      disableAnalytics();
+      logger.info("[ATT][Home] ATT not authorized path:", liveStatus);
+      await persistAnalyticsPreferences({
+        analyticsEnabled: false,
+        attStatus: liveStatus,
+        analyticsDisabledReason: liveStatus === "restricted" ? "restricted" : "att_denied",
+      });
     };
 
-    // On iOS native, only initialize if ATT is already authorized.
-    // Never auto-trigger the ATT dialog from the background effect —
-    // it must only fire after the user taps "Continue" in the consent modal.
-    if (isIOSNative() && (profile.attStatus === "unknown" || profile.attStatus === "not_determined")) {
-      return;
-    }
-
-    initAnalyticsSafely(profile);
+    void runHomeConsent();
   }, [profileQuery.data]);
 
-  const handleConsentChoice = async (granted: boolean) => {
-    setShowConsent(false);
-
-    if (!granted) {
-      // "Not now" — explicitly disable analytics server-side so the profile
-      // reflects the user's choice, not just the localStorage consent flag.
-      await persistAnalyticsPreferences({ analyticsEnabled: false, analyticsDisabledReason: "user_denied" });
-      return;
-    }
-
-    if (!profileQuery.data) return;
-
-    const profile: AnalyticsProfile = {
-      analyticsEnabled: profileQuery.data.analyticsEnabled ?? false,
-      attStatus: profileQuery.data.attStatus ?? "unknown",
-      attPromptedAt: profileQuery.data.attPromptedAt ?? null,
-      analyticsDisabledReason: profileQuery.data.analyticsDisabledReason ?? null,
-    };
-
-    await initAnalyticsSafely(profile);
-  };
-
-  return (
-    <>
-      {showConsent && <AnalyticsConsentModal onChoice={handleConsentChoice} />}
-      {children}
-    </>
-  );
+  return <>{children}</>;
 }
 
 export function identifyUser(userId: string, properties?: Record<string, unknown>) {

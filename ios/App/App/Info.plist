@@ -51,6 +51,8 @@
 	<string>GigAid saves photos of invoices and job records to your photo library for easy access.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>GigAid accesses your photo library to upload photos for jobs, invoices, and client records.</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>This identifier is used for product analytics. We do not sell your data.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

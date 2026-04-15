@@ -5,11 +5,11 @@ import { Check, Zap, Shield, Users, ArrowLeft, Loader2, Star, TrendingUp } from 
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Plan } from "@shared/plans";
-import { startStripeCheckout, SubscriptionPlan } from "@/lib/stripeCheckout";
+import { startSubscriptionUpgrade, SubscriptionPlan } from "@/lib/stripeCheckout";
 import { useLocation } from "wouter";
 import { useState, useEffect, useRef } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { trackEvent } from "@/components/PostHogProvider";
 import { emitChurnEvent } from "@/lib/churnEvents";
@@ -126,7 +126,8 @@ const PLANS: PlanInfo[] = [
 ];
 
 export default function PricingPage() {
-  const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
+  const { isAuthenticated, user } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [loadingPlan, setLoadingPlan] = useState<SubscriptionPlan | null>(null);
@@ -215,7 +216,7 @@ export default function PricingPage() {
       return;
     }
 
-    // Upgrade: use Stripe Checkout
+    // Upgrade: web uses Stripe Checkout; native uses RevenueCat / store billing
     if (isUpgrade(plan.id)) {
       if (!plan.stripeKey) {
         logger.error("[pricing] No stripeKey for plan:", plan.id);
@@ -224,13 +225,22 @@ export default function PricingPage() {
 
       setLoadingPlan(plan.stripeKey);
       try {
-        logger.debug("[pricing] Starting Stripe checkout for:", plan.stripeKey);
-        const result = await startStripeCheckout({
+        logger.debug("[pricing] Starting subscription upgrade for:", plan.stripeKey);
+        const result = await startSubscriptionUpgrade({
           plan: plan.stripeKey,
           returnTo: "/pricing",
+          appUserId: user?.id,
         });
-        
-        if (!result.success && result.error) {
+
+        if (result.success) {
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.subscriptionStatus() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.authUser() });
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile() });
+          toast({
+            title: "Subscription updated",
+            description: `You're on ${plan.name}.`,
+          });
+        } else if (result.error) {
           toast({
             title: "Payments temporarily unavailable",
             description: result.error,

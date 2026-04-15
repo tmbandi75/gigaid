@@ -15,7 +15,7 @@ import { useCapability } from "@/hooks/useCapability";
 import { logPricingInterest } from "@shared/capabilityLogger";
 import { isHardGated } from "@shared/gatingConfig";
 import { STRIPE_ENABLED } from "@shared/stripeConfig";
-import { startStripeCheckout } from "@/lib/stripeCheckout";
+import { startSubscriptionUpgrade } from "@/lib/stripeCheckout";
 import {
   Dialog,
   DialogContent,
@@ -837,9 +837,10 @@ export default function BookingRequests() {
         description="Deposits prevent no-shows and late cancellations. Available on Pro+."
         price="$28 / month"
         onConfirm={() => {
-          startStripeCheckout({
+          startSubscriptionUpgrade({
             plan: "pro_plus",
-            returnTo: "/booking-requests"
+            returnTo: "/booking-requests",
+            appUserId: user?.id,
           });
         }}
         onCancel={continueWithoutDeposit}

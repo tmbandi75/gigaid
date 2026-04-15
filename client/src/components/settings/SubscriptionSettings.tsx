@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Capacitor } from "@capacitor/core";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { emitChurnEvent } from "@/lib/churnEvents";
 import { openExternalUrl } from "@/lib/openExternalUrl";
+import { restoreNativePurchasesThenServer } from "@/lib/revenuecat";
+import { startSubscriptionUpgrade, type SubscriptionPlan } from "@/lib/stripeCheckout";
+import { logger } from "@/lib/logger";
+import { useAuth } from "@/hooks/use-auth";
 
 interface SubscriptionStatus {
   plan: string;
@@ -120,7 +125,9 @@ const PLANS = [
 const PLAN_ORDER = ["free", "pro", "pro_plus", "business"];
 
 export function SubscriptionSettings() {
+  const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [, navigate] = useLocation();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showPauseDialog, setShowPauseDialog] = useState(false);
@@ -133,6 +140,7 @@ export function SubscriptionSettings() {
   const [showCloseAccountDialog, setShowCloseAccountDialog] = useState(false);
   const [showChangePlanDialog, setShowChangePlanDialog] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [nativeUpgradePlanId, setNativeUpgradePlanId] = useState<string | null>(null);
   const [restoreResult, setRestoreResult] = useState<{
     restored: boolean;
     reason?: string;
@@ -308,7 +316,10 @@ export function SubscriptionSettings() {
   );
 
   const restoreMutation = useApiMutation(
-    () => apiFetch<any>("/api/subscription/restore", { method: "POST" }),
+    async () => {
+      await restoreNativePurchasesThenServer();
+      return apiFetch<any>("/api/subscription/restore", { method: "POST" });
+    },
     [QUERY_KEYS.subscriptionStatus(), QUERY_KEYS.profile(), QUERY_KEYS.authUser()],
     {
       onSuccess: (data: any) => {
@@ -338,6 +349,48 @@ export function SubscriptionSettings() {
         });
       },
     }
+  );
+
+  const runNativeUpgrade = useCallback(
+    async (planId: string) => {
+      setNativeUpgradePlanId(planId);
+      try {
+        const result = await startSubscriptionUpgrade({
+          plan: planId as SubscriptionPlan,
+          returnTo: "/settings?tab=billing",
+          appUserId: user?.id,
+        });
+        if (result.success) {
+          await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.subscriptionStatus() });
+          await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.authUser() });
+          await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile() });
+          const label =
+            planId === "pro_plus" ? "Pro+" : planId === "business" ? "Business" : "Pro";
+          toast({
+            title: "Subscription updated",
+            description: `You're on ${label}.`,
+          });
+        } else {
+          toast({
+            title: "Purchase did not complete",
+            description:
+              result.error ||
+              "No detail returned. Confirm Sandbox Apple ID (Settings → App Store), RevenueCat Current offering, and package ids pro / pro_plus / business.",
+            variant: "destructive",
+          });
+        }
+      } catch (e) {
+        logger.error("[SubscriptionSettings] native upgrade:", e);
+        toast({
+          title: "Upgrade failed",
+          description: "Please try again in a few minutes.",
+          variant: "destructive",
+        });
+      } finally {
+        setNativeUpgradePlanId(null);
+      }
+    },
+    [queryClient, toast, user?.id]
   );
 
   const changePlanMutation = useApiMutation(
@@ -393,6 +446,8 @@ export function SubscriptionSettings() {
 
   const currentPlanData = PLANS.find(p => p.id === effectiveSubscription.plan) || PLANS[0];
   const CurrentPlanIcon = currentPlanData.icon;
+  const isNativeApp = Capacitor.isNativePlatform();
+  const nativePlatform = Capacitor.getPlatform();
 
   return (
     <div className="space-y-4" data-testid="card-subscription-settings">
@@ -547,15 +602,21 @@ export function SubscriptionSettings() {
                             if (isDowngrade) {
                               setSelectedPlan(plan.id);
                               setShowChangePlanDialog(true);
+                            } else if (Capacitor.isNativePlatform()) {
+                              setSelectedPlan(plan.id);
+                              void runNativeUpgrade(plan.id);
                             } else {
                               setSelectedPlan(plan.id);
                               changePlanMutation.mutate(plan.id);
                             }
                           }}
-                          disabled={changePlanMutation.isPending}
+                          disabled={
+                            changePlanMutation.isPending || nativeUpgradePlanId === plan.id
+                          }
                           data-testid={`button-${isUpgrade ? "upgrade" : "downgrade"}-${plan.id}`}
                         >
-                          {changePlanMutation.isPending && selectedPlan === plan.id ? (
+                          {(changePlanMutation.isPending || nativeUpgradePlanId === plan.id) &&
+                          selectedPlan === plan.id ? (
                             <Loader2 className="h-3 w-3 animate-spin mr-1" />
                           ) : isUpgrade ? (
                             <ArrowUp className="h-3 w-3 mr-1" />
@@ -727,56 +788,103 @@ export function SubscriptionSettings() {
             Subscription Info
           </h3>
           <div className="space-y-3 text-sm text-muted-foreground">
-            <p data-testid="text-subscription-disclosure">
-            Subscriptions are managed externally via our website. Gig Aid subscriptions
-              are for business management services (job scheduling, invoicing, client
-              management, and automation tools) — not digital content or media. Payments
-              are processed securely through Stripe. Paid plans auto-renew at the stated
-              price each month until cancelled. Cancellation takes effect at the end of
-              the current billing period.
-            </p>
+            {isNativeApp ? (
+              <p data-testid="text-subscription-disclosure">
+                On this app, paid plans are purchased through{" "}
+                {nativePlatform === "ios" ? "the App Store" : "Google Play"} and renew
+                automatically until you cancel in your store account settings. Gig Aid
+                subscriptions unlock business management tools (scheduling, invoicing, clients,
+                and automation).
+              </p>
+            ) : (
+              <p data-testid="text-subscription-disclosure">
+                On the web, subscriptions are billed through Stripe. Gig Aid subscriptions
+                are for business management services (job scheduling, invoicing, client
+                management, and automation tools). Paid plans auto-renew each month until
+                cancelled. Cancellation takes effect at the end of the current billing
+                period.
+              </p>
+            )}
 
             <div className="space-y-2">
               <p className="font-medium text-foreground text-xs">How to manage your subscription:</p>
               <ul className="list-disc pl-5 space-y-1 text-xs">
-                <li>
-                  <strong>Upgrade</strong> — Tap "Upgrade" above or visit the Pricing page to
-                  choose a higher plan. You'll be directed to a secure checkout on our website.
-                </li>
-                <li>
-                  <strong>Cancel</strong> — Use the "Cancel subscription" option below. Your access
-                  continues until the end of your current billing period.
-                </li>
-                <li>
-                  <strong>Manage billing</strong> — Visit{" "}
-                  <a
-                    href="https://gigaid.ai/account"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline"
-                    data-testid="link-manage-billing"
-                  >
-                    gigaid.ai/account
-                  </a>{" "}
-                  or tap "Manage Billing" above to update your payment method, view invoices,
-                  or change your plan.
-                </li>
+                {isNativeApp ? (
+                  <>
+                    <li>
+                      <strong>Upgrade</strong> — Tap &quot;Upgrade&quot; on a higher plan above or use
+                      the Pricing screen. You will complete purchase with{" "}
+                      {nativePlatform === "ios" ? "App Store" : "Google Play"}.
+                    </li>
+                    <li>
+                      <strong>Cancel or change</strong> — Use your{" "}
+                      {nativePlatform === "ios" ? "Apple ID" : "Google Play"} subscription
+                      settings, or options below if you subscribed on the web before.
+                    </li>
+                    <li>
+                      <strong>Restore</strong> — Use &quot;Restore Access&quot; below if you reinstall
+                      or change devices.
+                    </li>
+                  </>
+                ) : (
+                  <>
+                    <li>
+                      <strong>Upgrade</strong> — Tap &quot;Upgrade&quot; above or visit Pricing to
+                      choose a higher plan. You will use secure Stripe checkout.
+                    </li>
+                    <li>
+                      <strong>Cancel</strong> — Use &quot;Cancel subscription&quot; below when
+                      available. Access continues through the end of the billing period.
+                    </li>
+                    <li>
+                      <strong>Manage billing</strong> — Visit{" "}
+                      <a
+                        href="https://gigaid.ai/account"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline"
+                        data-testid="link-manage-billing"
+                      >
+                        gigaid.ai/account
+                      </a>{" "}
+                      or tap &quot;Manage Billing&quot; above for payment method and invoices.
+                    </li>
+                  </>
+                )}
               </ul>
             </div>
 
-            <p className="text-xs">
-              If you previously subscribed through Apple's App Store, you can manage that
-              subscription at{" "}
-              <a
-                href="https://apps.apple.com/account/subscriptions"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline"
-                data-testid="link-apple-subscriptions"
-              >
-                Apple Subscription Settings
-              </a>.
-            </p>
+            {nativePlatform === "ios" && (
+              <p className="text-xs">
+                App Store subscriptions:{" "}
+                <a
+                  href="https://apps.apple.com/account/subscriptions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                  data-testid="link-apple-subscriptions"
+                >
+                  Apple Subscription Settings
+                </a>
+                .
+              </p>
+            )}
+            {!isNativeApp && (
+              <p className="text-xs">
+                If you subscribed through the App Store on an iPhone or iPad, manage that
+                subscription in{" "}
+                <a
+                  href="https://apps.apple.com/account/subscriptions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                  data-testid="link-apple-subscriptions-web"
+                >
+                  Apple Subscription Settings
+                </a>
+                .
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

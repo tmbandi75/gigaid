@@ -5,6 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { SiGoogle, SiApple } from "react-icons/si";
 import { signInWithEmail, signUpWithEmail, resetPassword, getFirebaseAuth } from "@/lib/firebase";
+import {
+  cleanupAfterDeletedAccountExchange,
+  isAccountDeletedExchangePayload,
+  shouldShowDeletedAccountToast,
+} from "@/lib/firebaseAuthExchange";
 import { setAuthToken } from "@/lib/authToken";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -34,12 +39,49 @@ export default function SplashPage() {
       body: JSON.stringify({ idToken }),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Authentication failed");
+    let body: unknown = null;
+    try {
+      const text = await response.text();
+      if (text) body = JSON.parse(text) as unknown;
+    } catch {
+      body = null;
     }
 
-    const data = await response.json();
+    if (response.status === 403 && isAccountDeletedExchangePayload(body)) {
+      await cleanupAfterDeletedAccountExchange();
+      setTokenReady(false);
+      if (shouldShowDeletedAccountToast()) {
+        const msg =
+          body &&
+          typeof body === "object" &&
+          "error" in body &&
+          typeof (body as { error: unknown }).error === "string"
+            ? (body as { error: string }).error
+            : "This account was deleted and cannot be used to sign in.";
+        toast({
+          title: "Account closed",
+          description: msg,
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
+    if (!response.ok) {
+      const errMsg =
+        body &&
+        typeof body === "object" &&
+        "error" in body &&
+        typeof (body as { error: unknown }).error === "string"
+          ? (body as { error: string }).error
+          : "Authentication failed";
+      throw new Error(errMsg);
+    }
+
+    const data = body as { token?: string };
+    if (!data?.token || typeof data.token !== "string") {
+      throw new Error("Authentication failed");
+    }
     const auth = getFirebaseAuth();
     const currentUid = auth?.currentUser?.uid || null;
     
@@ -51,6 +93,7 @@ export default function SplashPage() {
   };
 
   const handleAppleSignIn = async () => {
+    if (isAppleLoading) return;
     setIsAppleLoading(true);
     try {
       const idToken = await signInWithApple();
@@ -245,7 +288,8 @@ export default function SplashPage() {
               <Button
                 onClick={handleAppleSignIn}
                 disabled={isDisabled}
-                className="w-full h-12 gap-3 bg-black hover:bg-black/90 text-white font-semibold rounded-full shadow-lg"
+                variant="outline"
+                className="w-full h-12 gap-3 rounded-full border-2 border-white/55 bg-white/10 text-white font-semibold shadow-md hover:bg-white/20"
                 data-testid="button-apple-signin"
               >
                 {isAppleLoading ? (
@@ -259,7 +303,8 @@ export default function SplashPage() {
               <Button
                 onClick={handleGoogleSignIn}
                 disabled={isDisabled}
-                className="w-full h-12 gap-3 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-full shadow-lg"
+                variant="outline"
+                className="w-full h-12 gap-3 rounded-full border-2 border-white/55 bg-white/10 text-white font-semibold shadow-md hover:bg-white/20"
                 data-testid="button-google-signin"
               >
                 {isLoading ? (

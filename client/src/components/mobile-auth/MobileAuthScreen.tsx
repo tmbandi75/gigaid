@@ -30,7 +30,7 @@ export function MobileAuthScreen({
   const [termsAccepted, setTermsAccepted] = useState(false);
 
   const handleAppleSignIn = async () => {
-    if (!onAppleSignIn) return;
+    if (!onAppleSignIn || isLoading !== null) return;
     setIsLoading('apple');
     setError(null);
     try {
@@ -137,7 +137,7 @@ export function MobileAuthScreen({
 
           <Button
             variant="outline"
-            className="w-full h-12 justify-start gap-3 text-base font-medium bg-black text-white hover:bg-black/90 border-black"
+            className="w-full h-12 justify-start gap-3 text-base font-medium border-2"
             onClick={handleAppleSignIn}
             disabled={isLoading !== null || !onAppleSignIn || !termsAccepted}
             data-testid="button-apple-signin"
@@ -152,7 +152,7 @@ export function MobileAuthScreen({
 
           <Button
             variant="outline"
-            className="w-full h-12 justify-start gap-3 text-base font-medium"
+            className="w-full h-12 justify-start gap-3 text-base font-medium border-2"
             onClick={handleGoogleSignIn}
             disabled={isLoading !== null || !onGoogleSignIn || !termsAccepted}
             data-testid="button-google-signin"

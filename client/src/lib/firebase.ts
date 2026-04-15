@@ -129,6 +129,7 @@ export async function signInWithGoogle(): Promise<string> {
 const appleProvider = new OAuthProvider('apple.com');
 appleProvider.addScope('email');
 appleProvider.addScope('name');
+let nativeAppleSignInInFlight: Promise<string> | null = null;
 
 export async function signInWithApple(): Promise<string> {
   const a = requireAuth();
@@ -138,25 +139,62 @@ export async function signInWithApple(): Promise<string> {
   });
 
   if (isNativePlatform()) {
-    logger.info("[AppleSignIn] Native platform — using Capacitor Firebase plugin");
-    const { FirebaseAuthentication } = await import(
-      "@capacitor-firebase/authentication"
-    );
-    const result = await FirebaseAuthentication.signInWithApple();
-
-    if (!result.credential?.idToken) {
-      throw new Error("Apple Sign-In did not return a credential. The user may have cancelled.");
+    if (nativeAppleSignInInFlight) {
+      logger.warn("[AppleSignIn] Native sign-in already in progress, reusing existing request");
+      return nativeAppleSignInInFlight;
     }
 
-    const credential = appleProvider.credential({
-      idToken: result.credential.idToken,
-      rawNonce: result.credential.nonce,
-    });
-    const userCredential = await signInWithCredential(a, credential);
-    logger.info("[AppleSignIn] Native sign-in succeeded", {
-      email: userCredential.user.email,
-    });
-    return await userCredential.user.getIdToken();
+    nativeAppleSignInInFlight = (async () => {
+      logger.info("[AppleSignIn] Native platform — using Capacitor Firebase plugin");
+      const { FirebaseAuthentication } = await import(
+        "@capacitor-firebase/authentication"
+      );
+      const result = await FirebaseAuthentication.signInWithApple({
+        // We complete auth with Firebase JS SDK below using signInWithCredential.
+        // Native auth must be skipped to avoid nonce/credential reuse conflicts.
+        skipNativeAuth: true,
+      });
+
+      const idToken = result.credential?.idToken;
+      // Plugin payloads can vary by platform/version, so normalize nonce shape.
+      const rawNonce = (result.credential as any)?.nonce ?? (result.credential as any)?.rawNonce;
+
+      if (!idToken) {
+        throw new Error("Apple Sign-In did not return an idToken. The user may have cancelled.");
+      }
+      if (!rawNonce) {
+        throw new Error("Apple Sign-In did not return a nonce. Please try again.");
+      }
+
+      try {
+        const credential = appleProvider.credential({
+          idToken,
+          rawNonce,
+        });
+        const userCredential = await signInWithCredential(a, credential);
+        logger.info("[AppleSignIn] Native sign-in succeeded", {
+          email: userCredential.user.email,
+        });
+        return await userCredential.user.getIdToken();
+      } catch (nativeError: any) {
+        const message = nativeError?.message || "";
+        const code = nativeError?.code || "";
+        if (
+          code === "auth/missing-or-invalid-nonce" ||
+          message.includes("missing-or-invalid-nonce") ||
+          message.includes("duplicate credential")
+        ) {
+          throw new Error("Apple sign-in nonce expired or was reused. Please try again.");
+        }
+        throw nativeError;
+      }
+    })();
+
+    try {
+      return await nativeAppleSignInInFlight;
+    } finally {
+      nativeAppleSignInInFlight = null;
+    }
   }
 
   try {

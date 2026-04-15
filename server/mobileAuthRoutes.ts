@@ -1,8 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { verifyFirebaseIdToken, isFirebaseConfigured, selfTestFirebaseAdmin, getFirebaseInitError } from './firebaseAdmin';
 import { signAppJwt, isAppJwtConfigured } from './appJwt';
-import { storage } from './storage';
-import { eq, or } from 'drizzle-orm';
+import { and, eq, isNotNull, or } from 'drizzle-orm';
 import { users } from '@shared/schema';
 import { db } from './db';
 import { logger } from "./lib/logger";
@@ -23,6 +22,83 @@ interface MobileAuthResponse {
     name?: string;
   };
   linkedBy?: 'email' | 'phone' | 'new_user';
+}
+
+function isDeletedUser(user: any): boolean {
+  return Boolean(user?.deletedAt);
+}
+
+/** Catches legacy rows where firebase_uid was cleared but email/phone still match a deleted account. */
+async function hasDeletedIdentityConflict(
+  firebaseUid: string,
+  emailNormalized: string | undefined,
+  phoneE164: string | undefined,
+  email: string | undefined,
+): Promise<boolean> {
+  const clauses = [eq(users.firebaseUid, firebaseUid)];
+  if (emailNormalized) clauses.push(eq(users.emailNormalized, emailNormalized));
+  if (phoneE164) clauses.push(eq(users.phoneE164, phoneE164));
+  if (email) clauses.push(eq(users.email, email));
+
+  const [row] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(isNotNull(users.deletedAt), or(...clauses)))
+    .limit(1);
+  if (row) {
+    logger.warn("[AccountDeleteFlow] step=firebase_exchange_blocked_tombstone", {
+      tombstoneUserId: row.id,
+      hadEmail: !!emailNormalized,
+      hadPhone: !!phoneE164,
+    });
+  }
+  return !!row;
+}
+
+/**
+ * Reactivating a soft-deleted row via Firebase is OFF by default in every environment.
+ * Set GIGAID_ALLOW_DELETED_FIREBASE_REACTIVATION=true only when you intentionally need it (e.g. staging or local testing).
+ */
+function isSoftDeleteFirebaseReactivationEnabled(): boolean {
+  return process.env.GIGAID_ALLOW_DELETED_FIREBASE_REACTIVATION === "true";
+}
+
+function reactivateSoftDeletedUserPatch(
+  row: { id: string; username: string },
+  firebaseUid: string,
+  email: string | undefined,
+  emailNormalized: string | undefined,
+  phoneE164: string | undefined,
+  name: string | undefined,
+  photo: string | undefined,
+  now: string,
+): Record<string, unknown> {
+  const patch: Record<string, unknown> = {
+    deletedAt: null,
+    updatedAt: now,
+    firebaseUid,
+    authProvider: "firebase",
+  };
+  if (email) {
+    patch.email = email;
+  }
+  if (emailNormalized) {
+    patch.emailNormalized = emailNormalized;
+  }
+  if (emailNormalized && row.username.startsWith("deleted_")) {
+    patch.username = emailNormalized;
+  }
+  if (phoneE164) {
+    patch.phoneE164 = phoneE164;
+    patch.phone = phoneE164;
+  }
+  if (photo) {
+    patch.photo = photo;
+  }
+  if (name) {
+    patch.name = name;
+  }
+  return patch;
 }
 
 router.post('/mobile/firebase', async (req: Request, res: Response) => {
@@ -116,10 +192,50 @@ router.post('/mobile/firebase', async (req: Request, res: Response) => {
       }
     }
 
+    // Legacy rows may use email as username while email_normalized (or email) was never backfilled.
+    if (!existingUser && emailNormalized) {
+      const existingByUsername = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, emailNormalized))
+        .limit(1);
+
+      if (existingByUsername.length > 0) {
+        existingUser = existingByUsername[0];
+        linkedBy = 'email';
+        logger.info('[MobileAuth] Linking Firebase to existing user by username match');
+      }
+    }
+
     let userId: string;
     const now = new Date().toISOString();
 
     if (existingUser) {
+      if (isDeletedUser(existingUser)) {
+        if (!isSoftDeleteFirebaseReactivationEnabled()) {
+          logger.info("[MobileAuth] Blocked login for deleted account:", { userId: existingUser.id });
+          return res.status(403).json({
+            error: "This account was deleted and cannot be used to sign in.",
+            code: "account_deleted",
+          });
+        }
+        const rePatch = reactivateSoftDeletedUserPatch(
+          { id: existingUser.id, username: existingUser.username },
+          firebaseUid,
+          email,
+          emailNormalized,
+          phoneE164,
+          name,
+          photo,
+          now,
+        );
+        await db.update(users).set(rePatch).where(eq(users.id, existingUser.id));
+        logger.warn("[MobileAuth] Reactivated soft-deleted user (GIGAID_ALLOW_DELETED_FIREBASE_REACTIVATION)", {
+          userId: existingUser.id,
+        });
+        Object.assign(existingUser, rePatch);
+      }
+
       userId = existingUser.id;
 
       const updates: Record<string, any> = {
@@ -153,6 +269,14 @@ router.post('/mobile/firebase', async (req: Request, res: Response) => {
         logger.info('[MobileAuth] Updated user with Firebase data:', updates);
       }
     } else {
+      if (await hasDeletedIdentityConflict(firebaseUid, emailNormalized, phoneE164, email)) {
+        logger.info("[MobileAuth] Blocked signup — identity matches a deleted account");
+        return res.status(403).json({
+          error: "This account was deleted and cannot be used to sign in.",
+          code: "account_deleted",
+        });
+      }
+
       const username = emailNormalized || `firebase_${firebaseUid}`;
       
       const [newUser] = await db
@@ -199,9 +323,14 @@ router.post('/mobile/firebase', async (req: Request, res: Response) => {
 
     logger.info('[MobileAuth] Auth successful:', { userId, linkedBy });
     return res.json(response);
-  } catch (error) {
-    logger.error('[MobileAuth] Error:', error);
-    return res.status(500).json({ error: 'Internal server error during authentication' });
+  } catch (error: unknown) {
+    const pgCode =
+      error && typeof error === "object" && "code" in error
+        ? String((error as { code: unknown }).code)
+        : "";
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error("[MobileAuth] Error:", pgCode || "(no pg code)", message, error);
+    return res.status(500).json({ error: "Internal server error during authentication" });
   }
 });
 
@@ -323,10 +452,49 @@ router.post('/web/firebase', async (req: Request, res: Response) => {
       }
     }
 
+    if (!existingUser && emailNormalized) {
+      const existingByUsername = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, emailNormalized))
+        .limit(1);
+
+      if (existingByUsername.length > 0) {
+        existingUser = existingByUsername[0];
+        linkedBy = 'email';
+        logger.info('[WebAuth] Linking Firebase to existing user by username match');
+      }
+    }
+
     let userId: string;
     const now = new Date().toISOString();
 
     if (existingUser) {
+      if (isDeletedUser(existingUser)) {
+        if (!isSoftDeleteFirebaseReactivationEnabled()) {
+          logger.info("[WebAuth] Blocked login for deleted account:", { userId: existingUser.id });
+          return res.status(403).json({
+            error: "This account was deleted and cannot be used to sign in.",
+            code: "account_deleted",
+          });
+        }
+        const rePatch = reactivateSoftDeletedUserPatch(
+          { id: existingUser.id, username: existingUser.username },
+          firebaseUid,
+          email,
+          emailNormalized,
+          phoneE164,
+          name,
+          photo,
+          now,
+        );
+        await db.update(users).set(rePatch).where(eq(users.id, existingUser.id));
+        logger.warn("[WebAuth] Reactivated soft-deleted user (GIGAID_ALLOW_DELETED_FIREBASE_REACTIVATION)", {
+          userId: existingUser.id,
+        });
+        Object.assign(existingUser, rePatch);
+      }
+
       userId = existingUser.id;
 
       const updates: Record<string, any> = {
@@ -360,6 +528,14 @@ router.post('/web/firebase', async (req: Request, res: Response) => {
         logger.info('[WebAuth] Updated user with Firebase data:', updates);
       }
     } else {
+      if (await hasDeletedIdentityConflict(firebaseUid, emailNormalized, phoneE164, email)) {
+        logger.info("[WebAuth] Blocked signup — identity matches a deleted account");
+        return res.status(403).json({
+          error: "This account was deleted and cannot be used to sign in.",
+          code: "account_deleted",
+        });
+      }
+
       // Create new user
       const username = emailNormalized || `firebase_${firebaseUid}`;
       
@@ -407,9 +583,14 @@ router.post('/web/firebase', async (req: Request, res: Response) => {
 
     logger.info('[WebAuth] Auth successful:', { userId, linkedBy });
     return res.json(response);
-  } catch (error) {
-    logger.error('[WebAuth] Error:', error);
-    return res.status(500).json({ error: 'Internal server error during authentication' });
+  } catch (error: unknown) {
+    const pgCode =
+      error && typeof error === "object" && "code" in error
+        ? String((error as { code: unknown }).code)
+        : "";
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error("[WebAuth] Error:", pgCode || "(no pg code)", message, error);
+    return res.status(500).json({ error: "Internal server error during authentication" });
   }
 });
 

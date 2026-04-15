@@ -1,3 +1,4 @@
+import { Capacitor } from "@capacitor/core";
 import { Link, useLocation } from "wouter";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
@@ -262,14 +263,14 @@ function DesktopHeader() {
           </kbd>
         </div>
 
-        <DropdownMenu>
+        <DropdownMenu modal={Capacitor.isNativePlatform() ? false : true}>
           <DropdownMenuTrigger asChild>
             <Button variant="secondary" size="sm" className="h-9 gap-2 bg-white/20 hover:bg-white/30 border-0 text-primary-foreground" data-testid="button-quick-add">
               <Plus className="h-4 w-4" />
               <span className="hidden xl:inline">New</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuContent align="end" className="z-[300] w-48">
             {quickActions.map((action) => (
               <DropdownMenuItem
                 key={action.path}

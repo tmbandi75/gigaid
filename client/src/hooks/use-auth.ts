@@ -3,10 +3,18 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import type { User } from "@shared/schema";
 import { getAuthToken, clearAuthToken, setAuthToken } from "@/lib/authToken";
 import { firebaseSignOut, getFirebaseIdToken } from "@/lib/firebase";
+import {
+  cleanupAfterDeletedAccountExchange,
+  isAccountDeletedExchangePayload,
+  shouldShowDeletedAccountToast,
+} from "@/lib/firebaseAuthExchange";
 import { setGlobalLoggingOut, getGlobalLoggingOut } from "@/lib/queryClient";
 import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { logger } from "@/lib/logger";
+import { useToast } from "@/hooks/use-toast";
+import { isNativePlatform } from "@/lib/platform";
+import { bindRevenueCatToUser, logOutRevenueCat } from "@/lib/revenuecat";
 
 async function fetchUser(): Promise<User | null> {
   // Don't fetch user if we're in the middle of logging out
@@ -43,6 +51,7 @@ async function fetchUser(): Promise<User | null> {
 
 export function useAuth() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { isTokenReady, setTokenReady, firebaseUser, authLoading } = useFirebaseAuth();
   
@@ -66,9 +75,38 @@ export function useAuth() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ idToken }),
           });
-          if (response.ok) {
-            const data = await response.json();
-            setAuthToken(data.token, firebaseUser.uid);
+          let body: unknown = null;
+          try {
+            const text = await response.text();
+            if (text) body = JSON.parse(text) as unknown;
+          } catch {
+            body = null;
+          }
+          if (response.status === 403 && isAccountDeletedExchangePayload(body)) {
+            await cleanupAfterDeletedAccountExchange();
+            setTokenReady(false);
+            if (shouldShowDeletedAccountToast()) {
+              const msg =
+                body &&
+                typeof body === "object" &&
+                "error" in body &&
+                typeof (body as { error: unknown }).error === "string"
+                  ? (body as { error: string }).error
+                  : "This account was deleted and cannot be used to sign in.";
+              toast({
+                title: "Account closed",
+                description: msg,
+                variant: "destructive",
+              });
+            }
+          } else if (
+            response.ok &&
+            body &&
+            typeof body === "object" &&
+            "token" in body &&
+            typeof (body as { token: unknown }).token === "string"
+          ) {
+            setAuthToken((body as { token: string }).token, firebaseUser.uid);
             setTokenReady(true);
           }
         } catch {
@@ -77,7 +115,7 @@ export function useAuth() {
         }
       })();
     }
-  }, [authLoading, firebaseUser, isTokenReady, setTokenReady]);
+  }, [authLoading, firebaseUser, isTokenReady, setTokenReady, toast]);
 
   useEffect(() => {
     if (!authLoading && firebaseUser && !isTokenReady) {
@@ -108,6 +146,11 @@ export function useAuth() {
     enabled: canFetchUser,
   });
 
+  useEffect(() => {
+    if (!isNativePlatform()) return;
+    bindRevenueCatToUser(user?.id ?? null);
+  }, [user?.id]);
+
   const performLogout = useCallback(async (): Promise<void> => {
     logger.info("[Auth] ========== LOGOUT STARTED ==========");
     logger.info("[Auth] Logout timestamp:", Date.now());
@@ -121,6 +164,8 @@ export function useAuth() {
     setTokenReady(false);
     
     try {
+      await logOutRevenueCat();
+
       // Step 2: Clear app JWT from localStorage
       logger.debug("[Auth] Step 2: Clearing app JWT token");
       clearAuthToken();
@@ -218,6 +263,7 @@ export function useAuth() {
     // tokenPending indicates token exchange is still in progress
     tokenPending: !isTokenReady && !globalLogoutState && firebaseUser !== null,
     logout: logoutMutation.mutate,
+    logoutAsync: logoutMutation.mutateAsync,
     isLoggingOut: isLoggingOut || globalLogoutState,
     refetchUser: refetch,
   };

@@ -4,6 +4,7 @@ import { getAuthToken } from "@/lib/authToken";
 import { getGlobalLoggingOut } from "@/lib/queryClient";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { logger } from "@/lib/logger";
+import { restoreNativePurchasesThenServer } from "@/lib/revenuecat";
 
 const RESTORE_SESSION_KEY = "gigaid_sub_restore_checked";
 
@@ -46,22 +47,23 @@ export function useSubscriptionRestore(user: {
     const controller = new AbortController();
     const userId = String(user.id);
 
-    logger.info("[AutoRestore] User on free plan with no subscription ID, checking Stripe...");
+    logger.info("[AutoRestore] User on free plan with no subscription ID, checking billing...");
 
-    fetch("/api/subscription/restore", {
-      method: "POST",
-      credentials: "include",
-      signal: controller.signal,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    })
-      .then((res) => {
+    (async () => {
+      try {
+        await restoreNativePurchasesThenServer();
+        if (controller.signal.aborted) return;
+        const res = await fetch("/api/subscription/restore", {
+          method: "POST",
+          credentials: "include",
+          signal: controller.signal,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
         if (!res.ok) throw new Error(`Restore failed: ${res.status}`);
-        return res.json();
-      })
-      .then((data) => {
+        const data = await res.json();
         if (controller.signal.aborted) return;
         sessionStorage.setItem(RESTORE_SESSION_KEY, userId);
         if (data.restored) {
@@ -72,12 +74,12 @@ export function useSubscriptionRestore(user: {
         } else {
           logger.info("[AutoRestore] No active subscription found:", data.reason);
         }
-      })
-      .catch((err) => {
+      } catch (err: any) {
         if (err?.name === "AbortError") return;
         logger.warn("[AutoRestore] Restore check failed:", err?.message);
         sessionStorage.setItem(RESTORE_SESSION_KEY, userId);
-      });
+      }
+    })();
 
     return () => {
       controller.abort();

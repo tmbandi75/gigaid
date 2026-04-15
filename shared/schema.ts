@@ -95,6 +95,11 @@ export const users = pgTable("users", {
   plan: text("plan").default("free"), // free, pro, pro_plus, business
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
+  // App Store / Play Billing via RevenueCat (webhook + REST sync). Null when billing is Stripe-only or free.
+  subscriptionStore: text("subscription_store"), // app_store | play_store
+  storeSubscriptionExpiresAt: text("store_subscription_expires_at"),
+  storeSubscriptionCancelAtPeriodEnd: boolean("store_subscription_cancel_at_period_end").default(false),
+  revenuecatLastProcessedEventId: text("revenuecat_last_processed_event_id"),
   subscriptionCredit: integer("subscription_credit").default(0), // Credit balance in cents from referral rewards
   
   // Firebase Auth fields for mobile authentication

@@ -100,7 +100,13 @@ PODS:
   - IONFilesystemLib (1.1.2)
   - IONGeolocationLib (2.0.0)
   - PromisesObjC (2.4.0)
+  - PurchasesHybridCommon (17.54.0):
+    - RevenueCat (= 5.67.0)
   - RecaptchaInterop (101.0.0)
+  - RevenueCat (5.67.0)
+  - RevenuecatPurchasesCapacitor (12.3.1):
+    - Capacitor
+    - PurchasesHybridCommon (= 17.54.0)
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
@@ -117,6 +123,7 @@ DEPENDENCIES:
   - CapacitorPluginAppTrackingTransparency (from `../../node_modules/capacitor-plugin-app-tracking-transparency`)
   - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
   - "CapacitorStatusBar (from `../../node_modules/@capacitor/status-bar`)"
+  - "RevenuecatPurchasesCapacitor (from `../../node_modules/@revenuecat/purchases-capacitor`)"
 
 SPEC REPOS:
   trunk:
@@ -135,7 +142,9 @@ SPEC REPOS:
     - IONFilesystemLib
     - IONGeolocationLib
     - PromisesObjC
+    - PurchasesHybridCommon
     - RecaptchaInterop
+    - RevenueCat
 
 EXTERNAL SOURCES:
   Capacitor:
@@ -164,6 +173,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/share"
   CapacitorStatusBar:
     :path: "../../node_modules/@capacitor/status-bar"
+  RevenuecatPurchasesCapacitor:
+    :path: "../../node_modules/@revenuecat/purchases-capacitor"
 
 SPEC CHECKSUMS:
   AppAuth: 1c1a8afa7e12f2ec3a294d9882dfa5ab7d3cb063
@@ -194,8 +205,11 @@ SPEC CHECKSUMS:
   IONFilesystemLib: 21a63377696b2d8fab5632ecfb7d2ac67bddb68a
   IONGeolocationLib: a5e40b54edc2ee9902036eda5aaa41ddf07bb68d
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
+  PurchasesHybridCommon: 6a8f4e30952167d2afaccf17ebcf8f8107060e4c
   RecaptchaInterop: 11e0b637842dfb48308d242afc3f448062325aba
+  RevenueCat: f0d05079b59c33c645293bbc1fa78469ea7fcae7
+  RevenuecatPurchasesCapacitor: 3356e6e8b9ae8d9e7386990b53adeedac59aa6e8
 
-PODFILE CHECKSUM: 30b20a98410f685df2e0950f40dd541a02394757
+PODFILE CHECKSUM: ab9338b61ce0adf39527150082d70b5b1d426d52
 
 COCOAPODS: 1.15.2
