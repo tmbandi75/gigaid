@@ -280,7 +280,7 @@ Stripe generates a 1099 for you at the end of the year if you earn over the IRS 
 
 You can send a text to any lead, customer, or job contact right from inside GigAid. Tap the **Text** button on any contact card and the message box opens.
 
-We send through a verified business number so customers can reply, and replies show up in your **Messages** tab.
+We send through a verified business number so customers can reply, and replies show up under **More → Messages**.
 
 > **Plan limits on texting:**
 > - **Free**: 20 SMS replies per month (replies only — you can't send a brand-new conversation)
@@ -318,7 +318,7 @@ GigAid's AI is built to help you work faster, write better messages, and never m
 
 ### Today's Money Plan
 
-Open the **Get Paid** tab to see *Today's Money Plan* — a focused list of the deposits and invoices you should chase today. The AI sorts everything by what's most likely to bring money in the door first.
+Open **More → Money Plan** to see *Today's Money Plan* — a focused list of the deposits and invoices you should chase today. The AI sorts everything by what's most likely to bring money in the door first.
 
 ### AI Nudges
 
@@ -501,6 +501,26 @@ If you want to leave, go to **More → Settings → Account → Delete Account**
 
 ## 10. Troubleshooting
 
+### I can't sign in
+
+**With Apple:**
+1. Make sure you're on iOS 13 or newer.
+2. Go to your phone's **Settings → Apple ID → Password & Security → Apps Using Apple ID** and confirm GigAid is listed.
+3. If you previously hid your real email when signing up, Apple's relay address is the one tied to your account — use it (not your real email) if asked.
+
+**With Google:**
+1. Pick the right Google account in the Google chooser. If you have multiple, the wrong one signs you into a different (empty) GigAid workspace.
+2. If you see "account not found," use the same email you originally signed up with.
+
+**With email and password:**
+1. Tap **Forgot Password** on the sign-in screen and check your inbox (including spam).
+2. Make sure caps lock is off.
+3. If your email reset link expires, request a new one.
+
+**Good to know:** You can link Apple, Google, and email/phone to the same account anytime under **More → Settings → Account → Account Linking** so you have multiple ways in.
+
+**If something goes wrong:** Email **support@gigaid.ai** with the email you signed up with and the sign-in method you tried.
+
 ### I'm not getting notifications
 
 1. Go to **More → Settings → Account** in GigAid and make sure notifications are turned on.
@@ -523,6 +543,26 @@ Stripe sometimes asks for extra documents (like an ID photo or a utility bill) t
 - **Card payments** through GigAid show up instantly. If you don't see one, ask the customer for a confirmation email or transaction ID and forward it to **support@gigaid.ai**.
 - **Zelle, Venmo, Cash App, cash, or check** payments need to be marked as paid manually. Open the invoice or job and tap **Mark as Paid**.
 
+### My payout hasn't landed in my bank yet
+
+Stripe typically sends payouts to your bank within 1–2 business days after a card payment is captured. A few things can delay it:
+
+1. **First payout takes longer.** Brand-new Stripe accounts often have a 7-day hold on the first payout while Stripe verifies you.
+2. **Verification still pending.** If Stripe is still asking for documents, payouts pause until that's resolved. Check **More → Settings → Get Paid → Manage Stripe Account**.
+3. **Weekends and bank holidays.** Banks don't process payouts on those days.
+4. **Wrong bank account.** Double-check the routing and account numbers in your Stripe dashboard.
+
+**If something goes wrong:** Open your Stripe dashboard for the exact payout status, and email **support@gigaid.ai** if you need help reading it.
+
+### A text I sent didn't arrive
+
+1. Confirm the customer's phone number is correct and in **+1 555-555-5555** format.
+2. Some carriers block texts from new business numbers — ask the customer to reply "YES" to your first message to whitelist you.
+3. Check **More → Messages** for a "delivery failed" badge on the message.
+4. If you've hit your monthly SMS limit, you'll see a banner. Upgrade your plan or wait for the next billing cycle.
+
+**Good to know:** GigAid never sends texts overnight — messages composed late at night go out the next morning.
+
 ### I can't send a text
 
 - **Free plan users** can only reply to existing conversations, not start new ones. Upgrade to Pro for unlimited new texts.
@@ -536,6 +576,29 @@ Stripe sometimes asks for extra documents (like an ID photo or a utility bill) t
 3. Restart your phone.
 4. If it's still slow, email **support@gigaid.ai** with details about your phone and what you were doing.
 
+### Drive Mode can't find my location
+
+Drive Mode needs GPS access to navigate and to send "on my way" updates.
+
+1. On iPhone: **Settings → Privacy & Security → Location Services → GigAid → While Using the App**.
+2. On Android: **Settings → Apps → GigAid → Permissions → Location → Allow only while using the app**.
+3. Make sure your phone's overall Location Services switch is on.
+4. If you're indoors, walk near a window — GPS is weak under heavy roofs.
+
+**Good to know:** GigAid only uses your location when Drive Mode is open. We don't track you in the background.
+
+### My data didn't sync after I came back online
+
+GigAid lets you create jobs, leads, and notes while you're offline (no signal, basement, etc.). When you reconnect, the app syncs everything in the background. If you don't see changes after a minute:
+
+1. Pull down to refresh on the affected screen.
+2. Check the top of the screen for an **Offline** banner — it should disappear once you're connected.
+3. Force-close and reopen the app to trigger a fresh sync.
+
+**Good to know:** Photos taken offline are queued and uploaded once you're back online — you'll see an upload progress bar in the corner.
+
+**If something goes wrong:** If anything appears missing after a sync, email **support@gigaid.ai** with the time and screen where you saw the issue. We can usually recover it from your sync log.
+
 ### I lost a job, lead, or message
 
 Check your **Archived** filter on the Jobs or Leads page — sometimes things get archived by accident. If you really deleted something and need it back, email us as soon as you can.
@@ -543,6 +606,17 @@ Check your **Archived** filter on the Jobs or Leads page — sometimes things ge
 ### I want to switch from Free to Pro but I'm not sure
 
 The fastest way to know: count your active jobs. If you're hitting the 10-job limit on Free, Pro pays for itself with one extra booked job. You can also try Pro for a month and downgrade if it's not for you.
+
+### How to get extra help (escalation path)
+
+When you need more than this manual can give you:
+
+1. **Search this manual first** — use Ctrl/Cmd+F on the page to find your topic.
+2. **In-app Help** — open **More → Help & Support** for direct links and FAQs.
+3. **Email support** — write to **support@gigaid.ai** with a clear subject line ("Stripe payout missing," "Can't sign in with Apple," etc.). Include screenshots, the email tied to your account, and what you've already tried.
+4. **Urgent payment issues** — for missing money or stuck payouts, mention "URGENT: payment" in the subject so we prioritize.
+
+**Good to know:** Replies come from a real person, not a bot. We read every email.
 
 ### I need help with something not on this list
 
