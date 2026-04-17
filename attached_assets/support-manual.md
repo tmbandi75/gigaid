@@ -318,7 +318,7 @@ GigAid's AI is built to help you work faster, write better messages, and never m
 
 ### Today's Money Plan
 
-Open **More → Money Plan** to see *Today's Money Plan* — a focused list of the deposits and invoices you should chase today. The AI sorts everything by what's most likely to bring money in the door first.
+Open the **Money Plan** page (from your sidebar, or visit **/money-plan**) to see *Today's Money Plan* — a focused list of the deposits and invoices you should chase today. The AI sorts everything by what's most likely to bring money in the door first.
 
 ### AI Nudges
 
