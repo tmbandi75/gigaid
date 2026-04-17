@@ -26,6 +26,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { HelpLink } from "@/components/HelpLink";
 
 interface Conversation {
   clientPhone: string;
@@ -410,9 +411,12 @@ export default function Messages() {
   };
 
   const renderMobileHeader = () => (
-    <div className="px-4 py-3 border-b">
-      <h1 className="text-xl font-semibold">Messages</h1>
-      <p className="text-xs text-muted-foreground">Messages here stay in GigAid</p>
+    <div className="px-4 py-3 border-b flex items-start justify-between gap-2">
+      <div>
+        <h1 className="text-xl font-semibold">Messages</h1>
+        <p className="text-xs text-muted-foreground">Messages here stay in GigAid</p>
+      </div>
+      <HelpLink slug="messages-client-communication" label="Help with Messages" size="sm" />
     </div>
   );
 
@@ -424,7 +428,10 @@ export default function Messages() {
             <MessageSquare className="h-6 w-6 text-indigo-600 dark:text-blue-400" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground" data-testid="page-title">Messages</h1>
+            <div className="flex items-center gap-1">
+              <h1 className="text-2xl font-bold text-foreground" data-testid="page-title">Messages</h1>
+              <HelpLink slug="messages-client-communication" label="Help with Messages" />
+            </div>
             <p className="text-sm text-muted-foreground">Messages here stay in GigAid</p>
           </div>
         </div>

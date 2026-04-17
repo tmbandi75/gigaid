@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { UpgradeInterceptModal } from "@/upgrade/UpgradeInterceptModal";
 import { logger } from "@/lib/logger";
+import { HelpLink } from "@/components/HelpLink";
 
 interface AIFeature {
   id: string;
@@ -79,7 +80,10 @@ export default function AITools() {
             <Sparkles className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Business Co-Pilot</h1>
+            <div className="flex items-center gap-1">
+              <h1 className="text-2xl font-bold">Business Co-Pilot</h1>
+              <HelpLink slug="ai-features" label="Help with AI features" size="sm" />
+            </div>
             <p className="text-sm text-muted-foreground">See what works. Fix what doesn't. Get paid faster.</p>
           </div>
         </div>
@@ -95,7 +99,10 @@ export default function AITools() {
             <Sparkles className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold">Business Co-Pilot</h1>
+            <div className="flex items-center gap-1">
+              <h1 className="text-3xl font-bold">Business Co-Pilot</h1>
+              <HelpLink slug="ai-features" label="Help with AI features" />
+            </div>
             <p className="text-sm text-muted-foreground">See what works. Fix what doesn't. Get paid faster.</p>
           </div>
         </div>
