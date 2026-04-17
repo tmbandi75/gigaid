@@ -92,7 +92,7 @@ There are a few easy ways to get your link in front of customers:
 
 - Copy and paste it into your **Facebook bio** or **Instagram bio**
 - Add it to your **email signature**
-- Print it on a **business card** with a QR code (we generate one for you on the **Leads** page)
+- Print it on a **business card** or flyer for in-person hand-offs
 - Reply to neighborhood requests on **Nextdoor, Craigslist, or Facebook Marketplace** with your link
 
 ### What happens when someone books?
@@ -218,7 +218,7 @@ When you're driving to a job, tap the **Drive Mode** button on the home screen o
 
 ### Plan limits on jobs
 
-- **Free plan**: 10 jobs per month
+- **Free plan**: up to 5 jobs per month
 - **Pro, Pro+, Business**: unlimited
 
 If you hit the Free limit, you'll see a friendly nudge to upgrade. The counter resets each month.
@@ -399,44 +399,45 @@ You'll occasionally see little blue tip cards on different screens — those are
 
 We have four plans to fit different stages of business:
 
-#### Free
+#### Free — $0
 Best for: just getting started, trying things out
-- 10 jobs per month
-- 1 enforced deposit per month
-- 20 SMS replies (replies only)
-- 3 offline photos
-- 7-day analytics history
+- Up to 5 jobs per month
+- Basic invoicing
+- Job scheduling
+- Lead management
 - Booking link
-- Read-only access to AI suggestions
 
 #### Pro — $19/month
-Best for: solo workers running 10+ jobs a month
+Best for: solo workers running more than 5 jobs a month
 - Unlimited jobs
-- Unlimited SMS
-- 30-day analytics
-- Up to 10 automated event notifications
-- AI Co-Pilot, Price Estimator, and Smart Scheduling
+- Auto follow-ups
+- Two-way SMS
+- Owner View dashboard
+- Weekly summaries
+- Priority support
 
 #### Pro+ — $28/month
-Best for: people who want more deposits and dispute protection
+Best for: people who want deposits and risk protection
 - Everything in Pro
-- Unlimited deposits with risk protection
-- 300 SMS with templates
-- Unlimited analytics history
-- Profit Alerts and Owner View
-- Unlimited AI campaign suggestions
-- Dispute handling
+- Deposit enforcement
+- Booking risk protection
+- Today's Money Plan
+- Offline asset capture
+- Priority alerts
+- AI campaign suggestions
 
 #### Business — $49/month
 Best for: solo workers with helpers or a small crew
 - Everything in Pro+
-- 1,500 SMS
-- Crew member accounts and admin permissions
-- Shared team inbox
+- Multi-provider support
+- Team management
+- Business analytics
+- Admin controls
+- API access
 
 ### Upgrading or downgrading
 
-Go to **More → Settings → Account → Plan & Billing**. Tap **Change Plan** and pick the one you want. Upgrades take effect immediately. Downgrades take effect at the end of your current billing cycle, so you don't lose anything you've already paid for.
+Go to **More → Settings → Account** and find the **Subscription** section. Tap **Change Plan** and pick the one you want. Upgrades take effect immediately. Downgrades take effect at the end of your current billing cycle, so you don't lose anything you've already paid for.
 
 You can cancel anytime. There's no contract.
 
@@ -462,14 +463,12 @@ Go to **More → Settings → Account**. You can change your email, password, or
 
 ### Notifications
 
-Choose what you want to be notified about under **More → Settings → Account**. You can turn on or off:
+Under **More → Settings → Account → Notifications**, you can turn on or off:
 
-- Push notifications (on your phone)
-- Email notifications
-- Daily summary email
-- New booking request alerts
-- New lead alerts
-- Payment received alerts
+- **SMS Notifications** — texts to your phone for important updates
+- **Email Notifications** — emails for the same updates
+
+Push notifications are controlled by your phone's system settings (see Troubleshooting below).
 
 ### Privacy controls
 
