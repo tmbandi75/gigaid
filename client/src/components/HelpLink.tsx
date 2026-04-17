@@ -3,7 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { openExternalUrl } from "@/lib/openExternalUrl";
 
-const SUPPORT_BASE_URL = "https://support.gigaid.ai";
+const DEFAULT_SUPPORT_BASE_URL = "https://support.gigaid.ai";
+const rawSupportBaseUrl = import.meta.env.VITE_SUPPORT_BASE_URL?.trim();
+const SUPPORT_BASE_URL = (rawSupportBaseUrl && rawSupportBaseUrl.length > 0
+  ? rawSupportBaseUrl
+  : DEFAULT_SUPPORT_BASE_URL
+).replace(/\/+$/, "");
 
 export type HelpArticleSlug =
   | "getting-started"
