@@ -101,7 +101,7 @@ When a customer fills out your booking form, three things happen:
 
 1. The request shows up under **More → Booking Requests**
 2. You get a notification (push or email, depending on your settings)
-3. A new lead is created automatically under your **Leads** tab
+3. A new lead is created automatically under your **Requests** tab
 
 You can then accept, decline, or message the customer right from the app.
 
@@ -136,7 +136,7 @@ Every lead has a status that helps you keep track of where things stand:
 
 ### Adding a lead manually
 
-Tap the **+** button on the **Leads** page (or use **Quick Capture**). Fill in the customer's name, phone, the type of service they need, and any notes. Hit **Save**.
+Tap the **+** button on the **Requests** page (or use **Quick Capture**). Fill in the customer's name, phone, the type of service they need, and any notes. Hit **Save**.
 
 If you only have a phone number, that's fine — start there and fill in the rest as you learn it.
 
@@ -244,7 +244,7 @@ This information goes directly to Stripe — GigAid never sees or stores your SS
 
 From any completed job, tap **Send Invoice**. We'll prefill the customer, the amount, and a description. You can edit anything, then hit **Send**.
 
-The customer gets a text and/or email with a link to pay by card. Once they pay, the money lands in your Stripe account, and Stripe sends it to your bank within 1–2 business days.
+The customer gets a text and/or email with a link to pay by card. Once they pay, the money lands in your Stripe account, and Stripe sends it to your bank on its normal payout schedule.
 
 ### Recording cash, Zelle, Venmo, or check
 
@@ -544,12 +544,12 @@ Stripe sometimes asks for extra documents (like an ID photo or a utility bill) t
 
 ### My payout hasn't landed in my bank yet
 
-Stripe typically sends payouts to your bank within 1–2 business days after a card payment is captured. A few things can delay it:
+Stripe runs payouts on its own schedule (which you can see inside your Stripe dashboard). A few common reasons one might be delayed:
 
-1. **First payout takes longer.** Brand-new Stripe accounts often have a 7-day hold on the first payout while Stripe verifies you.
-2. **Verification still pending.** If Stripe is still asking for documents, payouts pause until that's resolved. Check **More → Settings → Get Paid → Manage Stripe Account**.
-3. **Weekends and bank holidays.** Banks don't process payouts on those days.
-4. **Wrong bank account.** Double-check the routing and account numbers in your Stripe dashboard.
+1. **Verification still pending.** If Stripe is still asking for documents, payouts pause until that's resolved. Check **More → Settings → Get Paid → Manage Stripe Account**.
+2. **Weekends and bank holidays.** Banks don't process payouts on those days.
+3. **Wrong bank account.** Double-check the routing and account numbers in your Stripe dashboard.
+4. **First payouts** sometimes take longer while Stripe verifies a brand-new account.
 
 **If something goes wrong:** Open your Stripe dashboard for the exact payout status, and email **support@gigaid.ai** if you need help reading it.
 
@@ -559,8 +559,6 @@ Stripe typically sends payouts to your bank within 1–2 business days after a c
 2. Some carriers block texts from new business numbers — ask the customer to reply "YES" to your first message to whitelist you.
 3. Check **More → Messages** for a "delivery failed" badge on the message.
 4. If you've hit your monthly SMS limit, you'll see a banner. Upgrade your plan or wait for the next billing cycle.
-
-**Good to know:** GigAid never sends texts overnight — messages composed late at night go out the next morning.
 
 ### I can't send a text
 
@@ -600,11 +598,11 @@ GigAid lets you create jobs, leads, and notes while you're offline (no signal, b
 
 ### I lost a job, lead, or message
 
-Check your **Archived** filter on the Jobs or Leads page — sometimes things get archived by accident. If you really deleted something and need it back, email us as soon as you can.
+Check your **Archived** filter on the Jobs or Requests page — sometimes things get archived by accident. If you really deleted something and need it back, email us as soon as you can.
 
 ### I want to switch from Free to Pro but I'm not sure
 
-The fastest way to know: count your active jobs. If you're hitting the 10-job limit on Free, Pro pays for itself with one extra booked job. You can also try Pro for a month and downgrade if it's not for you.
+The fastest way to know: count your active jobs. If you're hitting the 5-job-per-month limit on Free, Pro pays for itself with one extra booked job. You can also try Pro for a month and downgrade if it's not for you.
 
 ### How to get extra help (escalation path)
 
