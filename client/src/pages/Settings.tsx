@@ -801,7 +801,7 @@ export default function Settings() {
         >
           <div className="space-y-4">
             <div className="flex items-center justify-end -mt-2">
-              <HelpLink slug="booking-link-public-page" label="Booking Link & Public Page" />
+              <HelpLink slug="public-profile" label="Public Profile & Booking" />
             </div>
             <div className="flex items-center justify-between">
               <div>
@@ -1022,7 +1022,7 @@ export default function Settings() {
                   <Crown className="h-4 w-4 text-primary" />
                   Plan & Billing
                 </h4>
-                <HelpLink slug="plans-billing" label="Plans & Billing" size="xs" />
+                <HelpLink slug="subscription" label="Subscription" size="xs" />
               </div>
               <SubscriptionSettings />
             </div>
@@ -1036,7 +1036,7 @@ export default function Settings() {
                   <Bell className="h-4 w-4 text-amber-500" />
                   Notifications
                 </h4>
-                <HelpLink slug="account-privacy" label="Notifications" size="xs" />
+                <HelpLink slug="notifications" label="Notifications" size="xs" />
               </div>
               <div className="space-y-4 pl-6">
                 <div className="flex items-center justify-between">

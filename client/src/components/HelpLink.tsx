@@ -13,12 +13,16 @@ const SUPPORT_BASE_URL = (rawSupportBaseUrl && rawSupportBaseUrl.length > 0
 export type HelpArticleSlug =
   | "getting-started"
   | "booking-link-public-page"
+  | "public-profile"
   | "leads-booking-requests"
   | "jobs"
   | "invoices-payments"
   | "messages-client-communication"
   | "ai-features"
   | "plans-billing"
+  | "subscription"
+  | "stripe-connect"
+  | "notifications"
   | "account-privacy"
   | "troubleshooting";
 

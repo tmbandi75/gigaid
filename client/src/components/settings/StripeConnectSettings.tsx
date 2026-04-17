@@ -168,7 +168,7 @@ export function StripeConnectSettings() {
                 Connect your Stripe account to receive deposits from customers
               </CardDescription>
             </div>
-            <HelpLink slug="invoices-payments" label="Stripe Connect setup" />
+            <HelpLink slug="stripe-connect" label="Stripe Connect setup" />
           </div>
         </CardHeader>
         <CardContent className="space-y-4">

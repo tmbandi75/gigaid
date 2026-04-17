@@ -37,6 +37,7 @@ import { FreeSetupCta } from "@/components/growth/FreeSetupCta";
 import { SwipeableCard, type SwipeAction as SwipeCardAction } from "@/components/ui/swipeable-card";
 import { ActionConfirmDialog } from "@/components/ui/action-confirm-dialog";
 import { getInvoiceActionEligibility, getSwipeActions, type SwipeAction as RulesSwipeAction } from "@shared/archive-delete-rules";
+import { HelpLink } from "@/components/HelpLink";
 
 const statusConfig: Record<string, { 
   color: string; 
@@ -360,7 +361,10 @@ export default function Invoices() {
         <div className="relative">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Invoices</h1>
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-2xl font-bold tracking-tight">Invoices</h1>
+                <HelpLink slug="invoices-payments" label="Invoices & Payments" className="text-white/80 hover:text-white hover:bg-white/10" />
+              </div>
               <p className="text-sm text-white/70 mt-0.5">Manage your billing</p>
               <CoachingRenderer screen="invoices" />
             </div>
@@ -493,7 +497,10 @@ export default function Invoices() {
                 <FileText className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground" data-testid="page-title">Invoices</h1>
+                <div className="flex items-center gap-1.5">
+                  <h1 className="text-2xl font-bold text-foreground" data-testid="page-title">Invoices</h1>
+                  <HelpLink slug="invoices-payments" label="Invoices & Payments" />
+                </div>
                 <p className="text-sm text-muted-foreground">Manage your billing</p>
                 <CoachingRenderer screen="invoices" />
               </div>
