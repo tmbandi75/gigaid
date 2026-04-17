@@ -118,6 +118,25 @@ export async function registerRoutes(
     });
   });
 
+  // Public support media (GIFs/MP4s referenced by the support manual).
+  app.get(/^\/support-media\/([A-Za-z0-9_\-]+\.(gif|mp4|png|jpg|jpeg|webp))$/, (req: Request, res: Response) => {
+    const filename = req.params[0];
+    const mediaPath = path.resolve(process.cwd(), "attached_assets/support-media", filename);
+    if (!mediaPath.startsWith(path.resolve(process.cwd(), "attached_assets/support-media"))) {
+      res.status(400).type("text/plain").send("Invalid path");
+      return;
+    }
+    fs.access(mediaPath, fs.constants.R_OK, (err) => {
+      if (err) {
+        res.status(404).type("text/plain").send("Not found");
+        return;
+      }
+      res.set("Access-Control-Allow-Origin", "*");
+      res.set("Cache-Control", "public, max-age=3600");
+      res.sendFile(mediaPath);
+    });
+  });
+
   // Global health endpoint for uptime monitoring (UptimeRobot, Pingdom, etc.)
   // Registered before auth middleware so it's always accessible without credentials.
   app.get("/api/health", async (_req: Request, res: Response) => {
