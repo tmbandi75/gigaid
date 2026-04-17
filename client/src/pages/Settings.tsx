@@ -64,6 +64,7 @@ import { MessagingSettings } from "@/components/settings/MessagingSettings";
 import { ChangePasswordDialog } from "@/components/settings/ChangePasswordDialog";
 import { SubscriptionSettings } from "@/components/settings/SubscriptionSettings";
 import { SettingsSectionAccordion } from "@/components/settings/SettingsSectionAccordion";
+import { HelpLink } from "@/components/HelpLink";
 import { isEmailPasswordUser } from "@/lib/firebase";
 import type { Referral, WeeklyAvailability } from "@shared/schema";
 import { useFeatureFlag, useUpdateFeatureFlag } from "@/hooks/use-nudges";
@@ -654,6 +655,9 @@ export default function Settings() {
           }
         >
           <div className="space-y-6">
+            <div className="flex items-center justify-end -mt-2">
+              <HelpLink slug="invoices-payments" label="Invoices & Payments" />
+            </div>
             {stripeStatusBanner}
 
             <PaymentMethodsSettings onStripeToggle={setStripeEnabled} />
@@ -796,6 +800,9 @@ export default function Settings() {
           defaultOpen={false}
         >
           <div className="space-y-4">
+            <div className="flex items-center justify-end -mt-2">
+              <HelpLink slug="booking-link-public-page" label="Booking Link & Public Page" />
+            </div>
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-sm">Enable Public Profile</p>
@@ -981,6 +988,9 @@ export default function Settings() {
           defaultOpen={false}
         >
           <div className="space-y-6">
+            <div className="flex items-center justify-end -mt-2">
+              <HelpLink slug="account-privacy" label="Account & Privacy" />
+            </div>
             {/* Plan */}
             {!isBusinessPlan && subscription !== undefined && (
               <>
@@ -1006,16 +1016,28 @@ export default function Settings() {
               </>
             )}
 
-            <SubscriptionSettings />
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  <Crown className="h-4 w-4 text-primary" />
+                  Plan & Billing
+                </h4>
+                <HelpLink slug="plans-billing" label="Plans & Billing" size="xs" />
+              </div>
+              <SubscriptionSettings />
+            </div>
 
             <Separator />
 
             {/* Notifications */}
             <div className="space-y-4">
-              <h4 className="font-medium text-sm flex items-center gap-2">
-                <Bell className="h-4 w-4 text-amber-500" />
-                Notifications
-              </h4>
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  <Bell className="h-4 w-4 text-amber-500" />
+                  Notifications
+                </h4>
+                <HelpLink slug="account-privacy" label="Notifications" size="xs" />
+              </div>
               <div className="space-y-4 pl-6">
                 <div className="flex items-center justify-between">
                   <div>

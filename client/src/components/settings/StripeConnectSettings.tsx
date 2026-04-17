@@ -23,6 +23,7 @@ import {
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { logger } from "@/lib/logger";
 import { openExternalUrl } from "@/lib/openExternalUrl";
+import { HelpLink } from "@/components/HelpLink";
 
 interface ConnectStatus {
   connected: boolean;
@@ -156,14 +157,19 @@ export function StripeConnectSettings() {
     <div className="space-y-4">
       <Card data-testid="card-stripe-connect">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            Payment Account
-            {getStatusBadge()}
-          </CardTitle>
-          <CardDescription>
-            Connect your Stripe account to receive deposits from customers
-          </CardDescription>
+          <div className="flex items-start justify-between gap-2">
+            <div className="space-y-1.5">
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Payment Account
+                {getStatusBadge()}
+              </CardTitle>
+              <CardDescription>
+                Connect your Stripe account to receive deposits from customers
+              </CardDescription>
+            </div>
+            <HelpLink slug="invoices-payments" label="Stripe Connect setup" />
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {statusLoading ? (
