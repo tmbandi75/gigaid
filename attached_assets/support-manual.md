@@ -2,7 +2,22 @@
 
 Welcome to GigAid! This manual is here to help you get the most out of the app. Whether you're just getting started or you've been running jobs for months, you'll find friendly walkthroughs of every feature, plus tips that can save you time and help you get paid faster.
 
-If something isn't working the way you expect, jump to the **Troubleshooting** section at the end. And if you can't find an answer here, reach out at **support@gigaid.ai** — a real human will get back to you.
+If something isn't working the way you expect, jump to the **Troubleshooting** section at the end. And if you can't find an answer here, reach out at **support@gigaid.ai**.
+
+---
+
+## Table of Contents
+
+1. [Getting Started](#1-getting-started)
+2. [Booking Link & Public Page](#2-booking-link--public-page)
+3. [Leads & Booking Requests](#3-leads--booking-requests)
+4. [Jobs](#4-jobs)
+5. [Invoices & Payments](#5-invoices--payments)
+6. [Messages & Client Communication](#6-messages--client-communication)
+7. [AI Features](#7-ai-features)
+8. [Plans & Billing](#8-plans--billing)
+9. [Account & Privacy](#9-account--privacy)
+10. [Troubleshooting](#10-troubleshooting)
 
 ---
 
@@ -244,14 +259,14 @@ Deposits help reduce no-shows. There are two ways to use them:
 
 Set a deposit by going to the booking or job and tapping **Request Deposit**. You can choose a flat amount or a percentage (up to 30% of the job price).
 
-Stripe holds the deposit until the job is complete. If a customer cancels last-minute, you can keep the deposit (this is called *risk protection*). On the Pro+ plan, GigAid handles dispute paperwork for you automatically.
+Stripe holds the deposit until the job is complete. If a customer cancels last-minute, you can keep the deposit (this is called *risk protection*). Pro+ and Business plans unlock unlimited deposit risk protection.
 
 ### Plan limits on payments
 
 - **Free**: 1 enforced deposit per month, basic invoicing
 - **Pro**: unlimited invoices, basic deposit holds
-- **Pro+**: unlimited deposits, dispute protection, retained-fee handling
-- **Business**: everything in Pro+, plus crew payment splits
+- **Pro+**: unlimited deposits with risk protection
+- **Business**: everything in Pro+, plus crew accounts
 
 ### Tax time
 
@@ -299,19 +314,35 @@ Turn these on or off and customize the message text in **More → Settings → A
 
 ## 7. AI Features
 
-### AI Co-Pilot
+GigAid's AI is built to help you work faster, write better messages, and never miss a follow-up. Here's every AI feature in the app and how to use it.
 
-Tap the **Sparkle** icon at the top of most screens to summon the **AI Co-Pilot**. Ask it anything: "What jobs do I have tomorrow?", "Draft a quote for a kitchen remodel," or "What's my profit this month?" It pulls from your data and answers in plain English.
+### Today's Money Plan
+
+Open the **Get Paid** tab to see *Today's Money Plan* — a focused list of the deposits and invoices you should chase today. The AI sorts everything by what's most likely to bring money in the door first.
+
+### AI Nudges
+
+Throughout the app you'll see little purple **AI Suggestions** chips on leads, jobs, and invoices. These are *AI Nudges* — short, in-the-moment ideas like "Send a follow-up text" or "This lead has been quiet for 4 days." Tap any nudge to see suggested actions and one-tap responses.
+
+### Voice Notes
+
+Inside Quick Capture (and on most note fields), tap the microphone icon to record a **voice note**. The AI transcribes what you said and offers to turn it into a job, a lead, or a customer message. Perfect for capturing a quote on the way back to your truck.
 
 ### Price Estimator
 
-Not sure what to charge? Open any lead or job and tap **Estimate Price**. Tell the AI what the job involves, and we'll suggest a fair price based on your past jobs, your service area, and typical industry rates.
+Not sure what to charge? Open any lead or job (or use it on your public booking page) and tap **Estimate Price**. Tell the AI what the job involves, and it suggests a fair price based on your past jobs, your service area, and typical rates. You can always override it.
 
-You can always override the suggestion — it's just a starting point.
+### Follow-Up Composer
 
-### Smart Scheduling
+On any lead, tap **Follow Up**. The Follow-Up Composer writes a friendly, professional message for you. Pick a tone — friendly, professional, or casual — and tweak the message before sending. Great for those leads that have gone quiet for a few days.
 
-When you create a job, GigAid suggests times that don't conflict with your existing schedule and minimize your driving. Tap **Smart Suggest** in the date/time picker to see options ranked by efficiency.
+### AI Co-Pilot
+
+Tap the **Sparkle** icon (or open **More → AI Co-Pilot**) to chat with the **AI Co-Pilot**. Ask it anything: "What jobs do I have tomorrow?", "Draft a quote for a kitchen remodel," or "Which customers haven't paid yet?" It pulls from your data and answers in plain English.
+
+### Quick Job Entry
+
+When you start a new job, the AI watches what you type and prefills the rest — service type, duration, even a starter price — based on your past jobs. This is **Quick Job Entry**, and it usually cuts new-job creation time to under 30 seconds.
 
 ### Quick Capture
 
@@ -320,12 +351,37 @@ Tap the **+** in the header (or open **More → Quick Capture**). You can:
 - **Take a photo** of a job site, receipt, or business card
 - **Record a voice memo** of an idea or to-do
 - **Type a quick note**
+- **Paste a screenshot** of a Facebook message or Craigslist post
 
-We'll suggest what to do with it: turn it into a job, a lead, an invoice, or just save it as a note. Great for capturing things fast when you're on a job and don't have time to fill out forms.
+We'll suggest what to do with it: turn it into a job, a lead, an invoice, or just save it as a note.
+
+### Booking Insights
+
+Open **More → Owner View** to see **Booking Insights** — an AI-generated summary of where your bookings come from, your busiest days, your average lead-to-booking time, and tips on how to lift your booking rate.
+
+### Bio Rewrite
+
+Inside **More → Profile**, tap the **Sparkle** icon next to your bio field to use **Bio Rewrite**. The AI takes whatever you've written and rewrites it in a warmer, more professional tone. Try a few versions and pick your favorite.
+
+### FAQ Assistant
+
+Your public booking page includes an **FAQ Assistant** that answers common customer questions ("Do you do same-day jobs?", "Do you bring your own tools?") using your profile and past job data. Customize the answers anytime from your booking page settings.
+
+### Review Generator
+
+After a completed job, the **Review Generator** drafts a polite text or email asking the customer for a Google or Yelp review, with a direct link. You approve before it sends.
+
+### Campaign Suggestions
+
+On Pro+ and Business, the AI watches your activity and suggests one-tap **campaigns** — things like "Text your last 10 cleaning customers about a spring deep-clean special" or "Re-engage 3 leads who went quiet last month." Open **More → AI Tools** to see the latest suggestions.
+
+### Smart Scheduling
+
+When you create a job, GigAid suggests times that don't conflict with your existing schedule and minimize your driving. Tap **Smart Suggest** in the date/time picker to see options ranked by efficiency.
 
 ### Profit Alerts
 
-Pro+ and Business plans get **Profit Alerts**. We watch your jobs, deposits, and invoices for patterns — like a customer who hasn't paid an invoice in 30 days, or a slow week where you might want to push for more bookings — and ping you proactively.
+Pro+ and Business plans get **Profit Alerts** at **More → Profit Alerts**. We watch your jobs, deposits, and invoices for patterns — like a customer who hasn't paid an invoice in a while, or a slow week where you might want to push for more bookings — and ping you proactively.
 
 ### Owner View
 
@@ -333,7 +389,7 @@ The **Owner View** dashboard (under **More → Owner View**) gives you a bird's-
 
 ### Coaching tips
 
-You'll occasionally see little blue tip cards on different screens — those are coaching tips. They're context-aware suggestions like "Your Tuesdays are slow — want to send a discount text to your top 5 customers?" Dismiss any tip you don't want, and it won't come back.
+You'll occasionally see little blue tip cards on different screens — those are coaching tips. Context-aware suggestions like "Your Tuesdays are slow — want to send a discount text to your top 5 customers?" Dismiss any tip you don't want, and it won't come back.
 
 ---
 
@@ -377,8 +433,6 @@ Best for: solo workers with helpers or a small crew
 - 1,500 SMS
 - Crew member accounts and admin permissions
 - Shared team inbox
-- Crew payment splits
-- Priority support
 
 ### Upgrading or downgrading
 
@@ -392,7 +446,7 @@ We accept all major cards through Stripe. Update your card under **More → Sett
 
 ### Refunds
 
-If GigAid isn't working for you, email **support@gigaid.ai** within 14 days of your charge for a full refund, no hard feelings.
+If GigAid isn't working for you, email **support@gigaid.ai** and we'll do our best to make it right.
 
 ---
 
@@ -484,7 +538,7 @@ Stripe sometimes asks for extra documents (like an ID photo or a utility bill) t
 
 ### I lost a job, lead, or message
 
-Check your **Archived** filter on the Jobs or Leads page — sometimes things get archived by accident. If you really deleted something and need it back, email us within 30 days; we keep deleted data in a recovery window for that long.
+Check your **Archived** filter on the Jobs or Leads page — sometimes things get archived by accident. If you really deleted something and need it back, email us as soon as you can.
 
 ### I want to switch from Free to Pro but I'm not sure
 
@@ -492,7 +546,7 @@ The fastest way to know: count your active jobs. If you're hitting the 10-job li
 
 ### I need help with something not on this list
 
-Email **support@gigaid.ai** and we'll get back to you within one business day. Include screenshots if you can — they help us help you faster.
+Email **support@gigaid.ai** and we'll get back to you. Include screenshots if you can — they help us help you faster.
 
 ---
 
