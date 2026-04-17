@@ -95,6 +95,8 @@ There are a few easy ways to get your link in front of customers:
 - Print it on a **business card** or flyer for in-person hand-offs
 - Reply to neighborhood requests on **Nextdoor, Craigslist, or Facebook Marketplace** with your link
 
+![Sharing your booking link — animated walkthrough](support-media/share-booking-link.gif)
+
 ### What happens when someone books?
 
 When a customer fills out your booking form, three things happen:
@@ -199,6 +201,8 @@ If you do the same kinds of jobs over and over, GigAid comes with starter templa
 
 Next time, creating a job takes about 10 seconds.
 
+![Creating a job from a template — animated walkthrough](support-media/create-job-from-template.gif)
+
 ### Job status
 
 Jobs move through these statuses:
@@ -240,11 +244,15 @@ Go to **More → Settings → Get Paid** and tap **Connect Stripe**. Stripe will
 
 This information goes directly to Stripe — GigAid never sees or stores your SSN or bank details. Once approved (usually instantly, sometimes a day or two), you're good to go.
 
+![Connecting Stripe — animated walkthrough](support-media/connect-stripe.gif)
+
 ### Sending an invoice
 
 From any completed job, tap **Send Invoice**. We'll prefill the customer, the amount, and a description. You can edit anything, then hit **Send**.
 
 The customer gets a text and/or email with a link to pay by card. Once they pay, the money lands in your Stripe account, and Stripe sends it to your bank on its normal payout schedule.
+
+![Sending an invoice — animated walkthrough](support-media/send-invoice.gif)
 
 ### Recording cash, Zelle, Venmo, or check
 
@@ -354,6 +362,8 @@ Tap the **+** in the header (or open **More → Quick Capture**). You can:
 - **Paste a screenshot** of a Facebook message or Craigslist post
 
 We'll suggest what to do with it: turn it into a job, a lead, an invoice, or just save it as a note.
+
+![Using Quick Capture — animated walkthrough](support-media/quick-capture.gif)
 
 ### Booking Insights
 
