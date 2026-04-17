@@ -103,6 +103,21 @@ export async function registerRoutes(
   await setupAuth(app);
   registerAuthRoutes(app);
 
+  // Public support manual endpoint - serves the markdown so the marketing site
+  // (support.gigaid.ai) can fetch it directly. No auth required.
+  app.get("/support-manual.md", (_req: Request, res: Response) => {
+    const manualPath = path.resolve(process.cwd(), "attached_assets/support-manual.md");
+    fs.readFile(manualPath, "utf8", (err, data) => {
+      if (err) {
+        res.status(404).type("text/plain").send("Support manual not found");
+        return;
+      }
+      res.set("Access-Control-Allow-Origin", "*");
+      res.set("Cache-Control", "public, max-age=300");
+      res.type("text/markdown; charset=utf-8").send(data);
+    });
+  });
+
   // Global health endpoint for uptime monitoring (UptimeRobot, Pingdom, etc.)
   // Registered before auth middleware so it's always accessible without credentials.
   app.get("/api/health", async (_req: Request, res: Response) => {
