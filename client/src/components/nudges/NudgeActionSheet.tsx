@@ -14,6 +14,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
 import type { AiNudge } from "@shared/schema";
+import { copyTextToClipboard } from "@/lib/clipboard";
 
 interface NudgeActionSheetProps {
   nudge: AiNudge | null;
@@ -142,7 +143,7 @@ export function NudgeActionSheet({
             title: trustSignal.title, 
             description: trustSignal.description 
           });
-          navigator.clipboard.writeText(message);
+          void copyTextToClipboard(message);
         }
         
         onClose();

@@ -9,6 +9,7 @@ import { useApiMutation } from "@/hooks/useApiMutation";
 import { MessageSquare, Send, Loader2, Sparkles, RefreshCw, Copy, Check, Phone } from "lucide-react";
 import { useSendText } from "@/hooks/use-send-text";
 import { logger } from "@/lib/logger";
+import { copyTextToClipboard } from "@/lib/clipboard";
 
 interface LeadTextComposerProps {
   leadId: string;
@@ -77,7 +78,11 @@ export function LeadTextComposer({ leadId, clientPhone, clientName, serviceType,
   };
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(message);
+    const copiedOk = await copyTextToClipboard(message);
+    if (!copiedOk) {
+      toast({ title: "Could not copy message", variant: "destructive" });
+      return;
+    }
     setCopied(true);
     toast({ title: "Message copied!" });
     setTimeout(() => setCopied(false), 2000);

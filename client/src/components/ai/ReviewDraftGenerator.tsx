@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { Star, Loader2, Sparkles, Copy, Send, Check } from "lucide-react";
+import { copyTextToClipboard } from "@/lib/clipboard";
 
 interface ReviewDraft {
   review: string;
@@ -50,7 +51,11 @@ export function ReviewDraftGenerator({ clientName, jobName, onSend }: ReviewDraf
   );
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(message);
+    const copiedOk = await copyTextToClipboard(message);
+    if (!copiedOk) {
+      toast({ title: "Could not copy message", variant: "destructive" });
+      return;
+    }
     setCopied(true);
     toast({ title: "Copied to clipboard!" });
     setTimeout(() => setCopied(false), 2000);

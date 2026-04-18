@@ -2,6 +2,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Shield, AlertTriangle, DollarSign, CheckCircle } from "lucide-react";
+import { Plan, PLAN_PRICES_DOLLARS } from "@shared/plans";
 
 export default function ProPlusContext() {
   const [, navigate] = useLocation();
@@ -59,7 +60,9 @@ export default function ProPlusContext() {
         <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 mb-6">
           <CardContent className="p-6">
             <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-bold text-amber-900 dark:text-amber-100">$28</span>
+              <span className="text-3xl font-bold text-amber-900 dark:text-amber-100">
+                ${PLAN_PRICES_DOLLARS[Plan.PRO_PLUS].toFixed(2)}
+              </span>
               <span className="text-muted-foreground">/ month</span>
             </div>
             <p className="text-sm text-muted-foreground mt-2">

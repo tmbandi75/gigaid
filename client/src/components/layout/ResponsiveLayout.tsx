@@ -1,5 +1,5 @@
-import { Capacitor } from "@capacitor/core";
 import { Link, useLocation } from "wouter";
+import { useState } from "react";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -181,6 +181,8 @@ function MobileBottomNav() {
 function DesktopHeader() {
   const [location, navigate] = useLocation();
   const { logout } = useAuth();
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const { data: summary } = useQuery<DashboardSummary>({
     queryKey: QUERY_KEYS.dashboardSummary(),
@@ -263,18 +265,27 @@ function DesktopHeader() {
           </kbd>
         </div>
 
-        <DropdownMenu modal={Capacitor.isNativePlatform() ? false : true}>
+        <DropdownMenu modal={false} open={isQuickAddOpen} onOpenChange={setIsQuickAddOpen}>
           <DropdownMenuTrigger asChild>
-            <Button variant="secondary" size="sm" className="h-9 gap-2 bg-white/20 hover:bg-white/30 border-0 text-primary-foreground" data-testid="button-quick-add">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-9 gap-2 bg-white/20 hover:bg-white/30 border-0 text-primary-foreground"
+              data-testid="button-quick-add"
+              onClick={() => setIsQuickAddOpen((prev) => !prev)}
+            >
               <Plus className="h-4 w-4" />
               <span className="hidden xl:inline">New</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="z-[300] w-48">
+          <DropdownMenuContent align="end" className="w-48">
             {quickActions.map((action) => (
               <DropdownMenuItem
                 key={action.path}
-                onClick={() => navigate(action.path)}
+                onSelect={() => {
+                  setIsQuickAddOpen(false);
+                  navigate(action.path);
+                }}
                 data-testid={`quick-add-${action.label.toLowerCase().replace(/\s+/g, "-")}`}
               >
                 <action.icon className="h-4 w-4 mr-2" />
@@ -308,9 +319,16 @@ function DesktopHeader() {
           </Button>
         </Link>
 
-        <DropdownMenu>
+        <DropdownMenu modal={false} open={isUserMenuOpen} onOpenChange={setIsUserMenuOpen}>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-white/10" data-testid="header-user-menu" aria-label="User menu">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-full hover:bg-white/10"
+              data-testid="header-user-menu"
+              aria-label="User menu"
+              onClick={() => setIsUserMenuOpen((prev) => !prev)}
+            >
               <Avatar className="h-8 w-8 ring-2 ring-white/30">
                 {profile?.photo ? (
                   <AvatarImage src={profile.photo} alt="Profile" />
@@ -327,17 +345,29 @@ function DesktopHeader() {
               <p className="text-xs text-muted-foreground">{profile?.email || "user@example.com"}</p>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate("/profile")} data-testid="header-dropdown-profile">
+            <DropdownMenuItem onSelect={() => {
+              setIsUserMenuOpen(false);
+              navigate("/profile");
+            }} data-testid="header-dropdown-profile">
               Profile
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/settings")} data-testid="header-dropdown-settings">
+            <DropdownMenuItem onSelect={() => {
+              setIsUserMenuOpen(false);
+              navigate("/settings");
+            }} data-testid="header-dropdown-settings">
               Settings
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/help")} data-testid="header-dropdown-help">
+            <DropdownMenuItem onSelect={() => {
+              setIsUserMenuOpen(false);
+              navigate("/help");
+            }} data-testid="header-dropdown-help">
               Help & Support
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => logout()} className="text-destructive" data-testid="header-dropdown-logout">
+            <DropdownMenuItem onSelect={() => {
+              setIsUserMenuOpen(false);
+              logout();
+            }} className="text-destructive" data-testid="header-dropdown-logout">
               Log Out
             </DropdownMenuItem>
           </DropdownMenuContent>

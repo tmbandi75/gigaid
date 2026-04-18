@@ -7,6 +7,8 @@ import { queryClient } from "@/lib/queryClient";
 import { useActivationState } from "@/hooks/useActivationState";
 import { isActivated } from "@/lib/isActivated";
 import { useToast } from "@/hooks/use-toast";
+import { copyTextToClipboard } from "@/lib/clipboard";
+import { shareContent } from "@/lib/share";
 import { BookingLinkShare } from "@/components/booking-link/BookingLinkShare";
 import { CelebrationOverlay } from "@/components/CelebrationOverlay";
 import confetti from "canvas-confetti";
@@ -223,25 +225,25 @@ function BookingLinkFallback({ url }: { url: string }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(url);
+    const copiedOk = await copyTextToClipboard(url);
+    if (copiedOk) {
       setCopied(true);
       toast({ title: "Link copied" });
       setTimeout(() => setCopied(false), 2000);
-    } catch {
+    } else {
       toast({ title: "Couldn't copy", variant: "destructive" });
     }
   };
 
   const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "Book with me", text: "Book a job with me using this link", url });
-      } catch (err) {
-        if ((err as Error).name !== "AbortError") handleCopy();
-      }
-    } else {
-      handleCopy();
+    const sharedOk = await shareContent({
+      title: "Book with me",
+      text: "Book a job with me using this link",
+      url,
+      dialogTitle: "Share booking link",
+    });
+    if (!sharedOk) {
+      await handleCopy();
     }
   };
 

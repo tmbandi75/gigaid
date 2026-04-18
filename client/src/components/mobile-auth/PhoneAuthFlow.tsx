@@ -1,80 +1,119 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { ArrowLeft, Loader2 } from 'lucide-react';
-import { signInWithFirebaseIdToken } from '@/lib/auth/mobileAuth';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from "firebase/auth";
+import { firebaseInitError, formatFirebaseLinkError, getFirebaseAuth } from "@/lib/firebase";
+import { isNativePlatform } from "@/lib/platform";
+import { logger } from "@/lib/logger";
 
-type PhoneScreen = 'enter-phone' | 'verify-code';
+type PhoneScreen = "enter-phone" | "verify-code";
 
 interface PhoneAuthFlowProps {
-  onSuccess: (token: string) => void;
   onBack: () => void;
+  onFirebaseIdToken: (idToken: string) => Promise<void>;
 }
 
-export function PhoneAuthFlow({ onSuccess, onBack }: PhoneAuthFlowProps) {
-  const [screen, setScreen] = useState<PhoneScreen>('enter-phone');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [countryCode, setCountryCode] = useState('+1');
-  const [verificationCode, setVerificationCode] = useState('');
+export function PhoneAuthFlow({ onBack, onFirebaseIdToken }: PhoneAuthFlowProps) {
+  const [screen, setScreen] = useState<PhoneScreen>("enter-phone");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [countryCode, setCountryCode] = useState("+1");
+  const [verificationCode, setVerificationCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resendDisabled, setResendDisabled] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(0);
+  const [nativeSmsListenerReady, setNativeSmsListenerReady] = useState(() => !isNativePlatform());
 
-  const fullPhoneNumber = `${countryCode}${phoneNumber.replace(/\D/g, '')}`;
+  const recaptchaContainerRef = useRef<HTMLDivElement>(null);
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
+  const confirmationRef = useRef<ConfirmationResult | null>(null);
+  const nativeVerificationIdRef = useRef<string | null>(null);
+  const nativeListenerCleanupRef = useRef<(() => Promise<void>) | null>(null);
+  const resendTimerRef = useRef<number | null>(null);
 
-  const handleSendCode = async () => {
-    if (!phoneNumber.trim()) {
-      setError('Please enter your phone number.');
-      return;
-    }
+  const normalizeCountryCode = (value: string) => {
+    const digits = value.replace(/\D/g, "");
+    if (!digits) return "+";
+    return `+${digits.slice(0, 4)}`;
+  };
 
-    setIsLoading(true);
-    setError(null);
+  const fullPhoneNumber = `${countryCode}${phoneNumber.replace(/\D/g, "")}`;
 
+  const clearWebRecaptcha = useCallback(() => {
     try {
-      setScreen('verify-code');
-      startResendCountdown();
-    } catch (err) {
-      setError('Failed to send code. Please try again.');
-    } finally {
-      setIsLoading(false);
+      recaptchaVerifierRef.current?.clear();
+    } catch {
+      // verifier may already be cleared
     }
-  };
+    recaptchaVerifierRef.current = null;
+    confirmationRef.current = null;
+  }, []);
 
-  const handleVerifyCode = async () => {
-    if (verificationCode.length !== 6) {
-      setError('Please enter the 6-digit code.');
-      return;
+  const teardownNativeListeners = useCallback(async () => {
+    if (nativeListenerCleanupRef.current) {
+      await nativeListenerCleanupRef.current();
+      nativeListenerCleanupRef.current = null;
     }
+  }, []);
 
-    setIsLoading(true);
-    setError(null);
+  useEffect(() => {
+    if (!isNativePlatform()) return;
+    setNativeSmsListenerReady(false);
+    let cancelled = false;
+    (async () => {
+      try {
+        const { FirebaseAuthentication } = await import("@capacitor-firebase/authentication");
+        const codeSent = await FirebaseAuthentication.addListener("phoneCodeSent", (event) => {
+          if (!cancelled) nativeVerificationIdRef.current = event.verificationId;
+        });
+        const verifyFailed = await FirebaseAuthentication.addListener("phoneVerificationFailed", (event) => {
+          if (!cancelled) setError(formatFirebaseLinkError(event));
+        });
+        nativeListenerCleanupRef.current = async () => {
+          await Promise.all([codeSent.remove(), verifyFailed.remove()]);
+        };
+        if (!cancelled) setNativeSmsListenerReady(true);
+      } catch (e) {
+        logger.error("[PhoneAuthFlow] Failed to register native phone listeners", e);
+        setError("Could not start phone verification. Try again.");
+      }
+    })();
 
-    try {
-      onSuccess('mock-token-phone-auth');
-    } catch (err) {
-      setError("That code didn't work. Try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    return () => {
+      cancelled = true;
+      void teardownNativeListeners();
+      setNativeSmsListenerReady(false);
+    };
+  }, [teardownNativeListeners]);
 
-  const handleResendCode = () => {
-    if (resendDisabled) return;
-    startResendCountdown();
-  };
+  useEffect(() => {
+    return () => {
+      clearWebRecaptcha();
+      void teardownNativeListeners();
+      if (resendTimerRef.current !== null) {
+        window.clearInterval(resendTimerRef.current);
+        resendTimerRef.current = null;
+      }
+    };
+  }, [clearWebRecaptcha, teardownNativeListeners]);
 
   const startResendCountdown = () => {
+    if (resendTimerRef.current !== null) {
+      window.clearInterval(resendTimerRef.current);
+      resendTimerRef.current = null;
+    }
     setResendDisabled(true);
     setResendCountdown(30);
-    
-    const interval = setInterval(() => {
+    resendTimerRef.current = window.setInterval(() => {
       setResendCountdown((prev) => {
         if (prev <= 1) {
-          clearInterval(interval);
+          if (resendTimerRef.current !== null) {
+            window.clearInterval(resendTimerRef.current);
+            resendTimerRef.current = null;
+          }
           setResendDisabled(false);
           return 0;
         }
@@ -83,12 +122,92 @@ export function PhoneAuthFlow({ onSuccess, onBack }: PhoneAuthFlowProps) {
     }, 1000);
   };
 
-  const handleCodeChange = (value: string) => {
-    const digitsOnly = value.replace(/\D/g, '').slice(0, 6);
-    setVerificationCode(digitsOnly);
+  const sendSmsCode = async () => {
+    if (phoneNumber.replace(/\D/g, "").length < 7) {
+      setError("Please enter your phone number.");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (isNativePlatform()) {
+        const { FirebaseAuthentication } = await import("@capacitor-firebase/authentication");
+        await FirebaseAuthentication.signInWithPhoneNumber({ phoneNumber: fullPhoneNumber });
+      } else {
+        const auth = getFirebaseAuth();
+        if (!auth || firebaseInitError) {
+          throw new Error(firebaseInitError || "Firebase auth is not initialized.");
+        }
+        if (!recaptchaContainerRef.current) {
+          throw new Error("Verification UI is not ready. Try again.");
+        }
+        if (!recaptchaVerifierRef.current) {
+          recaptchaVerifierRef.current = new RecaptchaVerifier(auth, recaptchaContainerRef.current, {
+            size: "invisible",
+          });
+        }
+        confirmationRef.current = await signInWithPhoneNumber(
+          auth,
+          fullPhoneNumber,
+          recaptchaVerifierRef.current,
+        );
+      }
+      setScreen("verify-code");
+      startResendCountdown();
+    } catch (e) {
+      setError(formatFirebaseLinkError(e));
+      clearWebRecaptcha();
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  if (screen === 'verify-code') {
+  const handleVerifyCode = async () => {
+    if (verificationCode.length !== 6) {
+      setError("Please enter the 6-digit code.");
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (isNativePlatform()) {
+        const vid = nativeVerificationIdRef.current;
+        if (!vid) {
+          throw new Error("No verification session. Send the code again.");
+        }
+        const { FirebaseAuthentication } = await import("@capacitor-firebase/authentication");
+        await FirebaseAuthentication.confirmVerificationCode({
+          verificationId: vid,
+          verificationCode,
+        });
+        const tokenResult = await FirebaseAuthentication.getIdToken();
+        if (!tokenResult?.token) {
+          throw new Error("Could not fetch your sign-in token. Please try again.");
+        }
+        await onFirebaseIdToken(tokenResult.token);
+      } else {
+        const confirmation = confirmationRef.current;
+        if (!confirmation) {
+          throw new Error("Verification session expired. Send the code again.");
+        }
+        const result = await confirmation.confirm(verificationCode);
+        const idToken = await result.user.getIdToken();
+        await onFirebaseIdToken(idToken);
+      }
+    } catch (e) {
+      setError(formatFirebaseLinkError(e));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (resendDisabled || isLoading) return;
+    await sendSmsCode();
+  };
+
+  if (screen === "verify-code") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background" data-testid="phone-verify-screen">
         <Card className="w-full max-w-md">
@@ -97,7 +216,7 @@ export function PhoneAuthFlow({ onSuccess, onBack }: PhoneAuthFlowProps) {
               variant="ghost"
               size="sm"
               className="w-fit -ml-2 mb-2"
-              onClick={() => setScreen('enter-phone')}
+              onClick={() => setScreen("enter-phone")}
               data-testid="button-change-number"
             >
               <ArrowLeft className="h-4 w-4 mr-1" />
@@ -127,7 +246,7 @@ export function PhoneAuthFlow({ onSuccess, onBack }: PhoneAuthFlowProps) {
                 pattern="[0-9]*"
                 placeholder="000000"
                 value={verificationCode}
-                onChange={(e) => handleCodeChange(e.target.value)}
+                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 className="text-center text-2xl tracking-widest h-14"
                 maxLength={6}
                 autoFocus
@@ -141,17 +260,17 @@ export function PhoneAuthFlow({ onSuccess, onBack }: PhoneAuthFlowProps) {
               disabled={isLoading || verificationCode.length !== 6}
               data-testid="button-verify"
             >
-              {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Verify'}
+              {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Verify"}
             </Button>
 
             <Button
               variant="ghost"
               className="w-full"
-              onClick={handleResendCode}
-              disabled={resendDisabled}
+              onClick={() => void handleResendCode()}
+              disabled={resendDisabled || isLoading}
               data-testid="button-resend-code"
             >
-              {resendDisabled ? `Resend code (${resendCountdown}s)` : 'Resend code'}
+              {resendDisabled ? `Resend code (${resendCountdown}s)` : "Resend code"}
             </Button>
           </CardContent>
         </Card>
@@ -191,21 +310,15 @@ export function PhoneAuthFlow({ onSuccess, onBack }: PhoneAuthFlowProps) {
           <div className="space-y-2">
             <Label htmlFor="phone">Phone number</Label>
             <div className="flex gap-2">
-              <select
+              <Input
                 value={countryCode}
-                onChange={(e) => setCountryCode(e.target.value)}
-                className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                data-testid="select-country-code"
-              >
-                <option value="+1">+1 US</option>
-                <option value="+44">+44 UK</option>
-                <option value="+61">+61 AU</option>
-                <option value="+33">+33 FR</option>
-                <option value="+49">+49 DE</option>
-                <option value="+81">+81 JP</option>
-                <option value="+86">+86 CN</option>
-                <option value="+91">+91 IN</option>
-              </select>
+                onChange={(e) => setCountryCode(normalizeCountryCode(e.target.value))}
+                placeholder="+1"
+                inputMode="tel"
+                autoComplete="tel-country-code"
+                className="w-24"
+                data-testid="input-country-code"
+              />
               <Input
                 id="phone"
                 type="tel"
@@ -220,13 +333,17 @@ export function PhoneAuthFlow({ onSuccess, onBack }: PhoneAuthFlowProps) {
             </div>
           </div>
 
+          {!isNativePlatform() && (
+            <div ref={recaptchaContainerRef} className="sr-only" aria-hidden />
+          )}
+
           <Button
             className="w-full h-12"
-            onClick={handleSendCode}
-            disabled={isLoading || !phoneNumber.trim()}
+            onClick={() => void sendSmsCode()}
+            disabled={isLoading || !phoneNumber.trim() || (isNativePlatform() && !nativeSmsListenerReady)}
             data-testid="button-send-code"
           >
-            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Send code'}
+            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Send code"}
           </Button>
 
           <p className="text-xs text-center text-muted-foreground" data-testid="text-sms-disclosure">

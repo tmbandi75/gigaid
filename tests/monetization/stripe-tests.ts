@@ -1,5 +1,6 @@
 import { TestResult, createTestResult } from "./types.js";
 import { getAdminApiKey } from "../utils/adminKey";
+import { Plan, PLAN_PRICES_CENTS } from "@shared/plans";
 
 const BASE_URL = process.env.TEST_BASE_URL || `http://localhost:5000`;
 const ADMIN_API_KEY = getAdminApiKey();
@@ -46,9 +47,9 @@ async function testCheckoutPricing(): Promise<TestResult[]> {
   const results: TestResult[] = [];
 
   const planPrices: Record<string, number> = {
-    pro: 1900,
-    pro_plus: 2800,
-    business: 4900,
+    pro: PLAN_PRICES_CENTS[Plan.PRO],
+    pro_plus: PLAN_PRICES_CENTS[Plan.PRO_PLUS],
+    business: PLAN_PRICES_CENTS[Plan.BUSINESS],
   };
 
   for (const [plan, expectedPrice] of Object.entries(planPrices)) {

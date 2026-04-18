@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SiApple, SiGoogle } from 'react-icons/si';
-import { Phone, Mail, Check, Plus, Loader2 } from 'lucide-react';
+import { Phone, Mail, Check, Loader2 } from 'lucide-react';
 
 interface LinkedMethod {
   provider: 'apple' | 'google' | 'phone' | 'email';
@@ -18,7 +18,7 @@ interface AccountLinkingProps {
   phone?: string;
   onLinkApple?: () => Promise<void>;
   onLinkGoogle?: () => Promise<void>;
-  onLinkPhone?: () => void;
+  onLinkPhone?: () => Promise<void>;
   onLinkEmail?: () => void;
 }
 
@@ -173,7 +173,11 @@ export function AccountLinking({
                 disabled={isLinking !== null}
                 data-testid="button-link-phone"
               >
-                <Phone className="h-4 w-4" />
+                {isLinking === 'phone' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Phone className="h-4 w-4" />
+                )}
                 Link Phone
               </Button>
             )}

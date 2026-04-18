@@ -28,9 +28,10 @@ const config: CapacitorConfig = {
       style: 'dark',
       backgroundColor: '#ffffff',
     },
+    // Phone provider: https://github.com/capawesome-team/capacitor-firebase/blob/main/packages/authentication/docs/setup-phone.md
     FirebaseAuthentication: {
       skipNativeAuth: false,
-      providers: ['google.com', 'apple.com'],
+      providers: ['google.com', 'apple.com', 'phone'],
     },
   },
   ios: {

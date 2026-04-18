@@ -27,6 +27,7 @@ import {
   ArrowRight,
   Loader2,
 } from "lucide-react";
+import { copyTextToClipboard } from "@/lib/clipboard";
 
 interface QuoteEstimate {
   low: number;
@@ -72,10 +73,10 @@ export default function AutoQuotePage() {
   const handleUsePrice = async () => {
     if (!estimateMutation.data) return;
     const dollars = (estimateMutation.data.median / 100).toFixed(2);
-    try {
-      await navigator.clipboard.writeText(dollars);
+    const copiedOk = await copyTextToClipboard(dollars);
+    if (copiedOk) {
       toast({ title: `$${dollars} copied to clipboard` });
-    } catch {
+    } else {
       toast({ title: `Suggested price: $${dollars}` });
     }
   };

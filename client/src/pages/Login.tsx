@@ -3,8 +3,9 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { Loader2, ArrowLeft, Eye, EyeOff, Phone } from "lucide-react";
 import { SiGoogle, SiApple } from "react-icons/si";
+import { PhoneAuthFlow } from "@/components/mobile-auth/PhoneAuthFlow";
 import { signInWithEmail, signUpWithEmail, resetPassword, getFirebaseAuth } from "@/lib/firebase";
 import {
   cleanupAfterDeletedAccountExchange,
@@ -53,6 +54,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showPhoneAuth, setShowPhoneAuth] = useState(false);
 
 
   const exchangeTokenAndNavigate = async (idToken: string) => {
@@ -142,6 +144,15 @@ export default function Login() {
     );
   }
 
+  if (showPhoneAuth) {
+    return (
+      <PhoneAuthFlow
+        onBack={() => setShowPhoneAuth(false)}
+        onFirebaseIdToken={exchangeTokenAndNavigate}
+      />
+    );
+  }
+
   const handleAppleSignIn = async () => {
     if (isAppleLoading) return;
     setIsAppleLoading(true);
@@ -173,6 +184,10 @@ export default function Login() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePhoneSignIn = () => {
+    setShowPhoneAuth(true);
   };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
@@ -395,6 +410,17 @@ export default function Login() {
                   <SiGoogle className="h-5 w-5" />
                 )}
                 Continue with Google
+              </Button>
+
+              <Button
+                onClick={handlePhoneSignIn}
+                disabled={isDisabled || (mode === "signup" && !termsAccepted)}
+                variant="outline"
+                className="w-full h-12 gap-3 rounded-full border-2 border-white/55 bg-white/10 text-white font-semibold shadow-md hover:bg-white/20"
+                data-testid="button-phone-signin"
+              >
+                <Phone className="h-5 w-5" />
+                Continue with Phone
               </Button>
 
               {/* OR Divider */}

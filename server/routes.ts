@@ -65,7 +65,7 @@ import { logCapabilityAttempt } from "@shared/capabilityLogger";
 import { hasCapability, isDeveloper } from "@shared/entitlements";
 import { isHardGated } from "@shared/gatingConfig";
 import { canCreateJob, canSendSms, canUseAutoFollowups, PLAN_LIMITS } from "@shared/planLimits";
-import { Plan } from "@shared/plans";
+import { Plan, PLAN_PRICES_CENTS } from "@shared/plans";
 import { canPerform, type CanPerformResult } from "@shared/capabilities/canPerform";
 import type { Plan as CapPlan, Capability } from "@shared/capabilities/plans";
 import {
@@ -87,6 +87,10 @@ const quoteCache = new Map<string, { result: any; timestamp: number }>();
 const QUOTE_CACHE_TTL = 3600000;
 const QUOTE_CACHE_MAX = 500;
 const QUOTE_CACHE_PRUNE = 250;
+
+/** Throttle RevenueCat pulls on subscription status so the DB plan matches the store without hammering the RC API. */
+const subscriptionStatusLastRcSyncMs = new Map<string, number>();
+const SUBSCRIPTION_STATUS_RC_SYNC_COOLDOWN_MS = 25_000;
 
 function pruneQuoteCache() {
   if (quoteCache.size <= QUOTE_CACHE_MAX) return;
@@ -7652,17 +7656,17 @@ Return ONLY the message text, no JSON or formatting.`
         pro: {
           name: "GigAid Pro",
           description: "Owner View dashboard, weekly summaries, advanced analytics, priority support",
-          amount: 1900,
+          amount: PLAN_PRICES_CENTS[Plan.PRO],
         },
         pro_plus: {
           name: "GigAid Pro+",
           description: "Deposit enforcement, booking protection, Today's Money Plan",
-          amount: 2800,
+          amount: PLAN_PRICES_CENTS[Plan.PRO_PLUS],
         },
         business: {
           name: "GigAid Business",
           description: "Multi-provider support, team management, business analytics, API access",
-          amount: 4900,
+          amount: PLAN_PRICES_CENTS[Plan.BUSINESS],
         },
       };
 
@@ -7763,9 +7767,43 @@ Return ONLY the message text, no JSON or formatting.`
   // Get subscription status
   app.get("/api/subscription/status", isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).userId);
+      let user = await storage.getUser((req as any).userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
+      }
+
+      const forceRcSync =
+        req.query.refresh === "1" ||
+        req.query.sync === "1" ||
+        req.headers["x-subscription-sync"] === "1";
+      // Only users who already have store billing metadata — avoids overwriting comped/admin plans with RC "free".
+      const mayHaveRevenueCatSubscription =
+        user.subscriptionStore === "app_store" ||
+        user.subscriptionStore === "play_store" ||
+        user.storeSubscriptionExpiresAt != null;
+      if (
+        process.env.REVENUECAT_SECRET_API_KEY &&
+        !user.stripeSubscriptionId &&
+        mayHaveRevenueCatSubscription
+      ) {
+        const last = subscriptionStatusLastRcSyncMs.get(user.id) ?? 0;
+        const cooldownOk = Date.now() - last >= SUBSCRIPTION_STATUS_RC_SYNC_COOLDOWN_MS;
+        if (forceRcSync || cooldownOk) {
+          try {
+            const rcResult = await syncSubscriberFromRevenueCat(storage, user.id, {
+              reason: forceRcSync ? "subscription_status_forced" : "subscription_status_get",
+            });
+            if (rcResult.ok) {
+              subscriptionStatusLastRcSyncMs.set(user.id, Date.now());
+            }
+            const refreshed = await storage.getUser(user.id);
+            if (refreshed) {
+              user = refreshed;
+            }
+          } catch (syncErr) {
+            logger.warn("[Subscription status] RevenueCat sync failed:", syncErr);
+          }
+        }
       }
 
       const planNames: Record<string, string> = {
@@ -7786,6 +7824,7 @@ Return ONLY the message text, no JSON or formatting.`
             hasSubscription: !!user.stripeSubscriptionId,
             currentPeriodEnd: null,
             cancelAtPeriodEnd: false,
+            billingSource: "stripe",
           });
         }
 
@@ -7813,11 +7852,21 @@ Return ONLY the message text, no JSON or formatting.`
           currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
           cancelAtPeriodEnd: subscription.cancel_at_period_end,
           cancelAt: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
+          billingSource: "stripe",
+          pendingPlanChange: subscription.cancel_at_period_end
+            ? {
+                targetPlan: "free",
+                targetPlanName: "Free",
+                effectiveDate: new Date(subscription.current_period_end * 1000).toISOString(),
+              }
+            : null,
         });
       }
 
       if (isStoreSubscriptionActiveInDb(user)) {
         const p = user.plan || "free";
+        const billingSource =
+          user.subscriptionStore === "play_store" ? "play_store" : "app_store";
         return res.json({
           plan: p,
           planName: planNames[p] || "Free",
@@ -7826,6 +7875,14 @@ Return ONLY the message text, no JSON or formatting.`
           currentPeriodEnd: user.storeSubscriptionExpiresAt ?? null,
           cancelAtPeriodEnd: user.storeSubscriptionCancelAtPeriodEnd ?? false,
           cancelAt: null,
+          billingSource,
+          pendingPlanChange: user.storeSubscriptionCancelAtPeriodEnd && user.storeSubscriptionExpiresAt
+            ? {
+                targetPlan: "free",
+                targetPlanName: "Free",
+                effectiveDate: user.storeSubscriptionExpiresAt,
+              }
+            : null,
         });
       }
 
@@ -7836,6 +7893,8 @@ Return ONLY the message text, no JSON or formatting.`
         hasSubscription: false,
         currentPeriodEnd: null,
         cancelAtPeriodEnd: false,
+        billingSource: "none",
+        pendingPlanChange: null,
       });
     } catch (error) {
       logger.error("Subscription status error:", error);
@@ -8190,13 +8249,26 @@ Return ONLY the message text, no JSON or formatting.`
       const { STRIPE_ENABLED } = await import("@shared/stripeConfig");
 
       const planPrices: Record<string, number> = {
-        pro: 1900,
-        pro_plus: 2800,
-        business: 4900,
+        pro: PLAN_PRICES_CENTS[Plan.PRO],
+        pro_plus: PLAN_PRICES_CENTS[Plan.PRO_PLUS],
+        business: PLAN_PRICES_CENTS[Plan.BUSINESS],
       };
 
       const planOrder = ["free", "pro", "pro_plus", "business"];
       const isDowngrade = planOrder.indexOf(newPlan) < planOrder.indexOf(currentPlan);
+
+      // App Store / Play billing is authoritative; DB-only downgrades would be overwritten on the next RevenueCat sync.
+      if (
+        !user.stripeSubscriptionId &&
+        isStoreSubscriptionActiveInDb(user) &&
+        (newPlan === "free" || isDowngrade)
+      ) {
+        return res.status(400).json({
+          code: "store_managed_plan",
+          error:
+            "This subscription is managed in the App Store or Google Play. Change or cancel it there, then open Subscription settings again to sync.",
+        });
+      }
 
       // If no Stripe subscription exists, handle plan changes directly in the database
       if (!user.stripeSubscriptionId) {
@@ -8234,10 +8306,13 @@ Return ONLY the message text, no JSON or formatting.`
         await stripe.subscriptions.update(user.stripeSubscriptionId, {
           cancel_at_period_end: true,
         });
+        const updatedSubscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
         return res.json({
           success: true,
           message: "Your plan will change to Free at the end of your billing period",
           effectiveAt: "period_end",
+          effectiveDate: new Date(updatedSubscription.current_period_end * 1000).toISOString(),
+          targetPlan: "free",
         });
       }
 
@@ -8283,7 +8358,11 @@ Return ONLY the message text, no JSON or formatting.`
             message: isUpgrade
               ? `Upgraded to ${newPlanName}. Prorated charges applied.`
               : `Switched to ${newPlanName}. Your new rate of $${planPrices[newPlan] / 100}/mo starts next billing cycle.`,
-            effectiveAt: isUpgrade ? "immediate" : "immediate",
+            effectiveAt: isUpgrade ? "immediate" : "period_end",
+            effectiveDate: isUpgrade
+              ? null
+              : new Date(subscription.current_period_end * 1000).toISOString(),
+            targetPlan: newPlan,
           });
         }
       }

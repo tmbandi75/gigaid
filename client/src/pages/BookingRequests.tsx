@@ -14,6 +14,7 @@ import { BlockingIntercept } from "@/components/ui/blocking-intercept";
 import { useCapability } from "@/hooks/useCapability";
 import { logPricingInterest } from "@shared/capabilityLogger";
 import { isHardGated } from "@shared/gatingConfig";
+import { Plan, PLAN_PRICES_DOLLARS } from "@shared/plans";
 import { STRIPE_ENABLED } from "@shared/stripeConfig";
 import { startSubscriptionUpgrade } from "@/lib/stripeCheckout";
 import {
@@ -35,6 +36,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import {
   Calendar,
   Clock,
@@ -225,10 +227,14 @@ export default function BookingRequests() {
     return `${displayHours}:${minutes.toString().padStart(2, "0")} ${period}`;
   };
 
-  const copyBookingLink = (token: string) => {
+  const copyBookingLink = async (token: string) => {
     const link = `${window.location.origin}/booking/${token}`;
-    navigator.clipboard.writeText(link);
-    toast({ title: "Booking link copied" });
+    const copiedOk = await copyTextToClipboard(link);
+    if (copiedOk) {
+      toast({ title: "Booking link copied" });
+    } else {
+      toast({ title: "Could not copy booking link", variant: "destructive" });
+    }
   };
 
   const filteredBookings = bookings?.filter((b) => {
@@ -835,7 +841,7 @@ export default function BookingRequests() {
         onOpenChange={setShowBlockingIntercept}
         title="Protect this job with a deposit"
         description="Deposits prevent no-shows and late cancellations. Available on Pro+."
-        price="$28 / month"
+        price={`$${PLAN_PRICES_DOLLARS[Plan.PRO_PLUS].toFixed(2)} / month`}
         onConfirm={() => {
           startSubscriptionUpgrade({
             plan: "pro_plus",

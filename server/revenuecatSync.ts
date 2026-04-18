@@ -21,6 +21,63 @@ export function isStoreSubscriptionActiveInDb(user: {
 /** Entitlement identifiers configured in RevenueCat — map to GigAid plan names. */
 const ENTITLEMENT_PRIORITY = ["business", "pro_plus", "pro"] as const;
 
+const PLAN_ORDER = ["free", "pro", "pro_plus", "business"] as const;
+
+function planRank(p: string): number {
+  const i = PLAN_ORDER.indexOf(p as (typeof PLAN_ORDER)[number]);
+  return i === -1 ? 0 : i;
+}
+
+function higherPlan(
+  a: (typeof PLAN_ORDER)[number],
+  b: (typeof PLAN_ORDER)[number],
+): (typeof PLAN_ORDER)[number] {
+  return planRank(a) >= planRank(b) ? a : b;
+}
+
+function inferPlanFromIdentifier(identifier: string | null | undefined):
+  | "pro"
+  | "pro_plus"
+  | "business"
+  | null {
+  if (!identifier) return null;
+  const id = identifier.toLowerCase();
+  if (id.includes("business")) return "business";
+  if (id.includes("pro_plus") || id.includes("proplus") || id.includes("pro-plus")) {
+    return "pro_plus";
+  }
+  // Keep this check last so pro_plus does not get treated as pro.
+  if (/(^|[._-])pro([._-]|$)/.test(id)) return "pro";
+  return null;
+}
+
+/**
+ * Store product IDs → GigAid plan. Used when entitlements all point at one tier but the user upgraded
+ * in the subscription group (Apple/Google product id is the ground truth).
+ * Override via REVENUECAT_PRODUCT_PLAN_JSON='{"com.example.pro":"pro",...}' if IDs differ.
+ */
+function storeProductToPlanMap(): Record<string, "pro" | "pro_plus" | "business"> {
+  const defaults: Record<string, "pro" | "pro_plus" | "business"> = {
+    "com.gigaid.app.pro.monthly": "pro",
+    "com.gigaid.app.pro_plus.monthly": "pro_plus",
+    "com.gigaid.app.business.monthly": "business",
+  };
+  const raw = process.env.REVENUECAT_PRODUCT_PLAN_JSON;
+  if (!raw?.trim()) return defaults;
+  try {
+    const parsed = JSON.parse(raw) as Record<string, string>;
+    const out = { ...defaults };
+    for (const [pid, plan] of Object.entries(parsed)) {
+      if (plan === "pro" || plan === "pro_plus" || plan === "business") {
+        out[pid] = plan;
+      }
+    }
+    return out;
+  } catch {
+    return defaults;
+  }
+}
+
 export type RevenueCatSyncResult =
   | { ok: true; skipped?: string; plan?: string }
   | { ok: false; error: string };
@@ -64,18 +121,124 @@ function pickHighestActivePlan(entitlements: Record<string, RcEntitlement> | und
   if (!entitlements) {
     return { plan: "free", productId: null, expiresAt: null };
   }
+  let best: {
+    plan: "pro" | "pro_plus" | "business";
+    productId: string | null;
+    expiresAt: string | null;
+  } | null = null;
+
+  for (const [entitlementId, entitlement] of Object.entries(entitlements)) {
+    if (!isEntitlementActive(entitlement.expires_date ?? null)) continue;
+    const inferred =
+      inferPlanFromIdentifier(entitlementId) ??
+      inferPlanFromIdentifier(entitlement.product_identifier ?? null);
+    if (!inferred) continue;
+    if (!best || planRank(inferred) > planRank(best.plan)) {
+      best = {
+        plan: inferred,
+        productId: entitlement.product_identifier || null,
+        expiresAt: entitlement.expires_date ?? null,
+      };
+    }
+  }
+
   for (const entId of ENTITLEMENT_PRIORITY) {
     const e = entitlements[entId];
     if (!e) continue;
     if (!isEntitlementActive(e.expires_date ?? null)) continue;
     const pid = e.product_identifier || null;
+    const inferred = inferPlanFromIdentifier(entId) ?? inferPlanFromIdentifier(pid);
+    if (!inferred) continue;
+    if (!best || planRank(inferred) > planRank(best.plan)) {
+      best = { plan: inferred, productId: pid, expiresAt: e.expires_date ?? null };
+    }
+  }
+
+  if (best) {
     return {
-      plan: entId as "pro" | "pro_plus" | "business",
-      productId: pid,
-      expiresAt: e.expires_date ?? null,
+      plan: best.plan,
+      productId: best.productId,
+      expiresAt: best.expiresAt,
     };
   }
   return { plan: "free", productId: null, expiresAt: null };
+}
+
+/** Highest tier among active auto-renewing subscriptions, using store product ids (upgrade truth). */
+function pickHighestPlanFromActiveSubscriptions(
+  subscriptions: Record<string, RcSubscription> | undefined,
+  productToPlan: Record<string, "pro" | "pro_plus" | "business">,
+): {
+  plan: "free" | "pro" | "pro_plus" | "business";
+  productId: string | null;
+  expiresAt: string | null;
+} {
+  if (!subscriptions) {
+    return { plan: "free", productId: null, expiresAt: null };
+  }
+  let best: {
+    plan: "pro" | "pro_plus" | "business";
+    productId: string;
+    expiresAt: string | null;
+  } | null = null;
+  for (const [productId, sub] of Object.entries(subscriptions)) {
+    if (!isEntitlementActive(sub.expires_date ?? null)) continue;
+    const plan = productToPlan[productId] ?? inferPlanFromIdentifier(productId);
+    if (!plan) continue;
+    if (!best || planRank(plan) > planRank(best.plan)) {
+      best = { plan, productId, expiresAt: sub.expires_date ?? null };
+    }
+  }
+  if (!best) {
+    return { plan: "free", productId: null, expiresAt: null };
+  }
+  return { plan: best.plan, productId: best.productId, expiresAt: best.expiresAt };
+}
+
+function mergeRcSubscriberPayloads(
+  a: RcSubscriberRoot | undefined,
+  b: RcSubscriberRoot | undefined,
+): RcSubscriberRoot {
+  const ae = a?.subscriber?.entitlements ?? {};
+  const be = b?.subscriber?.entitlements ?? {};
+  const as = a?.subscriber?.subscriptions ?? {};
+  const bs = b?.subscriber?.subscriptions ?? {};
+  return {
+    subscriber: {
+      entitlements: { ...ae, ...be },
+      subscriptions: { ...as, ...bs },
+    },
+  };
+}
+
+async function fetchRevenueCatSubscriberMerged(
+  secret: string,
+  appUserId: string,
+): Promise<{ ok: true; body: RcSubscriberRoot } | { ok: false; status: number; text: string }> {
+  const url = `${RC_API}/subscribers/${encodeURIComponent(appUserId)}`;
+  const base = {
+    Authorization: `Bearer ${secret}`,
+    "Content-Type": "application/json",
+  } as const;
+
+  const resProd = await fetch(url, { headers: { ...base } });
+  if (!resProd.ok) {
+    const text = await resProd.text();
+    return { ok: false, status: resProd.status, text };
+  }
+  const bodyProd = (await resProd.json()) as RcSubscriberRoot;
+
+  const resSandbox = await fetch(url, {
+    headers: { ...base, "X-Is-Sandbox": "true" },
+  });
+  if (!resSandbox.ok) {
+    logger.debug(
+      `[RevenueCat] Sandbox subscriber GET ${resSandbox.status} — using production payload only (${appUserId})`,
+    );
+    return { ok: true, body: bodyProd };
+  }
+  const bodySandbox = (await resSandbox.json()) as RcSubscriberRoot;
+  return { ok: true, body: mergeRcSubscriberPayloads(bodyProd, bodySandbox) };
 }
 
 function subscriptionStoreFromRc(
@@ -133,47 +296,66 @@ export async function syncSubscriberFromRevenueCat(
     return { ok: true, skipped: "stripe_precedence" };
   }
 
-  const url = `${RC_API}/subscribers/${encodeURIComponent(appUserId)}`;
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${secret}`,
-      "Content-Type": "application/json",
-    },
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    logger.error(`[RevenueCat] GET subscribers failed ${res.status}: ${text.slice(0, 500)}`);
-    return { ok: false, error: `revenuecat_http_${res.status}` };
+  const fetched = await fetchRevenueCatSubscriberMerged(secret, appUserId);
+  if (!fetched.ok) {
+    logger.error(
+      `[RevenueCat] GET subscribers failed ${fetched.status}: ${fetched.text.slice(0, 500)}`,
+    );
+    return { ok: false, error: `revenuecat_http_${fetched.status}` };
   }
 
-  const body = (await res.json()) as RcSubscriberRoot;
+  const body = fetched.body;
   const entitlements = body.subscriber?.entitlements;
   const subscriptions = body.subscriber?.subscriptions;
 
-  const picked = pickHighestActivePlan(entitlements);
+  const fromEnt = pickHighestActivePlan(entitlements);
+  const productMap = storeProductToPlanMap();
+  const fromSub = pickHighestPlanFromActiveSubscriptions(subscriptions, productMap);
+  const mergedPlan = higherPlan(fromEnt.plan, fromSub.plan);
+
+  if (fromEnt.plan !== fromSub.plan && fromSub.plan !== "free" && fromEnt.plan !== "free") {
+    logger.info(
+      `[RevenueCat] Plan sources differ for ${appUserId}: entitlements=${fromEnt.plan} storeProducts=${fromSub.plan} → merged=${mergedPlan}`,
+    );
+  }
+
+  let canonicalProductId: string | null = null;
+  let expiresFallback: string | null = null;
+  if (mergedPlan !== "free") {
+    if (mergedPlan === fromSub.plan && fromSub.productId) {
+      canonicalProductId = fromSub.productId;
+      expiresFallback = fromSub.expiresAt;
+    } else if (mergedPlan === fromEnt.plan && fromEnt.productId) {
+      canonicalProductId = fromEnt.productId;
+      expiresFallback = fromEnt.expiresAt;
+    } else {
+      canonicalProductId = fromSub.productId ?? fromEnt.productId;
+      expiresFallback = fromSub.expiresAt ?? fromEnt.expiresAt;
+    }
+  }
+
   let store: "app_store" | "play_store" | null = null;
   let cancelAtEnd = false;
   let expiresForRow: string | null = null;
 
-  if (picked.plan !== "free" && picked.productId && subscriptions?.[picked.productId]) {
-    const sub = subscriptions[picked.productId]!;
+  if (mergedPlan !== "free" && canonicalProductId && subscriptions?.[canonicalProductId]) {
+    const sub = subscriptions[canonicalProductId]!;
     store = subscriptionStoreFromRc(sub.store);
     const subStillActive = isEntitlementActive(sub.expires_date ?? null);
     cancelAtEnd = deriveCancelAtPeriodEnd(sub, subStillActive);
-    expiresForRow = sub.expires_date ?? picked.expiresAt;
-  } else if (picked.plan !== "free") {
-    expiresForRow = picked.expiresAt;
+    expiresForRow = sub.expires_date ?? expiresFallback;
+  } else if (mergedPlan !== "free") {
+    expiresForRow = expiresFallback;
   }
 
   const oldPlan = user.plan;
   const updates: Partial<User> = {
-    plan: picked.plan,
-    isPro: picked.plan !== "free",
-    subscriptionStore: picked.plan === "free" ? null : store,
-    storeSubscriptionExpiresAt: picked.plan === "free" ? null : expiresForRow,
+    plan: mergedPlan,
+    isPro: mergedPlan !== "free",
+    subscriptionStore: mergedPlan === "free" ? null : store,
+    storeSubscriptionExpiresAt: mergedPlan === "free" ? null : expiresForRow,
     storeSubscriptionCancelAtPeriodEnd:
-      picked.plan === "free" ? false : cancelAtEnd,
+      mergedPlan === "free" ? false : cancelAtEnd,
   };
 
   if (options.eventId) {
@@ -182,13 +364,13 @@ export async function syncSubscriberFromRevenueCat(
 
   await storage.updateUser(appUserId, updates);
 
-  if (picked.plan !== "free" && oldPlan !== picked.plan) {
+  if (mergedPlan !== "free" && oldPlan !== mergedPlan) {
     emitCanonicalEvent({
       eventName: "user_became_paying",
       userId: appUserId,
       context: {
         oldPlan,
-        newPlan: picked.plan,
+        newPlan: mergedPlan,
         source: "revenuecat",
         reason: options.reason,
       },
@@ -197,8 +379,8 @@ export async function syncSubscriberFromRevenueCat(
   }
 
   logger.info(
-    `[RevenueCat] Synced user ${appUserId} plan=${picked.plan} store=${store ?? "n/a"} (${options.reason})`,
+    `[RevenueCat] Synced user ${appUserId} plan=${mergedPlan} store=${store ?? "n/a"} (${options.reason})`,
   );
 
-  return { ok: true, plan: picked.plan };
+  return { ok: true, plan: mergedPlan };
 }

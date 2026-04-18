@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
+import { copyTextToClipboard } from "@/lib/clipboard";
+import { shareContent } from "@/lib/share";
 import { Share2, Loader2, Sparkles, Copy, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -63,24 +65,24 @@ export function ReferralMessageAI({
     const fullMessage = hashtags.length > 0 
       ? `${message}\n\n${hashtags.join(" ")}`
       : message;
-    await navigator.clipboard.writeText(fullMessage);
+    const copiedOk = await copyTextToClipboard(fullMessage);
+    if (!copiedOk) {
+      toast({ title: "Could not copy message", variant: "destructive" });
+      return;
+    }
     setCopied(true);
     toast({ title: "Copied to clipboard!" });
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          text: message,
-          url: link,
-        });
-      } catch (err) {
-        handleCopy();
-      }
-    } else {
-      handleCopy();
+    const sharedOk = await shareContent({
+      text: message,
+      url: link,
+      dialogTitle: "Share referral message",
+    });
+    if (!sharedOk) {
+      await handleCopy();
     }
   };
 

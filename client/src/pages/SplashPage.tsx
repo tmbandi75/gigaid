@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, Phone } from "lucide-react";
 import { SiGoogle, SiApple } from "react-icons/si";
+import { PhoneAuthFlow } from "@/components/mobile-auth/PhoneAuthFlow";
 import { signInWithEmail, signUpWithEmail, resetPassword, getFirebaseAuth } from "@/lib/firebase";
 import {
   cleanupAfterDeletedAccountExchange,
@@ -27,6 +28,7 @@ export default function SplashPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isAppleLoading, setIsAppleLoading] = useState(false);
   const [isEmailLoading, setIsEmailLoading] = useState(false);
+  const [showPhoneAuth, setShowPhoneAuth] = useState(false);
   const [mode, setMode] = useState<AuthMode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -132,6 +134,10 @@ export default function SplashPage() {
     }
   };
 
+  const handlePhoneSignIn = () => {
+    setShowPhoneAuth(true);
+  };
+
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -234,6 +240,15 @@ export default function SplashPage() {
 
   const isDisabled = isLoading || isAppleLoading || isEmailLoading;
 
+  if (showPhoneAuth) {
+    return (
+      <PhoneAuthFlow
+        onBack={() => setShowPhoneAuth(false)}
+        onFirebaseIdToken={exchangeTokenAndNavigate}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen relative overflow-hidden" data-testid="splash-page">
       {/* Blue gradient background */}
@@ -313,6 +328,17 @@ export default function SplashPage() {
                   <SiGoogle className="h-5 w-5" />
                 )}
                 Continue with Google
+              </Button>
+
+              <Button
+                onClick={handlePhoneSignIn}
+                disabled={isDisabled}
+                variant="outline"
+                className="w-full h-12 gap-3 rounded-full border-2 border-white/55 bg-white/10 text-white font-semibold shadow-md hover:bg-white/20"
+                data-testid="button-phone-signin"
+              >
+                <Phone className="h-5 w-5" />
+                Continue with Phone
               </Button>
 
               {/* OR Divider */}

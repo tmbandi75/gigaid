@@ -118,15 +118,19 @@ export function FirstDollarBanner() {
 
     return (
       <div
-        className="relative flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 text-sm"
+        className="flex items-stretch bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 text-sm"
         data-testid="banner-activation-complete"
       >
-        <CheckCircle2 className="h-4 w-4 shrink-0" />
-        <span className="font-medium">You're Live — Start Getting Paid</span>
+        <div className="flex min-w-0 flex-1 items-center justify-center gap-2 px-3 py-2 sm:px-4">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <span className="min-w-0 text-center font-medium leading-snug">
+            You're Live — Start Getting Paid
+          </span>
+        </div>
         <Button
           size="icon"
           variant="ghost"
-          className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 text-emerald-600 dark:text-emerald-400"
+          className="h-auto shrink-0 rounded-none px-2 text-emerald-600 hover:bg-emerald-100/80 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
           onClick={handleDismiss}
           aria-label="Dismiss activation banner"
           data-testid="button-dismiss-activation-complete"
@@ -140,24 +144,28 @@ export function FirstDollarBanner() {
   if (dismissed) return null;
 
   return (
-    <div className="relative" data-testid="banner-first-dollar-wrapper">
+    <div
+      className="flex items-stretch bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300"
+      data-testid="banner-first-dollar-wrapper"
+    >
       <button
+        type="button"
         onClick={() => navigate("/")}
-        className="flex items-center justify-center gap-2 w-full px-4 pr-10 py-2 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 text-sm hover-elevate"
+        className="flex min-w-0 flex-1 items-start gap-2 px-3 py-2 text-left text-sm hover-elevate sm:items-center sm:justify-center sm:px-4 sm:text-center"
         data-testid="banner-first-dollar"
       >
-        <Target className="h-4 w-4 shrink-0" />
-        <span className="font-medium">
+        <Target className="mt-0.5 h-4 w-4 shrink-0 sm:mt-0" />
+        <span className="min-w-0 flex-1 font-medium leading-snug sm:flex-none sm:text-center">
           Get Your First Paid Booking in 24 Hours
         </span>
-        <span className="hidden sm:inline text-blue-500 dark:text-blue-400">
+        <span className="hidden shrink-0 sm:inline text-blue-500 dark:text-blue-400">
           — Complete setup to unlock clients
         </span>
       </button>
       <Button
         size="icon"
         variant="ghost"
-        className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 text-blue-600 dark:text-blue-400"
+        className="h-auto shrink-0 rounded-none px-2 text-blue-600 hover:bg-blue-100/80 dark:text-blue-400 dark:hover:bg-blue-950/50"
         onClick={handleDismiss}
         aria-label="Dismiss activation banner"
         data-testid="button-dismiss-first-dollar"

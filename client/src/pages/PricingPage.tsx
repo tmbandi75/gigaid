@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, Zap, Shield, Users, ArrowLeft, Loader2, Star, TrendingUp } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { Plan } from "@shared/plans";
+import { Plan, PLAN_PRICES_DOLLARS } from "@shared/plans";
 import { startSubscriptionUpgrade, SubscriptionPlan } from "@/lib/stripeCheckout";
 import { useLocation } from "wouter";
 import { useState, useEffect, useRef } from "react";
@@ -64,8 +64,8 @@ const PLANS: PlanInfo[] = [
   {
     id: Plan.PRO,
     name: "Pro",
-    price: 19,
-    priceLabel: "$19",
+    price: PLAN_PRICES_DOLLARS[Plan.PRO],
+    priceLabel: `$${PLAN_PRICES_DOLLARS[Plan.PRO].toFixed(2)}`,
     monthlyPrice: "/month",
     cta: "Start Pro Trial",
     description: "For growing professionals",
@@ -84,8 +84,8 @@ const PLANS: PlanInfo[] = [
   {
     id: Plan.PRO_PLUS,
     name: "Pro+",
-    price: 28,
-    priceLabel: "$28",
+    price: PLAN_PRICES_DOLLARS[Plan.PRO_PLUS],
+    priceLabel: `$${PLAN_PRICES_DOLLARS[Plan.PRO_PLUS].toFixed(2)}`,
     monthlyPrice: "/month",
     cta: "Get Pro+",
     description: "Protect your time and money",
@@ -106,8 +106,8 @@ const PLANS: PlanInfo[] = [
   {
     id: Plan.BUSINESS,
     name: "Business",
-    price: 49,
-    priceLabel: "$49",
+    price: PLAN_PRICES_DOLLARS[Plan.BUSINESS],
+    priceLabel: `$${PLAN_PRICES_DOLLARS[Plan.BUSINESS].toFixed(2)}`,
     monthlyPrice: "/month",
     cta: "Go Business",
     description: "Scale your operation",

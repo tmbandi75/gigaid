@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
@@ -59,15 +59,25 @@ import { PaymentMethodsSettings } from "@/components/PaymentMethodsSettings";
 import { StripeConnectSettings } from "@/components/settings/StripeConnectSettings";
 import { EmailSignatureSettings } from "@/components/settings/EmailSignatureSettings";
 import { AccountLinking } from "@/components/mobile-auth/AccountLinking";
+import { PhoneLinkDialog } from "@/components/mobile-auth/PhoneLinkDialog";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { AutomationSettings } from "@/components/settings/AutomationSettings";
 import { MessagingSettings } from "@/components/settings/MessagingSettings";
 import { ChangePasswordDialog } from "@/components/settings/ChangePasswordDialog";
 import { SubscriptionSettings } from "@/components/settings/SubscriptionSettings";
 import { SettingsSectionAccordion } from "@/components/settings/SettingsSectionAccordion";
-import { isEmailPasswordUser } from "@/lib/firebase";
+import {
+  isEmailPasswordUser,
+  getAccountLinkingInfo,
+  linkAppleToCurrentUser,
+  linkGoogleToCurrentUser,
+  formatFirebaseLinkError,
+  requireFirebaseUser,
+} from "@/lib/firebase";
 import type { Referral, WeeklyAvailability } from "@shared/schema";
 import { useFeatureFlag, useUpdateFeatureFlag } from "@/hooks/use-nudges";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { getAnalyticsConsent, setAnalyticsConsent } from "@/lib/consent/analyticsConsent";
 import { logger } from "@/lib/logger";
@@ -100,6 +110,10 @@ interface OnboardingStatus {
 export default function Settings() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { firebaseUser, authLoading } = useFirebaseAuth();
+  const phoneLinkFlowDoneRef = useRef<(() => void) | null>(null);
+  const [phoneLinkOpen, setPhoneLinkOpen] = useState(false);
   const isMobile = useIsMobile();
   const [bookingLinkCopied, setBookingLinkCopied] = useState(false);
   const { isAuthenticated, logoutAsync } = useAuth();
@@ -107,6 +121,16 @@ export default function Settings() {
   const [attBlocked, setAttBlocked] = useState(false);
 
   const profileQuery = useQuery<any>({ queryKey: ["/api/profile"] });
+
+  const linkingInfo = useMemo(
+    () => getAccountLinkingInfo(firebaseUser ?? null),
+    [firebaseUser],
+  );
+
+  const endPhoneLinkFlow = () => {
+    phoneLinkFlowDoneRef.current?.();
+    phoneLinkFlowDoneRef.current = null;
+  };
   useEffect(() => {
     if (profileQuery.data) {
       setAnalyticsEnabled(profileQuery.data.analyticsEnabled ?? false);
@@ -571,9 +595,13 @@ export default function Settings() {
     setSettings({ ...settings, availability, slotDuration });
   };
 
-  const copyBookingLink = () => {
+  const copyBookingLink = async () => {
     const link = `${window.location.origin}/book/${settings.publicProfileSlug}`;
-    navigator.clipboard.writeText(link);
+    const copiedOk = await copyTextToClipboard(link);
+    if (!copiedOk) {
+      toast({ title: "Could not copy booking link", variant: "destructive" });
+      return;
+    }
     setBookingLinkCopied(true);
     setTimeout(() => setBookingLinkCopied(false), 2000);
     toast({ title: "Booking link copied!" });
@@ -1090,26 +1118,84 @@ export default function Settings() {
 
             <Separator />
 
-            <AccountLinking
-              currentProvider={profile?.authProvider || 'email'}
-              linkedMethods={[
-                ...(profile?.firebaseUid ? [{ provider: 'google' as const, verified: true }] : []),
-              ]}
-              email={profile?.email}
-              phone={profile?.phone}
-              onLinkApple={async () => {
-                toast({ title: "Apple linking", description: "Apple Sign In linking is available in the mobile app" });
-              }}
-              onLinkGoogle={async () => {
-                toast({ title: "Google linking", description: "Google Sign In linking is available in the mobile app" });
-              }}
-              onLinkPhone={() => {
-                toast({ title: "Phone linking", description: "Phone verification linking is available in the mobile app" });
-              }}
-              onLinkEmail={() => {
-                toast({ title: "Email linking", description: "Email linking is available in the mobile app" });
-              }}
-            />
+            {!authLoading && firebaseUser && (
+              <>
+                <AccountLinking
+                  currentProvider={linkingInfo.currentProvider}
+                  linkedMethods={linkingInfo.linkedMethods}
+                  email={profile?.email}
+                  phone={profile?.phone}
+                  onLinkApple={async () => {
+                    try {
+                      await linkAppleToCurrentUser();
+                      toast({
+                        title: "Apple linked",
+                        description: "You can now sign in with Apple on this account.",
+                      });
+                      await queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
+                    } catch (e) {
+                      toast({
+                        title: "Could not link Apple",
+                        description: formatFirebaseLinkError(e),
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  onLinkGoogle={async () => {
+                    try {
+                      await linkGoogleToCurrentUser();
+                      toast({
+                        title: "Google linked",
+                        description: "You can now sign in with Google on this account.",
+                      });
+                      await queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
+                    } catch (e) {
+                      toast({
+                        title: "Could not link Google",
+                        description: formatFirebaseLinkError(e),
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  onLinkPhone={
+                    isNativePlatform()
+                      ? () =>
+                          new Promise<void>((resolve) => {
+                            phoneLinkFlowDoneRef.current = resolve;
+                            setPhoneLinkOpen(true);
+                          })
+                      : undefined
+                  }
+                  onLinkEmail={() => {
+                    toast({
+                      title: "Email linking",
+                      description: "Add or link email from the mobile app or contact support.",
+                    });
+                  }}
+                />
+                {isNativePlatform() && (
+                  <PhoneLinkDialog
+                    open={phoneLinkOpen}
+                    onOpenChange={(o) => {
+                      setPhoneLinkOpen(o);
+                      if (!o) endPhoneLinkFlow();
+                    }}
+                    onLinked={async () => {
+                      try {
+                        await requireFirebaseUser().reload();
+                      } catch {
+                        /* session may already be current */
+                      }
+                      toast({
+                        title: "Phone linked",
+                        description: "You can now sign in with this phone number.",
+                      });
+                      await queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
+                    }}
+                  />
+                )}
+              </>
+            )}
 
             <Separator />
 

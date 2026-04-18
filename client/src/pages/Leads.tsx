@@ -54,6 +54,7 @@ import { NudgeActionSheet } from "@/components/nudges/NudgeActionSheet";
 import { LeadsTableView } from "@/components/leads/LeadsTableView";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
 import { FreeSetupCta } from "@/components/growth/FreeSetupCta";
 import { BookingLinkShare, BookingLinkEmptyState } from "@/components/booking-link";
@@ -444,9 +445,13 @@ export default function Leads() {
     });
   };
 
-  const handleCopyMessage = () => {
-    navigator.clipboard.writeText(followUpMessage);
-    toast({ title: "Message copied to clipboard" });
+  const handleCopyMessage = async () => {
+    const copiedOk = await copyTextToClipboard(followUpMessage);
+    if (copiedOk) {
+      toast({ title: "Message copied to clipboard" });
+    } else {
+      toast({ title: "Could not copy message", variant: "destructive" });
+    }
   };
 
   const filteredLeads = filter === "all" 

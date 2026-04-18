@@ -57,10 +57,6 @@ export function MobileAuthScreen({
     }
   };
 
-  const handlePhoneAuthSuccess = (token: string) => {
-    onAuthSuccess(token);
-  };
-
   const handleEmailAuthSuccess = (token: string) => {
     onAuthSuccess(token);
   };
@@ -68,7 +64,7 @@ export function MobileAuthScreen({
   if (currentScreen === 'phone') {
     return (
       <PhoneAuthFlow
-        onSuccess={handlePhoneAuthSuccess}
+        onFirebaseIdToken={onAuthSuccess}
         onBack={() => setCurrentScreen('welcome')}
       />
     );

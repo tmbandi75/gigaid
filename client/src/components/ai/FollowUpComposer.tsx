@@ -15,6 +15,7 @@ import { UpgradeInterceptModal } from "@/upgrade";
 import type { Job, Lead } from "@shared/schema";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { logger } from "@/lib/logger";
+import { copyTextToClipboard } from "@/lib/clipboard";
 
 interface MessageUsage {
   outboundSent: number;
@@ -123,7 +124,11 @@ export function FollowUpComposer() {
   };
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(message);
+    const copiedOk = await copyTextToClipboard(message);
+    if (!copiedOk) {
+      toast({ title: "Could not copy message", variant: "destructive" });
+      return;
+    }
     setCopied(true);
     toast({ title: "Copied to clipboard!" });
     setTimeout(() => setCopied(false), 2000);

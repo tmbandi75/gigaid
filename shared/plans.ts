@@ -68,3 +68,17 @@ export const PLAN_NAMES: Record<Plan, string> = {
   [Plan.PRO_PLUS]: "Pro+",
   [Plan.BUSINESS]: "Business"
 };
+
+export const PLAN_PRICES_CENTS: Record<Plan, number> = {
+  [Plan.FREE]: 0,
+  [Plan.PRO]: 1999,
+  [Plan.PRO_PLUS]: 2999,
+  [Plan.BUSINESS]: 4999,
+};
+
+export const PLAN_PRICES_DOLLARS: Record<Plan, number> = {
+  [Plan.FREE]: 0,
+  [Plan.PRO]: PLAN_PRICES_CENTS[Plan.PRO] / 100,
+  [Plan.PRO_PLUS]: PLAN_PRICES_CENTS[Plan.PRO_PLUS] / 100,
+  [Plan.BUSINESS]: PLAN_PRICES_CENTS[Plan.BUSINESS] / 100,
+};

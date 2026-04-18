@@ -14,6 +14,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { Plan, PLAN_PRICES_DOLLARS } from "@shared/plans";
 import { 
   HelpCircle, 
   MessageCircle, 
@@ -414,7 +415,7 @@ const faqs = [
       },
       {
         q: "What's included in the Pro plan?",
-        a: "Pro ($19/month) includes Owner View dashboard, weekly email summaries, advanced analytics, priority support, and unlimited jobs. Pro+ ($28/month) adds Risk Protection and AI campaign suggestions. Business ($49/month) includes crew management and dedicated support.",
+        a: `Pro ($${PLAN_PRICES_DOLLARS[Plan.PRO].toFixed(2)}/month) includes Owner View dashboard, weekly email summaries, advanced analytics, priority support, and unlimited jobs. Pro+ ($${PLAN_PRICES_DOLLARS[Plan.PRO_PLUS].toFixed(2)}/month) adds Risk Protection and AI campaign suggestions. Business ($${PLAN_PRICES_DOLLARS[Plan.BUSINESS].toFixed(2)}/month) includes crew management and dedicated support.`,
       },
       {
         q: "How do I upgrade my plan?",

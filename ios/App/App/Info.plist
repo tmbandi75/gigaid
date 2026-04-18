@@ -30,6 +30,14 @@
 				<string>com.googleusercontent.apps.1028384687867-85sq7per51fv5ucsol3fgkvfi0aoc2qa</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>app-1-1028384687867-ios-b1f247acf166bde380d25e</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
@@ -37,22 +45,27 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>GigAid uses your camera to take photos of jobs, invoices, and client records.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>GigAid uses your location to find client addresses and provide directions to job sites.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>GigAid uses your location to find client addresses and provide directions to job sites. Location is only used when you are using the app.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>GigAid uses your location to find client addresses and provide directions to job sites. Location is only used when you are using the app.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>GigAid uses your location to find client addresses and provide directions to job sites.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>GigAid uses your microphone to record voice notes for job details.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>GigAid uses speech recognition to turn voice notes into text.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>GigAid saves photos of invoices and job records to your photo library for easy access.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>GigAid accesses your photo library to upload photos for jobs, invoices, and client records.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>GigAid uses speech recognition to turn voice notes into text.</string>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>This identifier is used for product analytics. We do not sell your data.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
