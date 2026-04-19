@@ -872,7 +872,7 @@ export async function registerRoutes(
       });
 
       const { db } = await import("./db");
-      const { eq, or } = await import("drizzle-orm");
+      const { eq, or, inArray } = await import("drizzle-orm");
       const schema = await import("@shared/schema");
 
       // Create audit record before deletion
@@ -885,6 +885,95 @@ export async function registerRoutes(
 
       const tablesCleared: string[] = [];
 
+      // Runs one delete and records success so logging stays consistent with the generic table loop below.
+      const clearRelated = async (name: string, run: () => Promise<unknown>) => {
+        try {
+          await run();
+          tablesCleared.push(name);
+        } catch (tableErr) {
+          logger.error(`[AccountDelete] Error deleting from ${name}:`, tableErr);
+        }
+      };
+
+      // Tables whose rows are not keyed by a single users.id column need explicit predicates (eq(undefined, …) becomes invalid SQL).
+      const userBookingIds = db
+        .select({ id: schema.bookingRequests.id })
+        .from(schema.bookingRequests)
+        .where(eq(schema.bookingRequests.userId, userId));
+      const userJobIds = db
+        .select({ id: schema.jobs.id })
+        .from(schema.jobs)
+        .where(eq(schema.jobs.userId, userId));
+      const userInvoiceIds = db
+        .select({ id: schema.invoices.id })
+        .from(schema.invoices)
+        .where(eq(schema.invoices.userId, userId));
+
+      await clearRelated("booking_events", () =>
+        db.delete(schema.bookingEvents).where(inArray(schema.bookingEvents.bookingId, userBookingIds)),
+      );
+
+      await clearRelated("photo_assets", () =>
+        db
+          .delete(schema.photoAssets)
+          .where(
+            or(eq(schema.photoAssets.ownerUserId, userId), eq(schema.photoAssets.workspaceUserId, userId)),
+          ),
+      );
+
+      // stripe_webhook_events stores global Stripe payloads with no app user_id column; skipping avoids bogus deletes and leaves platform audit rows.
+
+      await clearRelated("stripe_payment_state", () => {
+        const parts = [
+          inArray(schema.stripePaymentState.jobId, userJobIds),
+          inArray(schema.stripePaymentState.invoiceId, userInvoiceIds),
+        ];
+        if (user.stripeCustomerId) {
+          parts.unshift(eq(schema.stripePaymentState.customerId, user.stripeCustomerId));
+        }
+        return db.delete(schema.stripePaymentState).where(or(...parts));
+      });
+
+      await clearRelated("stripe_disputes", () =>
+        db
+          .delete(schema.stripeDisputes)
+          .where(
+            or(
+              inArray(schema.stripeDisputes.jobId, userJobIds),
+              inArray(schema.stripeDisputes.invoiceId, userInvoiceIds),
+              inArray(schema.stripeDisputes.bookingId, userBookingIds),
+            ),
+          ),
+      );
+
+      await clearRelated("referrals", () =>
+        db
+          .delete(schema.referrals)
+          .where(or(eq(schema.referrals.referrerId, userId), eq(schema.referrals.referredUserId, userId))),
+      );
+
+      await clearRelated("referral_rewards", () =>
+        db
+          .delete(schema.referralRewards)
+          .where(
+            or(
+              eq(schema.referralRewards.referrerUserId, userId),
+              eq(schema.referralRewards.referredUserId, userId),
+            ),
+          ),
+      );
+
+      await clearRelated("growth_referrals", () =>
+        db
+          .delete(schema.growthReferrals)
+          .where(
+            or(
+              eq(schema.growthReferrals.referrerUserId, userId),
+              eq(schema.growthReferrals.referredUserId, userId),
+            ),
+          ),
+      );
+
       // Delete all user-related data in dependency order (children before parents)
       const userIdTables = [
         { table: schema.crewJobPhotos, col: schema.crewJobPhotos.userId, name: "crew_job_photos" },
@@ -893,7 +982,6 @@ export async function registerRoutes(
         { table: schema.crewMembers, col: schema.crewMembers.userId, name: "crew_members" },
         { table: schema.aiNudgeEvents, col: schema.aiNudgeEvents.userId, name: "ai_nudge_events" },
         { table: schema.aiNudges, col: schema.aiNudges.userId, name: "ai_nudges" },
-        { table: schema.bookingEvents, col: schema.bookingEvents.userId, name: "booking_events" },
         { table: schema.bookingRequests, col: schema.bookingRequests.userId, name: "booking_requests" },
         { table: schema.bookingProtections, col: schema.bookingProtections.userId, name: "booking_protections" },
         { table: schema.priceConfirmations, col: schema.priceConfirmations.userId, name: "price_confirmations" },
@@ -909,8 +997,6 @@ export async function registerRoutes(
         { table: schema.leads, col: schema.leads.userId, name: "leads" },
         { table: schema.reminders, col: schema.reminders.userId, name: "reminders" },
         { table: schema.userPaymentMethods, col: schema.userPaymentMethods.userId, name: "user_payment_methods" },
-        { table: schema.referrals, col: schema.referrals.referrerId, name: "referrals" },
-        { table: schema.photoAssets, col: schema.photoAssets.userId, name: "photo_assets" },
         { table: schema.estimationRequests, col: schema.estimationRequests.providerId, name: "estimation_requests" },
         { table: schema.smsMessages, col: schema.smsMessages.userId, name: "sms_messages" },
         { table: schema.messageUsage, col: schema.messageUsage.userId, name: "message_usage" },
@@ -924,9 +1010,6 @@ export async function registerRoutes(
         { table: schema.userAutomationSettings, col: schema.userAutomationSettings.userId, name: "user_automation_settings" },
         { table: schema.outboundMessages, col: schema.outboundMessages.userId, name: "outbound_messages" },
         { table: schema.capabilityUsage, col: schema.capabilityUsage.userId, name: "capability_usage" },
-        { table: schema.stripeWebhookEvents, col: schema.stripeWebhookEvents.userId, name: "stripe_webhook_events" },
-        { table: schema.stripePaymentState, col: schema.stripePaymentState.userId, name: "stripe_payment_state" },
-        { table: schema.stripeDisputes, col: schema.stripeDisputes.userId, name: "stripe_disputes" },
         { table: schema.followUpRules, col: schema.followUpRules.userId, name: "follow_up_rules" },
         { table: schema.followUpLogs, col: schema.followUpLogs.userId, name: "follow_up_logs" },
         { table: schema.rebookingRules, col: schema.rebookingRules.userId, name: "rebooking_rules" },
@@ -939,8 +1022,6 @@ export async function registerRoutes(
         { table: schema.growthLeads, col: schema.growthLeads.userId, name: "growth_leads" },
         { table: schema.onboardingCalls, col: schema.onboardingCalls.userId, name: "onboarding_calls" },
         { table: schema.acquisitionAttribution, col: schema.acquisitionAttribution.userId, name: "acquisition_attribution" },
-        { table: schema.growthReferrals, col: schema.growthReferrals.referrerUserId, name: "growth_referrals" },
-        { table: schema.referralRewards, col: schema.referralRewards.userId, name: "referral_rewards" },
         { table: schema.outreachQueue, col: schema.outreachQueue.userId, name: "outreach_queue" },
         { table: schema.revenueDriftLogs, col: schema.revenueDriftLogs.userId, name: "revenue_drift_logs" },
         { table: schema.aiInterventions, col: schema.aiInterventions.userId, name: "ai_interventions" },
