@@ -1,0 +1,231 @@
+index-BJALGDgB.js:82 [2026-04-19T00:28:18.084Z]  @firebase/auth: Auth (12.8.0): Error while retrieving App Check token: FirebaseError: AppCheck: ReCAPTCHA error. (appCheck/recaptcha-error).
+defaultLogHandler @ index-BJALGDgB.js:82
+warn @ index-BJALGDgB.js:82
+_logWarn @ index-BJALGDgB.js:82
+_getAppCheckToken @ index-BJALGDgB.js:82
+await in _getAppCheckToken
+_getAdditionalHeaders @ index-BJALGDgB.js:82
+await in _getAdditionalHeaders
+(anonymous) @ index-BJALGDgB.js:82
+_performFetchWithErrorHandling @ index-BJALGDgB.js:82
+_performApiRequest @ index-BJALGDgB.js:82
+_performSignInRequest @ index-BJALGDgB.js:82
+signInWithPassword @ index-BJALGDgB.js:82
+handleRecaptchaFlow @ index-BJALGDgB.js:82
+_getIdTokenResponse @ index-BJALGDgB.js:82
+_processCredentialSavingMfaContextIfNecessary @ index-BJALGDgB.js:82
+_signInWithCredential @ index-BJALGDgB.js:82
+signInWithCredential @ index-BJALGDgB.js:82
+signInWithEmailAndPassword @ index-BJALGDgB.js:82
+signInWithEmail @ index-BJALGDgB.js:84
+$a @ index-BJALGDgB.js:95
+Gm @ index-BJALGDgB.js:6
+Fd @ index-BJALGDgB.js:6
+dg @ index-BJALGDgB.js:6
+Nh @ index-BJALGDgB.js:6
+_h @ index-BJALGDgB.js:6
+(anonymous) @ index-BJALGDgB.js:6
+bx @ index-BJALGDgB.js:9
+Ld @ index-BJALGDgB.js:6
+yp @ index-BJALGDgB.js:6
+Xm @ index-BJALGDgB.js:6
+Sg @ index-BJALGDgB.js:6Understand this warning
+recaptcha__en.js:1564  POST https://www.google.com/recaptcha/api2/clr?k=6Lez3m0sAAAAAB4Vz_gFsyPBQAtQ-RteqzKyZfaA net::ERR_ABORTED 400 (Bad Request)
+(anonymous) @ recaptcha__en.js:1564
+(anonymous) @ recaptcha__en.js:142
+l.next @ recaptcha__en.js:161
+(anonymous) @ recaptcha__en.js:109
+(anonymous) @ recaptcha__en.js:109
+(anonymous) @ recaptcha__en.js:408
+pI_.send @ recaptcha__en.js:1564
+(anonymous) @ recaptcha__en.js:663
+(anonymous) @ recaptcha__en.js:778
+(anonymous) @ recaptcha__en.js:142
+l.<computed> @ recaptcha__en.js:162
+D @ recaptcha__en.js:109
+Promise.then
+a @ recaptcha__en.js:109
+Promise.then
+a @ recaptcha__en.js:109
+(anonymous) @ recaptcha__en.js:109
+(anonymous) @ recaptcha__en.js:109
+(anonymous) @ recaptcha__en.js:408
+(anonymous) @ recaptcha__en.js:778
+(anonymous) @ recaptcha__en.js:573
+ZE @ recaptcha__en.js:1638
+(anonymous) @ recaptcha__en.js:1254
+Promise.then
+oo.zO @ recaptcha__en.js:1254
+l4 @ recaptcha__en.js:1637
+(anonymous) @ recaptcha__en.js:775
+(anonymous) @ index-BJALGDgB.js:84
+setTimeout
+(anonymous) @ recaptcha__en.js:383
+(anonymous) @ recaptcha__en.js:636
+(anonymous) @ index-BJALGDgB.js:84
+getToken$1 @ index-BJALGDgB.js:84
+await in getToken$1
+getToken @ index-BJALGDgB.js:84
+getToken$2 @ index-BJALGDgB.js:84
+await in getToken$2
+getToken @ index-BJALGDgB.js:84
+_getAppCheckToken @ index-BJALGDgB.js:82
+_getAdditionalHeaders @ index-BJALGDgB.js:82
+await in _getAdditionalHeaders
+(anonymous) @ index-BJALGDgB.js:82
+_performFetchWithErrorHandling @ index-BJALGDgB.js:82
+_performApiRequest @ index-BJALGDgB.js:82
+_performSignInRequest @ index-BJALGDgB.js:82
+signInWithPassword @ index-BJALGDgB.js:82
+handleRecaptchaFlow @ index-BJALGDgB.js:82
+_getIdTokenResponse @ index-BJALGDgB.js:82
+_processCredentialSavingMfaContextIfNecessary @ index-BJALGDgB.js:82
+_signInWithCredential @ index-BJALGDgB.js:82
+signInWithCredential @ index-BJALGDgB.js:82
+signInWithEmailAndPassword @ index-BJALGDgB.js:82
+signInWithEmail @ index-BJALGDgB.js:84
+$a @ index-BJALGDgB.js:95
+Gm @ index-BJALGDgB.js:6
+Fd @ index-BJALGDgB.js:6
+dg @ index-BJALGDgB.js:6
+Nh @ index-BJALGDgB.js:6
+_h @ index-BJALGDgB.js:6
+(anonymous) @ index-BJALGDgB.js:6
+bx @ index-BJALGDgB.js:9
+Ld @ index-BJALGDgB.js:6
+yp @ index-BJALGDgB.js:6
+Xm @ index-BJALGDgB.js:6
+Sg @ index-BJALGDgB.js:6Understand this error
+index-BJALGDgB.js:82 [2026-04-19T00:28:18.513Z]  @firebase/auth: Auth (12.8.0): Error while retrieving App Check token: FirebaseError: AppCheck: ReCAPTCHA error. (appCheck/recaptcha-error).
+defaultLogHandler @ index-BJALGDgB.js:82
+warn @ index-BJALGDgB.js:82
+_logWarn @ index-BJALGDgB.js:82
+_getAppCheckToken @ index-BJALGDgB.js:82
+await in _getAppCheckToken
+_getAdditionalHeaders @ index-BJALGDgB.js:82
+await in _getAdditionalHeaders
+(anonymous) @ index-BJALGDgB.js:82
+_performFetchWithErrorHandling @ index-BJALGDgB.js:82
+_performApiRequest @ index-BJALGDgB.js:82
+getAccountInfo @ index-BJALGDgB.js:82
+_reloadWithoutSaving @ index-BJALGDgB.js:82
+await in _reloadWithoutSaving
+_fromIdTokenResponse @ index-BJALGDgB.js:82
+_fromIdTokenResponse @ index-BJALGDgB.js:82
+_signInWithCredential @ index-BJALGDgB.js:82
+await in _signInWithCredential
+signInWithCredential @ index-BJALGDgB.js:82
+signInWithEmailAndPassword @ index-BJALGDgB.js:82
+signInWithEmail @ index-BJALGDgB.js:84
+$a @ index-BJALGDgB.js:95
+Gm @ index-BJALGDgB.js:6
+Fd @ index-BJALGDgB.js:6
+dg @ index-BJALGDgB.js:6
+Nh @ index-BJALGDgB.js:6
+_h @ index-BJALGDgB.js:6
+(anonymous) @ index-BJALGDgB.js:6
+bx @ index-BJALGDgB.js:9
+Ld @ index-BJALGDgB.js:6
+yp @ index-BJALGDgB.js:6
+Xm @ index-BJALGDgB.js:6
+Sg @ index-BJALGDgB.js:6Understand this warning
+recaptcha__en.js:1564  POST https://www.google.com/recaptcha/api2/clr?k=6Lez3m0sAAAAAB4Vz_gFsyPBQAtQ-RteqzKyZfaA net::ERR_ABORTED 400 (Bad Request)
+(anonymous) @ recaptcha__en.js:1564
+(anonymous) @ recaptcha__en.js:142
+l.next @ recaptcha__en.js:161
+(anonymous) @ recaptcha__en.js:109
+(anonymous) @ recaptcha__en.js:109
+(anonymous) @ recaptcha__en.js:408
+pI_.send @ recaptcha__en.js:1564
+(anonymous) @ recaptcha__en.js:663
+(anonymous) @ recaptcha__en.js:778
+(anonymous) @ recaptcha__en.js:142
+l.<computed> @ recaptcha__en.js:162
+D @ recaptcha__en.js:109
+Promise.then
+a @ recaptcha__en.js:109
+Promise.then
+a @ recaptcha__en.js:109
+(anonymous) @ recaptcha__en.js:109
+(anonymous) @ recaptcha__en.js:109
+(anonymous) @ recaptcha__en.js:408
+(anonymous) @ recaptcha__en.js:778
+(anonymous) @ recaptcha__en.js:573
+ZE @ recaptcha__en.js:1638
+(anonymous) @ recaptcha__en.js:1254
+Promise.then
+oo.zO @ recaptcha__en.js:1254
+l4 @ recaptcha__en.js:1637
+(anonymous) @ recaptcha__en.js:775
+(anonymous) @ index-BJALGDgB.js:84
+setTimeout
+(anonymous) @ recaptcha__en.js:383
+(anonymous) @ recaptcha__en.js:636
+(anonymous) @ index-BJALGDgB.js:84
+getToken$1 @ index-BJALGDgB.js:84
+await in getToken$1
+getToken @ index-BJALGDgB.js:84
+getToken$2 @ index-BJALGDgB.js:84
+await in getToken$2
+getToken @ index-BJALGDgB.js:84
+_getAppCheckToken @ index-BJALGDgB.js:82
+_getAdditionalHeaders @ index-BJALGDgB.js:82
+await in _getAdditionalHeaders
+(anonymous) @ index-BJALGDgB.js:82
+_performFetchWithErrorHandling @ index-BJALGDgB.js:82
+_performApiRequest @ index-BJALGDgB.js:82
+getAccountInfo @ index-BJALGDgB.js:82
+_reloadWithoutSaving @ index-BJALGDgB.js:82
+await in _reloadWithoutSaving
+_fromIdTokenResponse @ index-BJALGDgB.js:82
+_fromIdTokenResponse @ index-BJALGDgB.js:82
+_signInWithCredential @ index-BJALGDgB.js:82
+await in _signInWithCredential
+signInWithCredential @ index-BJALGDgB.js:82
+signInWithEmailAndPassword @ index-BJALGDgB.js:82
+signInWithEmail @ index-BJALGDgB.js:84
+$a @ index-BJALGDgB.js:95
+Gm @ index-BJALGDgB.js:6
+Fd @ index-BJALGDgB.js:6
+dg @ index-BJALGDgB.js:6
+Nh @ index-BJALGDgB.js:6
+_h @ index-BJALGDgB.js:6
+(anonymous) @ index-BJALGDgB.js:6
+bx @ index-BJALGDgB.js:9
+Ld @ index-BJALGDgB.js:6
+yp @ index-BJALGDgB.js:6
+Xm @ index-BJALGDgB.js:6
+Sg @ index-BJALGDgB.js:6Understand this error
+index-BJALGDgB.js:95  POST https://gig-aid--thierrymbandi.replit.app/api/auth/web/firebase 500 (Internal Server Error)
+ga @ index-BJALGDgB.js:95
+$a @ index-BJALGDgB.js:95
+await in $a
+Gm @ index-BJALGDgB.js:6
+Fd @ index-BJALGDgB.js:6
+dg @ index-BJALGDgB.js:6
+Nh @ index-BJALGDgB.js:6
+_h @ index-BJALGDgB.js:6
+(anonymous) @ index-BJALGDgB.js:6
+bx @ index-BJALGDgB.js:9
+Ld @ index-BJALGDgB.js:6
+yp @ index-BJALGDgB.js:6
+Xm @ index-BJALGDgB.js:6
+Sg @ index-BJALGDgB.js:6Understand this error
+index-BJALGDgB.js:9 [ERROR] [Auth] Email auth error: undefined Internal server error during authentication Error: Internal server error during authentication
+    at ga (index-BJALGDgB.js:95:52688)
+    at async $a (index-BJALGDgB.js:95:54527)
+error @ index-BJALGDgB.js:9
+$a @ index-BJALGDgB.js:95
+await in $a
+Gm @ index-BJALGDgB.js:6
+Fd @ index-BJALGDgB.js:6
+dg @ index-BJALGDgB.js:6
+Nh @ index-BJALGDgB.js:6
+_h @ index-BJALGDgB.js:6
+(anonymous) @ index-BJALGDgB.js:6
+bx @ index-BJALGDgB.js:9
+Ld @ index-BJALGDgB.js:6
+yp @ index-BJALGDgB.js:6
+Xm @ index-BJALGDgB.js:6
+Sg @ index-BJALGDgB.js:6Understand this error
+index-BJALGDgB.js:84  POST https://gig-aid--thierrymbandi.replit.app/api/auth/web/firebase 500 (Internal Server Error)
