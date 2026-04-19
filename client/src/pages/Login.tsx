@@ -3,9 +3,15 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { Loader2, ArrowLeft, Eye, EyeOff, Phone } from "lucide-react";
 import { SiGoogle, SiApple } from "react-icons/si";
+import { PhoneAuthFlow } from "@/components/mobile-auth/PhoneAuthFlow";
 import { signInWithEmail, signUpWithEmail, resetPassword, getFirebaseAuth } from "@/lib/firebase";
+import {
+  cleanupAfterDeletedAccountExchange,
+  isAccountDeletedExchangePayload,
+  shouldShowDeletedAccountToast,
+} from "@/lib/firebaseAuthExchange";
 import { setAuthToken, clearAuthToken } from "@/lib/authToken";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -48,6 +54,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showPhoneAuth, setShowPhoneAuth] = useState(false);
 
 
   const exchangeTokenAndNavigate = async (idToken: string) => {
@@ -56,19 +63,53 @@ export default function Login() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ idToken }),
     });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Authentication failed");
+    let body: unknown = null;
+    try {
+      const text = await response.text();
+      if (text) body = JSON.parse(text) as unknown;
+    } catch {
+      body = null;
     }
 
-    const data = await response.json();
+    if (response.status === 403 && isAccountDeletedExchangePayload(body)) {
+      await cleanupAfterDeletedAccountExchange();
+      setTokenReady(false);
+      if (shouldShowDeletedAccountToast()) {
+        const msg =
+          body &&
+          typeof body === "object" &&
+          "error" in body &&
+          typeof (body as { error: unknown }).error === "string"
+            ? (body as { error: string }).error
+            : "This account was deleted and cannot be used to sign in.";
+        toast({
+          title: "Account closed",
+          description: msg,
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
+    if (!response.ok) {
+      const errMsg =
+        body &&
+        typeof body === "object" &&
+        "error" in body &&
+        typeof (body as { error: unknown }).error === "string"
+          ? (body as { error: string }).error
+          : "Authentication failed";
+      throw new Error(errMsg);
+    }
+
+    const data = body as { token?: string };
+    if (!data?.token || typeof data.token !== "string") {
+      throw new Error("Authentication failed");
+    }
     const auth = getFirebaseAuth();
     const currentUid = auth?.currentUser?.uid || null;
-    
     setAuthToken(data.token, currentUid || undefined);
     setTokenReady(true);
-    
     await refetchUser();
     navigate("/");
   };
@@ -103,7 +144,17 @@ export default function Login() {
     );
   }
 
+  if (showPhoneAuth) {
+    return (
+      <PhoneAuthFlow
+        onBack={() => setShowPhoneAuth(false)}
+        onFirebaseIdToken={exchangeTokenAndNavigate}
+      />
+    );
+  }
+
   const handleAppleSignIn = async () => {
+    if (isAppleLoading) return;
     setIsAppleLoading(true);
     try {
       const idToken = await signInWithApple();
@@ -133,6 +184,10 @@ export default function Login() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePhoneSignIn = () => {
+    setShowPhoneAuth(true);
   };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
@@ -330,7 +385,8 @@ export default function Login() {
               <Button
                 onClick={handleAppleSignIn}
                 disabled={isDisabled || (mode === "signup" && !termsAccepted)}
-                className="w-full h-12 gap-3 bg-black hover:bg-black/90 text-white font-semibold rounded-full shadow-lg"
+                variant="outline"
+                className="w-full h-12 gap-3 rounded-full border-2 border-white/55 bg-white/10 text-white font-semibold shadow-md hover:bg-white/20"
                 data-testid="button-apple-signin"
               >
                 {isAppleLoading ? (
@@ -344,7 +400,8 @@ export default function Login() {
               <Button
                 onClick={handleGoogleSignIn}
                 disabled={isDisabled || (mode === "signup" && !termsAccepted)}
-                className="w-full h-12 gap-3 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-full shadow-lg"
+                variant="outline"
+                className="w-full h-12 gap-3 rounded-full border-2 border-white/55 bg-white/10 text-white font-semibold shadow-md hover:bg-white/20"
                 data-testid="button-google-signin"
               >
                 {isLoading ? (
@@ -353,6 +410,17 @@ export default function Login() {
                   <SiGoogle className="h-5 w-5" />
                 )}
                 Continue with Google
+              </Button>
+
+              <Button
+                onClick={handlePhoneSignIn}
+                disabled={isDisabled || (mode === "signup" && !termsAccepted)}
+                variant="outline"
+                className="w-full h-12 gap-3 rounded-full border-2 border-white/55 bg-white/10 text-white font-semibold shadow-md hover:bg-white/20"
+                data-testid="button-phone-signin"
+              >
+                <Phone className="h-5 w-5" />
+                Continue with Phone
               </Button>
 
               {/* OR Divider */}
@@ -377,7 +445,9 @@ export default function Login() {
                 data-testid="input-email"
               />
               {mode === "signin" && (
-                <p className="text-white/50 text-xs mt-1.5 px-2">Use this if you didn't sign up with Google</p>
+                <p className="text-white/50 text-xs mt-1.5 px-2">
+                  Use email if you did not sign up with Apple or Google
+                </p>
               )}
             </div>
             

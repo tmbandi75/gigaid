@@ -20,6 +20,7 @@ export function normalizeATTStatus(status: string | null | undefined): ATTStatus
     case "denied": return "denied";
     case "restricted": return "restricted";
     case "not_determined": return "not_determined";
+    case "notDetermined": return "not_determined";
     case "unknown": return "unknown";
     default: return "unavailable";
   }
@@ -47,6 +48,14 @@ export async function getATTStatus(): Promise<ATTStatus> {
 export async function requestATT(): Promise<ATTStatus> {
   if (!isIOSNative()) {
     return "unavailable";
+  }
+
+  const current = await getATTStatus();
+  if (current === "denied" || current === "restricted" || current === "authorized") {
+    return current;
+  }
+  if (current !== "unknown" && current !== "not_determined") {
+    return current;
   }
 
   try {
@@ -87,11 +96,15 @@ export function canUserInitiatedRePrompt(profile: AnalyticsProfile): boolean {
 
 export async function requestATTUserInitiated(profile: AnalyticsProfile): Promise<ATTStatus> {
   if (!isIOSNative()) return "unavailable";
+  const liveStatus = await getATTStatus();
+  if (liveStatus === "denied" || liveStatus === "restricted" || liveStatus === "authorized") {
+    return liveStatus;
+  }
+  if (liveStatus === "unknown" || liveStatus === "not_determined") {
+    return requestATT();
+  }
   if (profile.attStatus === "denied" || profile.attStatus === "restricted") {
     return normalizeATTStatus(profile.attStatus);
   }
-  if (profile.attStatus === "unknown" || profile.attStatus === "not_determined") {
-    return requestATT();
-  }
-  return getATTStatus();
+  return liveStatus;
 }

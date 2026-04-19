@@ -9,7 +9,7 @@ const config: CapacitorConfig = {
   appName: 'Gig Aid',
   webDir: 'dist/public',
   server: {
-    url:'https://gig-aid--thierrymbandi.replit.app',
+    url: isProduction ? 'https://gig-aid--thierrymbandi.replit.app' : 'http://192.168.100.92:3000',
     androidScheme: 'https',
     iosScheme: 'https',
     cleartext: !isProduction,
@@ -28,9 +28,10 @@ const config: CapacitorConfig = {
       style: 'dark',
       backgroundColor: '#ffffff',
     },
+    // Phone provider: https://github.com/capawesome-team/capacitor-firebase/blob/main/packages/authentication/docs/setup-phone.md
     FirebaseAuthentication: {
       skipNativeAuth: false,
-      providers: ['google.com'],
+      providers: ['google.com', 'apple.com', 'phone'],
     },
   },
   ios: {

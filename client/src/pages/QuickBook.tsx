@@ -14,6 +14,7 @@ import { ArrowLeft, Copy, Check, Edit2, DollarSign, Calendar, MapPin, Clock, Use
 import type { ParsedJobFields, FieldConfidence, PaymentConfig } from "@shared/schema";
 import { AddressAutocomplete } from "@/components/booking/AddressAutocomplete";
 import { QuickBookDesktopView } from "@/components/quickbook/QuickBookDesktopView";
+import { copyTextToClipboard } from "@/lib/clipboard";
 
 type Step = "paste" | "preview" | "sent";
 
@@ -149,8 +150,12 @@ export default function QuickBook() {
     }
   };
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(bookingLinkUrl);
+  const handleCopyLink = async () => {
+    const copiedOk = await copyTextToClipboard(bookingLinkUrl);
+    if (!copiedOk) {
+      toast({ title: "Could not copy link", variant: "destructive" });
+      return;
+    }
     setCopied(true);
     toast({ title: "Link copied!" });
     // TODO: Analytics - quickbook_copy_link_clicked

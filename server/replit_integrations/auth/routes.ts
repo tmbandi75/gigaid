@@ -33,6 +33,14 @@ export function registerAuthRoutes(app: Express): void {
         if (!user) {
           return res.status(404).json({ message: "User not found" });
         }
+
+        if (user.deletedAt) {
+          logger.warn("[AccountDeleteFlow] step=api_auth_user_blocked_deleted", {
+            userId,
+            deletedAt: user.deletedAt,
+          });
+          return res.status(401).json({ message: "Account has been deleted" });
+        }
         
         // Send with a timestamp to bust any remaining caches
         res.json({ ...user, _ts: Date.now() });

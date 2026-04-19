@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   MessageSquare, 
@@ -286,7 +287,15 @@ export default function ShareCapture() {
   };
 
   const handleCopyReply = async () => {
-    await navigator.clipboard.writeText(selectedReply);
+    const copiedOk = await copyTextToClipboard(selectedReply);
+    if (!copiedOk) {
+      toast({
+        title: "Could not copy reply",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
     setCopiedReply(true);
     setTimeout(() => setCopiedReply(false), 2000);
     

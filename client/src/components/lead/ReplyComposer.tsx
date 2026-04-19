@@ -19,6 +19,7 @@ import {
 import type { Lead } from "@shared/schema";
 import { useSendText } from "@/hooks/use-send-text";
 import { logger } from "@/lib/logger";
+import { copyTextToClipboard } from "@/lib/clipboard";
 
 interface ReplyComposerProps {
   lead: Lead;
@@ -87,7 +88,11 @@ export function ReplyComposer({ lead }: ReplyComposerProps) {
   };
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(editedReply);
+    const copiedOk = await copyTextToClipboard(editedReply);
+    if (!copiedOk) {
+      toast({ title: "Could not copy message", variant: "destructive" });
+      return;
+    }
     setCopied(true);
     toast({ title: "Message copied!" });
     setTimeout(() => setCopied(false), 2000);

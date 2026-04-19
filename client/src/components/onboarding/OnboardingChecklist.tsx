@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import confetti from "canvas-confetti";
 import { SendBookingLinkDialog } from "./SendBookingLinkDialog";
 import { AddServiceDialog } from "@/components/settings/AddServiceDialog";
+import { copyTextToClipboard } from "@/lib/clipboard";
 
 interface OnboardingStep {
   id: string;
@@ -117,14 +118,14 @@ export function OnboardingChecklist({ currentStep, onStepClick, onComplete, book
   const handleCopyBookingLink = async () => {
     if (bookingSlug) {
       const bookingUrl = `${window.location.origin}/book/${bookingSlug}`;
-      try {
-        await navigator.clipboard.writeText(bookingUrl);
+      const copiedOk = await copyTextToClipboard(bookingUrl);
+      if (copiedOk) {
         toast({
           title: "Link copied!",
           description: "Your booking link is ready to share",
         });
         trackEvent("onboarding_copy_booking_link_clicked");
-      } catch {
+      } else {
         toast({
           title: "Couldn't copy link",
           description: "Please try again",

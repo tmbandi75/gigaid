@@ -1,4 +1,5 @@
 import { useToast } from "@/hooks/use-toast";
+import { copyTextToClipboard } from "@/lib/clipboard";
 
 interface SendTextOptions {
   phoneNumber: string;
@@ -20,13 +21,13 @@ export function useSendText() {
       return false;
     }
 
-    try {
-      await navigator.clipboard.writeText(message);
+    const copiedOk = await copyTextToClipboard(message);
+    if (copiedOk) {
       toast({
         title: "Message copied!",
         description: "Opening your messaging app...",
       });
-    } catch {
+    } else {
       toast({
         title: "Message ready",
         description: "Opening your messaging app...",

@@ -4,6 +4,7 @@ import { users, leads, jobs, invoices, eventsCanonical, metricsDaily, adminActio
 import { eq, sql, desc, and, gte, lte, isNull, isNotNull, count } from "drizzle-orm";
 import { adminMiddleware, AdminRequest, requireRole } from "../copilot/adminMiddleware";
 import { logger } from "../lib/logger";
+import { Plan, PLAN_PRICES_CENTS } from "@shared/plans";
 
 const router = Router();
 
@@ -88,9 +89,9 @@ router.get("/revenue", adminMiddleware, async (req: AdminRequest, res: Response)
           plan,
           COUNT(*) as customers,
           COUNT(*) * CASE 
-            WHEN plan = 'pro' THEN 1999
-            WHEN plan = 'pro_plus' THEN 3999
-            WHEN plan = 'business' THEN 9999
+            WHEN plan = 'pro' THEN ${PLAN_PRICES_CENTS[Plan.PRO]}
+            WHEN plan = 'pro_plus' THEN ${PLAN_PRICES_CENTS[Plan.PRO_PLUS]}
+            WHEN plan = 'business' THEN ${PLAN_PRICES_CENTS[Plan.BUSINESS]}
             ELSE 0
           END as mrr_cents
         FROM users
@@ -291,9 +292,9 @@ router.get("/ltv", adminMiddleware, async (req: AdminRequest, res: Response) => 
           u.stripe_subscription_id,
           EXTRACT(MONTH FROM AGE(NOW(), TO_TIMESTAMP(u.created_at, 'YYYY-MM-DD"T"HH24:MI:SS'))) as months_active,
           CASE 
-            WHEN u.plan = 'pro' THEN 1999
-            WHEN u.plan = 'pro_plus' THEN 3999
-            WHEN u.plan = 'business' THEN 9999
+            WHEN u.plan = 'pro' THEN ${PLAN_PRICES_CENTS[Plan.PRO]}
+            WHEN u.plan = 'pro_plus' THEN ${PLAN_PRICES_CENTS[Plan.PRO_PLUS]}
+            WHEN u.plan = 'business' THEN ${PLAN_PRICES_CENTS[Plan.BUSINESS]}
             ELSE 0
           END as monthly_value_cents
         FROM users u

@@ -1,5 +1,14 @@
+import { Capacitor } from "@capacitor/core";
 import { getAuthToken, isTokenReady } from "./authToken";
 import { getGlobalLoggingOut } from "./queryClient";
+
+function clientPlatformHeader(): string | undefined {
+  if (!Capacitor.isNativePlatform()) return "web";
+  const p = Capacitor.getPlatform();
+  if (p === "ios") return "ios";
+  if (p === "android") return "android";
+  return p;
+}
 
 export async function apiFetch<T>(
   url: string,
@@ -21,6 +30,11 @@ export async function apiFetch<T>(
   const headers: Record<string, string> = {
     ...((options?.headers as Record<string, string>) || {}),
   };
+
+  const platform = clientPlatformHeader();
+  if (platform) {
+    headers["X-Client-Platform"] = platform;
+  }
 
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;

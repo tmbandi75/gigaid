@@ -4,77 +4,72 @@ Paste the text below into the **"Notes for Review"** field in App Store Connect 
 
 ---
 
-## REVIEW NOTES — Gig Aid v1.0.0
+## REVIEW NOTES — Gig Aid (resubmission)
 
-### Demo Account
+### Guideline 4.8 — Sign in with Apple (equivalent login)
 
-- Email: reviewer@gigaid.ai
-- Password: GigaidReview2026!
-- No MFA or CAPTCHA is required to sign in.
-- The account is pre-loaded with sample clients, jobs, and invoices so you can explore the full app experience immediately.
-- This account has an active Pro subscription so all features are accessible.
+**Sign in with Apple** is offered on the **first sign-in screen** as the **top** option, before Google and email. It satisfies Guideline 4.8 (limited data, Hide My Email where the user chooses it, no ad profiling by Apple as the login provider).
 
-### How to Test
+**How to test:** On launch, tap **Continue with Apple** and complete the system sheet. You can also use **Continue with Google** or **Continue with Email** on the same screen.
 
-1. Launch the app and tap "Continue with Email"
-2. Enter the demo credentials above
-3. You will land on the Dashboard with sample data
-4. Navigate via the bottom tabs: Plan (dashboard), Jobs, Requests (leads), Get Paid (invoices), and More
-5. Settings > Account & Security contains account deletion and data export
-6. Settings > Subscription contains "Restore Access" for subscription recovery after reinstall
+### Demo account (email path)
 
-### Payment Model — Guideline 3.1.3(b)
+- Email: reviewer@gigaid.ai  
+- Password: GigaidReview2026!  
+- No MFA or CAPTCHA. Sample data is pre-loaded. The account has Pro access for feature testing.
 
-Gig Aid is a business tool for real-world service professionals (plumbers, cleaners, electricians, handymen). All payments processed through Stripe are for **physical, real-world services** performed at client locations — not digital goods or digital content.
+### Guideline 3.1.1 — Subscriptions and In-App Purchase
 
-Per App Store Review Guideline 3.1.3(b), apps that facilitate payments for physical goods and services rendered outside the app may use external payment systems. No digital content, subscriptions for digital features, or in-app unlocks are sold through Stripe.
+On **iOS and Android**, **paid plan upgrades** are completed with **in-app purchase** (StoreKit / Google Play billing via RevenueCat). **Stripe / web checkout is not offered for new mobile subscriptions** from the app.
 
-The Pro subscription unlocks business management tools (more job slots, advanced invoicing, lead tracking) that support the user's real-world service business. These are productivity tools for managing physical service work, not digital content consumption.
+**Web:** Users who use the website can subscribe with Stripe as before.
 
-### Account Deletion — Guideline 5.1.1
+**How to test IAP:** Sign in → **Settings** → **Subscription** (or **Pricing**) → choose a higher plan → complete the **App Store** purchase sheet. Use a Sandbox Apple ID if needed.
 
-Users can delete their account from:
-**Settings > Account & Security > Delete Account**
+### Guideline 5.1.1(iv) — App Tracking Transparency
 
-The deletion process:
-- Days 0–30: Account disabled, data hidden but recoverable if the user changes their mind
-- Days 30–150: Account archived, minimal data retained for legal/financial obligations
-- Day 150+: Permanent deletion of all personal data
-- Stripe Connect and Stripe Customer records are cleaned up immediately
-- Firebase Authentication credentials are deleted immediately
-- Re-login is blocked after deletion
+We **do not** show a launch-time “analytics” dialog before the system ATT prompt. **Analytics default to off.** If the user turns on **Enable usage analytics** in **Settings**, the **system ATT prompt** may appear (neutral; no custom screen encouraging acceptance).
 
-### Privacy & Analytics
+### Guideline 5.1.1(v) — Account deletion
 
-- Analytics (PostHog) initializes **only after user consent** via an in-app consent modal
-- On iOS, the ATT (App Tracking Transparency) prompt is shown before any tracking
-- If the user denies tracking, all identifier-based analytics are fully disabled
-- No advertising SDKs are used; we do not serve ads
-- The IDFA is not used for advertising purposes
-- Privacy Policy is accessible at /privacy within the app and discloses all third-party SDKs
+**Settings → Account & Security → Delete account** (confirm with typing DELETE). See screen recording in App Review Information if attached.
 
-### Data Export
+### Guideline 2.1 — AI (information)
 
-Users can export all their data as JSON from:
-**Settings > Data Export > Download JSON**
+1. **Model:** OpenAI **gpt-4o-mini** for in-app AI assists (suggestions, summaries, similar text features).  
+2. **Third-party AI:** **OpenAI** receives text the user submits in those flows plus related business content already in the account (e.g. job or lead descriptions). We do not intentionally send account email/phone/client contacts unless the user pastes them into the AI input.  
+3. **Where users can read this:** **Settings → AI features** (summary) and **Privacy Policy** section **OpenAI (AI features)** (`/privacy#ai-third-parties` in the app).
 
-### Permissions Requested
+### Guideline 1.5 — Support URL
 
-All permissions have clear, purpose-driven usage descriptions in Info.plist:
-- Camera: Job site photos and invoice documentation
-- Microphone: Voice notes for job details
-- Photo Library: Upload/save job and invoice photos
-- Location: Find client addresses and provide directions to job sites
-- Tracking (ATT): Product analytics only, with full opt-out support
+Ensure **App Store Connect → Support URL** points to a **working** page. This build exposes **in-app help** at **`/support`** (same experience as Help). If your production host is `https://gigaid.ai`, use **`https://gigaid.ai/support`** (or fix **`http://support.gigaid.ai`** to redirect there with HTTPS).
 
-### Offline Support
+### Guideline 2.1(a) — iPad “+” (quick add)
 
-The app works offline for core actions (adding notes, updating job status). Data syncs automatically when connectivity is restored.
+The header **New (+)** menu uses a native-friendly menu mode on iOS. Please retry on iPad; if issues persist, note the screen and we will follow up.
 
-### Accessibility
+### How to navigate the app
 
-- All icon-only buttons have accessible labels
-- All toggle switches have accessible labels
-- Touch targets meet the 44pt minimum
-- Keyboard navigation is supported
-- Dark mode is fully supported
+- Bottom tabs: Plan, Jobs, Requests (leads), Get Paid (invoices), More  
+- **Settings** includes Analytics, AI disclosure, Subscription, Account deletion, Data export  
+
+### Data export
+
+**Settings → Export Data → Download JSON**
+
+### Permissions (Info.plist)
+
+Camera, microphone, photo library, location, speech recognition, and **NSUserTrackingUsageDescription** (factual; analytics only if the user opts in and allows tracking).
+
+---
+
+## Paste-ready replies (Guideline 2.1 AI questions)
+
+**1. What AI model is your app using?**  
+OpenAI **gpt-4o-mini** via the OpenAI API for optional in-app AI tools.
+
+**2. Is your app sending users’ data to any third-party AI provider? If yes, what personal information is sent?**  
+Yes — **OpenAI**. We send the **text the user enters** into AI features and **related business content** they already store in the app (for example job or service descriptions, notes). We do **not** send account email, phone, or client contact fields as part of those API calls unless the user **pastes** that information into the AI input.
+
+**3. Where in the app's UI can users check what is being sent and to which third parties?**  
+**Settings → AI features** (short summary) and the **Privacy Policy** under **Third-Party Services → OpenAI** (`/privacy#ai-third-parties`).

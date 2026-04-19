@@ -2,6 +2,7 @@ import { Capacitor } from "@capacitor/core";
 import { apiFetch } from "./apiFetch";
 import { logger } from "@/lib/logger";
 import { openExternalUrl } from "./openExternalUrl";
+import { purchaseSubscriptionOnNative } from "./revenuecat";
 
 // Cache bust: 2026-02-03T23:25:00Z
 // Single source of truth for Stripe enablement
@@ -17,6 +18,28 @@ export type SubscriptionPlan = "pro" | "pro_plus" | "business";
 export interface CheckoutResult {
   success: boolean;
   error?: string;
+}
+
+/**
+ * Web: Stripe Checkout. Native: App Store / Play via RevenueCat (no Stripe for subscriptions on device).
+ */
+export async function startSubscriptionUpgrade({
+  plan,
+  returnTo,
+  appUserId,
+}: {
+  plan: SubscriptionPlan;
+  returnTo: string;
+  /** Backend user id — pass on native so Purchases can configure before the auth effect runs (avoids race). */
+  appUserId?: string | null;
+}): Promise<CheckoutResult> {
+  if (Capacitor.isNativePlatform()) {
+    const native = await purchaseSubscriptionOnNative(plan, {
+      appUserId: appUserId ?? undefined,
+    });
+    return native.success ? { success: true } : { success: false, error: native.error };
+  }
+  return startStripeCheckout({ plan, returnTo });
 }
 
 export async function startStripeCheckout({

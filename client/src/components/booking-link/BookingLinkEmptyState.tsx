@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { copyTextToClipboard } from "@/lib/clipboard";
 
 function trackEvent(eventName: string, properties?: Record<string, unknown>) {
   if (typeof window !== 'undefined' && (window as { posthog?: { capture: (event: string, props?: Record<string, unknown>) => void } }).posthog) {
@@ -24,8 +25,8 @@ export function BookingLinkEmptyState() {
   if (!bookingLink) return null;
 
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(bookingLink);
+    const copiedOk = await copyTextToClipboard(bookingLink);
+    if (copiedOk) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       trackEvent('booking_link_copied', { screen: 'leads_empty' });
@@ -33,7 +34,7 @@ export function BookingLinkEmptyState() {
         title: "Link copied",
         description: "Your booking link is ready to share",
       });
-    } catch {
+    } else {
       toast({
         title: "Couldn't copy",
         description: "Please copy the link manually",

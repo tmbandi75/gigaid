@@ -13,6 +13,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { apiFetch } from "@/lib/apiFetch";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useApiMutation } from "@/hooks/useApiMutation";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import { 
   Users, 
   Plus, 
@@ -225,10 +226,14 @@ export default function Crew() {
     setExpandedMember(expandedMember === memberId ? null : memberId);
   };
 
-  const copyInviteLink = (token: string) => {
+  const copyInviteLink = async (token: string) => {
     const baseUrl = window.location.origin;
-    navigator.clipboard.writeText(`${baseUrl}/crew-portal/${token}`);
-    toast({ title: "Link copied to clipboard" });
+    const copiedOk = await copyTextToClipboard(`${baseUrl}/crew-portal/${token}`);
+    if (copiedOk) {
+      toast({ title: "Link copied to clipboard" });
+    } else {
+      toast({ title: "Could not copy link", variant: "destructive" });
+    }
   };
 
   const renderMobileHeader = () => (

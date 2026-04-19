@@ -161,12 +161,18 @@ export default function PrivacyPolicy() {
                   </p>
                 </div>
 
-                <div>
-                  <h4 className="font-medium">OpenAI</h4>
+                <div id="ai-third-parties">
+                  <h4 className="font-medium">OpenAI (AI features)</h4>
                   <p className="text-sm text-muted-foreground">
-                    AI-powered features (pricing suggestions, nudges). Receives anonymized job context
-                    — never your name, email, or phone number. We use the API with data not used for
-                    training. <a href="https://openai.com/privacy" className="underline" target="_blank" rel="noopener noreferrer">OpenAI Privacy Policy</a>
+                    We use OpenAI&apos;s API with the <strong>gpt-4o-mini</strong> model for in-app
+                    AI tools (for example pricing or scheduling suggestions, text summaries, and
+                    similar assists). When you use those features, we send OpenAI the text you
+                    provide and relevant business content you already store in the app (such as job
+                    descriptions, lead notes, or service details). We do not send your account email,
+                    phone number, or client contact fields as part of those requests unless you
+                    explicitly paste them into the AI input. OpenAI processes the request under their
+                    API terms; see their policy for retention and subprocessors.{" "}
+                    <a href="https://openai.com/privacy" className="underline" target="_blank" rel="noopener noreferrer">OpenAI Privacy Policy</a>
                   </p>
                 </div>
               </div>
@@ -271,21 +277,24 @@ export default function PrivacyPolicy() {
             <section data-testid="section-att">
               <h2 className="text-lg font-semibold mt-6">7. App Tracking Transparency (iOS Users)</h2>
               <p>
-                On iOS, we request your permission before tracking your activity across other
-                companies' apps and websites using Apple's App Tracking Transparency (ATT) framework.
+                Product analytics are <strong>off by default</strong>. On iOS, the app may show Apple&apos;s
+                App Tracking Transparency (ATT) prompt on the home screen when analytics are enabled
+                and iOS has not recorded a choice for this app. It asks whether the app may track
+                you across other companies&apos; apps and websites for analytics.
               </p>
               <ul className="list-disc pl-6 mt-2 space-y-1">
                 <li>
-                  If you allow tracking, we may use anonymized identifiers for product analytics
-                  (PostHog) to understand how the app is used in aggregate.
+                  If you allow tracking, we may use anonymized identifiers with PostHog for aggregate
+                  product analytics.
                 </li>
                 <li>
-                  If you deny tracking, we disable all identifier-based analytics. The app works
-                  the same way regardless of your choice.
+                  If you deny tracking, we do not enable identifier-based analytics. The rest of the
+                  app works the same.
                 </li>
                 <li>
-                  You can change your preference at any time in your iPhone's{" "}
-                  <strong>Settings &gt; Privacy &amp; Security &gt; Tracking</strong>.
+                  You can change your preference in{" "}
+                  <strong>Settings &gt; Privacy &amp; Security &gt; Tracking</strong> on your device.
+                  Android does not use ATT and uses in-app analytics consent only.
                 </li>
               </ul>
               <p className="mt-2">
@@ -300,9 +309,12 @@ export default function PrivacyPolicy() {
 
               <h3 className="text-base font-medium mt-4">Analytics</h3>
               <p className="text-sm">
-                You can opt out of product analytics by declining the ATT prompt on iOS.
-                On the web, you can block PostHog by using a browser extension that blocks
-                analytics scripts, or by contacting us to disable analytics for your account.
+                Keep analytics off by leaving &quot;Enable usage analytics&quot; disabled in the app
+                Settings, or turn it off there at any time. On iOS, if you enabled analytics and
+                allowed tracking, you can also withdraw tracking permission under{" "}
+                <strong>Settings &gt; Privacy &amp; Security &gt; Tracking</strong>. On the web, you
+                can use a browser extension that blocks analytics scripts or contact us to disable
+                analytics for your account.
               </p>
 
               <h3 className="text-base font-medium mt-4">SMS and Email Notifications</h3>

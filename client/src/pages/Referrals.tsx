@@ -10,6 +10,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { copyTextToClipboard } from "@/lib/clipboard";
+import { shareContent } from "@/lib/share";
 import {
   Gift,
   Copy,
@@ -71,35 +73,53 @@ export default function Referrals() {
     }
   );
 
-  const copyReferralLink = () => {
+  const copyReferralLink = async (options?: { silentSuccess?: boolean }) => {
     const link = `${window.location.origin}/join?ref=${referralData?.referralCode || ""}`;
-    navigator.clipboard.writeText(link);
+    const copiedSuccessfully = await copyTextToClipboard(link);
+    if (!copiedSuccessfully) {
+      toast({
+        title: "Could not copy link",
+        description: "Try sharing the link instead.",
+        variant: "destructive",
+      });
+      return;
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    toast({ title: "Referral link copied!" });
+    if (!options?.silentSuccess) {
+      toast({ title: "Referral link copied!" });
+    }
   };
 
   const shareReferralLink = async () => {
     const link = `${window.location.origin}/join?ref=${referralData?.referralCode || ""}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: "Join GigAid",
-          text: "Use my referral link to sign up for GigAid and we both get rewards!",
-          url: link,
-        });
-      } catch (e) {
-        copyReferralLink();
-      }
-    } else {
-      copyReferralLink();
+    const sharedOk = await shareContent({
+      title: "Join GigAid",
+      text: "Use my referral link to sign up for GigAid and we both get rewards!",
+      url: link,
+      dialogTitle: "Share referral link",
+    });
+    if (!sharedOk) {
+      await copyReferralLink({ silentSuccess: true });
+      toast({
+        title: "Share unavailable",
+        description: "We copied your referral link instead.",
+      });
     }
   };
 
+  const handleShareLink = () => {
+    void shareReferralLink();
+  };
+
+  const handleCopyLink = () => {
+    void copyReferralLink();
+  };
+  
   const getInitials = (name: string) => {
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
-
+  
   const renderMobileHeader = () => (
     <div className="relative overflow-hidden bg-gradient-to-br from-pink-500 via-rose-500 to-red-500 text-white px-4 pt-6 pb-16">
       <div className="absolute inset-0 overflow-hidden">
@@ -197,7 +217,7 @@ export default function Referrals() {
                 <Button 
                   variant="ghost" 
                   size="icon"
-                  onClick={copyReferralLink}
+                  onClick={handleCopyLink}
                   aria-label="Copy referral link"
                   data-testid="button-copy-referral"
                 >
@@ -212,7 +232,7 @@ export default function Referrals() {
             <div className="p-4 flex gap-2">
               <Button 
                 className="flex-1 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600"
-                onClick={shareReferralLink}
+                onClick={handleShareLink}
                 data-testid="button-share-referral"
               >
                 <Share2 className="h-4 w-4 mr-2" />
@@ -221,7 +241,7 @@ export default function Referrals() {
               <Button 
                 variant="outline" 
                 className="flex-1"
-                onClick={copyReferralLink}
+                onClick={handleCopyLink}
                 data-testid="button-copy-link"
               >
                 <Copy className="h-4 w-4 mr-2" />
@@ -375,7 +395,7 @@ export default function Referrals() {
                 Share your link with friends and start earning rewards together
               </p>
               <Button 
-                onClick={shareReferralLink}
+                onClick={handleShareLink}
                 className="bg-gradient-to-r from-rose-500 to-pink-500"
                 data-testid="button-share-empty"
               >

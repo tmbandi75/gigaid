@@ -133,3 +133,33 @@ export function isFirebaseConfigured(): boolean {
 export function getFirebaseInitError(): string | null {
   return initError;
 }
+
+/** Removes the Firebase Auth user so the same provider identity cannot keep minting valid sessions. */
+export async function deleteFirebaseAuthUser(uid: string): Promise<{ ok: boolean; error?: string }> {
+  if (!uid) {
+    logger.info("[AccountDeleteFlow] step=firebaseAdmin_deleteUser_skip_empty_uid");
+    return { ok: true };
+  }
+  if (!initializeFirebaseAdmin()) {
+    logger.warn("[AccountDeleteFlow] step=firebaseAdmin_deleteUser_no_sdk", initError);
+    return { ok: false, error: initError || "not_initialized" };
+  }
+  try {
+    logger.info("[AccountDeleteFlow] step=firebaseAdmin_deleteUser_calling", {
+      uidPrefix: uid.length >= 8 ? `${uid.slice(0, 4)}…${uid.slice(-4)}` : uid,
+    });
+    await admin.auth().deleteUser(uid);
+    logger.info("[AccountDeleteFlow] step=firebaseAdmin_deleteUser_ok", {
+      uidPrefix: uid.length >= 8 ? `${uid.slice(0, 4)}…${uid.slice(-4)}` : uid,
+    });
+    return { ok: true };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes("USER_NOT_FOUND")) {
+      logger.info("[AccountDeleteFlow] step=firebaseAdmin_deleteUser_already_gone");
+      return { ok: true };
+    }
+    logger.error("[AccountDeleteFlow] step=firebaseAdmin_deleteUser_failed", msg);
+    return { ok: false, error: msg };
+  }
+}

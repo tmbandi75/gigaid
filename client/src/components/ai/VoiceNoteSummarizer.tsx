@@ -13,6 +13,7 @@ import { useApiMutation } from "@/hooks/useApiMutation";
 import { getSupportedAudioMimeType } from "@/lib/audioUtils";
 import { getAuthToken } from "@/lib/authToken";
 import { isNativePlatform } from "@/lib/platform";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import { SpeechRecognition } from "@capacitor-community/speech-recognition";
 import { 
   Mic, 
@@ -36,6 +37,20 @@ const hasSpeechRecognition = () =>
 
 /** MediaRecorder is supported in Firefox, Safari, iOS, Android, and Chrome — use it as fallback for recording. */
 const hasMediaRecorder = () => typeof window !== "undefined" && typeof MediaRecorder !== "undefined";
+
+/** Ends any previous native session so start() does not throw "Ongoing speech recognition". */
+async function resetNativeSpeechSession(): Promise<void> {
+  try {
+    await SpeechRecognition.removeAllListeners();
+  } catch {
+    // Plugin may not be initialized yet.
+  }
+  try {
+    await SpeechRecognition.stop();
+  } catch {
+    // No active session; safe to ignore.
+  }
+}
 
 interface VoiceNoteSummary {
   transcript: string;
@@ -69,12 +84,22 @@ export function VoiceNoteSummarizer({ onSummaryComplete, onNoteSaved }: VoiceNot
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const nativeFinalTranscriptRef = useRef<string>("");
+  /** Prevents overlapping native start() calls before React state catches up. */
+  const nativeSpeechStartLockRef = useRef(false);
 
   useEffect(() => {
     return () => {
       if (recordedAudioUrl) URL.revokeObjectURL(recordedAudioUrl);
     };
   }, [recordedAudioUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (isNativePlatform()) {
+        void resetNativeSpeechSession();
+      }
+    };
+  }, []);
 
   const uploadAndTranscribe = useCallback(async (blob: Blob): Promise<string> => {
     const formData = new FormData();
@@ -162,6 +187,10 @@ export function VoiceNoteSummarizer({ onSummaryComplete, onNoteSaved }: VoiceNot
 
   const startRecording = useCallback(() => {
     if (isNativePlatform()) {
+      if (nativeSpeechStartLockRef.current) {
+        return;
+      }
+      nativeSpeechStartLockRef.current = true;
       (async () => {
         try {
           const available = await SpeechRecognition.available();
@@ -184,20 +213,14 @@ export function VoiceNoteSummarizer({ onSummaryComplete, onNoteSaved }: VoiceNot
             return;
           }
 
+          await resetNativeSpeechSession();
+
           nativeFinalTranscriptRef.current = "";
           setTranscript("");
           setIsRecording(true);
           toast({ title: "Recording started..." });
 
-          // Keep partial results so users see the text updating.
-          await SpeechRecognition.start({
-            language: "en-US",
-            maxResults: 1,
-            partialResults: true,
-            popup: false,
-          });
-
-          // Event listener emits partial and final matches; we keep a stable final buffer.
+          // Register listeners before start so early results are not missed.
           SpeechRecognition.addListener("partialResults", (data: any) => {
             const matches: string[] = data?.matches || [];
             const partial = matches.join(" ").trim();
@@ -211,13 +234,23 @@ export function VoiceNoteSummarizer({ onSummaryComplete, onNoteSaved }: VoiceNot
               setTranscript(nextFinal);
             }
           });
+
+          await SpeechRecognition.start({
+            language: "en-US",
+            maxResults: 1,
+            partialResults: true,
+            popup: false,
+          });
         } catch (err: any) {
+          await resetNativeSpeechSession();
           setIsRecording(false);
           toast({
             title: "Recording error",
             description: typeof err?.message === "string" ? err.message : String(err),
             variant: "destructive",
           });
+        } finally {
+          nativeSpeechStartLockRef.current = false;
         }
       })();
       return;
@@ -340,7 +373,11 @@ export function VoiceNoteSummarizer({ onSummaryComplete, onNoteSaved }: VoiceNot
 
   const handleCopy = async () => {
     if (summary) {
-      await navigator.clipboard.writeText(summary.summary);
+      const copiedOk = await copyTextToClipboard(summary.summary);
+      if (!copiedOk) {
+        toast({ title: "Could not copy summary", variant: "destructive" });
+        return;
+      }
       setCopied(true);
       toast({ title: "Summary copied!" });
       setTimeout(() => setCopied(false), 2000);

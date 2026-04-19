@@ -65,7 +65,7 @@ import { logCapabilityAttempt } from "@shared/capabilityLogger";
 import { hasCapability, isDeveloper } from "@shared/entitlements";
 import { isHardGated } from "@shared/gatingConfig";
 import { canCreateJob, canSendSms, canUseAutoFollowups, PLAN_LIMITS } from "@shared/planLimits";
-import { Plan } from "@shared/plans";
+import { Plan, PLAN_PRICES_CENTS } from "@shared/plans";
 import { canPerform, type CanPerformResult } from "@shared/capabilities/canPerform";
 import type { Plan as CapPlan, Capability } from "@shared/capabilities/plans";
 import {
@@ -77,6 +77,8 @@ import { verifyAppJwt } from "./appJwt";
 import { selfTestFirebaseAdmin } from "./firebaseAdmin";
 import { pool } from "./db";
 import { registerStripeWebhookRoutes, processRetryableWebhooks, reconcileStuckPayments, startWebhookRetryScheduler } from "./stripeWebhookRoutes";
+import { registerRevenueCatWebhookRoutes } from "./revenuecatWebhookRoutes";
+import { isStoreSubscriptionActiveInDb, syncSubscriberFromRevenueCat } from "./revenuecatSync";
 import { registerTestRoutes } from "./testRoutes";
 import { generateBookingSlug, ensureUniqueSlug, validateSlug } from "./lib/bookingSlug";
 import { logger } from "./lib/logger";
@@ -85,6 +87,10 @@ const quoteCache = new Map<string, { result: any; timestamp: number }>();
 const QUOTE_CACHE_TTL = 3600000;
 const QUOTE_CACHE_MAX = 500;
 const QUOTE_CACHE_PRUNE = 250;
+
+/** Throttle RevenueCat pulls on subscription status so the DB plan matches the store without hammering the RC API. */
+const subscriptionStatusLastRcSyncMs = new Map<string, number>();
+const SUBSCRIPTION_STATUS_RC_SYNC_COOLDOWN_MS = 25_000;
 
 function pruneQuoteCache() {
   if (quoteCache.size <= QUOTE_CACHE_MAX) return;
@@ -188,6 +194,8 @@ export async function registerRoutes(
 
   // Register Stripe webhook routes (needs raw body before JSON parsing)
   registerStripeWebhookRoutes(app, storage);
+
+  registerRevenueCatWebhookRoutes(app, storage);
   
   // Start Stripe webhook retry scheduler (every 60 seconds)
   startWebhookRetryScheduler(storage, 60000);
@@ -356,21 +364,47 @@ export async function registerRoutes(
   // Middleware to require authentication and set userId
   // Also blocks access for deleted accounts (Apple App Store compliance)
   const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
+    const pathOnly = (req.originalUrl || "").split("?")[0];
+    const isAccountDelete = req.method === "DELETE" && pathOnly.endsWith("/api/account");
+
     const userId = getAuthenticatedUserId(req);
     if (!userId) {
+      if (isAccountDelete) {
+        logger.warn("[AccountDeleteFlow] step=requireAuth_no_user_id", { path: pathOnly });
+      }
       return res.status(401).json({ error: "Authentication required" });
     }
-    
+
+    if (isAccountDelete) {
+      logger.info("[AccountDeleteFlow] step=requireAuth_ok", {
+        userId,
+        authMode: req.headers.authorization?.startsWith("Bearer ") ? "bearer_jwt" : "session_or_other",
+      });
+    }
+
     // Check if account is deleted
     try {
       const user = await storage.getUser(userId);
+      if (isAccountDelete) {
+        logger.info("[AccountDeleteFlow] step=requireAuth_db_user", {
+          userId,
+          rowFound: !!user,
+          deletedAt: user?.deletedAt ?? null,
+          hasFirebaseUid: !!user?.firebaseUid,
+        });
+      }
       if (user?.deletedAt) {
+        logger.warn("[AccountDeleteFlow] step=requireAuth_blocked_already_deleted", { userId });
         return res.status(401).json({ error: "Account has been deleted" });
       }
     } catch (error) {
+      logger.error("[AccountDeleteFlow] step=requireAuth_getUser_failed (request still proceeds)", {
+        userId,
+        error,
+      });
       // Allow through if user check fails - they may be new
     }
-    
+
     (req as any).userId = userId;
     (req as any).authProvider = getAuthProvider(req);
     next();
@@ -804,14 +838,33 @@ export async function registerRoutes(
     const now = new Date().toISOString();
 
     try {
+      logger.info("[AccountDeleteFlow] step=handler_enter", {
+        userId,
+        authProvider: (req as any).authProvider ?? null,
+      });
+
       const user = await storage.getUser(userId);
 
       if (!user) {
+        logger.warn("[AccountDeleteFlow] step=handler_no_user_row", { userId });
         return res.json({ success: true, message: "Account already deleted" });
       }
       if (user.deletedAt) {
+        logger.warn("[AccountDeleteFlow] step=handler_row_already_deleted", {
+          userId,
+          deletedAt: user.deletedAt,
+        });
         return res.json({ success: true, message: "Account already deleted" });
       }
+
+      logger.info("[AccountDeleteFlow] step=handler_user_snapshot", {
+        userId,
+        username: user.username,
+        hasFirebaseUid: !!user.firebaseUid,
+        firebaseUidLen: user.firebaseUid?.length ?? 0,
+        emailNormalizedSet: !!user.emailNormalized,
+        authProvider: user.authProvider ?? null,
+      });
 
       const { db } = await import("./db");
       const { eq, or } = await import("drizzle-orm");
@@ -823,6 +876,7 @@ export async function registerRoutes(
         requestedAt: now,
         status: "in_progress",
       });
+      logger.info("[AccountDeleteFlow] step=audit_inserted_in_progress", { userId });
 
       const tablesCleared: string[] = [];
 
@@ -912,6 +966,10 @@ export async function registerRoutes(
           logger.error(`[AccountDelete] Error deleting from ${name}:`, tableErr);
         }
       }
+      logger.info("[AccountDeleteFlow] step=related_tables_cleared", {
+        userId,
+        tableCount: tablesCleared.length,
+      });
 
       // Stripe cleanup: deauthorize/delete Stripe Connect account if exists
       let stripeCleanup = false;
@@ -957,20 +1015,43 @@ export async function registerRoutes(
         logger.error(`[AccountDelete] PostHog cleanup error:`, phErr?.message);
       }
 
+      // Remove Firebase Auth so old ID tokens cannot be exchanged and the same provider login must start fresh.
+      const firebaseUidBeforeDelete = user.firebaseUid ?? undefined;
+      if (firebaseUidBeforeDelete) {
+        logger.info("[AccountDeleteFlow] step=firebase_revoke_attempt", {
+          userId,
+          firebaseUidPrefix: `${firebaseUidBeforeDelete.slice(0, 6)}…`,
+        });
+        const { deleteFirebaseAuthUser } = await import("./firebaseAdmin");
+        const revoked = await deleteFirebaseAuthUser(firebaseUidBeforeDelete);
+        logger.info("[AccountDeleteFlow] step=firebase_revoke_result", {
+          userId,
+          ok: revoked.ok,
+          error: revoked.error ?? null,
+        });
+        if (!revoked.ok) {
+          logger.error("[AccountDelete] Firebase Auth revoke failed (continuing DB delete):", revoked.error);
+        }
+      } else {
+        logger.warn("[AccountDeleteFlow] step=firebase_revoke_skipped_no_uid", { userId });
+      }
+
       // Anonymize and soft-delete the user record (keep for audit trail)
       const anonymizedEmail = `deleted_${userId}@deleted.gigaid.app`;
+      logger.info("[AccountDeleteFlow] step=soft_delete_update_start", { userId });
       await storage.updateUser(userId, {
+        // Release the unique username so a future different user is not blocked by this row alone.
+        username: `deleted_${userId}`,
         email: anonymizedEmail,
-        emailNormalized: anonymizedEmail,
+        // Keep normalized identifier and firebase UID so deleted accounts cannot be recreated with the same login.
+        // This stores the minimum identity lock while still removing display PII from profile fields.
         phone: null,
-        phoneE164: null,
         name: "Deleted User",
         firstName: null,
         lastName: null,
         photo: null,
         bio: null,
         businessName: null,
-        firebaseUid: null,
         stripeConnectAccountId: null,
         stripeCustomerId: null,
         stripeConnectStatus: "not_connected",
@@ -981,6 +1062,15 @@ export async function registerRoutes(
       });
 
       tablesCleared.push("users_anonymized");
+
+      const rowAfter = await storage.getUser(userId);
+      logger.info("[AccountDeleteFlow] step=soft_delete_verify_row", {
+        userId,
+        deletedAt: rowAfter?.deletedAt ?? null,
+        firebaseUidStillSet: !!rowAfter?.firebaseUid,
+        username: rowAfter?.username ?? null,
+        email: rowAfter?.email ?? null,
+      });
 
       // Update audit record
       await db.update(schema.accountDeletions)
@@ -994,16 +1084,25 @@ export async function registerRoutes(
         .where(eq(schema.accountDeletions.userId, userId));
 
       logger.info(`[AccountDelete] User ${userId} account fully deleted at ${now}. Tables cleared: ${tablesCleared.length}`);
+      logger.info("[AccountDeleteFlow] step=handler_complete", {
+        userId,
+        tablesCleared: tablesCleared.length,
+      });
 
       // Destroy session
       if (req.session) {
         req.session.destroy((err: any) => {
           if (err) logger.error("[AccountDelete] Session destroy error:", err);
+          else logger.info("[AccountDeleteFlow] step=session_destroy_callback_ok", { userId });
         });
+      } else {
+        logger.info("[AccountDeleteFlow] step=session_skip_no_req_session", { userId });
       }
 
       res.json({ success: true, message: "Account deleted", tablesCleared: tablesCleared.length });
+      logger.info("[AccountDeleteFlow] step=response_sent_200", { userId });
     } catch (error) {
+      logger.error("[AccountDeleteFlow] step=handler_exception", { userId, error });
       logger.error("[AccountDelete] Error:", error);
 
       // Log failed deletion attempt
@@ -7591,17 +7690,17 @@ Return ONLY the message text, no JSON or formatting.`
         pro: {
           name: "GigAid Pro",
           description: "Owner View dashboard, weekly summaries, advanced analytics, priority support",
-          amount: 1900,
+          amount: PLAN_PRICES_CENTS[Plan.PRO],
         },
         pro_plus: {
           name: "GigAid Pro+",
           description: "Deposit enforcement, booking protection, Today's Money Plan",
-          amount: 2800,
+          amount: PLAN_PRICES_CENTS[Plan.PRO_PLUS],
         },
         business: {
           name: "GigAid Business",
           description: "Multi-provider support, team management, business analytics, API access",
-          amount: 4900,
+          amount: PLAN_PRICES_CENTS[Plan.BUSINESS],
         },
       };
 
@@ -7702,39 +7801,44 @@ Return ONLY the message text, no JSON or formatting.`
   // Get subscription status
   app.get("/api/subscription/status", isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).userId);
+      let user = await storage.getUser((req as any).userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      // If no subscription, return free plan status
-      if (!user.stripeSubscriptionId) {
-        return res.json({
-          plan: user.plan || "free",
-          planName: user.plan === "pro" ? "Pro" : user.plan === "pro_plus" ? "Pro+" : user.plan === "business" ? "Business" : "Free",
-          status: "active",
-          hasSubscription: false,
-          currentPeriodEnd: null,
-          cancelAtPeriodEnd: false,
-        });
+      const forceRcSync =
+        req.query.refresh === "1" ||
+        req.query.sync === "1" ||
+        req.headers["x-subscription-sync"] === "1";
+      // Only users who already have store billing metadata — avoids overwriting comped/admin plans with RC "free".
+      const mayHaveRevenueCatSubscription =
+        user.subscriptionStore === "app_store" ||
+        user.subscriptionStore === "play_store" ||
+        user.storeSubscriptionExpiresAt != null;
+      if (
+        process.env.REVENUECAT_SECRET_API_KEY &&
+        !user.stripeSubscriptionId &&
+        mayHaveRevenueCatSubscription
+      ) {
+        const last = subscriptionStatusLastRcSyncMs.get(user.id) ?? 0;
+        const cooldownOk = Date.now() - last >= SUBSCRIPTION_STATUS_RC_SYNC_COOLDOWN_MS;
+        if (forceRcSync || cooldownOk) {
+          try {
+            const rcResult = await syncSubscriberFromRevenueCat(storage, user.id, {
+              reason: forceRcSync ? "subscription_status_forced" : "subscription_status_get",
+            });
+            if (rcResult.ok) {
+              subscriptionStatusLastRcSyncMs.set(user.id, Date.now());
+            }
+            const refreshed = await storage.getUser(user.id);
+            if (refreshed) {
+              user = refreshed;
+            }
+          } catch (syncErr) {
+            logger.warn("[Subscription status] RevenueCat sync failed:", syncErr);
+          }
+        }
       }
-
-      const { getUncachableStripeClient } = await import("./stripeClient");
-      const { STRIPE_ENABLED } = await import("@shared/stripeConfig");
-      
-      if (!STRIPE_ENABLED) {
-        return res.json({
-          plan: user.plan || "free",
-          planName: user.plan === "pro" ? "Pro" : user.plan === "pro_plus" ? "Pro+" : user.plan === "business" ? "Business" : "Free",
-          status: "active",
-          hasSubscription: !!user.stripeSubscriptionId,
-          currentPeriodEnd: null,
-          cancelAtPeriodEnd: false,
-        });
-      }
-
-      const stripe = await getUncachableStripeClient();
-      const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
 
       const planNames: Record<string, string> = {
         free: "Free",
@@ -7743,31 +7847,119 @@ Return ONLY the message text, no JSON or formatting.`
         business: "Business",
       };
 
-      // Self-healing: sync user's plan with Stripe subscription metadata if mismatched
-      const stripePlan = subscription.metadata?.plan;
-      let effectivePlan = user.plan || "free";
-      
-      if (subscription.status === "active" && stripePlan && stripePlan !== user.plan) {
-        logger.info(`[Subscription Sync] User ${user.id} plan mismatch: DB=${user.plan}, Stripe=${stripePlan}. Auto-syncing.`);
-        await storage.updateUser(user.id, { 
-          plan: stripePlan,
-          isPro: stripePlan !== "free",
+      const { STRIPE_ENABLED } = await import("@shared/stripeConfig");
+
+      if (user.stripeSubscriptionId) {
+        if (!STRIPE_ENABLED) {
+          return res.json({
+            plan: user.plan || "free",
+            planName: planNames[user.plan || "free"] || "Free",
+            status: "active",
+            hasSubscription: !!user.stripeSubscriptionId,
+            currentPeriodEnd: null,
+            cancelAtPeriodEnd: false,
+            billingSource: "stripe",
+          });
+        }
+
+        const { getUncachableStripeClient } = await import("./stripeClient");
+        const stripe = await getUncachableStripeClient();
+        const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+
+        const stripePlan = subscription.metadata?.plan;
+        let effectivePlan = user.plan || "free";
+
+        if (subscription.status === "active" && stripePlan && stripePlan !== user.plan) {
+          logger.info(`[Subscription Sync] User ${user.id} plan mismatch: DB=${user.plan}, Stripe=${stripePlan}. Auto-syncing.`);
+          await storage.updateUser(user.id, {
+            plan: stripePlan,
+            isPro: stripePlan !== "free",
+          });
+          effectivePlan = stripePlan;
+        }
+
+        return res.json({
+          plan: effectivePlan,
+          planName: planNames[effectivePlan] || "Free",
+          status: subscription.status,
+          hasSubscription: true,
+          currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+          cancelAtPeriodEnd: subscription.cancel_at_period_end,
+          cancelAt: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
+          billingSource: "stripe",
+          pendingPlanChange: subscription.cancel_at_period_end
+            ? {
+                targetPlan: "free",
+                targetPlanName: "Free",
+                effectiveDate: new Date(subscription.current_period_end * 1000).toISOString(),
+              }
+            : null,
         });
-        effectivePlan = stripePlan;
       }
 
-      res.json({
-        plan: effectivePlan,
-        planName: planNames[effectivePlan] || "Free",
-        status: subscription.status,
-        hasSubscription: true,
-        currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
-        cancelAtPeriodEnd: subscription.cancel_at_period_end,
-        cancelAt: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
+      if (isStoreSubscriptionActiveInDb(user)) {
+        const p = user.plan || "free";
+        const billingSource =
+          user.subscriptionStore === "play_store" ? "play_store" : "app_store";
+        return res.json({
+          plan: p,
+          planName: planNames[p] || "Free",
+          status: "active",
+          hasSubscription: true,
+          currentPeriodEnd: user.storeSubscriptionExpiresAt ?? null,
+          cancelAtPeriodEnd: user.storeSubscriptionCancelAtPeriodEnd ?? false,
+          cancelAt: null,
+          billingSource,
+          pendingPlanChange: user.storeSubscriptionCancelAtPeriodEnd && user.storeSubscriptionExpiresAt
+            ? {
+                targetPlan: "free",
+                targetPlanName: "Free",
+                effectiveDate: user.storeSubscriptionExpiresAt,
+              }
+            : null,
+        });
+      }
+
+      return res.json({
+        plan: user.plan || "free",
+        planName: planNames[user.plan || "free"] || "Free",
+        status: "active",
+        hasSubscription: false,
+        currentPeriodEnd: null,
+        cancelAtPeriodEnd: false,
+        billingSource: "none",
+        pendingPlanChange: null,
       });
     } catch (error) {
       logger.error("Subscription status error:", error);
       res.status(500).json({ error: "Failed to get subscription status" });
+    }
+  });
+
+  app.post("/api/subscription/sync-store", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).userId as string;
+      if (!process.env.REVENUECAT_SECRET_API_KEY) {
+        return res.json({
+          ok: true,
+          skipped: "revenuecat_server_not_configured",
+          plan: null,
+        });
+      }
+      const result = await syncSubscriberFromRevenueCat(storage, userId, {
+        reason: "client_sync",
+      });
+      if (!result.ok) {
+        return res.status(500).json({ error: result.error });
+      }
+      return res.json({
+        ok: true,
+        skipped: result.skipped ?? null,
+        plan: result.plan ?? null,
+      });
+    } catch (error) {
+      logger.error("sync-store error:", error);
+      return res.status(500).json({ error: "Failed to sync store subscription" });
     }
   });
 
@@ -7777,6 +7969,22 @@ Return ONLY the message text, no JSON or formatting.`
       const user = await storage.getUser((req as any).userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
+      }
+
+      if (process.env.REVENUECAT_SECRET_API_KEY) {
+        await syncSubscriberFromRevenueCat(storage, user.id, { reason: "restore" });
+        const afterRc = await storage.getUser(user.id);
+        if (afterRc && isStoreSubscriptionActiveInDb(afterRc)) {
+          return res.json({
+            restored: true,
+            plan: afterRc.plan || "free",
+            status: "active",
+            source: "store",
+            currentPeriodEnd: afterRc.storeSubscriptionExpiresAt ?? null,
+            cancelAtPeriodEnd: afterRc.storeSubscriptionCancelAtPeriodEnd ?? false,
+            message: "Your App Store or Play subscription has been restored.",
+          });
+        }
       }
 
       const { getUncachableStripeClient } = await import("./stripeClient");
@@ -8075,13 +8283,26 @@ Return ONLY the message text, no JSON or formatting.`
       const { STRIPE_ENABLED } = await import("@shared/stripeConfig");
 
       const planPrices: Record<string, number> = {
-        pro: 1900,
-        pro_plus: 2800,
-        business: 4900,
+        pro: PLAN_PRICES_CENTS[Plan.PRO],
+        pro_plus: PLAN_PRICES_CENTS[Plan.PRO_PLUS],
+        business: PLAN_PRICES_CENTS[Plan.BUSINESS],
       };
 
       const planOrder = ["free", "pro", "pro_plus", "business"];
       const isDowngrade = planOrder.indexOf(newPlan) < planOrder.indexOf(currentPlan);
+
+      // App Store / Play billing is authoritative; DB-only downgrades would be overwritten on the next RevenueCat sync.
+      if (
+        !user.stripeSubscriptionId &&
+        isStoreSubscriptionActiveInDb(user) &&
+        (newPlan === "free" || isDowngrade)
+      ) {
+        return res.status(400).json({
+          code: "store_managed_plan",
+          error:
+            "This subscription is managed in the App Store or Google Play. Change or cancel it there, then open Subscription settings again to sync.",
+        });
+      }
 
       // If no Stripe subscription exists, handle plan changes directly in the database
       if (!user.stripeSubscriptionId) {
@@ -8119,10 +8340,13 @@ Return ONLY the message text, no JSON or formatting.`
         await stripe.subscriptions.update(user.stripeSubscriptionId, {
           cancel_at_period_end: true,
         });
+        const updatedSubscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
         return res.json({
           success: true,
           message: "Your plan will change to Free at the end of your billing period",
           effectiveAt: "period_end",
+          effectiveDate: new Date(updatedSubscription.current_period_end * 1000).toISOString(),
+          targetPlan: "free",
         });
       }
 
@@ -8168,9 +8392,28 @@ Return ONLY the message text, no JSON or formatting.`
             message: isUpgrade
               ? `Upgraded to ${newPlanName}. Prorated charges applied.`
               : `Switched to ${newPlanName}. Your new rate of $${planPrices[newPlan] / 100}/mo starts next billing cycle.`,
-            effectiveAt: isUpgrade ? "immediate" : "immediate",
+            effectiveAt: isUpgrade ? "immediate" : "period_end",
+            effectiveDate: isUpgrade
+              ? null
+              : new Date(subscription.current_period_end * 1000).toISOString(),
+            targetPlan: newPlan,
           });
         }
+      }
+
+      // Mobile apps must use store billing (IAP), not Stripe Checkout in a browser
+      const clientPlatform = String(req.headers["x-client-platform"] || "").toLowerCase();
+      const upgradingPaidTier =
+        planOrder.indexOf(newPlan) > planOrder.indexOf(currentPlan) && newPlan !== "free";
+      if (
+        upgradingPaidTier &&
+        (clientPlatform === "ios" || clientPlatform === "android")
+      ) {
+        return res.status(400).json({
+          error:
+            "On the mobile app, subscribe with the in-app purchase flow (Upgrade on this screen or Pricing). Web checkout is not used on iOS or Android.",
+          code: "use_native_iap",
+        });
       }
 
       // No existing subscription - create a checkout session for the new plan

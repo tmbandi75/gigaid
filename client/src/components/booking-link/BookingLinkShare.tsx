@@ -6,6 +6,8 @@ import { Copy, Share2, Link2, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { getPostActionMessage } from "@/encouragement/encouragementToast";
+import { copyTextToClipboard } from "@/lib/clipboard";
+import { canShareContent, shareContent } from "@/lib/share";
 
 type BookingLinkShareProps = {
   variant: "primary" | "inline" | "compact";
@@ -35,8 +37,8 @@ export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
   const handleCopy = async () => {
     if (!bookingLink) return;
     
-    try {
-      await navigator.clipboard.writeText(bookingLink);
+    const copiedOk = await copyTextToClipboard(bookingLink);
+    if (copiedOk) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       trackEvent('booking_link_copied', { screen: context });
@@ -45,7 +47,7 @@ export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
         title: "Link copied",
         description: encouragement || "Your booking link is ready to share",
       });
-    } catch {
+    } else {
       toast({
         title: "Couldn't copy",
         description: "Please copy the link manually",
@@ -59,24 +61,19 @@ export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
 
     trackEvent('booking_link_shared', { screen: context });
 
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: variant === "primary" ? "Book my services" : "Book with me",
-          text: variant === "primary" ? "Schedule a job with me using this link:" : "Book a job with me using this link",
-          url: bookingLink,
-        });
-      } catch (err) {
-        if ((err as Error).name !== 'AbortError') {
-          handleCopy();
-        }
-      }
-    } else {
-      handleCopy();
+    const sharedOk = await shareContent({
+      title: variant === "primary" ? "Book my services" : "Book with me",
+      text: variant === "primary" ? "Schedule a job with me using this link:" : "Book a job with me using this link",
+      url: bookingLink,
+      dialogTitle: "Share booking link",
+    });
+
+    if (!sharedOk) {
+      await handleCopy();
     }
   };
 
-  const supportsShare = typeof navigator !== 'undefined' && !!navigator.share;
+  const supportsShare = canShareContent();
 
   if (variant === "primary") {
     return (
@@ -92,11 +89,12 @@ export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
               <p className="text-sm text-muted-foreground mt-1 truncate">
                 {bookingLink}
               </p>
-              <div className="flex gap-2 mt-3">
+              <div className="mt-3 flex flex-col gap-2 xl:flex-row">
                 <Button 
                   size="sm" 
                   variant="default"
                   onClick={handleCopy}
+                  className="w-full xl:w-auto"
                   data-testid="button-copy-booking-link"
                 >
                   {copied ? (
@@ -115,6 +113,7 @@ export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
                   size="sm" 
                   variant="outline"
                   onClick={handleShare}
+                  className="w-full xl:w-auto"
                   data-testid="button-share-booking-link"
                 >
                   <Share2 className="h-4 w-4 mr-1" />

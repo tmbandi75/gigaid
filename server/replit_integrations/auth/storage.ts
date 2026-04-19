@@ -35,6 +35,10 @@ class AuthStorage implements IAuthStorage {
       : null;
     
     if (existingUser) {
+      if (existingUser.deletedAt) {
+        logger.warn("[AuthStorage] Blocked Replit upsert for deleted account:", existingUser.id);
+        throw new Error("ACCOUNT_DELETED");
+      }
       // Update existing user - only update auth-related fields
       // Also populate emailNormalized for account linking with Firebase mobile auth
       const [user] = await db

@@ -86,7 +86,13 @@ export async function setupAuth(app: Express) {
     ) => {
       const user = {};
       updateUserSession(user, tokens);
-      await upsertUser(tokens.claims());
+      try {
+        await upsertUser(tokens.claims());
+      } catch (e) {
+        logger.error("[Auth] Replit OIDC upsert failed:", e);
+        verified(e as Error, undefined);
+        return;
+      }
       verified(null, user);
     };
 
@@ -294,6 +300,34 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     const token = authHeader.substring(7);
     const payload = verifyAppJwt(token);
     if (payload?.sub) {
+      // Valid JWT - block deleted accounts before allowing access.
+      const pathStr = req.originalUrl || "";
+      try {
+        const dbUser = await storage.getUser(payload.sub);
+        if (!dbUser) {
+          if (pathStr.includes("/api/auth/") || pathStr.includes("/api/account")) {
+            logger.warn("[AccountDeleteFlow] step=isAuthenticated_bearer_no_db_row", {
+              sub: payload.sub,
+              path: pathStr,
+            });
+          }
+        } else if (dbUser?.deletedAt) {
+          logger.warn("[AccountDeleteFlow] step=isAuthenticated_bearer_blocked_deleted", {
+            sub: payload.sub,
+            deletedAt: dbUser.deletedAt,
+            path: pathStr,
+          });
+          return res.status(401).json({ message: "Account has been deleted" });
+        }
+      } catch (lookupErr) {
+        logger.error("[AccountDeleteFlow] step=isAuthenticated_bearer_getUser_failed", {
+          sub: payload.sub,
+          error: lookupErr,
+          path: pathStr,
+        });
+        // If user lookup fails, continue with token validation path.
+      }
+
       // Valid JWT - set userId and proceed
       (req as any).userId = payload.sub;
       return next();
@@ -312,6 +346,34 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   // Set userId on request for downstream handlers
   const userId = user?.claims?.sub;
   if (userId) {
+    // Block deleted Replit/session accounts as well.
+    try {
+      const pathStr = req.originalUrl || "";
+      const dbUser = await storage.getUser(userId);
+      if (!dbUser) {
+        if (pathStr.includes("/api/auth/") || pathStr.includes("/api/account")) {
+          logger.warn("[AccountDeleteFlow] step=isAuthenticated_session_no_db_row", {
+            userId,
+            path: pathStr,
+          });
+        }
+      } else if (dbUser?.deletedAt) {
+        logger.warn("[AccountDeleteFlow] step=isAuthenticated_session_blocked_deleted", {
+          userId,
+          deletedAt: dbUser.deletedAt,
+          path: pathStr,
+        });
+        return res.status(401).json({ message: "Account has been deleted" });
+      }
+    } catch (lookupErr) {
+      logger.error("[AccountDeleteFlow] step=isAuthenticated_session_getUser_failed", {
+        userId,
+        error: lookupErr,
+        path: req.originalUrl || "",
+      });
+      // If lookup fails, continue with existing session validation behavior.
+    }
+
     (req as any).userId = userId;
   }
 

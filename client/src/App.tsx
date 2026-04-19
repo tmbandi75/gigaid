@@ -213,7 +213,7 @@ function NativeDeepLinkHandler({ children }: { children: ReactNode }) {
 
 function AuthenticatedApp() {
   const [location, setLocation] = useLocation();
-  const { firebaseUser, authLoading, lastAuthEventTs, callbackCount } = useFirebaseAuth();
+  const { firebaseUser, authLoading, lastAuthEventTs, callbackCount, isTokenReady } = useFirebaseAuth();
   const { user } = useAuth();
   useSubscriptionRestore(user);
   
@@ -236,6 +236,19 @@ function AuthenticatedApp() {
   // Unauthenticated users see SplashPage (which has login UI)
   if (!firebaseUser) {
     return <SplashPage />;
+  }
+
+  // Firebase session alone is not enough: require app JWT from /api/auth/web/firebase.
+  // Otherwise deleted or blocked accounts still reach the dashboard with a live Firebase user.
+  if (!isTokenReady) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-2 bg-background px-4">
+        <div className="animate-pulse text-muted-foreground text-center">Signing you in…</div>
+        <p className="text-xs text-muted-foreground text-center max-w-sm">
+          If this takes too long, refresh the page or try signing in again.
+        </p>
+      </div>
+    );
   }
   
   // Authenticated users: redirect from "/" or "/welcome" to dashboard
@@ -309,6 +322,7 @@ function App() {
                 <Route path="/qb/:token" component={QuickBookConfirm} />
                 <Route path="/terms" component={TermsOfService} />
                 <Route path="/privacy" component={PrivacyPolicy} />
+                <Route path="/support" component={HelpSupport} />
                 <Route path="/downloads" component={Downloads} />
                 {/* /login redirects to home which shows the combined splash/login page */}
                 <Route path="/login" component={SplashPage} />
