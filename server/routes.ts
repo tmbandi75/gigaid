@@ -77,6 +77,11 @@ import { verifyAppJwt } from "./appJwt";
 import { selfTestFirebaseAdmin } from "./firebaseAdmin";
 import { pool } from "./db";
 import { registerStripeWebhookRoutes, processRetryableWebhooks, reconcileStuckPayments, startWebhookRetryScheduler } from "./stripeWebhookRoutes";
+import {
+  subscriptionCurrentPeriodEndSeconds,
+  subscriptionCurrentPeriodStartSeconds,
+  stripeSecondsToIso,
+} from "./stripeSubscriptionDates";
 import { registerRevenueCatWebhookRoutes } from "./revenuecatWebhookRoutes";
 import { isStoreSubscriptionActiveInDb, syncSubscriberFromRevenueCat } from "./revenuecatSync";
 import { registerTestRoutes } from "./testRoutes";
@@ -3963,12 +3968,15 @@ export async function registerRoutes(
       try {
         const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
         if (subscription.status === 'active') {
-          const currentPeriodStart = new Date(subscription.current_period_start * 1000);
-          // Reset if current billing period started after usage window
-          if (currentPeriodStart > usageWindowStart) {
-            await storage.resetCapabilityUsage(userId, 'sms.two_way');
-            logger.debug(`[SMS Usage] Reset for user ${userId} - new Stripe billing cycle started ${currentPeriodStart.toISOString()}`);
-            return;
+          const startSec = subscriptionCurrentPeriodStartSeconds(subscription);
+          if (startSec != null) {
+            const currentPeriodStart = new Date(startSec * 1000);
+            // Reset if current billing period started after usage window
+            if (currentPeriodStart > usageWindowStart) {
+              await storage.resetCapabilityUsage(userId, 'sms.two_way');
+              logger.debug(`[SMS Usage] Reset for user ${userId} - new Stripe billing cycle started ${currentPeriodStart.toISOString()}`);
+              return;
+            }
           }
         }
       } catch (err) {
@@ -4279,12 +4287,16 @@ export async function registerRoutes(
       try {
         const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
         if (subscription.status === 'active') {
-          const currentPeriodStart = new Date(subscription.current_period_start * 1000);
-          const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
-          if (currentPeriodStart > usagePeriodStart) {
-            await storage.resetMessageUsage(userId, currentPeriodStart.toISOString(), currentPeriodEnd.toISOString());
-            logger.debug(`[Message Usage] Reset for user ${userId} - new Stripe billing cycle started ${currentPeriodStart.toISOString()}`);
-            return;
+          const startSec = subscriptionCurrentPeriodStartSeconds(subscription);
+          const endSec = subscriptionCurrentPeriodEndSeconds(subscription);
+          if (startSec != null && endSec != null) {
+            const currentPeriodStart = new Date(startSec * 1000);
+            const currentPeriodEnd = new Date(endSec * 1000);
+            if (currentPeriodStart > usagePeriodStart) {
+              await storage.resetMessageUsage(userId, currentPeriodStart.toISOString(), currentPeriodEnd.toISOString());
+              logger.debug(`[Message Usage] Reset for user ${userId} - new Stripe billing cycle started ${currentPeriodStart.toISOString()}`);
+              return;
+            }
           }
         }
       } catch (err) {
@@ -7878,20 +7890,24 @@ Return ONLY the message text, no JSON or formatting.`
           effectivePlan = stripePlan;
         }
 
+        const periodEndIso = stripeSecondsToIso(subscriptionCurrentPeriodEndSeconds(subscription));
+        const cancelAtIso = stripeSecondsToIso(
+          typeof subscription.cancel_at === "number" ? subscription.cancel_at : undefined,
+        );
         return res.json({
           plan: effectivePlan,
           planName: planNames[effectivePlan] || "Free",
           status: subscription.status,
           hasSubscription: true,
-          currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+          currentPeriodEnd: periodEndIso,
           cancelAtPeriodEnd: subscription.cancel_at_period_end,
-          cancelAt: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
+          cancelAt: cancelAtIso,
           billingSource: "stripe",
           pendingPlanChange: subscription.cancel_at_period_end
             ? {
                 targetPlan: "free",
                 targetPlanName: "Free",
-                effectiveDate: new Date(subscription.current_period_end * 1000).toISOString(),
+                effectiveDate: periodEndIso,
               }
             : null,
         });
@@ -8019,7 +8035,7 @@ Return ONLY the message text, no JSON or formatting.`
             restored: true,
             plan,
             status,
-            currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+            currentPeriodEnd: stripeSecondsToIso(subscriptionCurrentPeriodEndSeconds(subscription)),
             cancelAtPeriodEnd: subscription.cancel_at_period_end,
             message: "Your subscription has been restored successfully",
           });
@@ -8181,7 +8197,7 @@ Return ONLY the message text, no JSON or formatting.`
       res.json({
         success: true,
         message: "Subscription will be cancelled at the end of the billing period",
-        cancelAt: new Date(subscription.current_period_end * 1000).toISOString(),
+        cancelAt: stripeSecondsToIso(subscriptionCurrentPeriodEndSeconds(subscription)),
       });
     } catch (error) {
       logger.error("Subscription cancel error:", error);
@@ -8345,7 +8361,7 @@ Return ONLY the message text, no JSON or formatting.`
           success: true,
           message: "Your plan will change to Free at the end of your billing period",
           effectiveAt: "period_end",
-          effectiveDate: new Date(updatedSubscription.current_period_end * 1000).toISOString(),
+          effectiveDate: stripeSecondsToIso(subscriptionCurrentPeriodEndSeconds(updatedSubscription)),
           targetPlan: "free",
         });
       }
@@ -8395,7 +8411,7 @@ Return ONLY the message text, no JSON or formatting.`
             effectiveAt: isUpgrade ? "immediate" : "period_end",
             effectiveDate: isUpgrade
               ? null
-              : new Date(subscription.current_period_end * 1000).toISOString(),
+              : stripeSecondsToIso(subscriptionCurrentPeriodEndSeconds(subscription)),
             targetPlan: newPlan,
           });
         }

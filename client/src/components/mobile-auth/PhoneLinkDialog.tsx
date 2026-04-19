@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
+import { PhoneAuthProvider, linkWithCredential } from "firebase/auth";
 import { formatFirebaseLinkError, requireFirebaseUser } from "@/lib/firebase";
 import { logger } from "@/lib/logger";
 
@@ -37,6 +38,7 @@ export function PhoneLinkDialog({ open, onOpenChange, onLinked }: PhoneLinkDialo
 
   const nativeVerificationIdRef = useRef<string | null>(null);
   const nativeListenerCleanupRef = useRef<(() => Promise<void>) | null>(null);
+  const verifyInFlightRef = useRef(false);
 
   const normalizeCountryCode = (value: string) => {
     const digits = value.replace(/\D/g, "");
@@ -150,18 +152,19 @@ export function PhoneLinkDialog({ open, onOpenChange, onLinked }: PhoneLinkDialo
       return;
     }
 
+    if (verifyInFlightRef.current) {
+      return;
+    }
+    verifyInFlightRef.current = true;
     setBusy(true);
     try {
-      const { FirebaseAuthentication } = await import(
-        "@capacitor-firebase/authentication"
-      );
-      await FirebaseAuthentication.confirmVerificationCode({
-        verificationId: vid,
-        verificationCode: code,
-      });
+      const user = requireFirebaseUser();
+      const credential = PhoneAuthProvider.credential(vid, code);
+      await linkWithCredential(user, credential);
+      nativeVerificationIdRef.current = null;
 
       try {
-        await requireFirebaseUser().reload();
+        await user.reload();
       } catch {
         /* session may already reflect the link */
       }
@@ -171,6 +174,7 @@ export function PhoneLinkDialog({ open, onOpenChange, onLinked }: PhoneLinkDialo
     } catch (e) {
       setError(formatFirebaseLinkError(e));
     } finally {
+      verifyInFlightRef.current = false;
       setBusy(false);
     }
   };

@@ -10,6 +10,7 @@ import { authStorage } from "./storage";
 import { storage } from "../../storage";
 import { verifyAppJwt, signAppJwt } from "../../appJwt";
 import { logger } from "../../lib/logger";
+import { ensureExpressSessionTable } from "../../ensureExpressSessionTable";
 
 const getOidcConfig = memoize(
   async () => {
@@ -24,6 +25,7 @@ const getOidcConfig = memoize(
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
+  // Table name "session" (singular) is connect-pg-simple's default — not the app's "sessions" token table.
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
     createTableIfMissing: false,
@@ -67,6 +69,7 @@ async function upsertUser(claims: any) {
 
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
+  await ensureExpressSessionTable();
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());

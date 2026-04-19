@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { isNativePlatform } from "@/lib/platform";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, ArrowLeft, Eye, EyeOff, Phone } from "lucide-react";
 import { SiGoogle, SiApple } from "react-icons/si";
@@ -412,7 +413,7 @@ export default function Login() {
                 Continue with Google
               </Button>
 
-              <Button
+             { isNativePlatform() && <Button
                 onClick={handlePhoneSignIn}
                 disabled={isDisabled || (mode === "signup" && !termsAccepted)}
                 variant="outline"
@@ -421,7 +422,7 @@ export default function Login() {
               >
                 <Phone className="h-5 w-5" />
                 Continue with Phone
-              </Button>
+              </Button>}
 
               {/* OR Divider */}
               <div className="relative flex items-center py-1">
