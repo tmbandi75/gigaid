@@ -4,7 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from "firebase/auth";
+import {
+  PhoneAuthProvider,
+  RecaptchaVerifier,
+  signInWithCredential,
+  signInWithPhoneNumber,
+  type ConfirmationResult,
+} from "firebase/auth";
 import { firebaseInitError, formatFirebaseLinkError, getFirebaseAuth } from "@/lib/firebase";
 import { isNativePlatform } from "@/lib/platform";
 import { logger } from "@/lib/logger";
@@ -33,6 +39,8 @@ export function PhoneAuthFlow({ onBack, onFirebaseIdToken }: PhoneAuthFlowProps)
   const nativeVerificationIdRef = useRef<string | null>(null);
   const nativeListenerCleanupRef = useRef<(() => Promise<void>) | null>(null);
   const resendTimerRef = useRef<number | null>(null);
+  // Blocks a second Verify tap before React re-renders; reusing the same SMS session triggers auth/code-expired.
+  const verifyInFlightRef = useRef(false);
 
   const normalizeCountryCode = (value: string) => {
     const digits = value.replace(/\D/g, "");
@@ -168,6 +176,10 @@ export function PhoneAuthFlow({ onBack, onFirebaseIdToken }: PhoneAuthFlowProps)
       setError("Please enter the 6-digit code.");
       return;
     }
+    if (verifyInFlightRef.current) {
+      return;
+    }
+    verifyInFlightRef.current = true;
     setIsLoading(true);
     setError(null);
     try {
@@ -176,16 +188,17 @@ export function PhoneAuthFlow({ onBack, onFirebaseIdToken }: PhoneAuthFlowProps)
         if (!vid) {
           throw new Error("No verification session. Send the code again.");
         }
-        const { FirebaseAuthentication } = await import("@capacitor-firebase/authentication");
-        await FirebaseAuthentication.confirmVerificationCode({
-          verificationId: vid,
-          verificationCode,
-        });
-        const tokenResult = await FirebaseAuthentication.getIdToken();
-        if (!tokenResult?.token) {
-          throw new Error("Could not fetch your sign-in token. Please try again.");
+        // Native plugin only receives SMS; sign-in must complete in the JS SDK so onAuthStateChanged
+        // and app JWT pairing match (see capacitor-firebase docs / firebase-js-sdk.md).
+        const auth = getFirebaseAuth();
+        if (!auth || firebaseInitError) {
+          throw new Error(firebaseInitError || "Firebase auth is not initialized.");
         }
-        await onFirebaseIdToken(tokenResult.token);
+        const credential = PhoneAuthProvider.credential(vid, verificationCode);
+        const userCredential = await signInWithCredential(auth, credential);
+        nativeVerificationIdRef.current = null;
+        const idToken = await userCredential.user.getIdToken();
+        await onFirebaseIdToken(idToken);
       } else {
         const confirmation = confirmationRef.current;
         if (!confirmation) {
@@ -198,6 +211,7 @@ export function PhoneAuthFlow({ onBack, onFirebaseIdToken }: PhoneAuthFlowProps)
     } catch (e) {
       setError(formatFirebaseLinkError(e));
     } finally {
+      verifyInFlightRef.current = false;
       setIsLoading(false);
     }
   };

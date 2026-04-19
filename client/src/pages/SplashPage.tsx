@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { isNativePlatform } from "@/lib/platform";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, ArrowLeft, Phone } from "lucide-react";
@@ -330,7 +331,7 @@ export default function SplashPage() {
                 Continue with Google
               </Button>
 
-              <Button
+           {  isNativePlatform() &&  <Button
                 onClick={handlePhoneSignIn}
                 disabled={isDisabled}
                 variant="outline"
@@ -339,7 +340,7 @@ export default function SplashPage() {
               >
                 <Phone className="h-5 w-5" />
                 Continue with Phone
-              </Button>
+              </Button>}
 
               {/* OR Divider */}
               <div className="relative flex items-center py-2">
