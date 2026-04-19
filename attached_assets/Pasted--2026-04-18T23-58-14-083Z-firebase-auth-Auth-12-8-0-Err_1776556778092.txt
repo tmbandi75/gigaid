@@ -1,0 +1,52 @@
+[2026-04-18T23:58:14.083Z]  @firebase/auth: Auth (12.8.0): Error while retrieving App Check token: FirebaseError: AppCheck: ReCAPTCHA error. (appCheck/recaptcha-error). index-BJALGDgB.js:82:10633
+[2026-04-18T23:58:14.428Z]  @firebase/auth: Auth (12.8.0): Error while retrieving App Check token: FirebaseError: AppCheck: ReCAPTCHA error. (appCheck/recaptcha-error). index-BJALGDgB.js:82:10633
+XHR
+POST
+https://www.google.com/recaptcha/api2/clr?k=6Lez3m0sAAAAAB4Vz_gFsyPBQAtQ-RteqzKyZfaA
+[HTTP/3 400  410ms]
+
+XHR
+POST
+https://www.google.com/recaptcha/api2/clr?k=6Lez3m0sAAAAAB4Vz_gFsyPBQAtQ-RteqzKyZfaA
+[HTTP/3 400  422ms]
+
+Partitioned cookie or storage access was provided to “https://gigaid-9c982.firebaseapp.com/__/auth/iframe?apiKey=AIzaSyBdyS79wNb_GBqARmJmzrBr2ZsdsC_51l8&appName=%5BDEFAULT%5D&v=12.8.0&eid=p&usegapi=1&jsh=m%3B%2F_%2Fscs%2Fabc-static%2F_%2Fjs%2Fk%3Dgapi.lb.en.PJsh2cctCQI.O%2Fd%3D1%2Frs%3DAHpOoo_QlMhY2cycn60Rs8eI1WInRwuahw%2Fm%3D__features__#id=I0_1776556694063&_gfid=I0_1776556694063&parent=https%3A%2F%2Fgig-aid--thierrymbandi.replit.app&pfname=&rpctoken=40927893” because it is loaded in the third-party context and dynamic state partitioning is enabled. iframe.js:308:1
+XHR
+POST
+https://www.google.com/recaptcha/api2/clr?k=6Lez3m0sAAAAAB4Vz_gFsyPBQAtQ-RteqzKyZfaA
+[HTTP/3 400  148ms]
+
+Storage access automatically granted for origin “https://appleid.apple.com” on “https://gig-aid--thierrymbandi.replit.app”.
+[2026-04-18T23:58:35.845Z]  @firebase/auth: Auth (12.8.0): Error while retrieving App Check token: FirebaseError: AppCheck: ReCAPTCHA error. (appCheck/recaptcha-error). index-BJALGDgB.js:82:10633
+XHR
+POST
+https://www.google.com/recaptcha/api2/clr?k=6Lez3m0sAAAAAB4Vz_gFsyPBQAtQ-RteqzKyZfaA
+[HTTP/3 400  147ms]
+
+[2026-04-18T23:58:36.946Z]  @firebase/auth: Auth (12.8.0): Error while retrieving App Check token: FirebaseError: AppCheck: ReCAPTCHA error. (appCheck/recaptcha-error). index-BJALGDgB.js:82:10633
+XHR
+POST
+https://www.google.com/recaptcha/api2/clr?k=6Lez3m0sAAAAAB4Vz_gFsyPBQAtQ-RteqzKyZfaA
+[HTTP/3 400  144ms]
+
+XHR
+POST
+https://gig-aid--thierrymbandi.replit.app/api/auth/web/firebase
+[HTTP/3 500  499ms]
+
+XHR
+POST
+https://gig-aid--thierrymbandi.replit.app/api/auth/web/firebase
+[HTTP/3 500  488ms]
+
+XHR
+GET
+https://gig-aid--thierrymbandi.replit.app/api/profile
+[HTTP/3 401  282ms]
+
+XHR
+POST
+https://www.google.com/recaptcha/api2/clr?k=6Lez3m0sAAAAAB4Vz_gFsyPBQAtQ-RteqzKyZfaA
+[HTTP/3 400  438ms]
+
+​

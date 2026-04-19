@@ -7,7 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
@@ -16,10 +22,10 @@ import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { getAuthToken } from "@/lib/authToken";
 import { isNativePlatform } from "@/lib/platform";
-import { 
-  Bell, 
-  Crown, 
-  Copy, 
+import {
+  Bell,
+  Crown,
+  Copy,
   Check,
   Loader2,
   Eye,
@@ -66,6 +72,7 @@ import { MessagingSettings } from "@/components/settings/MessagingSettings";
 import { ChangePasswordDialog } from "@/components/settings/ChangePasswordDialog";
 import { SubscriptionSettings } from "@/components/settings/SubscriptionSettings";
 import { SettingsSectionAccordion } from "@/components/settings/SettingsSectionAccordion";
+import { HelpLink } from "@/components/HelpLink";
 import {
   isEmailPasswordUser,
   getAccountLinkingInfo,
@@ -79,10 +86,22 @@ import { useFeatureFlag, useUpdateFeatureFlag } from "@/hooks/use-nudges";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
-import { getAnalyticsConsent, setAnalyticsConsent } from "@/lib/consent/analyticsConsent";
+import {
+  getAnalyticsConsent,
+  setAnalyticsConsent,
+} from "@/lib/consent/analyticsConsent";
 import { logger } from "@/lib/logger";
-import { initAnalyticsSafely, disableAnalytics, persistAnalyticsPreferences } from "@/lib/analytics/initAnalytics";
-import { getATTStatus, requestATTUserInitiated, isIOSNative, type AnalyticsProfile } from "@/lib/att/attManager";
+import {
+  initAnalyticsSafely,
+  disableAnalytics,
+  persistAnalyticsPreferences,
+} from "@/lib/analytics/initAnalytics";
+import {
+  getATTStatus,
+  requestATTUserInitiated,
+  isIOSNative,
+  type AnalyticsProfile,
+} from "@/lib/att/attManager";
 import { Directory } from "@capacitor/filesystem";
 
 interface ReferralData {
@@ -143,7 +162,10 @@ export default function Settings() {
 
   const handleAnalyticsToggle = async (checked: boolean) => {
     if (!profileQuery.data) {
-      toast({ title: "Loading", description: "Please wait while your profile loads." });
+      toast({
+        title: "Loading",
+        description: "Please wait while your profile loads.",
+      });
       return;
     }
 
@@ -173,23 +195,29 @@ export default function Settings() {
         setAnalyticsConsent("denied");
         toast({
           title: "Tracking disabled in iOS Settings",
-          description: "To enable analytics, allow tracking in Settings > Privacy & Security > Tracking.",
+          description:
+            "To enable analytics, allow tracking in Settings > Privacy & Security > Tracking.",
         });
         await persistAnalyticsPreferences({
           analyticsEnabled: false,
           attStatus: currentAttStatus,
           attPromptedAt: currentProfile.attPromptedAt ?? null,
-          analyticsDisabledReason: currentAttStatus === "denied" ? "att_denied" : "restricted",
+          analyticsDisabledReason:
+            currentAttStatus === "denied" ? "att_denied" : "restricted",
         });
         return;
       }
 
-      if (currentAttStatus === "unknown" || currentAttStatus === "not_determined") {
+      if (
+        currentAttStatus === "unknown" ||
+        currentAttStatus === "not_determined"
+      ) {
         const profileForATT: AnalyticsProfile = {
           analyticsEnabled: true,
           attStatus: currentAttStatus,
           attPromptedAt: currentProfile.attPromptedAt ?? null,
-          analyticsDisabledReason: currentProfile.analyticsDisabledReason ?? null,
+          analyticsDisabledReason:
+            currentProfile.analyticsDisabledReason ?? null,
         };
         const result = await requestATTUserInitiated(profileForATT);
         const now = new Date().toISOString();
@@ -206,7 +234,12 @@ export default function Settings() {
           return;
         }
 
-        const reason = result === "denied" ? "att_denied" : result === "restricted" ? "restricted" : "not_supported";
+        const reason =
+          result === "denied"
+            ? "att_denied"
+            : result === "restricted"
+              ? "restricted"
+              : "not_supported";
         setAnalyticsEnabled(false);
         setAnalyticsConsent("denied");
         setAttBlocked(result === "denied" || result === "restricted");
@@ -218,7 +251,8 @@ export default function Settings() {
         });
         toast({
           title: "Analytics not enabled",
-          description: "Tracking permission was not granted. Analytics will remain off.",
+          description:
+            "Tracking permission was not granted. Analytics will remain off.",
         });
         return;
       }
@@ -253,12 +287,12 @@ export default function Settings() {
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
       }
-      
+
       const response = await fetch(url, {
         credentials: "include",
         headers,
       });
-      
+
       if (!response.ok) {
         throw new Error(`Download failed: ${response.status}`);
       }
@@ -272,7 +306,8 @@ export default function Settings() {
         const toBase64 = (source: Blob): Promise<string> =>
           new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onerror = () => reject(new Error("Could not read file data"));
+            reader.onerror = () =>
+              reject(new Error("Could not read file data"));
             reader.onload = () => {
               const result = reader.result;
               if (typeof result !== "string") {
@@ -310,7 +345,10 @@ export default function Settings() {
           dialogTitle: "Export data",
         });
 
-        toast({ title: "Export ready", description: "Choose where to save or share your file." });
+        toast({
+          title: "Export ready",
+          description: "Choose where to save or share your file.",
+        });
         return;
       }
 
@@ -323,17 +361,20 @@ export default function Settings() {
       document.body.removeChild(a);
       URL.revokeObjectURL(downloadUrl);
 
-      toast({ title: "Download started", description: `${filename} is downloading` });
+      toast({
+        title: "Download started",
+        description: `${filename} is downloading`,
+      });
     } catch (error: any) {
       logger.error("Download error:", error);
-      toast({ 
-        title: "Download failed", 
+      toast({
+        title: "Download failed",
         description: error.message || "Could not download file",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
-  
+
   const { data: aiNudgesFlag } = useFeatureFlag("ai_micro_nudges");
   const updateFeatureFlag = useUpdateFeatureFlag();
 
@@ -341,11 +382,16 @@ export default function Settings() {
     queryKey: QUERY_KEYS.profile(),
   });
 
-  const { data: onboardingStatus, isLoading: isOnboardingLoading } = useQuery<OnboardingStatus>({
-    queryKey: QUERY_KEYS.onboarding(),
-  });
+  const { data: onboardingStatus, isLoading: isOnboardingLoading } =
+    useQuery<OnboardingStatus>({
+      queryKey: QUERY_KEYS.onboarding(),
+    });
 
-  const { data: subscription, isLoading: isSubscriptionLoading, isError: isSubscriptionError } = useQuery<{ plan: string; hasSubscription: boolean }>({
+  const {
+    data: subscription,
+    isLoading: isSubscriptionLoading,
+    isError: isSubscriptionError,
+  } = useQuery<{ plan: string; hasSubscription: boolean }>({
     queryKey: QUERY_KEYS.subscriptionStatus(),
     retry: 1,
     staleTime: 60000,
@@ -359,28 +405,35 @@ export default function Settings() {
     if (!plan || plan === "free") return "Free";
     return plan.charAt(0).toUpperCase() + plan.slice(1).replace("_", "+");
   };
-  
-  const isBusinessPlan = subscription !== undefined && subscription.plan === "business";
+
+  const isBusinessPlan =
+    subscription !== undefined && subscription.plan === "business";
   const currentPlanLabel = getPlanLabel();
 
-  const isMoneyProtectionReady = onboardingStatus ? onboardingStatus.moneyProtectionReady : true;
+  const isMoneyProtectionReady = onboardingStatus
+    ? onboardingStatus.moneyProtectionReady
+    : true;
   const needsSetup = !isOnboardingLoading && !isMoneyProtectionReady;
 
   const { data: paymentMethods } = useQuery<PaymentMethod[]>({
     queryKey: QUERY_KEYS.paymentMethods(),
   });
 
-  const savedStripeEnabled = paymentMethods?.some(
-    (method) => method.type === "stripe" && method.isEnabled
-  ) ?? false;
-  
+  const savedStripeEnabled =
+    paymentMethods?.some(
+      (method) => method.type === "stripe" && method.isEnabled,
+    ) ?? false;
+
   const [stripeEnabled, setStripeEnabled] = useState(false);
-  
+
   useEffect(() => {
     setStripeEnabled(savedStripeEnabled);
   }, [savedStripeEnabled]);
 
-  const { data: stripeStatus } = useQuery<{ connected: boolean; accountId?: string }>({
+  const { data: stripeStatus } = useQuery<{
+    connected: boolean;
+    accountId?: string;
+  }>({
     queryKey: QUERY_KEYS.stripeConnectStatus(),
     enabled: stripeEnabled,
   });
@@ -409,9 +462,10 @@ export default function Settings() {
       let parsedAvailability = null;
       try {
         if (profile.availability) {
-          parsedAvailability = typeof profile.availability === 'string' 
-            ? JSON.parse(profile.availability) 
-            : profile.availability;
+          parsedAvailability =
+            typeof profile.availability === "string"
+              ? JSON.parse(profile.availability)
+              : profile.availability;
         }
       } catch (e) {
         parsedAvailability = null;
@@ -426,20 +480,48 @@ export default function Settings() {
         showReviewsOnBooking: profile.showReviewsOnBooking !== false,
         publicEstimationEnabled: profile.publicEstimationEnabled !== false,
         noShowProtectionEnabled: profile.noShowProtectionEnabled !== false,
-        noShowProtectionDepositPercent: profile.noShowProtectionDepositPercent ?? 25,
+        noShowProtectionDepositPercent:
+          profile.noShowProtectionDepositPercent ?? 25,
       });
     }
   }, [profile]);
 
   const RESERVED_SLUGS = new Set([
-    "admin", "api", "login", "signup", "register", "settings", "profile",
-    "dashboard", "help", "support", "about", "terms", "privacy", "contact",
-    "pricing", "billing", "account", "app", "book", "booking", "onboarding",
-    "downloads", "home", "test", "demo", "status", "health",
+    "admin",
+    "api",
+    "login",
+    "signup",
+    "register",
+    "settings",
+    "profile",
+    "dashboard",
+    "help",
+    "support",
+    "about",
+    "terms",
+    "privacy",
+    "contact",
+    "pricing",
+    "billing",
+    "account",
+    "app",
+    "book",
+    "booking",
+    "onboarding",
+    "downloads",
+    "home",
+    "test",
+    "demo",
+    "status",
+    "health",
   ]);
 
   const handleSlugChange = (value: string) => {
-    const cleaned = value.toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/--+/g, "-").replace(/^-|-$/g, "");
+    const cleaned = value
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "")
+      .replace(/--+/g, "-")
+      .replace(/^-|-$/g, "");
     setSettings({ ...settings, publicProfileSlug: cleaned });
     setSlugAvailable(null);
 
@@ -473,7 +555,7 @@ export default function Settings() {
     const timer = setTimeout(async () => {
       try {
         const res = await apiFetch(`/api/slug/check/${slug}`);
-        const data = typeof res === 'string' ? JSON.parse(res) : res;
+        const data = typeof res === "string" ? JSON.parse(res) : res;
         if (data.available) {
           setSlugAvailable(true);
           setSlugError(null);
@@ -490,7 +572,11 @@ export default function Settings() {
   }, [settings.publicProfileSlug, originalSlug, slugError]);
 
   const updateMutation = useApiMutation(
-    (data: any) => apiFetch("/api/settings", { method: "PATCH", body: JSON.stringify(data) }),
+    (data: any) =>
+      apiFetch("/api/settings", {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
     [QUERY_KEYS.profile()],
     {
       onSuccess: () => {
@@ -499,7 +585,7 @@ export default function Settings() {
       onError: () => {
         toast({ title: "Failed to save settings", variant: "destructive" });
       },
-    }
+    },
   );
 
   const [isDeleting, setIsDeleting] = useState(false);
@@ -507,7 +593,8 @@ export default function Settings() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const deleteKeyboardInset = useKeyboardInset(showDeleteDialog);
-  const isDeleteConfirmValid = deleteConfirmText.trim().toUpperCase() === "DELETE";
+  const isDeleteConfirmValid =
+    deleteConfirmText.trim().toUpperCase() === "DELETE";
 
   const handleDeleteAccount = async () => {
     if (!isDeleteConfirmValid) return;
@@ -516,11 +603,15 @@ export default function Settings() {
     setDeleteError(null);
     try {
       logger.info("[AccountDeleteFlow] step=client_api_delete_request");
-      const result = await apiFetch<{ success?: boolean; message?: string; tablesCleared?: number }>(
-        "/api/account",
-        { method: "DELETE" },
+      const result = await apiFetch<{
+        success?: boolean;
+        message?: string;
+        tablesCleared?: number;
+      }>("/api/account", { method: "DELETE" });
+      logger.info(
+        "[AccountDeleteFlow] step=client_api_delete_ok",
+        result ?? {},
       );
-      logger.info("[AccountDeleteFlow] step=client_api_delete_ok", result ?? {});
       logger.info("[AccountDeleteFlow] step=client_logout_start");
       await logoutAsync();
       logger.info("[AccountDeleteFlow] step=client_logout_done redirect=/");
@@ -541,13 +632,16 @@ export default function Settings() {
 
   const quickSetupMutation = useApiMutation(
     async (price: number) => {
-      await apiFetch("/api/onboarding", { method: "PATCH", body: JSON.stringify({
-        defaultPrice: price,
-        depositPolicySet: true,
-        completed: true,
-        state: "completed",
-        step: 8
-      }) });
+      await apiFetch("/api/onboarding", {
+        method: "PATCH",
+        body: JSON.stringify({
+          defaultPrice: price,
+          depositPolicySet: true,
+          completed: true,
+          state: "completed",
+          step: 8,
+        }),
+      });
     },
     [QUERY_KEYS.onboarding(), QUERY_KEYS.profile()],
     {
@@ -559,7 +653,7 @@ export default function Settings() {
       onError: () => {
         toast({ title: "Failed to save settings", variant: "destructive" });
       },
-    }
+    },
   );
 
   const handleQuickSetup = () => {
@@ -573,7 +667,10 @@ export default function Settings() {
 
   const handleSave = () => {
     if (slugError) {
-      toast({ title: "Please fix the booking URL before saving", variant: "destructive" });
+      toast({
+        title: "Please fix the booking URL before saving",
+        variant: "destructive",
+      });
       return;
     }
     const dataToSave = {
@@ -581,7 +678,9 @@ export default function Settings() {
       publicProfileSlug: settings.publicProfileSlug,
       notifyBySms: settings.notifyBySms,
       notifyByEmail: settings.notifyByEmail,
-      availability: settings.availability ? JSON.stringify(settings.availability) : null,
+      availability: settings.availability
+        ? JSON.stringify(settings.availability)
+        : null,
       slotDuration: settings.slotDuration,
       showReviewsOnBooking: settings.showReviewsOnBooking,
       publicEstimationEnabled: settings.publicEstimationEnabled,
@@ -590,8 +689,11 @@ export default function Settings() {
     };
     updateMutation.mutate(dataToSave);
   };
-  
-  const handleAvailabilityChange = (availability: WeeklyAvailability, slotDuration: number) => {
+
+  const handleAvailabilityChange = (
+    availability: WeeklyAvailability,
+    slotDuration: number,
+  ) => {
     setSettings({ ...settings, availability, slotDuration });
   };
 
@@ -652,31 +754,41 @@ export default function Settings() {
   );
 
   const stripeStatusBanner = (
-    <div className={`flex items-center gap-2 p-3 rounded-lg ${
-      stripeEnabled && stripeStatus?.connected 
-        ? 'bg-green-500/10 border border-green-500/20' 
-        : 'bg-amber-500/10 border border-amber-500/20'
-    }`}>
+    <div
+      className={`flex items-center gap-2 p-3 rounded-lg ${
+        stripeEnabled && stripeStatus?.connected
+          ? "bg-green-500/10 border border-green-500/20"
+          : "bg-amber-500/10 border border-amber-500/20"
+      }`}
+    >
       {stripeEnabled && stripeStatus?.connected ? (
         <>
           <CheckCircle className="h-4 w-4 text-green-600" />
-          <span className="text-sm text-green-700 dark:text-green-400">Stripe connected - You can accept card payments</span>
+          <span className="text-sm text-green-700 dark:text-green-400">
+            Stripe connected - You can accept card payments
+          </span>
         </>
       ) : (
         <>
           <AlertCircle className="h-4 w-4 text-amber-600" />
-          <span className="text-sm text-amber-700 dark:text-amber-400">Enable Stripe to accept card payments and deposits</span>
+          <span className="text-sm text-amber-700 dark:text-amber-400">
+            Enable Stripe to accept card payments and deposits
+          </span>
         </>
       )}
     </div>
   );
 
   return (
-    <div className={`min-h-screen bg-background ${isMobile ? 'pb-24' : 'pb-12'}`} data-testid="page-settings">
+    <div
+      className={`min-h-screen bg-background ${isMobile ? "pb-24" : "pb-12"}`}
+      data-testid="page-settings"
+    >
       {isMobile ? renderMobileHeader() : renderDesktopHeader()}
 
-      <div className={`${isMobile ? 'px-4 py-4' : 'max-w-7xl mx-auto px-6 lg:px-8 py-6'} space-y-4`}>
-
+      <div
+        className={`${isMobile ? "px-4 py-4" : "max-w-7xl mx-auto px-6 lg:px-8 py-6"} space-y-4`}
+      >
         {/* SECTION 1: Get Paid (always expanded by default) */}
         <SettingsSectionAccordion
           id="get-paid"
@@ -688,13 +800,19 @@ export default function Settings() {
           className="border-emerald-200 dark:border-emerald-800/40 bg-emerald-50/30 dark:bg-emerald-950/10"
           headerExtra={
             stripeEnabled && stripeStatus?.connected ? (
-              <Badge variant="secondary" className="text-xs bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+              <Badge
+                variant="secondary"
+                className="text-xs bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300"
+              >
                 Connected
               </Badge>
             ) : null
           }
         >
           <div className="space-y-6">
+            <div className="flex items-center justify-end -mt-2">
+              <HelpLink slug="invoices-payments" label="Invoices & Payments" />
+            </div>
             {stripeStatusBanner}
 
             <PaymentMethodsSettings onStripeToggle={setStripeEnabled} />
@@ -713,7 +831,7 @@ export default function Settings() {
                 <Shield className="h-4 w-4 text-blue-500" />
                 Deposit Protection
               </h4>
-              
+
               {needsSetup ? (
                 <div className="p-4 rounded-xl border-dashed border-2 border-primary/30 bg-primary/5">
                   <div className="flex items-start gap-3">
@@ -721,14 +839,22 @@ export default function Settings() {
                       <Lock className="h-5 w-5 text-primary" />
                     </div>
                     <div className="space-y-2 flex-1">
-                      <p className="font-medium text-foreground">Set a default price to enable booking protection</p>
+                      <p className="font-medium text-foreground">
+                        Set a default price to enable booking protection
+                      </p>
                       <p className="text-sm text-muted-foreground">
-                        Complete your pricing setup to automatically protect against no-shows.
+                        Complete your pricing setup to automatically protect
+                        against no-shows.
                       </p>
                       {showQuickSetup ? (
                         <div className="mt-3 space-y-3">
                           <div>
-                            <Label htmlFor="quick-setup-price" className="text-sm">Your typical job price</Label>
+                            <Label
+                              htmlFor="quick-setup-price"
+                              className="text-sm"
+                            >
+                              Your typical job price
+                            </Label>
                             <div className="flex items-center gap-2 mt-1">
                               <div className="relative flex-1">
                                 <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -737,14 +863,17 @@ export default function Settings() {
                                   type="number"
                                   placeholder="150"
                                   value={quickSetupPrice}
-                                  onChange={(e) => setQuickSetupPrice(e.target.value)}
+                                  onChange={(e) =>
+                                    setQuickSetupPrice(e.target.value)
+                                  }
                                   className="pl-9"
                                   data-testid="input-quick-setup-price"
                                 />
                               </div>
                             </div>
                             <p className="text-xs text-muted-foreground mt-1">
-                              This enables automatic 30% deposit protection for bookings
+                              This enables automatic 30% deposit protection for
+                              bookings
                             </p>
                           </div>
                           <div className="flex gap-2">
@@ -786,28 +915,49 @@ export default function Settings() {
                 <>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-sm">Protect me from no-shows</p>
-                      <p className="text-xs text-muted-foreground">Automatically require deposits for higher-risk bookings</p>
+                      <p className="font-medium text-sm">
+                        Protect me from no-shows
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Automatically require deposits for higher-risk bookings
+                      </p>
                     </div>
                     <Switch
                       checked={settings.noShowProtectionEnabled}
-                      onCheckedChange={(checked) => setSettings({ ...settings, noShowProtectionEnabled: checked })}
+                      onCheckedChange={(checked) =>
+                        setSettings({
+                          ...settings,
+                          noShowProtectionEnabled: checked,
+                        })
+                      }
                       aria-label="Toggle Protect me from no-shows"
                       data-testid="switch-no-show-protection"
                     />
                   </div>
-                  
+
                   {settings.noShowProtectionEnabled && (
                     <div className="flex items-center justify-between pt-2 border-t">
                       <div>
-                        <p className="font-medium text-sm">Default deposit amount</p>
-                        <p className="text-xs text-muted-foreground">Percentage collected upfront for bookings</p>
+                        <p className="font-medium text-sm">
+                          Default deposit amount
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Percentage collected upfront for bookings
+                        </p>
                       </div>
                       <Select
                         value={String(settings.noShowProtectionDepositPercent)}
-                        onValueChange={(value) => setSettings({ ...settings, noShowProtectionDepositPercent: Number(value) })}
+                        onValueChange={(value) =>
+                          setSettings({
+                            ...settings,
+                            noShowProtectionDepositPercent: Number(value),
+                          })
+                        }
                       >
-                        <SelectTrigger className="w-24" data-testid="select-deposit-percent">
+                        <SelectTrigger
+                          className="w-24"
+                          data-testid="select-deposit-percent"
+                        >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -837,14 +987,24 @@ export default function Settings() {
           defaultOpen={false}
         >
           <div className="space-y-4">
+            <div className="flex items-center justify-end -mt-2">
+              <HelpLink
+                slug="public-profile"
+                label="Public Profile & Booking"
+              />
+            </div>
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-sm">Enable Public Profile</p>
-                <p className="text-xs text-muted-foreground">Let clients find and book you</p>
+                <p className="text-xs text-muted-foreground">
+                  Let clients find and book you
+                </p>
               </div>
               <Switch
                 checked={settings.publicProfileEnabled}
-                onCheckedChange={(checked) => setSettings({ ...settings, publicProfileEnabled: checked })}
+                onCheckedChange={(checked) =>
+                  setSettings({ ...settings, publicProfileEnabled: checked })
+                }
                 aria-label="Toggle Enable Public Profile"
                 data-testid="switch-public-profile"
               />
@@ -862,15 +1022,28 @@ export default function Settings() {
                       placeholder="your-name"
                       data-testid="input-profile-slug"
                     />
-                    <Button variant="outline" size="icon" onClick={copyBookingLink} aria-label="Copy booking link" data-testid="button-copy-booking">
-                      {bookingLinkCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={copyBookingLink}
+                      aria-label="Copy booking link"
+                      data-testid="button-copy-booking"
+                    >
+                      {bookingLinkCopied ? (
+                        <Check className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                   <div className="flex items-center gap-2">
                     <p className="text-xs text-muted-foreground">
-                      {window.location.origin}/book/{settings.publicProfileSlug || "your-name"}
+                      {window.location.origin}/book/
+                      {settings.publicProfileSlug || "your-name"}
                     </p>
-                    {slugChecking && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                    {slugChecking && (
+                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                    )}
                     {slugAvailable === true && !slugChecking && (
                       <span className="text-xs text-green-600 flex items-center gap-1">
                         <Check className="h-3 w-3" /> Available
@@ -889,9 +1062,12 @@ export default function Settings() {
                         <Lock className="h-5 w-5 text-amber-600" />
                       </div>
                       <div className="space-y-2">
-                        <p className="font-medium text-foreground">Complete setup to enable deposits</p>
+                        <p className="font-medium text-foreground">
+                          Complete setup to enable deposits
+                        </p>
                         <p className="text-sm text-muted-foreground">
-                          Your booking link works, but deposits won't be collected until you complete setup.
+                          Your booking link works, but deposits won't be
+                          collected until you complete setup.
                         </p>
                         <Button
                           size="sm"
@@ -930,7 +1106,9 @@ export default function Settings() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">No services added yet. Edit your profile to add services.</p>
+                    <p className="text-sm text-muted-foreground">
+                      No services added yet. Edit your profile to add services.
+                    </p>
                   )}
                 </div>
 
@@ -938,15 +1116,26 @@ export default function Settings() {
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {settings.showReviewsOnBooking ? <Eye className="h-4 w-4 text-muted-foreground" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
+                    {settings.showReviewsOnBooking ? (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    )}
                     <div>
                       <p className="font-medium text-sm">Show Reviews</p>
-                      <p className="text-xs text-muted-foreground">Display ratings on booking page</p>
+                      <p className="text-xs text-muted-foreground">
+                        Display ratings on booking page
+                      </p>
                     </div>
                   </div>
                   <Switch
                     checked={settings.showReviewsOnBooking}
-                    onCheckedChange={(checked) => setSettings({ ...settings, showReviewsOnBooking: checked })}
+                    onCheckedChange={(checked) =>
+                      setSettings({
+                        ...settings,
+                        showReviewsOnBooking: checked,
+                      })
+                    }
                     aria-label="Toggle Show Reviews"
                     data-testid="switch-show-reviews"
                   />
@@ -958,13 +1147,22 @@ export default function Settings() {
                   <div className="flex items-center gap-2">
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                     <div>
-                      <p className="font-medium text-sm">Public Price Estimates</p>
-                      <p className="text-xs text-muted-foreground">Allow customers to get AI estimates on booking page</p>
+                      <p className="font-medium text-sm">
+                        Public Price Estimates
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Allow customers to get AI estimates on booking page
+                      </p>
                     </div>
                   </div>
                   <Switch
                     checked={settings.publicEstimationEnabled}
-                    onCheckedChange={(checked) => setSettings({ ...settings, publicEstimationEnabled: checked })}
+                    onCheckedChange={(checked) =>
+                      setSettings({
+                        ...settings,
+                        publicEstimationEnabled: checked,
+                      })
+                    }
                     aria-label="Toggle Public Price Estimates"
                     data-testid="switch-public-estimation"
                   />
@@ -1022,6 +1220,9 @@ export default function Settings() {
           defaultOpen={false}
         >
           <div className="space-y-6">
+            <div className="flex items-center justify-end -mt-2">
+              <HelpLink slug="account-privacy" label="Account & Privacy" />
+            </div>
             {/* Plan */}
             {!isBusinessPlan && subscription !== undefined && (
               <>
@@ -1031,8 +1232,13 @@ export default function Settings() {
                       <Crown className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">Current Plan: {currentPlanLabel}</p>
-                      <p className="text-sm text-muted-foreground">Unlock advanced automations, booking protection, and AI tools</p>
+                      <p className="font-medium text-foreground">
+                        Current Plan: {currentPlanLabel}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Unlock advanced automations, booking protection, and AI
+                        tools
+                      </p>
                     </div>
                   </div>
                   <Button
@@ -1047,25 +1253,45 @@ export default function Settings() {
               </>
             )}
 
-            <SubscriptionSettings />
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  <Crown className="h-4 w-4 text-primary" />
+                  Plan & Billing
+                </h4>
+                <HelpLink slug="subscription" label="Subscription" size="xs" />
+              </div>
+              <SubscriptionSettings />
+            </div>
 
             <Separator />
 
             {/* Notifications */}
             <div className="space-y-4">
-              <h4 className="font-medium text-sm flex items-center gap-2">
-                <Bell className="h-4 w-4 text-amber-500" />
-                Notifications
-              </h4>
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  <Bell className="h-4 w-4 text-amber-500" />
+                  Notifications
+                </h4>
+                <HelpLink
+                  slug="notifications"
+                  label="Notifications"
+                  size="xs"
+                />
+              </div>
               <div className="space-y-4 pl-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-sm">SMS Notifications</p>
-                    <p className="text-xs text-muted-foreground">Receive updates via text message</p>
+                    <p className="text-xs text-muted-foreground">
+                      Receive updates via text message
+                    </p>
                   </div>
                   <Switch
                     checked={settings.notifyBySms}
-                    onCheckedChange={(checked) => setSettings({ ...settings, notifyBySms: checked })}
+                    onCheckedChange={(checked) =>
+                      setSettings({ ...settings, notifyBySms: checked })
+                    }
                     aria-label="Toggle SMS Notifications"
                     data-testid="switch-notify-sms"
                   />
@@ -1073,11 +1299,15 @@ export default function Settings() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-sm">Email Notifications</p>
-                    <p className="text-xs text-muted-foreground">Receive updates via email</p>
+                    <p className="text-xs text-muted-foreground">
+                      Receive updates via email
+                    </p>
                   </div>
                   <Switch
                     checked={settings.notifyByEmail}
-                    onCheckedChange={(checked) => setSettings({ ...settings, notifyByEmail: checked })}
+                    onCheckedChange={(checked) =>
+                      setSettings({ ...settings, notifyByEmail: checked })
+                    }
                     aria-label="Toggle Email Notifications"
                     data-testid="switch-notify-email"
                   />
@@ -1097,12 +1327,17 @@ export default function Settings() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-sm">Smart Action Nudges</p>
-                    <p className="text-xs text-muted-foreground">Get AI-powered suggestions for leads and invoices</p>
+                    <p className="text-xs text-muted-foreground">
+                      Get AI-powered suggestions for leads and invoices
+                    </p>
                   </div>
                   <Switch
                     checked={aiNudgesFlag?.enabled ?? true}
                     onCheckedChange={(checked) => {
-                      updateFeatureFlag.mutate({ key: "ai_micro_nudges", enabled: checked });
+                      updateFeatureFlag.mutate({
+                        key: "ai_micro_nudges",
+                        enabled: checked,
+                      });
                     }}
                     disabled={updateFeatureFlag.isPending}
                     aria-label="Toggle Smart Action Nudges"
@@ -1130,9 +1365,12 @@ export default function Settings() {
                       await linkAppleToCurrentUser();
                       toast({
                         title: "Apple linked",
-                        description: "You can now sign in with Apple on this account.",
+                        description:
+                          "You can now sign in with Apple on this account.",
                       });
-                      await queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
+                      await queryClient.invalidateQueries({
+                        queryKey: ["/api/profile"],
+                      });
                     } catch (e) {
                       toast({
                         title: "Could not link Apple",
@@ -1146,9 +1384,12 @@ export default function Settings() {
                       await linkGoogleToCurrentUser();
                       toast({
                         title: "Google linked",
-                        description: "You can now sign in with Google on this account.",
+                        description:
+                          "You can now sign in with Google on this account.",
                       });
-                      await queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
+                      await queryClient.invalidateQueries({
+                        queryKey: ["/api/profile"],
+                      });
                     } catch (e) {
                       toast({
                         title: "Could not link Google",
@@ -1169,7 +1410,8 @@ export default function Settings() {
                   onLinkEmail={() => {
                     toast({
                       title: "Email linking",
-                      description: "Add or link email from the mobile app or contact support.",
+                      description:
+                        "Add or link email from the mobile app or contact support.",
                     });
                   }}
                 />
@@ -1188,9 +1430,12 @@ export default function Settings() {
                       }
                       toast({
                         title: "Phone linked",
-                        description: "You can now sign in with this phone number.",
+                        description:
+                          "You can now sign in with this phone number.",
                       });
-                      await queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
+                      await queryClient.invalidateQueries({
+                        queryKey: ["/api/profile"],
+                      });
                     }}
                   />
                 )}
@@ -1207,8 +1452,13 @@ export default function Settings() {
               <div className="pl-6 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <p className="font-medium text-sm">Enable usage analytics</p>
-                    <p className="text-xs text-muted-foreground">We use anonymous usage data to improve reliability and features.</p>
+                    <p className="font-medium text-sm">
+                      Enable usage analytics
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      We use anonymous usage data to improve reliability and
+                      features.
+                    </p>
                   </div>
                   <Switch
                     checked={analyticsEnabled}
@@ -1218,8 +1468,18 @@ export default function Settings() {
                   />
                 </div>
                 {attBlocked && (
-                  <div className="p-3 text-xs text-muted-foreground bg-muted rounded-md" data-testid="text-att-blocked">
-                    <p>Tracking is disabled in your iOS settings. To enable analytics, allow tracking in <strong>Settings &gt; Privacy &amp; Security &gt; Tracking</strong>.</p>
+                  <div
+                    className="p-3 text-xs text-muted-foreground bg-muted rounded-md"
+                    data-testid="text-att-blocked"
+                  >
+                    <p>
+                      Tracking is disabled in your iOS settings. To enable
+                      analytics, allow tracking in{" "}
+                      <strong>
+                        Settings &gt; Privacy &amp; Security &gt; Tracking
+                      </strong>
+                      .
+                    </p>
                   </div>
                 )}
               </div>
@@ -1234,14 +1494,18 @@ export default function Settings() {
               </h4>
               <div className="pl-6 space-y-2 text-xs text-muted-foreground">
                 <p>
-                  Some tools use <strong>OpenAI</strong> (<strong>gpt-4o-mini</strong>) to generate
-                  suggestions or summaries from text you enter and related job or business content in
-                  your account.
+                  Some tools use <strong>OpenAI</strong> (
+                  <strong>gpt-4o-mini</strong>) to generate suggestions or
+                  summaries from text you enter and related job or business
+                  content in your account.
                 </p>
                 <p>
-                  Details on what categories of information may be sent and how OpenAI fits into our
-                  processing are in the{" "}
-                  <a href="/privacy#ai-third-parties" className="underline text-foreground">
+                  Details on what categories of information may be sent and how
+                  OpenAI fits into our processing are in the{" "}
+                  <a
+                    href="/privacy#ai-third-parties"
+                    className="underline text-foreground"
+                  >
                     Privacy Policy (OpenAI)
                   </a>
                   .
@@ -1259,19 +1523,26 @@ export default function Settings() {
                     Account & Security
                   </h4>
                   <div className="pl-6 space-y-4">
-                    {isEmailPasswordUser() && (
-                      <ChangePasswordDialog />
-                    )}
+                    {isEmailPasswordUser() && <ChangePasswordDialog />}
 
                     {deleteError && (
-                      <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md" data-testid="text-delete-error">
+                      <div
+                        className="p-3 text-sm text-destructive bg-destructive/10 rounded-md"
+                        data-testid="text-delete-error"
+                      >
                         {deleteError}
                       </div>
                     )}
-                    <AlertDialog open={showDeleteDialog} onOpenChange={(open) => { if (!open) resetDeleteDialog(); else setShowDeleteDialog(true); }}>
+                    <AlertDialog
+                      open={showDeleteDialog}
+                      onOpenChange={(open) => {
+                        if (!open) resetDeleteDialog();
+                        else setShowDeleteDialog(true);
+                      }}
+                    >
                       <AlertDialogTrigger asChild>
-                        <Button 
-                          variant="destructive" 
+                        <Button
+                          variant="destructive"
                           className="w-full"
                           data-testid="button-delete-account"
                         >
@@ -1293,7 +1564,9 @@ export default function Settings() {
                         }
                       >
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+                          <AlertDialogTitle>
+                            Delete your account?
+                          </AlertDialogTitle>
                           <AlertDialogDescription asChild>
                             <div
                               className="min-h-0 overflow-y-auto pr-1 space-y-3"
@@ -1304,7 +1577,11 @@ export default function Settings() {
                                     : "52vh",
                               }}
                             >
-                              <p>This action is <strong>permanent</strong> and cannot be undone. All of the following will be deleted:</p>
+                              <p>
+                                This action is <strong>permanent</strong> and
+                                cannot be undone. All of the following will be
+                                deleted:
+                              </p>
                               <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
                                 <li>Your profile and personal information</li>
                                 <li>All jobs, leads, and clients</li>
@@ -1314,25 +1591,38 @@ export default function Settings() {
                                 <li>Crew memberships and messages</li>
                                 <li>Stripe payment connections</li>
                                 <li>All analytics and tracking data</li>
-                                <li>Referrals, templates, and automation rules</li>
+                                <li>
+                                  Referrals, templates, and automation rules
+                                </li>
                               </ul>
-                              <p className="text-sm">Type <strong>DELETE</strong> below to confirm:</p>
+                              <p className="text-sm">
+                                Type <strong>DELETE</strong> below to confirm:
+                              </p>
                               <Input
                                 data-testid="input-delete-confirm"
                                 placeholder="Type DELETE to confirm"
                                 value={deleteConfirmText}
-                                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                                onChange={(e) =>
+                                  setDeleteConfirmText(e.target.value)
+                                }
                                 autoComplete="off"
                                 disabled={isDeleting}
                               />
                               {deleteError && (
-                                <p className="text-sm text-destructive">{deleteError}</p>
+                                <p className="text-sm text-destructive">
+                                  {deleteError}
+                                </p>
                               )}
                             </div>
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel data-testid="button-cancel-delete" disabled={isDeleting}>Cancel</AlertDialogCancel>
+                          <AlertDialogCancel
+                            data-testid="button-cancel-delete"
+                            disabled={isDeleting}
+                          >
+                            Cancel
+                          </AlertDialogCancel>
                           <Button
                             variant="destructive"
                             onClick={handleDeleteAccount}
@@ -1358,8 +1648,13 @@ export default function Settings() {
                     <Download className="h-4 w-4 text-blue-500" />
                     Export Data
                   </h4>
-                  <button 
-                    onClick={() => handleAuthenticatedDownload("/api/export/json", `gigaid-export-${new Date().toISOString().split('T')[0]}.json`)}
+                  <button
+                    onClick={() =>
+                      handleAuthenticatedDownload(
+                        "/api/export/json",
+                        `gigaid-export-${new Date().toISOString().split("T")[0]}.json`,
+                      )
+                    }
                     className="block w-full text-left"
                     data-testid="button-download-json"
                   >
@@ -1367,21 +1662,32 @@ export default function Settings() {
                       <FileJson className="h-5 w-5 text-blue-500" />
                       <div className="flex-1">
                         <p className="font-medium text-sm">Download JSON</p>
-                        <p className="text-xs text-muted-foreground">Complete data export</p>
+                        <p className="text-xs text-muted-foreground">
+                          Complete data export
+                        </p>
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
                   </button>
-                  <button 
-                    onClick={() => handleAuthenticatedDownload("/api/export/dot", `gigaid-graph-${new Date().toISOString().split('T')[0]}.dot`)}
+                  <button
+                    onClick={() =>
+                      handleAuthenticatedDownload(
+                        "/api/export/dot",
+                        `gigaid-graph-${new Date().toISOString().split("T")[0]}.dot`,
+                      )
+                    }
                     className="block w-full text-left"
                     data-testid="button-download-dot"
                   >
                     <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover-elevate cursor-pointer">
                       <Share className="h-5 w-5 text-purple-500" />
                       <div className="flex-1">
-                        <p className="font-medium text-sm">Download DOT Graph</p>
-                        <p className="text-xs text-muted-foreground">Data relationships (GraphViz)</p>
+                        <p className="font-medium text-sm">
+                          Download DOT Graph
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Data relationships (GraphViz)
+                        </p>
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
@@ -1393,9 +1699,9 @@ export default function Settings() {
         </SettingsSectionAccordion>
 
         {/* Save Button */}
-        <Button 
-          onClick={handleSave} 
-          className="w-full" 
+        <Button
+          onClick={handleSave}
+          className="w-full"
           size="lg"
           disabled={updateMutation.isPending}
           data-testid="button-save-settings"

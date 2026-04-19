@@ -58,6 +58,7 @@ import { copyTextToClipboard } from "@/lib/clipboard";
 import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
 import { FreeSetupCta } from "@/components/growth/FreeSetupCta";
 import { BookingLinkShare, BookingLinkEmptyState } from "@/components/booking-link";
+import { HelpLink } from "@/components/HelpLink";
 import { SwipeableCard, type SwipeAction as SwipeCardAction } from "@/components/ui/swipeable-card";
 import { ActionConfirmDialog } from "@/components/ui/action-confirm-dialog";
 import { 
@@ -482,7 +483,10 @@ export default function Leads() {
         <div className="relative">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold">Leads</h1>
+              <div className="flex items-center gap-1">
+                <h1 className="text-2xl font-bold">Leads</h1>
+                <HelpLink slug="leads-booking-requests" label="Help with Leads" className="text-white/80 hover:text-white hover:bg-white/10" />
+              </div>
               <p className="text-sm text-white/80">Track potential clients</p>
               <CoachingRenderer screen="leads" />
             </div>
@@ -596,7 +600,10 @@ export default function Leads() {
                 <Users className="h-6 w-6 text-emerald-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground" data-testid="page-title">Leads</h1>
+                <div className="flex items-center gap-1">
+                  <h1 className="text-2xl font-bold text-foreground" data-testid="page-title">Leads</h1>
+                  <HelpLink slug="leads-booking-requests" label="Help with Leads" />
+                </div>
                 <p className="text-sm text-muted-foreground">Track potential clients</p>
                 <CoachingRenderer screen="leads" />
               </div>

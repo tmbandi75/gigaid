@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "3IENGXHnrfjWJy7YjUZgR"
+uri = "file://attached_assets/support-manual.md"
+type = "text"
+title = "GigAid Support Manual"

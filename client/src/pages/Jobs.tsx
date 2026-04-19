@@ -44,6 +44,7 @@ import { FreeSetupCta } from "@/components/growth/FreeSetupCta";
 import { JobResolutionModal } from "@/components/jobs/JobResolutionModal";
 import { JobsCalendar } from "@/components/calendar/JobsCalendar";
 import { BookingLinkShare } from "@/components/booking-link";
+import { HelpLink } from "@/components/HelpLink";
 import { SwipeableCard, type SwipeAction as SwipeCardAction } from "@/components/ui/swipeable-card";
 import { ActionConfirmDialog } from "@/components/ui/action-confirm-dialog";
 import { getJobActionEligibility, getSwipeActions, type SwipeAction as RulesSwipeAction } from "@shared/archive-delete-rules";
@@ -535,7 +536,10 @@ export default function Jobs() {
         <div className="relative">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold">Jobs</h1>
+              <div className="flex items-center gap-1">
+                <h1 className="text-2xl font-bold">Jobs</h1>
+                <HelpLink slug="jobs" label="Help with Jobs" className="text-white/80 hover:text-white hover:bg-white/10" />
+              </div>
               <p className="text-sm text-primary-foreground/80">Manage your work schedule</p>
               <CoachingRenderer screen="jobs" />
             </div>
@@ -666,7 +670,10 @@ export default function Jobs() {
                 <Briefcase className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground" data-testid="page-title">Jobs</h1>
+                <div className="flex items-center gap-1">
+                  <h1 className="text-2xl font-bold text-foreground" data-testid="page-title">Jobs</h1>
+                  <HelpLink slug="jobs" label="Help with Jobs" />
+                </div>
                 <p className="text-sm text-muted-foreground">Manage your work schedule</p>
                 <CoachingRenderer screen="jobs" />
               </div>

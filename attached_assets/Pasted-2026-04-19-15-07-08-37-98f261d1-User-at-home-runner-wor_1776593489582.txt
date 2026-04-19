@@ -1,0 +1,132 @@
+2026-04-19 15:07:08.37
+98f261d1
+User
+at /home/runner/workspace/dist/index.cjs:66:13356
+2026-04-19 15:07:08.37
+98f261d1
+User
+at async /home/runner/workspace/dist/index.cjs:72:38203
+2026-04-19 15:07:08.37
+98f261d1
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2026-04-19 15:07:08.37
+98f261d1
+User
+at async Hte (/home/runner/workspace/dist/index.cjs:482:645)
+2026-04-19 15:07:10.87
+98f261d1
+User
+at async /home/runner/workspace/dist/index.cjs:72:38203
+2026-04-19 15:07:10.87
+98f261d1
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2026-04-19 15:07:10.87
+98f261d1
+User
+at /home/runner/workspace/dist/index.cjs:66:13356
+2026-04-19 15:07:10.87
+98f261d1
+User
+[ERROR 2026-04-19T10:07:10.873Z] [NextBestActionEngine] Error during auto-execution: error: column "subscription_store" does not exist
+2026-04-19 15:07:10.87
+98f261d1
+User
+at async Nj (/home/runner/workspace/dist/index.cjs:476:15108)
+2026-04-19 15:07:11.17
+98f261d1
+User
+[ERROR 2026-04-19T10:07:11.173Z] [NextBestActionEngine] Error during stall detection: error: column "subscription_store" does not exist
+2026-04-19 15:07:11.17
+98f261d1
+User
+at async Rj (/home/runner/workspace/dist/index.cjs:476:13712)
+2026-04-19 15:07:11.17
+98f261d1
+User
+at /home/runner/workspace/dist/index.cjs:66:13356
+2026-04-19 15:07:11.17
+98f261d1
+User
+at async /home/runner/workspace/dist/index.cjs:72:38203
+2026-04-19 15:07:11.17
+98f261d1
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2026-04-19 15:07:16.87
+98f261d1
+User
+at async /home/runner/workspace/dist/index.cjs:72:38203
+2026-04-19 15:07:16.87
+98f261d1
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2026-04-19 15:07:16.87
+98f261d1
+User
+[ERROR 2026-04-19T10:07:16.873Z] [IntentDetection] Error processing signals: error: column "subscription_store" does not exist
+2026-04-19 15:07:16.87
+98f261d1
+User
+at async xj (/home/runner/workspace/dist/index.cjs:466:9761)
+2026-04-19 15:07:16.87
+98f261d1
+User
+at /home/runner/workspace/dist/index.cjs:66:13356
+2026-04-19 15:07:19.07
+98f261d1
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2026-04-19 15:07:19.07
+98f261d1
+User
+at async Cee (/home/runner/workspace/dist/index.cjs:466:10080)
+2026-04-19 15:07:19.07
+98f261d1
+User
+[ERROR 2026-04-19T10:07:19.073Z] [IntentDetection] Error during auto-follow-up: error: column "subscription_store" does not exist
+2026-04-19 15:07:19.07
+98f261d1
+User
+at async /home/runner/workspace/dist/index.cjs:72:38203
+2026-04-19 15:07:19.07
+98f261d1
+User
+at /home/runner/workspace/dist/index.cjs:66:13356
+
+2026-04-19 15:07:25.67
+98f261d1
+User
+at async /home/runner/workspace/dist/index.cjs:72:38203
+2026-04-19 15:07:25.67
+98f261d1
+User
+[ERROR 2026-04-19T10:07:25.673Z] [IntentFollowUp] Scheduler error: error: column "subscription_store" does not exist
+2026-04-19 15:07:25.67
+98f261d1
+User
+at async CT.getUser (/home/runner/workspace/dist/index.cjs:72:174310)
+2026-04-19 15:07:25.67
+98f261d1
+User
+at async Cre (/home/runner/workspace/dist/index.cjs:1131:886)
+2026-04-19 15:07:25.67
+98f261d1
+User
+at async Timeout._onTimeout (/home/runner/workspace/dist/index.cjs:1131:723)
+2026-04-19 15:07:25.67
+98f261d1
+User
+at /home/runner/workspace/dist/index.cjs:66:13356
+2026-04-19 15:07:25.67
+98f261d1
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+
+Collapse
+
+Wrap
+
+Colors
+
