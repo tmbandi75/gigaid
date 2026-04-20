@@ -97,6 +97,51 @@ const QUOTE_CACHE_PRUNE = 250;
 const subscriptionStatusLastRcSyncMs = new Map<string, number>();
 const SUBSCRIPTION_STATUS_RC_SYNC_COOLDOWN_MS = 25_000;
 
+type ClientPlatform = "ios" | "android" | "web" | "unknown";
+
+function getClientPlatform(req: Request): ClientPlatform {
+  const raw = String(req.headers["x-client-platform"] ?? "").toLowerCase();
+  if (raw === "ios" || raw === "android" || raw === "web") return raw;
+  return "unknown";
+}
+
+function doesStoreSubscriptionApplyToClient(
+  subscriptionStore: string | null | undefined,
+  clientPlatform: ClientPlatform,
+): boolean {
+  if (subscriptionStore !== "app_store" && subscriptionStore !== "play_store") {
+    return true;
+  }
+  if (clientPlatform === "unknown") return true;
+  if (clientPlatform === "web") return false;
+  if (subscriptionStore === "app_store") return clientPlatform === "ios";
+  return clientPlatform === "android";
+}
+
+function getEffectivePlanForClient(
+  user: {
+    plan?: string | null;
+    subscriptionStore?: string | null;
+    storeSubscriptionExpiresAt?: string | null;
+  } | null | undefined,
+  req: Request,
+): "free" | "pro" | "pro_plus" | "business" {
+  const base = (user?.plan as "free" | "pro" | "pro_plus" | "business" | undefined) || "free";
+  if (!user) return "free";
+  if (!isStoreSubscriptionActiveInDb({
+    subscriptionStore: user.subscriptionStore ?? null,
+    plan: user.plan ?? null,
+    storeSubscriptionExpiresAt: user.storeSubscriptionExpiresAt ?? null,
+  })) {
+    return base;
+  }
+  const clientPlatform = getClientPlatform(req);
+  if (!doesStoreSubscriptionApplyToClient(user.subscriptionStore, clientPlatform)) {
+    return "free";
+  }
+  return base;
+}
+
 function pruneQuoteCache() {
   if (quoteCache.size <= QUOTE_CACHE_MAX) return;
   const entries = Array.from(quoteCache.entries())
@@ -7898,6 +7943,7 @@ Return ONLY the message text, no JSON or formatting.`
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
+      const clientPlatform = getClientPlatform(req);
 
       const forceRcSync =
         req.query.refresh === "1" ||
@@ -7995,6 +8041,23 @@ Return ONLY the message text, no JSON or formatting.`
       }
 
       if (isStoreSubscriptionActiveInDb(user)) {
+        const storeAppliesToClient = doesStoreSubscriptionApplyToClient(
+          user.subscriptionStore,
+          clientPlatform,
+        );
+        if (!storeAppliesToClient) {
+          return res.json({
+            plan: "free",
+            planName: "Free",
+            status: "active",
+            hasSubscription: false,
+            currentPeriodEnd: null,
+            cancelAtPeriodEnd: false,
+            cancelAt: null,
+            billingSource: "none",
+            pendingPlanChange: null,
+          });
+        }
         const p = user.plan || "free";
         const billingSource =
           user.subscriptionStore === "play_store" ? "play_store" : "app_store";
@@ -8017,9 +8080,14 @@ Return ONLY the message text, no JSON or formatting.`
         });
       }
 
+      const shouldMaskStorePlanForClient =
+        isStoreSubscriptionActiveInDb(user) &&
+        !doesStoreSubscriptionApplyToClient(user.subscriptionStore, clientPlatform);
+      const fallbackPlan = shouldMaskStorePlanForClient ? "free" : (user.plan || "free");
+
       return res.json({
-        plan: user.plan || "free",
-        planName: planNames[user.plan || "free"] || "Free",
+        plan: fallbackPlan,
+        planName: planNames[fallbackPlan] || "Free",
         status: "active",
         hasSubscription: false,
         currentPeriodEnd: null,
@@ -12450,7 +12518,7 @@ Return ONLY the message text, no JSON or formatting.`
   app.get("/api/capabilities", isAuthenticated, async (req, res) => {
     try {
       const user = await storage.getUser((req as any).userId);
-      const plan = (user?.plan as Plan) || 'free';
+      const plan = getEffectivePlanForClient(user, req) as Plan;
       
       // Get all usage for this user
       const allUsage = await storage.getAllCapabilityUsage((req as any).userId);
@@ -12494,7 +12562,7 @@ Return ONLY the message text, no JSON or formatting.`
     try {
       const capability = req.params.capability as Capability;
       const user = await storage.getUser((req as any).userId);
-      const plan = (user?.plan as Plan) || 'free';
+      const plan = getEffectivePlanForClient(user, req) as Plan;
       
       const usage = await storage.getCapabilityUsage((req as any).userId, capability);
       const usageCount = usage?.usageCount || 0;
@@ -12530,7 +12598,7 @@ Return ONLY the message text, no JSON or formatting.`
     try {
       const capability = req.params.capability as Capability;
       const user = await storage.getUser((req as any).userId);
-      const plan = (user?.plan as Plan) || 'free';
+      const plan = getEffectivePlanForClient(user, req) as Plan;
       
       // Check if action is allowed before incrementing
       const currentUsage = await storage.getCapabilityUsage((req as any).userId, capability);

@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { Capacitor } from "@capacitor/core";
 import { getAuthToken } from "./authToken";
 import { logger } from "@/lib/logger";
 
@@ -23,10 +24,17 @@ async function throwIfResNotOk(res: Response) {
 
 function getAuthHeaders(): Record<string, string> {
   const token = getAuthToken();
-  if (token) {
-    return { Authorization: `Bearer ${token}` };
+  const headers: Record<string, string> = {};
+  if (!Capacitor.isNativePlatform()) {
+    headers["X-Client-Platform"] = "web";
+  } else {
+    const p = Capacitor.getPlatform();
+    headers["X-Client-Platform"] = p === "ios" || p === "android" ? p : p;
   }
-  return {};
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
