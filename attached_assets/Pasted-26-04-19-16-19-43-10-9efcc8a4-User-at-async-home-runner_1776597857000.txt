@@ -1,0 +1,64 @@
+26-04-19 16:19:43.10
+9efcc8a4
+User
+at async /home/runner/workspace/dist/index.cjs:72:38203
+2026-04-19 16:19:43.20
+9efcc8a4
+User
+at /home/runner/workspace/dist/index.cjs:66:13356
+2026-04-19 16:19:43.20
+9efcc8a4
+User
+at async /home/runner/workspace/dist/index.cjs:731:13187
+2026-04-19 16:19:43.20
+9efcc8a4
+User
+[ERROR 2026-04-19T11:19:43.209Z] [WebAuth] Error: 42703 column "revenuecat_last_processed_event_id" does not exist error: column "revenuecat_last_processed_event_id" does not exist
+2026-04-19 16:19:43.20
+9efcc8a4
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2026-04-19 16:19:43.20
+9efcc8a4
+User
+at async /home/runner/workspace/dist/index.cjs:72:38203
+2026-04-19 16:19:43.21
+9efcc8a4
+User
+at async /home/runner/workspace/dist/index.cjs:72:38203
+2026-04-19 16:19:43.21
+9efcc8a4
+User
+at async /home/runner/workspace/dist/index.cjs:731:13187
+2026-04-19 16:19:43.21
+9efcc8a4
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2026-04-19 16:19:43.21
+9efcc8a4
+User
+at /home/runner/workspace/dist/index.cjs:66:13356
+2026-04-19 16:19:43.21
+9efcc8a4
+User
+[ERROR 2026-04-19T11:19:43.216Z] [WebAuth] Error: 42703 column "revenuecat_last_processed_event_id" does not exist error: column "revenuecat_last_processed_event_id" does not exist
+2026-04-19 16:20:31.69
+9efcc8a4
+User
+[ERROR 2026-04-19T11:20:31.690Z] [AccountDeleteFlow] step=isAuthenticated_bearer_getUser_failed {"sub":"[REDACTED-UUID]","error":{"length":136,"name":"error","severity":"ERROR","code":"42703","position":"1424","file":"parse_relation.c","line":"3722","routine":"errorMissingColumn"},"path":"/api/profile"}
+2026-04-19 16:20:31.84
+9efcc8a4
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2026-04-19 16:20:31.84
+9efcc8a4
+User
+at async /home/runner/workspace/dist/index.cjs:72:38203
+2026-04-19 16:20:31.84
+9efcc8a4
+User
+at /home/runner/workspace/dist/index.cjs:66:13356
+2026-04-19 16:20:31.84
+9efcc8a4
+User
+at async CT.getUser (/home/runner/workspace/dist/index.cjs:72:174310)
