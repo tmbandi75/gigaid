@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { logger } from "@/lib/logger";
+import { isAppleReviewMode } from "@/lib/env";
 
 type AuthMode = "signin" | "signup" | "forgot";
 
@@ -265,7 +266,8 @@ export default function SplashPage() {
       {/* Blue gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#6366F1] via-[#4F46E5] to-[#3730A3]" />
       
-      {/* Decorative floating shapes */}
+      {/* Decorative floating shapes — hidden in Apple review mode for a cleaner login screen */}
+      {!isAppleReviewMode && (
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Top right large circle */}
         <div className="absolute -top-20 -right-20 w-64 h-64 bg-[#818CF8]/30 rounded-full blur-sm" />
@@ -280,6 +282,7 @@ export default function SplashPage() {
         {/* Mid-left accent */}
         <div className="absolute top-1/2 -left-8 w-32 h-32 bg-[#4338CA]/30 rounded-full blur-md" />
       </div>
+      )}
 
       {/* Content */}
       <div className="relative min-h-screen flex flex-col items-center justify-center p-6">
