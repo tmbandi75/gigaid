@@ -392,6 +392,13 @@ export interface IStorage {
 
   // Stripe Connect user lookup
   getUsersByStripeConnectAccountId(accountId: string): Promise<User[]>;
+
+  // First-Booking acquisition flow: pre-generated booking pages
+  getBookingPage(id: string): Promise<import("@shared/schema").BookingPage | undefined>;
+  createBookingPage(data: import("@shared/schema").InsertBookingPage): Promise<import("@shared/schema").BookingPage>;
+  claimBookingPage(id: string, args: { userId: string; claimedAt: string }): Promise<import("@shared/schema").BookingPage | undefined>;
+  trackBookingPageEvent(pageId: string, type: import("@shared/schema").BookingPageEventType, metadata?: string): Promise<void>;
+  cancelBookingPageNudges(pageId: string): Promise<number>;
 }
 
 export class MemStorage implements IStorage {
@@ -3067,6 +3074,13 @@ export class MemStorage implements IStorage {
   async getUsersByStripeConnectAccountId(_accountId: string): Promise<User[]> {
     return Array.from(this.users.values()).filter(u => u.stripeConnectAccountId === _accountId);
   }
+
+  // First-Booking acquisition flow stubs (unused by MemStorage in production)
+  async getBookingPage(_id: string) { return undefined; }
+  async createBookingPage(_data: any): Promise<any> { throw new Error("MemStorage does not support booking pages"); }
+  async claimBookingPage(_id: string, _args: any) { return undefined; }
+  async trackBookingPageEvent(_pageId: string, _type: any, _metadata?: string) {}
+  async cancelBookingPageNudges(_pageId: string) { return 0; }
 }
 
 import { dbStorage } from "./db-storage";

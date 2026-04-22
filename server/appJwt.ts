@@ -13,7 +13,7 @@ function getJwtSecret(): string | null {
 
 export interface AppJwtPayload {
   sub: string;
-  provider: 'replit' | 'firebase';
+  provider: 'replit' | 'firebase' | 'claim';
   email_normalized?: string;
   firebase_uid?: string;
   iat?: number;

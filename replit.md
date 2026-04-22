@@ -143,6 +143,20 @@ To enforce App Check (block requests without valid tokens):
 - Backend enforces **10 jobs/month** for Free (`shared/planLimits.ts` `maxJobs: 10`, `shared/capabilities/capabilityRules.ts` `jobs.create.limit: 10`).
 - Pricing page and Subscription settings copy were updated from "Up to 5 jobs" to "Up to 10 jobs" to match enforcement (Task #15). Decision: keep the more generous backend limit rather than tightening to 5, so existing Free users are not downgraded.
 
+## First Booking Acquisition Flow (Task #19)
+
+For visitors landing on **pre-generated, unclaimed** booking pages from the Growth Engine. Existing claimed `/book/:slug` UX for current GigAid providers is unchanged.
+
+- New tables `booking_pages` and `booking_page_events` (`shared/schema.ts`).
+- `outbound_messages.job_id` was made nullable, and a new `booking_page_id` column was added so first-booking nudges can live in the same scheduler/queue as job-bound messages while still being cancelable as a group.
+- `GET /api/public/profile/:slug` first checks `booking_pages` for UUID-shaped slugs:
+  - **unclaimed** → returns `{ kind: "unclaimed_page", page }` and the React client renders `UnclaimedBookingPage`.
+  - **claimed** → resolves to `claimedByUserId` and falls through to the existing public profile flow.
+  - else → existing `users.publicProfileSlug` lookup unchanged.
+- Claim flow: `POST /api/claim-page` finds-or-creates a lightweight user (no password / email up front), claims the page, schedules two nudge SMS (10 min, 24 h) via `outbound_messages`, signs an app JWT, and redirects to `/first-booking/:pageId`.
+- `/first-booking/:pageId` is a standalone route (no sidebar, no app nav) with Copy Link + Send via Text. Both actions hit `POST /api/booking-pages/:pageId/events`, which also cancels pending nudge messages.
+- Files: `server/firstBookingRoutes.ts`, `client/src/pages/UnclaimedBookingPage.tsx`, `client/src/pages/FirstBookingPage.tsx`.
+
 ### Apple Review Mode flag
 - Set `VITE_APPLE_REVIEW_MODE=true` in deployment env to enable review-mode UI gating. Read via `import { isAppleReviewMode } from "@/lib/env"`. When on, the SplashPage decorative background shapes and the Pricing FAQ "Contact Support" teaser card are hidden so reviewers see a focused login + checkout flow. Default is off; auth, paywall, and checkout behavior are unchanged.
 

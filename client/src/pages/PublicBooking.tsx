@@ -27,6 +27,7 @@ import { SupportTicketForm } from "@/components/SupportTicketForm";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { useUtmCapture } from "@/hooks/useUtmCapture";
+import UnclaimedBookingPage, { type UnclaimedBookingPageData } from "@/pages/UnclaimedBookingPage";
 
 interface PublicProfile {
   name: string;
@@ -250,7 +251,9 @@ export default function PublicBooking() {
   const [, navigate] = useLocation();
   const [isRedirecting, setIsRedirecting] = useState(false);
 
-  const { data: profile, isLoading, error } = useQuery<PublicProfile>({
+  const { data: profileResponse, isLoading, error } = useQuery<
+    PublicProfile | { kind: "unclaimed_page"; page: UnclaimedBookingPageData }
+  >({
     queryKey: QUERY_KEYS.publicProfile(slug),
     queryFn: async () => {
       const res = await fetch(`/api/public/profile/${slug}`);
@@ -259,12 +262,21 @@ export default function PublicBooking() {
       if (data.redirect) {
         setIsRedirecting(true);
         navigate(`/book/${data.redirect}`, { replace: true });
-        return null as unknown as PublicProfile;
+        return null as any;
       }
       return data;
     },
     enabled: !!slug && !isRedirecting,
   });
+
+  // First-Booking acquisition flow: render the unclaimed UI before any of the
+  // existing booking logic runs, so the current claimed-page experience is untouched.
+  if (profileResponse && (profileResponse as any).kind === "unclaimed_page") {
+    const unclaimed = (profileResponse as { kind: "unclaimed_page"; page: UnclaimedBookingPageData }).page;
+    return <UnclaimedBookingPage page={unclaimed} />;
+  }
+
+  const profile = profileResponse as PublicProfile | undefined;
 
   const selectedDateStr = selectedDate 
     ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`

@@ -2224,8 +2224,9 @@ export type OutboundMessageStatus = typeof outboundMessageStatuses[number];
 export const outboundMessages = pgTable("outbound_messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(),
-  jobId: varchar("job_id").notNull(),
+  jobId: varchar("job_id"), // nullable: standalone messages (e.g. first-booking nudges) have no job
   clientId: varchar("client_id"),
+  bookingPageId: varchar("booking_page_id"), // nullable: links nudge messages back to a booking_pages row for cancellation
   
   channel: text("channel").notNull(), // sms, email, inapp
   toAddress: text("to_address").notNull(), // phone or email
@@ -2254,6 +2255,55 @@ export const insertOutboundMessageSchema = createInsertSchema(outboundMessages).
 
 export type InsertOutboundMessage = z.infer<typeof insertOutboundMessageSchema>;
 export type OutboundMessage = typeof outboundMessages.$inferSelect;
+
+// Pre-generated booking pages for the Growth Engine acquisition flow.
+// Existing user-owned booking pages (resolved via users.publicProfileSlug) are unaffected.
+export const bookingPages = pgTable("booking_pages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  phone: text("phone"), // E.164 of the prospect provider, optional
+  category: text("category"), // e.g. "moving", "cleaning"
+  location: text("location"), // e.g. "Brooklyn"
+  claimed: boolean("claimed").notNull().default(false),
+  claimedAt: text("claimed_at"),
+  claimedByUserId: varchar("claimed_by_user_id"),
+  source: text("source"), // e.g. "growth_engine", "user_created"
+  createdAt: text("created_at").notNull().default(sql`now()`),
+  updatedAt: text("updated_at").notNull().default(sql`now()`),
+}, (table) => [
+  index("booking_pages_claimed_idx").on(table.claimed),
+  index("booking_pages_phone_idx").on(table.phone),
+]);
+
+export const insertBookingPageSchema = createInsertSchema(bookingPages).omit({
+  id: true,
+  claimed: true,
+  claimedAt: true,
+  claimedByUserId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertBookingPage = z.infer<typeof insertBookingPageSchema>;
+export type BookingPage = typeof bookingPages.$inferSelect;
+
+export const bookingPageEventTypes = ["page_viewed", "page_claimed", "link_copied", "link_shared"] as const;
+export type BookingPageEventType = typeof bookingPageEventTypes[number];
+
+export const bookingPageEvents = pgTable("booking_page_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  pageId: varchar("page_id").notNull(),
+  type: text("type").notNull(),
+  metadata: text("metadata"),
+  createdAt: text("created_at").notNull().default(sql`now()`),
+}, (table) => [
+  index("booking_page_events_page_idx").on(table.pageId, table.type),
+]);
+
+export const insertBookingPageEventSchema = createInsertSchema(bookingPageEvents).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertBookingPageEvent = z.infer<typeof insertBookingPageEventSchema>;
+export type BookingPageEvent = typeof bookingPageEvents.$inferSelect;
 
 // Capability usage tracking for plan limits
 export const capabilityUsage = pgTable("capability_usage", {

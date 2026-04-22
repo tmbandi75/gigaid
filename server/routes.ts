@@ -371,6 +371,8 @@ export async function registerRoutes(
 
   app.use("/api", leadEmailRoutes);
   app.use("/api/auth", mobileAuthRoutes);
+  const firstBookingRoutes = (await import("./firstBookingRoutes")).default;
+  app.use("/api", firstBookingRoutes);
   
   startCopilotScheduler();
   startCampaignSuggestionScheduler();
@@ -6109,10 +6111,34 @@ export async function registerRoutes(
   app.get("/api/public/profile/:slug", async (req, res) => {
     try {
       const slug = req.params.slug;
-      let user = await storage.getUserByPublicSlug(slug);
-      
-      // Check if slug is a UUID (user ID) - this is used for onboarding flow
+
+      // First-Booking acquisition flow: try the booking_pages table before falling through.
+      // Only attempts a lookup for UUID-shaped slugs to avoid extra DB hits.
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      let user;
+      if (uuidRegex.test(slug)) {
+        const bookingPage = await storage.getBookingPage(slug).catch(() => undefined);
+        if (bookingPage) {
+          if (!bookingPage.claimed) {
+            return res.json({
+              kind: "unclaimed_page",
+              page: {
+                id: bookingPage.id,
+                phone: bookingPage.phone,
+                category: bookingPage.category,
+                location: bookingPage.location,
+              },
+            });
+          }
+          if (bookingPage.claimedByUserId) {
+            user = await storage.getUser(bookingPage.claimedByUserId);
+          }
+        }
+      }
+      if (!user) {
+        user = await storage.getUserByPublicSlug(slug);
+      }
+
       const isUserIdLookup = uuidRegex.test(slug) && user?.id === slug;
 
       // Redirect if user was found via fallback (legacy user-* pattern) but has a new slug

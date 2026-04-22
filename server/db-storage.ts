@@ -9,6 +9,9 @@ import {
   stallDetections, nextActions, autoExecutionLog, intentSignals, readyActions,
   clients, providerServices, clientNotificationCampaigns, campaignSuggestions,
   capabilityUsage,
+  outboundMessages,
+  bookingPages, bookingPageEvents,
+  type BookingPage, type InsertBookingPage, type BookingPageEventType,
   stripeWebhookEvents, stripePaymentState, stripeIdempotencyLocks, stripeDisputes,
   type User, type InsertUser,
   type Job, type InsertJob,
@@ -2239,6 +2242,50 @@ export class DatabaseStorage implements IStorage {
   async getUsersByStripeConnectAccountId(accountId: string): Promise<User[]> {
     return await db.select().from(users)
       .where(eq(users.stripeConnectAccountId, accountId));
+  }
+
+  // First-Booking acquisition flow
+  async getBookingPage(id: string): Promise<BookingPage | undefined> {
+    const rows = await db.select().from(bookingPages).where(eq(bookingPages.id, id)).limit(1);
+    return rows[0];
+  }
+
+  async createBookingPage(data: InsertBookingPage): Promise<BookingPage> {
+    const rows = await db.insert(bookingPages).values(data).returning();
+    return rows[0];
+  }
+
+  async claimBookingPage(id: string, args: { userId: string; claimedAt: string }): Promise<BookingPage | undefined> {
+    const rows = await db.update(bookingPages)
+      .set({
+        claimed: true,
+        claimedAt: args.claimedAt,
+        claimedByUserId: args.userId,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(and(eq(bookingPages.id, id), eq(bookingPages.claimed, false)))
+      .returning();
+    return rows[0];
+  }
+
+  async trackBookingPageEvent(pageId: string, type: BookingPageEventType, metadata?: string): Promise<void> {
+    await db.insert(bookingPageEvents).values({
+      pageId,
+      type,
+      metadata: metadata ?? null,
+    });
+  }
+
+  async cancelBookingPageNudges(pageId: string): Promise<number> {
+    const now = new Date().toISOString();
+    const rows = await db.update(outboundMessages)
+      .set({ status: "canceled", canceledAt: now, updatedAt: now })
+      .where(and(
+        eq(outboundMessages.bookingPageId, pageId),
+        inArray(outboundMessages.status, ["scheduled", "queued"]),
+      ))
+      .returning({ id: outboundMessages.id });
+    return rows.length;
   }
 }
 

@@ -39,6 +39,7 @@ import HelpSupport from "@/pages/HelpSupport";
 import UserGuides from "@/pages/UserGuides";
 import AITools from "@/pages/AITools";
 import PublicBooking from "@/pages/PublicBooking";
+import FirstBookingPage from "@/pages/FirstBookingPage";
 import FreeSetup from "@/pages/FreeSetup";
 import InvoiceRating from "@/pages/InvoiceRating";
 import CrewPortal from "@/pages/CrewPortal";
@@ -312,6 +313,7 @@ function App() {
                 <Switch>
                 <Route path="/free-setup" component={FreeSetup} />
                 <Route path="/book/:slug" component={PublicBooking} />
+                <Route path="/first-booking/:pageId" component={FirstBookingPage} />
                 <Route path="/booking/:token" component={CustomerBookingDetail} />
                 <Route path="/invoice/:token" component={PublicInvoice} />
                 <Route path="/invoice/:id/rate" component={InvoiceRating} />
