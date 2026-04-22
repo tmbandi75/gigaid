@@ -44,10 +44,16 @@ router.get("/booking-pages/:pageId", async (req: Request, res: Response) => {
   try {
     const page = await storage.getBookingPage(req.params.pageId);
     if (!page) return res.status(404).json({ error: "Not found" });
+    // Server-backed ownership check: only set isOwner when the caller's signed
+    // app JWT subject matches the page's claimedByUserId. This is what gates
+    // access to the standalone /first-booking/:pageId screen.
+    const callerId = getUserIdFromBearer(req);
+    const isOwner = !!page.claimedByUserId && !!callerId && callerId === page.claimedByUserId;
     return res.json({
       page: {
         id: page.id,
         claimed: page.claimed,
+        isOwner,
       },
     });
   } catch (err: any) {
@@ -128,16 +134,16 @@ router.post("/claim-page", async (req: Request, res: Response) => {
           id: newId,
           username,
           password: randomUUID(), // placeholder; not used (claim flow has no password login)
-          name: name || null,
+          name: name ?? null,
           // Intentionally do NOT persist `phone` on the user. Phone is unverified at
           // this point; saving it could later be mistaken for a verified contact.
           publicProfileEnabled: false,
           publicProfileSlug: `user-${newId.slice(0, 8).toLowerCase()}`,
           onboardingCompleted: false,
           authProvider: "claim",
-          defaultServiceType: serviceType || page.category || null,
+          defaultServiceType: serviceType ?? page.category ?? null,
           createdAt: nowIso,
-        } as any).returning();
+        }).returning();
 
         const [claimed] = await trx.update(bookingPages)
           .set({

@@ -8,12 +8,15 @@ import { getAuthToken } from "@/lib/authToken";
 interface BookingPageDto {
   id: string;
   claimed: boolean;
-  claimedByUserId: string | null;
+  isOwner: boolean;
 }
 
 async function fetchPage(pageId: string): Promise<BookingPageDto | null> {
   try {
-    const res = await fetch(`/api/booking-pages/${pageId}`);
+    const token = getAuthToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(`/api/booking-pages/${pageId}`, { headers });
     if (!res.ok) return null;
     const data = await res.json();
     return data.page as BookingPageDto;
@@ -61,7 +64,9 @@ export default function FirstBookingPage() {
       if (!pageId) return;
       const page = await fetchPage(pageId);
       if (cancelled) return;
-      if (!page || !page.claimed) {
+      // Server-backed ownership check: only the user whose JWT matches
+      // claimedByUserId is allowed on this screen. Non-owners get redirected.
+      if (!page || !page.claimed || !page.isOwner) {
         setLocation("/");
         return;
       }

@@ -262,7 +262,7 @@ export default function PublicBooking() {
       if (data.redirect) {
         setIsRedirecting(true);
         navigate(`/book/${data.redirect}`, { replace: true });
-        return null as any;
+        return { redirected: true } as { redirected: true };
       }
       return data;
     },

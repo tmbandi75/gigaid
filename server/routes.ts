@@ -6116,6 +6116,7 @@ export async function registerRoutes(
       // Only attempts a lookup for UUID-shaped slugs to avoid extra DB hits.
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       let user;
+      let isClaimedBookingPageLookup = false;
       if (uuidRegex.test(slug)) {
         const bookingPage = await storage.getBookingPage(slug).catch(() => undefined);
         if (bookingPage) {
@@ -6132,6 +6133,7 @@ export async function registerRoutes(
           }
           if (bookingPage.claimedByUserId) {
             user = await storage.getUser(bookingPage.claimedByUserId);
+            isClaimedBookingPageLookup = !!user;
           }
         }
       }
@@ -6139,7 +6141,11 @@ export async function registerRoutes(
         user = await storage.getUserByPublicSlug(slug);
       }
 
-      const isUserIdLookup = uuidRegex.test(slug) && user?.id === slug;
+      // Claimed booking pages always render the booking UI: callers used the
+      // booking_pages.id (a stable share URL we already gave the customer), so we
+      // intentionally bypass the publicProfileSlug redirect and the
+      // publicProfileEnabled gate that protect username-based public profiles.
+      const isUserIdLookup = (uuidRegex.test(slug) && user?.id === slug) || isClaimedBookingPageLookup;
 
       // Redirect if user was found via fallback (legacy user-* pattern) but has a new slug
       // Don't redirect UUID lookups since those are used by onboarding flow
