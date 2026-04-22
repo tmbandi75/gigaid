@@ -108,12 +108,26 @@ export function useOnboarding(onComplete: () => void, initialStep?: number) {
 
   useEffect(() => {
     if (user) {
-      setIdentity(prev => ({
-        ...prev,
-        firstName: (user as any).firstName || (user as any).name?.split(" ")[0] || "",
-        lastName: (user as any).lastName || "",
-        businessName: (user as any).businessName || "",
-      }));
+      setIdentity((prev) => {
+        const nextFirstName = (user as any).firstName || (user as any).name?.split(" ")[0] || "";
+        const nextLastName = (user as any).lastName || "";
+        const nextBusinessName = (user as any).businessName || "";
+
+        if (
+          prev.firstName === nextFirstName &&
+          prev.lastName === nextLastName &&
+          prev.businessName === nextBusinessName
+        ) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          firstName: nextFirstName,
+          lastName: nextLastName,
+          businessName: nextBusinessName,
+        };
+      });
     }
   }, [user]);
 
@@ -155,13 +169,13 @@ export function useOnboarding(onComplete: () => void, initialStep?: number) {
   };
 
   const handleIdentitySubmit = async () => {
-    if (!identity.firstName.trim() || !identity.serviceType) {
+    if (!identity.serviceType) {
       toast({ title: "Please fill in required fields" });
       return;
     }
 
     await updateProfileMutation.mutateAsync({
-      firstName: identity.firstName,
+      firstName: identity.firstName.trim() || null,
       lastName: identity.lastName || null,
       businessName: identity.businessName || null,
       defaultServiceType: identity.serviceType,
