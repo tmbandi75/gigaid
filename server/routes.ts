@@ -151,6 +151,29 @@ function pruneQuoteCache() {
   }
 }
 
+// Shared resolver for any public booking endpoint that takes a slug. Tries the
+// First-Booking `booking_pages` table first (UUID slugs only) and falls back to
+// the existing `users.publicProfileSlug` lookup. Claimed booking-page lookups
+// always set `bypassEnabledGate` because the caller is using a stable share URL
+// we already handed out, so we should not require `users.publicProfileEnabled`.
+const PUBLIC_SLUG_UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function resolvePublicBookingOwner(slug: string): Promise<{
+  user: Awaited<ReturnType<typeof storage.getUser>> | undefined;
+  bypassEnabledGate: boolean;
+}> {
+  if (PUBLIC_SLUG_UUID_REGEX.test(slug)) {
+    const page = await storage.getBookingPage(slug).catch(() => undefined);
+    if (page?.claimed && page.claimedByUserId) {
+      const user = await storage.getUser(page.claimedByUserId);
+      if (user) return { user, bypassEnabledGate: true };
+    }
+  }
+  const user = await storage.getUserByPublicSlug(slug);
+  const bypassEnabledGate = !!user && PUBLIC_SLUG_UUID_REGEX.test(slug) && user.id === slug;
+  return { user, bypassEnabledGate };
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -5404,11 +5427,8 @@ export async function registerRoutes(
   app.post("/api/public/book/:slug", async (req, res) => {
     try {
       const slug = req.params.slug;
-      const user = await storage.getUserByPublicSlug(slug);
-      
-      // Check if slug is a UUID (user ID) - this is used for onboarding flow
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      const isUserIdLookup = uuidRegex.test(slug) && user?.id === slug;
+      // resolvePublicBookingOwner also handles claimed booking_pages.id slugs.
+      const { user, bypassEnabledGate: isUserIdLookup } = await resolvePublicBookingOwner(slug);
       
       // For publicProfileSlug lookups, require publicProfileEnabled
       // For user ID lookups (onboarding), allow access even if not enabled
@@ -6112,40 +6132,31 @@ export async function registerRoutes(
     try {
       const slug = req.params.slug;
 
-      // First-Booking acquisition flow: try the booking_pages table before falling through.
-      // Only attempts a lookup for UUID-shaped slugs to avoid extra DB hits.
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      let user;
-      let isClaimedBookingPageLookup = false;
+      // First-Booking acquisition flow: detect unclaimed booking-page IDs first
+      // so we can render the unclaimed UI without ever touching the user table.
+      const uuidRegex = PUBLIC_SLUG_UUID_REGEX;
       if (uuidRegex.test(slug)) {
         const bookingPage = await storage.getBookingPage(slug).catch(() => undefined);
-        if (bookingPage) {
-          if (!bookingPage.claimed) {
-            return res.json({
-              kind: "unclaimed_page",
-              page: {
-                id: bookingPage.id,
-                phone: bookingPage.phone,
-                category: bookingPage.category,
-                location: bookingPage.location,
-              },
-            });
-          }
-          if (bookingPage.claimedByUserId) {
-            user = await storage.getUser(bookingPage.claimedByUserId);
-            isClaimedBookingPageLookup = !!user;
-          }
+        if (bookingPage && !bookingPage.claimed) {
+          return res.json({
+            kind: "unclaimed_page",
+            page: {
+              id: bookingPage.id,
+              phone: bookingPage.phone,
+              category: bookingPage.category,
+              location: bookingPage.location,
+            },
+          });
         }
       }
-      if (!user) {
-        user = await storage.getUserByPublicSlug(slug);
-      }
+
+      const { user, bypassEnabledGate } = await resolvePublicBookingOwner(slug);
 
       // Claimed booking pages always render the booking UI: callers used the
       // booking_pages.id (a stable share URL we already gave the customer), so we
       // intentionally bypass the publicProfileSlug redirect and the
       // publicProfileEnabled gate that protect username-based public profiles.
-      const isUserIdLookup = (uuidRegex.test(slug) && user?.id === slug) || isClaimedBookingPageLookup;
+      const isUserIdLookup = bypassEnabledGate;
 
       // Redirect if user was found via fallback (legacy user-* pattern) but has a new slug
       // Don't redirect UUID lookups since those are used by onboarding flow
@@ -6459,11 +6470,8 @@ export async function registerRoutes(
   app.get("/api/public/available-slots/:slug/:date", async (req, res) => {
     try {
       const slug = req.params.slug;
-      const user = await storage.getUserByPublicSlug(slug);
-      
-      // Check if slug is a UUID (user ID) - this is used for onboarding flow
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      const isUserIdLookup = uuidRegex.test(slug) && user?.id === slug;
+      // resolvePublicBookingOwner also handles claimed booking_pages.id slugs.
+      const { user, bypassEnabledGate: isUserIdLookup } = await resolvePublicBookingOwner(slug);
       
       // For publicProfileSlug lookups, require publicProfileEnabled
       // For user ID lookups (onboarding), allow access even if not enabled
@@ -6537,11 +6545,8 @@ export async function registerRoutes(
       const { getDistanceBetweenZips, estimateTravelTime, extractZipFromLocation } = await import("./zipDistance");
       
       const slug = req.params.slug;
-      const user = await storage.getUserByPublicSlug(slug);
-      
-      // Check if slug is a UUID (user ID) - this is used for onboarding flow
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      const isUserIdLookup = uuidRegex.test(slug) && user?.id === slug;
+      // resolvePublicBookingOwner also handles claimed booking_pages.id slugs.
+      const { user, bypassEnabledGate: isUserIdLookup } = await resolvePublicBookingOwner(slug);
       
       // For publicProfileSlug lookups, require publicProfileEnabled
       // For user ID lookups (onboarding), allow access even if not enabled
@@ -6688,11 +6693,8 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Missing userInput or slug" });
       }
 
-      const user = await storage.getUserByPublicSlug(slug);
-      
-      // Check if slug is a UUID (user ID) - this is used for onboarding flow
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      const isUserIdLookup = uuidRegex.test(slug) && user?.id === slug;
+      // resolvePublicBookingOwner also handles claimed booking_pages.id slugs.
+      const { user, bypassEnabledGate: isUserIdLookup } = await resolvePublicBookingOwner(slug);
       
       // For publicProfileSlug lookups, require publicProfileEnabled
       // For user ID lookups (onboarding), allow access even if not enabled
@@ -6741,7 +6743,7 @@ export async function registerRoutes(
       let services: string[] = [];
 
       if (slug) {
-        const user = await storage.getUserByPublicSlug(slug);
+        const { user } = await resolvePublicBookingOwner(slug);
         if (user) {
           providerName = user.name || user.businessName || "the service provider";
           services = user.services || [];
@@ -6767,7 +6769,7 @@ export async function registerRoutes(
       let services: Array<{ name: string; price?: number }> = [];
 
       if (slug) {
-        const user = await storage.getUserByPublicSlug(slug);
+        const { user } = await resolvePublicBookingOwner(slug);
         if (user && user.services) {
           services = user.services.map(s => ({ name: s }));
         }
@@ -6803,7 +6805,7 @@ export async function registerRoutes(
       // Check provider settings
       let providerEnabled = true;
       if (slug) {
-        const user = await storage.getUserByPublicSlug(slug);
+        const { user } = await resolvePublicBookingOwner(slug);
         if (user) {
           providerEnabled = user.publicEstimationEnabled !== false;
         }
@@ -6897,7 +6899,7 @@ Final price confirmed onsite.`;
         return res.status(400).json({ error: "Missing required fields" });
       }
 
-      const user = await storage.getUserByPublicSlug(slug);
+      const { user } = await resolvePublicBookingOwner(slug);
       if (!user) {
         return res.status(404).json({ error: "Provider not found" });
       }

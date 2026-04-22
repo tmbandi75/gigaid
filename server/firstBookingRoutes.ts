@@ -106,7 +106,12 @@ router.post("/claim-page", async (req: Request, res: Response) => {
     if (!parsed.success) {
       return res.status(400).json({ error: "Invalid claim payload" });
     }
-    const { pageId, name, phone: bodyPhone, serviceType } = parsed.data;
+    const { pageId, name, serviceType } = parsed.data;
+    // NOTE: `phone` from the request body is intentionally ignored when scheduling
+    // nudge SMS. The body's phone is unverified caller input and could be abused
+    // to make us send Twilio messages to arbitrary numbers (spam / cost). The
+    // nudge destination is taken only from `booking_pages.phone`, which is the
+    // prospect phone we recorded server-side when generating the page.
 
     if (!isAppJwtConfigured()) {
       return res.status(503).json({ error: "Authentication is not fully configured." });
@@ -116,7 +121,7 @@ router.post("/claim-page", async (req: Request, res: Response) => {
     if (!page) return res.status(404).json({ error: "Page not found" });
     if (page.claimed) return res.status(400).json({ error: "Page already claimed" });
 
-    const phone = normalizePhone(bodyPhone) ?? normalizePhone(page.phone);
+    const phone = normalizePhone(page.phone);
 
     let userId: string;
     let claimedAt: string;
