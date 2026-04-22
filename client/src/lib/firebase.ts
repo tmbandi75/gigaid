@@ -186,6 +186,8 @@ export async function signInWithApple(): Promise<string> {
         const userCredential = await signInWithCredential(a, credential);
         logger.info("[AppleSignIn] Native sign-in succeeded", {
           email: userCredential.user.email,
+          nameReceived: Boolean(userCredential.user.displayName),
+          emailReceived: Boolean(userCredential.user.email),
         });
         return await userCredential.user.getIdToken();
       } catch (nativeError: any) {
@@ -211,7 +213,11 @@ export async function signInWithApple(): Promise<string> {
 
   try {
     const result = await signInWithPopup(a, appleProvider);
-    logger.info("[AppleSignIn] Popup succeeded", { email: result.user.email });
+    logger.info("[AppleSignIn] Popup succeeded", {
+      email: result.user.email,
+      nameReceived: Boolean(result.user.displayName),
+      emailReceived: Boolean(result.user.email),
+    });
     return await result.user.getIdToken();
   } catch (popupError: any) {
     logger.error("[AppleSignIn] Popup error:", popupError?.code, popupError?.message);

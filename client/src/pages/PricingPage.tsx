@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Plan, PLAN_PRICES_DOLLARS } from "@shared/plans";
 import { startSubscriptionUpgrade, SubscriptionPlan } from "@/lib/stripeCheckout";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useState, useEffect, useRef } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,6 +14,7 @@ import { QUERY_KEYS } from "@/lib/queryKeys";
 import { trackEvent } from "@/components/PostHogProvider";
 import { emitChurnEvent } from "@/lib/churnEvents";
 import { logger } from "@/lib/logger";
+import { isAppleReviewMode } from "@/lib/env";
 
 interface PlanFeature {
   text: string;
@@ -432,7 +433,8 @@ export default function PricingPage() {
 
         {/* Bottom Section */}
         <div className="mt-16 text-center space-y-8" data-testid="section-bottom">
-          {/* FAQ Teaser */}
+          {/* FAQ Teaser — hidden in Apple review mode to keep the flow focused */}
+          {!isAppleReviewMode && (
           <Card className="max-w-2xl mx-auto" data-testid="card-faq">
             <CardContent className="py-6">
               <h3 className="font-semibold mb-2" data-testid="text-faq-title">Have questions?</h3>
@@ -448,6 +450,7 @@ export default function PricingPage() {
               </Button>
             </CardContent>
           </Card>
+          )}
 
           {/* Fine Print — Apple-required auto-renewal disclosure */}
           <p className="text-xs text-muted-foreground max-w-xl mx-auto" data-testid="text-fine-print">
@@ -456,6 +459,28 @@ export default function PricingPage() {
             takes effect at the end of the current billing period. No partial refunds for
             unused time. Payment is processed securely through Stripe.
           </p>
+
+          {/* Legal Links — Apple Guideline 3.1.2 compliance */}
+          <div
+            className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-muted-foreground"
+            data-testid="section-legal-links"
+          >
+            <Link
+              href="/privacy"
+              className="underline hover:text-foreground"
+              data-testid="link-privacy-policy"
+            >
+              Privacy Policy
+            </Link>
+            <span aria-hidden="true">·</span>
+            <Link
+              href="/terms"
+              className="underline hover:text-foreground"
+              data-testid="link-terms-of-use"
+            >
+              Terms of Use
+            </Link>
+          </div>
         </div>
       </div>
     </div>

@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Lock, Check } from "lucide-react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { trackEvent } from "@/components/PostHogProvider";
 import { emitChurnEvent } from "@/lib/churnEvents";
 import { getInterceptInfo } from "./upgradeInterceptConfig";
@@ -101,6 +101,28 @@ export function UpgradeInterceptModal({
             Manage billing at{" "}
             <a href="https://gigaid.ai/account" target="_blank" rel="noopener noreferrer" className="underline">gigaid.ai/account</a>.
           </p>
+          <div
+            className="flex items-center justify-center gap-3 text-[10px] text-muted-foreground"
+            data-testid="section-legal-links-intercept"
+          >
+            <Link
+              href="/privacy"
+              className="underline hover:text-foreground"
+              onClick={() => onOpenChange(false)}
+              data-testid="link-privacy-policy-intercept"
+            >
+              Privacy Policy
+            </Link>
+            <span aria-hidden="true">·</span>
+            <Link
+              href="/terms"
+              className="underline hover:text-foreground"
+              onClick={() => onOpenChange(false)}
+              data-testid="link-terms-of-use-intercept"
+            >
+              Terms of Use
+            </Link>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

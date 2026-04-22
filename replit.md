@@ -125,3 +125,20 @@ To enforce App Check (block requests without valid tokens):
 - **Analytics Consent Modal**: Pre-set via `addInitScript` to localStorage before navigation to prevent modal from rendering at z-[9999].
 - **Optional Steps**: Steps with `"optional": true` in JSON don't fail the scenario. Used for conditional UI elements (e.g., restore-access button in churn recovery).
 - **Test User**: `uat-test@gigaid.ai` / `UatTest123!` — needs `onboarding_completed=true`, `payday_onboarding_completed=true`, and `default_price` set in DB to avoid ActivationGate redirects.
+
+## Apple App Store Compliance
+
+### Sign in with Apple (Guideline 4)
+- Apple sign-in flow is **silent post-login**: no UI prompts the user for name or email after Apple authentication.
+- The server (`server/mobileAuthRoutes.ts` `/api/auth/web/firebase`) auto-creates the user from whatever Firebase returns. `name` is optional and falls back to an email-derived username when Apple withholds it (relay email + suppressed name on second login).
+- `[AppleSignIn]` logs report `nameReceived` / `emailReceived` booleans on every success path. Tokens, nonces, and raw credentials are never logged.
+
+### Subscriptions (Guideline 3.1.2)
+- The Pricing page (`/pricing`) and Upgrade Intercept modal both expose clickable **Privacy Policy** (`/privacy`) and **Terms of Use** (`/terms`) links before checkout.
+- Each plan card shows title, duration label, and price.
+- Auto-renewal disclosure is rendered in the bottom fine print on the Pricing page.
+- App Store Connect TODO (manual, outside this codebase): set the Privacy Policy URL, and either fill the EULA field or link to Apple’s standard EULA (https://www.apple.com/legal/internet-services/itunes/dev/stdeula/) in the App Description.
+
+### Apple Review Mode flag
+- Set `VITE_APPLE_REVIEW_MODE=true` in deployment env to enable review-mode UI gating. Read via `import { isAppleReviewMode } from "@/lib/env"`. Default is off; current build has no review-only banners but the helper is wired for future use.
+
