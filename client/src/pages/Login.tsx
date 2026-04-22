@@ -43,7 +43,12 @@ export default function Login() {
   const [, navigate] = useLocation();
   const { isAuthenticated, isLoggingOut, refetchUser } = useAuth();
   const { toast } = useToast();
-  const { setTokenReady, signInWithGoogle, signInWithApple } = useFirebaseAuth();
+  const {
+    setTokenReady,
+    signInWithGoogle,
+    signInWithApple,
+    setInteractiveExchangeInProgress,
+  } = useFirebaseAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isAppleLoading, setIsAppleLoading] = useState(false);
   const [isEmailLoading, setIsEmailLoading] = useState(false);
@@ -59,60 +64,65 @@ export default function Login() {
 
 
   const exchangeTokenAndNavigate = async (idToken: string) => {
-    const response = await fetch("/api/auth/web/firebase", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idToken }),
-    });
-    let body: unknown = null;
+    setInteractiveExchangeInProgress(true);
     try {
-      const text = await response.text();
-      if (text) body = JSON.parse(text) as unknown;
-    } catch {
-      body = null;
-    }
+      const response = await fetch("/api/auth/web/firebase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+      let body: unknown = null;
+      try {
+        const text = await response.text();
+        if (text) body = JSON.parse(text) as unknown;
+      } catch {
+        body = null;
+      }
 
-    if (response.status === 403 && isAccountDeletedExchangePayload(body)) {
-      await cleanupAfterDeletedAccountExchange();
-      setTokenReady(false);
-      if (shouldShowDeletedAccountToast()) {
-        const msg =
+      if (response.status === 403 && isAccountDeletedExchangePayload(body)) {
+        await cleanupAfterDeletedAccountExchange();
+        setTokenReady(false);
+        if (shouldShowDeletedAccountToast()) {
+          const msg =
+            body &&
+            typeof body === "object" &&
+            "error" in body &&
+            typeof (body as { error: unknown }).error === "string"
+              ? (body as { error: string }).error
+              : "This account was deleted and cannot be used to sign in.";
+          toast({
+            title: "Account closed",
+            description: msg,
+            variant: "destructive",
+          });
+        }
+        return;
+      }
+
+      if (!response.ok) {
+        const errMsg =
           body &&
           typeof body === "object" &&
           "error" in body &&
           typeof (body as { error: unknown }).error === "string"
             ? (body as { error: string }).error
-            : "This account was deleted and cannot be used to sign in.";
-        toast({
-          title: "Account closed",
-          description: msg,
-          variant: "destructive",
-        });
+            : "Authentication failed";
+        throw new Error(errMsg);
       }
-      return;
-    }
 
-    if (!response.ok) {
-      const errMsg =
-        body &&
-        typeof body === "object" &&
-        "error" in body &&
-        typeof (body as { error: unknown }).error === "string"
-          ? (body as { error: string }).error
-          : "Authentication failed";
-      throw new Error(errMsg);
+      const data = body as { token?: string };
+      if (!data?.token || typeof data.token !== "string") {
+        throw new Error("Authentication failed");
+      }
+      const auth = getFirebaseAuth();
+      const currentUid = auth?.currentUser?.uid || null;
+      setAuthToken(data.token, currentUid || undefined);
+      setTokenReady(true);
+      await refetchUser();
+      navigate("/");
+    } finally {
+      setInteractiveExchangeInProgress(false);
     }
-
-    const data = body as { token?: string };
-    if (!data?.token || typeof data.token !== "string") {
-      throw new Error("Authentication failed");
-    }
-    const auth = getFirebaseAuth();
-    const currentUid = auth?.currentUser?.uid || null;
-    setAuthToken(data.token, currentUid || undefined);
-    setTokenReady(true);
-    await refetchUser();
-    navigate("/");
   };
 
   useEffect(() => {
