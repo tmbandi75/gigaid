@@ -182,12 +182,26 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
 
   useEffect(() => {
     if (user) {
-      setIdentity(prev => ({
-        ...prev,
-        firstName: (user as any).firstName || (user as any).name?.split(" ")[0] || "",
-        lastName: (user as any).lastName || "",
-        businessName: (user as any).businessName || "",
-      }));
+      setIdentity((prev) => {
+        const nextFirstName = (user as any).firstName || (user as any).name?.split(" ")[0] || "";
+        const nextLastName = (user as any).lastName || "";
+        const nextBusinessName = (user as any).businessName || "";
+
+        if (
+          prev.firstName === nextFirstName &&
+          prev.lastName === nextLastName &&
+          prev.businessName === nextBusinessName
+        ) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          firstName: nextFirstName,
+          lastName: nextLastName,
+          businessName: nextBusinessName,
+        };
+      });
     }
   }, [user]);
 
@@ -229,13 +243,13 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
   };
 
   const handleIdentitySubmit = async () => {
-    if (!identity.firstName.trim() || !identity.serviceType) {
+    if (!identity.serviceType) {
       toast({ title: "Please fill in required fields" });
       return;
     }
     
     await updateProfileMutation.mutateAsync({
-      firstName: identity.firstName,
+      firstName: identity.firstName.trim() || null,
       lastName: identity.lastName || null,
       businessName: identity.businessName || null,
       defaultServiceType: identity.serviceType,
@@ -429,7 +443,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
                 
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName" className="text-base">First name *</Label>
+                    <Label htmlFor="firstName" className="text-base">First name (optional)</Label>
                     <Input
                       id="firstName"
                       value={identity.firstName}
@@ -441,7 +455,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="lastName" className="text-base">Last name</Label>
+                    <Label htmlFor="lastName" className="text-base">Last name (optional)</Label>
                     <Input
                       id="lastName"
                       value={identity.lastName}
@@ -508,7 +522,7 @@ export function OnboardingFlow({ onComplete, initialStep }: OnboardingFlowProps)
                   size="lg" 
                   className="w-full h-14 text-lg rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-[#4F46E5]/30"
                   onClick={handleIdentitySubmit}
-                  disabled={!identity.firstName.trim() || !identity.serviceType || updateProfileMutation.isPending}
+                  disabled={!identity.serviceType || updateProfileMutation.isPending}
                   data-testid="button-identity-continue"
                 >
                   {updateProfileMutation.isPending ? (

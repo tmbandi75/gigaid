@@ -190,7 +190,7 @@ function IdentityStep({ ob }: { ob: ObType }) {
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="firstName" className="text-base">First name *</Label>
+              <Label htmlFor="firstName" className="text-base">First name (optional)</Label>
               <Input
                 id="firstName"
                 value={ob.identity.firstName}
@@ -201,7 +201,7 @@ function IdentityStep({ ob }: { ob: ObType }) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="lastName" className="text-base">Last name</Label>
+              <Label htmlFor="lastName" className="text-base">Last name (optional)</Label>
               <Input
                 id="lastName"
                 value={ob.identity.lastName}
@@ -269,7 +269,7 @@ function IdentityStep({ ob }: { ob: ObType }) {
           size="lg"
           className="h-12 px-8 text-base rounded-xl bg-[#4F46E5] text-white shadow-lg shadow-[#4F46E5]/30"
           onClick={ob.handleIdentitySubmit}
-          disabled={!ob.identity.firstName.trim() || !ob.identity.serviceType || ob.updateProfileMutation.isPending}
+          disabled={!ob.identity.serviceType || ob.updateProfileMutation.isPending}
           data-testid="button-identity-continue"
         >
           {ob.updateProfileMutation.isPending ? (
