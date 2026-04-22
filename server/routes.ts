@@ -2729,9 +2729,20 @@ export async function registerRoutes(
       if (isOfflineSync && newPhotosCount > 0) {
         const user = await storage.getUser(job.userId);
         if (!isDeveloper(user)) {
+          const userPlan = (user?.plan as CapPlan) || 'free';
+          let lastUsage = 0;
           for (let i = 0; i < newPhotosCount; i++) {
-            await storage.incrementCapabilityUsage(job.userId, 'offline.photos');
+            const updated = await storage.incrementCapabilityUsage(job.userId, 'offline.photos');
+            lastUsage = updated.usageCount;
           }
+          // Fire-and-forget quota notification at 80% / 100% of monthly limit.
+          // Single dispatch with the final count avoids spamming when a batch
+          // crosses both thresholds in one upload.
+          import("./usageQuotaNotifier")
+            .then(({ maybeSendQuotaAlert }) =>
+              maybeSendQuotaAlert(job.userId, userPlan, 'offline.photos', lastUsage)
+            )
+            .catch(err => logger.error("[QuotaNotifier] dispatch failed", err));
         }
       }
 
@@ -4185,7 +4196,13 @@ export async function registerRoutes(
       if (smsResult.success) {
         // Increment SMS usage after successful send
         if (!isDeveloper(user)) {
-          await storage.incrementCapabilityUsage(userId, 'sms.two_way');
+          const updatedSmsUsage = await storage.incrementCapabilityUsage(userId, 'sms.two_way');
+          // Fire-and-forget quota notification at 80% / 100% of monthly limit.
+          import("./usageQuotaNotifier")
+            .then(({ maybeSendQuotaAlert }) =>
+              maybeSendQuotaAlert(userId, userPlan, 'sms.two_way', updatedSmsUsage.usageCount)
+            )
+            .catch(err => logger.error("[QuotaNotifier] dispatch failed", err));
         }
         
         // Track first GigAid message for tooltip (one-time)
@@ -12650,6 +12667,15 @@ Return ONLY the message text, no JSON or formatting.`
       }
       
       const updated = await storage.incrementCapabilityUsage((req as any).userId, capability);
+      
+      // Fire-and-forget quota notification at 80% / 100% of monthly limit.
+      // Covers capabilities incremented through this generic endpoint
+      // (deposits, auto follow-ups, price confirmations, etc.).
+      import("./usageQuotaNotifier")
+        .then(({ maybeSendQuotaAlert }) =>
+          maybeSendQuotaAlert((req as any).userId, plan, capability, updated.usageCount)
+        )
+        .catch(err => logger.error("[QuotaNotifier] dispatch failed", err));
       
       // Re-check after increment for new status
       const newResult = canPerform(plan, capability, updated.usageCount);

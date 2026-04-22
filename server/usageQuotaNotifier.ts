@@ -12,6 +12,56 @@ const UPGRADE_URL_BASE = process.env.FRONTEND_URL || "https://account.gigaid.ai"
 
 type Threshold = 80 | 100;
 
+interface CapabilityCopy {
+  noun: string;
+  blockedNote: string;
+  benefit: string;
+}
+
+const CAPABILITY_COPY: Partial<Record<Capability, CapabilityCopy>> = {
+  'jobs.create': {
+    noun: 'jobs',
+    blockedNote: "New jobs are paused until your quota resets",
+    benefit: "unlimited job creation",
+  },
+  'sms.two_way': {
+    noun: 'SMS replies',
+    blockedNote: "New SMS replies are paused until your quota resets",
+    benefit: "unlimited two-way messaging",
+  },
+  'sms.auto_followups': {
+    noun: 'auto follow-ups',
+    blockedNote: "Automatic follow-ups are paused until your quota resets",
+    benefit: "unlimited automatic follow-ups",
+  },
+  'deposit.enforce': {
+    noun: 'enforced deposits',
+    blockedNote: "You won't be able to enforce more deposits until your quota resets",
+    benefit: "unlimited deposit enforcement",
+  },
+  'price.confirmation': {
+    noun: 'price confirmations',
+    blockedNote: "New price confirmations are paused until your quota resets",
+    benefit: "unlimited price confirmations",
+  },
+  'offline.photos': {
+    noun: 'offline photos',
+    blockedNote: "Offline photo uploads are paused until your quota resets",
+    benefit: "unlimited offline photo uploads",
+  },
+};
+
+function getCopy(capability: Capability): CapabilityCopy {
+  const preset = CAPABILITY_COPY[capability];
+  if (preset) return preset;
+  const label = (CAPABILITY_DISPLAY_NAMES[capability] || capability).toLowerCase();
+  return {
+    noun: label,
+    blockedNote: `New ${label} are paused until your quota resets`,
+    benefit: `unlimited ${label}`,
+  };
+}
+
 function buildEmailContent(
   capability: Capability,
   threshold: Threshold,
@@ -19,39 +69,39 @@ function buildEmailContent(
   limit: number,
   firstName: string | null,
 ) {
-  const label = CAPABILITY_DISPLAY_NAMES[capability] || capability;
+  const { noun, blockedNote, benefit } = getCopy(capability);
   const greeting = firstName ? `Hi ${firstName},` : "Hi,";
   const upgradeUrl = `${UPGRADE_URL_BASE}/upgrade?from=quota_${threshold}&capability=${encodeURIComponent(capability)}`;
 
   if (threshold === 100) {
-    const subject = `You've used all ${limit} of your monthly ${label.toLowerCase()} on the Free plan`;
+    const subject = `You've used all ${limit} ${noun} on the Free plan this month`;
     const text = `${greeting}
 
-You've reached your Free plan limit of ${limit} ${label.toLowerCase()} this month (${current}/${limit}). New ${label.toLowerCase()} are paused until your quota resets.
+You've reached your Free plan limit of ${limit} ${noun} this month (${current}/${limit}). ${blockedNote}.
 
-Upgrade to Pro for unlimited ${label.toLowerCase()} and keep your business moving:
+Upgrade to Pro for ${benefit} and keep your business moving:
 ${upgradeUrl}
 
 — GigAid`;
     const html = `<p>${greeting}</p>
-<p>You've reached your Free plan limit of <strong>${limit} ${label.toLowerCase()}</strong> this month (${current}/${limit}). New ${label.toLowerCase()} are paused until your quota resets.</p>
+<p>You've reached your Free plan limit of <strong>${limit} ${noun}</strong> this month (${current}/${limit}). ${blockedNote}.</p>
 <p><a href="${upgradeUrl}" style="display:inline-block;padding:10px 16px;background:#0f172a;color:#fff;border-radius:6px;text-decoration:none">Upgrade to Pro</a></p>
-<p>Pro gives you unlimited ${label.toLowerCase()} and keeps your business moving without interruptions.</p>
+<p>Pro gives you ${benefit} and keeps your business moving without interruptions.</p>
 <p>— GigAid</p>`;
     return { subject, text, html };
   }
 
-  const subject = `You're at 80% of your monthly ${label.toLowerCase()} on the Free plan`;
+  const subject = `You're at 80% of your monthly ${noun} on the Free plan`;
   const text = `${greeting}
 
-Heads up — you've used ${current} of your ${limit} monthly ${label.toLowerCase()} on the Free plan. You'll be blocked from creating new ones once you hit ${limit}.
+Heads up — you've used ${current} of your ${limit} monthly ${noun} on the Free plan. Once you hit ${limit}, ${blockedNote.charAt(0).toLowerCase()}${blockedNote.slice(1)}.
 
-Upgrade to Pro for unlimited ${label.toLowerCase()}:
+Upgrade to Pro for ${benefit}:
 ${upgradeUrl}
 
 — GigAid`;
   const html = `<p>${greeting}</p>
-<p>Heads up — you've used <strong>${current} of your ${limit}</strong> monthly ${label.toLowerCase()} on the Free plan. You'll be blocked from creating new ones once you hit ${limit}.</p>
+<p>Heads up — you've used <strong>${current} of your ${limit}</strong> monthly ${noun} on the Free plan. Once you hit ${limit}, ${blockedNote.charAt(0).toLowerCase()}${blockedNote.slice(1)}.</p>
 <p><a href="${upgradeUrl}" style="display:inline-block;padding:10px 16px;background:#0f172a;color:#fff;border-radius:6px;text-decoration:none">Upgrade to Pro</a></p>
 <p>— GigAid</p>`;
   return { subject, text, html };
@@ -104,11 +154,23 @@ export async function maybeSendQuotaAlert(
   newCount: number,
 ): Promise<void> {
   try {
+    // Email copy is Free-plan upsell language ("Upgrade to Pro"). Other plans
+    // get their own warning treatment elsewhere; gate centrally so every
+    // call site (jobs, sms, photos, deposits, follow-ups, price confirms)
+    // is automatically safe.
+    if (plan !== 'free') return;
+
     const limit = getLimit(plan, capability);
     if (!limit || limit <= 0) return; // unlimited or unmetered
 
+    // Warn threshold = whichever is *smaller* of "ceil(80% of limit)" and
+    // "one below the hard cap". This ensures a real pre-limit warning fires
+    // even when the limit is tiny (e.g. price.confirmation=3 -> warn at 2,
+    // offline.photos=3 -> warn at 2). For limit=1 no early warning is
+    // possible, so only the 100% email fires.
+    const warnAt = limit > 1 ? Math.min(Math.ceil(limit * 0.8), limit - 1) : limit;
     const reached100 = newCount >= limit;
-    const reached80 = newCount >= Math.ceil(limit * 0.8);
+    const reached80 = newCount >= warnAt;
     if (!reached80 && !reached100) return;
 
     const usage = await storage.getCapabilityUsage(userId, capability);
