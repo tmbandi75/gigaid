@@ -34,38 +34,22 @@ function getUserIdFromBearer(req: Request): string | null {
   if (!auth || !auth.startsWith("Bearer ")) return null;
   const token = auth.slice(7).trim();
   if (!token) return null;
-  const payload = verifyAppJwt(token);
-  return payload?.sub ?? null;
+  return verifyAppJwt(token)?.sub ?? null;
 }
 
-// Public: minimal page metadata used by the standalone first-booking screen.
-// We deliberately do NOT expose phone, source, claimedByUserId, or timestamps.
 router.get("/booking-pages/:pageId", async (req: Request, res: Response) => {
   try {
     const page = await storage.getBookingPage(req.params.pageId);
     if (!page) return res.status(404).json({ error: "Not found" });
-    // Server-backed ownership check: only set isOwner when the caller's signed
-    // app JWT subject matches the page's claimedByUserId. This is what gates
-    // access to the standalone /first-booking/:pageId screen.
     const callerId = getUserIdFromBearer(req);
     const isOwner = !!page.claimedByUserId && !!callerId && callerId === page.claimedByUserId;
-    return res.json({
-      page: {
-        id: page.id,
-        claimed: page.claimed,
-        isOwner,
-      },
-    });
+    return res.json({ page: { id: page.id, claimed: page.claimed, isOwner } });
   } catch (err: any) {
     logger.error("[FirstBooking] getBookingPage error:", err?.message);
     return res.status(500).json({ error: "Lookup failed" });
   }
 });
 
-// Track an analytics event. `page_viewed` is anonymous (it fires on the
-// unclaimed page before any account exists). `link_copied` and `link_shared`
-// can cancel pending nudge SMS, so they require a JWT whose `sub` matches the
-// page's claimedByUserId.
 router.post("/booking-pages/:pageId/events", async (req: Request, res: Response) => {
   try {
     const pageId = req.params.pageId;
@@ -85,10 +69,7 @@ router.post("/booking-pages/:pageId/events", async (req: Request, res: Response)
     }
 
     await storage.trackBookingPageEvent(pageId, type);
-
-    if (isOwnerAction) {
-      await storage.cancelBookingPageNudges(pageId);
-    }
+    if (isOwnerAction) await storage.cancelBookingPageNudges(pageId);
     return res.json({ ok: true });
   } catch (err: any) {
     logger.error("[FirstBooking] trackEvent error:", err?.message);
@@ -96,22 +77,11 @@ router.post("/booking-pages/:pageId/events", async (req: Request, res: Response)
   }
 });
 
-// Claim a pre-generated booking page. Always creates a new lightweight user
-// record — we never silently attach to an existing user by phone, because the
-// caller has not proven ownership of that phone (no OTP). This avoids account
-// takeover via phone-number guessing.
 router.post("/claim-page", async (req: Request, res: Response) => {
   try {
     const parsed = claimSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid claim payload" });
-    }
+    if (!parsed.success) return res.status(400).json({ error: "Invalid claim payload" });
     const { pageId, name, serviceType } = parsed.data;
-    // NOTE: `phone` from the request body is intentionally ignored when scheduling
-    // nudge SMS. The body's phone is unverified caller input and could be abused
-    // to make us send Twilio messages to arbitrary numbers (spam / cost). The
-    // nudge destination is taken only from `booking_pages.phone`, which is the
-    // prospect phone we recorded server-side when generating the page.
 
     if (!isAppJwtConfigured()) {
       return res.status(503).json({ error: "Authentication is not fully configured." });
@@ -121,27 +91,22 @@ router.post("/claim-page", async (req: Request, res: Response) => {
     if (!page) return res.status(404).json({ error: "Page not found" });
     if (page.claimed) return res.status(400).json({ error: "Page already claimed" });
 
+    // Nudge SMS destination is the server-side prospect phone only — body phone
+    // is unverified caller input and must not control who we text.
     const phone = normalizePhone(page.phone);
 
     let userId: string;
-    let claimedAt: string;
 
-    // Atomically create the lightweight user AND mark the page claimed.
-    // If another request claims first, the conditional UPDATE returns no rows
-    // and the transaction rolls back, leaving no orphan user behind.
     try {
       const tx = await db.transaction(async (trx) => {
         const newId = randomUUID();
-        const username = `claim-${newId.slice(0, 8)}`;
         const nowIso = new Date().toISOString();
 
         const [created] = await trx.insert(users).values({
           id: newId,
-          username,
-          password: randomUUID(), // placeholder; not used (claim flow has no password login)
+          username: `claim-${newId.slice(0, 8)}`,
+          password: randomUUID(),
           name: name ?? null,
-          // Intentionally do NOT persist `phone` on the user. Phone is unverified at
-          // this point; saving it could later be mistaken for a verified contact.
           publicProfileEnabled: false,
           publicProfileSlug: `user-${newId.slice(0, 8).toLowerCase()}`,
           onboardingCompleted: false,
@@ -151,24 +116,14 @@ router.post("/claim-page", async (req: Request, res: Response) => {
         }).returning();
 
         const [claimed] = await trx.update(bookingPages)
-          .set({
-            claimed: true,
-            claimedAt: nowIso,
-            claimedByUserId: created.id,
-            updatedAt: nowIso,
-          })
+          .set({ claimed: true, claimedAt: nowIso, claimedByUserId: created.id, updatedAt: nowIso })
           .where(and(eq(bookingPages.id, pageId), eq(bookingPages.claimed, false)))
           .returning();
 
-        if (!claimed) {
-          // Race: another caller claimed first. Roll back the user insert.
-          throw new Error("ALREADY_CLAIMED");
-        }
-
-        return { userId: created.id, claimedAt: nowIso };
+        if (!claimed) throw new Error("ALREADY_CLAIMED");
+        return { userId: created.id };
       });
       userId = tx.userId;
-      claimedAt = tx.claimedAt;
     } catch (err: any) {
       if (err?.message === "ALREADY_CLAIMED") {
         return res.status(409).json({ error: "Page was just claimed by another session" });
@@ -178,22 +133,12 @@ router.post("/claim-page", async (req: Request, res: Response) => {
 
     await storage.trackBookingPageEvent(pageId, "page_claimed");
 
-    // Best-effort nudge scheduling (non-fatal). Only schedule when we have a
-    // phone to send to — this comes from the prospect record on the page.
     if (phone) {
       const now = new Date();
       const bookingUrl = `${publicOriginFromReq(req)}/book/${pageId}`;
       const nudges = [
-        {
-          minutes: 10,
-          type: "first_booking_nudge_10m",
-          body: `Send your booking link to your next customer — it saves a ton of back and forth: ${bookingUrl}`,
-        },
-        {
-          minutes: 60 * 24,
-          type: "first_booking_nudge_24h",
-          body: `Most people get their first booking within a day after sharing their link: ${bookingUrl}`,
-        },
+        { minutes: 10, type: "first_booking_nudge_10m", body: `Send your booking link to your next customer — it saves a ton of back and forth: ${bookingUrl}` },
+        { minutes: 60 * 24, type: "first_booking_nudge_24h", body: `Most people get their first booking within a day after sharing their link: ${bookingUrl}` },
       ];
       try {
         await db.insert(outboundMessages).values(nudges.map((n) => ({
@@ -215,14 +160,7 @@ router.post("/claim-page", async (req: Request, res: Response) => {
     }
 
     const token = signAppJwt({ sub: userId, provider: "claim" });
-
-    return res.json({
-      ok: true,
-      pageId,
-      redirect: `/first-booking/${pageId}`,
-      token,
-      user: { id: userId },
-    });
+    return res.json({ ok: true, pageId, redirect: `/first-booking/${pageId}`, token, user: { id: userId } });
   } catch (err: any) {
     logger.error("[FirstBooking] claim error:", err?.message, err?.stack);
     return res.status(500).json({ error: "Claim failed" });

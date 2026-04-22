@@ -3076,11 +3076,15 @@ export class MemStorage implements IStorage {
   }
 
   // First-Booking acquisition flow stubs (unused by MemStorage in production)
-  async getBookingPage(_id: string) { return undefined; }
-  async createBookingPage(_data: any): Promise<any> { throw new Error("MemStorage does not support booking pages"); }
-  async claimBookingPage(_id: string, _args: any) { return undefined; }
-  async trackBookingPageEvent(_pageId: string, _type: any, _metadata?: string) {}
-  async cancelBookingPageNudges(_pageId: string) { return 0; }
+  async getBookingPage(_id: string): Promise<import("@shared/schema").BookingPage | undefined> { return undefined; }
+  async createBookingPage(_data: import("@shared/schema").InsertBookingPage): Promise<import("@shared/schema").BookingPage> {
+    throw new Error("MemStorage does not support booking pages");
+  }
+  async claimBookingPage(_id: string, _args: { userId: string; claimedAt: string }): Promise<import("@shared/schema").BookingPage | undefined> {
+    return undefined;
+  }
+  async trackBookingPageEvent(_pageId: string, _type: import("@shared/schema").BookingPageEventType, _metadata?: string): Promise<void> {}
+  async cancelBookingPageNudges(_pageId: string): Promise<number> { return 0; }
 }
 
 import { dbStorage } from "./db-storage";

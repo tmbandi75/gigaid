@@ -151,11 +151,9 @@ function pruneQuoteCache() {
   }
 }
 
-// Shared resolver for any public booking endpoint that takes a slug. Tries the
-// First-Booking `booking_pages` table first (UUID slugs only) and falls back to
-// the existing `users.publicProfileSlug` lookup. Claimed booking-page lookups
-// always set `bypassEnabledGate` because the caller is using a stable share URL
-// we already handed out, so we should not require `users.publicProfileEnabled`.
+// Resolves a public-booking slug to its owner. Tries booking_pages first for
+// UUID slugs (claimed pages bypass the publicProfileEnabled gate), then falls
+// back to users.publicProfileSlug.
 const PUBLIC_SLUG_UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 async function resolvePublicBookingOwner(slug: string): Promise<{
@@ -6132,8 +6130,7 @@ export async function registerRoutes(
     try {
       const slug = req.params.slug;
 
-      // First-Booking acquisition flow: detect unclaimed booking-page IDs first
-      // so we can render the unclaimed UI without ever touching the user table.
+      // Unclaimed booking_pages.id slugs short-circuit to the acquisition UI.
       const uuidRegex = PUBLIC_SLUG_UUID_REGEX;
       if (uuidRegex.test(slug)) {
         const bookingPage = await storage.getBookingPage(slug).catch(() => undefined);
