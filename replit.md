@@ -140,5 +140,5 @@ To enforce App Check (block requests without valid tokens):
 - App Store Connect TODO (manual, outside this codebase): set the Privacy Policy URL, and either fill the EULA field or link to Apple’s standard EULA (https://www.apple.com/legal/internet-services/itunes/dev/stdeula/) in the App Description.
 
 ### Apple Review Mode flag
-- Set `VITE_APPLE_REVIEW_MODE=true` in deployment env to enable review-mode UI gating. Read via `import { isAppleReviewMode } from "@/lib/env"`. Default is off; current build has no review-only banners but the helper is wired for future use.
+- Set `VITE_APPLE_REVIEW_MODE=true` in deployment env to enable review-mode UI gating. Read via `import { isAppleReviewMode } from "@/lib/env"`. When on, the SplashPage decorative background shapes and the Pricing FAQ "Contact Support" teaser card are hidden so reviewers see a focused login + checkout flow. Default is off; auth, paywall, and checkout behavior are unchanged.
 
