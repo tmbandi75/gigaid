@@ -2998,6 +2998,8 @@ export class MemStorage implements IStorage {
       usageCount: 1,
       windowStart: now,
       lastUsedAt: now,
+      alert80SentAt: null,
+      alert100SentAt: null,
       createdAt: now,
       updatedAt: now
     };
@@ -3015,6 +3017,8 @@ export class MemStorage implements IStorage {
       ...existing,
       usageCount: 0,
       windowStart: now,
+      alert80SentAt: null,
+      alert100SentAt: null,
       updatedAt: now
     });
     return true;

@@ -2313,6 +2313,11 @@ export const capabilityUsage = pgTable("capability_usage", {
   usageCount: integer("usage_count").notNull().default(0),
   windowStart: text("window_start"), // ISO timestamp for time-windowed limits
   lastUsedAt: text("last_used_at"),
+  // Quota notification tracking. Reset to null when the usage window rolls over so
+  // the next window's alerts fire. Stored per-window so we never email twice in the
+  // same period.
+  alert80SentAt: text("alert_80_sent_at"),
+  alert100SentAt: text("alert_100_sent_at"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at"),
 }, (table) => [

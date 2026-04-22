@@ -2003,7 +2003,13 @@ export async function registerRoutes(
       
       // Increment capability usage after successful job creation
       if (!isDeveloper(user)) {
-        await storage.incrementCapabilityUsage(authUserId, 'jobs.create');
+        const updatedUsage = await storage.incrementCapabilityUsage(authUserId, 'jobs.create');
+        // Fire-and-forget quota notification at 80% / 100% of monthly limit.
+        import("./usageQuotaNotifier")
+          .then(({ maybeSendQuotaAlert }) =>
+            maybeSendQuotaAlert(authUserId, userPlan, 'jobs.create', updatedUsage.usageCount)
+          )
+          .catch(err => logger.error("[QuotaNotifier] dispatch failed", err));
       }
       
       emitCanonicalEvent({

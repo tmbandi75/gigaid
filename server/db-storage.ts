@@ -1993,6 +1993,8 @@ export class DatabaseStorage implements IStorage {
       .set({
         usageCount: 0,
         windowStart: now,
+        alert80SentAt: null,
+        alert100SentAt: null,
         updatedAt: now
       })
       .where(and(
