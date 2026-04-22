@@ -10,7 +10,9 @@ interface FirebaseAuthContextValue {
   lastAuthEventTs: number | null;
   callbackCount: number;
   isTokenReady: boolean;
+  isInteractiveExchangeInProgress: boolean;
   setTokenReady: (ready: boolean) => void;
+  setInteractiveExchangeInProgress: (inProgress: boolean) => void;
   signInWithGoogle: () => Promise<string>;
   signInWithApple: () => Promise<string>;
   logout: () => Promise<void>;
@@ -27,9 +29,14 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   const previousFirebaseUidRef = useRef<string | null>(null);
   
   const [isTokenReady, setIsTokenReady] = useState(false);
+  const [isInteractiveExchangeInProgress, setIsInteractiveExchangeInProgress] = useState(false);
 
   const setTokenReady = (ready: boolean) => {
     setIsTokenReady(ready);
+  };
+
+  const setInteractiveExchangeInProgress = (inProgress: boolean) => {
+    setIsInteractiveExchangeInProgress(inProgress);
   };
   
   useEffect(() => {
@@ -75,7 +82,7 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => firebaseSignOut(), []);
 
   return (
-    <FirebaseAuthContext.Provider value={{ firebaseUser, authLoading, lastAuthEventTs, callbackCount, isTokenReady, setTokenReady, signInWithGoogle, signInWithApple, logout }}>
+    <FirebaseAuthContext.Provider value={{ firebaseUser, authLoading, lastAuthEventTs, callbackCount, isTokenReady, isInteractiveExchangeInProgress, setTokenReady, setInteractiveExchangeInProgress, signInWithGoogle, signInWithApple, logout }}>
       {children}
     </FirebaseAuthContext.Provider>
   );

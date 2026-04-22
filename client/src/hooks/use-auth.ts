@@ -53,7 +53,13 @@ export function useAuth() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { isTokenReady, setTokenReady, firebaseUser, authLoading } = useFirebaseAuth();
+  const {
+    isTokenReady,
+    setTokenReady,
+    firebaseUser,
+    authLoading,
+    isInteractiveExchangeInProgress,
+  } = useFirebaseAuth();
   
   // Token readiness timeout - prevent indefinite blocking
   // After Firebase auth resolves, give token exchange 5 seconds max
@@ -61,7 +67,13 @@ export function useAuth() {
   const autoExchangeInProgress = useRef(false);
 
   useEffect(() => {
-    if (!authLoading && firebaseUser && !isTokenReady && !autoExchangeInProgress.current) {
+    if (
+      !authLoading &&
+      firebaseUser &&
+      !isTokenReady &&
+      !autoExchangeInProgress.current &&
+      !isInteractiveExchangeInProgress
+    ) {
       autoExchangeInProgress.current = true;
       (async () => {
         try {
@@ -115,7 +127,7 @@ export function useAuth() {
         }
       })();
     }
-  }, [authLoading, firebaseUser, isTokenReady, setTokenReady, toast]);
+  }, [authLoading, firebaseUser, isTokenReady, isInteractiveExchangeInProgress, setTokenReady, toast]);
 
   useEffect(() => {
     if (!authLoading && firebaseUser && !isTokenReady) {
