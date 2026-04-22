@@ -139,6 +139,10 @@ To enforce App Check (block requests without valid tokens):
 - Auto-renewal disclosure is rendered in the bottom fine print on the Pricing page.
 - App Store Connect TODO (manual, outside this codebase): set the Privacy Policy URL, and either fill the EULA field or link to Apple’s standard EULA (https://www.apple.com/legal/internet-services/itunes/dev/stdeula/) in the App Description.
 
+### Free plan job limit
+- Backend enforces **10 jobs/month** for Free (`shared/planLimits.ts` `maxJobs: 10`, `shared/capabilities/capabilityRules.ts` `jobs.create.limit: 10`).
+- Pricing page and Subscription settings copy were updated from "Up to 5 jobs" to "Up to 10 jobs" to match enforcement (Task #15). Decision: keep the more generous backend limit rather than tightening to 5, so existing Free users are not downgraded.
+
 ### Apple Review Mode flag
 - Set `VITE_APPLE_REVIEW_MODE=true` in deployment env to enable review-mode UI gating. Read via `import { isAppleReviewMode } from "@/lib/env"`. When on, the SplashPage decorative background shapes and the Pricing FAQ "Contact Support" teaser card are hidden so reviewers see a focused login + checkout flow. Default is off; auth, paywall, and checkout behavior are unchanged.
 

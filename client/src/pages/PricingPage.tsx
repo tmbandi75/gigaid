@@ -56,7 +56,7 @@ const PLANS: PlanInfo[] = [
     icon: <Zap className="h-5 w-5" />,
     color: "text-muted-foreground",
     features: [
-      { text: "Up to 5 jobs per month" },
+      { text: "Up to 10 jobs per month" },
       { text: "Basic invoicing" },
       { text: "Job scheduling" },
       { text: "Lead management" },

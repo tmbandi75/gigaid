@@ -113,7 +113,7 @@ const PLANS = [
     price: 0,
     icon: Zap,
     tagline: "Get started",
-    features: ["Basic invoicing", "Up to 5 jobs", "Manual follow-ups"],
+    features: ["Basic invoicing", "Up to 10 jobs", "Manual follow-ups"],
   },
   {
     id: "pro",
