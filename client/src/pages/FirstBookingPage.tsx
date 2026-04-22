@@ -96,9 +96,11 @@ export default function FirstBookingPage() {
 
   const handleShare = async () => {
     track(pageId, "link_shared");
-    if (typeof navigator !== "undefined" && (navigator as any).share) {
+    const nav: Navigator & { share?: (data: ShareData) => Promise<void> } =
+      typeof navigator !== "undefined" ? navigator : ({} as Navigator);
+    if (typeof nav.share === "function") {
       try {
-        await (navigator as any).share({ text: smsBody, url: bookingUrl });
+        await nav.share({ text: smsBody, url: bookingUrl });
         return;
       } catch {
         // fall through to sms: link

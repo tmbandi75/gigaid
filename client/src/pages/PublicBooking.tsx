@@ -251,9 +251,17 @@ export default function PublicBooking() {
   const [, navigate] = useLocation();
   const [isRedirecting, setIsRedirecting] = useState(false);
 
-  const { data: profileResponse, isLoading, error } = useQuery<
-    PublicProfile | { kind: "unclaimed_page"; page: UnclaimedBookingPageData }
-  >({
+  type ProfileResponse =
+    | PublicProfile
+    | { kind: "unclaimed_page"; page: UnclaimedBookingPageData }
+    | { redirected: true };
+
+  const isUnclaimed = (
+    r: ProfileResponse | undefined,
+  ): r is { kind: "unclaimed_page"; page: UnclaimedBookingPageData } =>
+    !!r && (r as { kind?: string }).kind === "unclaimed_page";
+
+  const { data: profileResponse, isLoading, error } = useQuery<ProfileResponse>({
     queryKey: QUERY_KEYS.publicProfile(slug),
     queryFn: async () => {
       const res = await fetch(`/api/public/profile/${slug}`);
@@ -271,12 +279,14 @@ export default function PublicBooking() {
 
   // First-Booking acquisition flow: render the unclaimed UI before any of the
   // existing booking logic runs, so the current claimed-page experience is untouched.
-  if (profileResponse && (profileResponse as any).kind === "unclaimed_page") {
-    const unclaimed = (profileResponse as { kind: "unclaimed_page"; page: UnclaimedBookingPageData }).page;
-    return <UnclaimedBookingPage page={unclaimed} />;
+  if (isUnclaimed(profileResponse)) {
+    return <UnclaimedBookingPage page={profileResponse.page} />;
   }
 
-  const profile = profileResponse as PublicProfile | undefined;
+  const profile =
+    profileResponse && !("redirected" in profileResponse) && !("kind" in profileResponse)
+      ? (profileResponse as PublicProfile)
+      : undefined;
 
   const selectedDateStr = selectedDate 
     ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
