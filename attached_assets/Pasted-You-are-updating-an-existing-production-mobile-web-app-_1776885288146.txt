@@ -1,0 +1,208 @@
+You are updating an existing production mobile/web app to resolve Apple App Store rejection issues related to:
+
+1. Sign in with Apple (Guideline 4 - Design)
+2. Auto-renewable subscriptions compliance (Guideline 3.1.2)
+
+⚠️ DO NOT BREAK EXISTING FUNCTIONALITY
+⚠️ DO NOT REMOVE OTHER AUTH METHODS
+⚠️ ONLY MODIFY WHAT IS NECESSARY FOR COMPLIANCE
+
+---
+
+# 🔵 PART 1 — FIX SIGN IN WITH APPLE FLOW
+
+## GOAL:
+
+Ensure the app does NOT request name or email after Apple authentication.
+
+## CURRENT ISSUE:
+
+The app prompts users to re-enter name/email after using Apple Sign In.
+
+## REQUIRED FIX:
+
+### 1. Update Apple Auth Handler
+
+When Apple returns authentication data:
+
+* Extract:
+
+  * userId (sub)
+  * email
+  * fullName (ONLY on first login)
+
+### 2. AUTO-CREATE USER
+
+If user does not exist:
+
+* Create user using:
+
+  * apple_user_id = sub
+  * email = email (can be relay email)
+  * name = fullName (if available)
+
+If fullName is missing:
+
+* DO NOT prompt user
+* Store name as null or “User”
+
+### 3. REMOVE ALL POST-LOGIN FIELDS
+
+Find and REMOVE any UI that:
+
+* Asks for email after Apple login
+* Asks for name after Apple login
+* Blocks access until those fields are filled
+
+🚫 These MUST NOT appear after Apple login.
+
+---
+
+### 4. OPTIONAL ONBOARDING (ALLOWED)
+
+If additional info is needed (phone, preferences):
+
+* Move to a separate onboarding screen
+* Mark as OPTIONAL or SKIPPABLE
+* DO NOT require email/name again
+
+---
+
+### 5. SESSION HANDLING
+
+After successful Apple login:
+
+* Immediately authenticate user session
+* Redirect to dashboard/home
+
+---
+
+# 🟡 PART 2 — SUBSCRIPTION COMPLIANCE FIX
+
+## GOAL:
+
+Ensure subscription screen + metadata meet Apple requirements
+
+---
+
+## 1. UPDATE PAYWALL UI
+
+On ALL subscription screens, display:
+
+* Subscription title (e.g., “Gig Aid Pro”)
+* Duration (e.g., Monthly / Yearly)
+* Price (e.g., $9.99/month)
+
+---
+
+### ADD LEGAL LINKS (REQUIRED)
+
+At bottom of paywall screen:
+
+* “Privacy Policy” → link to your policy URL
+* “Terms of Use” → link to EULA
+
+Use this if no custom EULA:
+https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+
+---
+
+### UI EXAMPLE:
+
+Gig Aid Pro – Monthly
+$9.99/month
+
+• Unlimited bookings
+• AI automation
+
+Privacy Policy: [link]
+Terms of Use: [link]
+
+---
+
+## 2. ENSURE LINKS ARE CLICKABLE
+
+* Must open in browser or in-app webview
+* Must NOT be broken
+* Must be accessible before purchase
+
+---
+
+## 3. APP STORE METADATA FIX
+
+Ensure the following:
+
+* Privacy Policy URL is set in App Store Connect
+* Add Terms of Use (EULA):
+
+Option A (recommended):
+
+* Add EULA link to App Description
+
+Option B:
+
+* Add in EULA field in App Store Connect
+
+---
+
+# 🟢 PART 3 — ADD APPLE REVIEW MODE (IMPORTANT)
+
+Add a temporary flag:
+
+ENV: APPLE_REVIEW_MODE=true
+
+When enabled:
+
+* Show clean login flow
+* Show subscription screen clearly
+* Avoid experimental UI
+
+---
+
+# 🟣 PART 4 — ADD LOGGING (SAFE)
+
+Log:
+
+* Apple login success
+* Whether name/email received
+* User creation vs login
+
+DO NOT log sensitive tokens
+
+---
+
+# 🟠 PART 5 — TESTING CHECKLIST (MUST PASS)
+
+Before finishing, verify:
+
+✔ Apple login does NOT ask for email
+✔ Apple login does NOT ask for name
+✔ User is created automatically
+✔ App works if Apple provides NO name
+✔ Subscription screen shows:
+
+* Title
+* Duration
+* Price
+* Privacy Policy link
+* Terms of Use link
+  ✔ All links open correctly
+
+---
+
+# 🔴 PART 6 — DO NOT TOUCH
+
+* Do NOT modify payment processing logic
+* Do NOT remove other login methods
+* Do NOT change database schema unless required
+
+---
+
+# ✅ FINAL OUTPUT
+
+* Updated auth flow
+* Updated subscription UI
+* Clean UX compliant with Apple guidelines
+* No regressions in existing features
+
+Return ONLY the modified components/files.
