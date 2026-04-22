@@ -42,6 +42,7 @@ import type { DashboardSummary, Job, Lead } from "@shared/schema";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
+import { JobQuotaMeter } from "@/components/upgrade/JobQuotaMeter";
 import { useAttributionSync } from "@/hooks/useUtmCapture";
 
 interface MoneyDashboardData {
@@ -496,6 +497,7 @@ export default function Dashboard() {
                   </Link>
                 ))}
               </div>
+              <JobQuotaMeter className="mt-3" />
             </div>
 
             {/* Today's Money Plan - global prioritization across leads, jobs, invoices */}

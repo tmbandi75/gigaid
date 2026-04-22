@@ -16,7 +16,7 @@ export type PlanCapabilityRules = {
 
 export const CAPABILITY_RULES: Record<Plan, PlanCapabilityRules> = {
   free: {
-    'jobs.create': { limit: 10 },
+    'jobs.create': { limit: 10, window_days: 30 },
     'invoices.send': { unlimited: true },
     'leads.manage': { unlimited: true },
     'clients.manage': { unlimited: true },

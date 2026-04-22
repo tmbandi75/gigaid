@@ -5,6 +5,7 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 import { storage } from "./storage";
+import { readCapabilityUsage, readAllCapabilityUsage } from "./capabilityUsage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { 
   insertJobSchema, 
@@ -1970,9 +1971,8 @@ export async function registerRoutes(
       
       // Developer bypass
       if (!isDeveloper(user)) {
-        // Get current usage for jobs.create capability
-        const jobsUsageRecord = await storage.getCapabilityUsage(authUserId, 'jobs.create');
-        const jobsUsage = jobsUsageRecord?.usageCount ?? 0;
+        // Get current usage for jobs.create capability (with monthly window reset)
+        const jobsUsage = await readCapabilityUsage(authUserId, userPlan, 'jobs.create');
         const capResult = canPerform(userPlan, 'jobs.create', jobsUsage);
         
         if (!capResult.allowed) {
@@ -12551,9 +12551,8 @@ Return ONLY the message text, no JSON or formatting.`
       const user = await storage.getUser((req as any).userId);
       const plan = getEffectivePlanForClient(user, req) as Plan;
       
-      // Get all usage for this user
-      const allUsage = await storage.getAllCapabilityUsage((req as any).userId);
-      const usageMap = new Map(allUsage.map(u => [u.capability, u.usageCount]));
+      // Get all usage for this user (applies window resets where applicable)
+      const usageMap = await readAllCapabilityUsage((req as any).userId, plan);
       
       // Build capability status for each capability
       const capabilities: Record<string, any> = {};
@@ -12595,8 +12594,7 @@ Return ONLY the message text, no JSON or formatting.`
       const user = await storage.getUser((req as any).userId);
       const plan = getEffectivePlanForClient(user, req) as Plan;
       
-      const usage = await storage.getCapabilityUsage((req as any).userId, capability);
-      const usageCount = usage?.usageCount || 0;
+      const usageCount = await readCapabilityUsage((req as any).userId, plan, capability);
       
       const result = canPerform(plan, capability, usageCount);
       
@@ -12631,9 +12629,8 @@ Return ONLY the message text, no JSON or formatting.`
       const user = await storage.getUser((req as any).userId);
       const plan = getEffectivePlanForClient(user, req) as Plan;
       
-      // Check if action is allowed before incrementing
-      const currentUsage = await storage.getCapabilityUsage((req as any).userId, capability);
-      const usageCount = currentUsage?.usageCount || 0;
+      // Check if action is allowed before incrementing (resets stale windows)
+      const usageCount = await readCapabilityUsage((req as any).userId, plan, capability);
       
       const checkResult = canPerform(plan, capability, usageCount);
       

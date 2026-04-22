@@ -44,6 +44,7 @@ import { FreeSetupCta } from "@/components/growth/FreeSetupCta";
 import { JobResolutionModal } from "@/components/jobs/JobResolutionModal";
 import { JobsCalendar } from "@/components/calendar/JobsCalendar";
 import { BookingLinkShare } from "@/components/booking-link";
+import { JobQuotaMeter } from "@/components/upgrade/JobQuotaMeter";
 import { HelpLink } from "@/components/HelpLink";
 import { SwipeableCard, type SwipeAction as SwipeCardAction } from "@/components/ui/swipeable-card";
 import { ActionConfirmDialog } from "@/components/ui/action-confirm-dialog";
@@ -624,6 +625,8 @@ export default function Jobs() {
             </Link>
             <BookingLinkShare variant="compact" context="jobs" />
           </div>
+
+          <JobQuotaMeter />
         </div>
 
         {isLoading ? (
@@ -707,6 +710,7 @@ export default function Jobs() {
               </Link>
             </div>
           </div>
+          <JobQuotaMeter className="mt-4" />
         </div>
       </div>
       
