@@ -24,9 +24,11 @@ async function postLinkCopiedEvent(pageId: string): Promise<void> {
     credentials: "include",
     body: JSON.stringify({ type: "link_copied" }),
   });
-  if (!res.ok && res.status !== 403) {
-    // 403 just means we couldn't attribute the event server-side; the copy
-    // still happened. Anything else is unexpected and worth surfacing.
+  if (!res.ok) {
+    // The endpoint accepts both bearer JWT and Replit session cookies, so an
+    // authenticated dashboard user owning this page should always succeed.
+    // Surface failures (including 403) so attribution silently failing is
+    // visible to the user instead of leaving the banner permanently shown.
     throw new Error(`Failed to record link_copied (${res.status})`);
   }
 }
