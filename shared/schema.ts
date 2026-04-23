@@ -50,6 +50,14 @@ export const users = pgTable("users", {
   notifyByEmail: boolean("notify_by_email").default(true),
   smsOptOut: boolean("sms_opt_out").notNull().default(false),
   smsOptOutAt: text("sms_opt_out_at"),
+  // Resume-confirmation send health. Populated when POST /api/profile/sms/resume
+  // tries to send the START-style confirmation text and Twilio rejects it
+  // (invalid phone, unverified trial number, generic send failure, or no number
+  // on file). Cleared on the next successful confirmation send so the flag
+  // tracks the most recent attempt only.
+  smsConfirmationLastFailureAt: text("sms_confirmation_last_failure_at"),
+  smsConfirmationLastFailureCode: text("sms_confirmation_last_failure_code"),
+  smsConfirmationLastFailureMessage: text("sms_confirmation_last_failure_message"),
   lastActiveAt: text("last_active_at"),
   publicProfileEnabled: boolean("public_profile_enabled").default(true),
   publicProfileSlug: text("public_profile_slug"),

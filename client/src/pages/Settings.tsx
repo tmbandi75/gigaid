@@ -1322,6 +1322,36 @@ export default function Settings() {
                 />
               </div>
               <div className="space-y-4 pl-6">
+                {profile?.smsConfirmationLastFailureAt && (
+                  <div
+                    className="rounded-md border border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-950/40 p-3 space-y-2"
+                    data-testid="banner-sms-confirmation-failed"
+                  >
+                    <div className="flex items-start gap-2">
+                      <AlertCircle
+                        className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 shrink-0"
+                        aria-hidden="true"
+                      />
+                      <div className="space-y-1">
+                        <p
+                          className="font-medium text-sm text-red-900 dark:text-red-100"
+                          data-testid="text-sms-confirmation-failed-title"
+                        >
+                          We couldn't deliver your SMS confirmation
+                        </p>
+                        <p
+                          className="text-xs text-red-800 dark:text-red-200"
+                          data-testid="text-sms-confirmation-failed-detail"
+                        >
+                          {profile?.smsConfirmationLastFailureMessage ||
+                            "The confirmation text we sent didn't go through."}{" "}
+                          Double-check your phone number below and try
+                          resuming again.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {profile?.smsOptOut && (
                   <div
                     className="rounded-md border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/40 p-3 space-y-2"

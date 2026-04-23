@@ -694,6 +694,9 @@ export async function registerRoutes(
         notifyByEmail: user.notifyByEmail,
         smsOptOut: user.smsOptOut ?? false,
         smsOptOutAt: user.smsOptOutAt ?? null,
+        smsConfirmationLastFailureAt: user.smsConfirmationLastFailureAt ?? null,
+        smsConfirmationLastFailureCode: user.smsConfirmationLastFailureCode ?? null,
+        smsConfirmationLastFailureMessage: user.smsConfirmationLastFailureMessage ?? null,
         showReviewsOnBooking: user.showReviewsOnBooking,
         publicEstimationEnabled: user.publicEstimationEnabled,
         noShowProtectionEnabled: user.noShowProtectionEnabled,
@@ -957,9 +960,11 @@ export async function registerRoutes(
       // De-dupe / rate-limit the confirmation SMS per user.
       let confirmationSent = false;
       let confirmationWarning: string | undefined;
+      let confirmationFailureCode: string | undefined;
       const phone = user.phone;
       if (!phone) {
         confirmationWarning = "No phone number on file for confirmation text.";
+        confirmationFailureCode = "NO_PHONE";
       } else {
         const now = Date.now();
         const last = smsResumeConfirmCache.get(userId) ?? 0;
@@ -977,12 +982,14 @@ export async function registerRoutes(
             } else {
               confirmationWarning =
                 result.errorMessage || "Couldn't send confirmation text.";
+              confirmationFailureCode = result.errorCode || "SEND_FAILED";
               logger.warn(
                 `[SMS Resume] Confirmation SMS failed for user ${userId}: ${result.errorCode}`,
               );
             }
           } catch (smsErr) {
             confirmationWarning = "Couldn't send confirmation text.";
+            confirmationFailureCode = "SEND_THREW";
             logger.error(
               `[SMS Resume] Confirmation SMS threw for user ${userId}:`,
               smsErr,
@@ -991,12 +998,44 @@ export async function registerRoutes(
         }
       }
 
+      // Persist confirmation health on the user record so Settings and the
+      // admin SMS health view can flag bad numbers without depending on a
+      // single transient toast.
+      try {
+        if (confirmationSent) {
+          await db
+            .update(usersTable)
+            .set({
+              smsConfirmationLastFailureAt: null,
+              smsConfirmationLastFailureCode: null,
+              smsConfirmationLastFailureMessage: null,
+            })
+            .where(eq(usersTable.id, userId));
+        } else if (confirmationFailureCode) {
+          await db
+            .update(usersTable)
+            .set({
+              smsConfirmationLastFailureAt: new Date().toISOString(),
+              smsConfirmationLastFailureCode: confirmationFailureCode,
+              smsConfirmationLastFailureMessage:
+                confirmationWarning ?? "Couldn't send confirmation text.",
+            })
+            .where(eq(usersTable.id, userId));
+        }
+      } catch (persistErr) {
+        logger.error(
+          `[SMS Resume] Failed to persist confirmation health for user ${userId}:`,
+          persistErr,
+        );
+      }
+
       res.json({
         success: true,
         smsOptOut: false,
         smsOptOutAt: null,
         confirmationSent,
         confirmationWarning,
+        confirmationFailureCode,
       });
     } catch (error) {
       logger.error("[SMS Resume] Error:", error);

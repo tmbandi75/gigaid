@@ -29,11 +29,23 @@ interface RecentOptOut {
   smsOptOutAt: string | null;
 }
 
+interface RecentConfirmFailure {
+  id: string;
+  email: string | null;
+  username: string | null;
+  name: string | null;
+  phone: string | null;
+  smsConfirmationLastFailureAt: string | null;
+  smsConfirmationLastFailureCode: string | null;
+  smsConfirmationLastFailureMessage: string | null;
+}
+
 interface SmsHealthSummary {
   windowDays: number;
   canceled: { total: number; byReason: Record<string, number> };
   failed: { total: number; byReason: Record<string, number> };
   optOuts: { total: number; last7d: number; recent: RecentOptOut[] };
+  confirmationFailures: { total: number; recent: RecentConfirmFailure[] };
 }
 
 interface OptOutUser {
@@ -363,6 +375,97 @@ export default function AdminSmsHealth() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card data-testid="card-confirmation-failures">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <AlertTriangle className="h-4 w-4" />
+            Resume confirmation bounces
+          </CardTitle>
+          <CardDescription>
+            Users whose most recent &quot;Resume SMS&quot; confirmation text
+            failed to deliver. Likely bad or unverified phone numbers.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {summaryQuery.isLoading ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : !summary ? (
+            <p className="text-sm text-muted-foreground">No data.</p>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <div
+                  className="text-3xl font-bold tabular-nums"
+                  data-testid="text-confirmation-failures-total"
+                >
+                  {summary.confirmationFailures.total}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  users with a failed confirmation on file
+                </div>
+              </div>
+              {summary.confirmationFailures.recent.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No bounced confirmations recorded.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                      <tr>
+                        <th className="py-2 pr-3">User</th>
+                        <th className="py-2 pr-3">Phone</th>
+                        <th className="py-2 pr-3">Reason</th>
+                        <th className="py-2 pr-3">Failed at</th>
+                        <th className="py-2 pr-3" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {summary.confirmationFailures.recent.map((u) => (
+                        <tr
+                          key={u.id}
+                          className="border-t"
+                          data-testid={`row-confirmation-failure-${u.id}`}
+                        >
+                          <td className="py-2 pr-3 font-medium">
+                            {u.name || u.username || u.email || u.id}
+                          </td>
+                          <td className="py-2 pr-3 text-muted-foreground">
+                            {u.phone || "—"}
+                          </td>
+                          <td
+                            className="py-2 pr-3 text-muted-foreground"
+                            data-testid={`text-confirmation-failure-code-${u.id}`}
+                          >
+                            {u.smsConfirmationLastFailureCode || "—"}
+                          </td>
+                          <td className="py-2 pr-3 text-muted-foreground">
+                            {formatDate(u.smsConfirmationLastFailureAt)}
+                          </td>
+                          <td className="py-2 pr-3 text-right">
+                            <Link href={`/admin/users/${u.id}`}>
+                              <Badge
+                                variant="outline"
+                                className="cursor-pointer"
+                                data-testid={`link-confirmation-failure-user-${u.id}`}
+                              >
+                                View
+                              </Badge>
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </CardContent>

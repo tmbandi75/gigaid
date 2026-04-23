@@ -96,6 +96,30 @@ router.get("/summary", async (_req, res) => {
       .orderBy(desc(users.smsOptOutAt))
       .limit(10);
 
+    // Resume-confirmation bounce signal: users whose most recent
+    // POST /api/profile/sms/resume confirmation text failed to send. Captured
+    // on the user record so we can flag bad numbers without scanning logs.
+    const [confirmFailureCountRow] = await db
+      .select({ c: count() })
+      .from(users)
+      .where(isNotNull(users.smsConfirmationLastFailureAt));
+
+    const recentConfirmFailures = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        username: users.username,
+        name: users.name,
+        phone: users.phone,
+        smsConfirmationLastFailureAt: users.smsConfirmationLastFailureAt,
+        smsConfirmationLastFailureCode: users.smsConfirmationLastFailureCode,
+        smsConfirmationLastFailureMessage: users.smsConfirmationLastFailureMessage,
+      })
+      .from(users)
+      .where(isNotNull(users.smsConfirmationLastFailureAt))
+      .orderBy(desc(users.smsConfirmationLastFailureAt))
+      .limit(10);
+
     res.json({
       windowDays: 7,
       canceled: {
@@ -110,6 +134,10 @@ router.get("/summary", async (_req, res) => {
         total: Number(optOutCountRow?.c || 0),
         last7d: Number(optOutRecentCountRow?.c || 0),
         recent: recentOptOuts,
+      },
+      confirmationFailures: {
+        total: Number(confirmFailureCountRow?.c || 0),
+        recent: recentConfirmFailures,
       },
     });
   } catch (error) {
