@@ -1,0 +1,236 @@
+Enhance the GigAid app by implementing a high-conversion “First Booking” screen.
+
+This screen appears AFTER a user claims their booking page.
+
+Route:
+GET /first-booking/:pageId
+
+---
+
+# 🎯 GOAL
+
+Drive ONE action:
+
+👉 User sends their booking link to a real customer
+
+Do NOT expose full product features on this screen.
+
+---
+
+# 🧩 UI REQUIREMENTS
+
+Build a minimal, centered layout with the following structure:
+
+---
+
+## 1. HEADLINE (PRIMARY FOCUS)
+
+Display:
+
+“Send this to your next customer”
+
+Large font, centered
+
+---
+
+## 2. SUBTEXT
+
+Display:
+
+“Instead of texting back and forth, just send this and let them book the job”
+
+---
+
+## 3. PRIMARY CTA (MOST IMPORTANT)
+
+Button:
+
+“Copy your booking link”
+
+Behavior:
+
+* Copies bookingPageUrl to clipboard
+* Shows confirmation message
+
+After click, show:
+
+“✓ Link copied — send it to your next customer”
+
+---
+
+## 4. SECONDARY CTA
+
+Button:
+
+“Send via text”
+
+Behavior:
+
+* Open SMS intent using device:
+
+sms:?body=Hey — you can book me here: {bookingPageUrl}
+
+---
+
+## 5. SIMPLE 3-STEP VISUAL FLOW
+
+Display horizontally:
+
+[ Send link ] → [ Customer books ] → [ You’re confirmed ]
+
+Use simple icons or minimal UI elements
+
+---
+
+## 6. SOCIAL PROOF (SMALL TEXT)
+
+Display:
+
+“Most people get their first booking within a day after sharing this”
+
+---
+
+## 7. URGENCY LINE
+
+Display:
+
+“Use this for your next job today”
+
+---
+
+# 🚨 HARD CONSTRAINTS
+
+DO NOT include:
+
+* Dashboard access
+* Navigation menu
+* Settings
+* Profile editing
+* Multiple links or actions
+
+ONLY allow:
+
+* Copy link
+* Send via text
+
+---
+
+# 🧩 DATA REQUIREMENTS
+
+Use:
+
+bookingPageUrl (already stored)
+
+Ensure it is passed into this screen from pageId
+
+---
+
+# 🧩 EVENT TRACKING
+
+Track the following events:
+
+* first_booking_viewed
+* link_copied
+* link_shared_sms
+
+Store timestamps
+
+---
+
+# 🧩 BEHAVIOR LOGIC
+
+If user clicks "Copy":
+
+* Mark link_copied = true
+
+If user clicks "Send via text":
+
+* Mark link_shared = true
+
+---
+
+# 🧩 TRIGGER SYSTEM (NUDGES)
+
+If user does NOT take action:
+
+---
+
+## After 10 minutes:
+
+Trigger SMS:
+
+“Send your booking link to your next customer — it saves a ton of back and forth”
+
+---
+
+## After 24 hours:
+
+Trigger SMS:
+
+“Most people get their first booking within a day after sharing this”
+
+---
+
+## IMPLEMENTATION
+
+Choose ONE:
+
+Option A:
+
+* Call Growth Engine webhook with user state
+
+Option B:
+
+* Use internal scheduler (node-cron)
+
+---
+
+# 🧩 CONDITIONAL FLOW
+
+This screen should ONLY appear:
+
+* Immediately after claim
+  OR
+* For users who have not yet taken first action
+
+If user has already:
+
+* copied link OR
+* shared link
+
+Then:
+→ allow transition to normal dashboard (future enhancement)
+
+---
+
+# 🧠 DESIGN PRINCIPLE
+
+This is NOT a product screen.
+
+This is an action screen.
+
+Optimize for:
+
+* clarity
+* speed
+* zero friction
+
+---
+
+# 🎯 EXPECTED RESULT
+
+Increase:
+
+Signup → activation conversion
+
+From:
+~5%
+
+To:
+15–25%
+
+---
+
+Implement using existing frontend framework and styling system.
+
+Keep layout extremely simple and mobile-first.
