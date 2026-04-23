@@ -1,0 +1,173 @@
+Update the GigAid booking page UI for UNCLAIMED pages only to improve conversion.
+
+DO NOT modify the existing booking page experience for claimed pages.
+
+---
+
+# 🎯 GOAL
+
+Increase claim conversion rate by improving:
+
+* clarity
+* trust
+* actionability
+* urgency
+
+---
+
+# 🧩 TARGET
+
+Applies ONLY when:
+
+* booking_page.claimed = false
+  OR
+* booking_page.source = "growth_engine"
+
+---
+
+# 🧩 UI CHANGES (REPLACE EXISTING CONTENT)
+
+## 1. HEADER (KEEP)
+
+Keep dynamic title:
+
+Example:
+“AUSTIN, TX MOVING SERVICE”
+
+---
+
+## 2. HEADLINE (REPLACE)
+
+Replace:
+
+“This page was created for your business”
+
+WITH:
+
+“Get booked without going back and forth with customers”
+
+---
+
+## 3. SUBTEXT (REPLACE)
+
+Replace:
+
+“Customers can book you and pay a deposit instead of texting back and forth”
+
+WITH:
+
+“Send this to your next customer — they can pick a time and lock in the job”
+
+---
+
+## 4. OPTIONAL SECONDARY LINE (ADD)
+
+Add small text below subtext:
+
+“You can also require a deposit if you want”
+
+(Keep subtle, smaller font)
+
+---
+
+## 5. URGENCY LINE (ADD)
+
+Add:
+
+“Use this for your next job today”
+
+Style:
+
+* slightly emphasized
+* small but visible
+
+---
+
+## 6. CTA BUTTON (UPDATE TEXT ONLY)
+
+Replace:
+
+“Claim this page”
+
+WITH:
+
+“Claim this page and start using it”
+
+---
+
+## 7. ADD SIMPLE 3-STEP VISUAL (NEW SECTION)
+
+Below CTA, add a horizontal 3-step flow:
+
+[ Send link ] → [ Customer books ] → [ You’re confirmed ]
+
+Use:
+
+* simple icons or emojis
+* minimal styling
+
+---
+
+## 8. TRUST LINE (UPDATE)
+
+Replace:
+
+“Contractors like you are using this to get booked faster”
+
+WITH:
+
+“Used by local contractors to get booked faster”
+
+---
+
+# 🧩 DESIGN RULES
+
+* Keep layout clean and minimal
+* No extra navigation
+* No menus
+* No additional buttons
+* Focus ONLY on:
+
+  * headline
+  * CTA
+  * simple explanation
+
+---
+
+# 🧩 CONDITIONAL RENDERING (IMPORTANT)
+
+Ensure this upgraded UI ONLY shows when:
+
+page.claimed === false
+
+If:
+
+page.claimed === true
+
+→ render the existing booking page UI exactly as before (NO changes)
+
+---
+
+# 🧠 DESIGN PRINCIPLE
+
+Shift messaging from:
+
+“this is a page”
+
+TO:
+
+“this helps you get booked faster”
+
+---
+
+# 🎯 EXPECTED RESULT
+
+Increase conversion from:
+
+~5–8% → 10–18%
+
+---
+
+Implement changes directly in the existing booking page component using conditional rendering.
+
+Do NOT create a new route.
