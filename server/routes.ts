@@ -4497,54 +4497,39 @@ export async function registerRoutes(
   const STOP_REPLY_BODY =
     "You're unsubscribed from GigAid messages. No more texts will be sent.";
 
-  // Ambiguity-safe phone -> userId resolution for opt-out only.
-  // Returns the userId if exactly one user can be confidently linked to the
-  // phone, otherwise null (and a structured warning is logged).
-  async function resolveOptOutUserId(fromPhone: string): Promise<string | null> {
-    const { users: usersTable, outboundMessages: outboundMessagesTable } =
-      await import("@shared/schema");
-    const { db } = await import("./db");
-    const { eq, and: andOp, desc } = await import("drizzle-orm");
+  // Mask a phone like +15551234567 -> +15***4567 for safe logging.
+  function maskPhone(phone: string | null | undefined): string {
+    if (!phone) return "unknown";
+    if (phone.length <= 6) return "***";
+    return `${phone.slice(0, 3)}***${phone.slice(-4)}`;
+  }
 
-    // Pass 1: exact match on canonical users.phone_e164.
+  // STOP-only phone -> userId resolution. Per spec, match users.phone_e164
+  // first; otherwise fall back to the recipient of the MOST RECENT outbound
+  // SMS to that number (the same fallback the existing inbound handler uses).
+  async function resolveOptOutUserId(fromPhone: string): Promise<string | null> {
+    const { users: usersTable } = await import("@shared/schema");
+    const { db } = await import("./db");
+    const { eq } = await import("drizzle-orm");
+
     const phoneMatches = await db
       .select({ id: usersTable.id })
       .from(usersTable)
       .where(eq(usersTable.phoneE164, fromPhone))
-      .limit(2);
+      .limit(1);
     if (phoneMatches.length === 1) {
       return phoneMatches[0].id;
     }
-    if (phoneMatches.length > 1) {
-      logger.warn(
-        `[Twilio STOP] Ambiguous: ${phoneMatches.length}+ users share phone ${fromPhone}; skipping opt-out`,
-      );
-      return null;
+
+    // Fallback: most recent outbound recipient. Reuses the same lookup path
+    // the rest of the inbound handler uses, so STOP routes to the same
+    // account a normal reply would be attributed to.
+    const lastOutbound = await storage.getLastOutboundMessageByPhone(fromPhone);
+    if (lastOutbound?.userId) {
+      return lastOutbound.userId;
     }
 
-    // Pass 2: fall back to recent outbound recipients. Only act if a single
-    // distinct userId has sent SMS to this phone — otherwise we'd risk
-    // opting out the wrong account.
-    const recent = await db
-      .select({ userId: outboundMessagesTable.userId })
-      .from(outboundMessagesTable)
-      .where(andOp(
-        eq(outboundMessagesTable.toAddress, fromPhone),
-        eq(outboundMessagesTable.channel, "sms"),
-      ))
-      .orderBy(desc(outboundMessagesTable.createdAt))
-      .limit(50);
-    const distinct = Array.from(new Set(recent.map(r => r.userId)));
-    if (distinct.length === 1) {
-      return distinct[0];
-    }
-    if (distinct.length > 1) {
-      logger.warn(
-        `[Twilio STOP] Ambiguous: ${distinct.length} users have outbound history to ${fromPhone}; skipping opt-out`,
-      );
-    } else {
-      logger.info(`[Twilio STOP] No matching user for ${fromPhone}; ignoring`);
-    }
+    logger.info(`[Twilio STOP] No matching user for ${maskPhone(fromPhone)}; ignoring`);
     return null;
   }
 
@@ -4561,7 +4546,8 @@ export async function registerRoutes(
           .send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
       }
 
-      logger.debug(`[Twilio Inbound] SMS from ${From}: ${Body.substring(0, 50)}...`);
+      // Spec: never log full phone numbers; cap body at 30 chars.
+      logger.debug(`[Twilio Inbound] SMS from ${maskPhone(From)}: ${(Body || "").substring(0, 30)}`);
 
       // ----- STOP opt-out branch (runs before normal inbound routing) -----
       const trimmedBody = (Body || "").trim().toUpperCase();
@@ -4583,7 +4569,7 @@ export async function registerRoutes(
               notifyBySms: false,
             })
             .where(eq(usersTable.id, userId));
-          logger.info(`[Twilio STOP] Opted out user ${userId} via ${From}`);
+          logger.info(`[Twilio STOP] Opted out user ${userId} via ${maskPhone(From)}`);
         }
         // TwiML confirmation reply (Twilio also auto-handles STOP at the
         // carrier level, but we send a friendly confirmation regardless).

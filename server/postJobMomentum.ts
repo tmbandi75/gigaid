@@ -13,7 +13,7 @@ import {
   type Job,
   type Client
 } from "@shared/schema";
-import { eq, and, lte, gte, inArray, sql } from "drizzle-orm";
+import { eq, and, lte, inArray, sql } from "drizzle-orm";
 import { logger } from "./lib/logger";
 
 // ============================================================================
@@ -21,14 +21,14 @@ import { logger } from "./lib/logger";
 // ----------------------------------------------------------------------------
 // Order of guards inside attemptSendMessage:
 //   1. Global opt-out      (sms_opt_out OR notify_by_sms === false)
-//   2. Per-user rate limit (3 sent SMS / rolling 24h, all SMS types)
-//   3. First-booking eligibility (only for first_booking_nudge_*)
-//   4. Send and transition queued -> sent atomically
-// Email sends skip 1-3 (opt-out and rate limit are SMS-only).
+//   2. First-booking eligibility (only for first_booking_nudge_*)
+//   3. Send and transition queued -> sent atomically
+// Email sends skip 1-2 (opt-out is SMS-only).
 // ============================================================================
 
-// Future eligibility triggers (e.g. "link_clicked" by customer, "booking_created")
-// extend this list — that is the only edit required to disqualify another signal.
+// Single source of truth for "an action by the owner cancels first-booking
+// nudges." Add future signals (link_clicked, booking_created, etc.) here —
+// that is the only edit required.
 export const FIRST_BOOKING_DISQUALIFYING_EVENT_TYPES = [
   "link_copied",
   "link_shared",
@@ -38,8 +38,6 @@ export const FIRST_BOOKING_NUDGE_TYPES = [
   "first_booking_nudge_10m",
   "first_booking_nudge_24h",
 ] as const;
-
-export const SMS_RATE_LIMIT_PER_24H = 3;
 
 function isFirstBookingNudgeType(type: string): boolean {
   return (FIRST_BOOKING_NUDGE_TYPES as readonly string[]).includes(type);
@@ -550,24 +548,7 @@ async function attemptSendMessage(message: OutboundMessage): Promise<SendOutcome
       return { kind: "canceled", reason: "user_opted_out" };
     }
 
-    // Guard 2: per-user SMS rate limit (3 sent / rolling 24h, all SMS types).
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const sentCountRows = await db
-      .select({ n: sql<number>`count(*)::int` })
-      .from(outboundMessages)
-      .where(and(
-        eq(outboundMessages.userId, message.userId),
-        eq(outboundMessages.channel, "sms"),
-        eq(outboundMessages.status, "sent"),
-        gte(outboundMessages.sentAt, since),
-      ));
-    const sentLast24h = sentCountRows[0]?.n ?? 0;
-    if (sentLast24h >= SMS_RATE_LIMIT_PER_24H) {
-      logger.info(`[OutboundMessages] Rate limit hit for user ${message.userId} (${sentLast24h}/${SMS_RATE_LIMIT_PER_24H})`);
-      return { kind: "canceled", reason: "rate_limited" };
-    }
-
-    // Guard 3: first-booking eligibility re-check. Only applies to nudges so
+    // Guard 2: first-booking eligibility re-check. Only applies to nudges so
     // existing followup/payment_reminder/etc behavior is unchanged.
     if (isFirstBookingNudgeType(message.type)) {
       // A first-booking nudge with no booking_page_id is malformed — there's

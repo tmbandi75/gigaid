@@ -173,9 +173,13 @@ router.post("/claim-page", async (req: Request, res: Response) => {
     if (phone) {
       const now = new Date();
       const bookingUrl = `${publicOriginFromReq(req)}/book/${pageId}`;
+      // Locked-spec bodies are rendered at SEND TIME inside attemptSendMessage,
+      // not here. We persist bookingUrl in metadata so that a future renderer
+      // (or admin tooling) can recover the page URL without re-deriving it,
+      // and leave templateRendered empty so there's no stale draft on disk.
       const nudges = [
-        { minutes: 10, type: "first_booking_nudge_10m", body: `Send your booking link to your next customer — it saves a ton of back and forth: ${bookingUrl}` },
-        { minutes: 60 * 24, type: "first_booking_nudge_24h", body: `Most people get their first booking within a day after sharing their link: ${bookingUrl}` },
+        { minutes: 10, type: "first_booking_nudge_10m" },
+        { minutes: 60 * 24, type: "first_booking_nudge_24h" },
       ];
       try {
         await db.insert(outboundMessages).values(nudges.map((n) => ({
@@ -187,8 +191,8 @@ router.post("/claim-page", async (req: Request, res: Response) => {
           type: n.type,
           status: "scheduled" as const,
           scheduledFor: new Date(now.getTime() + n.minutes * 60 * 1000).toISOString(),
-          templateRendered: n.body,
-          metadata: JSON.stringify({ pageId, source: "first_booking" }),
+          templateRendered: "",
+          metadata: JSON.stringify({ pageId, bookingUrl, source: "first_booking" }),
           createdAt: now.toISOString(),
         })));
       } catch (err: any) {
