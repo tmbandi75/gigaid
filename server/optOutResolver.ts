@@ -77,11 +77,14 @@ export async function buildDefaultOptOutResolverDeps(): Promise<OptOutResolverDe
 
   return {
     findUsersByPhoneE164: async (phone) => {
+      // Bounded fetch (cap at 10) so the ambiguity warning can report the
+      // real count instead of just "2+". Phone collisions on users are
+      // rare; ten is plenty for ops reporting.
       return await db
         .select({ id: usersTable.id })
         .from(usersTable)
         .where(eq(usersTable.phoneE164, phone))
-        .limit(2); // limit 2 is enough to detect ambiguity without count()
+        .limit(10);
     },
     findRecentOutboundUserIds: async (phone) => {
       const rows = await db
