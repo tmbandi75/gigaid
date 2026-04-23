@@ -4552,7 +4552,11 @@ export async function registerRoutes(
       // ----- STOP opt-out branch (runs before normal inbound routing) -----
       const trimmedBody = (Body || "").trim().toUpperCase();
       if (STOP_KEYWORDS.has(trimmedBody)) {
-        const userId = await resolveOptOutUserId(From);
+        // Spec: match against E.164-normalized From. Twilio always sends
+        // E.164 in production, but trim defensively so a stray space or
+        // a non-Twilio test client can't slip past the lookup.
+        const normalizedFrom = (From || "").trim();
+        const userId = await resolveOptOutUserId(normalizedFrom);
         if (userId) {
           const { users: usersTable } = await import("@shared/schema");
           const { db } = await import("./db");
