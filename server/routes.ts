@@ -4541,9 +4541,14 @@ export async function registerRoutes(
 
   // Phone masking + ambiguity-safe STOP resolver live in their own module
   // so they're unit-testable without spinning up the route stack.
+  // Note: ./twilioStopOptOut also exports a pure ambiguity-safe resolver
+  // and locked TwiML payloads used by the dedicated unit tests in
+  // tests/api/twilioStopWebhook.test.ts; the route uses optOutResolver
+  // here because it carries the START/UNSTOP flow and dependency wiring.
   const { maskPhone, resolveOptOutUserId, buildDefaultOptOutResolverDeps } =
     await import("./optOutResolver");
   const optOutResolverDeps = await buildDefaultOptOutResolverDeps();
+  const { EMPTY_TWIML, STOP_ACK_TWIML } = await import("./twilioStopOptOut");
 
   async function handleTwilioInbound(req: any, res: any) {
     try {
@@ -4552,10 +4557,7 @@ export async function registerRoutes(
       if (!From || !Body) {
         logger.debug("[Twilio Inbound] Missing From or Body");
         // Still 2xx with TwiML — Twilio retries on non-2xx and will duplicate.
-        return res
-          .type("text/xml")
-          .status(200)
-          .send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
+        return res.type("text/xml").status(200).send(EMPTY_TWIML);
       }
 
       // Spec: never log full phone numbers; cap body at 30 chars.
@@ -4569,7 +4571,7 @@ export async function registerRoutes(
         // routing so a customer reply that happens to say "START" / "UNSTOP"
         // is preserved as a normal message in conversations.
         const normalizedFrom = (From || "").trim();
-        const userId = await resolveOptOutUserId(normalizedFrom);
+        const userId = await resolveOptOutUserId(normalizedFrom, optOutResolverDeps);
         if (userId) {
           const candidate = await storage.getUser(userId);
           if (candidate?.smsOptOut) {
@@ -4620,9 +4622,7 @@ export async function registerRoutes(
         }
         // TwiML confirmation reply (Twilio also auto-handles STOP at the
         // carrier level, but we send a friendly confirmation regardless).
-        res.type("text/xml").send(
-          `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${STOP_REPLY_BODY}</Message></Response>`,
-        );
+        res.type("text/xml").send(STOP_ACK_TWIML);
         return;
       }
 
@@ -4698,15 +4698,12 @@ export async function registerRoutes(
       }
 
       // Return TwiML response (empty is fine for now)
-      res.type("text/xml").send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
+      res.type("text/xml").send(EMPTY_TWIML);
     } catch (error) {
       logger.error("[Twilio Inbound] Error:", error);
       // Always 2xx with TwiML so Twilio doesn't retry — duplicate inbound
       // storage is worse than missing one log line.
-      res
-        .type("text/xml")
-        .status(200)
-        .send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
+      res.type("text/xml").status(200).send(EMPTY_TWIML);
     }
   }
 

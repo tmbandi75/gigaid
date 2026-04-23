@@ -19,11 +19,12 @@ import { logger } from "./lib/logger";
 // ============================================================================
 // Send-time policy for outbound SMS.
 // ----------------------------------------------------------------------------
-// Order of guards inside attemptSendMessage:
+// Order of guards inside attemptSendMessage / evaluateSendPolicy:
 //   1. Global opt-out      (sms_opt_out OR notify_by_sms === false)
-//   2. First-booking eligibility (only for first_booking_nudge_*)
-//   3. Send and transition queued -> sent atomically
-// Email sends skip 1-2 (opt-out is SMS-only).
+//   2. Per-user rate limit (recent SMS sends in the rolling window)
+//   3. First-booking eligibility (only for first_booking_nudge_*)
+//   4. Send and transition queued -> sent atomically
+// Email sends skip 1-3 (opt-out and rate limit are SMS-only).
 // ============================================================================
 
 // Single source of truth for "an action by the owner cancels first-booking
@@ -108,6 +109,81 @@ type SendOutcome =
   | { kind: "sent"; body: string }
   | { kind: "canceled"; reason: string }
   | { kind: "deferred"; reason: string };
+
+// Cancellation reasons surfaced via outbound_messages.failure_reason. Locked
+// strings — admin dashboards and tests both pattern-match these directly.
+export const CANCEL_REASONS = {
+  USER_NOT_FOUND: "user_not_found",
+  USER_OPTED_OUT: "user_opted_out",
+  RATE_LIMITED: "rate_limited",
+  ACTION_TAKEN: "action_taken",
+  MISSING_BOOKING_PAGE: "missing_booking_page",
+} as const;
+
+// Inputs to evaluateSendPolicy — all data the chain needs is collected up
+// front by the caller so this stays a pure function (no DB / network).
+export interface SendPolicyInput {
+  channel: string;
+  type: string;
+  bookingPageId: string | null | undefined;
+  user: { smsOptOut?: boolean | null; notifyBySms?: boolean | null } | null;
+  // First-booking nudge inputs (only consulted when type matches a nudge):
+  bookingPageClaimed?: boolean | null;
+  disqualifyingEventCount?: number;
+  // Rate-limit inputs (only consulted for SMS):
+  recentSmsSentCount?: number;
+  maxSmsPerWindow?: number;
+}
+
+export type SendPolicyDecision =
+  | { kind: "allow" }
+  | { kind: "cancel"; reason: string };
+
+/**
+ * Pure send-time policy decision. Centralizes the chain so attemptSendMessage
+ * and tests both consume the exact same logic. Order is load-bearing: opt-out
+ * before rate-limit before first-booking-eligibility, so a STOPped user is
+ * always reported as `user_opted_out` rather than masked by a rate limit.
+ */
+export function evaluateSendPolicy(input: SendPolicyInput): SendPolicyDecision {
+  // Email path: opt-out and rate limit are SMS-only by design (spec).
+  if (input.channel !== "sms") {
+    return { kind: "allow" };
+  }
+
+  if (!input.user) {
+    return { kind: "cancel", reason: CANCEL_REASONS.USER_NOT_FOUND };
+  }
+
+  // Guard 1: global opt-out. Either flag blocks; STOP webhook flips both.
+  if (input.user.smsOptOut === true || input.user.notifyBySms === false) {
+    return { kind: "cancel", reason: CANCEL_REASONS.USER_OPTED_OUT };
+  }
+
+  // Guard 2: per-user rate limit. Skipped when caller didn't provide a max
+  // (e.g. internal tests of just opt-out behavior); enforced strictly when
+  // the cap is provided. >= so the cap is the inclusive max already-sent.
+  const max = input.maxSmsPerWindow;
+  const recent = input.recentSmsSentCount ?? 0;
+  if (typeof max === "number" && recent >= max) {
+    return { kind: "cancel", reason: CANCEL_REASONS.RATE_LIMITED };
+  }
+
+  // Guard 3: first-booking eligibility re-check. Other types unaffected.
+  if (isFirstBookingNudgeType(input.type)) {
+    if (!input.bookingPageId) {
+      return { kind: "cancel", reason: CANCEL_REASONS.MISSING_BOOKING_PAGE };
+    }
+    if (!input.bookingPageClaimed) {
+      return { kind: "cancel", reason: CANCEL_REASONS.ACTION_TAKEN };
+    }
+    if ((input.disqualifyingEventCount ?? 0) > 0) {
+      return { kind: "cancel", reason: CANCEL_REASONS.ACTION_TAKEN };
+    }
+  }
+
+  return { kind: "allow" };
+}
 
 // Template rendering utility - simple string replacement, no code execution
 export function renderTemplate(template: string, context: Record<string, string | undefined>): string {
@@ -585,59 +661,69 @@ async function attemptSendMessage(message: OutboundMessage): Promise<SendOutcome
       .where(eq(users.id, message.userId))
       .limit(1);
 
-    if (!user) {
-      logger.warn(`[OutboundMessages] Cancel ${message.id}: user_not_found ${message.userId}`);
-      return { kind: "canceled", reason: "user_not_found" };
-    }
-
-    // Guard 1: global SMS opt-out. notify_by_sms === false also blocks
-    // (preserves the existing user-preference contract).
-    if (user.smsOptOut === true || user.notifyBySms === false) {
-      return { kind: "canceled", reason: "user_opted_out" };
-    }
-
-    // Guard 2: per-user rolling 24h SMS cap. Applies across all SMS types;
-    // suppression is global because every send routes through this point.
-    if (await isSmsRateLimited(message.userId)) {
-      return { kind: "canceled", reason: "rate_limited" };
-    }
-
-    // Guard 3: first-booking eligibility re-check. Only applies to nudges so
-    // existing followup/payment_reminder/etc behavior is unchanged.
-    if (isFirstBookingNudgeType(message.type)) {
-      // A first-booking nudge with no booking_page_id is malformed — there's
-      // no way to verify eligibility, so cancel rather than blindly send.
-      if (!message.bookingPageId) {
-        logger.warn(`[OutboundMessages] Cancel ${message.id}: first-booking nudge missing bookingPageId`);
-        return { kind: "canceled", reason: "missing_booking_page" };
-      }
+    // Collect remaining policy inputs so the pure evaluateSendPolicy chain
+    // can decide. Reuses HEAD's isSmsRateLimited (24h cap, applies to all
+    // SMS types) for the rate-limit signal — kept as a separate function so
+    // ad-hoc callers (e.g. growth tooling) can consult it standalone.
+    let bookingPageClaimed: boolean | null = null;
+    let disqualifyingEventCount = 0;
+    if (user && isFirstBookingNudgeType(message.type) && message.bookingPageId) {
       const [page] = await db
         .select()
         .from(bookingPages)
         .where(eq(bookingPages.id, message.bookingPageId))
         .limit(1);
-      if (!page || !page.claimed) {
-        return { kind: "canceled", reason: "action_taken" };
-      }
-      const disqRows = await db
-        .select({ n: sql<number>`count(*)::int` })
-        .from(bookingPageEvents)
-        .where(and(
-          eq(bookingPageEvents.pageId, message.bookingPageId),
-          inArray(
-            bookingPageEvents.type,
-            Array.from(FIRST_BOOKING_DISQUALIFYING_EVENT_TYPES),
-          ),
-        ));
-      if ((disqRows[0]?.n ?? 0) > 0) {
-        return { kind: "canceled", reason: "action_taken" };
+      bookingPageClaimed = page ? page.claimed : null;
+      if (page) {
+        const disqRows = await db
+          .select({ n: sql<number>`count(*)::int` })
+          .from(bookingPageEvents)
+          .where(and(
+            eq(bookingPageEvents.pageId, message.bookingPageId),
+            inArray(
+              bookingPageEvents.type,
+              Array.from(FIRST_BOOKING_DISQUALIFYING_EVENT_TYPES),
+            ),
+          ));
+        disqualifyingEventCount = disqRows[0]?.n ?? 0;
       }
     }
+
+    // Rate-limit signal from HEAD's standalone helper. Pass it into the
+    // pure policy chain as a "saturated" recent-count when limited, so
+    // evaluateSendPolicy still owns the cancel decision and ordering.
+    const rateLimited = user ? await isSmsRateLimited(message.userId) : false;
+
+    const decision = evaluateSendPolicy({
+      channel: message.channel,
+      type: message.type,
+      bookingPageId: message.bookingPageId,
+      user: user ? { smsOptOut: user.smsOptOut, notifyBySms: user.notifyBySms } : null,
+      bookingPageClaimed,
+      disqualifyingEventCount,
+      recentSmsSentCount: rateLimited ? SMS_RATE_LIMIT_PER_24H : 0,
+      maxSmsPerWindow: SMS_RATE_LIMIT_PER_24H,
+    });
+
+    if (decision.kind === "cancel") {
+      if (decision.reason === CANCEL_REASONS.USER_NOT_FOUND) {
+        logger.warn(`[OutboundMessages] Cancel ${message.id}: user_not_found ${message.userId}`);
+      } else if (decision.reason === CANCEL_REASONS.MISSING_BOOKING_PAGE) {
+        logger.warn(`[OutboundMessages] Cancel ${message.id}: first-booking nudge missing bookingPageId`);
+      } else if (decision.reason === CANCEL_REASONS.RATE_LIMITED) {
+        logger.warn(`[OutboundMessages] Cancel ${message.id}: rate_limited (>=${SMS_RATE_LIMIT_PER_24H}/24h)`);
+      }
+      return { kind: "canceled", reason: decision.reason };
+    }
+
+    // After an `allow` decision, user is guaranteed non-null (a null user
+    // would have produced a `user_not_found` cancel above).
+    const allowedUser = user!;
 
     // Render body. Locked first-booking nudge bodies are rendered exclusively
     // here, at send time, so first_name is always fresh.
     const body = isFirstBookingNudgeType(message.type)
-      ? renderFirstBookingNudgeBody(message.type, user.firstName)
+      ? renderFirstBookingNudgeBody(message.type, allowedUser.firstName)
       : (message.templateRendered || "");
 
     // Reuse the canonical Twilio sender so credential resolution, error
