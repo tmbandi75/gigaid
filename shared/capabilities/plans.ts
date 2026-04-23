@@ -16,6 +16,7 @@ export type Capability =
   | 'ai.campaign_suggestions'
   | 'sms.two_way'
   | 'sms.auto_followups'
+  | 'sms.rate_limit_per_24h'
   | 'notifications.event_driven'
   | 'offline.capture'
   | 'offline.photos'

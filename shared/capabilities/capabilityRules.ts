@@ -31,6 +31,7 @@ export const CAPABILITY_RULES: Record<Plan, PlanCapabilityRules> = {
     'ai.campaign_suggestions': { mode: 'read_only' },
     'sms.two_way': { limit: 20, reply_only: true },
     'sms.auto_followups': { limit: 1 },
+    'sms.rate_limit_per_24h': { limit: 3 },
     'notifications.event_driven': { mode: 'suggest_only' },
     'offline.capture': { unlimited: true },
     'offline.photos': { limit: 3 },
@@ -50,6 +51,7 @@ export const CAPABILITY_RULES: Record<Plan, PlanCapabilityRules> = {
     'ai.outcome_attribution': { window_days: 30 },
     'sms.two_way': { unlimited: true },
     'sms.auto_followups': { unlimited: true },
+    'sms.rate_limit_per_24h': { limit: 50 },
     'notifications.event_driven': { limit: 10 },
     'offline.photos': { limit: 10 },
     'analytics.basic': { unlimited: true }
@@ -63,7 +65,8 @@ export const CAPABILITY_RULES: Record<Plan, PlanCapabilityRules> = {
     'notifications.event_driven': { unlimited: true },
     'offline.photos': { unlimited: true },
     'analytics.advanced': { mode: 'active' },
-    'sms.two_way': { limit: 300 }
+    'sms.two_way': { limit: 300 },
+    'sms.rate_limit_per_24h': { limit: 200 }
   },
 
   business: {
@@ -71,7 +74,8 @@ export const CAPABILITY_RULES: Record<Plan, PlanCapabilityRules> = {
     'crew.manage': { unlimited: true },
     'admin.controls': { unlimited: true },
     'analytics.advanced': { unlimited: true },
-    'sms.two_way': { limit: 1500 }
+    'sms.two_way': { limit: 1500 },
+    'sms.rate_limit_per_24h': { unlimited: true }
   }
 };
 
@@ -91,6 +95,7 @@ export const CAPABILITY_DISPLAY_NAMES: Record<Capability, string> = {
   'ai.campaign_suggestions': 'AI Campaign Suggestions',
   'sms.two_way': 'Two-Way SMS',
   'sms.auto_followups': 'Auto Follow-ups',
+  'sms.rate_limit_per_24h': 'SMS Send Cap (24h)',
   'notifications.event_driven': 'Event-Driven Notifications',
   'offline.capture': 'Offline Capture',
   'offline.photos': 'Offline Photos',

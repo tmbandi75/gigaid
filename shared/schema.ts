@@ -2204,7 +2204,12 @@ export const userAutomationSettings = pgTable("user_automation_settings", {
   confirmationTemplate: text("confirmation_template").default(
     "Hi {{client_first_name}} — just confirming we're set for {{job_date}} at {{job_time}}. Reply YES to confirm, or let me know if anything changes."
   ),
-  
+
+  // Per-user override for the rolling-24h SMS rate-limit cap. NULL means
+  // "use the plan default from CAPABILITY_RULES['sms.rate_limit_per_24h']".
+  // A positive integer overrides the plan default. 0 or negative means unlimited.
+  smsRateLimitPer24hOverride: integer("sms_rate_limit_per_24h_override"),
+
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at"),
 }, (table) => [

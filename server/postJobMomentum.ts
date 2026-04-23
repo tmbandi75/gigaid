@@ -15,6 +15,8 @@ import {
 } from "@shared/schema";
 import { eq, and, lte, gte, ne, inArray, sql } from "drizzle-orm";
 import { logger } from "./lib/logger";
+import type { Plan } from "@shared/capabilities";
+import { isUnlimited, getLimit } from "@shared/capabilities";
 
 // ============================================================================
 // Send-time policy for outbound SMS.
@@ -44,10 +46,36 @@ function isFirstBookingNudgeType(type: string): boolean {
   return (FIRST_BOOKING_NUDGE_TYPES as readonly string[]).includes(type);
 }
 
-// Per-user rolling 24h SMS cap. Applies to ALL outbound SMS types (nudges,
-// reminders, follow-ups, confirmations, …). Single source of truth so
-// future tuning is one edit. Enforced at the send chokepoint.
+// Per-user rolling 24h SMS cap for the FREE tier. Kept exported as a
+// back-compat constant: paid tiers now read their cap from plan capabilities
+// (`sms.rate_limit_per_24h`) and a per-user override on
+// `userAutomationSettings.smsRateLimitPer24hOverride` beats the plan default.
+// This constant equals the free-tier capability rule and is the value used
+// when no plan / override is supplied to the resolver.
 export const SMS_RATE_LIMIT_PER_24H = 3;
+
+/**
+ * Resolve the rolling-24h SMS cap for a user. Order of precedence:
+ *   1. A non-null per-user override (positive int = explicit cap, <=0 = unlimited)
+ *   2. The plan's `sms.rate_limit_per_24h` capability (unlimited or limit)
+ *   3. Free-tier default (`SMS_RATE_LIMIT_PER_24H`) when plan is missing
+ *
+ * Returns `undefined` to mean "no cap" (unlimited). A finite number is the
+ * inclusive cap to compare against `recentSmsSentCount` in evaluateSendPolicy.
+ */
+export function resolveSmsRateLimit(
+  plan: Plan | null | undefined,
+  override?: number | null,
+): number | undefined {
+  if (typeof override === "number") {
+    if (override <= 0) return undefined; // explicit "unlimited" override
+    return override;
+  }
+  if (!plan) return SMS_RATE_LIMIT_PER_24H;
+  if (isUnlimited(plan, "sms.rate_limit_per_24h")) return undefined;
+  const planLimit = getLimit(plan, "sms.rate_limit_per_24h");
+  return typeof planLimit === "number" ? planLimit : SMS_RATE_LIMIT_PER_24H;
+}
 
 /**
  * Counts outbound SMS rows for `userId` with status='sent' within the last
@@ -71,13 +99,17 @@ export async function countSentSmsLast24h(userId: string): Promise<number> {
 /**
  * Return true if sending another SMS to this user would violate the rolling
  * 24h cap. The counter is injectable so tests can drive it with controlled
- * values without exercising the database layer.
+ * values without exercising the database layer. The cap is resolved from the
+ * user's plan + per-user override (free-tier default when omitted), so
+ * paid tiers can send more without code changes.
  */
 export async function isSmsRateLimited(
   userId: string,
   getCount: (userId: string) => Promise<number> = countSentSmsLast24h,
+  cap: number | undefined = SMS_RATE_LIMIT_PER_24H,
 ): Promise<boolean> {
-  return (await getCount(userId)) >= SMS_RATE_LIMIT_PER_24H;
+  if (cap === undefined) return false; // unlimited
+  return (await getCount(userId)) >= cap;
 }
 
 function buildFirstNamePrefix(firstName: string | null | undefined): string {
@@ -689,10 +721,28 @@ async function attemptSendMessage(message: OutboundMessage): Promise<SendOutcome
       }
     }
 
+    // Resolve this user's effective rolling-24h cap. Per-user override beats
+    // the plan default; plan default comes from the capability rule. `undefined`
+    // means unlimited (skip rate-limit guard entirely).
+    let effectiveCap: number | undefined = SMS_RATE_LIMIT_PER_24H;
+    if (user) {
+      const [autoSettings] = await db
+        .select({ override: userAutomationSettings.smsRateLimitPer24hOverride })
+        .from(userAutomationSettings)
+        .where(eq(userAutomationSettings.userId, message.userId))
+        .limit(1);
+      effectiveCap = resolveSmsRateLimit(
+        (user.plan as Plan | null | undefined) ?? null,
+        autoSettings?.override ?? null,
+      );
+    }
+
     // Rate-limit signal from HEAD's standalone helper. Pass it into the
     // pure policy chain as a "saturated" recent-count when limited, so
     // evaluateSendPolicy still owns the cancel decision and ordering.
-    const rateLimited = user ? await isSmsRateLimited(message.userId) : false;
+    const rateLimited = user
+      ? await isSmsRateLimited(message.userId, countSentSmsLast24h, effectiveCap)
+      : false;
 
     const decision = evaluateSendPolicy({
       channel: message.channel,
@@ -701,8 +751,8 @@ async function attemptSendMessage(message: OutboundMessage): Promise<SendOutcome
       user: user ? { smsOptOut: user.smsOptOut, notifyBySms: user.notifyBySms } : null,
       bookingPageClaimed,
       disqualifyingEventCount,
-      recentSmsSentCount: rateLimited ? SMS_RATE_LIMIT_PER_24H : 0,
-      maxSmsPerWindow: SMS_RATE_LIMIT_PER_24H,
+      recentSmsSentCount: rateLimited && effectiveCap !== undefined ? effectiveCap : 0,
+      maxSmsPerWindow: effectiveCap,
     });
 
     if (decision.kind === "cancel") {
@@ -711,7 +761,7 @@ async function attemptSendMessage(message: OutboundMessage): Promise<SendOutcome
       } else if (decision.reason === CANCEL_REASONS.MISSING_BOOKING_PAGE) {
         logger.warn(`[OutboundMessages] Cancel ${message.id}: first-booking nudge missing bookingPageId`);
       } else if (decision.reason === CANCEL_REASONS.RATE_LIMITED) {
-        logger.warn(`[OutboundMessages] Cancel ${message.id}: rate_limited (>=${SMS_RATE_LIMIT_PER_24H}/24h)`);
+        logger.warn(`[OutboundMessages] Cancel ${message.id}: rate_limited (>=${effectiveCap}/24h)`);
       }
       return { kind: "canceled", reason: decision.reason };
     }
