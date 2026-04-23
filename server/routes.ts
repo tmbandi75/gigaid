@@ -4497,74 +4497,11 @@ export async function registerRoutes(
   const STOP_REPLY_BODY =
     "You're unsubscribed from GigAid messages. No more texts will be sent.";
 
-  // Mask a phone like +15551234567 -> +15***4567 for safe logging.
-  function maskPhone(phone: string | null | undefined): string {
-    if (!phone) return "unknown";
-    if (phone.length <= 6) return "***";
-    return `${phone.slice(0, 3)}***${phone.slice(-4)}`;
-  }
-
-  // STOP-only phone -> userId resolution. Ambiguity-safe per spec:
-  //   1. Try strict equality on users.phone_e164. Exactly one match wins.
-  //      If two or more users share the phone, REFUSE to opt out (would
-  //      silently disable the wrong account).
-  //   2. Otherwise look at recent outbound SMS to that number and collect
-  //     distinct userIds. Exactly one distinct user wins. If multiple
-  //      different accounts have texted that number recently, REFUSE.
-  // In every refusal path, log a structured warning for manual review and
-  // return null so the webhook still 2xxs without flipping any flags.
-  async function resolveOptOutUserId(fromPhone: string): Promise<string | null> {
-    const { users: usersTable, outboundMessages } = await import("@shared/schema");
-    const { db } = await import("./db");
-    const { eq, and, desc } = await import("drizzle-orm");
-
-    // Pass 1: strict users.phone_e164 match. Pull up to 2 to detect ambiguity
-    // without a count() round-trip.
-    const phoneMatches = await db
-      .select({ id: usersTable.id })
-      .from(usersTable)
-      .where(eq(usersTable.phoneE164, fromPhone))
-      .limit(2);
-    if (phoneMatches.length === 1) {
-      return phoneMatches[0].id;
-    }
-    if (phoneMatches.length > 1) {
-      logger.warn(
-        `[Twilio STOP] Ambiguous: ${phoneMatches.length}+ users share phone ${maskPhone(fromPhone)}; refusing opt-out, manual review required`,
-      );
-      return null;
-    }
-
-    // Pass 2: outbound SMS history. Look at the recent window and require a
-    // single distinct recipient userId. Limit 50 keeps it bounded; if more
-    // than one distinct userId appears in that window, the number has been
-    // shared/reassigned and we refuse rather than guess.
-    const recentOutbound = await db
-      .select({ userId: outboundMessages.userId })
-      .from(outboundMessages)
-      .where(and(
-        eq(outboundMessages.channel, "sms"),
-        eq(outboundMessages.toAddress, fromPhone),
-      ))
-      .orderBy(desc(outboundMessages.createdAt))
-      .limit(50);
-
-    const distinctUserIds = Array.from(
-      new Set(recentOutbound.map((r) => r.userId).filter(Boolean) as string[]),
-    );
-    if (distinctUserIds.length === 1) {
-      return distinctUserIds[0];
-    }
-    if (distinctUserIds.length > 1) {
-      logger.warn(
-        `[Twilio STOP] Ambiguous outbound history: ${distinctUserIds.length} distinct users have texted ${maskPhone(fromPhone)} recently; refusing opt-out, manual review required`,
-      );
-      return null;
-    }
-
-    logger.info(`[Twilio STOP] No matching user for ${maskPhone(fromPhone)}; ignoring`);
-    return null;
-  }
+  // Phone masking + ambiguity-safe STOP resolver live in their own module
+  // so they're unit-testable without spinning up the route stack.
+  const { maskPhone, resolveOptOutUserId, buildDefaultOptOutResolverDeps } =
+    await import("./optOutResolver");
+  const optOutResolverDeps = await buildDefaultOptOutResolverDeps();
 
   async function handleTwilioInbound(req: any, res: any) {
     try {
@@ -4589,7 +4526,7 @@ export async function registerRoutes(
         // E.164 in production, but trim defensively so a stray space or
         // a non-Twilio test client can't slip past the lookup.
         const normalizedFrom = (From || "").trim();
-        const userId = await resolveOptOutUserId(normalizedFrom);
+        const userId = await resolveOptOutUserId(normalizedFrom, optOutResolverDeps);
         if (userId) {
           const { users: usersTable } = await import("@shared/schema");
           const { db } = await import("./db");

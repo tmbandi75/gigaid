@@ -49,11 +49,11 @@ function isFirstBookingNudgeType(type: string): boolean {
 export const SMS_RATE_LIMIT_PER_24H = 3;
 
 /**
- * Return true if sending another SMS to this user would violate the rolling
- * 24h cap. Counts only successfully `sent` messages — scheduled/queued rows
- * don't consume the budget yet, and canceled/failed rows shouldn't.
+ * Counts outbound SMS rows for `userId` with status='sent' within the last
+ * 24h. Exported so tests can call it directly against the real DB if they
+ * need to, and so isSmsRateLimited can be unit-tested by injecting a fake.
  */
-export async function isSmsRateLimited(userId: string): Promise<boolean> {
+export async function countSentSmsLast24h(userId: string): Promise<number> {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const rows = await db
     .select({ n: sql<number>`count(*)::int` })
@@ -64,7 +64,19 @@ export async function isSmsRateLimited(userId: string): Promise<boolean> {
       eq(outboundMessages.status, "sent"),
       gte(outboundMessages.sentAt, since),
     ));
-  return (rows[0]?.n ?? 0) >= SMS_RATE_LIMIT_PER_24H;
+  return rows[0]?.n ?? 0;
+}
+
+/**
+ * Return true if sending another SMS to this user would violate the rolling
+ * 24h cap. The counter is injectable so tests can drive it with controlled
+ * values without exercising the database layer.
+ */
+export async function isSmsRateLimited(
+  userId: string,
+  getCount: (userId: string) => Promise<number> = countSentSmsLast24h,
+): Promise<boolean> {
+  return (await getCount(userId)) >= SMS_RATE_LIMIT_PER_24H;
 }
 
 function buildFirstNamePrefix(firstName: string | null | undefined): string {

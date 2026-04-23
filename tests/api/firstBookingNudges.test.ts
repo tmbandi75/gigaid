@@ -3,7 +3,13 @@ import {
   FIRST_BOOKING_DISQUALIFYING_EVENT_TYPES,
   FIRST_BOOKING_NUDGE_TYPES,
   SMS_RATE_LIMIT_PER_24H,
+  isSmsRateLimited,
 } from "../../server/postJobMomentum";
+import {
+  resolveOptOutUserId,
+  maskPhone,
+  type OptOutResolverDeps,
+} from "../../server/optOutResolver";
 
 const STOP_KEYWORDS = ["STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL"];
 
@@ -54,7 +60,6 @@ describe("First-booking SMS nudges (locked spec)", () => {
     it("uses the exact locked signature on both bodies", () => {
       const tenMin = renderFirstBookingNudgeBody("first_booking_nudge_10m", null);
       const oneDay = renderFirstBookingNudgeBody("first_booking_nudge_24h", null);
-      // em dash + lowercase "p" in "partners"
       expect(tenMin.endsWith("— Your partners at GigAid")).toBe(true);
       expect(oneDay.endsWith("— Your partners at GigAid")).toBe(true);
     });
@@ -62,7 +67,6 @@ describe("First-booking SMS nudges (locked spec)", () => {
     it("includes the brand 'GigAid' in the body itself, not just the signature", () => {
       const tenMin = renderFirstBookingNudgeBody("first_booking_nudge_10m", null);
       const oneDay = renderFirstBookingNudgeBody("first_booking_nudge_24h", null);
-      // Brand should appear at least twice: once in the body, once in the signature.
       expect((tenMin.match(/GigAid/g) || []).length).toBeGreaterThanOrEqual(2);
       expect((oneDay.match(/GigAid/g) || []).length).toBeGreaterThanOrEqual(2);
     });
@@ -112,76 +116,195 @@ describe("First-booking SMS nudges (locked spec)", () => {
       );
     });
   });
+});
 
-  describe("Task #48 AC #1: STOP ambiguity-safe resolver semantics", () => {
-    // Mirrors the resolver in server/routes.ts: phone_e164 wins when exactly
-    // one user matches; otherwise outbound history is consulted and only
-    // returns a userId when there's exactly one distinct recipient.
-    function resolve(opts: {
-      phoneMatches: string[];
-      distinctOutboundUserIds: string[];
-    }): string | null {
-      if (opts.phoneMatches.length === 1) return opts.phoneMatches[0];
-      if (opts.phoneMatches.length > 1) return null;
-      if (opts.distinctOutboundUserIds.length === 1) return opts.distinctOutboundUserIds[0];
-      return null;
-    }
+// ============================================================================
+// Task #48 safeguards — exercise the real exported production functions.
+// ============================================================================
 
-    it("returns the user when 0 phone matches + 1 distinct outbound userId", () => {
-      expect(resolve({ phoneMatches: [], distinctOutboundUserIds: ["u-1"] })).toBe("u-1");
-    });
-
-    it("refuses (null) when 0 phone matches + 2 distinct outbound userIds", () => {
-      expect(resolve({ phoneMatches: [], distinctOutboundUserIds: ["u-1", "u-2"] })).toBeNull();
-    });
-
-    it("refuses (null) when 2 users share the same phone_e164", () => {
-      expect(resolve({ phoneMatches: ["u-1", "u-2"], distinctOutboundUserIds: ["u-1"] })).toBeNull();
-    });
-
-    it("returns null when neither pass yields a match", () => {
-      expect(resolve({ phoneMatches: [], distinctOutboundUserIds: [] })).toBeNull();
-    });
-
-    it("phone_e164 single match wins even when outbound history is ambiguous", () => {
-      expect(resolve({ phoneMatches: ["u-1"], distinctOutboundUserIds: ["u-2", "u-3"] })).toBe("u-1");
-    });
-  });
-
-  describe("Task #48 AC #3: per-user 24h SMS rate limit chokepoint", () => {
-    it("exposes a single tunable threshold of 3", () => {
-      expect(SMS_RATE_LIMIT_PER_24H).toBe(3);
-    });
-
-    it.each([
-      [0, false],
-      [1, false],
-      [2, false],
-      [3, true],
-      [4, true],
-      [5, true],
-    ])("count=%i within 24h -> rate-limited=%s", (sentCount, expected) => {
-      // Mirrors the chokepoint check in attemptSendMessage.
-      const isLimited = sentCount >= SMS_RATE_LIMIT_PER_24H;
-      expect(isLimited).toBe(expected);
-    });
-  });
-
-  describe("Task #48 AC #2: sent-is-terminal contract documented", () => {
-    // The DB-level guarantee is enforced by a BEFORE UPDATE trigger
-    // (createOutboundMessagesSentTerminalTrigger in server/dbEnforcement.ts).
-    // App-level WHERE clauses also exclude `status = 'sent'` from any
-    // cancellation / failure update path. This test asserts the symbolic
-    // contract: 'sent' is the only terminal status code app code may target.
-    const VALID_TRANSITIONS: Record<string, string[]> = {
-      scheduled: ["queued", "canceled"],
-      queued: ["sent", "canceled", "failed"],
-      sent: [], // terminal
-      canceled: [],
-      failed: [],
+describe("Task #48 AC #1: ambiguity-safe STOP resolution (real resolveOptOutUserId)", () => {
+  function makeDeps(
+    phoneMatches: string[],
+    outboundUserIds: string[],
+  ): OptOutResolverDeps {
+    return {
+      findUsersByPhoneE164: jest.fn(async () => phoneMatches.map((id) => ({ id }))),
+      findRecentOutboundUserIds: jest.fn(async () => outboundUserIds),
     };
-    it("permits no outgoing transitions from 'sent'", () => {
-      expect(VALID_TRANSITIONS.sent).toEqual([]);
-    });
+  }
+
+  it("returns the user when exactly one phone_e164 match exists", async () => {
+    const deps = makeDeps(["u-1"], []);
+    await expect(resolveOptOutUserId("+15551110000", deps)).resolves.toBe("u-1");
+    expect(deps.findUsersByPhoneE164).toHaveBeenCalledWith("+15551110000");
+    // Outbound history should NOT have been consulted when phone match is unambiguous.
+    expect(deps.findRecentOutboundUserIds).not.toHaveBeenCalled();
+  });
+
+  it("refuses (returns null) when 2+ users share the same phone_e164", async () => {
+    const deps = makeDeps(["u-1", "u-2"], ["u-7"]);
+    await expect(resolveOptOutUserId("+15551110000", deps)).resolves.toBeNull();
+    // Must not fall through to the outbound history pass.
+    expect(deps.findRecentOutboundUserIds).not.toHaveBeenCalled();
+  });
+
+  it("falls back to outbound history and returns the single distinct userId", async () => {
+    const deps = makeDeps([], ["u-3", "u-3", "u-3"]);
+    await expect(resolveOptOutUserId("+15551110000", deps)).resolves.toBe("u-3");
+    expect(deps.findRecentOutboundUserIds).toHaveBeenCalledWith("+15551110000");
+  });
+
+  it("refuses when outbound history yields multiple distinct userIds", async () => {
+    const deps = makeDeps([], ["u-1", "u-2"]);
+    await expect(resolveOptOutUserId("+15551110000", deps)).resolves.toBeNull();
+  });
+
+  it("returns null when no user can be identified at all", async () => {
+    const deps = makeDeps([], []);
+    await expect(resolveOptOutUserId("+15551110000", deps)).resolves.toBeNull();
+  });
+
+  it("phone_e164 single match wins even when outbound history would be ambiguous", async () => {
+    const deps = makeDeps(["u-winner"], ["u-x", "u-y"]);
+    await expect(resolveOptOutUserId("+15551110000", deps)).resolves.toBe("u-winner");
+    expect(deps.findRecentOutboundUserIds).not.toHaveBeenCalled();
+  });
+
+  it("filters out empty/null userIds from outbound history before counting distinctness", async () => {
+    const deps = makeDeps([], ["u-only", "", "u-only"] as any);
+    await expect(resolveOptOutUserId("+15551110000", deps)).resolves.toBe("u-only");
+  });
+
+  it("masks phone numbers in the log-format helper used by resolver warnings", () => {
+    expect(maskPhone("+15551234567")).toBe("+15***4567");
+    expect(maskPhone(null)).toBe("unknown");
+    expect(maskPhone("+1234")).toBe("***");
+  });
+});
+
+describe("Task #48 AC #3: per-user 24h SMS cap (real isSmsRateLimited)", () => {
+  it("exposes a single tunable threshold of 3", () => {
+    expect(SMS_RATE_LIMIT_PER_24H).toBe(3);
+  });
+
+  it.each([
+    [0, false],
+    [1, false],
+    [2, false],
+    [3, true],
+    [4, true],
+    [5, true],
+    [99, true],
+  ])(
+    "drives the real isSmsRateLimited: count=%i in the last 24h -> rate-limited=%s",
+    async (sentCount, expected) => {
+      const fakeCounter = jest.fn(async () => sentCount);
+      const limited = await isSmsRateLimited("user-X", fakeCounter);
+      expect(limited).toBe(expected);
+      expect(fakeCounter).toHaveBeenCalledWith("user-X");
+      expect(fakeCounter).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("invokes the counter with the userId passed in", async () => {
+    const fakeCounter = jest.fn(async () => 0);
+    await isSmsRateLimited("specific-user-id-42", fakeCounter);
+    expect(fakeCounter).toHaveBeenCalledWith("specific-user-id-42");
+  });
+});
+
+// ----------------------------------------------------------------------------
+// Task #48 AC #2: sent-is-terminal — DB-backed integration test against the
+// BEFORE UPDATE trigger installed by createOutboundMessagesSentTerminalTrigger.
+// Skipped when DATABASE_URL is unavailable so unit-test runs don't fail.
+// ----------------------------------------------------------------------------
+
+const dbDescribe = process.env.DATABASE_URL ? describe : describe.skip;
+
+dbDescribe("Task #48 AC #2: sent-is-terminal trigger blocks demotion (DB-backed)", () => {
+  // Cold pool connect + ensure-trigger-exists can exceed Jest's default 5s on
+  // the first run. 30s is plenty for both DB tests in this block.
+  jest.setTimeout(30000);
+
+  it("rejects an UPDATE that tries to move a row out of status='sent'", async () => {
+    const { pool } = await import("../../server/db");
+    const { createOutboundMessagesSentTerminalTrigger } = await import(
+      "../../server/dbEnforcement"
+    );
+    // Make sure the trigger exists even if this suite runs against a DB
+    // where the server hasn't started yet.
+    await createOutboundMessagesSentTerminalTrigger();
+
+    const client = await pool.connect();
+    try {
+      const userId = `task48-test-user-${Date.now()}`;
+      const ins = await client.query(
+        `INSERT INTO outbound_messages
+           (user_id, channel, to_address, type, status,
+            scheduled_for, sent_at, created_at)
+         VALUES ($1, 'sms', '+15550000000', 'task48_trigger_demo', 'sent',
+            now()::text, now()::text, now()::text)
+         RETURNING id`,
+        [userId],
+      );
+      const id = ins.rows[0].id as string;
+
+      try {
+        let raised: Error | null = null;
+        try {
+          await client.query(
+            `UPDATE outbound_messages SET status = 'canceled' WHERE id = $1`,
+            [id],
+          );
+        } catch (e: any) {
+          raised = e;
+        }
+        expect(raised).not.toBeNull();
+        expect(String(raised?.message)).toMatch(/SENT_IS_TERMINAL/);
+
+        // Confirm the row is still 'sent'.
+        const after = await client.query(
+          `SELECT status FROM outbound_messages WHERE id = $1`,
+          [id],
+        );
+        expect(after.rows[0].status).toBe("sent");
+      } finally {
+        await client.query(`DELETE FROM outbound_messages WHERE id = $1`, [id]);
+      }
+    } finally {
+      client.release();
+    }
+  });
+
+  it("permits a no-op UPDATE that keeps status='sent' (e.g. metadata edits)", async () => {
+    const { pool } = await import("../../server/db");
+    const client = await pool.connect();
+    try {
+      const userId = `task48-test-user-noop-${Date.now()}`;
+      const ins = await client.query(
+        `INSERT INTO outbound_messages
+           (user_id, channel, to_address, type, status,
+            scheduled_for, sent_at, created_at)
+         VALUES ($1, 'sms', '+15550000000', 'task48_trigger_demo', 'sent',
+            now()::text, now()::text, now()::text)
+         RETURNING id`,
+        [userId],
+      );
+      const id = ins.rows[0].id as string;
+
+      try {
+        // Updating a non-status column on a sent row must succeed.
+        await expect(
+          client.query(
+            `UPDATE outbound_messages SET updated_at = now()::text WHERE id = $1`,
+            [id],
+          ),
+        ).resolves.toBeDefined();
+      } finally {
+        await client.query(`DELETE FROM outbound_messages WHERE id = $1`, [id]);
+      }
+    } finally {
+      client.release();
+    }
   });
 });
