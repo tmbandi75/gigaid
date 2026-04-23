@@ -13,6 +13,7 @@ router.use(adminMiddleware);
 // Known structured guard reasons. Anything else is bucketed under "other".
 const KNOWN_REASONS = [
   "user_opted_out",
+  "phone_unreachable",
   "rate_limited",
   "action_taken",
   "missing_booking_page",
@@ -115,11 +116,23 @@ router.get("/summary", async (_req, res) => {
         smsConfirmationLastFailureAt: users.smsConfirmationLastFailureAt,
         smsConfirmationLastFailureCode: users.smsConfirmationLastFailureCode,
         smsConfirmationLastFailureMessage: users.smsConfirmationLastFailureMessage,
+        smsConfirmationFailureCount: users.smsConfirmationFailureCount,
+        smsConfirmationFirstFailureAt: users.smsConfirmationFirstFailureAt,
+        phoneUnreachable: users.phoneUnreachable,
+        phoneUnreachableAt: users.phoneUnreachableAt,
       })
       .from(users)
       .where(isNotNull(users.smsConfirmationLastFailureAt))
       .orderBy(desc(users.smsConfirmationLastFailureAt))
-      .limit(10);
+      .limit(25);
+
+    // Distinguish one-off bounces from chronically bad numbers. A user is
+    // "chronic" once smsConfirmationFailureCount has crossed the auto-pause
+    // threshold (mirrored by phoneUnreachable=true on the user row).
+    const [unreachableCountRow] = await db
+      .select({ c: count() })
+      .from(users)
+      .where(eq(users.phoneUnreachable, true));
 
     // Inbound STOP audit: count + recent unmatched/ambiguous events. We
     // surface these so operators can spot opt-outs that didn't pin to any
@@ -164,6 +177,7 @@ router.get("/summary", async (_req, res) => {
       },
       confirmationFailures: {
         total: Number(confirmFailureCountRow?.c || 0),
+        unreachable: Number(unreachableCountRow?.c || 0),
         recent: recentConfirmFailures,
       },
       unmatchedOptOuts: {

@@ -292,6 +292,53 @@ describe("Send-time policy chain (evaluateSendPolicy)", () => {
     });
   });
 
+  describe("phone-unreachable guard", () => {
+    it("cancels with phone_unreachable when the user has been auto-paused", () => {
+      const decision = evaluateSendPolicy({
+        channel: "sms",
+        type: "followup",
+        bookingPageId: null,
+        user: { smsOptOut: false, notifyBySms: true, phoneUnreachable: true },
+      });
+      expect(decision).toEqual({
+        kind: "cancel",
+        reason: CANCEL_REASONS.PHONE_UNREACHABLE,
+      });
+    });
+
+    it("opt-out beats phone_unreachable (STOP wins over auto-pause)", () => {
+      const decision = evaluateSendPolicy({
+        channel: "sms",
+        type: "followup",
+        bookingPageId: null,
+        user: { smsOptOut: true, notifyBySms: true, phoneUnreachable: true },
+      });
+      expect(decision).toEqual({ kind: "cancel", reason: "user_opted_out" });
+    });
+
+    it("phone_unreachable beats rate limit", () => {
+      const decision = evaluateSendPolicy({
+        channel: "sms",
+        type: "followup",
+        bookingPageId: null,
+        user: { smsOptOut: false, notifyBySms: true, phoneUnreachable: true },
+        recentSmsSentCount: RATE_CAP,
+        maxSmsPerWindow: RATE_CAP,
+      });
+      expect(decision).toEqual({ kind: "cancel", reason: "phone_unreachable" });
+    });
+
+    it("allows email even when phoneUnreachable is true (SMS-only guard)", () => {
+      const decision = evaluateSendPolicy({
+        channel: "email",
+        type: "followup",
+        bookingPageId: null,
+        user: { smsOptOut: false, notifyBySms: true, phoneUnreachable: true },
+      });
+      expect(decision).toEqual({ kind: "allow" });
+    });
+  });
+
   describe("guard ordering", () => {
     it("opt-out beats first-booking eligibility (a STOPped user is reported as user_opted_out, not action_taken)", () => {
       const decision = evaluateSendPolicy({

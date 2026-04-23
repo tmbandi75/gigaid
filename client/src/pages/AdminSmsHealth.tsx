@@ -59,6 +59,10 @@ interface RecentConfirmFailure {
   smsConfirmationLastFailureAt: string | null;
   smsConfirmationLastFailureCode: string | null;
   smsConfirmationLastFailureMessage: string | null;
+  smsConfirmationFailureCount: number | null;
+  smsConfirmationFirstFailureAt: string | null;
+  phoneUnreachable: boolean | null;
+  phoneUnreachableAt: string | null;
 }
 
 interface UnmatchedOptOut {
@@ -80,7 +84,11 @@ interface SmsHealthSummary {
   canceled: { total: number; byReason: Record<string, number> };
   failed: { total: number; byReason: Record<string, number> };
   optOuts: { total: number; last7d: number; recent: RecentOptOut[] };
-  confirmationFailures: { total: number; recent: RecentConfirmFailure[] };
+  confirmationFailures: {
+    total: number;
+    unreachable: number;
+    recent: RecentConfirmFailure[];
+  };
   unmatchedOptOuts: { last7d: number; recent: UnmatchedOptOut[] };
 }
 
@@ -122,6 +130,7 @@ interface ClearPhoneTarget {
 
 const REASON_LABELS: Record<string, string> = {
   user_opted_out: "User opted out (STOP)",
+  phone_unreachable: "Phone unreachable (auto-paused)",
   rate_limited: "Rate limited",
   action_taken: "Action already taken",
   missing_booking_page: "Missing booking page",
@@ -983,15 +992,28 @@ export default function AdminSmsHealth() {
             <p className="text-sm text-muted-foreground">No data.</p>
           ) : (
             <div className="space-y-3">
-              <div>
-                <div
-                  className="text-3xl font-bold tabular-nums"
-                  data-testid="text-confirmation-failures-total"
-                >
-                  {summary.confirmationFailures.total}
+              <div className="flex items-end gap-6">
+                <div>
+                  <div
+                    className="text-3xl font-bold tabular-nums"
+                    data-testid="text-confirmation-failures-total"
+                  >
+                    {summary.confirmationFailures.total}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    users with a failed confirmation on file
+                  </div>
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  users with a failed confirmation on file
+                <div>
+                  <div
+                    className="text-2xl font-semibold tabular-nums text-red-600 dark:text-red-400"
+                    data-testid="text-confirmation-failures-unreachable"
+                  >
+                    {summary.confirmationFailures.unreachable}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    auto-paused (chronic)
+                  </div>
                 </div>
               </div>
               {summary.confirmationFailures.recent.length === 0 ? (
@@ -1005,6 +1027,8 @@ export default function AdminSmsHealth() {
                       <tr>
                         <th className="py-2 pr-3">User</th>
                         <th className="py-2 pr-3">Phone</th>
+                        <th className="py-2 pr-3">Status</th>
+                        <th className="py-2 pr-3">Streak</th>
                         <th className="py-2 pr-3">Reason</th>
                         <th className="py-2 pr-3">Failed at</th>
                         <th className="py-2 pr-3" />
@@ -1022,6 +1046,27 @@ export default function AdminSmsHealth() {
                           </td>
                           <td className="py-2 pr-3 text-muted-foreground">
                             {u.phone || "—"}
+                          </td>
+                          <td
+                            className="py-2 pr-3"
+                            data-testid={`text-confirmation-failure-status-${u.id}`}
+                          >
+                            {u.phoneUnreachable ? (
+                              <Badge
+                                variant="destructive"
+                                data-testid={`badge-phone-unreachable-${u.id}`}
+                              >
+                                Auto-paused
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary">One-off</Badge>
+                            )}
+                          </td>
+                          <td
+                            className="py-2 pr-3 text-muted-foreground tabular-nums"
+                            data-testid={`text-confirmation-failure-count-${u.id}`}
+                          >
+                            {u.smsConfirmationFailureCount ?? 0}
                           </td>
                           <td
                             className="py-2 pr-3 text-muted-foreground"

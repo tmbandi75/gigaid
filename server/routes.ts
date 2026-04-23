@@ -180,6 +180,10 @@ const SMS_RESUME_CONFIRM_WINDOW_MS = 60_000;
 const smsResumeConfirmCache = new Map<string, number>();
 const SMS_RESUME_CONFIRM_BODY =
   "You're re-subscribed to GigAid messages. Reply STOP at any time to opt out.";
+// Number of consecutive resume-confirmation failures that flip a user into
+// the "phone unreachable" state. Tuned conservatively so a single transient
+// Twilio blip doesn't pause messaging, but a repeatedly-bad number does.
+export const PHONE_UNREACHABLE_THRESHOLD = 3;
 
 export async function registerRoutes(
   httpServer: Server,
@@ -697,6 +701,10 @@ export async function registerRoutes(
         smsConfirmationLastFailureAt: user.smsConfirmationLastFailureAt ?? null,
         smsConfirmationLastFailureCode: user.smsConfirmationLastFailureCode ?? null,
         smsConfirmationLastFailureMessage: user.smsConfirmationLastFailureMessage ?? null,
+        smsConfirmationFailureCount: user.smsConfirmationFailureCount ?? 0,
+        smsConfirmationFirstFailureAt: user.smsConfirmationFirstFailureAt ?? null,
+        phoneUnreachable: user.phoneUnreachable ?? false,
+        phoneUnreachableAt: user.phoneUnreachableAt ?? null,
         showReviewsOnBooking: user.showReviewsOnBooking,
         publicEstimationEnabled: user.publicEstimationEnabled,
         noShowProtectionEnabled: user.noShowProtectionEnabled,
@@ -1000,7 +1008,11 @@ export async function registerRoutes(
 
       // Persist confirmation health on the user record so Settings and the
       // admin SMS health view can flag bad numbers without depending on a
-      // single transient toast.
+      // single transient toast. Also tracks a rolling streak of consecutive
+      // failures so we can flip the user into a "phone unreachable" state
+      // once the threshold is crossed (see PHONE_UNREACHABLE_THRESHOLD).
+      let phoneUnreachable = user.phoneUnreachable ?? false;
+      let smsConfirmationFailureCount = user.smsConfirmationFailureCount ?? 0;
       try {
         if (confirmationSent) {
           await db
@@ -1009,18 +1021,41 @@ export async function registerRoutes(
               smsConfirmationLastFailureAt: null,
               smsConfirmationLastFailureCode: null,
               smsConfirmationLastFailureMessage: null,
+              smsConfirmationFailureCount: 0,
+              smsConfirmationFirstFailureAt: null,
+              phoneUnreachable: false,
+              phoneUnreachableAt: null,
             })
             .where(eq(usersTable.id, userId));
+          phoneUnreachable = false;
+          smsConfirmationFailureCount = 0;
         } else if (confirmationFailureCode) {
+          const now = new Date().toISOString();
+          const nextCount = (user.smsConfirmationFailureCount ?? 0) + 1;
+          const crossedThreshold = nextCount >= PHONE_UNREACHABLE_THRESHOLD;
           await db
             .update(usersTable)
             .set({
-              smsConfirmationLastFailureAt: new Date().toISOString(),
+              smsConfirmationLastFailureAt: now,
               smsConfirmationLastFailureCode: confirmationFailureCode,
               smsConfirmationLastFailureMessage:
                 confirmationWarning ?? "Couldn't send confirmation text.",
+              smsConfirmationFailureCount: nextCount,
+              smsConfirmationFirstFailureAt:
+                user.smsConfirmationFirstFailureAt ?? now,
+              phoneUnreachable: crossedThreshold ? true : (user.phoneUnreachable ?? false),
+              phoneUnreachableAt: crossedThreshold
+                ? (user.phoneUnreachableAt ?? now)
+                : (user.phoneUnreachableAt ?? null),
             })
             .where(eq(usersTable.id, userId));
+          smsConfirmationFailureCount = nextCount;
+          if (crossedThreshold && !phoneUnreachable) {
+            phoneUnreachable = true;
+            logger.warn(
+              `[SMS Resume] User ${userId} flipped to phone_unreachable after ${nextCount} consecutive confirmation failures (last code: ${confirmationFailureCode})`,
+            );
+          }
         }
       } catch (persistErr) {
         logger.error(
@@ -1036,6 +1071,8 @@ export async function registerRoutes(
         confirmationSent,
         confirmationWarning,
         confirmationFailureCode,
+        smsConfirmationFailureCount,
+        phoneUnreachable,
       });
     } catch (error) {
       logger.error("[SMS Resume] Error:", error);

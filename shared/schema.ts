@@ -58,6 +58,19 @@ export const users = pgTable("users", {
   smsConfirmationLastFailureAt: text("sms_confirmation_last_failure_at"),
   smsConfirmationLastFailureCode: text("sms_confirmation_last_failure_code"),
   smsConfirmationLastFailureMessage: text("sms_confirmation_last_failure_message"),
+  // Rolling streak of consecutive resume-confirmation failures. Reset to 0 on
+  // any successful confirmation send. Crossing PHONE_UNREACHABLE_THRESHOLD
+  // flips phoneUnreachable=true so further outbound SMS is suppressed.
+  smsConfirmationFailureCount: integer("sms_confirmation_failure_count").notNull().default(0),
+  // Timestamp of the first failure in the current streak (set when the
+  // counter goes from 0 -> 1, cleared on success). Lets the admin view show
+  // how long the number has been bouncing.
+  smsConfirmationFirstFailureAt: text("sms_confirmation_first_failure_at"),
+  // Hard "phone is dead" flag. Set when the failure streak crosses the
+  // threshold; suppresses outbound SMS via evaluateSendPolicy until the user
+  // resumes successfully (or an admin clears it).
+  phoneUnreachable: boolean("phone_unreachable").notNull().default(false),
+  phoneUnreachableAt: text("phone_unreachable_at"),
   lastActiveAt: text("last_active_at"),
   publicProfileEnabled: boolean("public_profile_enabled").default(true),
   publicProfileSlug: text("public_profile_slug"),

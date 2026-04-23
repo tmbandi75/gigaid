@@ -259,6 +259,7 @@ type SendOutcome =
 export const CANCEL_REASONS = {
   USER_NOT_FOUND: "user_not_found",
   USER_OPTED_OUT: "user_opted_out",
+  PHONE_UNREACHABLE: "phone_unreachable",
   RATE_LIMITED: "rate_limited",
   ACTION_TAKEN: "action_taken",
   MISSING_BOOKING_PAGE: "missing_booking_page",
@@ -274,6 +275,7 @@ export interface SendPolicyInput {
     smsOptOut?: boolean | null;
     notifyBySms?: boolean | null;
     notifyByEmail?: boolean | null;
+    phoneUnreachable?: boolean | null;
   } | null;
   // First-booking eligibility inputs (consulted for any first-booking touch
   // — both SMS nudges and the new transactional emails):
@@ -305,6 +307,13 @@ export function evaluateSendPolicy(input: SendPolicyInput): SendPolicyDecision {
     }
     if (input.user.smsOptOut === true || input.user.notifyBySms === false) {
       return { kind: "cancel", reason: CANCEL_REASONS.USER_OPTED_OUT };
+    }
+    // Phone marked unreachable after repeated resume-confirmation bounces.
+    // Distinct reason so the admin SMS health view can separate "user said
+    // STOP" from "carrier won't deliver". Cleared when the user successfully
+    // resumes. SMS-only — email path is unaffected.
+    if (input.user.phoneUnreachable === true) {
+      return { kind: "cancel", reason: CANCEL_REASONS.PHONE_UNREACHABLE };
     }
     const max = input.maxSmsPerWindow;
     const recent = input.recentSmsSentCount ?? 0;
@@ -872,6 +881,7 @@ async function attemptSendMessage(message: OutboundMessage): Promise<SendOutcome
           smsOptOut: user.smsOptOut,
           notifyBySms: user.notifyBySms,
           notifyByEmail: user.notifyByEmail,
+          phoneUnreachable: user.phoneUnreachable,
         }
       : null,
     bookingPageClaimed,
