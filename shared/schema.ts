@@ -2292,11 +2292,16 @@ export const bookingPageEvents = pgTable("booking_page_events", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   pageId: varchar("page_id").notNull(),
   type: text("type").notNull(),
+  variant: text("variant"),
   metadata: text("metadata"),
   createdAt: text("created_at").notNull().default(sql`now()`),
 }, (table) => [
   index("booking_page_events_page_idx").on(table.pageId, table.type),
+  index("booking_page_events_variant_idx").on(table.variant, table.type),
 ]);
+
+export const unclaimedHeadlineVariants = ["back_and_forth", "deposit_first", "speed_first", "social_proof"] as const;
+export type UnclaimedHeadlineVariant = typeof unclaimedHeadlineVariants[number];
 
 export const insertBookingPageEventSchema = createInsertSchema(bookingPageEvents).omit({
   id: true,

@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, bookingPages, outboundMessages, bookingPageEventTypes } from "@shared/schema";
+import { users, bookingPages, outboundMessages, bookingPageEventTypes, unclaimedHeadlineVariants } from "@shared/schema";
 import { and, eq } from "drizzle-orm";
 import { signAppJwt, verifyAppJwt, isAppJwtConfigured } from "./appJwt";
 import { logger } from "./lib/logger";
@@ -15,7 +15,13 @@ const claimSchema = z.object({
   name: z.string().trim().max(120).optional(),
   phone: z.string().trim().max(32).optional(),
   serviceType: z.string().trim().max(120).optional(),
+  variant: z.enum(unclaimedHeadlineVariants).optional(),
 });
+
+function sanitizeVariant(input: unknown): string | undefined {
+  if (typeof input !== "string") return undefined;
+  return (unclaimedHeadlineVariants as readonly string[]).includes(input) ? input : undefined;
+}
 
 function publicOriginFromReq(req: Request): string {
   const proto = (req.headers["x-forwarded-proto"] as string)?.split(",")[0] || req.protocol || "https";
@@ -68,7 +74,8 @@ router.post("/booking-pages/:pageId/events", async (req: Request, res: Response)
       }
     }
 
-    await storage.trackBookingPageEvent(pageId, type);
+    const variant = sanitizeVariant(req.body?.variant);
+    await storage.trackBookingPageEvent(pageId, type, { variant });
     if (isOwnerAction) await storage.cancelBookingPageNudges(pageId);
     return res.json({ ok: true });
   } catch (err: any) {
@@ -81,7 +88,7 @@ router.post("/claim-page", async (req: Request, res: Response) => {
   try {
     const parsed = claimSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: "Invalid claim payload" });
-    const { pageId, name, serviceType } = parsed.data;
+    const { pageId, name, serviceType, variant } = parsed.data;
 
     if (!isAppJwtConfigured()) {
       return res.status(503).json({ error: "Authentication is not fully configured." });
@@ -131,7 +138,7 @@ router.post("/claim-page", async (req: Request, res: Response) => {
       throw err;
     }
 
-    await storage.trackBookingPageEvent(pageId, "page_claimed");
+    await storage.trackBookingPageEvent(pageId, "page_claimed", { variant });
 
     if (phone) {
       const now = new Date();

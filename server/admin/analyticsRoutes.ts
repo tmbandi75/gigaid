@@ -325,4 +325,39 @@ router.get("/ltv", adminMiddleware, async (req: AdminRequest, res: Response) => 
   }
 });
 
+// A/B test report: views and claims per unclaimed-page headline variant.
+// Source: booking_page_events. We aggregate views (page_viewed) and claims
+// (page_claimed) keyed on the variant column, then compute claim-through rate.
+router.get("/booking-page-variants", adminMiddleware, async (_req: AdminRequest, res: Response) => {
+  try {
+    const result = await db.execute(sql`
+      SELECT
+        COALESCE(variant, 'unassigned') AS variant,
+        SUM(CASE WHEN type = 'page_viewed' THEN 1 ELSE 0 END) AS views,
+        SUM(CASE WHEN type = 'page_claimed' THEN 1 ELSE 0 END) AS claims,
+        COUNT(DISTINCT CASE WHEN type = 'page_viewed' THEN page_id END) AS unique_pages_viewed
+      FROM booking_page_events
+      GROUP BY COALESCE(variant, 'unassigned')
+      ORDER BY views DESC
+    `);
+
+    const rows = (result.rows as any[]).map((r) => {
+      const views = Number(r.views || 0);
+      const claims = Number(r.claims || 0);
+      return {
+        variant: r.variant as string,
+        views,
+        claims,
+        uniquePagesViewed: Number(r.unique_pages_viewed || 0),
+        claimRate: views > 0 ? Number((claims / views).toFixed(4)) : 0,
+      };
+    });
+
+    res.json({ variants: rows });
+  } catch (error) {
+    logger.error("[Analytics] Error fetching booking page variant report:", error);
+    res.status(500).json({ error: "Failed to fetch booking page variant report" });
+  }
+});
+
 export default router;

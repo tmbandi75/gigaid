@@ -397,7 +397,7 @@ export interface IStorage {
   getBookingPage(id: string): Promise<import("@shared/schema").BookingPage | undefined>;
   createBookingPage(data: import("@shared/schema").InsertBookingPage): Promise<import("@shared/schema").BookingPage>;
   claimBookingPage(id: string, args: { userId: string; claimedAt: string }): Promise<import("@shared/schema").BookingPage | undefined>;
-  trackBookingPageEvent(pageId: string, type: import("@shared/schema").BookingPageEventType, metadata?: string): Promise<void>;
+  trackBookingPageEvent(pageId: string, type: import("@shared/schema").BookingPageEventType, opts?: { variant?: string | null; metadata?: string | null }): Promise<void>;
   cancelBookingPageNudges(pageId: string): Promise<number>;
 }
 
@@ -3087,7 +3087,7 @@ export class MemStorage implements IStorage {
   async claimBookingPage(_id: string, _args: { userId: string; claimedAt: string }): Promise<import("@shared/schema").BookingPage | undefined> {
     return undefined;
   }
-  async trackBookingPageEvent(_pageId: string, _type: import("@shared/schema").BookingPageEventType, _metadata?: string): Promise<void> {}
+  async trackBookingPageEvent(_pageId: string, _type: import("@shared/schema").BookingPageEventType, _opts?: { variant?: string | null; metadata?: string | null }): Promise<void> {}
   async cancelBookingPageNudges(_pageId: string): Promise<number> { return 0; }
 }
 

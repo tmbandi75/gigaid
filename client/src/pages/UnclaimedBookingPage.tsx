@@ -35,12 +35,78 @@ function dynamicTitle(page: UnclaimedBookingPageData): string {
   return "Your Local Service";
 }
 
-async function track(pageId: string, type: "page_viewed" | "link_copied" | "link_shared") {
+type HeadlineVariant = "back_and_forth" | "deposit_first" | "speed_first" | "social_proof";
+
+const HEADLINE_VARIANTS: HeadlineVariant[] = [
+  "back_and_forth",
+  "deposit_first",
+  "speed_first",
+  "social_proof",
+];
+
+interface VariantCopy {
+  headline: string;
+  subtext: string;
+  secondary: string;
+}
+
+const VARIANT_COPY: Record<HeadlineVariant, VariantCopy> = {
+  back_and_forth: {
+    headline: "Get booked without going back and forth with customers",
+    subtext: "Send this to your next customer — they can pick a time and lock in the job.",
+    secondary: "You can also require a deposit if you want.",
+  },
+  deposit_first: {
+    headline: "Stop showing up to no-shows — collect a deposit before the job",
+    subtext: "Send your link, customer picks a time and pays a deposit to lock it in.",
+    secondary: "You set the deposit amount. No deposit, no booking.",
+  },
+  speed_first: {
+    headline: "Book your next job in under 60 seconds",
+    subtext: "Share one link. Your customer picks a time and you're booked — no calls, no texting back and forth.",
+    secondary: "Add a deposit too if you want to filter out no-shows.",
+  },
+  social_proof: {
+    headline: "How local contractors are booking jobs without lifting a finger",
+    subtext: "Share one link with your next customer — they pick a time and you're confirmed.",
+    secondary: "Used by movers, cleaners, handymen, and more.",
+  },
+};
+
+const VARIANT_STORAGE_PREFIX = "gigaid:unclaimed-variant:";
+
+function pickVariant(pageId: string): HeadlineVariant {
+  if (typeof window === "undefined") return HEADLINE_VARIANTS[0];
+  const key = `${VARIANT_STORAGE_PREFIX}${pageId}`;
+  try {
+    const existing = window.localStorage.getItem(key);
+    if (existing && (HEADLINE_VARIANTS as string[]).includes(existing)) {
+      return existing as HeadlineVariant;
+    }
+  } catch {
+    // ignore storage errors (private mode, etc.)
+  }
+  // Deterministic-ish pick using a random index, persisted per page.
+  const idx = Math.floor(Math.random() * HEADLINE_VARIANTS.length);
+  const chosen = HEADLINE_VARIANTS[idx];
+  try {
+    window.localStorage.setItem(key, chosen);
+  } catch {
+    // ignore
+  }
+  return chosen;
+}
+
+async function track(
+  pageId: string,
+  type: "page_viewed" | "link_copied" | "link_shared",
+  variant?: HeadlineVariant,
+) {
   try {
     await fetch(`/api/booking-pages/${pageId}/events`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type }),
+      body: JSON.stringify({ type, variant }),
     });
   } catch {
     // tracking failures are non-fatal
@@ -55,13 +121,15 @@ export default function UnclaimedBookingPage({ page }: Props) {
   const [phone, setPhone] = useState(page.phone || "");
   const [serviceType, setServiceType] = useState(capitalize(page.category) || "");
   const [submitting, setSubmitting] = useState(false);
+  const [variant] = useState<HeadlineVariant>(() => pickVariant(page.id));
 
   const title = dynamicTitle(page);
+  const copy = VARIANT_COPY[variant];
 
   useEffect(() => {
     document.title = `${title} | GigAid`;
-    track(page.id, "page_viewed");
-  }, [page.id, title]);
+    track(page.id, "page_viewed", variant);
+  }, [page.id, title, variant]);
 
   const handleClaim = async () => {
     setSubmitting(true);
@@ -74,6 +142,7 @@ export default function UnclaimedBookingPage({ page }: Props) {
           name: name || undefined,
           phone: phone || undefined,
           serviceType: serviceType || undefined,
+          variant,
         }),
       });
       const data = await res.json();
@@ -101,14 +170,18 @@ export default function UnclaimedBookingPage({ page }: Props) {
           <p className="text-sm font-medium text-indigo-600 uppercase tracking-wide" data-testid="text-page-title">
             {title}
           </p>
-          <h1 className="text-3xl font-bold text-slate-900 leading-tight" data-testid="text-page-headline">
-            Get booked without going back and forth with customers
+          <h1
+            className="text-3xl font-bold text-slate-900 leading-tight"
+            data-testid="text-page-headline"
+            data-variant={variant}
+          >
+            {copy.headline}
           </h1>
           <p className="text-base text-slate-600" data-testid="text-page-subtext">
-            Send this to your next customer — they can pick a time and lock in the job.
+            {copy.subtext}
           </p>
           <p className="text-xs text-slate-500" data-testid="text-page-secondary">
-            You can also require a deposit if you want.
+            {copy.secondary}
           </p>
           <p className="text-sm font-semibold text-slate-800 pt-1" data-testid="text-page-urgency">
             Use this for your next job today

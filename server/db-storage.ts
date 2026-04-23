@@ -2270,11 +2270,12 @@ export class DatabaseStorage implements IStorage {
     return rows[0];
   }
 
-  async trackBookingPageEvent(pageId: string, type: BookingPageEventType, metadata?: string): Promise<void> {
+  async trackBookingPageEvent(pageId: string, type: BookingPageEventType, opts?: { variant?: string | null; metadata?: string | null }): Promise<void> {
     await db.insert(bookingPageEvents).values({
       pageId,
       type,
-      metadata: metadata ?? null,
+      variant: opts?.variant ?? null,
+      metadata: opts?.metadata ?? null,
     });
   }
 
