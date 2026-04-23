@@ -40,10 +40,27 @@ export const FIRST_BOOKING_DISQUALIFYING_EVENT_TYPES = [
 export const FIRST_BOOKING_NUDGE_TYPES = [
   "first_booking_nudge_10m",
   "first_booking_nudge_24h",
+  "first_booking_nudge_72h",
+] as const;
+
+export const FIRST_BOOKING_EMAIL_TYPES = [
+  "first_booking_email_2h",
+  "first_booking_email_48h",
 ] as const;
 
 function isFirstBookingNudgeType(type: string): boolean {
   return (FIRST_BOOKING_NUDGE_TYPES as readonly string[]).includes(type);
+}
+
+function isFirstBookingEmailType(type: string): boolean {
+  return (FIRST_BOOKING_EMAIL_TYPES as readonly string[]).includes(type);
+}
+
+// Predicate consulted by evaluateSendPolicy for the send-time eligibility
+// re-check (covers BOTH SMS nudges and the new transactional emails so that
+// `link_copied`/`link_shared` cancels every touch).
+export function isFirstBookingTouchType(type: string): boolean {
+  return isFirstBookingNudgeType(type) || isFirstBookingEmailType(type);
 }
 
 // Per-user rolling 24h SMS cap for the FREE tier. Kept exported as a
@@ -134,7 +151,102 @@ export function renderFirstBookingNudgeBody(
   if (type === "first_booking_nudge_24h") {
     return `${prefix}most people get their first GigAid booking within a day after sharing their link.\n\n— Your partners at GigAid`;
   }
+  if (type === "first_booking_nudge_72h") {
+    return `${prefix}still haven't shared your GigAid link? Your next customer could book in seconds.\n\n— Your partners at GigAid`;
+  }
   return "";
+}
+
+/**
+ * Render the locked first-booking email bodies. Returns subject + plain text +
+ * HTML so the SendGrid call can pass both formats. Lives in the same file as
+ * the SMS bodies so the entire first-booking spec stays in one place.
+ */
+export interface RenderedEmail {
+  subject: string;
+  text: string;
+  html: string;
+}
+
+function emailGreeting(firstName: string | null | undefined, restOfLine: string): string {
+  const trimmed = (firstName ?? "").trim();
+  return trimmed ? `${trimmed}, ${restOfLine}` : restOfLine;
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (ch) => {
+    switch (ch) {
+      case "&": return "&amp;";
+      case "<": return "&lt;";
+      case ">": return "&gt;";
+      case '"': return "&quot;";
+      case "'": return "&#39;";
+      default: return ch;
+    }
+  });
+}
+
+export function renderFirstBookingEmail(
+  type: string,
+  firstName: string | null | undefined,
+  bookingUrl: string,
+): RenderedEmail {
+  if (type === "first_booking_email_2h") {
+    const subject = "Your GigAid page is ready — here's how to get your first booking";
+    const greeting = emailGreeting(firstName, "your GigAid page is ready — here's how to get your first booking");
+    const text =
+`${greeting}
+
+1. Copy your booking link
+2. Send it to your next customer
+3. They book and pay the deposit — you're confirmed
+
+Most people get their first booking within a day after sharing their link.
+
+Copy My Booking Link: ${bookingUrl}
+
+— Your partners at GigAid`;
+    const safeUrl = escapeHtml(bookingUrl);
+    const html =
+`<p>${escapeHtml(greeting)}</p>
+<ol>
+  <li>Copy your booking link</li>
+  <li>Send it to your next customer</li>
+  <li>They book and pay the deposit — you're confirmed</li>
+</ol>
+<p>Most people get their first booking within a day after sharing their link.</p>
+<p><a href="${safeUrl}" style="display:inline-block;padding:12px 20px;background:#4f46e5;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600">Copy My Booking Link</a></p>
+<p style="color:#64748b;font-size:13px;margin-top:8px">${safeUrl}</p>
+<p>— Your partners at GigAid</p>`;
+    return { subject, text, html };
+  }
+  if (type === "first_booking_email_48h") {
+    const subject = "Don't miss your first booking";
+    const greeting = emailGreeting(firstName, "don't miss your first booking");
+    const text =
+`${greeting}
+
+You set up your GigAid page — now let it work for you.
+
+If you haven't shared your link yet, you're missing out on easy bookings.
+
+It takes 10 seconds to send.
+
+Send My Booking Link: ${bookingUrl}
+
+— Your partners at GigAid`;
+    const safeUrl = escapeHtml(bookingUrl);
+    const html =
+`<p>${escapeHtml(greeting)}</p>
+<p>You set up your GigAid page — now let it work for you.</p>
+<p>If you haven't shared your link yet, you're missing out on easy bookings.</p>
+<p><strong>It takes 10 seconds to send.</strong></p>
+<p><a href="${safeUrl}" style="display:inline-block;padding:12px 20px;background:#4f46e5;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600">Send My Booking Link</a></p>
+<p style="color:#64748b;font-size:13px;margin-top:8px">${safeUrl}</p>
+<p>— Your partners at GigAid</p>`;
+    return { subject, text, html };
+  }
+  return { subject: "", text: "", html: "" };
 }
 
 type SendOutcome =
@@ -158,8 +270,13 @@ export interface SendPolicyInput {
   channel: string;
   type: string;
   bookingPageId: string | null | undefined;
-  user: { smsOptOut?: boolean | null; notifyBySms?: boolean | null } | null;
-  // First-booking nudge inputs (only consulted when type matches a nudge):
+  user: {
+    smsOptOut?: boolean | null;
+    notifyBySms?: boolean | null;
+    notifyByEmail?: boolean | null;
+  } | null;
+  // First-booking eligibility inputs (consulted for any first-booking touch
+  // — both SMS nudges and the new transactional emails):
   bookingPageClaimed?: boolean | null;
   disqualifyingEventCount?: number;
   // Rate-limit inputs (only consulted for SMS):
@@ -178,31 +295,41 @@ export type SendPolicyDecision =
  * always reported as `user_opted_out` rather than masked by a rate limit.
  */
 export function evaluateSendPolicy(input: SendPolicyInput): SendPolicyDecision {
-  // Email path: opt-out and rate limit are SMS-only by design (spec).
-  if (input.channel !== "sms") {
-    return { kind: "allow" };
+  // Channel-specific opt-out + rate-limit guards. Per spec:
+  //   - SMS: smsOptOut OR notifyBySms === false  -> user_opted_out
+  //   - Email: notifyByEmail === false           -> user_opted_out
+  //   - Email is exempt from smsOptOut and the SMS rolling-24h cap.
+  if (input.channel === "sms") {
+    if (!input.user) {
+      return { kind: "cancel", reason: CANCEL_REASONS.USER_NOT_FOUND };
+    }
+    if (input.user.smsOptOut === true || input.user.notifyBySms === false) {
+      return { kind: "cancel", reason: CANCEL_REASONS.USER_OPTED_OUT };
+    }
+    const max = input.maxSmsPerWindow;
+    const recent = input.recentSmsSentCount ?? 0;
+    if (typeof max === "number" && recent >= max) {
+      return { kind: "cancel", reason: CANCEL_REASONS.RATE_LIMITED };
+    }
+  } else if (input.channel === "email") {
+    // Only first-booking emails consult the user record at policy time today.
+    // Other email types keep their pre-task #74 "always allow" behavior so we
+    // don't accidentally regress invoice / review reminders that don't yet
+    // pass a `user` object in.
+    if (isFirstBookingEmailType(input.type)) {
+      if (!input.user) {
+        return { kind: "cancel", reason: CANCEL_REASONS.USER_NOT_FOUND };
+      }
+      if (input.user.notifyByEmail === false) {
+        return { kind: "cancel", reason: CANCEL_REASONS.USER_OPTED_OUT };
+      }
+    }
   }
 
-  if (!input.user) {
-    return { kind: "cancel", reason: CANCEL_REASONS.USER_NOT_FOUND };
-  }
-
-  // Guard 1: global opt-out. Either flag blocks; STOP webhook flips both.
-  if (input.user.smsOptOut === true || input.user.notifyBySms === false) {
-    return { kind: "cancel", reason: CANCEL_REASONS.USER_OPTED_OUT };
-  }
-
-  // Guard 2: per-user rate limit. Skipped when caller didn't provide a max
-  // (e.g. internal tests of just opt-out behavior); enforced strictly when
-  // the cap is provided. >= so the cap is the inclusive max already-sent.
-  const max = input.maxSmsPerWindow;
-  const recent = input.recentSmsSentCount ?? 0;
-  if (typeof max === "number" && recent >= max) {
-    return { kind: "cancel", reason: CANCEL_REASONS.RATE_LIMITED };
-  }
-
-  // Guard 3: first-booking eligibility re-check. Other types unaffected.
-  if (isFirstBookingNudgeType(input.type)) {
+  // First-booking eligibility re-check. Applies to BOTH SMS nudges and the new
+  // transactional emails so a `link_copied` / `link_shared` event cancels
+  // every still-queued touch.
+  if (isFirstBookingTouchType(input.type)) {
     if (!input.bookingPageId) {
       return { kind: "cancel", reason: CANCEL_REASONS.MISSING_BOOKING_PAGE };
     }
@@ -683,101 +810,103 @@ export async function processScheduledMessages(): Promise<number> {
 
 // Attempt to send message via available provider
 async function attemptSendMessage(message: OutboundMessage): Promise<SendOutcome> {
-  // ----- SMS-only guards -----
-  // Email is exempt from opt-out and the SMS rate limit by design (spec).
-  if (message.channel === "sms") {
-    // Look up the user once and reuse for opt-out + first-name rendering.
-    const [user] = await db
+  // ----- Shared user load -----
+  // Both SMS opt-out / personalization and email opt-out / personalization
+  // need the user record. Load once for either channel.
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, message.userId))
+    .limit(1);
+
+  // ----- Shared first-booking eligibility lookup -----
+  // Now also runs for first-booking emails so a `link_copied` / `link_shared`
+  // event cancels every still-queued touch (SMS or email).
+  let bookingPageClaimed: boolean | null = null;
+  let disqualifyingEventCount = 0;
+  if (user && isFirstBookingTouchType(message.type) && message.bookingPageId) {
+    const [page] = await db
       .select()
-      .from(users)
-      .where(eq(users.id, message.userId))
+      .from(bookingPages)
+      .where(eq(bookingPages.id, message.bookingPageId))
       .limit(1);
-
-    // Collect remaining policy inputs so the pure evaluateSendPolicy chain
-    // can decide. Reuses HEAD's isSmsRateLimited (24h cap, applies to all
-    // SMS types) for the rate-limit signal — kept as a separate function so
-    // ad-hoc callers (e.g. growth tooling) can consult it standalone.
-    let bookingPageClaimed: boolean | null = null;
-    let disqualifyingEventCount = 0;
-    if (user && isFirstBookingNudgeType(message.type) && message.bookingPageId) {
-      const [page] = await db
-        .select()
-        .from(bookingPages)
-        .where(eq(bookingPages.id, message.bookingPageId))
-        .limit(1);
-      bookingPageClaimed = page ? page.claimed : null;
-      if (page) {
-        const disqRows = await db
-          .select({ n: sql<number>`count(*)::int` })
-          .from(bookingPageEvents)
-          .where(and(
-            eq(bookingPageEvents.pageId, message.bookingPageId),
-            inArray(
-              bookingPageEvents.type,
-              Array.from(FIRST_BOOKING_DISQUALIFYING_EVENT_TYPES),
-            ),
-          ));
-        disqualifyingEventCount = disqRows[0]?.n ?? 0;
-      }
+    bookingPageClaimed = page ? page.claimed : null;
+    if (page) {
+      const disqRows = await db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(bookingPageEvents)
+        .where(and(
+          eq(bookingPageEvents.pageId, message.bookingPageId),
+          inArray(
+            bookingPageEvents.type,
+            Array.from(FIRST_BOOKING_DISQUALIFYING_EVENT_TYPES),
+          ),
+        ));
+      disqualifyingEventCount = disqRows[0]?.n ?? 0;
     }
+  }
 
-    // Resolve this user's effective rolling-24h cap. Per-user override beats
-    // the plan default; plan default comes from the capability rule. `undefined`
-    // means unlimited (skip rate-limit guard entirely).
-    let effectiveCap: number | undefined = SMS_RATE_LIMIT_PER_24H;
-    if (user) {
-      const [autoSettings] = await db
-        .select({ override: userAutomationSettings.smsRateLimitPer24hOverride })
-        .from(userAutomationSettings)
-        .where(eq(userAutomationSettings.userId, message.userId))
-        .limit(1);
-      effectiveCap = resolveSmsRateLimit(
-        (user.plan as Plan | null | undefined) ?? null,
-        autoSettings?.override ?? null,
-      );
+  // ----- SMS-only rate-limit lookup -----
+  // Email is exempt from the rolling SMS cap by design (spec).
+  let effectiveCap: number | undefined = SMS_RATE_LIMIT_PER_24H;
+  let rateLimited = false;
+  if (message.channel === "sms" && user) {
+    const [autoSettings] = await db
+      .select({ override: userAutomationSettings.smsRateLimitPer24hOverride })
+      .from(userAutomationSettings)
+      .where(eq(userAutomationSettings.userId, message.userId))
+      .limit(1);
+    effectiveCap = resolveSmsRateLimit(
+      (user.plan as Plan | null | undefined) ?? null,
+      autoSettings?.override ?? null,
+    );
+    rateLimited = await isSmsRateLimited(message.userId, countSentSmsLast24h, effectiveCap);
+  }
+
+  const decision = evaluateSendPolicy({
+    channel: message.channel,
+    type: message.type,
+    bookingPageId: message.bookingPageId,
+    user: user
+      ? {
+          smsOptOut: user.smsOptOut,
+          notifyBySms: user.notifyBySms,
+          notifyByEmail: user.notifyByEmail,
+        }
+      : null,
+    bookingPageClaimed,
+    disqualifyingEventCount,
+    recentSmsSentCount:
+      message.channel === "sms" && rateLimited && effectiveCap !== undefined ? effectiveCap : 0,
+    maxSmsPerWindow: message.channel === "sms" ? effectiveCap : undefined,
+  });
+
+  if (decision.kind === "cancel") {
+    if (decision.reason === CANCEL_REASONS.USER_NOT_FOUND) {
+      logger.warn(`[OutboundMessages] Cancel ${message.id}: user_not_found ${message.userId}`);
+    } else if (decision.reason === CANCEL_REASONS.MISSING_BOOKING_PAGE) {
+      logger.warn(`[OutboundMessages] Cancel ${message.id}: first-booking touch missing bookingPageId`);
+    } else if (decision.reason === CANCEL_REASONS.RATE_LIMITED) {
+      logger.warn(`[OutboundMessages] Cancel ${message.id}: rate_limited (>=${effectiveCap}/24h)`);
+    } else if (decision.reason === CANCEL_REASONS.ACTION_TAKEN) {
+      logger.info(`[OutboundMessages] Cancel ${message.id}: action_taken (${message.type})`);
+    } else if (decision.reason === CANCEL_REASONS.USER_OPTED_OUT) {
+      logger.info(`[OutboundMessages] Cancel ${message.id}: user_opted_out (${message.channel})`);
     }
+    return { kind: "canceled", reason: decision.reason };
+  }
 
-    // Rate-limit signal from HEAD's standalone helper. Pass it into the
-    // pure policy chain as a "saturated" recent-count when limited, so
-    // evaluateSendPolicy still owns the cancel decision and ordering.
-    const rateLimited = user
-      ? await isSmsRateLimited(message.userId, countSentSmsLast24h, effectiveCap)
-      : false;
+  // After an `allow` decision, user is guaranteed non-null whenever the
+  // policy chain consulted it. Other email types (legacy invoice / review
+  // reminders) don't require user, so guard before using.
+  const allowedUser = user;
 
-    const decision = evaluateSendPolicy({
-      channel: message.channel,
-      type: message.type,
-      bookingPageId: message.bookingPageId,
-      user: user ? { smsOptOut: user.smsOptOut, notifyBySms: user.notifyBySms } : null,
-      bookingPageClaimed,
-      disqualifyingEventCount,
-      recentSmsSentCount: rateLimited && effectiveCap !== undefined ? effectiveCap : 0,
-      maxSmsPerWindow: effectiveCap,
-    });
-
-    if (decision.kind === "cancel") {
-      if (decision.reason === CANCEL_REASONS.USER_NOT_FOUND) {
-        logger.warn(`[OutboundMessages] Cancel ${message.id}: user_not_found ${message.userId}`);
-      } else if (decision.reason === CANCEL_REASONS.MISSING_BOOKING_PAGE) {
-        logger.warn(`[OutboundMessages] Cancel ${message.id}: first-booking nudge missing bookingPageId`);
-      } else if (decision.reason === CANCEL_REASONS.RATE_LIMITED) {
-        logger.warn(`[OutboundMessages] Cancel ${message.id}: rate_limited (>=${effectiveCap}/24h)`);
-      }
-      return { kind: "canceled", reason: decision.reason };
-    }
-
-    // After an `allow` decision, user is guaranteed non-null (a null user
-    // would have produced a `user_not_found` cancel above).
-    const allowedUser = user!;
-
-    // Render body. Locked first-booking nudge bodies are rendered exclusively
-    // here, at send time, so first_name is always fresh.
+  // ----- SMS send path -----
+  if (message.channel === "sms") {
     const body = isFirstBookingNudgeType(message.type)
-      ? renderFirstBookingNudgeBody(message.type, allowedUser.firstName)
+      ? renderFirstBookingNudgeBody(message.type, allowedUser?.firstName)
       : (message.templateRendered || "");
 
-    // Reuse the canonical Twilio sender so credential resolution, error
-    // mapping, and number normalization stay in one place.
     const { sendSMS } = await import("./twilio");
     const result = await sendSMS(message.toAddress, body);
     if (result.success) {
@@ -791,22 +920,55 @@ async function attemptSendMessage(message: OutboundMessage): Promise<SendOutcome
     throw new Error(result.errorMessage || result.errorCode || "twilio_send_failed");
   }
 
-  // ----- Email path (unchanged behavior) -----
-  if (message.channel === "email" && process.env.SENDGRID_API_KEY) {
-    try {
-      const sgMail = await import("@sendgrid/mail");
-      sgMail.default.setApiKey(process.env.SENDGRID_API_KEY);
-      const body = message.templateRendered || "";
-      await sgMail.default.send({
+  // ----- Email send path -----
+  if (message.channel === "email") {
+    // First-booking emails: render typed subject + html + text from the locked
+    // spec at send time so first_name is always fresh.
+    if (isFirstBookingEmailType(message.type)) {
+      let bookingUrl = "";
+      if (message.metadata) {
+        try {
+          const meta = JSON.parse(message.metadata) as { bookingUrl?: string };
+          if (typeof meta.bookingUrl === "string") bookingUrl = meta.bookingUrl;
+        } catch {
+          // fall through with empty URL — still attempt send rather than hard-fail
+        }
+      }
+      const rendered = renderFirstBookingEmail(
+        message.type,
+        allowedUser?.firstName,
+        bookingUrl,
+      );
+      const { sendEmail } = await import("./sendgrid");
+      const ok = await sendEmail({
         to: message.toAddress,
-        from: process.env.SENDGRID_FROM_EMAIL || "noreply@gigaid.app",
-        subject: message.type === "payment_reminder" ? "Quick reminder about your invoice" : "Thanks for choosing me!",
-        text: body,
+        subject: rendered.subject,
+        text: rendered.text,
+        html: rendered.html,
       });
-      return { kind: "sent", body };
-    } catch (error) {
-      logger.error(`[OutboundMessages] SendGrid send failed:`, error);
-      throw error;
+      if (ok) return { kind: "sent", body: rendered.text };
+      logger.info(`[OutboundMessages] SendGrid not configured / failed, deferring ${message.id}`);
+      return { kind: "deferred", reason: "no_provider" };
+    }
+
+    // Legacy email branch (invoice / review reminders) — unchanged behavior,
+    // gated on the env-var path so we don't break existing flows.
+    if (process.env.SENDGRID_API_KEY) {
+      try {
+        const sgMail = await import("@sendgrid/mail");
+        sgMail.default.setApiKey(process.env.SENDGRID_API_KEY);
+        const body = message.templateRendered || "";
+        await sgMail.default.send({
+          to: message.toAddress,
+          from: process.env.SENDGRID_FROM_EMAIL || "noreply@gigaid.app",
+          subject: message.type === "payment_reminder" ? "Quick reminder about your invoice" : "Thanks for choosing me!",
+          text: body,
+        });
+        return { kind: "sent", body };
+      } catch (error) {
+        logger.error(`[OutboundMessages] SendGrid send failed:`, error);
+        throw error;
+      }
     }
   }
 

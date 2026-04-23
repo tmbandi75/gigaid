@@ -1,7 +1,10 @@
 import {
   renderFirstBookingNudgeBody,
+  renderFirstBookingEmail,
   FIRST_BOOKING_DISQUALIFYING_EVENT_TYPES,
   FIRST_BOOKING_NUDGE_TYPES,
+  FIRST_BOOKING_EMAIL_TYPES,
+  isFirstBookingTouchType,
   SMS_RATE_LIMIT_PER_24H,
   isSmsRateLimited,
 } from "../../server/postJobMomentum";
@@ -114,6 +117,80 @@ describe("First-booking SMS nudges (locked spec)", () => {
       expect(renderFirstBookingNudgeBody("first_booking_nudge_24h", "Alex")).toBe(
         "Alex, most people get their first GigAid booking within a day after sharing their link.\n\n— Your partners at GigAid",
       );
+    });
+  });
+
+  describe("Task #74: 72h SMS nudge body", () => {
+    it("renders the 72-hour body verbatim with first_name prefix", () => {
+      expect(renderFirstBookingNudgeBody("first_booking_nudge_72h", "Riley")).toBe(
+        "Riley, still haven't shared your GigAid link? Your next customer could book in seconds.\n\n— Your partners at GigAid",
+      );
+    });
+
+    it("renders the 72-hour body without prefix when first_name is missing", () => {
+      const body = renderFirstBookingNudgeBody("first_booking_nudge_72h", null);
+      expect(body.startsWith("still haven't shared your GigAid link?")).toBe(true);
+      expect(body.endsWith("— Your partners at GigAid")).toBe(true);
+      expect(body).not.toContain("Reply STOP");
+      expect(body).not.toContain("there,");
+    });
+
+    it("isFirstBookingTouchType covers all SMS + email types", () => {
+      for (const t of FIRST_BOOKING_NUDGE_TYPES) expect(isFirstBookingTouchType(t)).toBe(true);
+      for (const t of FIRST_BOOKING_EMAIL_TYPES) expect(isFirstBookingTouchType(t)).toBe(true);
+      expect(isFirstBookingTouchType("followup")).toBe(false);
+    });
+  });
+
+  describe("Task #74: renderFirstBookingEmail", () => {
+    const URL = "https://gigaid.app/book/page-xyz";
+
+    it("first_booking_email_2h: subject + first line + signature + CTA URL all present (with first_name)", () => {
+      const out = renderFirstBookingEmail("first_booking_email_2h", "Sam", URL);
+      expect(out.subject).toBe(
+        "Your GigAid page is ready — here's how to get your first booking",
+      );
+      expect(out.text.split("\n")[0]).toBe(
+        "Sam, your GigAid page is ready — here's how to get your first booking",
+      );
+      expect(out.text.trim().endsWith("— Your partners at GigAid")).toBe(true);
+      expect(out.text).toContain(URL);
+      expect(out.html).toContain(URL);
+      expect(out.html).toContain("Copy My Booking Link");
+      expect(out.html.length).toBeGreaterThan(out.text.length / 2);
+    });
+
+    it("first_booking_email_2h: omits prefix when first_name is null", () => {
+      const out = renderFirstBookingEmail("first_booking_email_2h", null, URL);
+      expect(out.text.split("\n")[0]).toBe(
+        "your GigAid page is ready — here's how to get your first booking",
+      );
+      expect(out.text).not.toContain("there,");
+      expect(out.text).not.toContain("undefined");
+    });
+
+    it("first_booking_email_48h: subject + first line + signature + CTA URL all present (with first_name)", () => {
+      const out = renderFirstBookingEmail("first_booking_email_48h", "Jordan", URL);
+      expect(out.subject).toBe("Don't miss your first booking");
+      expect(out.text.split("\n")[0]).toBe("Jordan, don't miss your first booking");
+      expect(out.text.trim().endsWith("— Your partners at GigAid")).toBe(true);
+      expect(out.text).toContain("It takes 10 seconds to send.");
+      expect(out.text).toContain(URL);
+      expect(out.html).toContain("Send My Booking Link");
+      expect(out.html).toContain(URL);
+    });
+
+    it("first_booking_email_48h: omits prefix when first_name is empty/whitespace", () => {
+      const out = renderFirstBookingEmail("first_booking_email_48h", "   ", URL);
+      expect(out.text.split("\n")[0]).toBe("don't miss your first booking");
+    });
+
+    it("HTML escaping: a hostile bookingUrl is escaped, not injected as raw HTML", () => {
+      const hostile = "https://x.test/?q=<script>alert(1)</script>&y=1";
+      const out = renderFirstBookingEmail("first_booking_email_2h", "Sam", hostile);
+      expect(out.html).not.toContain("<script>alert(1)</script>");
+      expect(out.html).toContain("&lt;script&gt;");
+      expect(out.html).toContain("&amp;y=1");
     });
   });
 });
@@ -307,4 +384,85 @@ dbDescribe("Task #48 AC #2: sent-is-terminal trigger blocks demotion (DB-backed)
       client.release();
     }
   });
+});
+
+dbDescribe("Task #74 AC #7: worker round-trip cancels new touches when link_copied event exists", () => {
+  jest.setTimeout(45000);
+
+  const newTouchTypes: Array<{ type: string; channel: "sms" | "email"; toAddress: string }> = [
+    { type: "first_booking_email_2h", channel: "email", toAddress: "round-trip@example.com" },
+    { type: "first_booking_email_48h", channel: "email", toAddress: "round-trip@example.com" },
+    { type: "first_booking_nudge_72h", channel: "sms", toAddress: "+15550000074" },
+  ];
+
+  for (const touch of newTouchTypes) {
+    it(`cancels ${touch.type} when link_copied event exists at dequeue time`, async () => {
+      const { pool, db } = await import("../../server/db");
+      const { processScheduledMessages } = await import("../../server/postJobMomentum");
+      const { outboundMessages, bookingPages, bookingPageEvents, users } = await import(
+        "../../shared/schema"
+      );
+      const { eq } = await import("drizzle-orm");
+
+      const suffix = `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+      const userId = `task74-rt-user-${suffix}`;
+      const client = await pool.connect();
+
+      try {
+        await client.query(
+          `INSERT INTO users (id, username, password, email, phone, notify_by_email, notify_by_sms, sms_opt_out)
+           VALUES ($1, $2, 'unused', $3, $4, true, true, false)`,
+          [userId, `task74-rt-${suffix}`, "round-trip@example.com", "+15550000074"],
+        );
+
+        const pageIns = await client.query(
+          `INSERT INTO booking_pages (claimed, claimed_by_user_id) VALUES (true, $1) RETURNING id`,
+          [userId],
+        );
+        const pageId = pageIns.rows[0].id as string;
+
+        await client.query(
+          `INSERT INTO booking_page_events (page_id, type) VALUES ($1, 'link_copied')`,
+          [pageId],
+        );
+
+        const past = new Date(Date.now() - 60_000).toISOString();
+        const msgIns = await client.query(
+          `INSERT INTO outbound_messages
+             (user_id, channel, to_address, type, status, scheduled_for, created_at,
+              booking_page_id, metadata)
+           VALUES ($1, $2, $3, $4, 'scheduled', $5, now()::text, $6, $7)
+           RETURNING id`,
+          [
+            userId,
+            touch.channel,
+            touch.toAddress,
+            touch.type,
+            past,
+            pageId,
+            JSON.stringify({ pageId, bookingUrl: `https://example.com/book/${pageId}`, source: "first_booking" }),
+          ],
+        );
+        const msgId = msgIns.rows[0].id as string;
+
+        try {
+          await processScheduledMessages();
+
+          const after = await client.query(
+            `SELECT status, failure_reason FROM outbound_messages WHERE id = $1`,
+            [msgId],
+          );
+          expect(after.rows[0].status).toBe("canceled");
+          expect(String(after.rows[0].failure_reason || "")).toMatch(/action_taken/);
+        } finally {
+          await client.query(`DELETE FROM outbound_messages WHERE id = $1`, [msgId]);
+          await client.query(`DELETE FROM booking_page_events WHERE page_id = $1`, [pageId]);
+          await client.query(`DELETE FROM booking_pages WHERE id = $1`, [pageId]);
+          await client.query(`DELETE FROM users WHERE id = $1`, [userId]);
+        }
+      } finally {
+        client.release();
+      }
+    });
+  }
 });

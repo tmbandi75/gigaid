@@ -2266,9 +2266,9 @@ export const outboundMessages = pgTable("outbound_messages", {
   // while a row is still scheduled, queued, or sent. Because `sent` is included
   // in the predicate, a sent row permanently blocks any future insert of the
   // same (booking_page_id, type), making "sent" terminal at the database level.
-  uniqueIndex("outbound_messages_first_booking_nudge_dedupe_idx")
+  uniqueIndex("outbound_messages_first_booking_dedupe_idx")
     .on(table.bookingPageId, table.type)
-    .where(sql`type IN ('first_booking_nudge_10m', 'first_booking_nudge_24h') AND status IN ('scheduled', 'queued', 'sent')`),
+    .where(sql`type IN ('first_booking_nudge_10m', 'first_booking_nudge_24h', 'first_booking_nudge_72h', 'first_booking_email_2h', 'first_booking_email_48h') AND status IN ('scheduled', 'queued', 'sent')`),
   // Used by the rate limiter to count recent SMS sends per user.
   index("outbound_messages_user_channel_sent_idx").on(table.userId, table.channel, table.sentAt),
 ]);

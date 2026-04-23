@@ -42,6 +42,7 @@ import type { DashboardSummary, Job, Lead } from "@shared/schema";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
+import { FirstBookingBanner } from "@/components/dashboard/FirstBookingBanner";
 import { JobQuotaMeter } from "@/components/upgrade/JobQuotaMeter";
 import { MonthlyLimitWarnings } from "@/components/upgrade/MonthlyLimitWarnings";
 import { useAttributionSync } from "@/hooks/useUtmCapture";
@@ -334,6 +335,8 @@ export default function Dashboard() {
       {isMobile ? renderMobileHeader() : renderDesktopHeader()}
 
       <div className={`flex-1 px-4 py-6 space-y-6 max-w-7xl mx-auto w-full -mt-4`}>
+        <FirstBookingBanner />
+
         <ActivationChecklist />
 
         <MonthlyLimitWarnings source="dashboard" />

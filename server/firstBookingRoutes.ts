@@ -2,9 +2,11 @@ import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, bookingPages, outboundMessages, bookingPageEventTypes, unclaimedHeadlineVariants } from "@shared/schema";
-import { and, eq } from "drizzle-orm";
+import { users, bookingPages, bookingPageEvents, outboundMessages, bookingPageEventTypes, unclaimedHeadlineVariants } from "@shared/schema";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { signAppJwt, verifyAppJwt, isAppJwtConfigured } from "./appJwt";
+import { isAuthenticated } from "./replit_integrations/auth/replitAuth";
+import { FIRST_BOOKING_DISQUALIFYING_EVENT_TYPES } from "./postJobMomentum";
 import { logger } from "./lib/logger";
 import { randomUUID } from "crypto";
 
@@ -170,33 +172,68 @@ router.post("/claim-page", async (req: Request, res: Response) => {
     // `variant` is required by claimSchema, so it is always present here.
     await storage.trackBookingPageEvent(pageId, "page_claimed", { variant });
 
-    if (phone) {
+    {
+      // Schedule the 5-touch first-booking conversion sequence. Locked-spec
+      // bodies are rendered at SEND TIME inside attemptSendMessage; here we
+      // only enqueue rows. SMS rows require a phone; email rows require an
+      // email — each is skipped independently.
       const now = new Date();
       const bookingUrl = `${publicOriginFromReq(req)}/book/${pageId}`;
-      // Locked-spec bodies are rendered at SEND TIME inside attemptSendMessage,
-      // not here. We persist bookingUrl in metadata so that a future renderer
-      // (or admin tooling) can recover the page URL without re-deriving it,
-      // and leave templateRendered empty so there's no stale draft on disk.
-      const nudges = [
-        { minutes: 10, type: "first_booking_nudge_10m" },
-        { minutes: 60 * 24, type: "first_booking_nudge_24h" },
+      const metadata = JSON.stringify({ pageId, bookingUrl, source: "first_booking" });
+      const nowIso = now.toISOString();
+
+      // Email window: spec says "2-4 hours after claim". Pick a uniform random
+      // offset in [120, 240] minutes so we don't burst-send to SendGrid when
+      // many claims land at once.
+      const emailTwoHourOffsetMinutes = 120 + Math.floor(Math.random() * 121);
+
+      type Touch = {
+        type: string;
+        channel: "sms" | "email";
+        toAddress: string | null;
+        offsetMinutes: number;
+      };
+
+      // Need the user's email to enqueue email rows. The claim flow doesn't
+      // capture email today (the user record was just created above), so this
+      // is typically null and the email rows are skipped — they'll be scheduled
+      // by future flows that do collect email at claim time.
+      const userEmail = (await db
+        .select({ email: users.email })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1))[0]?.email ?? null;
+
+      const touches: Touch[] = [
+        { type: "first_booking_nudge_10m", channel: "sms", toAddress: phone ?? null, offsetMinutes: 10 },
+        { type: "first_booking_email_2h", channel: "email", toAddress: userEmail, offsetMinutes: emailTwoHourOffsetMinutes },
+        { type: "first_booking_nudge_24h", channel: "sms", toAddress: phone ?? null, offsetMinutes: 60 * 24 },
+        { type: "first_booking_email_48h", channel: "email", toAddress: userEmail, offsetMinutes: 60 * 48 },
+        { type: "first_booking_nudge_72h", channel: "sms", toAddress: phone ?? null, offsetMinutes: 60 * 72 },
       ];
-      try {
-        await db.insert(outboundMessages).values(nudges.map((n) => ({
+
+      const rows = touches
+        .filter((t) => !!t.toAddress)
+        .map((t) => ({
           userId,
           jobId: null,
           bookingPageId: pageId,
-          channel: "sms",
-          toAddress: phone,
-          type: n.type,
+          channel: t.channel,
+          toAddress: t.toAddress as string,
+          type: t.type,
           status: "scheduled" as const,
-          scheduledFor: new Date(now.getTime() + n.minutes * 60 * 1000).toISOString(),
+          scheduledFor: new Date(now.getTime() + t.offsetMinutes * 60 * 1000).toISOString(),
           templateRendered: "",
-          metadata: JSON.stringify({ pageId, bookingUrl, source: "first_booking" }),
-          createdAt: now.toISOString(),
-        })));
-      } catch (err: any) {
-        logger.error("[FirstBooking] Failed to schedule nudges:", err?.message);
+          metadata,
+          createdAt: nowIso,
+        }));
+
+      if (rows.length > 0) {
+        try {
+          await db.insert(outboundMessages).values(rows);
+        } catch (err: any) {
+          logger.error("[FirstBooking] Failed to schedule first-booking touches:", err?.message);
+        }
       }
     }
 
@@ -205,6 +242,48 @@ router.post("/claim-page", async (req: Request, res: Response) => {
   } catch (err: any) {
     logger.error("[FirstBooking] claim error:", err?.message, err?.stack);
     return res.status(500).json({ error: "Claim failed" });
+  }
+});
+
+// Powers the in-app dashboard banner (Touch 2 of the 5-touch first-booking
+// system). Returns the most-recently-claimed booking page for the caller and
+// hides the banner the moment a `link_copied` / `link_shared` event lands —
+// matching the same eligibility predicate used by the send-time policy chain.
+router.get("/first-booking/banner-state", isAuthenticated, async (req: Request, res: Response) => {
+  const userId = (req as any).userId as string | undefined;
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  try {
+    const [page] = await db
+      .select()
+      .from(bookingPages)
+      .where(and(eq(bookingPages.claimedByUserId, userId), eq(bookingPages.claimed, true)))
+      .orderBy(desc(bookingPages.claimedAt))
+      .limit(1);
+
+    if (!page) {
+      return res.json({ shouldShow: false, pageId: null, bookingUrl: null });
+    }
+
+    const [{ n: disq } = { n: 0 }] = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(bookingPageEvents)
+      .where(and(
+        eq(bookingPageEvents.pageId, page.id),
+        inArray(
+          bookingPageEvents.type,
+          Array.from(FIRST_BOOKING_DISQUALIFYING_EVENT_TYPES),
+        ),
+      ));
+
+    if ((disq ?? 0) > 0) {
+      return res.json({ shouldShow: false, pageId: page.id, bookingUrl: null });
+    }
+
+    const bookingUrl = `${publicOriginFromReq(req)}/book/${page.id}`;
+    return res.json({ shouldShow: true, pageId: page.id, bookingUrl });
+  } catch (err: any) {
+    logger.error("[FirstBooking] banner-state error:", err?.message);
+    return res.status(500).json({ error: "Lookup failed" });
   }
 });
 
