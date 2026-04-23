@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { Loader2, ArrowRight, ShieldCheck } from "lucide-react";
+import { Loader2, ArrowRight, ShieldCheck, Send, Calendar, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -97,32 +97,65 @@ export default function UnclaimedBookingPage({ page }: Props) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white" data-testid="page-unclaimed-booking">
       <div className="mx-auto max-w-md px-6 pt-16 pb-12">
-        <div className="text-center space-y-2 mb-10">
+        <div className="text-center space-y-3 mb-8">
           <p className="text-sm font-medium text-indigo-600 uppercase tracking-wide" data-testid="text-page-title">
             {title}
           </p>
-          <h1 className="text-3xl font-bold text-slate-900" data-testid="text-page-headline">
-            This page was created for your business
+          <h1 className="text-3xl font-bold text-slate-900 leading-tight" data-testid="text-page-headline">
+            Get booked without going back and forth with customers
           </h1>
           <p className="text-base text-slate-600" data-testid="text-page-subtext">
-            Customers can book you and pay a deposit instead of texting back and forth.
+            Send this to your next customer — they can pick a time and lock in the job.
+          </p>
+          <p className="text-xs text-slate-500" data-testid="text-page-secondary">
+            You can also require a deposit if you want.
+          </p>
+          <p className="text-sm font-semibold text-slate-800 pt-1" data-testid="text-page-urgency">
+            Use this for your next job today
           </p>
         </div>
 
         {step === "intro" && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <Button
               size="lg"
               className="w-full h-14 text-base font-semibold rounded-xl"
               onClick={() => setStep("confirm")}
               data-testid="button-claim-page"
             >
-              Claim this page
+              Claim this page and start using it
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
+
+            <div
+              className="flex items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm"
+              data-testid="section-three-steps"
+            >
+              <div className="flex flex-1 flex-col items-center gap-1.5 text-center" data-testid="step-send-link">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+                  <Send className="h-4 w-4" />
+                </div>
+                <span className="text-[11px] font-medium leading-tight text-slate-700">Send link</span>
+              </div>
+              <ArrowRight className="h-4 w-4 shrink-0 text-slate-300" />
+              <div className="flex flex-1 flex-col items-center gap-1.5 text-center" data-testid="step-customer-books">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+                  <Calendar className="h-4 w-4" />
+                </div>
+                <span className="text-[11px] font-medium leading-tight text-slate-700">Customer books</span>
+              </div>
+              <ArrowRight className="h-4 w-4 shrink-0 text-slate-300" />
+              <div className="flex flex-1 flex-col items-center gap-1.5 text-center" data-testid="step-confirmed">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                  <CheckCircle2 className="h-4 w-4" />
+                </div>
+                <span className="text-[11px] font-medium leading-tight text-slate-700">You're confirmed</span>
+              </div>
+            </div>
+
             <div className="flex items-center justify-center gap-2 text-sm text-slate-500" data-testid="text-trust-line">
               <ShieldCheck className="h-4 w-4" />
-              Contractors like you are using this to get booked faster
+              Used by local contractors to get booked faster
             </div>
           </div>
         )}
