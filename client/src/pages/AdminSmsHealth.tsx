@@ -10,7 +10,20 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { useApiMutation } from "@/hooks/useApiMutation";
+import { apiFetch } from "@/lib/apiFetch";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { getAuthToken } from "@/lib/authToken";
 import {
@@ -22,11 +35,11 @@ import {
   HelpCircle,
   Loader2,
   MessageSquareOff,
+  PhoneOff,
   RefreshCw,
   Search,
   ShieldOff,
 } from "lucide-react";
-import { useMemo, useState } from "react";
 import { queryClient } from "@/lib/queryClient";
 
 interface RecentOptOut {
@@ -78,6 +91,33 @@ interface OptOutUser {
   name: string | null;
   phone: string | null;
   smsOptOutAt: string | null;
+}
+
+interface DuplicatePhoneUser {
+  id: string;
+  phoneE164: string | null;
+  email?: string | null;
+  username?: string | null;
+  name?: string | null;
+  lastActiveAt?: string | null;
+}
+
+interface DuplicatePhoneGroup {
+  phoneE164: string;
+  userCount: number;
+  users: DuplicatePhoneUser[];
+}
+
+interface DuplicatePhonesResponse {
+  groupCount: number;
+  affectedUserCount: number;
+  groups: DuplicatePhoneGroup[];
+}
+
+interface ClearPhoneTarget {
+  userId: string;
+  phoneE164: string;
+  label: string;
 }
 
 const REASON_LABELS: Record<string, string> = {
@@ -191,9 +231,45 @@ export default function AdminSmsHealth() {
     enabled: showUnmatchedDetail,
   });
 
+  const duplicatesQuery = useQuery<DuplicatePhonesResponse>({
+    queryKey: QUERY_KEYS.adminSmsDuplicatePhones(),
+    queryFn: () => authedFetch("/api/admin/sms/duplicate-phones"),
+  });
+
+  const { toast } = useToast();
+  const [clearTarget, setClearTarget] = useState<ClearPhoneTarget | null>(null);
+  const [clearReason, setClearReason] = useState("");
+
+  const clearPhoneMutation = useApiMutation<
+    unknown,
+    { userId: string; reason: string }
+  >(
+    async ({ userId, reason }) =>
+      apiFetch(`/api/admin/sms/users/${userId}/clear-phone`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      }),
+    [QUERY_KEYS.adminSmsDuplicatePhones()],
+    {
+      onSuccess: () => {
+        toast({ title: "Phone number cleared" });
+        setClearTarget(null);
+        setClearReason("");
+      },
+      onError: (error) => {
+        toast({
+          title: "Could not clear phone",
+          description: error.message || "Please try again",
+          variant: "destructive",
+        });
+      },
+    },
+  );
+
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.adminSmsHealthSummary() });
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.adminSmsOptOutEvents() });
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.adminSmsDuplicatePhones() });
     queryClient.invalidateQueries({
       predicate: (q) =>
         Array.isArray(q.queryKey) &&
@@ -681,6 +757,211 @@ export default function AdminSmsHealth() {
           )}
         </CardContent>
       </Card>
+
+      <Card data-testid="card-duplicate-phones">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <PhoneOff className="h-4 w-4" />
+            Duplicate phone numbers
+          </CardTitle>
+          <CardDescription>
+            Phone numbers shared by 2+ users. STOP texts from these numbers
+            are blocked until the duplicate is resolved. Clear the wrong
+            account&apos;s phone to unblock opt-outs.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {duplicatesQuery.isLoading ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : !duplicatesQuery.data ? (
+            <p className="text-sm text-muted-foreground">No data.</p>
+          ) : duplicatesQuery.data.groups.length === 0 ? (
+            <p
+              className="text-sm text-muted-foreground py-4 text-center"
+              data-testid="text-no-duplicates"
+            >
+              No duplicate phone numbers. STOP routing is healthy.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-end gap-6">
+                <div>
+                  <div
+                    className="text-3xl font-bold tabular-nums"
+                    data-testid="text-duplicate-group-count"
+                  >
+                    {duplicatesQuery.data.groupCount}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    duplicate phone groups
+                  </div>
+                </div>
+                <div>
+                  <div
+                    className="text-2xl font-semibold tabular-nums"
+                    data-testid="text-duplicate-affected-users"
+                  >
+                    {duplicatesQuery.data.affectedUserCount}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    affected users
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4">
+                {duplicatesQuery.data.groups.map((group) => (
+                  <div
+                    key={group.phoneE164}
+                    className="border rounded-md overflow-hidden"
+                    data-testid={`group-duplicate-${group.phoneE164}`}
+                  >
+                    <div className="flex items-center justify-between bg-muted/50 px-3 py-2">
+                      <div
+                        className="font-mono text-sm font-semibold"
+                        data-testid={`text-duplicate-phone-${group.phoneE164}`}
+                      >
+                        {group.phoneE164}
+                      </div>
+                      <Badge variant="outline">
+                        {group.userCount} users
+                      </Badge>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                          <tr>
+                            <th className="py-2 px-3">User</th>
+                            <th className="py-2 px-3">Email</th>
+                            <th className="py-2 px-3">User ID</th>
+                            <th className="py-2 px-3">Last active</th>
+                            <th className="py-2 px-3" />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {group.users.map((u) => {
+                            const label =
+                              u.name || u.username || u.email || u.id;
+                            return (
+                              <tr
+                                key={u.id}
+                                className="border-t"
+                                data-testid={`row-duplicate-user-${u.id}`}
+                              >
+                                <td className="py-2 px-3 font-medium">
+                                  <Link
+                                    href={`/admin/users/${u.id}`}
+                                    data-testid={`link-duplicate-user-${u.id}`}
+                                  >
+                                    <span className="hover:underline cursor-pointer">
+                                      {label}
+                                    </span>
+                                  </Link>
+                                </td>
+                                <td className="py-2 px-3 text-muted-foreground">
+                                  {u.email || "—"}
+                                </td>
+                                <td className="py-2 px-3 text-xs font-mono text-muted-foreground">
+                                  {u.id}
+                                </td>
+                                <td className="py-2 px-3 text-muted-foreground">
+                                  {formatDate(u.lastActiveAt ?? null)}
+                                </td>
+                                <td className="py-2 px-3 text-right">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setClearTarget({
+                                        userId: u.id,
+                                        phoneE164: group.phoneE164,
+                                        label,
+                                      });
+                                      setClearReason("");
+                                    }}
+                                    data-testid={`button-clear-phone-${u.id}`}
+                                  >
+                                    Clear phone
+                                  </Button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog
+        open={clearTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !clearPhoneMutation.isPending) {
+            setClearTarget(null);
+            setClearReason("");
+          }
+        }}
+      >
+        <DialogContent data-testid="dialog-clear-phone">
+          <DialogHeader>
+            <DialogTitle>Clear phone number</DialogTitle>
+            <DialogDescription>
+              This will remove <span className="font-mono">{clearTarget?.phoneE164}</span>{" "}
+              from {clearTarget?.label}. STOP texts from that number will then
+              opt out the remaining account. The action is logged in the admin
+              audit trail.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="clear-phone-reason">Reason (required)</Label>
+            <Textarea
+              id="clear-phone-reason"
+              value={clearReason}
+              onChange={(e) => setClearReason(e.target.value)}
+              placeholder="e.g. Duplicate created during signup; this account never confirmed."
+              rows={3}
+              data-testid="input-clear-phone-reason"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setClearTarget(null);
+                setClearReason("");
+              }}
+              disabled={clearPhoneMutation.isPending}
+              data-testid="button-cancel-clear-phone"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (!clearTarget || !clearReason.trim()) return;
+                clearPhoneMutation.mutate({
+                  userId: clearTarget.userId,
+                  reason: clearReason.trim(),
+                });
+              }}
+              disabled={
+                !clearReason.trim() || clearPhoneMutation.isPending
+              }
+              data-testid="button-confirm-clear-phone"
+            >
+              {clearPhoneMutation.isPending && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
+              Clear phone
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Card data-testid="card-confirmation-failures">
         <CardHeader className="pb-3">
