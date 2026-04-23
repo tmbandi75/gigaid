@@ -164,6 +164,53 @@ export async function repairUnresolvedCompletedJobs(): Promise<{
 }
 
 /**
+ * Creates the database trigger that prevents `outbound_messages.status` from
+ * being demoted away from `sent`. Combined with the partial unique index on
+ * (booking_page_id, type) for first-booking nudges, this gives a hard,
+ * tamper-proof "sent is terminal" guarantee that survives:
+ *   - retries
+ *   - worker restarts
+ *   - concurrent workers
+ *   - ad-hoc admin SQL
+ * Application code also adds defensive WHERE clauses; this is the floor.
+ */
+export async function createOutboundMessagesSentTerminalTrigger(): Promise<void> {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      CREATE OR REPLACE FUNCTION enforce_outbound_messages_sent_terminal()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        IF OLD.status = 'sent' AND NEW.status IS DISTINCT FROM 'sent' THEN
+          RAISE EXCEPTION 'SENT_IS_TERMINAL: outbound_messages.status cannot leave "sent" (id=%, attempted=%).', OLD.id, NEW.status
+            USING ERRCODE = 'P0001';
+        END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+
+    await client.query(
+      `DROP TRIGGER IF EXISTS enforce_outbound_messages_sent_terminal_trigger ON outbound_messages;`,
+    );
+
+    await client.query(`
+      CREATE TRIGGER enforce_outbound_messages_sent_terminal_trigger
+      BEFORE UPDATE ON outbound_messages
+      FOR EACH ROW
+      EXECUTE FUNCTION enforce_outbound_messages_sent_terminal();
+    `);
+
+    logger.info("[DBEnforcement] outbound_messages sent-is-terminal trigger installed");
+  } catch (error) {
+    logger.error("[DBEnforcement] Failed to install sent-is-terminal trigger:", error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/**
  * Initialize all database enforcement mechanisms.
  * Call this on server startup BEFORE any job operations.
  */
@@ -175,6 +222,9 @@ export async function initializeDbEnforcement(): Promise<void> {
   
   // Then create the trigger to prevent future violations
   await createJobResolutionEnforcementTrigger();
-  
+
+  // SMS pipeline hardening: sent-is-terminal at the DB level.
+  await createOutboundMessagesSentTerminalTrigger();
+
   logger.info("[DBEnforcement] Database enforcement initialized");
 }

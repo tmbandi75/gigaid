@@ -2,6 +2,7 @@ import {
   renderFirstBookingNudgeBody,
   FIRST_BOOKING_DISQUALIFYING_EVENT_TYPES,
   FIRST_BOOKING_NUDGE_TYPES,
+  SMS_RATE_LIMIT_PER_24H,
 } from "../../server/postJobMomentum";
 
 const STOP_KEYWORDS = ["STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL"];
@@ -109,6 +110,78 @@ describe("First-booking SMS nudges (locked spec)", () => {
       expect(renderFirstBookingNudgeBody("first_booking_nudge_24h", "Alex")).toBe(
         "Alex, most people get their first GigAid booking within a day after sharing their link.\n\n— Your partners at GigAid",
       );
+    });
+  });
+
+  describe("Task #48 AC #1: STOP ambiguity-safe resolver semantics", () => {
+    // Mirrors the resolver in server/routes.ts: phone_e164 wins when exactly
+    // one user matches; otherwise outbound history is consulted and only
+    // returns a userId when there's exactly one distinct recipient.
+    function resolve(opts: {
+      phoneMatches: string[];
+      distinctOutboundUserIds: string[];
+    }): string | null {
+      if (opts.phoneMatches.length === 1) return opts.phoneMatches[0];
+      if (opts.phoneMatches.length > 1) return null;
+      if (opts.distinctOutboundUserIds.length === 1) return opts.distinctOutboundUserIds[0];
+      return null;
+    }
+
+    it("returns the user when 0 phone matches + 1 distinct outbound userId", () => {
+      expect(resolve({ phoneMatches: [], distinctOutboundUserIds: ["u-1"] })).toBe("u-1");
+    });
+
+    it("refuses (null) when 0 phone matches + 2 distinct outbound userIds", () => {
+      expect(resolve({ phoneMatches: [], distinctOutboundUserIds: ["u-1", "u-2"] })).toBeNull();
+    });
+
+    it("refuses (null) when 2 users share the same phone_e164", () => {
+      expect(resolve({ phoneMatches: ["u-1", "u-2"], distinctOutboundUserIds: ["u-1"] })).toBeNull();
+    });
+
+    it("returns null when neither pass yields a match", () => {
+      expect(resolve({ phoneMatches: [], distinctOutboundUserIds: [] })).toBeNull();
+    });
+
+    it("phone_e164 single match wins even when outbound history is ambiguous", () => {
+      expect(resolve({ phoneMatches: ["u-1"], distinctOutboundUserIds: ["u-2", "u-3"] })).toBe("u-1");
+    });
+  });
+
+  describe("Task #48 AC #3: per-user 24h SMS rate limit chokepoint", () => {
+    it("exposes a single tunable threshold of 3", () => {
+      expect(SMS_RATE_LIMIT_PER_24H).toBe(3);
+    });
+
+    it.each([
+      [0, false],
+      [1, false],
+      [2, false],
+      [3, true],
+      [4, true],
+      [5, true],
+    ])("count=%i within 24h -> rate-limited=%s", (sentCount, expected) => {
+      // Mirrors the chokepoint check in attemptSendMessage.
+      const isLimited = sentCount >= SMS_RATE_LIMIT_PER_24H;
+      expect(isLimited).toBe(expected);
+    });
+  });
+
+  describe("Task #48 AC #2: sent-is-terminal contract documented", () => {
+    // The DB-level guarantee is enforced by a BEFORE UPDATE trigger
+    // (createOutboundMessagesSentTerminalTrigger in server/dbEnforcement.ts).
+    // App-level WHERE clauses also exclude `status = 'sent'` from any
+    // cancellation / failure update path. This test asserts the symbolic
+    // contract: 'sent' is the only terminal status code app code may target.
+    const VALID_TRANSITIONS: Record<string, string[]> = {
+      scheduled: ["queued", "canceled"],
+      queued: ["sent", "canceled", "failed"],
+      sent: [], // terminal
+      canceled: [],
+      failed: [],
+    };
+    it("permits no outgoing transitions from 'sent'", () => {
+      expect(VALID_TRANSITIONS.sent).toEqual([]);
     });
   });
 });

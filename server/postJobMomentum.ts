@@ -13,7 +13,7 @@ import {
   type Job,
   type Client
 } from "@shared/schema";
-import { eq, and, lte, inArray, sql } from "drizzle-orm";
+import { eq, and, lte, gte, ne, inArray, sql } from "drizzle-orm";
 import { logger } from "./lib/logger";
 
 // ============================================================================
@@ -41,6 +41,30 @@ export const FIRST_BOOKING_NUDGE_TYPES = [
 
 function isFirstBookingNudgeType(type: string): boolean {
   return (FIRST_BOOKING_NUDGE_TYPES as readonly string[]).includes(type);
+}
+
+// Per-user rolling 24h SMS cap. Applies to ALL outbound SMS types (nudges,
+// reminders, follow-ups, confirmations, …). Single source of truth so
+// future tuning is one edit. Enforced at the send chokepoint.
+export const SMS_RATE_LIMIT_PER_24H = 3;
+
+/**
+ * Return true if sending another SMS to this user would violate the rolling
+ * 24h cap. Counts only successfully `sent` messages — scheduled/queued rows
+ * don't consume the budget yet, and canceled/failed rows shouldn't.
+ */
+export async function isSmsRateLimited(userId: string): Promise<boolean> {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const rows = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(outboundMessages)
+    .where(and(
+      eq(outboundMessages.userId, userId),
+      eq(outboundMessages.channel, "sms"),
+      eq(outboundMessages.status, "sent"),
+      gte(outboundMessages.sentAt, since),
+    ));
+  return (rows[0]?.n ?? 0) >= SMS_RATE_LIMIT_PER_24H;
 }
 
 function buildFirstNamePrefix(firstName: string | null | undefined): string {
@@ -318,7 +342,13 @@ export async function scheduleJobConfirmation(job: Job, isReschedule: boolean = 
           canceledAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         })
-        .where(eq(outboundMessages.id, msg.id));
+        .where(and(
+          eq(outboundMessages.id, msg.id),
+          // Defense-in-depth: never overwrite a row already in `sent`.
+          // The DB trigger also blocks this, but failing fast in the app
+          // surfaces the bug instead of relying on a SQL exception.
+          ne(outboundMessages.status, "sent"),
+        ));
       logger.info(`[PostJobMomentum] Canceled old confirmation ${msg.id} for reschedule`);
     }
   } else if (!isReschedule && existingConfirmations.length > 0) {
@@ -516,7 +546,13 @@ export async function processScheduledMessages(): Promise<number> {
           failureReason: errorMessage.substring(0, 500),
           updatedAt: new Date().toISOString(),
         })
-        .where(eq(outboundMessages.id, message.id));
+        .where(and(
+          eq(outboundMessages.id, message.id),
+          // Defense-in-depth: a thrown error during a "sent" race must
+          // never demote the row back to "failed". The DB trigger backs
+          // this up.
+          ne(outboundMessages.status, "sent"),
+        ));
       
       logger.error(`[PostJobMomentum] Failed to send message ${message.id}:`, errorMessage);
     }
@@ -548,7 +584,13 @@ async function attemptSendMessage(message: OutboundMessage): Promise<SendOutcome
       return { kind: "canceled", reason: "user_opted_out" };
     }
 
-    // Guard 2: first-booking eligibility re-check. Only applies to nudges so
+    // Guard 2: per-user rolling 24h SMS cap. Applies across all SMS types;
+    // suppression is global because every send routes through this point.
+    if (await isSmsRateLimited(message.userId)) {
+      return { kind: "canceled", reason: "rate_limited" };
+    }
+
+    // Guard 3: first-booking eligibility re-check. Only applies to nudges so
     // existing followup/payment_reminder/etc behavior is unchanged.
     if (isFirstBookingNudgeType(message.type)) {
       // A first-booking nudge with no booking_page_id is malformed — there's

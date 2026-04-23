@@ -4504,29 +4504,62 @@ export async function registerRoutes(
     return `${phone.slice(0, 3)}***${phone.slice(-4)}`;
   }
 
-  // STOP-only phone -> userId resolution. Per spec, match users.phone_e164
-  // first; otherwise fall back to the recipient of the MOST RECENT outbound
-  // SMS to that number (the same fallback the existing inbound handler uses).
+  // STOP-only phone -> userId resolution. Ambiguity-safe per spec:
+  //   1. Try strict equality on users.phone_e164. Exactly one match wins.
+  //      If two or more users share the phone, REFUSE to opt out (would
+  //      silently disable the wrong account).
+  //   2. Otherwise look at recent outbound SMS to that number and collect
+  //     distinct userIds. Exactly one distinct user wins. If multiple
+  //      different accounts have texted that number recently, REFUSE.
+  // In every refusal path, log a structured warning for manual review and
+  // return null so the webhook still 2xxs without flipping any flags.
   async function resolveOptOutUserId(fromPhone: string): Promise<string | null> {
-    const { users: usersTable } = await import("@shared/schema");
+    const { users: usersTable, outboundMessages } = await import("@shared/schema");
     const { db } = await import("./db");
-    const { eq } = await import("drizzle-orm");
+    const { eq, and, desc } = await import("drizzle-orm");
 
+    // Pass 1: strict users.phone_e164 match. Pull up to 2 to detect ambiguity
+    // without a count() round-trip.
     const phoneMatches = await db
       .select({ id: usersTable.id })
       .from(usersTable)
       .where(eq(usersTable.phoneE164, fromPhone))
-      .limit(1);
+      .limit(2);
     if (phoneMatches.length === 1) {
       return phoneMatches[0].id;
     }
+    if (phoneMatches.length > 1) {
+      logger.warn(
+        `[Twilio STOP] Ambiguous: ${phoneMatches.length}+ users share phone ${maskPhone(fromPhone)}; refusing opt-out, manual review required`,
+      );
+      return null;
+    }
 
-    // Fallback: most recent outbound recipient. Reuses the same lookup path
-    // the rest of the inbound handler uses, so STOP routes to the same
-    // account a normal reply would be attributed to.
-    const lastOutbound = await storage.getLastOutboundMessageByPhone(fromPhone);
-    if (lastOutbound?.userId) {
-      return lastOutbound.userId;
+    // Pass 2: outbound SMS history. Look at the recent window and require a
+    // single distinct recipient userId. Limit 50 keeps it bounded; if more
+    // than one distinct userId appears in that window, the number has been
+    // shared/reassigned and we refuse rather than guess.
+    const recentOutbound = await db
+      .select({ userId: outboundMessages.userId })
+      .from(outboundMessages)
+      .where(and(
+        eq(outboundMessages.channel, "sms"),
+        eq(outboundMessages.toAddress, fromPhone),
+      ))
+      .orderBy(desc(outboundMessages.createdAt))
+      .limit(50);
+
+    const distinctUserIds = Array.from(
+      new Set(recentOutbound.map((r) => r.userId).filter(Boolean) as string[]),
+    );
+    if (distinctUserIds.length === 1) {
+      return distinctUserIds[0];
+    }
+    if (distinctUserIds.length > 1) {
+      logger.warn(
+        `[Twilio STOP] Ambiguous outbound history: ${distinctUserIds.length} distinct users have texted ${maskPhone(fromPhone)} recently; refusing opt-out, manual review required`,
+      );
+      return null;
     }
 
     logger.info(`[Twilio STOP] No matching user for ${maskPhone(fromPhone)}; ignoring`);
