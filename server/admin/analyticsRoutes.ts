@@ -328,6 +328,17 @@ router.get("/ltv", adminMiddleware, async (req: AdminRequest, res: Response) => 
 // A/B test report: views and claims per unclaimed-page headline variant.
 // Source: booking_page_events. We aggregate views (page_viewed) and claims
 // (page_claimed) keyed on the variant column, then compute claim-through rate.
+//
+// NOTE on the `unassigned` bucket: prior to the schema rollout that added the
+// `variant` column to `booking_page_events`, every row was inserted with a
+// NULL variant regardless of which headline the visitor actually saw. Those
+// pre-fix rows surface here as the `unassigned` group and MUST be excluded
+// when picking an A/B winner — they are not a real arm of the experiment,
+// just legacy data with no variant tag. Only compare the four named variants
+// (back_and_forth, deposit_first, speed_first, social_proof) against one
+// another. New `page_viewed` and `page_claimed` events written after the
+// rollout always carry a variant, so the `unassigned` count should stop
+// growing once the deploy is live.
 router.get("/booking-page-variants", adminMiddleware, async (_req: AdminRequest, res: Response) => {
   try {
     const result = await db.execute(sql`
@@ -350,10 +361,19 @@ router.get("/booking-page-variants", adminMiddleware, async (_req: AdminRequest,
         claims,
         uniquePagesViewed: Number(r.unique_pages_viewed || 0),
         claimRate: views > 0 ? Number((claims / views).toFixed(4)) : 0,
+        // `unassigned` rows pre-date the variant column and should be ignored
+        // when comparing A/B arms.
+        legacyUntagged: r.variant === "unassigned",
       };
     });
 
-    res.json({ variants: rows });
+    res.json({
+      variants: rows,
+      notes: {
+        unassigned:
+          "Rows tagged 'unassigned' were recorded before the variant column was added to booking_page_events. Exclude them when picking a winner; they cannot be attributed to any headline.",
+      },
+    });
   } catch (error) {
     logger.error("[Analytics] Error fetching booking page variant report:", error);
     res.status(500).json({ error: "Failed to fetch booking page variant report" });

@@ -15,13 +15,28 @@ const claimSchema = z.object({
   name: z.string().trim().max(120).optional(),
   phone: z.string().trim().max(32).optional(),
   serviceType: z.string().trim().max(120).optional(),
-  variant: z.enum(unclaimedHeadlineVariants).optional(),
+  // Variant is REQUIRED on claim: the headline A/B test cannot pick a
+  // winner if conversions arrive without a variant tag. The frontend
+  // (client/src/pages/UnclaimedBookingPage.tsx) always selects and
+  // persists a variant before it can submit the form, so requiring it
+  // here is safe and prevents silent attribution loss.
+  variant: z.enum(unclaimedHeadlineVariants),
 });
 
 function sanitizeVariant(input: unknown): string | undefined {
   if (typeof input !== "string") return undefined;
   return (unclaimedHeadlineVariants as readonly string[]).includes(input) ? input : undefined;
 }
+
+// Event types whose entire purpose is to feed the headline A/B test report
+// at /api/admin/analytics/booking-page-variants. If a write of one of these
+// arrives without a recognised variant the data point is useless — surface
+// it loudly so the bug gets caught instead of silently inflating the
+// `unassigned` bucket.
+const VARIANT_REQUIRED_EVENT_TYPES = new Set<string>([
+  "page_viewed",
+  "page_claimed",
+]);
 
 function publicOriginFromReq(req: Request): string {
   const proto = (req.headers["x-forwarded-proto"] as string)?.split(",")[0] || req.protocol || "https";
@@ -75,6 +90,17 @@ router.post("/booking-pages/:pageId/events", async (req: Request, res: Response)
     }
 
     const variant = sanitizeVariant(req.body?.variant);
+    if (VARIANT_REQUIRED_EVENT_TYPES.has(type) && !variant) {
+      // Reject A/B-critical events that arrive without a recognised variant.
+      // The frontend always selects and persists a headline variant before
+      // firing these events, so a missing/invalid variant indicates a bug
+      // and we refuse to corrupt the report by writing a NULL row.
+      logger.warn(
+        `[FirstBooking] ${type} event for page ${pageId} rejected — missing/invalid variant ` +
+          `(received: ${JSON.stringify(req.body?.variant)}).`,
+      );
+      return res.status(400).json({ error: "Missing or invalid headline variant" });
+    }
     await storage.trackBookingPageEvent(pageId, type, { variant });
     // Only cancel nudges when the owner has actually taken a completion action
     // (copied or shared the link). Just viewing the page should not cancel them.
@@ -141,6 +167,7 @@ router.post("/claim-page", async (req: Request, res: Response) => {
       throw err;
     }
 
+    // `variant` is required by claimSchema, so it is always present here.
     await storage.trackBookingPageEvent(pageId, "page_claimed", { variant });
 
     if (phone) {
