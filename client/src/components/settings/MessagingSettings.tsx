@@ -23,6 +23,7 @@ import { MessageCircle, Phone, Inbox, AlertCircle, CheckCircle, Loader2, Lock } 
 import { cn } from "@/lib/utils";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { UpgradeInterceptModal } from "@/upgrade";
+import { SmsOptOutBanner } from "@/components/settings/SmsOptOutBanner";
 
 interface MessageUsage {
   outboundSent: number;
@@ -83,6 +84,8 @@ export function MessagingSettings() {
 
   return (
     <div className="space-y-6">
+      <SmsOptOutBanner />
+
       {/* Usage Stats */}
       <div className="space-y-4">
         <h4 className="font-medium text-sm flex items-center gap-2">

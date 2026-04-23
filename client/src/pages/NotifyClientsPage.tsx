@@ -45,6 +45,7 @@ import {
 } from "@shared/schema";
 import { findCategoryForService } from "@shared/service-categories";
 import NotifyClientsDesktopView from "@/components/notify-clients/NotifyClientsDesktopView";
+import { SmsOptOutBanner } from "@/components/settings/SmsOptOutBanner";
 
 const categoryIdToSchemaCategory: Record<string, ServiceCategory> = {
   "handyman": "handyman_repairs",
@@ -781,6 +782,9 @@ export default function NotifyClientsPage() {
           </div>
 
           <div className="flex-1 max-w-2xl px-4 pb-24 mx-auto w-full">
+            <div className="mb-4">
+              <SmsOptOutBanner />
+            </div>
             {notifyUpgrade.bannerPayload && (
               <div className="mb-4">
                 <UpgradeBanner
@@ -827,6 +831,10 @@ export default function NotifyClientsPage() {
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="max-w-7xl mx-auto px-6 lg:px-8 mt-4">
+            <SmsOptOutBanner />
           </div>
 
           {notifyUpgrade.bannerPayload && (
