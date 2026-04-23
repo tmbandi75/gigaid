@@ -1,0 +1,284 @@
+Implement the full 5-touch conversion system (SMS + in-app + email) on top of the existing booking page claim flow.
+
+This is a BUILD task. Reuse existing infrastructure. Do NOT duplicate pipelines.
+
+-------------------------------------
+EXISTING SYSTEM (DO NOT REBUILD)
+-------------------------------------
+Already exists:
+- Twilio SMS system (server/twilio.ts)
+- outbound_messages + processScheduledMessages worker
+- bookingPageEvents (source of truth for user actions)
+- claim flow (/book/<uuid> → claimedAt)
+- SMS nudges (10m + 24h)
+
+You MUST build on top of this.
+
+-------------------------------------
+CORE RULE (GLOBAL)
+-------------------------------------
+ALL touches must STOP if user has completed first action.
+
+First action = bookingPageEvents:
+- link_copied
+- link_shared
+
+At SEND TIME (not schedule time), re-check eligibility.
+
+-------------------------------------
+PERSONALIZATION (GLOBAL RULE)
+-------------------------------------
+All user-facing messages (SMS and Email) must support personalization.
+
+FIRST NAME RULES:
+
+- If user.first_name exists:
+  - SMS: prefix with "{first_name}, "
+  - Email: use natural inline greeting (e.g., "John, your GigAid page is ready…")
+
+- If first_name is null:
+  - DO NOT use placeholders like "there"
+  - DO NOT include awkward greetings
+  - Message must still read naturally
+
+Personalization must be rendered at SEND TIME.
+
+-------------------------------------
+SIGNATURE (GLOBAL RULE)
+-------------------------------------
+
+SMS SIGNATURE (REQUIRED):
+"— Your partners at GigAid"
+
+EMAIL SIGNATURE (REQUIRED):
+"— Your partners at GigAid"
+
+Rules:
+- Must appear exactly as written (em dash, lowercase "partners")
+- Must be included in ALL SMS and ALL Emails
+- Email signature must appear at the end of the message body (after CTA)
+
+-------------------------------------
+TOUCH 1 — SMS (10 MINUTES)
+-------------------------------------
+Trigger:
+- 10 minutes after claim
+
+Message (EXACT):
+
+"{first_name_prefix}send your GigAid booking link to your next customer — it saves a ton of back and forth.
+
+Reply STOP to opt out.
+— Your partners at GigAid"
+
+Rules:
+- Include opt-out text ONLY in this message
+- Personalization rules apply
+- Cancel if first action already completed
+- Enforce dedupe
+
+-------------------------------------
+TOUCH 2 — IN-APP DASHBOARD BANNER
+-------------------------------------
+SHOW banner when:
+- user has claimed a booking page
+- AND no link_copied / link_shared event exists
+
+HIDE when:
+- first action completed
+
+UI SPEC:
+
+Headline:
+"You’re 1 step away from your first booking"
+
+CTA:
+"Copy your booking link"
+
+Microcopy:
+"Send this to any customer and let them book instantly"
+
+Requirements:
+- CTA must trigger real copy-to-clipboard
+- Banner must evaluate dynamically on load
+- No hardcoded state
+
+-------------------------------------
+EMAIL INFRASTRUCTURE
+-------------------------------------
+If email system exists:
+- reuse it
+
+If NOT:
+- implement minimal transactional email system:
+  - queue
+  - worker
+  - provider (SendGrid, Resend, etc.)
+
+Mirror SMS architecture. Do NOT overbuild.
+
+-------------------------------------
+TOUCH 3 — EMAIL (2–4 HOURS)
+-------------------------------------
+Trigger:
+- 2–4 hours after claim
+
+Subject (EXACT):
+"Your GigAid page is ready — here’s how to get your first booking"
+
+Body:
+
+If first_name exists:
+"{first_name}, your GigAid page is ready — here’s how to get your first booking"
+
+Else:
+"Your GigAid page is ready — here’s how to get your first booking"
+
+Then include:
+
+Steps:
+1. Copy your link  
+2. Send it to a customer  
+3. Get booked instantly  
+
+Social proof:
+"Most GigAid users get their first booking the same day they share their link."
+
+CTA:
+"Copy My Booking Link"
+
+Signature:
+"— Your partners at GigAid"
+
+Rules:
+- Cancel if first action already completed
+- Include correct booking link
+
+-------------------------------------
+TOUCH 4 — SMS (24 HOURS)
+-------------------------------------
+Trigger:
+- 24 hours after claim
+
+Message (EXACT):
+
+"{first_name_prefix}most people get their first GigAid booking within a day after sharing their link.
+
+— Your partners at GigAid"
+
+Rules:
+- NO opt-out text
+- Personalization applies
+- Cancel if first action completed
+- Dedup enforced
+
+-------------------------------------
+TOUCH 5 — EMAIL (48 HOURS)
+-------------------------------------
+Trigger:
+- 48 hours after claim
+
+Subject (EXACT):
+"Don’t miss your first booking"
+
+Body:
+
+If first_name exists:
+"{first_name}, don’t miss your first booking"
+
+Else:
+"Don’t miss your first booking"
+
+Then include:
+
+"You set up your GigAid page — now let it work for you.
+
+If you haven’t shared your link yet, you’re missing out on easy bookings."
+
+Urgency line:
+"It takes 10 seconds to send."
+
+CTA:
+"Send My Booking Link"
+
+Signature:
+"— Your partners at GigAid"
+
+Rules:
+- Cancel if first action completed
+
+-------------------------------------
+OPTIONAL TOUCH 6 — SMS (72 HOURS)
+-------------------------------------
+If implemented:
+
+Trigger:
+- 72 hours after claim
+
+Message (EXACT):
+
+"{first_name_prefix}still haven’t shared your GigAid link? Your next customer could book in seconds.
+
+— Your partners at GigAid"
+
+Rules:
+- Personalization applies
+- Same eligibility + opt-out enforcement
+- Dedup enforced
+
+-------------------------------------
+SCHEDULING
+-------------------------------------
+Use EXISTING scheduling system.
+
+When page is claimed:
+- schedule:
+  - SMS (10m, 24h)
+  - Email (2–4h)
+  - Email (48h)
+  - Optional SMS (72h)
+
+DO NOT create new scheduler loops.
+
+-------------------------------------
+OPT-OUT + ELIGIBILITY
+-------------------------------------
+Before ANY SMS send:
+
+- check notify_by_sms = true
+- check sms_opt_out = false
+
+Before ANY send (SMS + Email):
+
+- check first action NOT completed
+
+Cancel send if not eligible.
+
+-------------------------------------
+DEDUPLICATION
+-------------------------------------
+Each touch must be sent at most once per booking page.
+
+Use database-level guarantees where possible.
+
+-------------------------------------
+TRACKING
+-------------------------------------
+Track:
+
+- SMS sends (already via outbound_messages)
+- Email sends
+- Banner impressions (optional but recommended)
+
+-------------------------------------
+OUTPUT
+-------------------------------------
+Return:
+
+1) Files created/modified
+2) Email system design (if new)
+3) Scheduling updates
+4) UI banner implementation
+5) End-to-end test instructions
+
+Do NOT return a spec. Build the system.
