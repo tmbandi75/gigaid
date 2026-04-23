@@ -168,6 +168,41 @@ To clear history (e.g., after fixing a known flaky suite):
 echo '{"version":1,"suites":{}}' > reports/test-history.json
 ```
 
+## SMS opt-out suite runtime requirements
+
+`tests/api/smsOptOut.test.ts` (the STOP/START webhook + `/api/profile/sms/resume`
+regression net from Task #51) is an **integration** suite, not a pure unit
+suite. It requires:
+
+1. **`DATABASE_URL`** — must point at a Postgres instance the suite can read
+   and write (it mutates the `users` table to set phone numbers and
+   `smsOptOut` flags).
+2. **A running dev server reachable at `TEST_BASE_URL`** (defaults to
+   `http://localhost:5000`) — the suite POSTs to `/api/twilio/inbound` and
+   `/api/profile/sms/resume`. Start the `Start application` workflow
+   (`npm run dev`) before invoking jest.
+
+**CI must provide both.** The suite previously used `describe.skip` when
+`DATABASE_URL` was unset, which silently turned a misconfigured CI run into
+a green "0 tests" result. As of Task #63 the suite asserts both
+prerequisites in `beforeAll` and **fails loudly** with an actionable error
+message if either is missing — so a misconfigured pipeline shows up as a
+red build instead of a missing regression net.
+
+To run it locally:
+
+```bash
+# 1. Start the app (provides DATABASE_URL via .env and serves :5000)
+npm run dev
+
+# 2. In a second shell, run only the smsOptOut suite
+npx jest --selectProjects api --testPathPatterns='smsOptOut\.test' --forceExit
+```
+
+If you see `[smsOptOut] DATABASE_URL is not set` or
+`[smsOptOut] Dev server not reachable`, fix the environment before re-running
+— do not edit the suite to skip the check.
+
 ## Known Considerations
 
 - **Socket errors under heavy parallel load**: The dev server may drop connections when many suites run simultaneously. Use `--runInBand` if needed. This is a server connection limit, not a test isolation issue.

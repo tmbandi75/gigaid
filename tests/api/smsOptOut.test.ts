@@ -16,7 +16,41 @@ const START_REPLY_BODY =
 const STOP_KEYWORDS = ["STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL"] as const;
 const START_KEYWORDS = ["START", "UNSTOP"] as const;
 
-const dbDescribe = process.env.DATABASE_URL ? describe : describe.skip;
+/**
+ * Runtime requirements (enforced in beforeAll, not silently skipped):
+ *   - process.env.DATABASE_URL must be set (suite reads/writes the users table)
+ *   - The dev server must be reachable at TEST_BASE_URL (suite POSTs to
+ *     /api/twilio/inbound and /api/profile/sms/resume)
+ *
+ * Previously this suite used `describe.skip` when DATABASE_URL was missing,
+ * which silently no-op'd the regression net on CI. We now fail loudly so a
+ * misconfigured CI run surfaces as a red build instead of a green "0 tests".
+ *
+ * See tests/README.md "SMS opt-out suite runtime requirements".
+ */
+async function assertSmsOptOutRuntime(): Promise<void> {
+  if (!process.env.DATABASE_URL) {
+    throw new Error(
+      "[smsOptOut] DATABASE_URL is not set. This suite requires a Postgres " +
+        "connection to read/write the users table. Configure DATABASE_URL in " +
+        "the CI environment before running --selectProjects api.",
+    );
+  }
+  try {
+    const res = await fetch(`${TEST_BASE_URL}/api/health`, { method: "GET" });
+    if (!res.ok) {
+      throw new Error(`status ${res.status}`);
+    }
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `[smsOptOut] Dev server not reachable at ${TEST_BASE_URL}/api/health ` +
+        `(${reason}). Start the 'Start application' workflow (npm run dev) ` +
+        `before running this suite, or set TEST_BASE_URL to point at a ` +
+        `running instance.`,
+    );
+  }
+}
 
 async function postTwilioInbound(body: Record<string, string>) {
   const form = new URLSearchParams(body);
@@ -92,7 +126,7 @@ async function countInboundSmsMessagesForUser(userId: string) {
   return rows;
 }
 
-dbDescribe("Task #51: STOP/START opt-out webhook + resume endpoint", () => {
+describe("Task #51: STOP/START opt-out webhook + resume endpoint", () => {
   jest.setTimeout(30000);
 
   const { userA } = createSuiteUsers("smsoptout");
@@ -107,6 +141,7 @@ dbDescribe("Task #51: STOP/START opt-out webhook + resume endpoint", () => {
   let realUserId: string;
 
   beforeAll(async () => {
+    await assertSmsOptOutRuntime();
     await createTestUser(userA);
     token = await getAuthToken(userA.id);
     realUserId = await resolveRealUserId(userA.id);
@@ -114,8 +149,14 @@ dbDescribe("Task #51: STOP/START opt-out webhook + resume endpoint", () => {
   });
 
   afterAll(async () => {
-    await setUserPhoneE164(realUserId, null);
-    await resetTestData(userA.id);
+    // Guard against beforeAll having failed before realUserId was resolved
+    // (e.g. when assertSmsOptOutRuntime() throws on a misconfigured CI run).
+    if (realUserId) {
+      await setUserPhoneE164(realUserId, null);
+    }
+    if (process.env.DATABASE_URL) {
+      await resetTestData(userA.id);
+    }
   });
 
   beforeEach(async () => {
