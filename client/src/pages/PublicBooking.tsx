@@ -277,12 +277,6 @@ export default function PublicBooking() {
     enabled: !!slug && !isRedirecting,
   });
 
-  // First-Booking acquisition flow: render the unclaimed UI before any of the
-  // existing booking logic runs, so the current claimed-page experience is untouched.
-  if (isUnclaimed(profileResponse)) {
-    return <UnclaimedBookingPage page={profileResponse.page} />;
-  }
-
   const profile =
     profileResponse && !("redirected" in profileResponse) && !("kind" in profileResponse)
       ? (profileResponse as PublicProfile)
@@ -453,6 +447,10 @@ export default function PublicBooking() {
   };
 
   const monthYear = currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+  if (isUnclaimed(profileResponse)) {
+    return <UnclaimedBookingPage page={profileResponse.page} />;
+  }
 
   if (isLoading || isRedirecting) {
     return (
