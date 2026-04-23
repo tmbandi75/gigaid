@@ -925,6 +925,18 @@ async function attemptSendMessage(message: OutboundMessage): Promise<SendOutcome
     // First-booking emails: render typed subject + html + text from the locked
     // spec at send time so first_name is always fresh.
     if (isFirstBookingEmailType(message.type)) {
+      // Resolve the destination email at SEND TIME from the user record.
+      // Claim flow stores a sentinel (`pending@first-booking.local`) when the
+      // user hasn't supplied an email yet; if they fill it in during onboarding
+      // before the touch fires, we honor that fresh address. If still missing,
+      // cancel rather than spam the sentinel inbox.
+      const liveEmail = allowedUser?.email?.trim();
+      if (!liveEmail || liveEmail.endsWith("@first-booking.local")) {
+        logger.info(
+          `[OutboundMessages] Cancel ${message.id}: first-booking email has no destination yet`,
+        );
+        return { kind: "canceled", reason: CANCEL_REASONS.USER_NOT_FOUND };
+      }
       let bookingUrl = "";
       if (message.metadata) {
         try {
@@ -941,7 +953,7 @@ async function attemptSendMessage(message: OutboundMessage): Promise<SendOutcome
       );
       const { sendEmail } = await import("./sendgrid");
       const ok = await sendEmail({
-        to: message.toAddress,
+        to: liveEmail,
         subject: rendered.subject,
         text: rendered.text,
         html: rendered.html,

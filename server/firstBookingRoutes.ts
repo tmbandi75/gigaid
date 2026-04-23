@@ -60,6 +60,20 @@ function getUserIdFromBearer(req: Request): string | null {
   return verifyAppJwt(token)?.sub ?? null;
 }
 
+// Session-auth fallback so the in-app dashboard banner (which uses Replit
+// session cookies, not the claim-flow bearer JWT) can record link_copied
+// events on the same endpoint.
+function getUserIdFromSession(req: Request): string | null {
+  const sessionUser = (req as any).user;
+  const isAuthFn = (req as any).isAuthenticated;
+  if (typeof isAuthFn !== "function" || !isAuthFn.call(req)) return null;
+  return sessionUser?.claims?.sub ?? null;
+}
+
+function getCallerUserId(req: Request): string | null {
+  return getUserIdFromBearer(req) ?? getUserIdFromSession(req);
+}
+
 router.get("/booking-pages/:pageId", async (req: Request, res: Response) => {
   try {
     const page = await storage.getBookingPage(req.params.pageId);
@@ -85,7 +99,7 @@ router.post("/booking-pages/:pageId/events", async (req: Request, res: Response)
 
     const requiresOwner = type === "link_copied" || type === "link_shared" || type === "first_booking_viewed";
     if (requiresOwner) {
-      const userId = getUserIdFromBearer(req);
+      const userId = getCallerUserId(req);
       if (!userId || !page.claimedByUserId || userId !== page.claimedByUserId) {
         return res.status(403).json({ error: "Forbidden" });
       }
@@ -194,21 +208,25 @@ router.post("/claim-page", async (req: Request, res: Response) => {
         offsetMinutes: number;
       };
 
-      // Need the user's email to enqueue email rows. The claim flow doesn't
-      // capture email today (the user record was just created above), so this
-      // is typically null and the email rows are skipped — they'll be scheduled
-      // by future flows that do collect email at claim time.
+      // The claim flow doesn't capture an email today, so we enqueue email
+      // touches with a sentinel `to_address` (the column is NOT NULL). The
+      // real destination is resolved at SEND TIME inside `attemptSendMessage`
+      // by re-reading `users.email`, so any email the provider adds during
+      // onboarding before the touch fires is honored. If still no email at
+      // send time, the touch is canceled with `user_not_found`.
+      const EMAIL_PENDING_SENTINEL = "pending@first-booking.local";
       const userEmail = (await db
         .select({ email: users.email })
         .from(users)
         .where(eq(users.id, userId))
         .limit(1))[0]?.email ?? null;
+      const emailToAddress = userEmail ?? EMAIL_PENDING_SENTINEL;
 
       const touches: Touch[] = [
         { type: "first_booking_nudge_10m", channel: "sms", toAddress: phone ?? null, offsetMinutes: 10 },
-        { type: "first_booking_email_2h", channel: "email", toAddress: userEmail, offsetMinutes: emailTwoHourOffsetMinutes },
+        { type: "first_booking_email_2h", channel: "email", toAddress: emailToAddress, offsetMinutes: emailTwoHourOffsetMinutes },
         { type: "first_booking_nudge_24h", channel: "sms", toAddress: phone ?? null, offsetMinutes: 60 * 24 },
-        { type: "first_booking_email_48h", channel: "email", toAddress: userEmail, offsetMinutes: 60 * 48 },
+        { type: "first_booking_email_48h", channel: "email", toAddress: emailToAddress, offsetMinutes: 60 * 48 },
         { type: "first_booking_nudge_72h", channel: "sms", toAddress: phone ?? null, offsetMinutes: 60 * 72 },
       ];
 
