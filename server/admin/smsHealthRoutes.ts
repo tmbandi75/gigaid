@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { db } from "../db";
-import { outboundMessages, users } from "@shared/schema";
+import { outboundMessages, users, adminActionAudit } from "@shared/schema";
 import { and, desc, eq, gte, isNotNull, sql, count } from "drizzle-orm";
-import { adminMiddleware } from "../copilot/adminMiddleware";
+import { adminMiddleware, type AdminRequest } from "../copilot/adminMiddleware";
 import { logger } from "../lib/logger";
+import { loadDuplicatePhoneGroups } from "./duplicatePhones";
 
 const router = Router();
 
@@ -168,6 +169,89 @@ router.get("/opt-outs", async (req, res) => {
   } catch (error) {
     logger.error("[Admin SMS Health] opt-outs error:", error);
     res.status(500).json({ error: "Failed to load opt-out list" });
+  }
+});
+
+// ----------------------------------------------------------------------------
+// Duplicate phone diagnostics + repair tool.
+// ----------------------------------------------------------------------------
+// Background: the STOP webhook refuses to opt anyone out when 2+ user rows
+// share the same users.phone_e164 (see server/twilioStopOptOut.ts and
+// server/optOutResolver.ts). That safety means the affected users CANNOT
+// opt out by texting STOP until the duplicate is resolved.
+//
+// These two endpoints give support the visibility + repair tool described
+// in docs/runbooks/sms-duplicate-phones.md.
+// ----------------------------------------------------------------------------
+
+router.get("/duplicate-phones", async (_req, res) => {
+  try {
+    const groups = await loadDuplicatePhoneGroups();
+    res.json({
+      groupCount: groups.length,
+      affectedUserCount: groups.reduce((sum, g) => sum + g.userCount, 0),
+      groups,
+    });
+  } catch (error) {
+    logger.error("[Admin SMS Health] duplicate-phones error:", error);
+    res.status(500).json({ error: "Failed to load duplicate phone numbers" });
+  }
+});
+
+router.post("/users/:userId/clear-phone", async (req: AdminRequest, res) => {
+  try {
+    const { userId } = req.params;
+    if (!req.adminUserId) {
+      return res.status(401).json({ error: "Admin identity required" });
+    }
+    const reason = ((req.body && req.body.reason) || "").toString().trim();
+    if (!reason) {
+      // Force a written reason so the audit log is meaningful — clearing
+      // a phone affects which account future STOP texts opt out.
+      return res.status(400).json({ error: "reason is required" });
+    }
+
+    const [target] = await db
+      .select({ id: users.id, phoneE164: users.phoneE164 })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!target) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const previousPhone = target.phoneE164;
+
+    // Transactional so we never end up with a cleared phone but no audit
+    // row (or vice-versa). The audit trail is the only forensic record of
+    // who touched STOP-routing data.
+    await db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({ phoneE164: null })
+        .where(eq(users.id, userId));
+
+      await tx.insert(adminActionAudit).values({
+        createdAt: new Date().toISOString(),
+        actorUserId: req.adminUserId!,
+        actorEmail: req.userEmail || null,
+        targetUserId: userId,
+        actionKey: "sms_clear_phone_e164",
+        reason,
+        payload: JSON.stringify({ previousPhoneE164: previousPhone }),
+        source: "admin_ui",
+      });
+    });
+
+    logger.info(
+      `[Admin SMS Health] Cleared phone_e164 for user ${userId} (actor=${req.adminUserId})`,
+    );
+
+    res.json({ success: true, userId, previousPhoneE164: previousPhone });
+  } catch (error) {
+    logger.error("[Admin SMS Health] clear-phone error:", error);
+    res.status(500).json({ error: "Failed to clear phone_e164" });
   }
 });
 
