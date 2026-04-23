@@ -1,0 +1,135 @@
+This looks good overall — proceed, but implement the following EXACTLY (no interpretation):
+
+-------------------------------------
+PERSONALIZATION (REQUIRED)
+-------------------------------------
+Messages MUST be personalized using first_name when available.
+
+- If first_name exists:
+  prefix message with "{first_name}, "
+
+- If first_name is null:
+  do NOT include name (no awkward fallback like "there,")
+
+This must be handled dynamically at send time.
+
+-------------------------------------
+MESSAGE CONTENT (LOCKED)
+-------------------------------------
+
+10-MINUTE MESSAGE (MUST include opt-out):
+
+"{first_name_prefix}send your GigAid booking link to your next customer — it saves a ton of back and forth.
+
+Reply STOP to opt out.
+— Your partners at GigAid"
+
+24-HOUR MESSAGE (NO opt-out text):
+
+"{first_name_prefix}most people get their first GigAid booking within a day after sharing their link.
+
+— Your partners at GigAid"
+
+Rules:
+- Include "GigAid" in message body (not just signature)
+- Include signature EXACTLY: "— Your partners at GigAid"
+- Do NOT repeat opt-out in second message
+
+-------------------------------------
+ONE-TIME OPT-OUT (GLOBAL)
+-------------------------------------
+
+Implement Twilio inbound webhook (e.g. POST /api/twilio/sms):
+
+If inbound message contains:
+- STOP
+- STOPALL
+- UNSUBSCRIBE
+- CANCEL
+(case-insensitive)
+
+Then:
+- set users.notifyBySms = false
+- set users.sms_opt_out = true (add column if needed)
+
+This MUST:
+- apply globally across ALL SMS types (not just nudges)
+- immediately suppress all future outbound messages
+
+-------------------------------------
+SEND-TIME OPT-OUT ENFORCEMENT
+-------------------------------------
+
+Before sending ANY SMS:
+
+- check users.notifyBySms = true
+- check users.sms_opt_out = false
+
+If either fails → DO NOT SEND
+
+-------------------------------------
+DEDUPLICATION (STRICT)
+-------------------------------------
+
+Guarantee each nudge type is sent at most once per booking page.
+
+Enforce via database (not just code):
+
+- either unique constraint
+- or atomic check + insert in outbound_messages
+
+No duplicate sends under any condition.
+
+-------------------------------------
+SEND-TIME ELIGIBILITY RE-CHECK
+-------------------------------------
+
+At execution time (not just schedule time), verify:
+
+- booking page still claimed
+- NO bookingPageEvents of type:
+  - link_copied
+  - link_shared
+
+If first action exists → CANCEL send
+
+-------------------------------------
+SOURCE OF TRUTH
+-------------------------------------
+
+Use bookingPageEvents ONLY to determine first action.
+
+Do NOT introduce conflicting logic.
+
+-------------------------------------
+TWILIO USAGE
+-------------------------------------
+
+Reuse existing Twilio client (server/twilio.ts)
+
+Do NOT:
+- create new client
+- create new SMS pipeline
+
+-------------------------------------
+LOGGING
+-------------------------------------
+
+Ensure all sends are recorded via existing outbound_messages system.
+
+-------------------------------------
+ACCEPTANCE CRITERIA
+-------------------------------------
+
+Must verify:
+
+1. Message includes name when available
+2. Message excludes name cleanly when not available
+3. First SMS includes opt-out text
+4. Second SMS does NOT include opt-out text
+5. STOP reply disables ALL SMS globally
+6. No duplicate sends occur
+7. Users who copy/share link receive NO SMS
+8. Existing Twilio pipeline is reused
+
+Do not partially implement any of the above.
