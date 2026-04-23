@@ -26,6 +26,7 @@ import {
   CreditCard,
   HeartPulse,
   Rocket,
+  MessageSquareOff,
   LogOut,
   Moon,
   Sun,
@@ -65,6 +66,12 @@ const adminNavItems = [
     href: "/admin/system", 
     icon: Activity,
     testId: "nav-system-health",
+  },
+  {
+    title: "SMS Health",
+    href: "/admin/sms",
+    icon: MessageSquareOff,
+    testId: "nav-sms-health",
   },
   { 
     title: "Audit Logs", 

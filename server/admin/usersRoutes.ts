@@ -11,6 +11,7 @@ import {
   userFlags,
   messagingSuppression,
   adminActionKeys,
+  outboundMessages,
   type AdminActionKey
 } from "@shared/schema";
 import { eq, desc, and, or, ilike, gte, count, sql, isNull, isNotNull, lte } from "drizzle-orm";
@@ -1417,6 +1418,38 @@ router.get("/:userId/failed-invoices", async (req: AdminRequest, res) => {
   } catch (error) {
     logger.error("[Admin Users] Failed invoices error:", error);
     res.status(500).json({ error: "Failed to fetch invoices" });
+  }
+});
+
+// Outbound message log for a single user (last N entries with status & failureReason).
+router.get("/:userId/outbound-messages", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const limit = Math.min(parseInt((req.query.limit as string) || "25", 10) || 25, 200);
+
+    const rows = await db
+      .select({
+        id: outboundMessages.id,
+        channel: outboundMessages.channel,
+        type: outboundMessages.type,
+        status: outboundMessages.status,
+        toAddress: outboundMessages.toAddress,
+        scheduledFor: outboundMessages.scheduledFor,
+        sentAt: outboundMessages.sentAt,
+        canceledAt: outboundMessages.canceledAt,
+        failureReason: outboundMessages.failureReason,
+        createdAt: outboundMessages.createdAt,
+        updatedAt: outboundMessages.updatedAt,
+      })
+      .from(outboundMessages)
+      .where(eq(outboundMessages.userId, userId))
+      .orderBy(desc(outboundMessages.createdAt))
+      .limit(limit);
+
+    res.json({ messages: rows });
+  } catch (error) {
+    logger.error("[Admin Users] Outbound messages error:", error);
+    res.status(500).json({ error: "Failed to fetch outbound messages" });
   }
 });
 

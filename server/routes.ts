@@ -42,6 +42,7 @@ import cockpitRoutes from "./copilot/routes";
 import adminUsersRoutes from "./admin/usersRoutes";
 import adminAuthRoutes from "./admin/authRoutes";
 import adminSystemHealthRoutes from "./admin/systemHealthRoutes";
+import adminSmsHealthRoutes from "./admin/smsHealthRoutes";
 import adminAuditLogRoutes from "./admin/auditLogRoutes";
 import adminAnalyticsRoutes from "./admin/analyticsRoutes";
 import adminCustomerioRoutes from "./admin/customerioRoutes";
@@ -305,6 +306,7 @@ export async function registerRoutes(
   app.use("/api/admin/users", adminUsersRoutes);
   app.use("/api/admin/auth", adminAuthRoutes);
   app.use("/api/admin/system", adminSystemHealthRoutes);
+  app.use("/api/admin/sms", adminSmsHealthRoutes);
   app.use("/api/admin/audit-logs", adminAuditLogRoutes);
   app.use("/api/admin/analytics", adminAnalyticsRoutes);
   app.use("/api/admin/customerio", adminCustomerioRoutes);

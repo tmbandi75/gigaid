@@ -61,6 +61,7 @@ import AdminCockpit from "@/pages/AdminCockpit";
 import AdminUsers from "@/pages/AdminUsers";
 import AdminUserDetail from "@/pages/AdminUserDetail";
 import AdminSystemHealth from "@/pages/AdminSystemHealth";
+import AdminSmsHealth from "@/pages/AdminSmsHealth";
 import AdminAuditLogs from "@/pages/AdminAuditLogs";
 import AdminAnalytics from "@/pages/AdminAnalytics";
 import AdminCustomerIO from "@/pages/AdminCustomerIO";
@@ -137,6 +138,7 @@ function Router() {
       <Route path="/admin/users" component={AdminUsers} />
       <Route path="/admin/users/:userId" component={AdminUserDetail} />
       <Route path="/admin/system" component={AdminSystemHealth} />
+      <Route path="/admin/sms" component={AdminSmsHealth} />
       <Route path="/admin/audit-logs" component={AdminAuditLogs} />
       <Route path="/admin/analytics" component={AdminAnalytics} />
       <Route path="/admin/customerio" component={AdminCustomerIO} />

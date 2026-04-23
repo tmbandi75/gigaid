@@ -397,6 +397,129 @@ function AuditSection({ userId }: { userId: string }) {
   );
 }
 
+interface OutboundMessageRow {
+  id: string;
+  channel: string;
+  type: string;
+  status: string;
+  toAddress: string;
+  scheduledFor: string | null;
+  sentAt: string | null;
+  canceledAt: string | null;
+  failureReason: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+function statusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
+  switch (status) {
+    case "sent":
+      return "default";
+    case "canceled":
+      return "secondary";
+    case "failed":
+      return "destructive";
+    default:
+      return "outline";
+  }
+}
+
+function OutboundMessagesSection({ userId }: { userId: string }) {
+  const { data, isLoading } = useQuery<{ messages: OutboundMessageRow[] }>({
+    queryKey: QUERY_KEYS.adminUserOutboundMessages(userId),
+    queryFn: async () => {
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(
+        `/api/admin/users/${userId}/outbound-messages?limit=50`,
+        { credentials: "include", headers },
+      );
+      if (!res.ok) throw new Error("Failed to fetch outbound messages");
+      return res.json();
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const messages = data?.messages || [];
+
+  return (
+    <Card data-testid="card-outbound-messages">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Send className="h-4 w-4" />
+          Outbound Messages ({messages.length})
+        </CardTitle>
+        <CardDescription>
+          Last 50 outbound messages with status and any structured failure reason.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {messages.length === 0 ? (
+          <p className="text-muted-foreground text-center py-4">
+            No outbound messages recorded.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="py-2 pr-3">When</th>
+                  <th className="py-2 pr-3">Channel</th>
+                  <th className="py-2 pr-3">Type</th>
+                  <th className="py-2 pr-3">Status</th>
+                  <th className="py-2 pr-3">Failure reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                {messages.map((m) => {
+                  const ts = m.sentAt || m.canceledAt || m.updatedAt || m.createdAt;
+                  return (
+                    <tr
+                      key={m.id}
+                      className="border-t align-top"
+                      data-testid={`row-outbound-message-${m.id}`}
+                    >
+                      <td className="py-2 pr-3 whitespace-nowrap text-muted-foreground">
+                        {ts ? new Date(ts).toLocaleString() : "—"}
+                      </td>
+                      <td className="py-2 pr-3">{m.channel}</td>
+                      <td className="py-2 pr-3">{m.type}</td>
+                      <td className="py-2 pr-3">
+                        <Badge
+                          variant={statusVariant(m.status)}
+                          data-testid={`badge-outbound-status-${m.id}`}
+                        >
+                          {m.status}
+                        </Badge>
+                      </td>
+                      <td
+                        className="py-2 pr-3 text-muted-foreground"
+                        data-testid={`text-outbound-reason-${m.id}`}
+                      >
+                        {m.failureReason || "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function ExternalLinksSection({ userId }: { userId: string }) {
   const { data } = useQuery<any>({
     queryKey: QUERY_KEYS.adminExternalLinks(),
@@ -1188,14 +1311,18 @@ export default function AdminUserDetail() {
         </div>
 
         <Tabs defaultValue="timeline">
-          <TabsList className="w-full grid grid-cols-4">
+          <TabsList className="w-full grid grid-cols-5">
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="messages" data-testid="tab-outbound-messages">Outbound Messages</TabsTrigger>
             <TabsTrigger value="audit">Audit Log</TabsTrigger>
             <TabsTrigger value="links">External Links</TabsTrigger>
             <TabsTrigger value="actions">Actions</TabsTrigger>
           </TabsList>
           <TabsContent value="timeline" className="mt-4">
             <TimelineSection userId={userId} />
+          </TabsContent>
+          <TabsContent value="messages" className="mt-4">
+            <OutboundMessagesSection userId={userId} />
           </TabsContent>
           <TabsContent value="audit" className="mt-4">
             <AuditSection userId={userId} />
