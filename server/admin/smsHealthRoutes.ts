@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "../db";
-import { outboundMessages, users, adminActionAudit } from "@shared/schema";
-import { and, desc, eq, gte, isNotNull, sql, count } from "drizzle-orm";
+import { outboundMessages, smsOptOutEvents, users, adminActionAudit } from "@shared/schema";
+import { and, desc, eq, gte, isNotNull, ne, sql, count } from "drizzle-orm";
 import { adminMiddleware, type AdminRequest } from "../copilot/adminMiddleware";
 import { logger } from "../lib/logger";
 import { loadDuplicatePhoneGroups } from "./duplicatePhones";
@@ -121,6 +121,32 @@ router.get("/summary", async (_req, res) => {
       .orderBy(desc(users.smsConfirmationLastFailureAt))
       .limit(10);
 
+    // Inbound STOP audit: count + recent unmatched/ambiguous events. We
+    // surface these so operators can spot opt-outs that didn't pin to any
+    // user (e.g. a customer texts STOP to a number we never sent to).
+    const [unmatchedRow] = await db
+      .select({ c: count() })
+      .from(smsOptOutEvents)
+      .where(
+        and(
+          ne(smsOptOutEvents.resolution, "matched"),
+          gte(smsOptOutEvents.createdAt, sevenDaysAgo),
+        ),
+      );
+
+    const recentUnmatched = await db
+      .select({
+        id: smsOptOutEvents.id,
+        fromPhoneMasked: smsOptOutEvents.fromPhoneMasked,
+        resolution: smsOptOutEvents.resolution,
+        body: smsOptOutEvents.body,
+        createdAt: smsOptOutEvents.createdAt,
+      })
+      .from(smsOptOutEvents)
+      .where(ne(smsOptOutEvents.resolution, "matched"))
+      .orderBy(desc(smsOptOutEvents.createdAt))
+      .limit(10);
+
     res.json({
       windowDays: 7,
       canceled: {
@@ -139,6 +165,10 @@ router.get("/summary", async (_req, res) => {
       confirmationFailures: {
         total: Number(confirmFailureCountRow?.c || 0),
         recent: recentConfirmFailures,
+      },
+      unmatchedOptOuts: {
+        last7d: Number(unmatchedRow?.c || 0),
+        recent: recentUnmatched,
       },
     });
   } catch (error) {
@@ -252,6 +282,42 @@ router.post("/users/:userId/clear-phone", async (req: AdminRequest, res) => {
   } catch (error) {
     logger.error("[Admin SMS Health] clear-phone error:", error);
     res.status(500).json({ error: "Failed to clear phone_e164" });
+  }
+});
+
+// Drill-down list of unmatched/ambiguous STOP events. Returns the raw
+// From phone (admin-only audit) so operators can investigate. Defaults to
+// only non-matched rows; pass ?include=all to see everything.
+router.get("/opt-out-events", async (req, res) => {
+  try {
+    const limit = Math.min(parseInt((req.query.limit as string) || "50", 10) || 50, 200);
+    const include = (req.query.include as string) || "unmatched";
+
+    const where = include === "all"
+      ? undefined
+      : ne(smsOptOutEvents.resolution, "matched");
+
+    const baseQuery = db
+      .select({
+        id: smsOptOutEvents.id,
+        fromPhoneMasked: smsOptOutEvents.fromPhoneMasked,
+        fromPhoneRaw: smsOptOutEvents.fromPhoneRaw,
+        userId: smsOptOutEvents.userId,
+        resolution: smsOptOutEvents.resolution,
+        body: smsOptOutEvents.body,
+        twilioSid: smsOptOutEvents.twilioSid,
+        createdAt: smsOptOutEvents.createdAt,
+      })
+      .from(smsOptOutEvents);
+
+    const rows = await (where ? baseQuery.where(where) : baseQuery)
+      .orderBy(desc(smsOptOutEvents.createdAt))
+      .limit(limit);
+
+    res.json({ events: rows });
+  } catch (error) {
+    logger.error("[Admin SMS Health] opt-out-events error:", error);
+    res.status(500).json({ error: "Failed to load opt-out events" });
   }
 });
 

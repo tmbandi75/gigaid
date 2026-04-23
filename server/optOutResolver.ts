@@ -24,6 +24,46 @@ export interface OptOutResolverDeps {
   findRecentOutboundUserIds: (phone: string) => Promise<string[]>;
 }
 
+/** Why the resolver returned the userId (or didn't). */
+export type OptOutResolution = "matched" | "unmatched" | "ambiguous";
+
+/**
+ * Like `resolveOptOutUserId` but also reports *why* the resolver landed
+ * where it did, so the audit trail can distinguish "no user at all" from
+ * "we deliberately refused due to ambiguity". Pure wrapper — keeps the
+ * existing log lines and ambiguity guards intact.
+ */
+export async function resolveOptOutWithReason(
+  fromPhone: string,
+  deps: OptOutResolverDeps,
+): Promise<{ userId: string | null; resolution: OptOutResolution }> {
+  const phoneMatches = await deps.findUsersByPhoneE164(fromPhone);
+  if (phoneMatches.length === 1) {
+    return { userId: phoneMatches[0].id, resolution: "matched" };
+  }
+  if (phoneMatches.length > 1) {
+    logger.warn(
+      `[Twilio STOP] Ambiguous: ${phoneMatches.length}+ users share phone ${maskPhone(fromPhone)}; refusing opt-out, manual review required`,
+    );
+    return { userId: null, resolution: "ambiguous" };
+  }
+
+  const recentUserIds = await deps.findRecentOutboundUserIds(fromPhone);
+  const distinct = Array.from(new Set(recentUserIds.filter(Boolean)));
+  if (distinct.length === 1) {
+    return { userId: distinct[0], resolution: "matched" };
+  }
+  if (distinct.length > 1) {
+    logger.warn(
+      `[Twilio STOP] Ambiguous outbound history: ${distinct.length} distinct users have texted ${maskPhone(fromPhone)} recently; refusing opt-out, manual review required`,
+    );
+    return { userId: null, resolution: "ambiguous" };
+  }
+
+  logger.info(`[Twilio STOP] No matching user for ${maskPhone(fromPhone)}; ignoring`);
+  return { userId: null, resolution: "unmatched" };
+}
+
 /**
  * STOP-only phone -> userId resolution. Ambiguity-safe per spec:
  *   1. Strict users.phone_e164 match wins only on exactly one row.

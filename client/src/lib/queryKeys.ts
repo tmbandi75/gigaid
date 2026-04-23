@@ -128,6 +128,7 @@ export const QUERY_KEYS = {
   adminSystemStatus: () => ["/api/admin/system/status"] as const,
   adminSmsHealthSummary: () => ["/api/admin/sms/summary"] as const,
   adminSmsOptOuts: () => ["/api/admin/sms/opt-outs"] as const,
+  adminSmsOptOutEvents: () => ["/api/admin/sms/opt-out-events"] as const,
   adminUserOutboundMessages: (userId: string) => ["/api/admin/users", userId, "outbound-messages"] as const,
   adminSystemJobs: () => ["/api/admin/system/jobs"] as const,
   adminSystemErrors: () => ["/api/admin/system/errors"] as const,

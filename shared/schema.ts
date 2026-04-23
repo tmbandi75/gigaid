@@ -2280,6 +2280,39 @@ export const insertOutboundMessageSchema = createInsertSchema(outboundMessages).
 export type InsertOutboundMessage = z.infer<typeof insertOutboundMessageSchema>;
 export type OutboundMessage = typeof outboundMessages.$inferSelect;
 
+// Audit trail of inbound STOP webhook deliveries. We persist every STOP we
+// receive (matched or not) so the admin SMS Health view can surface
+// unmatched opt-outs without operators having to grep raw logs.
+export const smsOptOutEvents = pgTable("sms_optout_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  // Always-stored masked rendering (e.g. +15***4567) for safe display.
+  fromPhoneMasked: text("from_phone_masked").notNull(),
+  // Raw From value as Twilio delivered it. Sensitive; only exposed to admins.
+  fromPhoneRaw: text("from_phone_raw").notNull(),
+  // Resolved user when the ambiguity-safe resolver could pin one. Null when
+  // unmatched (no users.phoneE164 hit and no recent outbound history) or
+  // when the resolver refused due to ambiguity.
+  userId: varchar("user_id"),
+  // "matched" | "unmatched" | "ambiguous". Lets the UI/summary distinguish
+  // between "no user at all" vs "we deliberately refused due to ambiguity".
+  resolution: text("resolution").notNull(),
+  // Trimmed inbound body (cap 30 chars to mirror existing log policy) so an
+  // operator can tell apart STOP/STOPALL/UNSUBSCRIBE etc. when investigating.
+  body: text("body"),
+  twilioSid: text("twilio_sid"),
+  createdAt: text("created_at").notNull().default(sql`now()`),
+}, (table) => [
+  index("sms_optout_events_created_idx").on(table.createdAt),
+  index("sms_optout_events_resolution_created_idx").on(table.resolution, table.createdAt),
+]);
+
+export const insertSmsOptOutEventSchema = createInsertSchema(smsOptOutEvents).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertSmsOptOutEvent = z.infer<typeof insertSmsOptOutEventSchema>;
+export type SmsOptOutEvent = typeof smsOptOutEvents.$inferSelect;
+
 // Pre-generated booking pages for the Growth Engine acquisition flow.
 // Existing user-owned booking pages (resolved via users.publicProfileSlug) are unaffected.
 export const bookingPages = pgTable("booking_pages", {

@@ -4645,10 +4645,35 @@ export async function registerRoutes(
   // and locked TwiML payloads used by the dedicated unit tests in
   // tests/api/twilioStopWebhook.test.ts; the route uses optOutResolver
   // here because it carries the START/UNSTOP flow and dependency wiring.
-  const { maskPhone, resolveOptOutUserId, buildDefaultOptOutResolverDeps } =
+  const { maskPhone, resolveOptOutUserId, resolveOptOutWithReason, buildDefaultOptOutResolverDeps } =
     await import("./optOutResolver");
   const optOutResolverDeps = await buildDefaultOptOutResolverDeps();
   const { EMPTY_TWIML, STOP_ACK_TWIML } = await import("./twilioStopOptOut");
+
+  // Persist a STOP delivery to the audit table. Best-effort: never let a
+  // logging failure block the TwiML response (Twilio retries non-2xx).
+  async function recordOptOutEvent(args: {
+    fromRaw: string;
+    userId: string | null;
+    resolution: "matched" | "unmatched" | "ambiguous";
+    body: string;
+    twilioSid: string | null;
+  }) {
+    try {
+      const { smsOptOutEvents } = await import("@shared/schema");
+      const { db } = await import("./db");
+      await db.insert(smsOptOutEvents).values({
+        fromPhoneMasked: maskPhone(args.fromRaw),
+        fromPhoneRaw: args.fromRaw,
+        userId: args.userId,
+        resolution: args.resolution,
+        body: (args.body || "").trim().substring(0, 30),
+        twilioSid: args.twilioSid,
+      });
+    } catch (err) {
+      logger.error("[Twilio STOP] Failed to record opt-out event:", err);
+    }
+  }
 
   async function handleTwilioInbound(req: any, res: any) {
     try {
@@ -4701,7 +4726,16 @@ export async function registerRoutes(
         // E.164 in production, but trim defensively so a stray space or
         // a non-Twilio test client can't slip past the lookup.
         const normalizedFrom = (From || "").trim();
-        const userId = await resolveOptOutUserId(normalizedFrom, optOutResolverDeps);
+        const { userId, resolution } = await resolveOptOutWithReason(normalizedFrom, optOutResolverDeps);
+        // Audit every STOP delivery so the admin SMS Health view can show
+        // unmatched / ambiguous opt-outs without grepping logs.
+        await recordOptOutEvent({
+          fromRaw: normalizedFrom,
+          userId,
+          resolution,
+          body: Body,
+          twilioSid: MessageSid || null,
+        });
         if (userId) {
           const { users: usersTable } = await import("@shared/schema");
           const { db } = await import("./db");

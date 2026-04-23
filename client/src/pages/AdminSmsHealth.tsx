@@ -14,11 +14,13 @@ import { getAuthToken } from "@/lib/authToken";
 import {
   AlertTriangle,
   BellOff,
+  HelpCircle,
   Loader2,
   MessageSquareOff,
   RefreshCw,
   ShieldOff,
 } from "lucide-react";
+import { useState } from "react";
 import { queryClient } from "@/lib/queryClient";
 
 interface RecentOptOut {
@@ -40,12 +42,27 @@ interface RecentConfirmFailure {
   smsConfirmationLastFailureMessage: string | null;
 }
 
+interface UnmatchedOptOut {
+  id: string;
+  fromPhoneMasked: string;
+  resolution: "unmatched" | "ambiguous" | "matched";
+  body: string | null;
+  createdAt: string;
+}
+
+interface UnmatchedOptOutDetail extends UnmatchedOptOut {
+  fromPhoneRaw: string;
+  userId: string | null;
+  twilioSid: string | null;
+}
+
 interface SmsHealthSummary {
   windowDays: number;
   canceled: { total: number; byReason: Record<string, number> };
   failed: { total: number; byReason: Record<string, number> };
   optOuts: { total: number; last7d: number; recent: RecentOptOut[] };
   confirmationFailures: { total: number; recent: RecentConfirmFailure[] };
+  unmatchedOptOuts: { last7d: number; recent: UnmatchedOptOut[] };
 }
 
 interface OptOutUser {
@@ -120,6 +137,8 @@ function ReasonRow({
 }
 
 export default function AdminSmsHealth() {
+  const [showUnmatchedDetail, setShowUnmatchedDetail] = useState(false);
+
   const summaryQuery = useQuery<SmsHealthSummary>({
     queryKey: QUERY_KEYS.adminSmsHealthSummary(),
     queryFn: () => authedFetch("/api/admin/sms/summary"),
@@ -130,9 +149,16 @@ export default function AdminSmsHealth() {
     queryFn: () => authedFetch("/api/admin/sms/opt-outs?limit=100"),
   });
 
+  const unmatchedDetailQuery = useQuery<{ events: UnmatchedOptOutDetail[] }>({
+    queryKey: QUERY_KEYS.adminSmsOptOutEvents(),
+    queryFn: () => authedFetch("/api/admin/sms/opt-out-events?limit=50"),
+    enabled: showUnmatchedDetail,
+  });
+
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.adminSmsHealthSummary() });
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.adminSmsOptOuts() });
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.adminSmsOptOutEvents() });
   };
 
   const summary = summaryQuery.data;
@@ -312,6 +338,124 @@ export default function AdminSmsHealth() {
           </CardContent>
         </Card>
       </div>
+
+      <Card data-testid="tile-unmatched-optouts">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <HelpCircle className="h-4 w-4" />
+            Unmatched STOP webhooks
+          </CardTitle>
+          <CardDescription>
+            STOP messages we couldn't pin to a specific user — either no
+            matching phone, or multiple users share the number. These used
+            to live only in raw logs.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {summaryQuery.isLoading ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : !summary ? (
+            <p className="text-sm text-muted-foreground">No data.</p>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-end gap-6">
+                <div>
+                  <div
+                    className="text-3xl font-bold tabular-nums"
+                    data-testid="text-unmatched-optout-last7d"
+                  >
+                    {summary.unmatchedOptOuts.last7d}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    in last 7 days
+                  </div>
+                </div>
+                <div className="ml-auto">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowUnmatchedDetail((v) => !v)}
+                    data-testid="button-toggle-unmatched-detail"
+                  >
+                    {showUnmatchedDetail ? "Hide details" : "Show recent"}
+                  </Button>
+                </div>
+              </div>
+
+              {!showUnmatchedDetail && summary.unmatchedOptOuts.recent.length > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  {summary.unmatchedOptOuts.recent.length} recent event
+                  {summary.unmatchedOptOuts.recent.length === 1 ? "" : "s"} on file.
+                </div>
+              )}
+
+              {showUnmatchedDetail && (
+                <div data-testid="region-unmatched-detail">
+                  {unmatchedDetailQuery.isLoading ? (
+                    <div className="flex justify-center py-6">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : !unmatchedDetailQuery.data ||
+                    unmatchedDetailQuery.data.events.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-4 text-center">
+                      No unmatched STOP events recorded.
+                    </p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                          <tr>
+                            <th className="py-2 pr-3">When</th>
+                            <th className="py-2 pr-3">From</th>
+                            <th className="py-2 pr-3">Resolution</th>
+                            <th className="py-2 pr-3">Body</th>
+                            <th className="py-2 pr-3">Twilio SID</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {unmatchedDetailQuery.data.events.map((ev) => (
+                            <tr
+                              key={ev.id}
+                              className="border-t"
+                              data-testid={`row-unmatched-event-${ev.id}`}
+                            >
+                              <td className="py-2 pr-3 text-muted-foreground whitespace-nowrap">
+                                {formatDate(ev.createdAt)}
+                              </td>
+                              <td className="py-2 pr-3 font-mono text-xs">
+                                {ev.fromPhoneRaw || ev.fromPhoneMasked}
+                              </td>
+                              <td className="py-2 pr-3">
+                                <Badge
+                                  variant={
+                                    ev.resolution === "ambiguous"
+                                      ? "destructive"
+                                      : "secondary"
+                                  }
+                                >
+                                  {ev.resolution}
+                                </Badge>
+                              </td>
+                              <td className="py-2 pr-3 text-muted-foreground">
+                                {ev.body || "—"}
+                              </td>
+                              <td className="py-2 pr-3 font-mono text-xs text-muted-foreground">
+                                {ev.twilioSid || "—"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card data-testid="card-optout-roster">
         <CardHeader className="pb-3">
