@@ -171,7 +171,7 @@ describe("Task #48 AC #1: ambiguity-safe STOP resolution (real resolveOptOutUser
   });
 
   it("filters out empty/null userIds from outbound history before counting distinctness", async () => {
-    const deps = makeDeps([], ["u-only", "", "u-only"] as any);
+    const deps = makeDeps([], ["u-only", "", "u-only"]);
     await expect(resolveOptOutUserId("+15551110000", deps)).resolves.toBe("u-only");
   });
 
