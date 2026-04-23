@@ -683,6 +683,8 @@ export async function registerRoutes(
         bookingLink,
         notifyBySms: user.notifyBySms,
         notifyByEmail: user.notifyByEmail,
+        smsOptOut: user.smsOptOut ?? false,
+        smsOptOutAt: user.smsOptOutAt ?? null,
         showReviewsOnBooking: user.showReviewsOnBooking,
         publicEstimationEnabled: user.publicEstimationEnabled,
         noShowProtectionEnabled: user.noShowProtectionEnabled,
@@ -901,6 +903,41 @@ export async function registerRoutes(
     } catch (error) {
       logger.error("[AnalyticsPrefs] Error updating analytics preferences:", error);
       res.status(500).json({ error: "Failed to update analytics preferences" });
+    }
+  });
+
+  // POST /api/profile/sms/resume - Re-enable SMS for a user that previously
+  // texted STOP. Requires explicit confirmation from the client (button in
+  // Settings) and clears both smsOptOut and smsOptOutAt. Also restores the
+  // notifyBySms preference, which we forced off when we recorded the opt-out.
+  app.post("/api/profile/sms/resume", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      if (!user.smsOptOut) {
+        return res.json({ success: true, smsOptOut: false, smsOptOutAt: null });
+      }
+
+      const { users: usersTable } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      await db
+        .update(usersTable)
+        .set({
+          smsOptOut: false,
+          smsOptOutAt: null,
+          notifyBySms: true,
+        })
+        .where(eq(usersTable.id, userId));
+
+      logger.info(`[SMS Resume] User ${userId} re-enabled SMS via in-app action`);
+      res.json({ success: true, smsOptOut: false, smsOptOutAt: null });
+    } catch (error) {
+      logger.error("[SMS Resume] Error:", error);
+      res.status(500).json({ error: "Failed to resume SMS" });
     }
   });
 
@@ -4494,8 +4531,11 @@ export async function registerRoutes(
   // doesn't retry (which would cause duplicate opt-outs / message storage).
   // ============================================================================
   const STOP_KEYWORDS = new Set(["STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL"]);
+  const START_KEYWORDS = new Set(["START", "UNSTOP"]);
   const STOP_REPLY_BODY =
     "You're unsubscribed from GigAid messages. No more texts will be sent.";
+  const START_REPLY_BODY =
+    "You're re-subscribed to GigAid messages. Reply STOP at any time to opt out.";
 
   // Phone masking + ambiguity-safe STOP resolver live in their own module
   // so they're unit-testable without spinning up the route stack.
@@ -4519,8 +4559,39 @@ export async function registerRoutes(
       // Spec: never log full phone numbers; cap body at 30 chars.
       logger.debug(`[Twilio Inbound] SMS from ${maskPhone(From)}: ${(Body || "").substring(0, 30)}`);
 
-      // ----- STOP opt-out branch (runs before normal inbound routing) -----
+      // ----- STOP / START branch (runs before normal inbound routing) -----
       const trimmedBody = (Body || "").trim().toUpperCase();
+      if (START_KEYWORDS.has(trimmedBody)) {
+        // START / UNSTOP only intercepts when the resolved user is actually
+        // currently opted out. Otherwise we fall through to normal inbound
+        // routing so a customer reply that happens to say "START" / "UNSTOP"
+        // is preserved as a normal message in conversations.
+        const normalizedFrom = (From || "").trim();
+        const userId = await resolveOptOutUserId(normalizedFrom);
+        if (userId) {
+          const candidate = await storage.getUser(userId);
+          if (candidate?.smsOptOut) {
+            const { users: usersTable } = await import("@shared/schema");
+            const { db } = await import("./db");
+            const { eq } = await import("drizzle-orm");
+            await db
+              .update(usersTable)
+              .set({
+                smsOptOut: false,
+                smsOptOutAt: null,
+                notifyBySms: true,
+              })
+              .where(eq(usersTable.id, userId));
+            logger.info(`[Twilio START] Re-subscribed user ${userId} via ${maskPhone(From)}`);
+            res.type("text/xml").send(
+              `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${START_REPLY_BODY}</Message></Response>`,
+            );
+            return;
+          }
+        }
+        // No opted-out user matches — fall through and let the normal
+        // inbound handler treat this as a regular customer reply.
+      }
       if (STOP_KEYWORDS.has(trimmedBody)) {
         // Spec: match against E.164-normalized From. Twilio always sends
         // E.164 in production, but trim defensively so a stray space or
