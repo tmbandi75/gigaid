@@ -572,7 +572,7 @@ async function attemptSendMessage(message: OutboundMessage): Promise<SendOutcome
           eq(bookingPageEvents.pageId, message.bookingPageId),
           inArray(
             bookingPageEvents.type,
-            FIRST_BOOKING_DISQUALIFYING_EVENT_TYPES as unknown as string[],
+            Array.from(FIRST_BOOKING_DISQUALIFYING_EVENT_TYPES),
           ),
         ));
       if ((disqRows[0]?.n ?? 0) > 0) {
@@ -586,24 +586,19 @@ async function attemptSendMessage(message: OutboundMessage): Promise<SendOutcome
       ? renderFirstBookingNudgeBody(message.type, user.firstName)
       : (message.templateRendered || "");
 
-    if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+    // Reuse the canonical Twilio sender so credential resolution, error
+    // mapping, and number normalization stay in one place.
+    const { sendSMS } = await import("./twilio");
+    const result = await sendSMS(message.toAddress, body);
+    if (result.success) {
+      return { kind: "sent", body };
+    }
+    if (result.errorCode === "NO_FROM_NUMBER") {
       logger.info(`[OutboundMessages] Twilio not configured, deferring ${message.id}`);
       return { kind: "deferred", reason: "no_provider" };
     }
-
-    try {
-      const twilio = await import("twilio");
-      const client = twilio.default(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-      await client.messages.create({
-        body,
-        from: process.env.TWILIO_PHONE_NUMBER,
-        to: message.toAddress,
-      });
-      return { kind: "sent", body };
-    } catch (error) {
-      logger.error(`[OutboundMessages] Twilio send failed:`, error);
-      throw error;
-    }
+    logger.error(`[OutboundMessages] Twilio send failed: ${result.errorCode} ${result.errorMessage}`);
+    throw new Error(result.errorMessage || result.errorCode || "twilio_send_failed");
   }
 
   // ----- Email path (unchanged behavior) -----

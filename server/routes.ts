@@ -4583,7 +4583,7 @@ export async function registerRoutes(
       const lastOutbound = await storage.getLastOutboundMessageByPhone(From);
       
       if (!lastOutbound) {
-        logger.debug(`[Twilio Inbound] No matching provider found for ${From}`);
+        logger.debug(`[Twilio Inbound] No matching provider found for ${maskPhone(From)}`);
         return res.status(200).send("OK");
       }
 
