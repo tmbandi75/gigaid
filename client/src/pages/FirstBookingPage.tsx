@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useRoute } from "wouter";
-import { Copy, Send, Check, Loader2 } from "lucide-react";
+import { ArrowRight, Calendar, Check, CheckCircle2, Copy, Loader2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { getAuthToken } from "@/lib/authToken";
@@ -25,7 +25,7 @@ async function fetchPage(pageId: string): Promise<BookingPageDto | null> {
   }
 }
 
-async function track(pageId: string, type: "link_copied" | "link_shared") {
+async function track(pageId: string, type: "link_copied" | "link_shared" | "first_booking_viewed") {
   try {
     const token = getAuthToken();
     const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -49,6 +49,8 @@ export default function FirstBookingPage() {
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [linkCopiedConfirmed, setLinkCopiedConfirmed] = useState(false);
+  const viewedFiredRef = useRef(false);
 
   const bookingUrl = useMemo(() => {
     if (!pageId) return "";
@@ -72,6 +74,10 @@ export default function FirstBookingPage() {
       }
       setAllowed(true);
       setLoading(false);
+      if (!viewedFiredRef.current) {
+        viewedFiredRef.current = true;
+        track(pageId, "first_booking_viewed");
+      }
     })();
     return () => {
       cancelled = true;
@@ -82,6 +88,7 @@ export default function FirstBookingPage() {
     try {
       await navigator.clipboard.writeText(bookingUrl);
       setCopied(true);
+      setLinkCopiedConfirmed(true);
       toast({ title: "Link copied", description: "Paste it to your next customer." });
       track(pageId, "link_copied");
       setTimeout(() => setCopied(false), 2000);
@@ -128,7 +135,7 @@ export default function FirstBookingPage() {
             Send this to your next customer
           </h1>
           <p className="text-base text-slate-600" data-testid="text-first-booking-microcopy">
-            Instead of texting back and forth, just send this and they can book + pay a deposit.
+            Instead of texting back and forth, just send this and let them book the job.
           </p>
         </div>
 
@@ -165,6 +172,50 @@ export default function FirstBookingPage() {
           >
             <Send className="mr-2 h-5 w-5" /> Send via text
           </Button>
+          {linkCopiedConfirmed && (
+            <p
+              className="flex items-center justify-center gap-1.5 text-sm font-medium text-emerald-700"
+              data-testid="text-link-copied-confirmed"
+            >
+              <Check className="h-4 w-4" />
+              Link copied — send it to your next customer
+            </p>
+          )}
+        </div>
+
+        <div
+          className="flex items-center justify-between gap-1 rounded-2xl border border-slate-200 bg-white px-3 py-4 shadow-sm sm:gap-2 sm:px-4"
+          data-testid="section-three-steps"
+        >
+          <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5 text-center" data-testid="step-send-link">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+              <Send className="h-4 w-4" />
+            </div>
+            <span className="text-[11px] font-medium leading-tight text-slate-700">Send link</span>
+          </div>
+          <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-300 sm:h-4 sm:w-4" />
+          <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5 text-center" data-testid="step-customer-books">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+              <Calendar className="h-4 w-4" />
+            </div>
+            <span className="text-[11px] font-medium leading-tight text-slate-700">Customer books</span>
+          </div>
+          <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-300 sm:h-4 sm:w-4" />
+          <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5 text-center" data-testid="step-confirmed">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+              <CheckCircle2 className="h-4 w-4" />
+            </div>
+            <span className="text-[11px] font-medium leading-tight text-slate-700">You're confirmed</span>
+          </div>
+        </div>
+
+        <div className="space-y-2 text-center">
+          <p className="text-sm text-slate-500" data-testid="text-first-booking-social-proof">
+            Most people get their first booking within a day after sharing this.
+          </p>
+          <p className="text-sm font-semibold text-slate-800" data-testid="text-first-booking-urgency">
+            Use this for your next job today
+          </p>
         </div>
       </div>
     </div>

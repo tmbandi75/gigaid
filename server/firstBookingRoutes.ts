@@ -66,8 +66,8 @@ router.post("/booking-pages/:pageId/events", async (req: Request, res: Response)
     const page = await storage.getBookingPage(pageId);
     if (!page) return res.status(404).json({ error: "Not found" });
 
-    const isOwnerAction = type === "link_copied" || type === "link_shared";
-    if (isOwnerAction) {
+    const requiresOwner = type === "link_copied" || type === "link_shared" || type === "first_booking_viewed";
+    if (requiresOwner) {
       const userId = getUserIdFromBearer(req);
       if (!userId || !page.claimedByUserId || userId !== page.claimedByUserId) {
         return res.status(403).json({ error: "Forbidden" });
@@ -76,7 +76,10 @@ router.post("/booking-pages/:pageId/events", async (req: Request, res: Response)
 
     const variant = sanitizeVariant(req.body?.variant);
     await storage.trackBookingPageEvent(pageId, type, { variant });
-    if (isOwnerAction) await storage.cancelBookingPageNudges(pageId);
+    // Only cancel nudges when the owner has actually taken a completion action
+    // (copied or shared the link). Just viewing the page should not cancel them.
+    const completesNudge = type === "link_copied" || type === "link_shared";
+    if (completesNudge) await storage.cancelBookingPageNudges(pageId);
     return res.json({ ok: true });
   } catch (err: any) {
     logger.error("[FirstBooking] trackEvent error:", err?.message);

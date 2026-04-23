@@ -2285,7 +2285,7 @@ export const insertBookingPageSchema = createInsertSchema(bookingPages).omit({
 export type InsertBookingPage = z.infer<typeof insertBookingPageSchema>;
 export type BookingPage = typeof bookingPages.$inferSelect;
 
-export const bookingPageEventTypes = ["page_viewed", "page_claimed", "link_copied", "link_shared"] as const;
+export const bookingPageEventTypes = ["page_viewed", "page_claimed", "link_copied", "link_shared", "first_booking_viewed"] as const;
 export type BookingPageEventType = typeof bookingPageEventTypes[number];
 
 export const bookingPageEvents = pgTable("booking_page_events", {
