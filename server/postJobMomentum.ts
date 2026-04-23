@@ -5,13 +5,75 @@ import {
   jobs, 
   invoices,
   clients,
+  users,
+  bookingPages,
+  bookingPageEvents,
   type UserAutomationSettings,
   type OutboundMessage,
   type Job,
   type Client
 } from "@shared/schema";
-import { eq, and, lte, inArray } from "drizzle-orm";
+import { eq, and, lte, gte, inArray, sql } from "drizzle-orm";
 import { logger } from "./lib/logger";
+
+// ============================================================================
+// Send-time policy for outbound SMS.
+// ----------------------------------------------------------------------------
+// Order of guards inside attemptSendMessage:
+//   1. Global opt-out      (sms_opt_out OR notify_by_sms === false)
+//   2. Per-user rate limit (3 sent SMS / rolling 24h, all SMS types)
+//   3. First-booking eligibility (only for first_booking_nudge_*)
+//   4. Send and transition queued -> sent atomically
+// Email sends skip 1-3 (opt-out and rate limit are SMS-only).
+// ============================================================================
+
+// Future eligibility triggers (e.g. "link_clicked" by customer, "booking_created")
+// extend this list — that is the only edit required to disqualify another signal.
+export const FIRST_BOOKING_DISQUALIFYING_EVENT_TYPES = [
+  "link_copied",
+  "link_shared",
+] as const;
+
+export const FIRST_BOOKING_NUDGE_TYPES = [
+  "first_booking_nudge_10m",
+  "first_booking_nudge_24h",
+] as const;
+
+export const SMS_RATE_LIMIT_PER_24H = 3;
+
+function isFirstBookingNudgeType(type: string): boolean {
+  return (FIRST_BOOKING_NUDGE_TYPES as readonly string[]).includes(type);
+}
+
+function buildFirstNamePrefix(firstName: string | null | undefined): string {
+  const trimmed = (firstName ?? "").trim();
+  // Locked spec: "{first_name}, " when known, "" when not. No "there," fallback.
+  return trimmed ? `${trimmed}, ` : "";
+}
+
+/**
+ * Render the locked first-booking nudge body. Exists in exactly one place so
+ * the verbatim spec strings live in a single file and personalization is
+ * always rendered fresh at send time.
+ */
+export function renderFirstBookingNudgeBody(
+  type: string,
+  firstName: string | null | undefined,
+): string {
+  const prefix = buildFirstNamePrefix(firstName);
+  if (type === "first_booking_nudge_10m") {
+    return `${prefix}send your GigAid booking link to your next customer — it saves a ton of back and forth.\n\nReply STOP to opt out.\n— Your partners at GigAid`;
+  }
+  if (type === "first_booking_nudge_24h") {
+    return `${prefix}most people get their first GigAid booking within a day after sharing their link.\n\n— Your partners at GigAid`;
+  }
+  return "";
+}
+
+type SendOutcome =
+  | { kind: "sent"; body: string }
+  | { kind: "canceled"; reason: string }
+  | { kind: "deferred"; reason: string };
 
 // Template rendering utility - simple string replacement, no code execution
 export function renderTemplate(template: string, context: Record<string, string | undefined>): string {
@@ -407,10 +469,13 @@ export async function processScheduledMessages(): Promise<number> {
         continue; // Already processed by another worker
       }
       
-      // Attempt to send via available provider
-      const sent = await attemptSendMessage(message);
-      
-      if (sent) {
+      // Run send-time policy chain + provider call.
+      const outcome = await attemptSendMessage(message);
+
+      if (outcome.kind === "sent") {
+        // Atomic terminal transition: only flip queued -> sent. Combined with
+        // the partial unique index on (booking_page_id, type), this guarantees
+        // a row already in `sent` cannot be flipped back or re-enqueued.
         await db
           .update(outboundMessages)
           .set({
@@ -418,12 +483,31 @@ export async function processScheduledMessages(): Promise<number> {
             sentAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           })
-          .where(eq(outboundMessages.id, message.id));
-        
-        logger.info(`[PostJobMomentum] Sent ${message.type} message ${message.id}`);
+          .where(and(
+            eq(outboundMessages.id, message.id),
+            eq(outboundMessages.status, "queued"),
+          ));
+        logger.info(`[OutboundMessages] Sent ${message.type} message ${message.id}`);
+      } else if (outcome.kind === "canceled") {
+        // Cancel the message with a structured failureReason (user_opted_out,
+        // rate_limited, action_taken, user_not_found). Atomic on queued so
+        // we never overwrite a row another worker raced to "sent".
+        await db
+          .update(outboundMessages)
+          .set({
+            status: "canceled",
+            canceledAt: new Date().toISOString(),
+            failureReason: outcome.reason.substring(0, 500),
+            updatedAt: new Date().toISOString(),
+          })
+          .where(and(
+            eq(outboundMessages.id, message.id),
+            eq(outboundMessages.status, "queued"),
+          ));
+        logger.info(`[OutboundMessages] Canceled ${message.type} message ${message.id} (${outcome.reason})`);
       }
-      // If not sent, stays as "queued" for manual review
-      
+      // "deferred" leaves it as "queued" for the next worker tick (e.g. no provider configured).
+
       processed++;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -444,49 +528,124 @@ export async function processScheduledMessages(): Promise<number> {
 }
 
 // Attempt to send message via available provider
-async function attemptSendMessage(message: OutboundMessage): Promise<boolean> {
-  // Check for Twilio SMS if channel is sms
-  if (message.channel === "sms" && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+async function attemptSendMessage(message: OutboundMessage): Promise<SendOutcome> {
+  // ----- SMS-only guards -----
+  // Email is exempt from opt-out and the SMS rate limit by design (spec).
+  if (message.channel === "sms") {
+    // Look up the user once and reuse for opt-out + first-name rendering.
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, message.userId))
+      .limit(1);
+
+    if (!user) {
+      logger.warn(`[OutboundMessages] Cancel ${message.id}: user_not_found ${message.userId}`);
+      return { kind: "canceled", reason: "user_not_found" };
+    }
+
+    // Guard 1: global SMS opt-out. notify_by_sms === false also blocks
+    // (preserves the existing user-preference contract).
+    if (user.smsOptOut === true || user.notifyBySms === false) {
+      return { kind: "canceled", reason: "user_opted_out" };
+    }
+
+    // Guard 2: per-user SMS rate limit (3 sent / rolling 24h, all SMS types).
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const sentCountRows = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(outboundMessages)
+      .where(and(
+        eq(outboundMessages.userId, message.userId),
+        eq(outboundMessages.channel, "sms"),
+        eq(outboundMessages.status, "sent"),
+        gte(outboundMessages.sentAt, since),
+      ));
+    const sentLast24h = sentCountRows[0]?.n ?? 0;
+    if (sentLast24h >= SMS_RATE_LIMIT_PER_24H) {
+      logger.info(`[OutboundMessages] Rate limit hit for user ${message.userId} (${sentLast24h}/${SMS_RATE_LIMIT_PER_24H})`);
+      return { kind: "canceled", reason: "rate_limited" };
+    }
+
+    // Guard 3: first-booking eligibility re-check. Only applies to nudges so
+    // existing followup/payment_reminder/etc behavior is unchanged.
+    if (isFirstBookingNudgeType(message.type)) {
+      // A first-booking nudge with no booking_page_id is malformed — there's
+      // no way to verify eligibility, so cancel rather than blindly send.
+      if (!message.bookingPageId) {
+        logger.warn(`[OutboundMessages] Cancel ${message.id}: first-booking nudge missing bookingPageId`);
+        return { kind: "canceled", reason: "missing_booking_page" };
+      }
+      const [page] = await db
+        .select()
+        .from(bookingPages)
+        .where(eq(bookingPages.id, message.bookingPageId))
+        .limit(1);
+      if (!page || !page.claimed) {
+        return { kind: "canceled", reason: "action_taken" };
+      }
+      const disqRows = await db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(bookingPageEvents)
+        .where(and(
+          eq(bookingPageEvents.pageId, message.bookingPageId),
+          inArray(
+            bookingPageEvents.type,
+            FIRST_BOOKING_DISQUALIFYING_EVENT_TYPES as unknown as string[],
+          ),
+        ));
+      if ((disqRows[0]?.n ?? 0) > 0) {
+        return { kind: "canceled", reason: "action_taken" };
+      }
+    }
+
+    // Render body. Locked first-booking nudge bodies are rendered exclusively
+    // here, at send time, so first_name is always fresh.
+    const body = isFirstBookingNudgeType(message.type)
+      ? renderFirstBookingNudgeBody(message.type, user.firstName)
+      : (message.templateRendered || "");
+
+    if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+      logger.info(`[OutboundMessages] Twilio not configured, deferring ${message.id}`);
+      return { kind: "deferred", reason: "no_provider" };
+    }
+
     try {
       const twilio = await import("twilio");
       const client = twilio.default(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-      
       await client.messages.create({
-        body: message.templateRendered || "",
+        body,
         from: process.env.TWILIO_PHONE_NUMBER,
         to: message.toAddress,
       });
-      
-      return true;
+      return { kind: "sent", body };
     } catch (error) {
-      logger.error(`[PostJobMomentum] Twilio send failed:`, error);
+      logger.error(`[OutboundMessages] Twilio send failed:`, error);
       throw error;
     }
   }
-  
-  // Check for SendGrid email if channel is email
+
+  // ----- Email path (unchanged behavior) -----
   if (message.channel === "email" && process.env.SENDGRID_API_KEY) {
     try {
       const sgMail = await import("@sendgrid/mail");
       sgMail.default.setApiKey(process.env.SENDGRID_API_KEY);
-      
+      const body = message.templateRendered || "";
       await sgMail.default.send({
         to: message.toAddress,
         from: process.env.SENDGRID_FROM_EMAIL || "noreply@gigaid.app",
         subject: message.type === "payment_reminder" ? "Quick reminder about your invoice" : "Thanks for choosing me!",
-        text: message.templateRendered || "",
+        text: body,
       });
-      
-      return true;
+      return { kind: "sent", body };
     } catch (error) {
-      logger.error(`[PostJobMomentum] SendGrid send failed:`, error);
+      logger.error(`[OutboundMessages] SendGrid send failed:`, error);
       throw error;
     }
   }
-  
-  // No provider available - leave as queued for manual send
-  logger.info(`[PostJobMomentum] No provider for ${message.channel}, leaving as queued`);
-  return false;
+
+  logger.info(`[OutboundMessages] No provider for ${message.channel}, leaving as queued`);
+  return { kind: "deferred", reason: "no_provider" };
 }
 
 // Start the scheduler (call this from server startup)

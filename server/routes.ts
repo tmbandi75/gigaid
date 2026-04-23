@@ -4485,17 +4485,113 @@ export async function registerRoutes(
     }
   }
 
-  // Twilio inbound webhook (receives replies)
-  app.post("/api/twilio/inbound", async (req, res) => {
+  // ============================================================================
+  // Twilio inbound webhook (receives replies + STOP opt-outs).
+  // Mounted at both /api/twilio/inbound (legacy) and /api/twilio/sms (spec).
+  // ----------------------------------------------------------------------------
+  // STOP keyword handling runs BEFORE existing routing so an opt-out reply is
+  // never stored as a normal customer message. We always return 2xx so Twilio
+  // doesn't retry (which would cause duplicate opt-outs / message storage).
+  // ============================================================================
+  const STOP_KEYWORDS = new Set(["STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL"]);
+  const STOP_REPLY_BODY =
+    "You're unsubscribed from GigAid messages. No more texts will be sent.";
+
+  // Ambiguity-safe phone -> userId resolution for opt-out only.
+  // Returns the userId if exactly one user can be confidently linked to the
+  // phone, otherwise null (and a structured warning is logged).
+  async function resolveOptOutUserId(fromPhone: string): Promise<string | null> {
+    const { users: usersTable, outboundMessages: outboundMessagesTable } =
+      await import("@shared/schema");
+    const { db } = await import("./db");
+    const { eq, and: andOp, desc } = await import("drizzle-orm");
+
+    // Pass 1: exact match on canonical users.phone_e164.
+    const phoneMatches = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.phoneE164, fromPhone))
+      .limit(2);
+    if (phoneMatches.length === 1) {
+      return phoneMatches[0].id;
+    }
+    if (phoneMatches.length > 1) {
+      logger.warn(
+        `[Twilio STOP] Ambiguous: ${phoneMatches.length}+ users share phone ${fromPhone}; skipping opt-out`,
+      );
+      return null;
+    }
+
+    // Pass 2: fall back to recent outbound recipients. Only act if a single
+    // distinct userId has sent SMS to this phone — otherwise we'd risk
+    // opting out the wrong account.
+    const recent = await db
+      .select({ userId: outboundMessagesTable.userId })
+      .from(outboundMessagesTable)
+      .where(andOp(
+        eq(outboundMessagesTable.toAddress, fromPhone),
+        eq(outboundMessagesTable.channel, "sms"),
+      ))
+      .orderBy(desc(outboundMessagesTable.createdAt))
+      .limit(50);
+    const distinct = Array.from(new Set(recent.map(r => r.userId)));
+    if (distinct.length === 1) {
+      return distinct[0];
+    }
+    if (distinct.length > 1) {
+      logger.warn(
+        `[Twilio STOP] Ambiguous: ${distinct.length} users have outbound history to ${fromPhone}; skipping opt-out`,
+      );
+    } else {
+      logger.info(`[Twilio STOP] No matching user for ${fromPhone}; ignoring`);
+    }
+    return null;
+  }
+
+  async function handleTwilioInbound(req: any, res: any) {
     try {
       const { From, Body, MessageSid } = req.body;
-      
+
       if (!From || !Body) {
         logger.debug("[Twilio Inbound] Missing From or Body");
-        return res.status(400).send("Missing required fields");
+        // Still 2xx with TwiML — Twilio retries on non-2xx and will duplicate.
+        return res
+          .type("text/xml")
+          .status(200)
+          .send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
       }
 
       logger.debug(`[Twilio Inbound] SMS from ${From}: ${Body.substring(0, 50)}...`);
+
+      // ----- STOP opt-out branch (runs before normal inbound routing) -----
+      const trimmedBody = (Body || "").trim().toUpperCase();
+      if (STOP_KEYWORDS.has(trimmedBody)) {
+        const userId = await resolveOptOutUserId(From);
+        if (userId) {
+          const { users: usersTable } = await import("@shared/schema");
+          const { db } = await import("./db");
+          const { eq } = await import("drizzle-orm");
+          // Spec requires BOTH flags on STOP: the global hard opt-out
+          // (smsOptOut) plus the legacy user preference (notifyBySms=false).
+          // Setting both keeps any code path that consults notifyBySms
+          // (e.g. UI toggles, exports) consistent with the opt-out.
+          await db
+            .update(usersTable)
+            .set({
+              smsOptOut: true,
+              smsOptOutAt: new Date().toISOString(),
+              notifyBySms: false,
+            })
+            .where(eq(usersTable.id, userId));
+          logger.info(`[Twilio STOP] Opted out user ${userId} via ${From}`);
+        }
+        // TwiML confirmation reply (Twilio also auto-handles STOP at the
+        // carrier level, but we send a friendly confirmation regardless).
+        res.type("text/xml").send(
+          `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${STOP_REPLY_BODY}</Message></Response>`,
+        );
+        return;
+      }
 
       // Find the last outbound message to this phone to identify the provider
       const lastOutbound = await storage.getLastOutboundMessageByPhone(From);
@@ -4572,9 +4668,18 @@ export async function registerRoutes(
       res.type("text/xml").send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
     } catch (error) {
       logger.error("[Twilio Inbound] Error:", error);
-      res.status(500).send("Internal error");
+      // Always 2xx with TwiML so Twilio doesn't retry — duplicate inbound
+      // storage is worse than missing one log line.
+      res
+        .type("text/xml")
+        .status(200)
+        .send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
     }
-  });
+  }
+
+  // Twilio inbound: legacy path + spec'd alias. Both delegate to the same handler.
+  app.post("/api/twilio/inbound", handleTwilioInbound);
+  app.post("/api/twilio/sms", handleTwilioInbound);
 
   // Reminders Endpoints
   app.get("/api/reminders", isAuthenticated, async (req, res) => {

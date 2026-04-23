@@ -48,6 +48,8 @@ export const users = pgTable("users", {
   proExpiresAt: text("pro_expires_at"),
   notifyBySms: boolean("notify_by_sms").default(true),
   notifyByEmail: boolean("notify_by_email").default(true),
+  smsOptOut: boolean("sms_opt_out").notNull().default(false),
+  smsOptOutAt: text("sms_opt_out_at"),
   lastActiveAt: text("last_active_at"),
   publicProfileEnabled: boolean("public_profile_enabled").default(true),
   publicProfileSlug: text("public_profile_slug"),
@@ -2247,6 +2249,15 @@ export const outboundMessages = pgTable("outbound_messages", {
   index("outbound_messages_status_scheduled_idx").on(table.status, table.scheduledFor),
   index("outbound_messages_job_type_idx").on(table.jobId, table.type),
   index("outbound_messages_user_status_idx").on(table.userId, table.status),
+  // Partial unique index: prevents duplicate first-booking nudges per booking page
+  // while a row is still scheduled, queued, or sent. Because `sent` is included
+  // in the predicate, a sent row permanently blocks any future insert of the
+  // same (booking_page_id, type), making "sent" terminal at the database level.
+  uniqueIndex("outbound_messages_first_booking_nudge_dedupe_idx")
+    .on(table.bookingPageId, table.type)
+    .where(sql`type IN ('first_booking_nudge_10m', 'first_booking_nudge_24h') AND status IN ('scheduled', 'queued', 'sent')`),
+  // Used by the rate limiter to count recent SMS sends per user.
+  index("outbound_messages_user_channel_sent_idx").on(table.userId, table.channel, table.sentAt),
 ]);
 
 export const insertOutboundMessageSchema = createInsertSchema(outboundMessages).omit({
