@@ -1,0 +1,76 @@
+Proceed with the current implementation plan, but incorporate the following additional safeguards and constraints before completion:
+
+-------------------------------------
+PHONE MATCHING (OPT-OUT SAFETY)
+-------------------------------------
+When processing inbound STOP/opt-out:
+
+- Match users strictly by users.phone_e164 first
+- Only fall back to outbound message history if there is a SINGLE unambiguous match
+- If multiple possible users match OR confidence is low:
+  - DO NOT apply opt-out
+  - Log the event for review
+
+This prevents incorrect opt-outs due to shared/reused phone numbers.
+
+-------------------------------------
+DEDUPLICATION HARDENING
+-------------------------------------
+Current partial unique index is correct, but must guarantee:
+
+- A nudge (10m or 24h) can NEVER be sent more than once per booking page
+- This must hold true across:
+  - retries
+  - worker restarts
+  - race conditions
+
+Ensure:
+- “sent” messages are treated as terminal and cannot be re-sent
+- No duplicate insert or re-send is possible under any condition
+
+-------------------------------------
+GLOBAL SMS RATE LIMIT (SAFETY)
+-------------------------------------
+Add a lightweight per-user rate limit:
+
+- Max 3 SMS per user per rolling 24-hour period across ALL message types
+
+At send-time:
+- Count outbound_messages for that user in last 24h
+- If limit exceeded:
+  - cancel send
+  - set failureReason = "rate_limited"
+
+-------------------------------------
+FUTURE-PROOFING HOOK (NO BEHAVIOR CHANGE YET)
+-------------------------------------
+Keep current eligibility logic (link_copied / link_shared), but structure code so it can later support:
+
+- link clicked by customer
+- booking created
+
+Do NOT implement new triggers now — just avoid hardcoding logic in a way that blocks extension.
+
+-------------------------------------
+DO NOT CHANGE EXISTING SPEC
+-------------------------------------
+Do NOT modify:
+
+- message content (must remain exact)
+- personalization logic (send-time first_name prefix)
+- opt-out behavior (global STOP handling)
+- Twilio integration (reuse existing client)
+- bookingPageEvents as source of truth
+
+-------------------------------------
+ACCEPTANCE CRITERIA (ADDITIONAL)
+-------------------------------------
+Must verify:
+
+1. STOP cannot accidentally opt-out the wrong user
+2. No duplicate SMS can ever be sent for same nudge type
+3. User never receives more than 3 SMS in 24h across system
+4. Existing functionality remains unchanged
+5. System is extensible for future behavior-based triggers
+
+Implement these as part of the existing task — do not create a separate system.
