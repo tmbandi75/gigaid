@@ -174,6 +174,13 @@ async function resolvePublicBookingOwner(slug: string): Promise<{
   return { user, bypassEnabledGate };
 }
 
+// In-memory dedupe window for the /api/profile/sms/resume confirmation SMS.
+// Process-local; resets on restart, which is fine for "rapid taps" protection.
+const SMS_RESUME_CONFIRM_WINDOW_MS = 60_000;
+const smsResumeConfirmCache = new Map<string, number>();
+const SMS_RESUME_CONFIRM_BODY =
+  "You're re-subscribed to GigAid messages. Reply STOP at any time to opt out.";
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -912,6 +919,11 @@ export async function registerRoutes(
   // texted STOP. Requires explicit confirmation from the client (button in
   // Settings) and clears both smsOptOut and smsOptOutAt. Also restores the
   // notifyBySms preference, which we forced off when we recorded the opt-out.
+  // After flipping the flag we send a one-line confirmation SMS (mirrors the
+  // START reply) so the user knows texts are flowing again. The send is
+  // de-duped per user via an in-memory window so rapid taps / concurrent
+  // requests don't fan out multiple texts. If the SMS fails we still report
+  // success on the resume and surface a soft warning the UI can toast.
   app.post("/api/profile/sms/resume", isAuthenticated, async (req, res) => {
     try {
       const userId = (req as any).userId;
@@ -920,7 +932,12 @@ export async function registerRoutes(
         return res.status(404).json({ error: "User not found" });
       }
       if (!user.smsOptOut) {
-        return res.json({ success: true, smsOptOut: false, smsOptOutAt: null });
+        return res.json({
+          success: true,
+          smsOptOut: false,
+          smsOptOutAt: null,
+          confirmationSent: false,
+        });
       }
 
       const { users: usersTable } = await import("@shared/schema");
@@ -936,7 +953,51 @@ export async function registerRoutes(
         .where(eq(usersTable.id, userId));
 
       logger.info(`[SMS Resume] User ${userId} re-enabled SMS via in-app action`);
-      res.json({ success: true, smsOptOut: false, smsOptOutAt: null });
+
+      // De-dupe / rate-limit the confirmation SMS per user.
+      let confirmationSent = false;
+      let confirmationWarning: string | undefined;
+      const phone = user.phone;
+      if (!phone) {
+        confirmationWarning = "No phone number on file for confirmation text.";
+      } else {
+        const now = Date.now();
+        const last = smsResumeConfirmCache.get(userId) ?? 0;
+        if (now - last < SMS_RESUME_CONFIRM_WINDOW_MS) {
+          logger.info(
+            `[SMS Resume] Skipping duplicate confirmation SMS for user ${userId} (within ${SMS_RESUME_CONFIRM_WINDOW_MS}ms window)`,
+          );
+        } else {
+          smsResumeConfirmCache.set(userId, now);
+          try {
+            const { sendSMS } = await import("./twilio");
+            const result = await sendSMS(phone, SMS_RESUME_CONFIRM_BODY);
+            if (result.success) {
+              confirmationSent = true;
+            } else {
+              confirmationWarning =
+                result.errorMessage || "Couldn't send confirmation text.";
+              logger.warn(
+                `[SMS Resume] Confirmation SMS failed for user ${userId}: ${result.errorCode}`,
+              );
+            }
+          } catch (smsErr) {
+            confirmationWarning = "Couldn't send confirmation text.";
+            logger.error(
+              `[SMS Resume] Confirmation SMS threw for user ${userId}:`,
+              smsErr,
+            );
+          }
+        }
+      }
+
+      res.json({
+        success: true,
+        smsOptOut: false,
+        smsOptOutAt: null,
+        confirmationSent,
+        confirmationWarning,
+      });
     } catch (error) {
       logger.error("[SMS Resume] Error:", error);
       res.status(500).json({ error: "Failed to resume SMS" });

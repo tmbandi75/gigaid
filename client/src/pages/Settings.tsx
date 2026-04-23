@@ -589,19 +589,36 @@ export default function Settings() {
   );
 
   const [resumeSmsDialogOpen, setResumeSmsDialogOpen] = useState(false);
-  const resumeSmsMutation = useApiMutation(
+  const resumeSmsMutation = useApiMutation<{
+    success: boolean;
+    confirmationSent?: boolean;
+    confirmationWarning?: string;
+  }>(
     () =>
       apiFetch("/api/profile/sms/resume", {
         method: "POST",
       }),
     [QUERY_KEYS.profile()],
     {
-      onSuccess: () => {
+      onSuccess: (data) => {
         setResumeSmsDialogOpen(false);
-        toast({
-          title: "SMS resumed",
-          description: "You'll start receiving text messages again.",
-        });
+        if (data?.confirmationWarning) {
+          toast({
+            title: "SMS resumed",
+            description: `You'll start receiving text messages again. ${data.confirmationWarning}`,
+          });
+        } else if (data?.confirmationSent) {
+          toast({
+            title: "SMS resumed",
+            description:
+              "We just sent a confirmation text so you know messages are flowing again.",
+          });
+        } else {
+          toast({
+            title: "SMS resumed",
+            description: "You'll start receiving text messages again.",
+          });
+        }
       },
       onError: () => {
         toast({
@@ -1346,8 +1363,10 @@ export default function Settings() {
                         <AlertDialogHeader>
                           <AlertDialogTitle>Resume SMS messages?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            You'll start receiving GigAid text messages again.
-                            You can stop them any time by replying STOP.
+                            You'll start receiving GigAid text messages again,
+                            and we'll send a quick confirmation text to your
+                            phone so you know they're going through. You can
+                            stop them any time by replying STOP.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
