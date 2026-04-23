@@ -1,0 +1,65 @@
+Apply the following additional constraints to the existing First-Booking SMS Nudges implementation. These are REQUIRED safeguards and do not change existing behavior — they harden correctness.
+
+-------------------------------------
+PHONE MATCHING SAFETY (OPT-OUT)
+-------------------------------------
+When processing inbound STOP:
+
+- Match users strictly by users.phone_e164 first
+- Only fall back to outbound message history if there is EXACTLY ONE unambiguous match
+- If multiple possible matches exist OR confidence is low:
+  - DO NOT apply opt-out
+  - log the event for manual review
+
+This prevents incorrect opt-outs due to shared or reused phone numbers.
+
+-------------------------------------
+DEDUPLICATION HARD GUARANTEE
+-------------------------------------
+Extend the dedupe guarantee:
+
+- A message that has reached status = "sent" must be treated as FINAL and can NEVER be re-sent
+- This must hold across:
+  - retries
+  - worker restarts
+  - concurrent workers
+
+Ensure no code path can re-queue or re-send a previously sent nudge.
+
+-------------------------------------
+GLOBAL SMS RATE LIMIT
+-------------------------------------
+Add a per-user rate limit across ALL SMS types:
+
+- Maximum 3 SMS per user per rolling 24-hour window
+
+At send time:
+- count outbound_messages for that user in the last 24 hours
+- if count >= 3:
+  - cancel the send
+  - set failureReason = "rate_limited"
+
+This applies across all message types (nudges, reminders, follow-ups, etc.)
+
+-------------------------------------
+NO CHANGES TO EXISTING SPEC
+-------------------------------------
+Do NOT modify:
+
+- message content (must remain exact)
+- personalization rules
+- opt-out behavior
+- Twilio integration
+- bookingPageEvents usage
+
+-------------------------------------
+ACCEPTANCE CRITERIA (ADDITIONAL)
+-------------------------------------
+Must verify:
+
+1. STOP cannot accidentally opt-out the wrong user
+2. A sent message can never be sent again under any condition
+3. A user never receives more than 3 SMS in any 24-hour period
+4. Existing behavior remains unchanged
+
+Implement as part of the current task — do not create a new system.
