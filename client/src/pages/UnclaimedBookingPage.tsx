@@ -128,24 +128,24 @@ export default function UnclaimedBookingPage({ page }: Props) {
             </Button>
 
             <div
-              className="flex items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm"
+              className="flex items-center justify-between gap-1 rounded-2xl border border-slate-200 bg-white px-3 py-4 shadow-sm sm:gap-2 sm:px-4"
               data-testid="section-three-steps"
             >
-              <div className="flex flex-1 flex-col items-center gap-1.5 text-center" data-testid="step-send-link">
+              <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5 text-center" data-testid="step-send-link">
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
                   <Send className="h-4 w-4" />
                 </div>
                 <span className="text-[11px] font-medium leading-tight text-slate-700">Send link</span>
               </div>
-              <ArrowRight className="h-4 w-4 shrink-0 text-slate-300" />
-              <div className="flex flex-1 flex-col items-center gap-1.5 text-center" data-testid="step-customer-books">
+              <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-300 sm:h-4 sm:w-4" />
+              <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5 text-center" data-testid="step-customer-books">
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
                   <Calendar className="h-4 w-4" />
                 </div>
                 <span className="text-[11px] font-medium leading-tight text-slate-700">Customer books</span>
               </div>
-              <ArrowRight className="h-4 w-4 shrink-0 text-slate-300" />
-              <div className="flex flex-1 flex-col items-center gap-1.5 text-center" data-testid="step-confirmed">
+              <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-300 sm:h-4 sm:w-4" />
+              <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5 text-center" data-testid="step-confirmed">
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
                   <CheckCircle2 className="h-4 w-4" />
                 </div>
