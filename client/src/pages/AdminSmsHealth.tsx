@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import {
@@ -9,18 +10,23 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { getAuthToken } from "@/lib/authToken";
 import {
   AlertTriangle,
   BellOff,
+  ChevronLeft,
+  ChevronRight,
+  Download,
   HelpCircle,
   Loader2,
   MessageSquareOff,
   RefreshCw,
+  Search,
   ShieldOff,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { queryClient } from "@/lib/queryClient";
 
 interface RecentOptOut {
@@ -136,17 +142,47 @@ function ReasonRow({
   );
 }
 
+const PAGE_SIZE = 50;
+
+interface OptOutsResponse {
+  users: OptOutUser[];
+  pagination: { total: number; limit: number; offset: number };
+}
+
 export default function AdminSmsHealth() {
   const [showUnmatchedDetail, setShowUnmatchedDetail] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [since, setSince] = useState("");
+  const [until, setUntil] = useState("");
+  const [page, setPage] = useState(1);
+
+  const filterParams = useMemo(() => {
+    const params = new URLSearchParams();
+    if (search) params.set("q", search);
+    if (since) params.set("since", since);
+    if (until) {
+      // Make `until` inclusive of the selected day.
+      params.set("until", `${until}T23:59:59.999Z`);
+    }
+    return params;
+  }, [search, since, until]);
+
+  const optOutQueryParams = useMemo(() => {
+    const params = new URLSearchParams(filterParams);
+    params.set("limit", String(PAGE_SIZE));
+    params.set("offset", String((page - 1) * PAGE_SIZE));
+    return params.toString();
+  }, [filterParams, page]);
 
   const summaryQuery = useQuery<SmsHealthSummary>({
     queryKey: QUERY_KEYS.adminSmsHealthSummary(),
     queryFn: () => authedFetch("/api/admin/sms/summary"),
   });
 
-  const optOutsQuery = useQuery<{ users: OptOutUser[] }>({
-    queryKey: QUERY_KEYS.adminSmsOptOuts(),
-    queryFn: () => authedFetch("/api/admin/sms/opt-outs?limit=100"),
+  const optOutsQuery = useQuery<OptOutsResponse>({
+    queryKey: QUERY_KEYS.adminSmsOptOuts(optOutQueryParams),
+    queryFn: () => authedFetch(`/api/admin/sms/opt-outs?${optOutQueryParams}`),
   });
 
   const unmatchedDetailQuery = useQuery<{ events: UnmatchedOptOutDetail[] }>({
@@ -157,9 +193,45 @@ export default function AdminSmsHealth() {
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.adminSmsHealthSummary() });
-    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.adminSmsOptOuts() });
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.adminSmsOptOutEvents() });
+    queryClient.invalidateQueries({
+      predicate: (q) =>
+        Array.isArray(q.queryKey) &&
+        typeof q.queryKey[0] === "string" &&
+        (q.queryKey[0] as string).startsWith("/api/admin/sms/opt-outs"),
+    });
   };
+
+  const applySearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPage(1);
+    setSearch(searchInput.trim());
+  };
+
+  const handleExport = async () => {
+    const token = getAuthToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const res = await fetch(
+      `/api/admin/sms/opt-outs/export?${filterParams.toString()}`,
+      { credentials: "include", headers },
+    );
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `sms-opt-outs-${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const total = optOutsQuery.data?.pagination.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const showingFrom = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const showingTo = Math.min(total, page * PAGE_SIZE);
 
   const summary = summaryQuery.data;
   const canceledEntries = summary
@@ -459,10 +531,61 @@ export default function AdminSmsHealth() {
 
       <Card data-testid="card-optout-roster">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">All opted-out users</CardTitle>
-          <CardDescription>
-            Up to 100 most recent. Click a row to open the user detail.
-          </CardDescription>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle className="text-base">All opted-out users</CardTitle>
+              <CardDescription>
+                Filter by date and search by name, email, username, or phone.
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              data-testid="button-export-optouts-csv"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download CSV
+            </Button>
+          </div>
+          <form
+            onSubmit={applySearch}
+            className="grid gap-2 mt-4 md:grid-cols-[1fr_auto_auto_auto]"
+          >
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search email, phone, name…"
+                className="pl-9"
+                data-testid="input-search-optouts"
+              />
+            </div>
+            <Input
+              type="date"
+              value={since}
+              onChange={(e) => {
+                setSince(e.target.value);
+                setPage(1);
+              }}
+              data-testid="input-since-date"
+              aria-label="From date"
+            />
+            <Input
+              type="date"
+              value={until}
+              onChange={(e) => {
+                setUntil(e.target.value);
+                setPage(1);
+              }}
+              data-testid="input-until-date"
+              aria-label="To date"
+            />
+            <Button type="submit" data-testid="button-apply-filters">
+              Apply
+            </Button>
+          </form>
         </CardHeader>
         <CardContent>
           {optOutsQuery.isLoading ? (
@@ -470,8 +593,8 @@ export default function AdminSmsHealth() {
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : !optOutsQuery.data || optOutsQuery.data.users.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              No opted-out users.
+            <p className="text-sm text-muted-foreground py-4 text-center" data-testid="text-no-optouts">
+              No opted-out users match these filters.
             </p>
           ) : (
             <div className="overflow-x-auto">
@@ -519,6 +642,41 @@ export default function AdminSmsHealth() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+          {optOutsQuery.data && total > 0 && (
+            <div className="flex items-center justify-between mt-4 text-sm">
+              <div
+                className="text-muted-foreground"
+                data-testid="text-optout-pagination-summary"
+              >
+                Showing {showingFrom}–{showingTo} of {total}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  data-testid="button-optout-prev-page"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Prev
+                </Button>
+                <span data-testid="text-optout-page">
+                  Page {page} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                  data-testid="button-optout-next-page"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

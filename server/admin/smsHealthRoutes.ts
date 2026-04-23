@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "../db";
 import { outboundMessages, smsOptOutEvents, users, adminActionAudit } from "@shared/schema";
-import { and, desc, eq, gte, isNotNull, ne, sql, count } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, isNotNull, lte, ne, or, sql, count } from "drizzle-orm";
 import { adminMiddleware, type AdminRequest } from "../copilot/adminMiddleware";
 import { logger } from "../lib/logger";
 import { loadDuplicatePhoneGroups } from "./duplicatePhones";
@@ -177,9 +177,43 @@ router.get("/summary", async (_req, res) => {
   }
 });
 
+function buildOptOutFilters(query: Record<string, any>) {
+  const conditions = [eq(users.smsOptOut, true)];
+
+  const since = typeof query.since === "string" ? query.since.trim() : "";
+  const until = typeof query.until === "string" ? query.until.trim() : "";
+  const q = typeof query.q === "string" ? query.q.trim() : "";
+
+  if (since) conditions.push(gte(users.smsOptOutAt, since));
+  if (until) conditions.push(lte(users.smsOptOutAt, until));
+
+  if (q) {
+    const like = `%${q}%`;
+    const searchExpr = or(
+      ilike(users.email, like),
+      ilike(users.username, like),
+      ilike(users.name, like),
+      ilike(users.phone, like),
+    );
+    if (searchExpr) conditions.push(searchExpr);
+  }
+
+  return and(...conditions);
+}
+
 router.get("/opt-outs", async (req, res) => {
   try {
-    const limit = Math.min(parseInt((req.query.limit as string) || "50", 10) || 50, 200);
+    const limit = Math.min(
+      parseInt((req.query.limit as string) || "50", 10) || 50,
+      200,
+    );
+    const offset = Math.max(parseInt((req.query.offset as string) || "0", 10) || 0, 0);
+    const where = buildOptOutFilters(req.query as Record<string, any>);
+
+    const [totalRow] = await db
+      .select({ c: count() })
+      .from(users)
+      .where(where);
 
     const rows = await db
       .select({
@@ -191,11 +225,19 @@ router.get("/opt-outs", async (req, res) => {
         smsOptOutAt: users.smsOptOutAt,
       })
       .from(users)
-      .where(eq(users.smsOptOut, true))
-      .orderBy(sql`${users.smsOptOutAt} DESC NULLS LAST`)
-      .limit(limit);
+      .where(where)
+      .orderBy(sql`${users.smsOptOutAt} DESC NULLS LAST`, desc(users.id))
+      .limit(limit)
+      .offset(offset);
 
-    res.json({ users: rows });
+    res.json({
+      users: rows,
+      pagination: {
+        total: Number(totalRow?.c || 0),
+        limit,
+        offset,
+      },
+    });
   } catch (error) {
     logger.error("[Admin SMS Health] opt-outs error:", error);
     res.status(500).json({ error: "Failed to load opt-out list" });
@@ -318,6 +360,90 @@ router.get("/opt-out-events", async (req, res) => {
   } catch (error) {
     logger.error("[Admin SMS Health] opt-out-events error:", error);
     res.status(500).json({ error: "Failed to load opt-out events" });
+  }
+});
+
+function csvEscape(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  let str = String(value);
+  // Neutralize CSV/spreadsheet formula injection. If the cell starts with
+  // a character that Excel/Sheets/Numbers treat as a formula trigger
+  // (=, +, -, @, tab, CR), prefix a single quote so it is rendered as
+  // literal text rather than evaluated.
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`;
+  }
+  if (/[",\n\r]/.test(str)) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
+router.get("/opt-outs/export", async (req, res) => {
+  try {
+    const where = buildOptOutFilters(req.query as Record<string, any>);
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="sms-opt-outs-${new Date().toISOString().split("T")[0]}.csv"`,
+    );
+
+    const header = ["id", "name", "username", "email", "phone", "sms_opt_out_at"]
+      .map(csvEscape)
+      .join(",");
+    res.write(header + "\n");
+
+    const pageSize = 500;
+    let offset = 0;
+
+    // Stream the entire filtered set; CSV exports power compliance
+    // reviews so we deliberately do not cap the row count here.
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const rows = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          username: users.username,
+          name: users.name,
+          phone: users.phone,
+          smsOptOutAt: users.smsOptOutAt,
+        })
+        .from(users)
+        .where(where)
+        .orderBy(sql`${users.smsOptOutAt} DESC NULLS LAST`, desc(users.id))
+        .limit(pageSize)
+        .offset(offset);
+
+      if (rows.length === 0) break;
+
+      for (const r of rows) {
+        const line = [
+          r.id,
+          r.name,
+          r.username,
+          r.email,
+          r.phone,
+          r.smsOptOutAt,
+        ]
+          .map(csvEscape)
+          .join(",");
+        res.write(line + "\n");
+      }
+
+      if (rows.length < pageSize) break;
+      offset += pageSize;
+    }
+
+    res.end();
+  } catch (error) {
+    logger.error("[Admin SMS Health] opt-outs export error:", error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Failed to export opt-out list" });
+    } else {
+      res.end();
+    }
   }
 });
 
