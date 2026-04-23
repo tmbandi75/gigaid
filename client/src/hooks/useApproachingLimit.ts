@@ -2,9 +2,12 @@ import { useCanPerform, type NewCapability } from "@/hooks/useCapability";
 import { trackEvent } from "@/components/PostHogProvider";
 import { useRef } from "react";
 
+export type ApproachingLimitTier = "warning" | "limit";
+
 export interface ApproachingLimitInfo {
   isApproaching: boolean;
   isAtLimit: boolean;
+  tier: ApproachingLimitTier | null;
   current: number;
   limit: number | undefined;
   remaining: number | undefined;
@@ -28,11 +31,12 @@ const CAPABILITY_LABELS: Partial<Record<NewCapability, string>> = {
 
 export function useApproachingLimit(capability: NewCapability): ApproachingLimitInfo {
   const { current, limit, remaining, unlimited, loading, allowed } = useCanPerform(capability);
-  const trackedRef = useRef(false);
+  const trackedRef = useRef<ApproachingLimitTier | null>(null);
 
   const noLimit: ApproachingLimitInfo = {
     isApproaching: false,
     isAtLimit: false,
+    tier: null,
     current: 0,
     limit: undefined,
     remaining: undefined,
@@ -46,20 +50,25 @@ export function useApproachingLimit(capability: NewCapability): ApproachingLimit
   }
 
   const percentage = Math.round((current / limit) * 100);
-  const isApproaching = percentage >= APPROACHING_THRESHOLD * 100 && allowed;
   const isAtLimit = !allowed && (remaining === 0 || percentage >= 100);
+  const isApproaching = !isAtLimit && percentage >= APPROACHING_THRESHOLD * 100;
+  const tier: ApproachingLimitTier | null = isAtLimit
+    ? "limit"
+    : isApproaching
+      ? "warning"
+      : null;
 
   let message: string | null = null;
   const label = CAPABILITY_LABELS[capability] || capability;
 
   if (isAtLimit) {
-    message = `You've used all ${limit} ${label} on your plan. Upgrade for more.`;
+    message = `You've used all ${limit} ${label} on your plan this month. Upgrade to keep going.`;
   } else if (isApproaching && remaining !== undefined) {
-    message = `${remaining} ${label} remaining on your plan.`;
+    message = `Heads up — only ${remaining} of ${limit} ${label} left on your plan this month.`;
   }
 
-  if ((isApproaching || isAtLimit) && !trackedRef.current && !loading) {
-    trackedRef.current = true;
+  if (tier && trackedRef.current !== tier && !loading) {
+    trackedRef.current = tier;
     trackEvent('approaching_limit_shown', {
       capability,
       current,
@@ -67,12 +76,14 @@ export function useApproachingLimit(capability: NewCapability): ApproachingLimit
       remaining,
       percentage,
       at_limit: isAtLimit,
+      tier,
     });
   }
 
   return {
     isApproaching,
     isAtLimit,
+    tier,
     current,
     limit,
     remaining,

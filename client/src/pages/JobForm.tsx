@@ -66,6 +66,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { PhotoUpload } from "@/components/ui/photo-upload";
+import { ApproachingLimitBanner } from "@/components/upgrade/ApproachingLimitBanner";
 import { ServiceTypeSelect } from "@/components/ui/service-type-select";
 import type { Job, JobResolutionType } from "@shared/schema";
 import { GetPaidDialog } from "@/components/job/GetPaidDialog";
@@ -1174,7 +1175,12 @@ export default function JobForm() {
                 />
 
                 {isEditing && (
-                  <div className="pt-2">
+                  <div className="pt-2 space-y-2">
+                    <ApproachingLimitBanner
+                      capability="offline.photos"
+                      source="job_photos"
+                      compact
+                    />
                     <PhotoUpload
                       photos={jobPhotos}
                       onPhotosChange={(newPhotos) => {

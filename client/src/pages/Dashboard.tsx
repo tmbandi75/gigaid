@@ -43,6 +43,7 @@ import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
 import { JobQuotaMeter } from "@/components/upgrade/JobQuotaMeter";
+import { MonthlyLimitWarnings } from "@/components/upgrade/MonthlyLimitWarnings";
 import { useAttributionSync } from "@/hooks/useUtmCapture";
 
 interface MoneyDashboardData {
@@ -334,6 +335,8 @@ export default function Dashboard() {
 
       <div className={`flex-1 px-4 py-6 space-y-6 max-w-7xl mx-auto w-full -mt-4`}>
         <ActivationChecklist />
+
+        <MonthlyLimitWarnings source="dashboard" />
 
         <AIAssistantHero onHasNudges={setHasNudges} />
 

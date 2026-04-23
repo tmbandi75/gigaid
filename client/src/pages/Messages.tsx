@@ -21,6 +21,7 @@ import { CustomerContextPanel } from "@/components/messages/CustomerContextPanel
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useUpgradeOrchestrator, UpgradeBanner, UpgradeNudgeModal, incrementStallCounter, UpgradeInterceptModal } from "@/upgrade";
+import { ApproachingLimitBanner } from "@/components/upgrade/ApproachingLimitBanner";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiFetch } from "@/lib/apiFetch";
@@ -443,6 +444,10 @@ export default function Messages() {
     <div className="flex flex-col h-full max-h-[calc(100vh-120px)]" data-testid="page-messages">
       {renderMobileHeader()}
 
+      <div className="px-3 pt-2">
+        <ApproachingLimitBanner capability="sms.two_way" source="messages" />
+      </div>
+
       <div className="flex-1 flex overflow-hidden">
         <div className={`w-full flex-shrink-0 overflow-y-auto ${
           selectedPhone ? "hidden" : ""
@@ -501,6 +506,9 @@ export default function Messages() {
       {renderDesktopHeader()}
 
       <div className="flex-1 overflow-hidden max-w-7xl mx-auto w-full px-6 lg:px-8 py-6">
+        <div className="mb-3">
+          <ApproachingLimitBanner capability="sms.two_way" source="messages" />
+        </div>
         <div className="grid grid-cols-12 gap-6 h-full">
           <div className="col-span-3 flex flex-col border rounded-xl shadow-sm overflow-hidden" data-testid="panel-conversation-list">
             <div className="p-3 border-b">

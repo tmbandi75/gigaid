@@ -12,6 +12,7 @@ import { PageSpinner } from "@/components/ui/spinner";
 import { SoftIntercept } from "@/components/ui/soft-intercept";
 import { BlockingIntercept } from "@/components/ui/blocking-intercept";
 import { useCapability } from "@/hooks/useCapability";
+import { ApproachingLimitBanner } from "@/components/upgrade/ApproachingLimitBanner";
 import { logPricingInterest } from "@shared/capabilityLogger";
 import { isHardGated } from "@shared/gatingConfig";
 import { Plan, PLAN_PRICES_DOLLARS } from "@shared/plans";
@@ -331,7 +332,12 @@ export default function BookingRequests() {
   return (
     <div className={`min-h-screen bg-background ${isMobile ? "pb-20" : ""}`} data-testid="page-booking-requests">
       {isMobile ? renderMobileHeader() : renderDesktopHeader()}
-      
+
+      <div className={`${isMobile ? "px-3 pt-3" : "max-w-7xl mx-auto w-full px-6 lg:px-8 pt-4"} space-y-2`}>
+        <ApproachingLimitBanner capability="deposit.enforce" source="booking_requests" />
+        <ApproachingLimitBanner capability="price.confirmation" source="booking_requests" />
+      </div>
+
       {isMobile ? (
         <div className="content-container -mt-4 relative z-10">
           <Card className="border-0 shadow-lg mb-4">
