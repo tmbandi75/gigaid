@@ -341,6 +341,91 @@ router.post("/users/:userId/clear-phone", async (req: AdminRequest, res) => {
   }
 });
 
+// Recent clear-phone audit rows. Surfaces the last N
+// `sms_clear_phone_e164` actions (actor, target, reason, timestamp,
+// previous phone) on the duplicate-phone diagnostic so support doesn't
+// have to query admin_action_audit directly to confirm a repair.
+router.get("/clear-phone-audit", async (req, res) => {
+  try {
+    const limit = Math.min(
+      parseInt((req.query.limit as string) || "25", 10) || 25,
+      100,
+    );
+    const offset = Math.max(parseInt((req.query.offset as string) || "0", 10) || 0, 0);
+
+    const where = eq(adminActionAudit.actionKey, "sms_clear_phone_e164");
+
+    const [totalRow] = await db
+      .select({ c: count() })
+      .from(adminActionAudit)
+      .where(where);
+
+    const targetUser = {
+      id: users.id,
+      email: users.email,
+      username: users.username,
+      name: users.name,
+    } as const;
+
+    const rows = await db
+      .select({
+        id: adminActionAudit.id,
+        createdAt: adminActionAudit.createdAt,
+        actorUserId: adminActionAudit.actorUserId,
+        actorEmail: adminActionAudit.actorEmail,
+        targetUserId: adminActionAudit.targetUserId,
+        reason: adminActionAudit.reason,
+        payload: adminActionAudit.payload,
+        source: adminActionAudit.source,
+        targetUser,
+      })
+      .from(adminActionAudit)
+      .leftJoin(users, eq(users.id, adminActionAudit.targetUserId))
+      .where(where)
+      .orderBy(desc(adminActionAudit.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const events = rows.map((r) => {
+      let previousPhoneE164: string | null = null;
+      if (r.payload) {
+        try {
+          const parsed = JSON.parse(r.payload);
+          if (parsed && typeof parsed.previousPhoneE164 === "string") {
+            previousPhoneE164 = parsed.previousPhoneE164;
+          }
+        } catch {
+          // Tolerate legacy/malformed payloads — the rest of the row
+          // is still useful even if we can't parse the previous phone.
+        }
+      }
+      return {
+        id: r.id,
+        createdAt: r.createdAt,
+        actorUserId: r.actorUserId,
+        actorEmail: r.actorEmail,
+        targetUserId: r.targetUserId,
+        targetUser: r.targetUser?.id ? r.targetUser : null,
+        reason: r.reason,
+        source: r.source,
+        previousPhoneE164,
+      };
+    });
+
+    res.json({
+      events,
+      pagination: {
+        total: Number(totalRow?.c || 0),
+        limit,
+        offset,
+      },
+    });
+  } catch (error) {
+    logger.error("[Admin SMS Health] clear-phone-audit error:", error);
+    res.status(500).json({ error: "Failed to load clear-phone audit log" });
+  }
+});
+
 // Drill-down list of unmatched/ambiguous STOP events. Returns the raw
 // From phone (admin-only audit) so operators can investigate. Defaults to
 // only non-matched rows; pass ?include=all to see everything.

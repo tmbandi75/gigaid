@@ -1,4 +1,3 @@
-import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import {
@@ -39,6 +38,7 @@ import {
   RefreshCw,
   Search,
   ShieldOff,
+  History,
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 
@@ -90,6 +90,28 @@ interface SmsHealthSummary {
     recent: RecentConfirmFailure[];
   };
   unmatchedOptOuts: { last7d: number; recent: UnmatchedOptOut[] };
+}
+
+interface ClearPhoneAuditEvent {
+  id: string;
+  createdAt: string;
+  actorUserId: string;
+  actorEmail: string | null;
+  targetUserId: string | null;
+  targetUser: {
+    id: string;
+    email: string | null;
+    username: string | null;
+    name: string | null;
+  } | null;
+  reason: string;
+  source: string;
+  previousPhoneE164: string | null;
+}
+
+interface ClearPhoneAuditResponse {
+  events: ClearPhoneAuditEvent[];
+  pagination: { total: number; limit: number; offset: number };
 }
 
 interface OptOutUser {
@@ -205,6 +227,7 @@ export default function AdminSmsHealth() {
   const [since, setSince] = useState("");
   const [until, setUntil] = useState("");
   const [page, setPage] = useState(1);
+  const [clearAuditPage, setClearAuditPage] = useState(1);
 
   const filterParams = useMemo(() => {
     const params = new URLSearchParams();
@@ -232,6 +255,20 @@ export default function AdminSmsHealth() {
   const optOutsQuery = useQuery<OptOutsResponse>({
     queryKey: QUERY_KEYS.adminSmsOptOuts(optOutQueryParams),
     queryFn: () => authedFetch(`/api/admin/sms/opt-outs?${optOutQueryParams}`),
+  });
+
+  const CLEAR_AUDIT_PAGE_SIZE = 25;
+  const clearAuditQueryParams = useMemo(() => {
+    const params = new URLSearchParams();
+    params.set("limit", String(CLEAR_AUDIT_PAGE_SIZE));
+    params.set("offset", String((clearAuditPage - 1) * CLEAR_AUDIT_PAGE_SIZE));
+    return params.toString();
+  }, [clearAuditPage]);
+
+  const clearPhoneAuditQuery = useQuery<ClearPhoneAuditResponse>({
+    queryKey: QUERY_KEYS.adminSmsClearPhoneAudit(clearAuditQueryParams),
+    queryFn: () =>
+      authedFetch(`/api/admin/sms/clear-phone-audit?${clearAuditQueryParams}`),
   });
 
   const unmatchedDetailQuery = useQuery<{ events: UnmatchedOptOutDetail[] }>({
@@ -279,6 +316,12 @@ export default function AdminSmsHealth() {
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.adminSmsHealthSummary() });
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.adminSmsOptOutEvents() });
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.adminSmsDuplicatePhones() });
+    queryClient.invalidateQueries({
+      predicate: (q) =>
+        Array.isArray(q.queryKey) &&
+        typeof q.queryKey[0] === "string" &&
+        (q.queryKey[0] as string).startsWith("/api/admin/sms/clear-phone-audit"),
+    });
     queryClient.invalidateQueries({
       predicate: (q) =>
         Array.isArray(q.queryKey) &&
@@ -610,6 +653,145 @@ export default function AdminSmsHealth() {
                 </div>
               )}
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card data-testid="card-clear-phone-audit">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <History className="h-4 w-4" />
+            Recent phone-clear actions
+          </CardTitle>
+          <CardDescription>
+            Most recent <code>sms_clear_phone_e164</code> repairs from the
+            duplicate-phone tool. Shows who cleared which user, when, and
+            why.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {clearPhoneAuditQuery.isLoading ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : !clearPhoneAuditQuery.data ||
+            clearPhoneAuditQuery.data.events.length === 0 ? (
+            <p
+              className="text-sm text-muted-foreground py-4 text-center"
+              data-testid="text-no-clear-phone-audit"
+            >
+              No phone-clear actions recorded yet.
+            </p>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <tr>
+                      <th className="py-2 pr-3">When</th>
+                      <th className="py-2 pr-3">Actor</th>
+                      <th className="py-2 pr-3">Target user</th>
+                      <th className="py-2 pr-3">Previous phone</th>
+                      <th className="py-2 pr-3">Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {clearPhoneAuditQuery.data.events.map((ev) => {
+                      const target = ev.targetUser;
+                      const targetLabel = target
+                        ? target.name ||
+                          target.username ||
+                          target.email ||
+                          target.id
+                        : ev.targetUserId || "—";
+                      return (
+                        <tr
+                          key={ev.id}
+                          className="border-t"
+                          data-testid={`row-clear-phone-audit-${ev.id}`}
+                        >
+                          <td className="py-2 pr-3 text-muted-foreground whitespace-nowrap">
+                            {formatDate(ev.createdAt)}
+                          </td>
+                          <td className="py-2 pr-3">
+                            <div className="font-medium truncate">
+                              {ev.actorEmail || ev.actorUserId}
+                            </div>
+                          </td>
+                          <td className="py-2 pr-3">
+                            {ev.targetUserId ? (
+                              <Link
+                                href={`/admin/users/${ev.targetUserId}`}
+                                data-testid={`link-clear-phone-target-${ev.id}`}
+                              >
+                                <span className="font-medium hover:underline">
+                                  {targetLabel}
+                                </span>
+                              </Link>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          <td className="py-2 pr-3 font-mono text-xs text-muted-foreground">
+                            {ev.previousPhoneE164 || "—"}
+                          </td>
+                          <td
+                            className="py-2 pr-3 text-muted-foreground"
+                            data-testid={`text-clear-phone-reason-${ev.id}`}
+                          >
+                            {ev.reason}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {clearPhoneAuditQuery.data.pagination.total >
+                CLEAR_AUDIT_PAGE_SIZE && (
+                <div className="flex items-center justify-between mt-4 text-sm">
+                  <div
+                    className="text-muted-foreground"
+                    data-testid="text-clear-phone-audit-pagination-summary"
+                  >
+                    Showing{" "}
+                    {(clearAuditPage - 1) * CLEAR_AUDIT_PAGE_SIZE + 1}–
+                    {Math.min(
+                      clearPhoneAuditQuery.data.pagination.total,
+                      clearAuditPage * CLEAR_AUDIT_PAGE_SIZE,
+                    )}{" "}
+                    of {clearPhoneAuditQuery.data.pagination.total}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={clearAuditPage <= 1}
+                      onClick={() =>
+                        setClearAuditPage((p) => Math.max(1, p - 1))
+                      }
+                      data-testid="button-clear-phone-audit-prev-page"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Prev
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={
+                        clearAuditPage * CLEAR_AUDIT_PAGE_SIZE >=
+                        clearPhoneAuditQuery.data.pagination.total
+                      }
+                      onClick={() => setClearAuditPage((p) => p + 1)}
+                      data-testid="button-clear-phone-audit-next-page"
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
