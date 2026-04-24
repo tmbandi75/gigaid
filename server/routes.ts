@@ -6688,24 +6688,91 @@ export async function registerRoutes(
     }
   });
   
-  // Track when user shares their booking link
+  // Allowed surfaces for booking link share funnel tracking. Anything else is
+  // bucketed as "other" to keep the admin breakdown clean.
+  const KNOWN_BOOKING_LINK_SCREENS = new Set([
+    "plan",
+    "leads",
+    "leads_empty",
+    "jobs",
+    "bookings",
+    "nba",
+  ]);
+  function normalizeBookingLinkScreen(value: unknown): string {
+    if (typeof value !== "string" || !value) return "unknown";
+    const trimmed = value.slice(0, 64);
+    return KNOWN_BOOKING_LINK_SCREENS.has(trimmed) ? trimmed : "other";
+  }
+
+  // Track when user shares their booking link (completion of the share sheet
+  // or copy action). Emits two canonical events:
+  //   - `booking_link_shared` once per user as a milestone marker (paired
+  //     with `users.booking_link_shared_at`).
+  //   - `booking_link_share_completed` every time so the admin share-funnel
+  //     report can compare taps vs completions per surface.
   app.post("/api/track/booking-link-shared", isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser((req as any).userId);
+      const userId = (req as any).userId as string;
+      const method = typeof req.body?.method === "string" ? req.body.method.slice(0, 32) : "unknown";
+      const screen = normalizeBookingLinkScreen(req.body?.screen);
+      const user = await storage.getUser(userId);
       if (user && !user.bookingLinkSharedAt) {
-        await storage.updateUser((req as any).userId, {
+        await storage.updateUser(userId, {
           bookingLinkSharedAt: new Date().toISOString(),
         });
         emitCanonicalEvent({
           eventName: "booking_link_shared",
-          userId: (req as any).userId,
-          context: { method: req.body.method || "unknown" },
+          userId,
+          context: { method, screen },
           source: "web",
         });
       }
+      emitCanonicalEvent({
+        eventName: "booking_link_share_completed",
+        userId,
+        context: { method, screen },
+        source: "web",
+      });
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to track share" });
+    }
+  });
+
+  // Track when the user opens the native share sheet but has not yet
+  // confirmed sending. Pairs with `booking_link_share_completed` to compute
+  // the tap-to-completion conversion rate.
+  app.post("/api/track/booking-link-share-tap", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).userId as string;
+      const screen = normalizeBookingLinkScreen(req.body?.screen);
+      emitCanonicalEvent({
+        eventName: "booking_link_share_tap",
+        userId,
+        context: { screen },
+        source: "web",
+      });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to track share tap" });
+    }
+  });
+
+  // Track when the user copies their booking link (counts as a successful
+  // share completion via the copy path, not the native share sheet).
+  app.post("/api/track/booking-link-copied", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).userId as string;
+      const screen = normalizeBookingLinkScreen(req.body?.screen);
+      emitCanonicalEvent({
+        eventName: "booking_link_copied",
+        userId,
+        context: { screen },
+        source: "web",
+      });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to track copy" });
     }
   });
 

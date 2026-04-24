@@ -68,6 +68,16 @@ Emoji usage is restricted to user-facing presentation layers, limited to one per
 - **Analytics**: PostHog
 - **Security**: Firebase App Check (reCAPTCHA v3 for web)
 
+## Booking Link Share Funnel (Admin Analytics)
+
+The Admin Analytics page (`/admin/analytics`) includes a "Booking Link Share Funnel" card sourced from `events_canonical`. Three event names back the report:
+
+- `booking_link_share_tap` — emitted when the Share button is pressed (server: `POST /api/track/booking-link-share-tap`, mirrored on the client by the PostHog `booking_link_shared` event).
+- `booking_link_share_completed` — emitted on every successful share-sheet send or copy (server: `POST /api/track/booking-link-shared`). The legacy once-per-user `booking_link_shared` milestone event still flips `users.booking_link_shared_at`, but the funnel report uses `booking_link_share_completed` so the conversion rate is not skewed.
+- `booking_link_copied` — emitted on every booking-link copy (server: `POST /api/track/booking-link-copied`, also mirrored as the PostHog `booking_link_copied` event).
+
+All three carry a `screen` field (`plan`, `leads`, `leads_empty`, `jobs`, `bookings`, `nba`, `other`, `unknown`) so the admin page can break down the funnel by surface. The aggregation endpoint is `GET /api/admin/analytics/share-funnel?days=N`.
+
 ## Help Support URL
 
 The `HelpLink` component (`client/src/components/HelpLink.tsx`) builds support article URLs from a configurable base. By default it points at `https://support.gigaid.ai`, but you can override it per environment by setting `VITE_SUPPORT_BASE_URL` (e.g. a staging domain or `http://localhost:4000` during development). The variable must be prefixed with `VITE_` so Vite exposes it to the client bundle.

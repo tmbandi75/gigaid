@@ -5,6 +5,7 @@ import { Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import { recordCopy } from "@/lib/bookingLinkAnalytics";
 
 function trackEvent(eventName: string, properties?: Record<string, unknown>) {
   if (typeof window !== 'undefined' && (window as { posthog?: { capture: (event: string, props?: Record<string, unknown>) => void } }).posthog) {
@@ -30,6 +31,7 @@ export function BookingLinkEmptyState() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       trackEvent('booking_link_copied', { screen: 'leads_empty' });
+      void recordCopy('leads_empty');
       toast({
         title: "Link copied",
         description: "Your booking link is ready to share",

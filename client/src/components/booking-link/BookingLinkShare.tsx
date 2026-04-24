@@ -10,6 +10,7 @@ import { copyTextToClipboard } from "@/lib/clipboard";
 import { canShareContent, shareContent } from "@/lib/share";
 import { apiFetch } from "@/lib/apiFetch";
 import { markBookingLinkShared } from "@/lib/bookingLinkShared";
+import { recordCopy, recordShareTap } from "@/lib/bookingLinkAnalytics";
 import { useAuth } from "@/hooks/use-auth";
 
 type BookingLinkShareProps = {
@@ -25,6 +26,7 @@ function trackEvent(eventName: string, properties?: Record<string, unknown>) {
 
 async function recordBookingLinkShared(
   method: "copy" | "share",
+  screen: BookingLinkShareProps["context"],
   queryClient: ReturnType<typeof useQueryClient>,
   userId: string | undefined,
 ) {
@@ -33,7 +35,7 @@ async function recordBookingLinkShared(
   try {
     await apiFetch("/api/track/booking-link-shared", {
       method: "POST",
-      body: JSON.stringify({ method }),
+      body: JSON.stringify({ method, screen }),
     });
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboardGamePlan() });
   } catch {
@@ -66,7 +68,8 @@ export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       trackEvent('booking_link_copied', { screen: context });
-      void recordBookingLinkShared("copy", queryClient, userId);
+      void recordCopy(context);
+      void recordBookingLinkShared("copy", context, queryClient, userId);
       const encouragement = getPostActionMessage("link_shared");
       toast({
         title: "Link copied",
@@ -85,6 +88,7 @@ export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
     if (!bookingLink) return;
 
     trackEvent('booking_link_shared', { screen: context });
+    void recordShareTap(context);
 
     if (!canShareContent()) {
       await handleCopy();
@@ -99,7 +103,7 @@ export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
     });
 
     if (sharedOk) {
-      void recordBookingLinkShared("share", queryClient, userId);
+      void recordBookingLinkShared("share", context, queryClient, userId);
     }
   };
 

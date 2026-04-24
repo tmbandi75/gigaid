@@ -26,6 +26,7 @@ import {
 } from "@/lib/nbaState";
 import { getNBACardClasses } from "@/lib/nbaStyling";
 import { shouldFireNBAShown } from "@/lib/nbaAnalytics";
+import { recordCopy, recordShareTap } from "@/lib/bookingLinkAnalytics";
 
 export type { DashboardSummary } from "@/lib/nbaState";
 export { deriveNBAState } from "@/lib/nbaState";
@@ -84,7 +85,7 @@ export function NextBestActionCard({
     try {
       await apiFetch("/api/track/booking-link-shared", {
         method: "POST",
-        body: JSON.stringify({ method }),
+        body: JSON.stringify({ method, screen: "nba" }),
       });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboardGamePlan() });
     } catch {
@@ -107,6 +108,8 @@ export function NextBestActionCard({
         title: "Link copied",
         description: "Your booking link is ready to share",
       });
+      trackEvent("booking_link_copied", { screen: "nba" });
+      void recordCopy("nba");
       void recordShared("copy");
     } else {
       toast({
@@ -126,6 +129,8 @@ export function NextBestActionCard({
       navigate("/profile");
       return;
     }
+    trackEvent("booking_link_shared", { screen: "nba" });
+    void recordShareTap("nba");
     if (!canShareContent()) {
       await doCopy();
       return;

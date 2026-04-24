@@ -339,6 +339,7 @@ router.get("/ltv", adminMiddleware, async (req: AdminRequest, res: Response) => 
 // another. New `page_viewed` and `page_claimed` events written after the
 // rollout always carry a variant, so the `unassigned` count should stop
 // growing once the deploy is live.
+
 router.get("/booking-page-variants", adminMiddleware, async (_req: AdminRequest, res: Response) => {
   try {
     const result = await db.execute(sql`
@@ -377,6 +378,97 @@ router.get("/booking-page-variants", adminMiddleware, async (_req: AdminRequest,
   } catch (error) {
     logger.error("[Analytics] Error fetching booking page variant report:", error);
     res.status(500).json({ error: "Failed to fetch booking page variant report" });
+  }
+});
+
+// Booking link share funnel: surfaces the tap → completion → copy funnel and
+// breaks it down by surface (`screen` context: plan, leads, jobs, bookings,
+// nba). Source events are emitted by the `/api/track/booking-link-share-tap`,
+// `/api/track/booking-link-shared`, and `/api/track/booking-link-copied`
+// handlers and stored in `events_canonical`.
+//
+// Note: prior to this report being introduced, completions were only tracked
+// once-per-user via `booking_link_shared` (the milestone). Those rows are
+// kept for the existing `/funnels` endpoint; this report uses the
+// `booking_link_share_completed` event which records every completion with a
+// `screen`. Older completions (before the rollout) will not appear here.
+router.get("/share-funnel", adminMiddleware, async (req: AdminRequest, res: Response) => {
+  try {
+    const days = parseInt(req.query.days as string) || 30;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    const startDateStr = startDate.toISOString();
+
+    const result = await db.execute(sql`
+      SELECT
+        event_name,
+        COALESCE(NULLIF(context::jsonb ->> 'screen', ''), 'unknown') AS screen,
+        COUNT(*) AS event_count
+      FROM events_canonical
+      WHERE event_name IN (
+          'booking_link_share_tap',
+          'booking_link_share_completed',
+          'booking_link_copied'
+        )
+        AND occurred_at >= ${startDateStr}
+      GROUP BY event_name, COALESCE(NULLIF(context::jsonb ->> 'screen', ''), 'unknown')
+    `);
+
+    const rows = result.rows as Array<{ event_name: string; screen: string; event_count: string | number }>;
+
+    type SurfaceCounts = { taps: number; completions: number; copies: number };
+    const bySurface = new Map<string, SurfaceCounts>();
+    const totals: SurfaceCounts = { taps: 0, completions: 0, copies: 0 };
+
+    for (const row of rows) {
+      const screen = row.screen || "unknown";
+      const count = Number(row.event_count) || 0;
+      const surface = bySurface.get(screen) ?? { taps: 0, completions: 0, copies: 0 };
+      if (row.event_name === "booking_link_share_tap") {
+        surface.taps += count;
+        totals.taps += count;
+      } else if (row.event_name === "booking_link_share_completed") {
+        surface.completions += count;
+        totals.completions += count;
+      } else if (row.event_name === "booking_link_copied") {
+        surface.copies += count;
+        totals.copies += count;
+      }
+      bySurface.set(screen, surface);
+    }
+
+    const tapToCompletionRate =
+      totals.taps > 0 ? Number((totals.completions / totals.taps).toFixed(4)) : 0;
+
+    const surfaces = Array.from(bySurface.entries())
+      .map(([screen, counts]) => ({
+        screen,
+        taps: counts.taps,
+        completions: counts.completions,
+        copies: counts.copies,
+        tapToCompletionRate:
+          counts.taps > 0 ? Number((counts.completions / counts.taps).toFixed(4)) : 0,
+      }))
+      .sort((a, b) => b.taps + b.completions + b.copies - (a.taps + a.completions + a.copies));
+
+    res.json({
+      period: `Last ${days} days`,
+      totals: {
+        taps: totals.taps,
+        completions: totals.completions,
+        copies: totals.copies,
+        tapToCompletionRate,
+      },
+      surfaces,
+      notes: {
+        taps: "Counts every press of the Share button (server-recorded via /api/track/booking-link-share-tap). The PostHog `booking_link_shared` event mirrors this on the client.",
+        completions: "Counts every successful share-sheet send OR copy that calls /api/track/booking-link-shared. Older `booking_link_shared` milestone events (one per user) are excluded so the rate is not skewed.",
+        copies: "Counts every booking link copy via /api/track/booking-link-copied (also mirrored as PostHog `booking_link_copied`).",
+      },
+    });
+  } catch (error) {
+    logger.error("[Analytics] Error fetching share funnel:", error);
+    res.status(500).json({ error: "Failed to fetch share funnel" });
   }
 });
 

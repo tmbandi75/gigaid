@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { QUERY_KEYS } from "@/lib/queryKeys";
-import { TrendingUp, Users, DollarSign, BarChart3, Target, Loader2, Sparkles, ArrowUpRight } from "lucide-react";
+import { TrendingUp, Users, DollarSign, BarChart3, Target, Loader2, Sparkles, ArrowUpRight, Share2 } from "lucide-react";
 
 interface RevenueSummary {
   mrr: number;
@@ -79,6 +79,39 @@ interface LtvData {
   }>;
 }
 
+interface ShareFunnelData {
+  period: string;
+  totals: {
+    taps: number;
+    completions: number;
+    copies: number;
+    tapToCompletionRate: number;
+  };
+  surfaces: Array<{
+    screen: string;
+    taps: number;
+    completions: number;
+    copies: number;
+    tapToCompletionRate: number;
+  }>;
+  notes: {
+    taps: string;
+    completions: string;
+    copies: string;
+  };
+}
+
+const SURFACE_LABELS: Record<string, string> = {
+  plan: "Plan (dashboard)",
+  leads: "Leads",
+  leads_empty: "Leads (empty state)",
+  jobs: "Jobs",
+  bookings: "Bookings",
+  nba: "NBA card",
+  other: "Other",
+  unknown: "Unknown",
+};
+
 function formatCurrency(cents: number): string {
   return `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 0 })}`;
 }
@@ -147,7 +180,11 @@ export default function AdminAnalytics() {
     queryKey: QUERY_KEYS.adminAnalyticsLtv(),
   });
 
-  const isLoading = revenueLoading || cohortsLoading || funnelsLoading || ltvLoading;
+  const { data: shareFunnel, isLoading: shareFunnelLoading } = useQuery<ShareFunnelData>({
+    queryKey: QUERY_KEYS.adminAnalyticsShareFunnel(days),
+  });
+
+  const isLoading = revenueLoading || cohortsLoading || funnelsLoading || ltvLoading || shareFunnelLoading;
 
   return (
     <div className="space-y-6" data-testid="page-admin-analytics">
@@ -308,6 +345,91 @@ export default function AdminAnalytics() {
               </CardContent>
             </Card>
           </div>
+
+          <Card className="border-0 shadow-sm" data-testid="card-share-funnel">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Share2 className="h-5 w-5 text-violet-500" />
+                Booking Link Share Funnel ({shareFunnel?.period})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {shareFunnel?.totals && (
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="p-4 rounded-xl bg-muted/30" data-testid="share-funnel-total-taps">
+                      <p className="text-xs text-muted-foreground">Share taps</p>
+                      <p className="text-2xl font-bold mt-1">{shareFunnel.totals.taps.toLocaleString()}</p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-muted/30" data-testid="share-funnel-total-completions">
+                      <p className="text-xs text-muted-foreground">Share completions</p>
+                      <p className="text-2xl font-bold mt-1">{shareFunnel.totals.completions.toLocaleString()}</p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-muted/30" data-testid="share-funnel-total-copies">
+                      <p className="text-xs text-muted-foreground">Copy completions</p>
+                      <p className="text-2xl font-bold mt-1">{shareFunnel.totals.copies.toLocaleString()}</p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20" data-testid="share-funnel-tap-conversion">
+                      <p className="text-xs text-muted-foreground">Tap → completion</p>
+                      <p className="text-2xl font-bold mt-1 text-emerald-600">
+                        {(shareFunnel.totals.tapToCompletionRate * 100).toFixed(1)}%
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-medium mb-3">Breakdown by surface</h3>
+                    {shareFunnel.surfaces.length === 0 ? (
+                      <p className="text-sm text-muted-foreground" data-testid="share-funnel-empty">
+                        No share activity recorded in this window yet.
+                      </p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm" data-testid="table-share-funnel-surfaces">
+                          <thead>
+                            <tr className="text-left text-muted-foreground border-b">
+                              <th className="py-2 pr-4 font-medium">Surface</th>
+                              <th className="py-2 pr-4 font-medium text-right">Taps</th>
+                              <th className="py-2 pr-4 font-medium text-right">Completions</th>
+                              <th className="py-2 pr-4 font-medium text-right">Copies</th>
+                              <th className="py-2 font-medium text-right">Tap → completion</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {shareFunnel.surfaces.map((s) => (
+                              <tr
+                                key={s.screen}
+                                className="border-b last:border-b-0"
+                                data-testid={`share-funnel-row-${s.screen}`}
+                              >
+                                <td className="py-2 pr-4">
+                                  <Badge variant="outline" className="capitalize">
+                                    {SURFACE_LABELS[s.screen] || s.screen}
+                                  </Badge>
+                                </td>
+                                <td className="py-2 pr-4 text-right tabular-nums">{s.taps.toLocaleString()}</td>
+                                <td className="py-2 pr-4 text-right tabular-nums">{s.completions.toLocaleString()}</td>
+                                <td className="py-2 pr-4 text-right tabular-nums">{s.copies.toLocaleString()}</td>
+                                <td className="py-2 text-right tabular-nums">
+                                  {s.taps > 0 ? `${(s.tapToCompletionRate * 100).toFixed(1)}%` : "—"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p><strong>Taps:</strong> {shareFunnel.notes.taps}</p>
+                    <p><strong>Completions:</strong> {shareFunnel.notes.completions}</p>
+                    <p><strong>Copies:</strong> {shareFunnel.notes.copies}</p>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
           <Card className="border-0 shadow-sm" data-testid="card-cohorts">
             <CardHeader>
