@@ -5,6 +5,7 @@ import { BookingLinkShare } from "@/components/booking-link";
 import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
 import { CampaignSuggestionBanner } from "@/components/CampaignSuggestionBanner";
 import { NextBestActionCard, deriveNBAState, type DashboardSummary } from "@/components/dashboard/NextBestActionCard";
+import { shouldDemoteNBAMoneyTone } from "@/lib/nbaStyling";
 import {
   FileText,
   DollarSign,
@@ -282,7 +283,7 @@ export function GamePlanDesktopView({
             summary={dashboardSummary}
             variant="desktop"
             userId={userId}
-            demoteMoneyTone={stats.moneyWaiting > 0}
+            demoteMoneyTone={shouldDemoteNBAMoneyTone(stats)}
           />
         )}
 

@@ -24,6 +24,7 @@ import {
   deriveNBAState,
   type DashboardSummary,
 } from "@/lib/nbaState";
+import { getNBACardClasses } from "@/lib/nbaStyling";
 import { shouldFireNBAShown } from "@/lib/nbaAnalytics";
 
 export type { DashboardSummary } from "@/lib/nbaState";
@@ -234,13 +235,10 @@ export function NextBestActionCard({
   const PrimaryIcon = content.primary.icon;
   const SecondaryIcon = content.secondary?.icon;
 
-  const isMoneyTone = content.tone === "money" && !demoteMoneyTone;
-  const cardClass = isMoneyTone
-    ? "border-0 shadow-md overflow-visible bg-gradient-to-br from-emerald-50 to-emerald-50/30 dark:from-emerald-950/30 dark:to-emerald-950/10"
-    : "border-0 shadow-md overflow-visible";
-  const iconWrapperClass = isMoneyTone
-    ? "h-12 w-12 rounded-2xl bg-emerald-500 flex items-center justify-center shrink-0"
-    : "h-12 w-12 rounded-2xl bg-primary flex items-center justify-center shrink-0";
+  const { cardClass, iconWrapperClass } = getNBACardClasses(
+    content.tone,
+    demoteMoneyTone,
+  );
 
   const contentPadding = variant === "desktop" ? "p-6" : "p-5";
   const titleClass = variant === "desktop"

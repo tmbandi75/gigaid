@@ -48,6 +48,7 @@ import { ActivationChecklist } from "@/components/activation/ActivationChecklist
 import { GamePlanDesktopView } from "@/components/game-plan/GamePlanDesktopView";
 import { NextBestActionCard, deriveNBAState } from "@/components/dashboard/NextBestActionCard";
 import type { NBAState } from "@/lib/nbaState";
+import { shouldDemoteNBAMoneyTone } from "@/lib/nbaStyling";
 
 interface ActionItem {
   id: string;
@@ -482,7 +483,7 @@ export default function TodaysGamePlanPage() {
               summary={dashboardSummary}
               variant="mobile"
               userId={user?.id}
-              demoteMoneyTone={stats.moneyWaiting > 0}
+              demoteMoneyTone={shouldDemoteNBAMoneyTone(stats)}
             />
           </motion.div>
         )}
