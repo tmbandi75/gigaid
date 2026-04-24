@@ -403,6 +403,7 @@ router.get("/share-funnel", adminMiddleware, async (req: AdminRequest, res: Resp
       SELECT
         event_name,
         COALESCE(NULLIF(context::jsonb ->> 'screen', ''), 'unknown') AS screen,
+        COALESCE(NULLIF(context::jsonb ->> 'platform', ''), 'unknown') AS platform,
         COUNT(*) AS event_count
       FROM events_canonical
       WHERE event_name IN (
@@ -411,30 +412,44 @@ router.get("/share-funnel", adminMiddleware, async (req: AdminRequest, res: Resp
           'booking_link_copied'
         )
         AND occurred_at >= ${startDateStr}
-      GROUP BY event_name, COALESCE(NULLIF(context::jsonb ->> 'screen', ''), 'unknown')
+      GROUP BY
+        event_name,
+        COALESCE(NULLIF(context::jsonb ->> 'screen', ''), 'unknown'),
+        COALESCE(NULLIF(context::jsonb ->> 'platform', ''), 'unknown')
     `);
 
-    const rows = result.rows as Array<{ event_name: string; screen: string; event_count: string | number }>;
+    const rows = result.rows as Array<{
+      event_name: string;
+      screen: string;
+      platform: string;
+      event_count: string | number;
+    }>;
 
-    type SurfaceCounts = { taps: number; completions: number; copies: number };
-    const bySurface = new Map<string, SurfaceCounts>();
-    const totals: SurfaceCounts = { taps: 0, completions: 0, copies: 0 };
+    type Counts = { taps: number; completions: number; copies: number };
+    const bySurface = new Map<string, Counts>();
+    const byPlatform = new Map<string, Counts>();
+    const totals: Counts = { taps: 0, completions: 0, copies: 0 };
+
+    const bumpCounts = (bucket: Counts, eventName: string, count: number) => {
+      if (eventName === "booking_link_share_tap") bucket.taps += count;
+      else if (eventName === "booking_link_share_completed") bucket.completions += count;
+      else if (eventName === "booking_link_copied") bucket.copies += count;
+    };
 
     for (const row of rows) {
       const screen = row.screen || "unknown";
+      const platform = row.platform || "unknown";
       const count = Number(row.event_count) || 0;
+
       const surface = bySurface.get(screen) ?? { taps: 0, completions: 0, copies: 0 };
-      if (row.event_name === "booking_link_share_tap") {
-        surface.taps += count;
-        totals.taps += count;
-      } else if (row.event_name === "booking_link_share_completed") {
-        surface.completions += count;
-        totals.completions += count;
-      } else if (row.event_name === "booking_link_copied") {
-        surface.copies += count;
-        totals.copies += count;
-      }
+      bumpCounts(surface, row.event_name, count);
       bySurface.set(screen, surface);
+
+      const platformBucket = byPlatform.get(platform) ?? { taps: 0, completions: 0, copies: 0 };
+      bumpCounts(platformBucket, row.event_name, count);
+      byPlatform.set(platform, platformBucket);
+
+      bumpCounts(totals, row.event_name, count);
     }
 
     const tapToCompletionRate =
@@ -443,6 +458,17 @@ router.get("/share-funnel", adminMiddleware, async (req: AdminRequest, res: Resp
     const surfaces = Array.from(bySurface.entries())
       .map(([screen, counts]) => ({
         screen,
+        taps: counts.taps,
+        completions: counts.completions,
+        copies: counts.copies,
+        tapToCompletionRate:
+          counts.taps > 0 ? Number((counts.completions / counts.taps).toFixed(4)) : 0,
+      }))
+      .sort((a, b) => b.taps + b.completions + b.copies - (a.taps + a.completions + a.copies));
+
+    const platforms = Array.from(byPlatform.entries())
+      .map(([platform, counts]) => ({
+        platform,
         taps: counts.taps,
         completions: counts.completions,
         copies: counts.copies,
@@ -460,10 +486,12 @@ router.get("/share-funnel", adminMiddleware, async (req: AdminRequest, res: Resp
         tapToCompletionRate,
       },
       surfaces,
+      platforms,
       notes: {
         taps: "Counts every press of the Share button (server-recorded via /api/track/booking-link-share-tap). The PostHog `booking_link_shared` event mirrors this on the client.",
         completions: "Counts every successful share-sheet send OR copy that calls /api/track/booking-link-shared. Older `booking_link_shared` milestone events (one per user) are excluded so the rate is not skewed.",
         copies: "Counts every booking link copy via /api/track/booking-link-copied (also mirrored as PostHog `booking_link_copied`).",
+        platforms: "Device platform comes from the `X-Client-Platform` request header (web/ios/android). Events recorded before this breakdown shipped have no platform tag and surface as `unknown`.",
       },
     });
   } catch (error) {

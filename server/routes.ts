@@ -6715,6 +6715,7 @@ export async function registerRoutes(
       const userId = (req as any).userId as string;
       const method = typeof req.body?.method === "string" ? req.body.method.slice(0, 32) : "unknown";
       const screen = normalizeBookingLinkScreen(req.body?.screen);
+      const platform = getClientPlatform(req);
       const user = await storage.getUser(userId);
       if (user && !user.bookingLinkSharedAt) {
         await storage.updateUser(userId, {
@@ -6723,14 +6724,14 @@ export async function registerRoutes(
         emitCanonicalEvent({
           eventName: "booking_link_shared",
           userId,
-          context: { method, screen },
+          context: { method, screen, platform },
           source: "web",
         });
       }
       emitCanonicalEvent({
         eventName: "booking_link_share_completed",
         userId,
-        context: { method, screen },
+        context: { method, screen, platform },
         source: "web",
       });
       res.json({ success: true });
@@ -6746,10 +6747,11 @@ export async function registerRoutes(
     try {
       const userId = (req as any).userId as string;
       const screen = normalizeBookingLinkScreen(req.body?.screen);
+      const platform = getClientPlatform(req);
       emitCanonicalEvent({
         eventName: "booking_link_share_tap",
         userId,
-        context: { screen },
+        context: { screen, platform },
         source: "web",
       });
       res.json({ success: true });
@@ -6764,10 +6766,11 @@ export async function registerRoutes(
     try {
       const userId = (req as any).userId as string;
       const screen = normalizeBookingLinkScreen(req.body?.screen);
+      const platform = getClientPlatform(req);
       emitCanonicalEvent({
         eventName: "booking_link_copied",
         userId,
-        context: { screen },
+        context: { screen, platform },
         source: "web",
       });
       res.json({ success: true });

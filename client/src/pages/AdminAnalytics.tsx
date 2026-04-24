@@ -94,10 +94,18 @@ interface ShareFunnelData {
     copies: number;
     tapToCompletionRate: number;
   }>;
+  platforms: Array<{
+    platform: string;
+    taps: number;
+    completions: number;
+    copies: number;
+    tapToCompletionRate: number;
+  }>;
   notes: {
     taps: string;
     completions: string;
     copies: string;
+    platforms: string;
   };
 }
 
@@ -109,6 +117,13 @@ const SURFACE_LABELS: Record<string, string> = {
   bookings: "Bookings",
   nba: "NBA card",
   other: "Other",
+  unknown: "Unknown",
+};
+
+const PLATFORM_LABELS: Record<string, string> = {
+  web: "Web",
+  ios: "iOS",
+  android: "Android",
   unknown: "Unknown",
 };
 
@@ -421,10 +436,55 @@ export default function AdminAnalytics() {
                     )}
                   </div>
 
+                  <div>
+                    <h3 className="text-sm font-medium mb-3">Breakdown by device platform</h3>
+                    {shareFunnel.platforms.length === 0 ? (
+                      <p className="text-sm text-muted-foreground" data-testid="share-funnel-platforms-empty">
+                        No platform-tagged share activity recorded in this window yet.
+                      </p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm" data-testid="table-share-funnel-platforms">
+                          <thead>
+                            <tr className="text-left text-muted-foreground border-b">
+                              <th className="py-2 pr-4 font-medium">Platform</th>
+                              <th className="py-2 pr-4 font-medium text-right">Taps</th>
+                              <th className="py-2 pr-4 font-medium text-right">Completions</th>
+                              <th className="py-2 pr-4 font-medium text-right">Copies</th>
+                              <th className="py-2 font-medium text-right">Tap → completion</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {shareFunnel.platforms.map((p) => (
+                              <tr
+                                key={p.platform}
+                                className="border-b last:border-b-0"
+                                data-testid={`share-funnel-platform-row-${p.platform}`}
+                              >
+                                <td className="py-2 pr-4">
+                                  <Badge variant="outline">
+                                    {PLATFORM_LABELS[p.platform] || p.platform}
+                                  </Badge>
+                                </td>
+                                <td className="py-2 pr-4 text-right tabular-nums">{p.taps.toLocaleString()}</td>
+                                <td className="py-2 pr-4 text-right tabular-nums">{p.completions.toLocaleString()}</td>
+                                <td className="py-2 pr-4 text-right tabular-nums">{p.copies.toLocaleString()}</td>
+                                <td className="py-2 text-right tabular-nums">
+                                  {p.taps > 0 ? `${(p.tapToCompletionRate * 100).toFixed(1)}%` : "—"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="text-xs text-muted-foreground space-y-1">
                     <p><strong>Taps:</strong> {shareFunnel.notes.taps}</p>
                     <p><strong>Completions:</strong> {shareFunnel.notes.completions}</p>
                     <p><strong>Copies:</strong> {shareFunnel.notes.copies}</p>
+                    <p><strong>Platforms:</strong> {shareFunnel.notes.platforms}</p>
                   </div>
                 </>
               )}
