@@ -48,6 +48,10 @@ const config: Config = {
       displayName: 'nba',
       testEnvironment: 'jsdom',
       testMatch: ['<rootDir>/tests/nba/**/*.test.ts'],
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/client/src/$1',
+        '^@shared/(.*)$': '<rootDir>/shared/$1',
+      },
       transform: {
         '^.+\\.tsx?$': ['ts-jest', {
           tsconfig: 'tsconfig.json',

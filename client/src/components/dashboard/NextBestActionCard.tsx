@@ -16,10 +16,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { trackEvent } from "@/components/PostHogProvider";
 import { QUERY_KEYS } from "@/lib/queryKeys";
-import { apiFetch } from "@/lib/apiFetch";
-import { copyTextToClipboard } from "@/lib/clipboard";
-import { canShareContent, shareContent } from "@/lib/share";
-import { markBookingLinkShared } from "@/lib/bookingLinkShared";
+import { canShareContent } from "@/lib/share";
+import {
+  attemptShareBookingLink,
+  copyBookingLinkToClipboard,
+} from "@/lib/bookingLinkShareFlow";
 import {
   deriveNBAState,
   type DashboardSummary,
@@ -79,19 +80,8 @@ export function NextBestActionCard({
     }
   }, [state, userId]);
 
-  const recordShared = async (method: "copy" | "share") => {
-    markBookingLinkShared(userId);
+  const invalidateGamePlan = () =>
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboardGamePlan() });
-    try {
-      await apiFetch("/api/track/booking-link-shared", {
-        method: "POST",
-        body: JSON.stringify({ method, screen: "nba" }),
-      });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboardGamePlan() });
-    } catch {
-      // best effort — the localStorage flag already flipped the NBA state
-    }
-  };
 
   const doCopy = async () => {
     if (!bookingLink) {
@@ -102,7 +92,12 @@ export function NextBestActionCard({
       navigate("/profile");
       return;
     }
-    const ok = await copyTextToClipboard(bookingLink);
+    const { copied: ok } = await copyBookingLinkToClipboard({
+      bookingLink,
+      userId,
+      onLocalMark: invalidateGamePlan,
+      onApiSuccess: invalidateGamePlan,
+    });
     if (ok) {
       toast({
         title: "Link copied",
@@ -110,7 +105,6 @@ export function NextBestActionCard({
       });
       trackEvent("booking_link_copied", { screen: "nba" });
       void recordCopy("nba");
-      void recordShared("copy");
     } else {
       toast({
         title: "Couldn't copy",
@@ -135,15 +129,15 @@ export function NextBestActionCard({
       await doCopy();
       return;
     }
-    const sharedOk = await shareContent({
-      title: "Book my services",
-      text: "Schedule a job with me using this link:",
-      url: bookingLink,
+    await attemptShareBookingLink({
+      bookingLink,
+      shareTitle: "Book my services",
+      shareText: "Schedule a job with me using this link:",
       dialogTitle: "Share booking link",
+      userId,
+      onLocalMark: invalidateGamePlan,
+      onApiSuccess: invalidateGamePlan,
     });
-    if (sharedOk) {
-      void recordShared("share");
-    }
   };
 
   const supportsNativeShare = canShareContent();

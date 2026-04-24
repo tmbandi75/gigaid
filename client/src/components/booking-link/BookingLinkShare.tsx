@@ -6,10 +6,11 @@ import { Copy, Share2, Link2, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { getPostActionMessage } from "@/encouragement/encouragementToast";
-import { copyTextToClipboard } from "@/lib/clipboard";
-import { canShareContent, shareContent } from "@/lib/share";
-import { apiFetch } from "@/lib/apiFetch";
-import { markBookingLinkShared } from "@/lib/bookingLinkShared";
+import { canShareContent } from "@/lib/share";
+import {
+  attemptShareBookingLink,
+  copyBookingLinkToClipboard,
+} from "@/lib/bookingLinkShareFlow";
 import { recordCopy, recordShareTap } from "@/lib/bookingLinkAnalytics";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -21,25 +22,6 @@ type BookingLinkShareProps = {
 function trackEvent(eventName: string, properties?: Record<string, unknown>) {
   if (typeof window !== 'undefined' && (window as { posthog?: { capture: (event: string, props?: Record<string, unknown>) => void } }).posthog) {
     (window as { posthog?: { capture: (event: string, props?: Record<string, unknown>) => void } }).posthog?.capture(eventName, properties);
-  }
-}
-
-async function recordBookingLinkShared(
-  method: "copy" | "share",
-  screen: BookingLinkShareProps["context"],
-  queryClient: ReturnType<typeof useQueryClient>,
-  userId: string | undefined,
-) {
-  markBookingLinkShared(userId);
-  queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboardGamePlan() });
-  try {
-    await apiFetch("/api/track/booking-link-shared", {
-      method: "POST",
-      body: JSON.stringify({ method, screen }),
-    });
-    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboardGamePlan() });
-  } catch {
-    // best effort — local flag still flips the NBA state instantly
   }
 }
 
@@ -60,16 +42,23 @@ export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
   // Only show booking link if user has services set up and a booking link
   if (!hasServices || !bookingLink) return null;
 
+  const invalidateGamePlan = () =>
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboardGamePlan() });
+
   const handleCopy = async () => {
     if (!bookingLink) return;
-    
-    const copiedOk = await copyTextToClipboard(bookingLink);
+
+    const { copied: copiedOk } = await copyBookingLinkToClipboard({
+      bookingLink,
+      userId,
+      onLocalMark: invalidateGamePlan,
+      onApiSuccess: invalidateGamePlan,
+    });
     if (copiedOk) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       trackEvent('booking_link_copied', { screen: context });
       void recordCopy(context);
-      void recordBookingLinkShared("copy", context, queryClient, userId);
       const encouragement = getPostActionMessage("link_shared");
       toast({
         title: "Link copied",
@@ -95,16 +84,17 @@ export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
       return;
     }
 
-    const sharedOk = await shareContent({
-      title: variant === "primary" ? "Book my services" : "Book with me",
-      text: variant === "primary" ? "Schedule a job with me using this link:" : "Book a job with me using this link",
-      url: bookingLink,
+    await attemptShareBookingLink({
+      bookingLink,
+      shareTitle: variant === "primary" ? "Book my services" : "Book with me",
+      shareText: variant === "primary"
+        ? "Schedule a job with me using this link:"
+        : "Book a job with me using this link",
       dialogTitle: "Share booking link",
+      userId,
+      onLocalMark: invalidateGamePlan,
+      onApiSuccess: invalidateGamePlan,
     });
-
-    if (sharedOk) {
-      void recordBookingLinkShared("share", context, queryClient, userId);
-    }
   };
 
   const supportsShare = canShareContent();
