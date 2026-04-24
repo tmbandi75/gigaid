@@ -1,0 +1,216 @@
+You are updating the GigAid dashboard to replace static messaging with a dynamic
+“Next Best Action (NBA) Engine”.
+
+GOAL:
+- Show ONE clear, state-driven message and ONE primary CTA.
+- Eliminate incorrect or generic messaging (e.g., “1 step away from getting paid” when user has nothing to invoice).
+- Do NOT redesign layout or colors. Only change logic + content + CTA prioritization.
+
+--------------------------------------------------
+1) DATA MODEL (derive from existing tables)
+--------------------------------------------------
+
+From existing data, compute:
+
+hasClients: boolean
+hasJobs: boolean
+hasCompletedJobs: boolean
+hasUninvoicedCompletedJobs: boolean
+hasInvoices: boolean
+hasLinkShared: boolean   // derive from events: link_shared OR link_copied
+recentActivityAt: datetime
+
+Suggested sources (map to your schema):
+- clients.count > 0 → hasClients
+- jobs.count > 0 → hasJobs
+- jobs.status === 'completed' → hasCompletedJobs
+- jobs.status === 'completed' AND jobs.invoiceId IS NULL → hasUninvoicedCompletedJobs
+- invoices.count > 0 → hasInvoices
+- leads.activatedAt OR booking_events in ('link_shared','link_copied') → hasLinkShared
+
+--------------------------------------------------
+2) STATE MACHINE (ordered, first match wins)
+--------------------------------------------------
+
+States:
+
+STATE_NEW_USER
+Condition:
+- !hasClients AND !hasJobs
+
+Message:
+- Title: "Get your first client"
+- Subtitle: "Share your booking link to start getting jobs."
+
+Primary CTA:
+- Label: "Share Link"
+- Action: openShareSheet(bookingLink)
+
+Secondary CTA (optional, subtle):
+- "Copy Link"
+
+--------------------------------------------------
+
+STATE_NO_JOBS_YET
+Condition:
+- hasLinkShared AND !hasJobs
+
+Message:
+- Title: "Share your link to get your first job"
+- Subtitle: "Most first jobs come from sharing by text."
+
+Primary CTA:
+- Label: "Share Link"
+- Action: openShareSheet(bookingLink)
+
+Secondary:
+- "Copy Link"
+
+--------------------------------------------------
+
+STATE_IN_PROGRESS
+Condition:
+- hasJobs AND !hasCompletedJobs
+
+Message:
+- Title: "Finish your job to get paid"
+- Subtitle: "Mark jobs complete when you're done."
+
+Primary CTA:
+- Label: "View Jobs"
+- Action: navigate('/jobs')
+
+Secondary:
+- "Update Status"
+
+--------------------------------------------------
+
+STATE_READY_TO_INVOICE
+Condition:
+- hasUninvoicedCompletedJobs === true
+
+Message:
+- Title: "You're 1 step away from getting paid"
+- Subtitle: "Send your first invoice to get paid."
+
+Primary CTA:
+- Label: "Create Invoice"
+- Action: navigate('/invoices/create')
+
+Secondary:
+- none (or "View Jobs")
+
+--------------------------------------------------
+
+STATE_ACTIVE_USER
+Condition:
+- hasInvoices OR hasCompletedJobs
+
+Message:
+- Title: "Keep the momentum going"
+- Subtitle: "Follow up with leads or get your next job."
+
+Primary CTA:
+- Label: "Follow Up"
+- Action: navigate('/requests' or '/leads')
+
+Secondary:
+- "Share Link"
+
+--------------------------------------------------
+
+Fallback:
+- Default to STATE_NEW_USER
+
+--------------------------------------------------
+3) UI APPLICATION RULES
+--------------------------------------------------
+
+- Replace current static card:
+  “You’re 1 step away from getting paid / Send your first invoice”
+
+- Render ONE “Next Best Action” card at the top.
+
+Card structure:
+- Title (Primary font)
+- Subtitle (Body font)
+- ONE Primary Button (filled)
+- Optional Secondary (outline or text)
+
+CRITICAL:
+- Only ONE filled (primary) CTA visible at a time.
+- All other actions must be visually de-emphasized.
+
+--------------------------------------------------
+4) CTA PRIORITIZATION (MANDATORY)
+--------------------------------------------------
+
+- Primary CTA = filled button
+- Secondary CTA = outline or text-only
+- Remove competing primary buttons from nearby cards if they conflict
+
+Examples:
+- If NBA = Share Link → “Create Invoice” must NOT be primary on screen
+- If NBA = Create Invoice → “Share Link” becomes secondary
+
+--------------------------------------------------
+5) COMPONENT API
+--------------------------------------------------
+
+Create component:
+
+<NextBestActionCard
+  title: string
+  subtitle: string
+  primaryCta: { label: string, onClick: fn }
+  secondaryCta?: { label: string, onClick: fn }
+/>
+
+--------------------------------------------------
+6) LOGIC IMPLEMENTATION (example)
+--------------------------------------------------
+
+function getNBAState(data) {
+  if (!data.hasClients && !data.hasJobs) return 'NEW_USER';
+  if (data.hasLinkShared && !data.hasJobs) return 'NO_JOBS_YET';
+  if (data.hasJobs && !data.hasCompletedJobs) return 'IN_PROGRESS';
+  if (data.hasUninvoicedCompletedJobs) return 'READY_TO_INVOICE';
+  return 'ACTIVE_USER';
+}
+
+--------------------------------------------------
+7) ANALYTICS (REQUIRED)
+--------------------------------------------------
+
+Track:
+
+event: nba_shown
+- state
+- userId
+
+event: nba_primary_clicked
+- state
+- cta_label
+
+event: nba_secondary_clicked
+- state
+- cta_label
+
+--------------------------------------------------
+8) VALIDATION CHECKLIST
+--------------------------------------------------
+
+Before shipping, confirm:
+
+- No user sees an irrelevant message
+- Only one primary CTA is visible
+- Message always matches real user data
+- Screen can be understood in < 3 seconds
+- No conflicting instructions on screen
+
+--------------------------------------------------
+
+FINAL OUTPUT:
+- Dashboard shows dynamic, state-driven messaging
+- Users always see the correct “next step”
+- No incorrect prompts like “send invoice” when nothing to invoice
