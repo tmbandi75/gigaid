@@ -6,6 +6,8 @@ vite.config.ts.*
 *.tar.gz
 reports/
 backups/
+playwright-report/
+test-results/
 .env
 .env.*
 test.txt
