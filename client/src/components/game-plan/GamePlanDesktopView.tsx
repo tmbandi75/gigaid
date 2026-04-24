@@ -275,7 +275,15 @@ export function GamePlanDesktopView({
         <CampaignSuggestionBanner />
 
         {showNBACard && (
-          <NextBestActionCard summary={dashboardSummary} variant="desktop" userId={userId} />
+          // When money is waiting, the standalone Collect Payment card below
+          // owns the green money tone (it carries the concrete dollar figure).
+          // Demote NBA so we never render two money-toned primary cards at once.
+          <NextBestActionCard
+            summary={dashboardSummary}
+            variant="desktop"
+            userId={userId}
+            demoteMoneyTone={stats.moneyWaiting > 0}
+          />
         )}
 
         {/* Primary Action Card (active users only — first-timers are served by NBA above) */}

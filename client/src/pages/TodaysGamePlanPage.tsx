@@ -473,7 +473,17 @@ export default function TodaysGamePlanPage() {
 
         {showNBACard && (
           <motion.div variants={itemVariants}>
-            <NextBestActionCard summary={dashboardSummary} variant="mobile" userId={user?.id} />
+            {/*
+              When money is waiting, the standalone Collect Payment card below
+              owns the green money tone (it carries the concrete dollar figure).
+              Demote NBA so we never render two money-toned primary cards at once.
+            */}
+            <NextBestActionCard
+              summary={dashboardSummary}
+              variant="mobile"
+              userId={user?.id}
+              demoteMoneyTone={stats.moneyWaiting > 0}
+            />
           </motion.div>
         )}
 

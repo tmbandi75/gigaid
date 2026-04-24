@@ -48,12 +48,14 @@ interface NextBestActionCardProps {
   summary: DashboardSummary | undefined;
   variant?: "mobile" | "desktop";
   userId?: string;
+  demoteMoneyTone?: boolean;
 }
 
 export function NextBestActionCard({
   summary,
   variant = "mobile",
   userId,
+  demoteMoneyTone = false,
 }: NextBestActionCardProps) {
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -232,7 +234,7 @@ export function NextBestActionCard({
   const PrimaryIcon = content.primary.icon;
   const SecondaryIcon = content.secondary?.icon;
 
-  const isMoneyTone = content.tone === "money";
+  const isMoneyTone = content.tone === "money" && !demoteMoneyTone;
   const cardClass = isMoneyTone
     ? "border-0 shadow-md overflow-visible bg-gradient-to-br from-emerald-50 to-emerald-50/30 dark:from-emerald-950/30 dark:to-emerald-950/10"
     : "border-0 shadow-md overflow-visible";
