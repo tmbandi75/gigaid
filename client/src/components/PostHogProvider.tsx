@@ -147,8 +147,19 @@ export function identifyUser(userId: string, properties?: Record<string, unknown
 }
 
 export function trackEvent(eventName: string, properties?: Record<string, unknown>) {
+  const cleanProps = stripPII(properties);
   if (POSTHOG_KEY && isAnalyticsInitialized()) {
-    posthog.capture(eventName, stripPII(properties));
+    posthog.capture(eventName, cleanProps);
+  }
+  // E2E instrumentation: when a Playwright test installs
+  // `window.__capturedAnalytics = []` via addInitScript, every trackEvent call
+  // is mirrored into that array so specs can assert events fire exactly once.
+  // No production behavior change — the hook is inert unless the array exists.
+  if (typeof window !== "undefined") {
+    const captured = (window as unknown as { __capturedAnalytics?: unknown[] }).__capturedAnalytics;
+    if (Array.isArray(captured)) {
+      captured.push({ eventName, properties: cleanProps });
+    }
   }
 }
 

@@ -83,6 +83,7 @@ import PriceOptimizationPage from "@/pages/PriceOptimizationPage";
 import ProfitWarningsPage from "@/pages/ProfitWarningsPage";
 import ViewAllStats from "@/pages/ViewAllStats";
 import NotFound from "@/pages/not-found";
+import E2ENbaHarness from "@/pages/E2ENbaHarness";
 import { AppErrorBoundary } from "@/components/ErrorBoundary";
 import { logClientEnv } from "./debug/envProbe";
 import { logger } from "@/lib/logger";
@@ -331,6 +332,9 @@ function App() {
                 {/* /login redirects to home which shows the combined splash/login page */}
                 <Route path="/login" component={SplashPage} />
                 <Route path="/force-logout" component={ForceLogout} />
+                {import.meta.env.DEV && (
+                  <Route path="/_e2e/nba" component={E2ENbaHarness} />
+                )}
                 <Route>
                   <NativeDeepLinkHandler>
                     <AuthenticatedApp />
