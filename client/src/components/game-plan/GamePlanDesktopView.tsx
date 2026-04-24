@@ -538,6 +538,7 @@ export function GamePlanDesktopView({
                 <Plus className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <span className="text-t-secondary font-semibold text-foreground">New Job</span>
+              <span className="text-t-meta font-regular text-muted-foreground -mt-1">Create a job</span>
             </button>
             <button
               onClick={() => navigate("/invoices/new")}
@@ -548,6 +549,7 @@ export function GamePlanDesktopView({
                 <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               </div>
               <span className="text-t-secondary font-semibold text-foreground">Invoice</span>
+              <span className="text-t-meta font-regular text-muted-foreground -mt-1">Send & get paid</span>
             </button>
             <button
               onClick={() => navigate("/reminders")}
@@ -558,6 +560,7 @@ export function GamePlanDesktopView({
                 <MessageSquare className="h-5 w-5 text-violet-600 dark:text-violet-400" />
               </div>
               <span className="text-t-secondary font-semibold text-foreground">Message</span>
+              <span className="text-t-meta font-regular text-muted-foreground -mt-1">Text clients</span>
             </button>
             <button
               onClick={onShowVoiceNotes}
@@ -568,6 +571,7 @@ export function GamePlanDesktopView({
                 <Mic className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
               <span className="text-t-secondary font-semibold text-foreground">Voice</span>
+              <span className="text-t-meta font-regular text-muted-foreground -mt-1">Speak notes</span>
             </button>
           </div>
         </section>
