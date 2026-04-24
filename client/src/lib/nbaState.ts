@@ -19,5 +19,6 @@ export function getNBAState(data: NBAInputs): NBAState {
   if (!data.hasClients && !data.hasJobs) return "NEW_USER";
   if (data.hasJobs && !data.hasCompletedJobs) return "IN_PROGRESS";
   if (data.hasUninvoicedCompletedJobs) return "READY_TO_INVOICE";
-  return "ACTIVE_USER";
+  if (data.hasInvoices || data.hasCompletedJobs) return "ACTIVE_USER";
+  return "NEW_USER";
 }

@@ -95,9 +95,9 @@ export function NextBestActionCard({
   useEffect(() => {
     if (!seenNBAStates.has(state)) {
       seenNBAStates.add(state);
-      trackEvent("nba_shown", { state });
+      trackEvent("nba_shown", { state, userId });
     }
-  }, [state]);
+  }, [state, userId]);
 
   const recordShared = async (method: "copy" | "share") => {
     markBookingLinkShared(userId);

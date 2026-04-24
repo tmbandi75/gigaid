@@ -35,6 +35,7 @@ import {
   ArrowRight,
   TrendingUp,
   Send,
+  Share2,
 } from "lucide-react";
 import { AddServiceDialog } from "@/components/settings/AddServiceDialog";
 import { motion, AnimatePresence } from "framer-motion";
@@ -46,6 +47,7 @@ import { getSubtitleMessage, type EncouragementData } from "@/encouragement/enco
 import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
 import { GamePlanDesktopView } from "@/components/game-plan/GamePlanDesktopView";
 import { NextBestActionCard, deriveNBAState } from "@/components/dashboard/NextBestActionCard";
+import type { NBAState } from "@/lib/nbaState";
 
 interface ActionItem {
   id: string;
@@ -187,10 +189,26 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.25, 0.1, 0.25, 1] } },
 };
 
+function getNBAStickyCta(
+  state: NBAState,
+): { label: string; route: string; icon: typeof DollarSign } | null {
+  switch (state) {
+    case "NEW_USER":
+    case "NO_JOBS_YET":
+      return { label: "Share Booking Link", route: "/profile", icon: Share2 };
+    case "IN_PROGRESS":
+      return { label: "View Jobs", route: "/jobs", icon: Briefcase };
+    case "READY_TO_INVOICE":
+      return { label: "Create Invoice", route: "/invoices/new", icon: Send };
+    case "ACTIVE_USER":
+      return null;
+  }
+}
+
 function getStickyCtaInfo(
   stats: GamePlanStats,
   priorityItem: ActionItem | null,
-  firstTimeState: string,
+  nbaState: NBAState,
 ): { label: string; route: string; icon: typeof DollarSign } | null {
   if (stats.moneyWaiting > 0) {
     return {
@@ -206,12 +224,9 @@ function getStickyCtaInfo(
       icon: DollarSign,
     };
   }
-  if (firstTimeState === "no_invoices") {
-    return {
-      label: "Send Your First Invoice",
-      route: "/invoices/new",
-      icon: Send,
-    };
+  if (nbaState !== "ACTIVE_USER") {
+    const nbaSticky = getNBAStickyCta(nbaState);
+    if (nbaSticky) return nbaSticky;
   }
   if (priorityItem) {
     const Icon = getIconForType(priorityItem.type);
@@ -296,11 +311,11 @@ export default function TodaysGamePlanPage() {
   const firstTimeUserState = getFirstTimeUserState();
   const nbaState = deriveNBAState(dashboardSummary, user?.id);
   const showNBACard = nbaState !== "ACTIVE_USER" || (!priorityItem && stats.moneyWaiting === 0);
-  const nbaDrivesShareLink = nbaState === "NEW_USER" || nbaState === "NO_JOBS_YET";
+  const suppressBookingLinkPrimary = showNBACard;
 
   const stickyCtaInfo = useMemo(
-    () => getStickyCtaInfo(stats, priorityItem, firstTimeUserState),
-    [stats, priorityItem, firstTimeUserState]
+    () => getStickyCtaInfo(stats, priorityItem, nbaState),
+    [stats, priorityItem, nbaState]
   );
 
   if (isLoading) {
@@ -443,7 +458,7 @@ export default function TodaysGamePlanPage() {
 
         <CampaignSuggestionBanner />
 
-        {!nbaDrivesShareLink && (
+        {!suppressBookingLinkPrimary && (
           <motion.div variants={itemVariants}>
             <BookingLinkShare variant="primary" context="plan" />
           </motion.div>
@@ -752,8 +767,8 @@ export default function TodaysGamePlanPage() {
         )}
       </motion.div>
 
-      {/* Sticky bottom CTA (mobile only) — only show for money-waiting since other actions already have prominent cards */}
-      {isMobile && stickyCtaInfo && stats.moneyWaiting > 0 && (
+      {/* Sticky bottom CTA (mobile only) — driven by money-waiting, invoice priority, or NBA primary */}
+      {isMobile && stickyCtaInfo && (
         <div className="fixed bottom-16 left-0 right-0 p-3 z-50" data-testid="sticky-cta-wrapper">
           <div className="max-w-lg mx-auto">
             <Button

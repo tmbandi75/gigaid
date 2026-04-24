@@ -167,7 +167,7 @@ export function GamePlanDesktopView({
 }: GamePlanDesktopViewProps) {
   const nbaState = deriveNBAState(dashboardSummary, userId);
   const showNBACard = nbaState !== "ACTIVE_USER" || (!priorityItem && stats.moneyWaiting === 0);
-  const nbaDrivesShareLink = nbaState === "NEW_USER" || nbaState === "NO_JOBS_YET";
+  const suppressBookingLinkPrimary = showNBACard;
   return (
     <div className="grid grid-cols-12 gap-6" data-testid="desktop-game-plan">
       {/* LEFT COLUMN — Primary content (8 cols) */}
@@ -439,7 +439,7 @@ export function GamePlanDesktopView({
       {/* RIGHT COLUMN — Sidebar (4 cols) */}
       <div className="col-span-12 lg:col-span-4 space-y-6">
         {/* Booking Link — suppressed when NBA primary already drives Share Link */}
-        {!nbaDrivesShareLink && (
+        {!suppressBookingLinkPrimary && (
           <BookingLinkShare variant="primary" context="plan" />
         )}
 
