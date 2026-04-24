@@ -284,6 +284,19 @@ router.get("/duplicate-phones", async (_req, res) => {
   }
 });
 
+// Manual trigger for the duplicate-phone alert notifier. Useful for support to
+// force a re-check after cleaning up data, or to verify SUPPORT_EMAIL routing.
+router.post("/duplicate-phones/run-alerts", async (_req, res) => {
+  try {
+    const { runDuplicatePhoneAlertJob } = await import("./duplicatePhoneAlertJob");
+    const result = await runDuplicatePhoneAlertJob({ triggeredBy: "manual" });
+    res.json(result);
+  } catch (error) {
+    logger.error("[Admin SMS Health] duplicate-phones run-alerts error:", error);
+    res.status(500).json({ error: "Failed to run duplicate phone alert job" });
+  }
+});
+
 router.post("/users/:userId/clear-phone", async (req: AdminRequest, res) => {
   try {
     const { userId } = req.params;

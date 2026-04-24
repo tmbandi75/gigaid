@@ -14958,6 +14958,12 @@ Respond in JSON format only:
     logger.error("[RebookingScheduler] Failed to start:", err);
   });
 
+  import("./admin/duplicatePhoneAlertJob").then(({ startDuplicatePhoneAlertScheduler }) => {
+    startDuplicatePhoneAlertScheduler();
+  }).catch(err => {
+    logger.error("[DuplicatePhoneAlertJob] Failed to start:", err);
+  });
+
   const { registerGrowthRoutes } = await import("./growth/routes");
   registerGrowthRoutes(app, requireAuth);
 

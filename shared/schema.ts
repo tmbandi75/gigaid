@@ -2937,5 +2937,20 @@ export const insertRevenueDriftLogSchema = createInsertSchema(revenueDriftLogs).
 export type InsertRevenueDriftLog = z.infer<typeof insertRevenueDriftLogSchema>;
 export type RevenueDriftLog = typeof revenueDriftLogs.$inferSelect;
 
+// Tracks which duplicate-phone groups support has already been alerted on,
+// so the scheduled notifier (server/admin/duplicatePhoneAlertJob.ts) does
+// not re-spam support every run. We re-alert if the group grows (new
+// colliding user joined) by comparing lastUserCount to the current size.
+export const duplicatePhoneAlerts = pgTable("duplicate_phone_alerts", {
+  phoneE164: text("phone_e164").primaryKey(),
+  lastUserCount: integer("last_user_count").notNull(),
+  lastUserIds: text("last_user_ids").notNull(), // JSON-encoded sorted list
+  firstAlertedAt: text("first_alerted_at").notNull(),
+  lastAlertedAt: text("last_alerted_at").notNull(),
+  alertCount: integer("alert_count").notNull().default(1),
+});
+
+export type DuplicatePhoneAlert = typeof duplicatePhoneAlerts.$inferSelect;
+
 export * from "./models/chat";
 export * from "./models/auth";
