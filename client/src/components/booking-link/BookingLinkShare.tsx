@@ -85,7 +85,11 @@ export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
     if (!bookingLink) return;
 
     trackEvent('booking_link_shared', { screen: context });
-    void recordBookingLinkShared("share", queryClient, userId);
+
+    if (!canShareContent()) {
+      await handleCopy();
+      return;
+    }
 
     const sharedOk = await shareContent({
       title: variant === "primary" ? "Book my services" : "Book with me",
@@ -94,8 +98,8 @@ export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
       dialogTitle: "Share booking link",
     });
 
-    if (!sharedOk) {
-      await handleCopy();
+    if (sharedOk) {
+      void recordBookingLinkShared("share", queryClient, userId);
     }
   };
 

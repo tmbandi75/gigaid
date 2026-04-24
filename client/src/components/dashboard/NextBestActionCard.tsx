@@ -148,15 +148,18 @@ export function NextBestActionCard({
       navigate("/profile");
       return;
     }
-    void recordShared("share");
+    if (!canShareContent()) {
+      await doCopy();
+      return;
+    }
     const sharedOk = await shareContent({
       title: "Book my services",
       text: "Schedule a job with me using this link:",
       url: bookingLink,
       dialogTitle: "Share booking link",
     });
-    if (!sharedOk) {
-      await doCopy();
+    if (sharedOk) {
+      void recordShared("share");
     }
   };
 
