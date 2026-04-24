@@ -48,7 +48,7 @@ import { ActivationChecklist } from "@/components/activation/ActivationChecklist
 import { GamePlanDesktopView } from "@/components/game-plan/GamePlanDesktopView";
 import { NextBestActionCard, deriveNBAState } from "@/components/dashboard/NextBestActionCard";
 import type { NBAState } from "@/lib/nbaState";
-import { shouldDemoteNBAMoneyTone } from "@/lib/nbaStyling";
+import { shouldDemoteNBAMoneyTone, shouldSuppressBookingLinkPrimary } from "@/lib/nbaStyling";
 
 interface ActionItem {
   id: string;
@@ -316,10 +316,7 @@ export default function TodaysGamePlanPage() {
   // Suppress competing standalone Share Link primary only when NBA's primary
   // CTA is itself Share Link (NEW_USER, NO_JOBS_YET) or Create Invoice
   // (READY_TO_INVOICE — spec requires nearby Share Link to be demoted).
-  const suppressBookingLinkPrimary =
-    nbaState === "NEW_USER" ||
-    nbaState === "NO_JOBS_YET" ||
-    nbaState === "READY_TO_INVOICE";
+  const suppressBookingLinkPrimary = shouldSuppressBookingLinkPrimary(nbaState);
 
   const stickyCtaInfo = useMemo(
     () => getStickyCtaInfo(stats, priorityItem, nbaState),

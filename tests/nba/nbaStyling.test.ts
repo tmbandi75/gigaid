@@ -6,6 +6,8 @@ import {
   isNBAMoneyToneApplied,
   getNBACardClasses,
   shouldDemoteNBAMoneyTone,
+  shouldSuppressBookingLinkPrimary,
+  NBA_STATES_OWNING_PRIMARY_CTA,
 } from "../../client/src/lib/nbaStyling";
 import type { NBAState } from "../../client/src/lib/nbaState";
 
@@ -123,7 +125,7 @@ describe("Parent dashboards wire demoteMoneyTone from stats.moneyWaiting", () =>
   it("TodaysGamePlanPage (mobile) imports the helper and passes demoteMoneyTone derived from stats", () => {
     const src = readSource(MOBILE_PATH);
     expect(src).toMatch(
-      /import\s*\{\s*shouldDemoteNBAMoneyTone\s*\}\s*from\s*["']@\/lib\/nbaStyling["']/,
+      /import\s*\{[^}]*\bshouldDemoteNBAMoneyTone\b[^}]*\}\s*from\s*["']@\/lib\/nbaStyling["']/,
     );
     expect(src).toMatch(
       /demoteMoneyTone=\{shouldDemoteNBAMoneyTone\(stats\)\}/,
@@ -133,10 +135,80 @@ describe("Parent dashboards wire demoteMoneyTone from stats.moneyWaiting", () =>
   it("GamePlanDesktopView imports the helper and passes demoteMoneyTone derived from stats", () => {
     const src = readSource(DESKTOP_PATH);
     expect(src).toMatch(
-      /import\s*\{\s*shouldDemoteNBAMoneyTone\s*\}\s*from\s*["']@\/lib\/nbaStyling["']/,
+      /import\s*\{[^}]*\bshouldDemoteNBAMoneyTone\b[^}]*\}\s*from\s*["']@\/lib\/nbaStyling["']/,
     );
     expect(src).toMatch(
       /demoteMoneyTone=\{shouldDemoteNBAMoneyTone\(stats\)\}/,
+    );
+  });
+});
+
+describe("shouldSuppressBookingLinkPrimary (NBA-owns-primary-CTA rule)", () => {
+  it.each<NBAState>(["NEW_USER", "NO_JOBS_YET", "READY_TO_INVOICE"])(
+    "returns true for %s (NBA card owns the dashboard primary CTA)",
+    (state) => {
+      expect(shouldSuppressBookingLinkPrimary(state)).toBe(true);
+    },
+  );
+
+  it.each<NBAState>(["IN_PROGRESS", "ACTIVE_USER"])(
+    "returns false for %s (standalone booking link primary stays visible)",
+    (state) => {
+      expect(shouldSuppressBookingLinkPrimary(state)).toBe(false);
+    },
+  );
+
+  it("constant lists exactly the three states whose NBA primary CTA owns the slot", () => {
+    expect([...NBA_STATES_OWNING_PRIMARY_CTA].sort()).toEqual(
+      ["NEW_USER", "NO_JOBS_YET", "READY_TO_INVOICE"].sort(),
+    );
+  });
+
+  it("covers every NBAState exactly once across true/false (exhaustive contract)", () => {
+    const allStates: NBAState[] = [
+      "NEW_USER",
+      "NO_JOBS_YET",
+      "IN_PROGRESS",
+      "READY_TO_INVOICE",
+      "ACTIVE_USER",
+    ];
+    const truthy = allStates.filter(shouldSuppressBookingLinkPrimary);
+    const falsy = allStates.filter((s) => !shouldSuppressBookingLinkPrimary(s));
+    expect(truthy.sort()).toEqual(
+      ["NEW_USER", "NO_JOBS_YET", "READY_TO_INVOICE"].sort(),
+    );
+    expect(falsy.sort()).toEqual(["ACTIVE_USER", "IN_PROGRESS"].sort());
+  });
+});
+
+describe("Parent dashboards use the shared shouldSuppressBookingLinkPrimary helper", () => {
+  const MOBILE_PATH = "client/src/pages/TodaysGamePlanPage.tsx";
+  const DESKTOP_PATH = "client/src/components/game-plan/GamePlanDesktopView.tsx";
+
+  it("TodaysGamePlanPage (mobile) imports and calls the helper instead of inline state checks", () => {
+    const src = readSource(MOBILE_PATH);
+    expect(src).toMatch(
+      /import\s*\{[^}]*\bshouldSuppressBookingLinkPrimary\b[^}]*\}\s*from\s*["']@\/lib\/nbaStyling["']/,
+    );
+    expect(src).toMatch(
+      /suppressBookingLinkPrimary\s*=\s*shouldSuppressBookingLinkPrimary\(\s*nbaState\s*\)/,
+    );
+    // No inline duplication of the rule should remain.
+    expect(src).not.toMatch(
+      /nbaState\s*===\s*["']NEW_USER["']\s*\|\|\s*nbaState\s*===\s*["']NO_JOBS_YET["']/,
+    );
+  });
+
+  it("GamePlanDesktopView imports and calls the helper instead of inline state checks", () => {
+    const src = readSource(DESKTOP_PATH);
+    expect(src).toMatch(
+      /import\s*\{[^}]*\bshouldSuppressBookingLinkPrimary\b[^}]*\}\s*from\s*["']@\/lib\/nbaStyling["']/,
+    );
+    expect(src).toMatch(
+      /suppressBookingLinkPrimary\s*=\s*shouldSuppressBookingLinkPrimary\(\s*nbaState\s*\)/,
+    );
+    expect(src).not.toMatch(
+      /nbaState\s*===\s*["']NEW_USER["']\s*\|\|\s*nbaState\s*===\s*["']NO_JOBS_YET["']/,
     );
   });
 });

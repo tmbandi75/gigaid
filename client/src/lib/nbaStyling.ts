@@ -2,6 +2,20 @@ import type { NBAState } from "./nbaState";
 
 export type NBATone = "neutral" | "money";
 
+// NBA states whose primary CTA owns the dashboard's main action slot — when
+// the NBA card's primary CTA is itself Share Link (NEW_USER, NO_JOBS_YET) or
+// Create Invoice (READY_TO_INVOICE), the standalone Share Link primary
+// elsewhere on the dashboard should be suppressed/demoted.
+export const NBA_STATES_OWNING_PRIMARY_CTA: readonly NBAState[] = [
+  "NEW_USER",
+  "NO_JOBS_YET",
+  "READY_TO_INVOICE",
+] as const;
+
+export function shouldSuppressBookingLinkPrimary(state: NBAState): boolean {
+  return NBA_STATES_OWNING_PRIMARY_CTA.includes(state);
+}
+
 const STATE_TONES: Record<NBAState, NBATone> = {
   NEW_USER: "neutral",
   NO_JOBS_YET: "neutral",

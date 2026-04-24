@@ -5,7 +5,7 @@ import { BookingLinkShare } from "@/components/booking-link";
 import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
 import { CampaignSuggestionBanner } from "@/components/CampaignSuggestionBanner";
 import { NextBestActionCard, deriveNBAState, type DashboardSummary } from "@/components/dashboard/NextBestActionCard";
-import { shouldDemoteNBAMoneyTone } from "@/lib/nbaStyling";
+import { shouldDemoteNBAMoneyTone, shouldSuppressBookingLinkPrimary } from "@/lib/nbaStyling";
 import {
   FileText,
   DollarSign,
@@ -172,10 +172,7 @@ export function GamePlanDesktopView({
   // Suppress competing standalone Share Link primary only when NBA's primary
   // CTA is itself Share Link (NEW_USER, NO_JOBS_YET) or Create Invoice
   // (READY_TO_INVOICE — spec requires nearby Share Link to be demoted).
-  const suppressBookingLinkPrimary =
-    nbaState === "NEW_USER" ||
-    nbaState === "NO_JOBS_YET" ||
-    nbaState === "READY_TO_INVOICE";
+  const suppressBookingLinkPrimary = shouldSuppressBookingLinkPrimary(nbaState);
   return (
     <div className="grid grid-cols-12 gap-6" data-testid="desktop-game-plan">
       {/* LEFT COLUMN — Primary content (8 cols) */}
