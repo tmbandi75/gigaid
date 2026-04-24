@@ -190,15 +190,20 @@ export default function UnclaimedBookingPage({ page }: Props) {
 
         {step === "intro" && (
           <div className="space-y-6">
-            <Button
-              size="lg"
-              className="w-full h-14 text-base font-semibold rounded-xl"
-              onClick={() => setStep("confirm")}
-              data-testid="button-claim-page"
-            >
-              Claim this page and start using it
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+            <div>
+              <Button
+                size="lg"
+                className="w-full h-14 text-base font-semibold rounded-xl"
+                onClick={() => setStep("confirm")}
+                data-testid="button-claim-page"
+              >
+                Claim this page and start using it
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+              <p className="text-sm text-slate-500 text-center mt-2" data-testid="text-claim-free-note">
+                Free to start. No signup required.
+              </p>
+            </div>
 
             <div
               className="flex items-center justify-between gap-1 rounded-2xl border border-slate-200 bg-white px-3 py-4 shadow-sm sm:gap-2 sm:px-4"
