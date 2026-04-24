@@ -1725,12 +1725,37 @@ export async function registerRoutes(
 
       const totalCompletedJobs = jobs.filter(j => j.status === "completed").length;
       const sentInvoiceCount = invoices.filter(i => i.status === "sent" || i.status === "paid").length;
+
+      const invoicedJobIds = new Set(
+        invoices.map((inv) => inv.jobId).filter((id): id is string => Boolean(id))
+      );
+      const hasUninvoicedCompletedJobs = jobs.some(
+        (j) => j.status === "completed" && !invoicedJobIds.has(j.id)
+      );
+
+      let hasClients = false;
+      try {
+        const clientCountResult = await pool.query(
+          `SELECT 1 FROM clients WHERE user_id = $1 LIMIT 1`,
+          [(req as any).userId]
+        );
+        hasClients = (clientCountResult.rowCount ?? 0) > 0;
+      } catch {
+        hasClients = false;
+      }
+
+      const summaryUser = await storage.getUser((req as any).userId);
+      const hasLinkShared = Boolean(summaryUser?.bookingLinkSharedAt);
+
       const dashboardSummary = {
         totalJobs: jobs.length,
         completedJobs: totalCompletedJobs,
         totalLeads: leads.length,
         totalInvoices: invoices.length,
         sentInvoices: sentInvoiceCount,
+        hasClients,
+        hasUninvoicedCompletedJobs,
+        hasLinkShared,
       };
 
       res.json({

@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { BookingLinkShare } from "@/components/booking-link";
 import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
 import { CampaignSuggestionBanner } from "@/components/CampaignSuggestionBanner";
+import { NextBestActionCard, deriveNBAState, type DashboardSummary } from "@/components/dashboard/NextBestActionCard";
 import {
   FileText,
   DollarSign,
@@ -18,11 +19,9 @@ import {
   X,
   Zap,
   Target,
-  Wrench,
   AlertTriangle,
   ArrowRight,
   TrendingUp,
-  CircleDot,
 } from "lucide-react";
 
 interface ActionItem {
@@ -82,6 +81,7 @@ interface GamePlanDesktopViewProps {
   nextActions: NextAction[];
   firstTimeUserState: "no_services" | "no_jobs" | "no_invoices" | "normal";
   stepsToGettingPaid: number;
+  dashboardSummary: DashboardSummary | undefined;
   navigate: (path: string) => void;
   onShowVoiceNotes: () => void;
   onShowAddService: () => void;
@@ -91,6 +91,7 @@ interface GamePlanDesktopViewProps {
   hasActionableStall: boolean;
   topStall: StallInfo | null;
   invalidateGamePlan: () => void;
+  userId?: string;
 }
 
 function formatCurrency(cents: number): string {
@@ -161,7 +162,12 @@ export function GamePlanDesktopView({
   hasActionableStall,
   topStall,
   invalidateGamePlan,
+  dashboardSummary,
+  userId,
 }: GamePlanDesktopViewProps) {
+  const nbaState = deriveNBAState(dashboardSummary, userId);
+  const showNBACard = nbaState !== "ACTIVE_USER" || (!priorityItem && stats.moneyWaiting === 0);
+  const nbaDrivesShareLink = nbaState === "NEW_USER" || nbaState === "NO_JOBS_YET";
   return (
     <div className="grid grid-cols-12 gap-6" data-testid="desktop-game-plan">
       {/* LEFT COLUMN — Primary content (8 cols) */}
@@ -261,82 +267,12 @@ export function GamePlanDesktopView({
 
         <CampaignSuggestionBanner />
 
-        {/* Progress momentum for first-time users */}
-        {stepsToGettingPaid > 0 && (
-          <div className="flex items-center gap-2 px-1">
-            <CircleDot className="h-4 w-4 text-primary" />
-            <p className="text-sm font-medium text-foreground">
-              {stepsToGettingPaid === 1
-                ? "You're 1 step away from getting paid"
-                : `${stepsToGettingPaid} steps to your first payment`}
-            </p>
-          </div>
+        {showNBACard && (
+          <NextBestActionCard summary={dashboardSummary} variant="desktop" userId={userId} />
         )}
 
-        {/* Primary Action Card */}
-        {firstTimeUserState === "no_services" ? (
-          <Card className="border-0 shadow-md" data-testid="desktop-card-add-first-service">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-5">
-                <div className="h-14 w-14 rounded-2xl bg-primary flex items-center justify-center shrink-0">
-                  <Wrench className="h-7 w-7 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-foreground text-lg mb-1">Add your first service</p>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Tell us what kind of work you do so we can help you book jobs and get paid.
-                  </p>
-                  <Button onClick={() => onShowAddService()} data-testid="desktop-button-add-first-service">
-                    Add a Service
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : firstTimeUserState === "no_jobs" ? (
-          <Card className="border-0 shadow-md" data-testid="desktop-card-add-first-job">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-5">
-                <div className="h-14 w-14 rounded-2xl bg-blue-500 flex items-center justify-center shrink-0">
-                  <Briefcase className="h-7 w-7 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-foreground text-lg mb-1">Create your first job</p>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Add a job to start tracking your work and getting paid.
-                  </p>
-                  <Button onClick={() => navigate("/jobs/new")} data-testid="desktop-button-add-first-job">
-                    Create a Job
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : firstTimeUserState === "no_invoices" ? (
-          <Card
-            className="border-0 shadow-md bg-gradient-to-br from-emerald-50 to-emerald-50/30 dark:from-emerald-950/30 dark:to-emerald-950/10"
-            data-testid="desktop-card-add-first-invoice"
-          >
-            <CardContent className="p-6">
-              <div className="flex items-start gap-5">
-                <div className="h-14 w-14 rounded-2xl bg-emerald-500 flex items-center justify-center shrink-0">
-                  <DollarSign className="h-7 w-7 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-foreground text-lg mb-1">Send your first invoice</p>
-                  <p className="text-sm text-muted-foreground mb-4">Get paid for the work you've done.</p>
-                  <Button onClick={() => navigate("/invoices/new")} data-testid="desktop-button-add-first-invoice">
-                    <DollarSign className="h-4 w-4 mr-2" />
-                    Create Invoice
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : firstTimeUserState === "normal" && stats.moneyWaiting > 0 ? (
+        {/* Primary Action Card (active users only — first-timers are served by NBA above) */}
+        {nbaState === "ACTIVE_USER" && stats.moneyWaiting > 0 ? (
           <Card
             className="border-0 shadow-md bg-gradient-to-br from-emerald-50 to-emerald-50/30 dark:from-emerald-950/30 dark:to-emerald-950/10"
             data-testid="desktop-card-payment"
@@ -355,7 +291,7 @@ export function GamePlanDesktopView({
               </Button>
             </CardContent>
           </Card>
-        ) : priorityItem && !(priorityItem.type === "invoice" && stats.moneyWaiting > 0) ? (
+        ) : priorityItem && nbaState === "ACTIVE_USER" && !(priorityItem.type === "invoice" && stats.moneyWaiting > 0) ? (
           <Card className="border-0 shadow-md" data-testid="desktop-card-priority-item">
             <CardContent className="p-6">
               <div className="flex items-center gap-2 mb-3">
@@ -391,26 +327,6 @@ export function GamePlanDesktopView({
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : !priorityItem && stats.moneyWaiting === 0 ? (
-          <Card className="border-0 shadow-sm bg-emerald-50/50 dark:bg-emerald-950/20" data-testid="desktop-card-all-caught-up">
-            <CardContent className="p-6 text-center">
-              <div className="h-14 w-14 rounded-2xl bg-emerald-500/15 flex items-center justify-center mx-auto mb-3">
-                <CheckCircle2 className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <p className="text-t-primary font-semibold text-foreground mb-1">You're all caught up</p>
-              <p className="text-t-body font-regular text-muted-foreground mb-4">Great time to follow up on leads or send an invoice.</p>
-              <div className="flex gap-3 justify-center">
-                <Button variant="outline" onClick={() => navigate("/leads")} data-testid="desktop-button-get-ahead" className="text-t-secondary font-semibold">
-                  <MessageSquare className="h-4 w-4 mr-1" />
-                  Follow Up
-                </Button>
-                <Button onClick={() => navigate("/invoices/new")} data-testid="desktop-button-send-invoice-caught-up" className="text-t-secondary font-semibold">
-                  <DollarSign className="h-4 w-4 mr-1" />
-                  Send Invoice
-                </Button>
               </div>
             </CardContent>
           </Card>
@@ -522,8 +438,10 @@ export function GamePlanDesktopView({
 
       {/* RIGHT COLUMN — Sidebar (4 cols) */}
       <div className="col-span-12 lg:col-span-4 space-y-6">
-        {/* Booking Link */}
-        <BookingLinkShare variant="primary" context="plan" />
+        {/* Booking Link — suppressed when NBA primary already drives Share Link */}
+        {!nbaDrivesShareLink && (
+          <BookingLinkShare variant="primary" context="plan" />
+        )}
 
         {/* Quick Actions */}
         <section>
