@@ -18,7 +18,6 @@ import {
 import { VoiceNoteSummarizer } from "@/components/ai/VoiceNoteSummarizer";
 import { CampaignSuggestionBanner } from "@/components/CampaignSuggestionBanner";
 import {
-  FileText,
   DollarSign,
   Briefcase,
   MessageSquare,
@@ -34,9 +33,14 @@ import {
   AlertTriangle,
   ArrowRight,
   TrendingUp,
-  Send,
-  Share2,
 } from "lucide-react";
+import {
+  formatCurrency,
+  getIconForType,
+  getStickyCtaInfo,
+  type ActionItem,
+  type GamePlanStats,
+} from "@/lib/stickyCta";
 import { AddServiceDialog } from "@/components/settings/AddServiceDialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
@@ -49,25 +53,6 @@ import { GamePlanDesktopView } from "@/components/game-plan/GamePlanDesktopView"
 import { NextBestActionCard, deriveNBAState } from "@/components/dashboard/NextBestActionCard";
 import type { NBAState } from "@/lib/nbaState";
 import { shouldDemoteNBAMoneyTone, shouldSuppressBookingLinkPrimary } from "@/lib/nbaStyling";
-
-interface ActionItem {
-  id: string;
-  type: "invoice" | "job" | "lead" | "reminder";
-  priority: number;
-  title: string;
-  subtitle: string;
-  actionLabel: string;
-  actionRoute: string;
-  urgency: "critical" | "high" | "normal";
-  amount?: number;
-}
-
-interface GamePlanStats {
-  jobsToday: number;
-  moneyCollectedToday: number;
-  moneyWaiting: number;
-  messagesToSend: number;
-}
 
 interface RecentItem {
   id: string;
@@ -111,15 +96,6 @@ interface NextAction {
   autoExecutedAt: string | null;
 }
 
-function formatCurrency(cents: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
-}
-
 function formatRelativeTime(dateStr: string): string {
   const date = new Date(dateStr);
   const now = new Date();
@@ -131,25 +107,6 @@ function formatRelativeTime(dateStr: string): string {
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays === 1) return "Yesterday";
   return `${diffDays} days ago`;
-}
-
-function getIconForType(type: string) {
-  switch (type) {
-    case "invoice":
-      return DollarSign;
-    case "job":
-      return Briefcase;
-    case "lead":
-      return MessageSquare;
-    case "reminder":
-      return MessageSquare;
-    case "invoice_paid":
-      return DollarSign;
-    case "job_completed":
-      return CheckCircle2;
-    default:
-      return FileText;
-  }
 }
 
 function getEntityLabel(entityType: string): string {
@@ -189,56 +146,6 @@ const itemVariants = {
   hidden: { opacity: 0, y: 16 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.25, 0.1, 0.25, 1] } },
 };
-
-function getNBAStickyCta(
-  state: NBAState,
-): { label: string; route: string; icon: typeof DollarSign } | null {
-  switch (state) {
-    case "NEW_USER":
-    case "NO_JOBS_YET":
-      return { label: "Share Booking Link", route: "/profile", icon: Share2 };
-    case "IN_PROGRESS":
-      return { label: "View Jobs", route: "/jobs", icon: Briefcase };
-    case "READY_TO_INVOICE":
-      return { label: "Create Invoice", route: "/invoices/new", icon: Send };
-    case "ACTIVE_USER":
-      return null;
-  }
-}
-
-function getStickyCtaInfo(
-  stats: GamePlanStats,
-  priorityItem: ActionItem | null,
-  nbaState: NBAState,
-): { label: string; route: string; icon: typeof DollarSign } | null {
-  if (stats.moneyWaiting > 0) {
-    return {
-      label: `Collect ${formatCurrency(stats.moneyWaiting)}`,
-      route: "/invoices",
-      icon: DollarSign,
-    };
-  }
-  if (priorityItem?.type === "invoice") {
-    return {
-      label: priorityItem.actionLabel,
-      route: priorityItem.actionRoute,
-      icon: DollarSign,
-    };
-  }
-  if (nbaState !== "ACTIVE_USER") {
-    const nbaSticky = getNBAStickyCta(nbaState);
-    if (nbaSticky) return nbaSticky;
-  }
-  if (priorityItem) {
-    const Icon = getIconForType(priorityItem.type);
-    return {
-      label: priorityItem.actionLabel,
-      route: priorityItem.actionRoute,
-      icon: Icon,
-    };
-  }
-  return null;
-}
 
 export default function TodaysGamePlanPage() {
   const [, navigate] = useLocation();
