@@ -337,6 +337,26 @@ export function GamePlanDesktopView({
               </div>
             </CardContent>
           </Card>
+        ) : !priorityItem && stats.moneyWaiting === 0 ? (
+          <Card className="border-0 shadow-sm bg-emerald-50/50 dark:bg-emerald-950/20" data-testid="desktop-card-all-caught-up">
+            <CardContent className="p-6 text-center">
+              <div className="h-14 w-14 rounded-2xl bg-emerald-500/15 flex items-center justify-center mx-auto mb-3">
+                <CheckCircle2 className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <p className="text-t-primary font-semibold text-foreground mb-1">You're all caught up</p>
+              <p className="text-t-body font-regular text-muted-foreground mb-4">Great time to follow up on leads or send an invoice.</p>
+              <div className="flex gap-3 justify-center">
+                <Button variant="outline" onClick={() => navigate("/leads")} data-testid="desktop-button-get-ahead" className="text-t-secondary font-semibold">
+                  <MessageSquare className="h-4 w-4 mr-1" />
+                  Follow Up
+                </Button>
+                <Button onClick={() => navigate("/invoices/new")} data-testid="desktop-button-send-invoice-caught-up" className="text-t-secondary font-semibold">
+                  <DollarSign className="h-4 w-4 mr-1" />
+                  Send Invoice
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         ) : null}
 
         {/* Up Next */}

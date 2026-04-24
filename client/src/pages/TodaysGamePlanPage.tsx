@@ -560,6 +560,46 @@ export default function TodaysGamePlanPage() {
                   </CardContent>
                 </Card>
               </motion.div>
+            ) : !priorityItem && stats.moneyWaiting === 0 ? (
+              <motion.div
+                key="caught-up"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+              >
+                <Card className="border-0 shadow-sm bg-emerald-50/50 dark:bg-emerald-950/20" data-testid="card-all-caught-up">
+                  <CardContent className="p-5 text-center">
+                    <div className="h-12 w-12 rounded-2xl bg-emerald-500/15 flex items-center justify-center mx-auto mb-3">
+                      <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <p className="text-t-primary font-semibold text-foreground mb-1">You're all caught up</p>
+                    <p className="text-t-body font-regular text-muted-foreground mb-4">
+                      Great time to follow up on leads or send an invoice.
+                    </p>
+                    <div className="flex gap-3 justify-center">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate("/leads")}
+                        data-testid="button-get-ahead"
+                        className="text-t-secondary font-semibold"
+                      >
+                        <MessageSquare className="h-4 w-4 mr-1" />
+                        Follow Up
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => navigate("/invoices/new")}
+                        data-testid="button-send-invoice-caught-up"
+                        className="text-t-secondary font-semibold"
+                      >
+                        <DollarSign className="h-4 w-4 mr-1" />
+                        Send Invoice
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
             ) : null}
           </AnimatePresence>
         </motion.section>
