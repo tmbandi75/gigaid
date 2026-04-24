@@ -71,7 +71,7 @@ export function deriveNBAState(
   return getNBAState(inputs);
 }
 
-const seenNBAStates = new Set<NBAState>();
+const seenNBAStates = new Set<string>();
 
 export function NextBestActionCard({
   summary,
@@ -93,8 +93,9 @@ export function NextBestActionCard({
   const bookingLink = bookingData?.bookingLink ?? null;
 
   useEffect(() => {
-    if (!seenNBAStates.has(state)) {
-      seenNBAStates.add(state);
+    const dedupeKey = `${userId ?? "anon"}:${state}`;
+    if (!seenNBAStates.has(dedupeKey)) {
+      seenNBAStates.add(dedupeKey);
       trackEvent("nba_shown", { state, userId });
     }
   }, [state, userId]);
