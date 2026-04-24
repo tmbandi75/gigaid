@@ -15,8 +15,8 @@ export interface NBAInputs {
 }
 
 export function getNBAState(data: NBAInputs): NBAState {
+  if (!data.hasClients && !data.hasJobs && !data.hasLinkShared) return "NEW_USER";
   if (data.hasLinkShared && !data.hasJobs) return "NO_JOBS_YET";
-  if (!data.hasClients && !data.hasJobs) return "NEW_USER";
   if (data.hasJobs && !data.hasCompletedJobs) return "IN_PROGRESS";
   if (data.hasUninvoicedCompletedJobs) return "READY_TO_INVOICE";
   if (data.hasInvoices || data.hasCompletedJobs) return "ACTIVE_USER";

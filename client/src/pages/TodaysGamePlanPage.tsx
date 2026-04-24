@@ -310,8 +310,15 @@ export default function TodaysGamePlanPage() {
 
   const firstTimeUserState = getFirstTimeUserState();
   const nbaState = deriveNBAState(dashboardSummary, user?.id);
-  const showNBACard = nbaState !== "ACTIVE_USER" || (!priorityItem && stats.moneyWaiting === 0);
-  const suppressBookingLinkPrimary = showNBACard;
+  // NBA card is the single dynamic activation card — always rendered.
+  const showNBACard = true;
+  // Suppress competing standalone Share Link primary only when NBA's primary
+  // CTA is itself Share Link (NEW_USER, NO_JOBS_YET) or Create Invoice
+  // (READY_TO_INVOICE — spec requires nearby Share Link to be demoted).
+  const suppressBookingLinkPrimary =
+    nbaState === "NEW_USER" ||
+    nbaState === "NO_JOBS_YET" ||
+    nbaState === "READY_TO_INVOICE";
 
   const stickyCtaInfo = useMemo(
     () => getStickyCtaInfo(stats, priorityItem, nbaState),
@@ -470,8 +477,8 @@ export default function TodaysGamePlanPage() {
           </motion.div>
         )}
 
-        {/* CARD 1 — Payment Card (Money First; active users only — first-timers served by NBA above) */}
-        {nbaState === "ACTIVE_USER" && stats.moneyWaiting > 0 && (
+        {/* CARD 1 — Payment Card (Money First) */}
+        {stats.moneyWaiting > 0 && (
           <motion.div variants={itemVariants}>
             <Card
               className="border-0 shadow-md overflow-visible bg-gradient-to-br from-emerald-50 to-emerald-50/30 dark:from-emerald-950/30 dark:to-emerald-950/10"
@@ -506,7 +513,7 @@ export default function TodaysGamePlanPage() {
         {/* CARD 2 — Priority Action (only for active users; first-timers are served by NBA above) */}
         <motion.section variants={itemVariants}>
           <AnimatePresence mode="wait">
-            {priorityItem && !(priorityItem.type === "invoice" && stats.moneyWaiting > 0) && nbaState === "ACTIVE_USER" ? (
+            {priorityItem && !(priorityItem.type === "invoice" && stats.moneyWaiting > 0) ? (
               <motion.div
                 key="priority"
                 initial={{ opacity: 0, y: 8 }}

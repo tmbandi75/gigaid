@@ -166,8 +166,15 @@ export function GamePlanDesktopView({
   userId,
 }: GamePlanDesktopViewProps) {
   const nbaState = deriveNBAState(dashboardSummary, userId);
-  const showNBACard = nbaState !== "ACTIVE_USER" || (!priorityItem && stats.moneyWaiting === 0);
-  const suppressBookingLinkPrimary = showNBACard;
+  // NBA card is the single dynamic activation card — always rendered.
+  const showNBACard = true;
+  // Suppress competing standalone Share Link primary only when NBA's primary
+  // CTA is itself Share Link (NEW_USER, NO_JOBS_YET) or Create Invoice
+  // (READY_TO_INVOICE — spec requires nearby Share Link to be demoted).
+  const suppressBookingLinkPrimary =
+    nbaState === "NEW_USER" ||
+    nbaState === "NO_JOBS_YET" ||
+    nbaState === "READY_TO_INVOICE";
   return (
     <div className="grid grid-cols-12 gap-6" data-testid="desktop-game-plan">
       {/* LEFT COLUMN — Primary content (8 cols) */}
@@ -272,7 +279,7 @@ export function GamePlanDesktopView({
         )}
 
         {/* Primary Action Card (active users only — first-timers are served by NBA above) */}
-        {nbaState === "ACTIVE_USER" && stats.moneyWaiting > 0 ? (
+        {stats.moneyWaiting > 0 ? (
           <Card
             className="border-0 shadow-md bg-gradient-to-br from-emerald-50 to-emerald-50/30 dark:from-emerald-950/30 dark:to-emerald-950/10"
             data-testid="desktop-card-payment"
@@ -291,7 +298,7 @@ export function GamePlanDesktopView({
               </Button>
             </CardContent>
           </Card>
-        ) : priorityItem && nbaState === "ACTIVE_USER" && !(priorityItem.type === "invoice" && stats.moneyWaiting > 0) ? (
+        ) : priorityItem && !(priorityItem.type === "invoice" && stats.moneyWaiting > 0) ? (
           <Card className="border-0 shadow-md" data-testid="desktop-card-priority-item">
             <CardContent className="p-6">
               <div className="flex items-center gap-2 mb-3">
