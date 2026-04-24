@@ -19,21 +19,16 @@ import { QUERY_KEYS } from "@/lib/queryKeys";
 import { apiFetch } from "@/lib/apiFetch";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { canShareContent, shareContent } from "@/lib/share";
+import { markBookingLinkShared } from "@/lib/bookingLinkShared";
 import {
-  hasSharedBookingLinkLocally,
-  markBookingLinkShared,
-} from "@/lib/bookingLinkShared";
-import { getNBAState, type NBAInputs, type NBAState } from "@/lib/nbaState";
+  deriveNBAState,
+  type DashboardSummary,
+} from "@/lib/nbaState";
+import { shouldFireNBAShown } from "@/lib/nbaAnalytics";
 
-export type DashboardSummary = {
-  totalJobs: number;
-  completedJobs: number;
-  totalInvoices: number;
-  sentInvoices: number;
-  hasClients?: boolean;
-  hasUninvoicedCompletedJobs?: boolean;
-  hasLinkShared?: boolean;
-};
+export type { DashboardSummary } from "@/lib/nbaState";
+export { deriveNBAState } from "@/lib/nbaState";
+
 
 interface CtaInfo {
   label: string;
@@ -55,24 +50,6 @@ interface NextBestActionCardProps {
   userId?: string;
 }
 
-export function deriveNBAState(
-  summary: DashboardSummary | undefined,
-  userId?: string,
-): NBAState {
-  const inputs: NBAInputs = {
-    hasClients: Boolean(summary?.hasClients),
-    hasJobs: (summary?.totalJobs ?? 0) > 0,
-    hasCompletedJobs: (summary?.completedJobs ?? 0) > 0,
-    hasUninvoicedCompletedJobs: Boolean(summary?.hasUninvoicedCompletedJobs),
-    hasInvoices: (summary?.totalInvoices ?? 0) > 0,
-    hasLinkShared:
-      Boolean(summary?.hasLinkShared) || hasSharedBookingLinkLocally(userId),
-  };
-  return getNBAState(inputs);
-}
-
-const seenNBAStates = new Set<string>();
-
 export function NextBestActionCard({
   summary,
   variant = "mobile",
@@ -93,9 +70,7 @@ export function NextBestActionCard({
   const bookingLink = bookingData?.bookingLink ?? null;
 
   useEffect(() => {
-    const dedupeKey = `${userId ?? "anon"}:${state}`;
-    if (!seenNBAStates.has(dedupeKey)) {
-      seenNBAStates.add(dedupeKey);
+    if (shouldFireNBAShown(userId, state)) {
       trackEvent("nba_shown", { state, userId });
     }
   }, [state, userId]);

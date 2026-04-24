@@ -44,6 +44,19 @@ const config: Config = {
       testTimeout: 10000,
       modulePathIgnorePatterns: ['<rootDir>/.cache/'],
     },
+    {
+      displayName: 'nba',
+      testEnvironment: 'jsdom',
+      testMatch: ['<rootDir>/tests/nba/**/*.test.ts'],
+      transform: {
+        '^.+\\.tsx?$': ['ts-jest', {
+          tsconfig: 'tsconfig.json',
+          diagnostics: false,
+        }],
+      },
+      testTimeout: 10000,
+      modulePathIgnorePatterns: ['<rootDir>/.cache/'],
+    },
   ],
 };
 
