@@ -252,7 +252,17 @@ Send My Booking Link: ${bookingUrl}
 type SendOutcome =
   | { kind: "sent"; body: string }
   | { kind: "canceled"; reason: string }
-  | { kind: "deferred"; reason: string };
+  | { kind: "deferred"; reason: string }
+  // "requeue" pushes the row back to scheduled with a new scheduledFor
+  // (e.g. first-booking email waiting on the user to add an email).
+  | { kind: "requeue"; reason: string; delayMinutes: number };
+
+// First-booking emails wait this long, max, for the user to supply an email
+// before we give up. Picked so a provider who finishes onboarding within a
+// week of claiming still receives the touch.
+export const FIRST_BOOKING_EMAIL_RESOLVE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+// Re-check cadence while waiting on a destination email.
+export const FIRST_BOOKING_EMAIL_RECHECK_MINUTES = 6 * 60;
 
 // Cancellation reasons surfaced via outbound_messages.failure_reason. Locked
 // strings — admin dashboards and tests both pattern-match these directly.
@@ -789,6 +799,26 @@ export async function processScheduledMessages(): Promise<number> {
             eq(outboundMessages.status, "queued"),
           ));
         logger.info(`[OutboundMessages] Canceled ${message.type} message ${message.id} (${outcome.reason})`);
+      } else if (outcome.kind === "requeue") {
+        // Push the row back to "scheduled" with a fresh scheduledFor so the
+        // worker re-evaluates after the delay. Atomic on queued so a racing
+        // sender can't get clobbered.
+        const nextRunAt = new Date(Date.now() + outcome.delayMinutes * 60_000).toISOString();
+        await db
+          .update(outboundMessages)
+          .set({
+            status: "scheduled",
+            scheduledFor: nextRunAt,
+            failureReason: outcome.reason.substring(0, 500),
+            updatedAt: new Date().toISOString(),
+          })
+          .where(and(
+            eq(outboundMessages.id, message.id),
+            eq(outboundMessages.status, "queued"),
+          ));
+        logger.info(
+          `[OutboundMessages] Requeued ${message.type} message ${message.id} for ${nextRunAt} (${outcome.reason})`,
+        );
       }
       // "deferred" leaves it as "queued" for the next worker tick (e.g. no provider configured).
 
@@ -942,10 +972,26 @@ async function attemptSendMessage(message: OutboundMessage): Promise<SendOutcome
       // cancel rather than spam the sentinel inbox.
       const liveEmail = allowedUser?.email?.trim();
       if (!liveEmail || liveEmail.endsWith("@first-booking.local")) {
+        // Don't permanently drop the touch the moment it dequeues — the
+        // provider may still be in onboarding. Push the row back to
+        // `scheduled` and re-check on a fixed cadence, up to a 7-day
+        // window from the row's creation. After that, give up.
+        const createdAtMs = message.createdAt ? Date.parse(message.createdAt) : Date.now();
+        const ageMs = Date.now() - createdAtMs;
+        if (ageMs >= FIRST_BOOKING_EMAIL_RESOLVE_WINDOW_MS) {
+          logger.info(
+            `[OutboundMessages] Cancel ${message.id}: first-booking email destination never resolved (>${Math.round(FIRST_BOOKING_EMAIL_RESOLVE_WINDOW_MS / 86_400_000)}d)`,
+          );
+          return { kind: "canceled", reason: CANCEL_REASONS.USER_NOT_FOUND };
+        }
         logger.info(
-          `[OutboundMessages] Cancel ${message.id}: first-booking email has no destination yet`,
+          `[OutboundMessages] Requeue ${message.id}: first-booking email waiting on user.email`,
         );
-        return { kind: "canceled", reason: CANCEL_REASONS.USER_NOT_FOUND };
+        return {
+          kind: "requeue",
+          reason: "awaiting_email",
+          delayMinutes: FIRST_BOOKING_EMAIL_RECHECK_MINUTES,
+        };
       }
       let bookingUrl = "";
       if (message.metadata) {
