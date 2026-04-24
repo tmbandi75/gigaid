@@ -1,0 +1,121 @@
+You are updating the GigAid mobile web app UI.
+
+Your goal is to implement a STRICT typography system across the dashboard screen shown.
+
+DO NOT redesign layout.
+DO NOT change colors.
+DO NOT change spacing unless required for readability.
+ONLY update font sizes, weights, and hierarchy.
+
+-------------------------------------
+1. DEFINE GLOBAL TYPOGRAPHY SYSTEM
+-------------------------------------
+
+Use EXACTLY these font tokens:
+
+Hero:
+- font-size: 30px
+- line-height: 36px
+- font-weight: 700
+
+Primary:
+- font-size: 20px
+- line-height: 28px
+- font-weight: 600
+
+Secondary:
+- font-size: 16px
+- line-height: 24px
+- font-weight: 500
+
+Body:
+- font-size: 14px
+- line-height: 20px
+- font-weight: 400
+
+Meta:
+- font-size: 12px
+- line-height: 16px
+- font-weight: 400
+
+-------------------------------------
+2. APPLY TYPOGRAPHY TO EXISTING UI
+-------------------------------------
+
+Top Section:
+- "Good evening, Alex" → Meta
+- "You earned $80 this week. One more job gets you past $100." → Hero
+
+Banner:
+- "Get Your First Paid Booking in 24 Hours" → Body
+
+-------------------------------------
+
+"You're all caught up" Card:
+- Title → Primary
+- Subtext ("Great time to follow up...") → Body
+- Buttons ("Follow Up", "Send Invoice") → Secondary
+
+-------------------------------------
+
+"Today at a glance":
+- Section title → Primary
+- Numbers (e.g. "0") → Hero
+- Labels ("jobs today", "to send") → Meta
+
+-------------------------------------
+
+"Quick Actions":
+- Section title → Primary
+- Action titles ("New Job", "Invoice") → Secondary
+- Subtext ("Create a job", "Send & get paid") → Meta
+
+-------------------------------------
+3. ENFORCE TYPOGRAPHY RULES
+-------------------------------------
+
+- ONLY one Hero text allowed per screen (exception: numeric metrics)
+- Numbers MUST be larger than their labels
+- No custom font sizes allowed outside defined tokens
+- Maintain clear contrast between each level
+- If two elements look similar in size, fix it
+
+-------------------------------------
+4. IMPLEMENTATION DETAILS
+-------------------------------------
+
+If using Tailwind:
+
+Add to tailwind.config.js:
+
+fontSize: {
+  hero: ['30px', { lineHeight: '36px' }],
+  primary: ['20px', { lineHeight: '28px' }],
+  secondary: ['16px', { lineHeight: '24px' }],
+  body: ['14px', { lineHeight: '20px' }],
+  meta: ['12px', { lineHeight: '16px' }],
+}
+
+fontWeight: {
+  regular: 400,
+  medium: 500,
+  semibold: 600,
+  bold: 700,
+}
+
+-------------------------------------
+5. VALIDATION CHECK (MANDATORY)
+-------------------------------------
+
+Before finishing, verify:
+
+- Can a user scan the screen in under 3 seconds?
+- Do the most important numbers stand out immediately?
+- Is there a clear top → middle → bottom hierarchy?
+- Is there ZERO ambiguity between text levels?
+
+If not, adjust within the defined system.
+
+-------------------------------------
+
+Final output: Updated UI with consistent typography hierarchy and no visual conflicts.
