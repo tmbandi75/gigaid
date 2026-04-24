@@ -87,6 +87,19 @@ export default {
         serif: ["var(--font-serif)"],
         mono: ["var(--font-mono)"],
       },
+      fontSize: {
+        "t-hero": ["30px", { lineHeight: "36px" }],
+        "t-primary": ["20px", { lineHeight: "28px" }],
+        "t-secondary": ["16px", { lineHeight: "24px" }],
+        "t-body": ["14px", { lineHeight: "20px" }],
+        "t-meta": ["12px", { lineHeight: "16px" }],
+      },
+      fontWeight: {
+        regular: "400",
+        medium: "500",
+        semibold: "600",
+        bold: "700",
+      },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },

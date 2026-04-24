@@ -151,14 +151,14 @@ export function FirstDollarBanner() {
       <button
         type="button"
         onClick={() => navigate("/")}
-        className="flex min-w-0 flex-1 items-start gap-2 px-3 py-2 text-left text-sm hover-elevate sm:items-center sm:justify-center sm:px-4 sm:text-center"
+        className="flex min-w-0 flex-1 items-start gap-2 px-3 py-2 text-left hover-elevate sm:items-center sm:justify-center sm:px-4 sm:text-center"
         data-testid="banner-first-dollar"
       >
         <Target className="mt-0.5 h-4 w-4 shrink-0 sm:mt-0" />
-        <span className="min-w-0 flex-1 font-medium leading-snug sm:flex-none sm:text-center">
+        <span className="min-w-0 flex-1 text-t-body font-medium leading-snug sm:flex-none sm:text-center">
           Get Your First Paid Booking in 24 Hours
         </span>
-        <span className="hidden shrink-0 sm:inline text-blue-500 dark:text-blue-400">
+        <span className="hidden shrink-0 sm:inline text-t-meta font-regular text-blue-500 dark:text-blue-400">
           — Complete setup to unlock clients
         </span>
       </button>

@@ -312,15 +312,15 @@ export default function TodaysGamePlanPage() {
       {/* Header */}
       {isMobile ? (
         <div className="px-5 pt-6 pb-5 bg-background">
-          <p className="text-sm text-muted-foreground mb-0.5" data-testid="text-greeting">{greeting}</p>
-          <h1 className="text-xl font-bold text-foreground" data-testid="text-encouragement-subtitle">{subtitleText}</h1>
+          <p className="text-t-meta font-regular text-muted-foreground mb-0.5" data-testid="text-greeting">{greeting}</p>
+          <h1 className="text-t-hero font-bold text-foreground" data-testid="text-encouragement-subtitle">{subtitleText}</h1>
           <CoachingRenderer screen="dashboard" />
         </div>
       ) : (
         <div className="border-b bg-background sticky top-0 z-[999]">
           <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
-            <p className="text-sm text-muted-foreground mb-0.5" data-testid="text-greeting">{greeting}</p>
-            <h1 className="text-xl font-bold text-foreground" data-testid="text-encouragement-subtitle-desktop">{subtitleText}</h1>
+            <p className="text-t-meta font-regular text-muted-foreground mb-0.5" data-testid="text-greeting">{greeting}</p>
+            <h1 className="text-t-hero font-bold text-foreground" data-testid="text-encouragement-subtitle-desktop">{subtitleText}</h1>
             <CoachingRenderer screen="dashboard" />
           </div>
         </div>
@@ -647,8 +647,8 @@ export default function TodaysGamePlanPage() {
                     <div className="h-12 w-12 rounded-2xl bg-emerald-500/15 flex items-center justify-center mx-auto mb-3">
                       <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                     </div>
-                    <p className="font-semibold text-foreground mb-1">You're all caught up</p>
-                    <p className="text-sm text-muted-foreground mb-4">
+                    <p className="text-t-primary font-semibold text-foreground mb-1">You're all caught up</p>
+                    <p className="text-t-body font-regular text-muted-foreground mb-4">
                       Great time to follow up on leads or send an invoice.
                     </p>
                     <div className="flex gap-3 justify-center">
@@ -657,6 +657,7 @@ export default function TodaysGamePlanPage() {
                         size="sm"
                         onClick={() => navigate("/leads")}
                         data-testid="button-get-ahead"
+                        className="text-t-secondary font-semibold"
                       >
                         <MessageSquare className="h-4 w-4 mr-1" />
                         Follow Up
@@ -665,6 +666,7 @@ export default function TodaysGamePlanPage() {
                         size="sm"
                         onClick={() => navigate("/invoices/new")}
                         data-testid="button-send-invoice-caught-up"
+                        className="text-t-secondary font-semibold"
                       >
                         <DollarSign className="h-4 w-4 mr-1" />
                         Send Invoice
@@ -680,7 +682,7 @@ export default function TodaysGamePlanPage() {
         {/* CARD 3 — Up Next (secondary actions) */}
         {upNextItems.length > 0 && (
           <motion.section variants={itemVariants}>
-            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">Up Next</h2>
+            <h2 className="text-t-primary font-semibold text-muted-foreground mb-2 px-1">Up Next</h2>
             <div className="space-y-2">
               {upNextItems.slice(0, 3).map((item) => {
                 const Icon = getIconForType(item.type);
@@ -716,7 +718,7 @@ export default function TodaysGamePlanPage() {
         {/* CARD 4 — Smart Suggestions */}
         {nextActions.length > 0 && (
           <motion.section variants={itemVariants}>
-            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1 flex items-center gap-2">
+            <h2 className="text-t-primary font-semibold text-muted-foreground mb-2 px-1 flex items-center gap-2">
               <Sparkles className="h-3.5 w-3.5 text-violet-500" />
               Smart Suggestions
             </h2>
@@ -782,7 +784,7 @@ export default function TodaysGamePlanPage() {
         {/* Stats grid - compact */}
         {firstTimeUserState === "normal" && (
           <motion.section variants={itemVariants}>
-            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">Today at a Glance</h2>
+            <h2 className="text-t-primary font-semibold text-muted-foreground mb-2 px-1">Today at a Glance</h2>
             <div className="grid grid-cols-2 gap-2">
               <Card className="border shadow-sm" data-testid="stat-jobs-today">
                 <CardContent className="p-3 flex items-center gap-3">
@@ -790,8 +792,8 @@ export default function TodaysGamePlanPage() {
                     <Briefcase className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-foreground leading-tight">{stats.jobsToday}</p>
-                    <p className="text-xs text-muted-foreground">jobs today</p>
+                    <p className="text-t-hero font-bold text-foreground leading-tight">{stats.jobsToday}</p>
+                    <p className="text-t-meta font-regular text-muted-foreground">jobs today</p>
                   </div>
                 </CardContent>
               </Card>
@@ -801,8 +803,8 @@ export default function TodaysGamePlanPage() {
                     <MessageSquare className="h-4 w-4 text-violet-600 dark:text-violet-400" />
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-foreground leading-tight">{stats.messagesToSend}</p>
-                    <p className="text-xs text-muted-foreground">to send</p>
+                    <p className="text-t-hero font-bold text-foreground leading-tight">{stats.messagesToSend}</p>
+                    <p className="text-t-meta font-regular text-muted-foreground">to send</p>
                   </div>
                 </CardContent>
               </Card>
@@ -812,7 +814,7 @@ export default function TodaysGamePlanPage() {
 
         {/* Quick Actions - thumb-friendly grid */}
         <motion.section variants={itemVariants}>
-          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">Quick Actions</h2>
+          <h2 className="text-t-primary font-semibold text-muted-foreground mb-2 px-1">Quick Actions</h2>
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => navigate("/jobs/new")}
@@ -822,8 +824,8 @@ export default function TodaysGamePlanPage() {
               <div className="h-11 w-11 rounded-xl bg-blue-500/10 flex items-center justify-center">
                 <Plus className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
-              <span className="text-xs font-semibold text-foreground">New Job</span>
-              <span className="text-[11px] text-muted-foreground -mt-1">Create a job</span>
+              <span className="text-t-secondary font-semibold text-foreground">New Job</span>
+              <span className="text-t-meta font-regular text-muted-foreground -mt-1">Create a job</span>
             </button>
             <button
               onClick={() => navigate("/invoices/new")}
@@ -833,8 +835,8 @@ export default function TodaysGamePlanPage() {
               <div className="h-11 w-11 rounded-xl bg-emerald-500/10 flex items-center justify-center">
                 <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <span className="text-xs font-semibold text-foreground">Invoice</span>
-              <span className="text-[11px] text-muted-foreground -mt-1">Send & get paid</span>
+              <span className="text-t-secondary font-semibold text-foreground">Invoice</span>
+              <span className="text-t-meta font-regular text-muted-foreground -mt-1">Send & get paid</span>
             </button>
             <button
               onClick={() => navigate("/reminders")}
@@ -844,8 +846,8 @@ export default function TodaysGamePlanPage() {
               <div className="h-11 w-11 rounded-xl bg-violet-500/10 flex items-center justify-center">
                 <MessageSquare className="h-5 w-5 text-violet-600 dark:text-violet-400" />
               </div>
-              <span className="text-xs font-semibold text-foreground">Message</span>
-              <span className="text-[11px] text-muted-foreground -mt-1">Text clients</span>
+              <span className="text-t-secondary font-semibold text-foreground">Message</span>
+              <span className="text-t-meta font-regular text-muted-foreground -mt-1">Text clients</span>
             </button>
             <button
               onClick={() => setShowVoiceNotes(true)}
@@ -855,8 +857,8 @@ export default function TodaysGamePlanPage() {
               <div className="h-11 w-11 rounded-xl bg-amber-500/10 flex items-center justify-center">
                 <Mic className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
-              <span className="text-xs font-semibold text-foreground">Voice</span>
-              <span className="text-[11px] text-muted-foreground -mt-1">Speak notes</span>
+              <span className="text-t-secondary font-semibold text-foreground">Voice</span>
+              <span className="text-t-meta font-regular text-muted-foreground -mt-1">Speak notes</span>
             </button>
           </div>
         </motion.section>
@@ -864,7 +866,7 @@ export default function TodaysGamePlanPage() {
         {/* Done Recently */}
         {recentlyCompleted.length > 0 && (
           <motion.section variants={itemVariants}>
-            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">Done Recently</h2>
+            <h2 className="text-t-primary font-semibold text-muted-foreground mb-2 px-1">Done Recently</h2>
             <div className="space-y-1">
               {recentlyCompleted.map((item) => {
                 const Icon = getIconForType(item.type);
