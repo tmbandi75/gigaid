@@ -28,6 +28,7 @@ import {
   Receipt,
   UserCheck,
   BarChart3,
+  MessageSquare,
 } from "lucide-react";
 import { apiFetch } from "@/lib/apiFetch";
 import { QUERY_KEYS } from "@/lib/queryKeys";
@@ -289,6 +290,18 @@ export default function AdminCockpit() {
             <Link href="/admin/analytics" data-testid="link-view-analytics">
               <BarChart3 className="h-4 w-4" />
               View Analytics
+            </Link>
+          </Button>
+          <Button variant="outline" className="gap-2" asChild>
+            <Link href="/admin/growth" data-testid="link-growth-engine">
+              <TrendingUp className="h-4 w-4" />
+              Growth Engine
+            </Link>
+          </Button>
+          <Button variant="outline" className="gap-2" asChild>
+            <Link href="/admin/sms" data-testid="link-sms-health">
+              <MessageSquare className="h-4 w-4" />
+              SMS Health
             </Link>
           </Button>
           <Button
