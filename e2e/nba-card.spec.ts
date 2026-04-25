@@ -354,6 +354,77 @@ test.describe('Next Best Action card UI', () => {
         }
       }
 
+      type NavigatorShareStub = Navigator & { share?: (data: unknown) => Promise<void> };
+
+      test(`fires booking_link_share_opened on tap and booking_link_shared only on share success (${viewport.name})`, async ({ page }) => {
+        const newUser = NBA_EXPECTATIONS.find((e) => e.state === 'NEW_USER')!;
+        await page.addInitScript(() => {
+          (navigator as NavigatorShareStub).share = () => Promise.resolve();
+        });
+        await installHarnessStubs(page, buildGamePlanResponse(newUser));
+        await gotoHarness(page, viewport.variant);
+        await clearCapturedAnalytics(page);
+
+        await page.locator('[data-testid="button-nba-primary"]').click();
+        await page.waitForTimeout(300);
+
+        const events = await getCapturedAnalytics(page);
+        const opened = events.filter((e) => e.eventName === 'booking_link_share_opened');
+        const completed = events.filter((e) => e.eventName === 'booking_link_shared');
+
+        expect(opened).toHaveLength(1);
+        expect(opened[0].properties).toMatchObject({ screen: 'nba' });
+        expect(completed).toHaveLength(1);
+        expect(completed[0].properties).toMatchObject({ screen: 'nba', method: 'share' });
+      });
+
+      test(`emits opened + completed with method 'copy' when the share API is unavailable (${viewport.name})`, async ({ page }) => {
+        const newUser = NBA_EXPECTATIONS.find((e) => e.state === 'NEW_USER')!;
+        // Force the no-Web-Share-API path so the Share CTA falls back to copy.
+        await page.addInitScript(() => {
+          Reflect.deleteProperty(navigator as NavigatorShareStub, 'share');
+        });
+        await installHarnessStubs(page, buildGamePlanResponse(newUser));
+        await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+        await gotoHarness(page, viewport.variant);
+        await clearCapturedAnalytics(page);
+
+        await page.locator('[data-testid="button-nba-primary"]').click();
+        await page.waitForTimeout(300);
+
+        const events = await getCapturedAnalytics(page);
+        const opened = events.filter((e) => e.eventName === 'booking_link_share_opened');
+        const completed = events.filter((e) => e.eventName === 'booking_link_shared');
+        const copied = events.filter((e) => e.eventName === 'booking_link_copied');
+
+        expect(opened).toHaveLength(1);
+        expect(opened[0].properties).toMatchObject({ screen: 'nba' });
+        expect(completed).toHaveLength(1);
+        expect(completed[0].properties).toMatchObject({ screen: 'nba', method: 'copy' });
+        expect(copied).toHaveLength(1);
+      });
+
+      test(`does NOT fire booking_link_shared when the share sheet is cancelled (${viewport.name})`, async ({ page }) => {
+        const newUser = NBA_EXPECTATIONS.find((e) => e.state === 'NEW_USER')!;
+        // A rejected navigator.share simulates the user dismissing the sheet.
+        await page.addInitScript(() => {
+          (navigator as NavigatorShareStub).share = () => Promise.reject(new Error('AbortError'));
+        });
+        await installHarnessStubs(page, buildGamePlanResponse(newUser));
+        await gotoHarness(page, viewport.variant);
+        await clearCapturedAnalytics(page);
+
+        await page.locator('[data-testid="button-nba-primary"]').click();
+        await page.waitForTimeout(300);
+
+        const events = await getCapturedAnalytics(page);
+        const opened = events.filter((e) => e.eventName === 'booking_link_share_opened');
+        const completed = events.filter((e) => e.eventName === 'booking_link_shared');
+
+        expect(opened).toHaveLength(1);
+        expect(completed).toHaveLength(0);
+      });
+
       // Payment-card scenario: with money waiting, the standalone payment card
       // appears exactly once alongside (not duplicating) the NBA card.
       test(`renders exactly one NBA card and one payment card when money is waiting (${viewport.name})`, async ({ page }) => {

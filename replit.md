@@ -72,8 +72,8 @@ Emoji usage is restricted to user-facing presentation layers, limited to one per
 
 The Admin Analytics page (`/admin/analytics`) includes a "Booking Link Share Funnel" card sourced from `events_canonical`. Three event names back the report:
 
-- `booking_link_share_tap` — emitted when the Share button is pressed (server: `POST /api/track/booking-link-share-tap`, mirrored on the client by the PostHog `booking_link_shared` event).
-- `booking_link_share_completed` — emitted on every successful share-sheet send or copy (server: `POST /api/track/booking-link-shared`). The legacy once-per-user `booking_link_shared` milestone event still flips `users.booking_link_shared_at`, but the funnel report uses `booking_link_share_completed` so the conversion rate is not skewed.
+- `booking_link_share_tap` — emitted when the Share button is pressed (server: `POST /api/track/booking-link-share-tap`, mirrored on the client by the PostHog `booking_link_share_opened` event). Fires on tap regardless of whether the share sheet is confirmed or cancelled.
+- `booking_link_share_completed` — emitted on every successful share-sheet send or copy (server: `POST /api/track/booking-link-shared`). The client mirrors completions with the PostHog `booking_link_shared` event, which (per Task #98) only fires after the OS share sheet returns success — or after a successful copy when share isn't available. The legacy once-per-user `booking_link_shared` milestone event still flips `users.booking_link_shared_at`, but the funnel report uses `booking_link_share_completed` so the conversion rate is not skewed.
 - `booking_link_copied` — emitted on every booking-link copy (server: `POST /api/track/booking-link-copied`, also mirrored as the PostHog `booking_link_copied` event).
 
 All three carry a `screen` field (`plan`, `leads`, `leads_empty`, `jobs`, `bookings`, `nba`, `other`, `unknown`) so the admin page can break down the funnel by surface. The aggregation endpoint is `GET /api/admin/analytics/share-funnel?days=N`.

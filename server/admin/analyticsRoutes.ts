@@ -557,8 +557,8 @@ router.get("/share-funnel", adminMiddleware, async (req: AdminRequest, res: Resp
       series,
       platformSeries,
       notes: {
-        taps: "Counts every press of the Share button (server-recorded via /api/track/booking-link-share-tap). The PostHog `booking_link_shared` event mirrors this on the client.",
-        completions: "Counts every successful share-sheet send OR copy that calls /api/track/booking-link-shared. Older `booking_link_shared` milestone events (one per user) are excluded so the rate is not skewed.",
+        taps: "Counts every press of the Share button (server-recorded via /api/track/booking-link-share-tap). On the client this is mirrored as the PostHog `booking_link_share_opened` event — fired on tap regardless of whether the share sheet is confirmed or cancelled.",
+        completions: "Counts every confirmed share-sheet send OR successful copy fallback that calls /api/track/booking-link-shared. The client mirrors this with the PostHog `booking_link_shared` event, which now only fires after the OS share sheet returns success (or after a successful copy when share isn't available) — cancelled share sheets are no longer counted (Task #98). Older `booking_link_shared` milestone events (one per user) are excluded so the rate is not skewed.",
         copies: "Counts every booking link copy via /api/track/booking-link-copied (also mirrored as PostHog `booking_link_copied`).",
         platforms: "Device platform comes from the `X-Client-Platform` request header (web/ios/android). Events recorded before this breakdown shipped have no platform tag and surface as `unknown`.",
         series: "Daily rollup of taps/completions/copies across all surfaces. `platformSeries` provides the same daily rollup faceted per platform so trends can be compared across web/ios/android.",

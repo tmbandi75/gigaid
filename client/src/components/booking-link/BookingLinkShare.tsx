@@ -45,8 +45,8 @@ export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
   const invalidateGamePlan = () =>
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboardGamePlan() });
 
-  const handleCopy = async () => {
-    if (!bookingLink) return;
+  const handleCopy = async (): Promise<boolean> => {
+    if (!bookingLink) return false;
 
     const { copied: copiedOk } = await copyBookingLinkToClipboard({
       bookingLink,
@@ -64,27 +64,31 @@ export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
         title: "Link copied",
         description: encouragement || "Your booking link is ready to share",
       });
-    } else {
-      toast({
-        title: "Couldn't copy",
-        description: "Please copy the link manually",
-        variant: "destructive",
-      });
+      return true;
     }
+    toast({
+      title: "Couldn't copy",
+      description: "Please copy the link manually",
+      variant: "destructive",
+    });
+    return false;
   };
 
   const handleShare = async () => {
     if (!bookingLink) return;
 
-    trackEvent('booking_link_shared', { screen: context });
+    trackEvent('booking_link_share_opened', { screen: context });
     void recordShareTap(context);
 
     if (!canShareContent()) {
-      await handleCopy();
+      const copiedOk = await handleCopy();
+      if (copiedOk) {
+        trackEvent('booking_link_shared', { screen: context, method: 'copy' });
+      }
       return;
     }
 
-    await attemptShareBookingLink({
+    const { shared } = await attemptShareBookingLink({
       bookingLink,
       shareTitle: variant === "primary" ? "Book my services" : "Book with me",
       shareText: variant === "primary"
@@ -95,6 +99,9 @@ export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
       onLocalMark: invalidateGamePlan,
       onApiSuccess: invalidateGamePlan,
     });
+    if (shared) {
+      trackEvent('booking_link_shared', { screen: context, method: 'share' });
+    }
   };
 
   const supportsShare = canShareContent();

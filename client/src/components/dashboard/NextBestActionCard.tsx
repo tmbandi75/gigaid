@@ -83,14 +83,14 @@ export function NextBestActionCard({
   const invalidateGamePlan = () =>
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboardGamePlan() });
 
-  const doCopy = async () => {
+  const doCopy = async (): Promise<boolean> => {
     if (!bookingLink) {
       toast({
         title: "Booking link not ready yet",
         description: "Add a service first to generate your booking link.",
       });
       navigate("/profile");
-      return;
+      return false;
     }
     const { copied: ok } = await copyBookingLinkToClipboard({
       bookingLink,
@@ -105,13 +105,14 @@ export function NextBestActionCard({
       });
       trackEvent("booking_link_copied", { screen: "nba" });
       void recordCopy("nba");
-    } else {
-      toast({
-        title: "Couldn't copy",
-        description: "Please copy the link manually",
-        variant: "destructive",
-      });
+      return true;
     }
+    toast({
+      title: "Couldn't copy",
+      description: "Please copy the link manually",
+      variant: "destructive",
+    });
+    return false;
   };
 
   const doShare = async () => {
@@ -123,13 +124,16 @@ export function NextBestActionCard({
       navigate("/profile");
       return;
     }
-    trackEvent("booking_link_shared", { screen: "nba" });
+    trackEvent("booking_link_share_opened", { screen: "nba" });
     void recordShareTap("nba");
     if (!canShareContent()) {
-      await doCopy();
+      const copiedOk = await doCopy();
+      if (copiedOk) {
+        trackEvent("booking_link_shared", { screen: "nba", method: "copy" });
+      }
       return;
     }
-    await attemptShareBookingLink({
+    const { shared } = await attemptShareBookingLink({
       bookingLink,
       shareTitle: "Book my services",
       shareText: "Schedule a job with me using this link:",
@@ -138,19 +142,24 @@ export function NextBestActionCard({
       onLocalMark: invalidateGamePlan,
       onApiSuccess: invalidateGamePlan,
     });
+    if (shared) {
+      trackEvent("booking_link_shared", { screen: "nba", method: "share" });
+    }
   };
-
-  const supportsNativeShare = canShareContent();
 
   const shareLinkPrimary: CtaInfo = {
     label: "Share Link",
     icon: Share2,
-    onClick: supportsNativeShare ? doShare : doCopy,
+    onClick: async () => {
+      await doShare();
+    },
   };
   const copyLinkSecondary: CtaInfo = {
     label: "Copy Link",
     icon: Copy,
-    onClick: doCopy,
+    onClick: async () => {
+      await doCopy();
+    },
   };
 
   const content: NBAContent = (() => {
@@ -210,7 +219,9 @@ export function NextBestActionCard({
           secondary: {
             label: "Share Link",
             icon: Share2,
-            onClick: supportsNativeShare ? doShare : doCopy,
+            onClick: async () => {
+              await doShare();
+            },
           },
           tone: "neutral",
         };
