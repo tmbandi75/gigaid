@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { QUERY_KEYS } from "@/lib/queryKeys";
-import { TrendingUp, Users, DollarSign, BarChart3, Target, Loader2, Sparkles, ArrowUpRight, Share2 } from "lucide-react";
+import { TrendingUp, Users, DollarSign, BarChart3, Target, Loader2, Sparkles, ArrowUpRight, ArrowLeft, Share2 } from "lucide-react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 interface RevenueSummary {
@@ -381,7 +382,14 @@ export default function AdminAnalytics() {
           </h1>
           <p className="text-muted-foreground mt-1">Revenue, funnels, and cohort analysis</p>
         </div>
-        <Select value={days} onValueChange={setDays}>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" className="gap-2" asChild>
+            <Link href="/admin/cockpit" data-testid="link-back-to-cockpit">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Dashboard
+            </Link>
+          </Button>
+          <Select value={days} onValueChange={setDays}>
           <SelectTrigger className="w-36 h-10 rounded-xl" data-testid="select-days">
             <SelectValue />
           </SelectTrigger>
@@ -391,6 +399,7 @@ export default function AdminAnalytics() {
             <SelectItem value="90" data-testid="select-option-90">Last 90 days</SelectItem>
           </SelectContent>
         </Select>
+        </div>
       </div>
 
       {isLoading ? (
