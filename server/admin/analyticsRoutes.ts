@@ -398,12 +398,18 @@ router.get("/share-funnel", adminMiddleware, async (req: AdminRequest, res: Resp
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
     const startDateStr = startDate.toISOString();
+    // Day bucket boundary used to seed the empty time series. We zero out the
+    // hour to keep the per-day buckets aligned with the LEFT(occurred_at, 10)
+    // grouping below regardless of the request time of day.
+    const seriesStart = new Date(startDate);
+    seriesStart.setUTCHours(0, 0, 0, 0);
 
     const result = await db.execute(sql`
       SELECT
         event_name,
         COALESCE(NULLIF(context::jsonb ->> 'screen', ''), 'unknown') AS screen,
         COALESCE(NULLIF(context::jsonb ->> 'platform', ''), 'unknown') AS platform,
+        LEFT(occurred_at, 10) AS day,
         COUNT(*) AS event_count
       FROM events_canonical
       WHERE event_name IN (
@@ -415,13 +421,15 @@ router.get("/share-funnel", adminMiddleware, async (req: AdminRequest, res: Resp
       GROUP BY
         event_name,
         COALESCE(NULLIF(context::jsonb ->> 'screen', ''), 'unknown'),
-        COALESCE(NULLIF(context::jsonb ->> 'platform', ''), 'unknown')
+        COALESCE(NULLIF(context::jsonb ->> 'platform', ''), 'unknown'),
+        LEFT(occurred_at, 10)
     `);
 
     const rows = result.rows as Array<{
       event_name: string;
       screen: string;
       platform: string;
+      day: string;
       event_count: string | number;
     }>;
 
@@ -436,9 +444,37 @@ router.get("/share-funnel", adminMiddleware, async (req: AdminRequest, res: Resp
       else if (eventName === "booking_link_copied") bucket.copies += count;
     };
 
+    // Build a continuous list of day buckets (YYYY-MM-DD) covering the
+    // requested window so the chart has a stable x-axis even on days with no
+    // share activity. We compute it inclusively from the bucket-aligned
+    // window start through today (UTC).
+    const dayBuckets: string[] = [];
+    {
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      const cursor = new Date(seriesStart);
+      while (cursor.getTime() <= today.getTime()) {
+        dayBuckets.push(cursor.toISOString().slice(0, 10));
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+      }
+    }
+
+    const makeEmptyDayMap = (): Map<string, Counts> => {
+      const m = new Map<string, Counts>();
+      for (const d of dayBuckets) m.set(d, { taps: 0, completions: 0, copies: 0 });
+      return m;
+    };
+
+    // Total per-day series and per-platform per-day series so the frontend
+    // can render an aggregate trend or filter to a single platform without a
+    // second request.
+    const totalsByDay = makeEmptyDayMap();
+    const byPlatformByDay = new Map<string, Map<string, Counts>>();
+
     for (const row of rows) {
       const screen = row.screen || "unknown";
       const platform = row.platform || "unknown";
+      const day = row.day;
       const count = Number(row.event_count) || 0;
 
       const surface = bySurface.get(screen) ?? { taps: 0, completions: 0, copies: 0 };
@@ -450,6 +486,21 @@ router.get("/share-funnel", adminMiddleware, async (req: AdminRequest, res: Resp
       byPlatform.set(platform, platformBucket);
 
       bumpCounts(totals, row.event_name, count);
+
+      if (day && totalsByDay.has(day)) {
+        bumpCounts(totalsByDay.get(day)!, row.event_name, count);
+      }
+
+      if (day) {
+        let platformDays = byPlatformByDay.get(platform);
+        if (!platformDays) {
+          platformDays = makeEmptyDayMap();
+          byPlatformByDay.set(platform, platformDays);
+        }
+        if (platformDays.has(day)) {
+          bumpCounts(platformDays.get(day)!, row.event_name, count);
+        }
+      }
     }
 
     const tapToCompletionRate =
@@ -477,6 +528,22 @@ router.get("/share-funnel", adminMiddleware, async (req: AdminRequest, res: Resp
       }))
       .sort((a, b) => b.taps + b.completions + b.copies - (a.taps + a.completions + a.copies));
 
+    const series = dayBuckets.map((date) => {
+      const counts = totalsByDay.get(date)!;
+      return { date, taps: counts.taps, completions: counts.completions, copies: counts.copies };
+    });
+
+    const platformSeries: Record<
+      string,
+      Array<{ date: string; taps: number; completions: number; copies: number }>
+    > = {};
+    Array.from(byPlatformByDay.entries()).forEach(([platform, dayMap]) => {
+      platformSeries[platform] = dayBuckets.map((date) => {
+        const counts = dayMap.get(date)!;
+        return { date, taps: counts.taps, completions: counts.completions, copies: counts.copies };
+      });
+    });
+
     res.json({
       period: `Last ${days} days`,
       totals: {
@@ -487,11 +554,14 @@ router.get("/share-funnel", adminMiddleware, async (req: AdminRequest, res: Resp
       },
       surfaces,
       platforms,
+      series,
+      platformSeries,
       notes: {
         taps: "Counts every press of the Share button (server-recorded via /api/track/booking-link-share-tap). The PostHog `booking_link_shared` event mirrors this on the client.",
         completions: "Counts every successful share-sheet send OR copy that calls /api/track/booking-link-shared. Older `booking_link_shared` milestone events (one per user) are excluded so the rate is not skewed.",
         copies: "Counts every booking link copy via /api/track/booking-link-copied (also mirrored as PostHog `booking_link_copied`).",
         platforms: "Device platform comes from the `X-Client-Platform` request header (web/ios/android). Events recorded before this breakdown shipped have no platform tag and surface as `unknown`.",
+        series: "Daily rollup of taps/completions/copies across all surfaces. `platformSeries` provides the same daily rollup faceted per platform so trends can be compared across web/ios/android.",
       },
     });
   } catch (error) {

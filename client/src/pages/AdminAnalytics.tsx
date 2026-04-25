@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { TrendingUp, Users, DollarSign, BarChart3, Target, Loader2, Sparkles, ArrowUpRight, Share2 } from "lucide-react";
+import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 interface RevenueSummary {
   mrr: number;
@@ -79,6 +80,13 @@ interface LtvData {
   }>;
 }
 
+interface ShareFunnelSeriesPoint {
+  date: string;
+  taps: number;
+  completions: number;
+  copies: number;
+}
+
 interface ShareFunnelData {
   period: string;
   totals: {
@@ -101,11 +109,14 @@ interface ShareFunnelData {
     copies: number;
     tapToCompletionRate: number;
   }>;
+  series: ShareFunnelSeriesPoint[];
+  platformSeries: Record<string, ShareFunnelSeriesPoint[]>;
   notes: {
     taps: string;
     completions: string;
     copies: string;
     platforms: string;
+    series?: string;
   };
 }
 
@@ -176,8 +187,167 @@ function MetricCard({
   );
 }
 
+const SHARE_FUNNEL_PLATFORM_COLORS: Record<string, string> = {
+  all: "hsl(var(--primary))",
+  web: "#2563eb",
+  ios: "#0ea5e9",
+  android: "#16a34a",
+  unknown: "#6b7280",
+};
+
+function formatChartDate(date: string): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return date;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+}
+
+function ShareFunnelTrendChart({
+  series,
+  platformSeries,
+  selectedPlatform,
+  onSelectPlatform,
+}: {
+  series: ShareFunnelSeriesPoint[];
+  platformSeries: Record<string, ShareFunnelSeriesPoint[]>;
+  selectedPlatform: string;
+  onSelectPlatform: (value: string) => void;
+}) {
+  const platformKeys = Object.keys(platformSeries).sort();
+  const platformOptions = ["all", ...platformKeys];
+
+  // If a previously selected platform is no longer in the returned window
+  // (e.g. the admin shrank the window and that platform stopped reporting),
+  // fall back to "all" so the dropdown never shows a dangling value.
+  useEffect(() => {
+    if (selectedPlatform !== "all" && !platformKeys.includes(selectedPlatform)) {
+      onSelectPlatform("all");
+    }
+  }, [selectedPlatform, platformKeys, onSelectPlatform]);
+
+  const activeSeries =
+    selectedPlatform === "all"
+      ? series
+      : platformSeries[selectedPlatform] ?? [];
+
+  const hasAnyActivity = activeSeries.some(
+    (p) => p.taps > 0 || p.completions > 0 || p.copies > 0,
+  );
+
+  const accentColor =
+    SHARE_FUNNEL_PLATFORM_COLORS[selectedPlatform] ??
+    SHARE_FUNNEL_PLATFORM_COLORS.all;
+
+  return (
+    <div data-testid="share-funnel-trend">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <h3 className="text-sm font-medium">Trend over time</h3>
+        <Select value={selectedPlatform} onValueChange={onSelectPlatform}>
+          <SelectTrigger
+            className="w-40 h-9 rounded-lg"
+            data-testid="select-share-funnel-platform"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {platformOptions.map((p) => (
+              <SelectItem
+                key={p}
+                value={p}
+                data-testid={`select-option-share-funnel-platform-${p}`}
+              >
+                {p === "all"
+                  ? "All platforms"
+                  : PLATFORM_LABELS[p] || p}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {activeSeries.length === 0 ? (
+        <p
+          className="text-sm text-muted-foreground"
+          data-testid="share-funnel-trend-empty"
+        >
+          No daily share activity to chart for this window.
+        </p>
+      ) : !hasAnyActivity ? (
+        <p
+          className="text-sm text-muted-foreground"
+          data-testid="share-funnel-trend-empty"
+        >
+          No share activity recorded in this window
+          {selectedPlatform === "all"
+            ? "."
+            : ` for ${PLATFORM_LABELS[selectedPlatform] || selectedPlatform}.`}
+        </p>
+      ) : (
+        <div className="h-64 w-full" data-testid="chart-share-funnel-trend">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={activeSeries} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 11 }}
+                tickFormatter={formatChartDate}
+                minTickGap={20}
+                className="text-muted-foreground"
+              />
+              <YAxis
+                tick={{ fontSize: 11 }}
+                allowDecimals={false}
+                className="text-muted-foreground"
+                width={36}
+              />
+              <Tooltip
+                labelFormatter={(label: string) => formatChartDate(label)}
+                contentStyle={{
+                  borderRadius: "8px",
+                  border: "1px solid hsl(var(--border))",
+                  background: "hsl(var(--card))",
+                  color: "hsl(var(--foreground))",
+                  fontSize: "12px",
+                }}
+              />
+              <Legend wrapperStyle={{ fontSize: "12px" }} />
+              <Line
+                type="monotone"
+                dataKey="taps"
+                name="Taps"
+                stroke={accentColor}
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="completions"
+                name="Completions"
+                stroke="#10b981"
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="copies"
+                name="Copies"
+                stroke="#f59e0b"
+                strokeWidth={2}
+                strokeDasharray="4 3"
+                dot={false}
+                activeDot={{ r: 4 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminAnalytics() {
   const [days, setDays] = useState("30");
+  const [shareFunnelPlatform, setShareFunnelPlatform] = useState<string>("all");
 
   const { data: revenue, isLoading: revenueLoading } = useQuery<RevenueData>({
     queryKey: QUERY_KEYS.adminAnalyticsRevenue(),
@@ -392,6 +562,13 @@ export default function AdminAnalytics() {
                     </div>
                   </div>
 
+                  <ShareFunnelTrendChart
+                    series={shareFunnel.series ?? []}
+                    platformSeries={shareFunnel.platformSeries ?? {}}
+                    selectedPlatform={shareFunnelPlatform}
+                    onSelectPlatform={setShareFunnelPlatform}
+                  />
+
                   <div>
                     <h3 className="text-sm font-medium mb-3">Breakdown by surface</h3>
                     {shareFunnel.surfaces.length === 0 ? (
@@ -485,6 +662,9 @@ export default function AdminAnalytics() {
                     <p><strong>Completions:</strong> {shareFunnel.notes.completions}</p>
                     <p><strong>Copies:</strong> {shareFunnel.notes.copies}</p>
                     <p><strong>Platforms:</strong> {shareFunnel.notes.platforms}</p>
+                    {shareFunnel.notes.series && (
+                      <p><strong>Trend:</strong> {shareFunnel.notes.series}</p>
+                    )}
                   </div>
                 </>
               )}
