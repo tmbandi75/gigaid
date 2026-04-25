@@ -76,12 +76,12 @@ export function ReferralMessageAI({
   };
 
   const handleShare = async () => {
-    const sharedOk = await shareContent({
+    const { shared } = await shareContent({
       text: message,
       url: link,
       dialogTitle: "Share referral message",
     });
-    if (!sharedOk) {
+    if (!shared) {
       await handleCopy();
     }
   };

@@ -292,6 +292,88 @@ dbDescribe("Booking link share-funnel tracking", () => {
       );
       expect(otherRow).toBeDefined();
     });
+
+    // Task #108: capture the share target the OS told us the user picked.
+    // This lets the admin share funnel break completions down by destination
+    // (Messages, Mail, WhatsApp, etc.).
+    it("persists the `target` field on the per-completion event when provided", async () => {
+      const { signAppJwt } = await import("../../server/appJwt");
+      const tokenB = signAppJwt({ sub: userBRowId, provider: "replit" });
+
+      const res = await trackShared(tokenB, {
+        method: "share",
+        screen: "plan",
+        target: "messages",
+      });
+      expect(res.status).toBe(200);
+
+      const rows = await waitForEvent(
+        userBRowId,
+        ["booking_link_share_completed"],
+        (r) => r.some((x) => x.context?.target === "messages"),
+      );
+      const messagesRow = rows.find((r) => r.context?.target === "messages");
+      expect(messagesRow).toBeDefined();
+      expect(messagesRow!.context).toMatchObject({
+        method: "share",
+        screen: "plan",
+        target: "messages",
+      });
+    });
+
+    it("defaults the target to 'copy' for method=copy when no target is provided", async () => {
+      const { signAppJwt } = await import("../../server/appJwt");
+      const tokenB = signAppJwt({ sub: userBRowId, provider: "replit" });
+
+      const res = await trackShared(tokenB, { method: "copy", screen: "leads" });
+      expect(res.status).toBe(200);
+
+      const rows = await waitForEvent(
+        userBRowId,
+        ["booking_link_share_completed"],
+        (r) =>
+          r.some(
+            (x) =>
+              x.context?.method === "copy" &&
+              x.context?.screen === "leads" &&
+              x.context?.target === "copy",
+          ),
+      );
+      const copyRow = rows.find(
+        (r) =>
+          r.context?.method === "copy" &&
+          r.context?.screen === "leads" &&
+          r.context?.target === "copy",
+      );
+      expect(copyRow).toBeDefined();
+    });
+
+    it("defaults the target to 'unknown' for method=share when no target is provided", async () => {
+      const { signAppJwt } = await import("../../server/appJwt");
+      const tokenB = signAppJwt({ sub: userBRowId, provider: "replit" });
+
+      const res = await trackShared(tokenB, { method: "share", screen: "bookings" });
+      expect(res.status).toBe(200);
+
+      const rows = await waitForEvent(
+        userBRowId,
+        ["booking_link_share_completed"],
+        (r) =>
+          r.some(
+            (x) =>
+              x.context?.method === "share" &&
+              x.context?.screen === "bookings" &&
+              x.context?.target === "unknown",
+          ),
+      );
+      const unknownRow = rows.find(
+        (r) =>
+          r.context?.method === "share" &&
+          r.context?.screen === "bookings" &&
+          r.context?.target === "unknown",
+      );
+      expect(unknownRow).toBeDefined();
+    });
   });
 
   // ----- POST /api/track/booking-link-copied -----------------------------
@@ -337,27 +419,37 @@ dbDescribe("Booking link share-funnel tracking", () => {
         version: number;
       }> = [];
 
-      const push = (eventName: string, screen: string, count: number) => {
+      const push = (
+        eventName: string,
+        screen: string,
+        count: number,
+        target?: string,
+      ) => {
         for (let i = 0; i < count; i++) {
           rows.push({
             occurredAt: now,
             userId: SEED_USER_ID,
             eventName,
-            context: JSON.stringify({ screen, method: "share_sheet" }),
+            context: JSON.stringify({
+              screen,
+              method: "share_sheet",
+              ...(target ? { target } : {}),
+            }),
             source: "web",
             version: 1,
           });
         }
       };
 
-      // Surface A: 4 taps, 2 completions, 1 copy → 50% conversion.
+      // Surface A: 4 taps, 2 completions (1 messages + 1 mail), 1 copy → 50% conversion.
       push("booking_link_share_tap", SEED_SURFACE_A, 4);
-      push("booking_link_share_completed", SEED_SURFACE_A, 2);
-      push("booking_link_copied", SEED_SURFACE_A, 1);
+      push("booking_link_share_completed", SEED_SURFACE_A, 1, "messages");
+      push("booking_link_share_completed", SEED_SURFACE_A, 1, "mail");
+      push("booking_link_copied", SEED_SURFACE_A, 1, "copy");
 
-      // Surface B: 2 taps, 2 completions, 0 copies → 100% conversion.
+      // Surface B: 2 taps, 2 completions (both messages), 0 copies → 100% conversion.
       push("booking_link_share_tap", SEED_SURFACE_B, 2);
-      push("booking_link_share_completed", SEED_SURFACE_B, 2);
+      push("booking_link_share_completed", SEED_SURFACE_B, 2, "messages");
 
       await db.insert(eventsCanonical).values(rows);
     });
@@ -410,6 +502,42 @@ dbDescribe("Booking link share-funnel tracking", () => {
       expect(body.totals.copies).toBeGreaterThanOrEqual(1);
       expect(body.totals.tapToCompletionRate).toBeGreaterThan(0);
       expect(body.totals.tapToCompletionRate).toBeLessThanOrEqual(1);
+    });
+
+    // Task #108: the report should now break completions/copies down by
+    // share destination so we can see whether Messages, Mail, etc. is
+    // driving the most first jobs.
+    it("returns a per-destination breakdown sourced from the `target` field", async () => {
+      const res = await fetch(`${BASE_URL}/api/admin/analytics/share-funnel?days=1`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+
+      expect(body).toHaveProperty("targets");
+      expect(Array.isArray(body.targets)).toBe(true);
+
+      const messages = body.targets.find((t: any) => t.target === "messages");
+      const mail = body.targets.find((t: any) => t.target === "mail");
+      const copy = body.targets.find((t: any) => t.target === "copy");
+
+      expect(messages).toBeDefined();
+      // 1 (surface A) + 2 (surface B) seeded completions.
+      expect(messages.completions).toBeGreaterThanOrEqual(3);
+      expect(messages.shareOfCompletions).toBeGreaterThan(0);
+      expect(messages.shareOfCompletions).toBeLessThanOrEqual(1);
+
+      expect(mail).toBeDefined();
+      expect(mail.completions).toBeGreaterThanOrEqual(1);
+
+      expect(copy).toBeDefined();
+      // The seeded copy event uses the booking_link_copied event name and
+      // should be tallied under the `copies` column for target=copy.
+      expect(copy.copies).toBeGreaterThanOrEqual(1);
     });
   });
 });

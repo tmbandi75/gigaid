@@ -133,7 +133,7 @@ export function NextBestActionCard({
       }
       return;
     }
-    const { shared } = await attemptShareBookingLink({
+    const { shared, target } = await attemptShareBookingLink({
       bookingLink,
       shareTitle: "Book my services",
       shareText: "Schedule a job with me using this link:",
@@ -143,7 +143,7 @@ export function NextBestActionCard({
       onApiSuccess: invalidateGamePlan,
     });
     if (shared) {
-      trackEvent("booking_link_shared", { screen: "nba", method: "share" });
+      trackEvent("booking_link_shared", { screen: "nba", method: "share", target });
     }
   };
 

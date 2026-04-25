@@ -111,6 +111,12 @@ interface ShareFunnelData {
     copies: number;
     tapToCompletionRate: number;
   }>;
+  targets: Array<{
+    target: string;
+    completions: number;
+    copies: number;
+    shareOfCompletions: number;
+  }>;
   series: ShareFunnelSeriesPoint[];
   platformSeries: Record<string, ShareFunnelSeriesPoint[]>;
   notes: {
@@ -118,6 +124,7 @@ interface ShareFunnelData {
     completions: string;
     copies: string;
     platforms: string;
+    targets?: string;
     series?: string;
     historical?: string;
   };
@@ -140,6 +147,40 @@ const PLATFORM_LABELS: Record<string, string> = {
   android: "Android",
   unknown: "Unknown",
 };
+
+const TARGET_LABELS: Record<string, string> = {
+  messages: "Messages",
+  mail: "Mail",
+  whatsapp: "WhatsApp",
+  airdrop: "AirDrop",
+  copy: "Copy fallback",
+  facebook: "Facebook",
+  facebook_messenger: "Messenger",
+  twitter: "Twitter / X",
+  instagram: "Instagram",
+  snapchat: "Snapchat",
+  slack: "Slack",
+  gmail: "Gmail",
+  google: "Google",
+  linkedin: "LinkedIn",
+  discord: "Discord",
+  telegram: "Telegram",
+  notes: "Apple Notes",
+  reminders: "Reminders",
+  unknown: "Unknown",
+};
+
+function formatTargetLabel(target: string): string {
+  if (TARGET_LABELS[target]) return TARGET_LABELS[target];
+  // Strip Apple's reverse-DNS prefix and any extension suffix so the
+  // long-tail still reads reasonably (e.g.
+  // "com.acme.MyApp.ShareExtension" → "MyApp").
+  const segments = target.split(".");
+  const cleaned = segments
+    .filter((s) => s && !/^share/i.test(s) && !/^extension/i.test(s))
+    .pop();
+  return cleaned || target;
+}
 
 function formatCurrency(cents: number): string {
   return `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 0 })}`;
@@ -707,11 +748,56 @@ export default function AdminAnalytics() {
                     )}
                   </div>
 
+                  <div>
+                    <h3 className="text-sm font-medium mb-3">Breakdown by share destination</h3>
+                    {shareFunnel.targets.length === 0 ? (
+                      <p className="text-sm text-muted-foreground" data-testid="share-funnel-targets-empty">
+                        No share destinations recorded in this window yet.
+                      </p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm" data-testid="table-share-funnel-targets">
+                          <thead>
+                            <tr className="text-left text-muted-foreground border-b">
+                              <th className="py-2 pr-4 font-medium">Destination</th>
+                              <th className="py-2 pr-4 font-medium text-right">Completions</th>
+                              <th className="py-2 pr-4 font-medium text-right">Copies</th>
+                              <th className="py-2 font-medium text-right">% of tagged completions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {shareFunnel.targets.map((t) => (
+                              <tr
+                                key={t.target}
+                                className="border-b last:border-b-0"
+                                data-testid={`share-funnel-target-row-${t.target}`}
+                              >
+                                <td className="py-2 pr-4">
+                                  <Badge variant="outline">
+                                    {formatTargetLabel(t.target)}
+                                  </Badge>
+                                </td>
+                                <td className="py-2 pr-4 text-right tabular-nums">{t.completions.toLocaleString()}</td>
+                                <td className="py-2 pr-4 text-right tabular-nums">{t.copies.toLocaleString()}</td>
+                                <td className="py-2 text-right tabular-nums">
+                                  {`${(t.shareOfCompletions * 100).toFixed(1)}%`}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="text-xs text-muted-foreground space-y-1" data-testid="share-funnel-notes">
                     <p><strong>Taps:</strong> {shareFunnel.notes.taps}</p>
                     <p><strong>Completions:</strong> {shareFunnel.notes.completions}</p>
                     <p><strong>Copies:</strong> {shareFunnel.notes.copies}</p>
                     <p><strong>Platforms:</strong> {shareFunnel.notes.platforms}</p>
+                    {shareFunnel.notes.targets && (
+                      <p><strong>Destinations:</strong> {shareFunnel.notes.targets}</p>
+                    )}
                     {shareFunnel.notes.series && (
                       <p><strong>Trend:</strong> {shareFunnel.notes.series}</p>
                     )}

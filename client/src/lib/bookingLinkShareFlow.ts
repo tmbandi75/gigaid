@@ -8,6 +8,13 @@ export type BookingLinkShareMethod = "copy" | "share";
 export interface RecordBookingLinkSharedOptions {
   method: BookingLinkShareMethod;
   userId: string | undefined;
+  /**
+   * Normalized share target the user picked (e.g. "messages",
+   * "mail", "whatsapp"). For the "copy" method the server treats
+   * this as "copy" automatically, but it can be set explicitly
+   * for clarity.
+   */
+  target?: string;
   onLocalMark?: () => void;
   onApiSuccess?: () => void;
 }
@@ -20,7 +27,7 @@ export async function recordBookingLinkShared(
   try {
     await apiFetch("/api/track/booking-link-shared", {
       method: "POST",
-      body: JSON.stringify({ method: opts.method }),
+      body: JSON.stringify({ method: opts.method, target: opts.target }),
     });
     opts.onApiSuccess?.();
     return { apiOk: true };
@@ -40,32 +47,48 @@ export interface AttemptShareBookingLinkOptions {
   onApiSuccess?: () => void;
 }
 
+export interface AttemptShareBookingLinkResult {
+  shared: boolean;
+  /**
+   * The normalized share target the OS told us the user picked
+   * (e.g. "messages", "mail"). Only available on platforms that
+   * expose this hint (currently iOS); undefined elsewhere.
+   */
+  target?: string;
+}
+
 /**
  * Attempts to share the booking link via the native/web share sheet.
  * Only records the share (locally + via API) when the share sheet returns
  * success. If the user dismisses or cancels the share sheet, no state
  * is mutated — preventing the NBA from incorrectly advancing past
  * NEW_USER (regression fixed in Task #89).
+ *
+ * Returns the chosen share target (e.g. "messages", "mail") when the
+ * platform exposes it (Task #108). The same target is forwarded to the
+ * `/api/track/booking-link-shared` handler so the admin share funnel
+ * can break completions down by destination.
  */
 export async function attemptShareBookingLink(
   opts: AttemptShareBookingLinkOptions,
-): Promise<{ shared: boolean }> {
-  const sharedOk = await shareContent({
+): Promise<AttemptShareBookingLinkResult> {
+  const { shared, target } = await shareContent({
     title: opts.shareTitle,
     text: opts.shareText,
     url: opts.bookingLink,
     dialogTitle: opts.dialogTitle,
   });
-  if (!sharedOk) {
+  if (!shared) {
     return { shared: false };
   }
   await recordBookingLinkShared({
     method: "share",
+    target,
     userId: opts.userId,
     onLocalMark: opts.onLocalMark,
     onApiSuccess: opts.onApiSuccess,
   });
-  return { shared: true };
+  return { shared: true, target };
 }
 
 export interface CopyBookingLinkOptions {
@@ -87,6 +110,7 @@ export async function copyBookingLinkToClipboard(
   if (!ok) return { copied: false };
   await recordBookingLinkShared({
     method: "copy",
+    target: "copy",
     userId: opts.userId,
     onLocalMark: opts.onLocalMark,
     onApiSuccess: opts.onApiSuccess,

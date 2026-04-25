@@ -409,6 +409,7 @@ router.get("/share-funnel", adminMiddleware, async (req: AdminRequest, res: Resp
         event_name,
         COALESCE(NULLIF(context::jsonb ->> 'screen', ''), 'unknown') AS screen,
         COALESCE(NULLIF(context::jsonb ->> 'platform', ''), 'unknown') AS platform,
+        COALESCE(NULLIF(context::jsonb ->> 'target', ''), 'unknown') AS target,
         LEFT(occurred_at, 10) AS day,
         COUNT(*) AS event_count
       FROM events_canonical
@@ -422,6 +423,7 @@ router.get("/share-funnel", adminMiddleware, async (req: AdminRequest, res: Resp
         event_name,
         COALESCE(NULLIF(context::jsonb ->> 'screen', ''), 'unknown'),
         COALESCE(NULLIF(context::jsonb ->> 'platform', ''), 'unknown'),
+        COALESCE(NULLIF(context::jsonb ->> 'target', ''), 'unknown'),
         LEFT(occurred_at, 10)
     `);
 
@@ -429,6 +431,7 @@ router.get("/share-funnel", adminMiddleware, async (req: AdminRequest, res: Resp
       event_name: string;
       screen: string;
       platform: string;
+      target: string;
       day: string;
       event_count: string | number;
     }>;
@@ -436,6 +439,10 @@ router.get("/share-funnel", adminMiddleware, async (req: AdminRequest, res: Resp
     type Counts = { taps: number; completions: number; copies: number };
     const bySurface = new Map<string, Counts>();
     const byPlatform = new Map<string, Counts>();
+    // Targets only meaningfully apply to completions and copies — there
+    // is no share destination yet at the "tap" stage. We still maintain
+    // a Counts shape for consistency but `taps` will always be 0.
+    const byTarget = new Map<string, Counts>();
     const totals: Counts = { taps: 0, completions: 0, copies: 0 };
 
     const bumpCounts = (bucket: Counts, eventName: string, count: number) => {
@@ -474,6 +481,7 @@ router.get("/share-funnel", adminMiddleware, async (req: AdminRequest, res: Resp
     for (const row of rows) {
       const screen = row.screen || "unknown";
       const platform = row.platform || "unknown";
+      const target = row.target || "unknown";
       const day = row.day;
       const count = Number(row.event_count) || 0;
 
@@ -484,6 +492,18 @@ router.get("/share-funnel", adminMiddleware, async (req: AdminRequest, res: Resp
       const platformBucket = byPlatform.get(platform) ?? { taps: 0, completions: 0, copies: 0 };
       bumpCounts(platformBucket, row.event_name, count);
       byPlatform.set(platform, platformBucket);
+
+      // Skip taps for the target breakdown — share destinations only
+      // exist at the completion/copy stage.
+      if (
+        row.event_name === "booking_link_share_completed" ||
+        row.event_name === "booking_link_copied"
+      ) {
+        const targetBucket =
+          byTarget.get(target) ?? { taps: 0, completions: 0, copies: 0 };
+        bumpCounts(targetBucket, row.event_name, count);
+        byTarget.set(target, targetBucket);
+      }
 
       bumpCounts(totals, row.event_name, count);
 
@@ -528,6 +548,30 @@ router.get("/share-funnel", adminMiddleware, async (req: AdminRequest, res: Resp
       }))
       .sort((a, b) => b.taps + b.completions + b.copies - (a.taps + a.completions + a.copies));
 
+    // Total share destinations recorded so the frontend can show the
+    // share of "tagged" completions vs the long-tail "unknown" bucket.
+    const totalTaggedCompletions = Array.from(byTarget.entries()).reduce(
+      (acc, [, counts]) => acc + counts.completions + counts.copies,
+      0,
+    );
+    const targets = Array.from(byTarget.entries())
+      .map(([target, counts]) => {
+        const denom = counts.completions + counts.copies;
+        return {
+          target,
+          completions: counts.completions,
+          copies: counts.copies,
+          shareOfCompletions:
+            totalTaggedCompletions > 0
+              ? Number((denom / totalTaggedCompletions).toFixed(4))
+              : 0,
+        };
+      })
+      .sort(
+        (a, b) =>
+          b.completions + b.copies - (a.completions + a.copies),
+      );
+
     const series = dayBuckets.map((date) => {
       const counts = totalsByDay.get(date)!;
       return { date, taps: counts.taps, completions: counts.completions, copies: counts.copies };
@@ -554,6 +598,7 @@ router.get("/share-funnel", adminMiddleware, async (req: AdminRequest, res: Resp
       },
       surfaces,
       platforms,
+      targets,
       series,
       platformSeries,
       notes: {
@@ -561,6 +606,7 @@ router.get("/share-funnel", adminMiddleware, async (req: AdminRequest, res: Resp
         completions: "Counts every confirmed share-sheet send OR successful copy fallback that calls /api/track/booking-link-shared. The client mirrors this with the PostHog `booking_link_shared` event, which now only fires after the OS share sheet returns success (or after a successful copy when share isn't available) — cancelled share sheets are no longer counted (Task #98). Older `booking_link_shared` milestone events (one per user) are excluded so the rate is not skewed.",
         copies: "Counts every booking link copy via /api/track/booking-link-copied (also mirrored as PostHog `booking_link_copied`).",
         platforms: "Device platform comes from the `X-Client-Platform` request header (web/ios/android). Events recorded before this breakdown shipped have no platform tag and surface as `unknown`.",
+        targets: "Share destination (Messages, Mail, WhatsApp, etc.) comes from the OS share sheet's `activityType` hint and is currently only exposed by iOS — Android and most desktop browsers will surface as `unknown`. Copy fallbacks are bucketed under `copy`. Events recorded before this breakdown shipped (Task #108) have no target tag and also surface as `unknown`.",
         series: "Daily rollup of taps/completions/copies across all surfaces. `platformSeries` provides the same daily rollup faceted per platform so trends can be compared across web/ios/android.",
         historical: "Heads up: this report is unaffected, but raw `booking_link_shared` totals in PostHog before Task #98 (April 2026) are inflated because every Share-button tap was logged as a completion — including cancelled share sheets. When comparing this card to older PostHog dashboards/insights/alerts that key off `booking_link_shared`, expect post-Task-#98 numbers to be lower. Top-of-funnel PostHog reports should be migrated to `booking_link_share_opened`; conversion/completion reports should keep `booking_link_shared` with a note about the semantic change.",
       },

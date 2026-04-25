@@ -74,8 +74,8 @@ beforeEach(() => {
 describe("attemptShareBookingLink — handleShare flow (BookingLinkShare) and doShare flow (NextBestActionCard)", () => {
   describe("when the share sheet is dismissed/cancelled", () => {
     beforeEach(() => {
-      // shareContent returns false when the user cancels the OS share sheet
-      mockedShareContent.mockResolvedValue(false);
+      // shareContent returns { shared: false } when the user cancels the OS share sheet
+      mockedShareContent.mockResolvedValue({ shared: false });
     });
 
     it("does NOT call /api/track/booking-link-shared", async () => {
@@ -126,7 +126,7 @@ describe("attemptShareBookingLink — handleShare flow (BookingLinkShare) and do
 
   describe("when the share sheet returns success", () => {
     beforeEach(() => {
-      mockedShareContent.mockResolvedValue(true);
+      mockedShareContent.mockResolvedValue({ shared: true });
       mockedApiFetch.mockResolvedValue(undefined as never);
     });
 
@@ -139,7 +139,25 @@ describe("attemptShareBookingLink — handleShare flow (BookingLinkShare) and do
         "/api/track/booking-link-shared",
         expect.objectContaining({
           method: "POST",
-          body: JSON.stringify({ method: "share" }),
+          body: JSON.stringify({ method: "share", target: undefined }),
+        }),
+      );
+    });
+
+    it("forwards the OS-provided activity target into the result and the API call (Task #108)", async () => {
+      mockedShareContent.mockResolvedValueOnce({
+        shared: true,
+        target: "messages",
+      });
+
+      const result = await attemptShareBookingLink(baseShareOptions);
+
+      expect(result).toEqual({ shared: true, target: "messages" });
+      expect(mockedApiFetch).toHaveBeenCalledWith(
+        "/api/track/booking-link-shared",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ method: "share", target: "messages" }),
         }),
       );
     });
@@ -197,9 +215,9 @@ describe("attemptShareBookingLink — handleShare flow (BookingLinkShare) and do
     });
   });
 
-  describe("when shareContent returns false (defensive cancel handling)", () => {
+  describe("when shareContent returns shared: false (defensive cancel handling)", () => {
     it("treats it as cancelled and does not record", async () => {
-      mockedShareContent.mockResolvedValue(false);
+      mockedShareContent.mockResolvedValue({ shared: false });
 
       await attemptShareBookingLink(baseShareOptions);
 
@@ -226,7 +244,7 @@ describe("copyBookingLinkToClipboard — handleCopy flow (BookingLinkShare) and 
       "/api/track/booking-link-shared",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ method: "copy" }),
+        body: JSON.stringify({ method: "copy", target: "copy" }),
       }),
     );
     expect(hasSharedBookingLinkLocally(USER_ID)).toBe(true);

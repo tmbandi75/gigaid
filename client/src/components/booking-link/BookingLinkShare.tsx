@@ -88,7 +88,7 @@ export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
       return;
     }
 
-    const { shared } = await attemptShareBookingLink({
+    const { shared, target } = await attemptShareBookingLink({
       bookingLink,
       shareTitle: variant === "primary" ? "Book my services" : "Book with me",
       shareText: variant === "primary"
@@ -100,7 +100,7 @@ export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
       onApiSuccess: invalidateGamePlan,
     });
     if (shared) {
-      trackEvent('booking_link_shared', { screen: context, method: 'share' });
+      trackEvent('booking_link_shared', { screen: context, method: 'share', target });
     }
   };
 

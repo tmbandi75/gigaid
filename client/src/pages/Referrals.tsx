@@ -93,13 +93,13 @@ export default function Referrals() {
 
   const shareReferralLink = async () => {
     const link = `${window.location.origin}/join?ref=${referralData?.referralCode || ""}`;
-    const sharedOk = await shareContent({
+    const { shared } = await shareContent({
       title: "Join GigAid",
       text: "Use my referral link to sign up for GigAid and we both get rewards!",
       url: link,
       dialogTitle: "Share referral link",
     });
-    if (!sharedOk) {
+    if (!shared) {
       await copyReferralLink({ silentSuccess: true });
       toast({
         title: "Share unavailable",

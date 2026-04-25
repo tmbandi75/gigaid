@@ -236,13 +236,13 @@ function BookingLinkFallback({ url }: { url: string }) {
   };
 
   const handleShare = async () => {
-    const sharedOk = await shareContent({
+    const { shared } = await shareContent({
       title: "Book with me",
       text: "Book a job with me using this link",
       url,
       dialogTitle: "Share booking link",
     });
-    if (!sharedOk) {
+    if (!shared) {
       await handleCopy();
     }
   };

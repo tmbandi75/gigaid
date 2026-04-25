@@ -6716,6 +6716,12 @@ export async function registerRoutes(
       const method = typeof req.body?.method === "string" ? req.body.method.slice(0, 32) : "unknown";
       const screen = normalizeBookingLinkScreen(req.body?.screen);
       const platform = getClientPlatform(req);
+      // `target` records which share destination the user picked
+      // (e.g. "messages", "mail", "whatsapp"). Only iOS exposes this
+      // hint via the OS share sheet today, so most rows will store
+      // `unknown`. The `copy` method always rolls up under "copy".
+      const rawTarget = typeof req.body?.target === "string" ? req.body.target.slice(0, 64) : "";
+      const target = rawTarget || (method === "copy" ? "copy" : "unknown");
       const user = await storage.getUser(userId);
       if (user && !user.bookingLinkSharedAt) {
         await storage.updateUser(userId, {
@@ -6724,14 +6730,14 @@ export async function registerRoutes(
         emitCanonicalEvent({
           eventName: "booking_link_shared",
           userId,
-          context: { method, screen, platform },
+          context: { method, screen, platform, target },
           source: "web",
         });
       }
       emitCanonicalEvent({
         eventName: "booking_link_share_completed",
         userId,
-        context: { method, screen, platform },
+        context: { method, screen, platform, target },
         source: "web",
       });
       res.json({ success: true });

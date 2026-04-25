@@ -80,6 +80,8 @@ All three carry a `screen` field (`plan`, `leads`, `leads_empty`, `jobs`, `booki
 
 The admin card itself (`client/src/pages/AdminAnalytics.tsx`) renders an in-page banner above the funnel stats explaining the post-Task-#98 completion semantics, calls out that historical raw `booking_link_shared` totals in PostHog before April 2026 are inflated, and recommends migrating top-of-funnel PostHog dashboards/insights/alerts to `booking_link_share_opened`. The same explainer is also delivered from the server as `notes.historical` in the `/share-funnel` response so it stays in sync between the API and the UI.
 
+`booking_link_share_completed` and `booking_link_copied` events also carry a `target` field (Task #108) sourced from the OS share sheet's `activityType` hint via `normalizeShareTarget()` in `client/src/lib/share.ts`. Currently only iOS surfaces a real activity type — Android and most desktop browsers fall back to `unknown`. Copy fallbacks are bucketed under `copy`. The admin endpoint exposes a `targets[]` array with `{ target, completions, copies, shareOfCompletions }`, rendered as the "Breakdown by share destination" table on `AdminAnalytics.tsx`.
+
 ## Help Support URL
 
 The `HelpLink` component (`client/src/components/HelpLink.tsx`) builds support article URLs from a configurable base. By default it points at `https://support.gigaid.ai`, but you can override it per environment by setting `VITE_SUPPORT_BASE_URL` (e.g. a staging domain or `http://localhost:4000` during development). The variable must be prefixed with `VITE_` so Vite exposes it to the client bundle.
