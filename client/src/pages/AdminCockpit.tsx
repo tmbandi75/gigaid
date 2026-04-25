@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -283,16 +284,24 @@ export default function AdminCockpit() {
           </h1>
           <p className="text-muted-foreground mt-1">Business health at a glance</p>
         </div>
-        <Button 
-          variant="outline"
-          onClick={() => refreshMutation.mutate()}
-          disabled={refreshMutation.isPending}
-          data-testid="button-refresh"
-          className="gap-2"
-        >
-          <RefreshCw className={cn("h-4 w-4", refreshMutation.isPending && "animate-spin")} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" className="gap-2" asChild>
+            <Link href="/admin/analytics" data-testid="link-view-analytics">
+              <BarChart3 className="h-4 w-4" />
+              View Analytics
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => refreshMutation.mutate()}
+            disabled={refreshMutation.isPending}
+            data-testid="button-refresh"
+            className="gap-2"
+          >
+            <RefreshCw className={cn("h-4 w-4", refreshMutation.isPending && "animate-spin")} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {focus && (
@@ -457,6 +466,16 @@ export default function AdminCockpit() {
                   )}
                 </div>
               ))}
+            </div>
+            <Separator className="my-4" />
+            <div className="flex justify-end">
+              <Button variant="ghost" size="sm" className="gap-2" asChild>
+                <Link href="/admin/analytics" data-testid="link-funnel-view-analytics">
+                  <BarChart3 className="h-4 w-4" />
+                  View full analytics
+                  <ArrowUpRight className="h-4 w-4" />
+                </Link>
+              </Button>
             </div>
           </CardContent>
         </Card>
