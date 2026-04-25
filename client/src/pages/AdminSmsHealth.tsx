@@ -27,6 +27,7 @@ import { QUERY_KEYS } from "@/lib/queryKeys";
 import { getAuthToken } from "@/lib/authToken";
 import {
   AlertTriangle,
+  ArrowLeft,
   BellOff,
   ChevronLeft,
   ChevronRight,
@@ -378,15 +379,23 @@ export default function AdminSmsHealth() {
             How often send-time guards fire, plus the current opt-out roster.
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={refresh}
-          data-testid="button-refresh-sms-health"
-        >
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" className="gap-2" asChild>
+            <Link href="/admin/cockpit" data-testid="link-back-to-cockpit">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Cockpit
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refresh}
+            data-testid="button-refresh-sms-health"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

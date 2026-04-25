@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  ArrowLeft,
   Loader2,
   Rocket,
   Users,
@@ -972,12 +974,20 @@ export default function AdminGrowth() {
   return (
     <AdminLayout>
       <div className="space-y-6" data-testid="page-admin-growth">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Rocket className="h-6 w-6 text-violet-500" />
-            Growth Engine
-          </h1>
-          <p className="text-muted-foreground mt-1">Lead acquisition, outreach, and channel performance</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+              <Rocket className="h-6 w-6 text-violet-500" />
+              Growth Engine
+            </h1>
+            <p className="text-muted-foreground mt-1">Lead acquisition, outreach, and channel performance</p>
+          </div>
+          <Button variant="outline" className="gap-2" asChild>
+            <Link href="/admin/cockpit" data-testid="link-back-to-cockpit">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Cockpit
+            </Link>
+          </Button>
         </div>
 
         <div className="flex flex-wrap gap-1 border-b">

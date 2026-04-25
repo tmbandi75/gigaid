@@ -388,7 +388,7 @@ export default function AdminAnalytics() {
           <Button variant="outline" className="gap-2" asChild>
             <Link href="/admin/cockpit" data-testid="link-back-to-cockpit">
               <ArrowLeft className="h-4 w-4" />
-              Back to Dashboard
+              Back to Cockpit
             </Link>
           </Button>
           <Select value={days} onValueChange={setDays}>
