@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { TrendingUp, Users, DollarSign, BarChart3, Target, Loader2, Sparkles, ArrowUpRight, ArrowLeft, Share2, Info } from "lucide-react";
-import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface RevenueSummary {
@@ -243,6 +243,141 @@ function formatChartDate(date: string): string {
   const d = new Date(`${date}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) return date;
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+}
+
+const SHARE_DESTINATION_BAR_COLORS = [
+  "#7c3aed",
+  "#2563eb",
+  "#0ea5e9",
+  "#10b981",
+  "#f59e0b",
+  "#ef4444",
+  "#ec4899",
+  "#6366f1",
+];
+
+const SHARE_DESTINATION_TOP_N = 8;
+
+interface ShareDestinationChartDatum {
+  target: string;
+  label: string;
+  completions: number;
+  copies: number;
+  shareOfCompletions: number;
+}
+
+function ShareDestinationChartTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload: ShareDestinationChartDatum }>;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+  const datum = payload[0].payload;
+  return (
+    <div
+      className="rounded-lg border bg-card text-card-foreground shadow-sm px-3 py-2 text-xs space-y-1"
+      data-testid={`share-funnel-target-tooltip-${datum.target}`}
+    >
+      <p className="font-medium text-sm">{datum.label}</p>
+      <div className="flex justify-between gap-4">
+        <span className="text-muted-foreground">Completions</span>
+        <span className="tabular-nums">{datum.completions.toLocaleString()}</span>
+      </div>
+      <div className="flex justify-between gap-4">
+        <span className="text-muted-foreground">Copies</span>
+        <span className="tabular-nums">{datum.copies.toLocaleString()}</span>
+      </div>
+      <div className="flex justify-between gap-4">
+        <span className="text-muted-foreground">% of tagged completions</span>
+        <span className="tabular-nums font-medium">
+          {(datum.shareOfCompletions * 100).toFixed(1)}%
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function ShareDestinationChart({
+  targets,
+}: {
+  targets: ShareFunnelData["targets"];
+}) {
+  const ranked = [...targets].sort((a, b) => {
+    if (b.completions !== a.completions) return b.completions - a.completions;
+    if (b.copies !== a.copies) return b.copies - a.copies;
+    return a.target.localeCompare(b.target);
+  });
+  const top = ranked.slice(0, SHARE_DESTINATION_TOP_N);
+  const data: ShareDestinationChartDatum[] = top.map((t) => ({
+    target: t.target,
+    label: formatTargetLabel(t.target),
+    completions: t.completions,
+    copies: t.copies,
+    shareOfCompletions: t.shareOfCompletions,
+  }));
+
+  if (data.length === 0 || data.every((d) => d.completions === 0)) {
+    return null;
+  }
+
+  const chartHeight = Math.max(180, data.length * 36 + 32);
+  const remaining = ranked.length - top.length;
+
+  return (
+    <div className="mb-4" data-testid="chart-share-funnel-targets">
+      <div className="flex items-baseline justify-between mb-2">
+        <p className="text-xs text-muted-foreground">
+          Top {data.length} destinations by completions
+        </p>
+        {remaining > 0 && (
+          <p
+            className="text-xs text-muted-foreground"
+            data-testid="chart-share-funnel-targets-remaining"
+          >
+            +{remaining} more in table below
+          </p>
+        )}
+      </div>
+      <div style={{ height: chartHeight }} className="w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={data}
+            layout="vertical"
+            margin={{ top: 4, right: 24, left: 8, bottom: 4 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-muted" />
+            <XAxis
+              type="number"
+              tick={{ fontSize: 11 }}
+              allowDecimals={false}
+              className="text-muted-foreground"
+            />
+            <YAxis
+              type="category"
+              dataKey="label"
+              tick={{ fontSize: 11 }}
+              width={110}
+              className="text-muted-foreground"
+            />
+            <Tooltip
+              cursor={{ fill: "hsl(var(--muted) / 0.4)" }}
+              content={<ShareDestinationChartTooltip />}
+            />
+            <Bar dataKey="completions" name="Completions" radius={[0, 4, 4, 0]}>
+              {data.map((entry, index) => (
+                <Cell
+                  key={entry.target}
+                  fill={SHARE_DESTINATION_BAR_COLORS[index % SHARE_DESTINATION_BAR_COLORS.length]}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
 }
 
 function ShareFunnelTrendChart({
@@ -755,8 +890,10 @@ export default function AdminAnalytics() {
                         No share destinations recorded in this window yet.
                       </p>
                     ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm" data-testid="table-share-funnel-targets">
+                      <>
+                        <ShareDestinationChart targets={shareFunnel.targets} />
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm" data-testid="table-share-funnel-targets">
                           <thead>
                             <tr className="text-left text-muted-foreground border-b">
                               <th className="py-2 pr-4 font-medium">Destination</th>
@@ -785,8 +922,9 @@ export default function AdminAnalytics() {
                               </tr>
                             ))}
                           </tbody>
-                        </table>
-                      </div>
+                          </table>
+                        </div>
+                      </>
                     )}
                   </div>
 
