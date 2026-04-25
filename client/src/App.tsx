@@ -335,6 +335,9 @@ function App() {
                 {import.meta.env.DEV && (
                   <Route path="/_e2e/nba" component={E2ENbaHarness} />
                 )}
+                {import.meta.env.DEV && (
+                  <Route path="/_e2e/admin-cockpit" component={AdminCockpit} />
+                )}
                 <Route>
                   <NativeDeepLinkHandler>
                     <AuthenticatedApp />
