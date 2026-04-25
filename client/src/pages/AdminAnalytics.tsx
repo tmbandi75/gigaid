@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { QUERY_KEYS } from "@/lib/queryKeys";
-import { TrendingUp, Users, DollarSign, BarChart3, Target, Loader2, Sparkles, ArrowUpRight, ArrowLeft, Share2 } from "lucide-react";
+import { TrendingUp, Users, DollarSign, BarChart3, Target, Loader2, Sparkles, ArrowUpRight, ArrowLeft, Share2, Info } from "lucide-react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface RevenueSummary {
   mrr: number;
@@ -118,6 +119,7 @@ interface ShareFunnelData {
     copies: string;
     platforms: string;
     series?: string;
+    historical?: string;
   };
 }
 
@@ -550,23 +552,62 @@ export default function AdminAnalytics() {
             <CardContent className="space-y-6">
               {shareFunnel?.totals && (
                 <>
+                  <Alert
+                    className="border-amber-500/30 bg-amber-500/10 text-foreground"
+                    data-testid="share-funnel-semantic-banner"
+                  >
+                    <Info className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-xs leading-relaxed">
+                      <strong>New completion definition (Task #98, April 2026):</strong>{" "}
+                      A "share completion" now means the OS share sheet was{" "}
+                      <em>confirmed</em> (or a successful copy fallback fired).
+                      Cancelled share-sheet taps are no longer counted as
+                      completions. This card already uses the corrected
+                      server-side <code>booking_link_share_completed</code>{" "}
+                      event, so the totals and conversion rate below are
+                      accurate for the selected window. However, raw{" "}
+                      <code>booking_link_shared</code> totals in PostHog from
+                      <em> before</em> Task #98 are inflated because every
+                      Share-button tap was logged as a completion — expect
+                      post-Task-#98 numbers to be lower in any historical
+                      comparison. PostHog dashboards/insights/alerts that
+                      track top-of-funnel intent should be migrated to{" "}
+                      <code>booking_link_share_opened</code>; conversion
+                      reports keying off <code>booking_link_shared</code>{" "}
+                      should be kept with a note about the semantic change.
+                    </AlertDescription>
+                  </Alert>
+
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div className="p-4 rounded-xl bg-muted/30" data-testid="share-funnel-total-taps">
                       <p className="text-xs text-muted-foreground">Share taps</p>
                       <p className="text-2xl font-bold mt-1">{shareFunnel.totals.taps.toLocaleString()}</p>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Every Share-button press (open <em>or</em> cancel).
+                      </p>
                     </div>
                     <div className="p-4 rounded-xl bg-muted/30" data-testid="share-funnel-total-completions">
                       <p className="text-xs text-muted-foreground">Share completions</p>
                       <p className="text-2xl font-bold mt-1">{shareFunnel.totals.completions.toLocaleString()}</p>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Confirmed shares only — cancelled share sheets excluded
+                        (Task #98).
+                      </p>
                     </div>
                     <div className="p-4 rounded-xl bg-muted/30" data-testid="share-funnel-total-copies">
                       <p className="text-xs text-muted-foreground">Copy completions</p>
                       <p className="text-2xl font-bold mt-1">{shareFunnel.totals.copies.toLocaleString()}</p>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Successful copies of the booking link.
+                      </p>
                     </div>
                     <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20" data-testid="share-funnel-tap-conversion">
                       <p className="text-xs text-muted-foreground">Tap → completion</p>
                       <p className="text-2xl font-bold mt-1 text-emerald-600">
                         {(shareFunnel.totals.tapToCompletionRate * 100).toFixed(1)}%
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Confirmed-share rate — taps that produced a completion.
                       </p>
                     </div>
                   </div>
@@ -666,13 +707,19 @@ export default function AdminAnalytics() {
                     )}
                   </div>
 
-                  <div className="text-xs text-muted-foreground space-y-1">
+                  <div className="text-xs text-muted-foreground space-y-1" data-testid="share-funnel-notes">
                     <p><strong>Taps:</strong> {shareFunnel.notes.taps}</p>
                     <p><strong>Completions:</strong> {shareFunnel.notes.completions}</p>
                     <p><strong>Copies:</strong> {shareFunnel.notes.copies}</p>
                     <p><strong>Platforms:</strong> {shareFunnel.notes.platforms}</p>
                     {shareFunnel.notes.series && (
                       <p><strong>Trend:</strong> {shareFunnel.notes.series}</p>
+                    )}
+                    {shareFunnel.notes.historical && (
+                      <p data-testid="share-funnel-note-historical">
+                        <strong>Historical PostHog data:</strong>{" "}
+                        {shareFunnel.notes.historical}
+                      </p>
                     )}
                   </div>
                 </>
