@@ -61,6 +61,25 @@ const config: Config = {
       testTimeout: 10000,
       modulePathIgnorePatterns: ['<rootDir>/.cache/'],
     },
+    {
+      displayName: 'client',
+      testEnvironment: 'jsdom',
+      testMatch: ['<rootDir>/tests/client/**/*.test.tsx'],
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/client/src/$1',
+        '^@shared/(.*)$': '<rootDir>/shared/$1',
+        '^@assets/(.*)$': '<rootDir>/attached_assets/$1',
+        '\\.(css|less|scss|sass)$': '<rootDir>/tests/client/styleMock.ts',
+      },
+      transform: {
+        '^.+\\.tsx?$': ['ts-jest', {
+          tsconfig: '<rootDir>/tests/client/tsconfig.json',
+          diagnostics: false,
+        }],
+      },
+      testTimeout: 15000,
+      modulePathIgnorePatterns: ['<rootDir>/.cache/'],
+    },
   ],
 };
 
