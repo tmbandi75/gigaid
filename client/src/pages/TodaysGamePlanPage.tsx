@@ -506,7 +506,7 @@ export default function TodaysGamePlanPage() {
                         size="sm"
                         onClick={() => navigate("/invoices/new")}
                         data-testid="button-send-invoice-caught-up"
-                        className="text-t-secondary font-semibold"
+                        className="text-base text-white font-semibold"
                       >
                         <DollarSign className="h-4 w-4 mr-1" />
                         Send Invoice

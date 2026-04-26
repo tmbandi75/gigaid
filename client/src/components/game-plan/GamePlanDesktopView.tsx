@@ -356,7 +356,7 @@ export function GamePlanDesktopView({
                   <MessageSquare className="h-4 w-4 mr-1" />
                   Follow Up
                 </Button>
-                <Button onClick={() => navigate("/invoices/new")} data-testid="desktop-button-send-invoice-caught-up" className="text-t-secondary font-semibold">
+                <Button onClick={() => navigate("/invoices/new")} data-testid="desktop-button-send-invoice-caught-up" className="text-base text-white font-semibold">
                   <DollarSign className="h-4 w-4 mr-1" />
                   Send Invoice
                 </Button>
