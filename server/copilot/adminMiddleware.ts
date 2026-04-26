@@ -7,7 +7,13 @@ import { logger } from "../lib/logger";
 
 // Fallback admin user IDs for bootstrapping (before admins table is populated)
 const BOOTSTRAP_ADMIN_USER_IDS = (process.env.ADMIN_USER_IDS || "demo-user").split(",").map(s => s.trim());
-const BOOTSTRAP_ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").split(",").map(s => s.trim()).filter(Boolean);
+// Emails are normalized to lowercase so matching is case-insensitive (Task #136).
+// Replit Auth and Firebase may store the same email with different casing, so we
+// compare on the lowercased form below in isBootstrapAdmin().
+const BOOTSTRAP_ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
+  .split(",")
+  .map(s => s.trim().toLowerCase())
+  .filter(Boolean);
 
 // Helper to extract user info from request (JWT or Replit Auth session)
 async function extractUserFromRequest(req: Request): Promise<{ userId: string | null; userEmail: string | null }> {
@@ -111,7 +117,7 @@ async function getAdminByEmail(email: string): Promise<{ role: AdminRole; isActi
 function isBootstrapAdmin(userId: string | undefined, userEmail: string | undefined): boolean {
   if (!userId && !userEmail) return false;
   if (userId && BOOTSTRAP_ADMIN_USER_IDS.includes(userId)) return true;
-  if (userEmail && BOOTSTRAP_ADMIN_EMAILS.includes(userEmail)) return true;
+  if (userEmail && BOOTSTRAP_ADMIN_EMAILS.includes(userEmail.trim().toLowerCase())) return true;
   return false;
 }
 

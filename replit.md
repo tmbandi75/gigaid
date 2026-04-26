@@ -174,6 +174,13 @@ For visitors landing on **pre-generated, unclaimed** booking pages from the Grow
 ### Apple Review Mode flag
 - Set `VITE_APPLE_REVIEW_MODE=true` in deployment env to enable review-mode UI gating. Read via `import { isAppleReviewMode } from "@/lib/env"`. When on, the SplashPage decorative background shapes and the Pricing FAQ "Contact Support" teaser card are hidden so reviewers see a focused login + checkout flow. Default is off; auth, paywall, and checkout behavior are unchanged.
 
+### Admin access (Task #136)
+- The canonical way to grant admin access is the `ADMIN_EMAILS` shared env var: a comma-separated list of email addresses that should receive `super_admin` privileges. Anyone whose login email matches is treated as admin via the bootstrap path in `server/copilot/adminMiddleware.ts` (`BOOTSTRAP_ADMIN_EMAILS`), which short-circuits the check before any DB lookup. This is what makes the Admin Cockpit link appear in the sidebar (`AppSidebar.tsx` reads `/api/admin/status`).
+- Email matching is case-insensitive and whitespace-tolerant — both the env var entries and the incoming user email are normalized via `trim().toLowerCase()` before comparison, so casing differences between Replit Auth and Firebase don't silently lock the right person out.
+- A separate `ADMIN_USER_IDS` env var supports the same bootstrap path keyed by user id (defaults to `demo-user`).
+- The `admins` database table is the secondary mechanism, intended for finer per-user role assignments later. It is checked only when the bootstrap envs do not match. Do not rely on it for the primary owners — keep their emails in `ADMIN_EMAILS`. An orphan row that pointed `thierry.mbandi@outlook.com` at `demo-user` was removed during Task #136 because no real login uses that combination.
+- After changing `ADMIN_EMAILS`, the dev workflow must be restarted so the server reads the new value at module load. For production, the change ships with the next deploy.
+
 ### Booking link host (Task #128)
 - Every public booking link the app generates uses the `account.gigaid.ai` host so customers see a consistent URL (e.g. `https://account.gigaid.ai/book/<slug>`) across email, SMS, follow-ups, the campaign engine, and the in-app share UI — never the request's Host header, never localhost, never the legacy `gigaid.ai/book/...` URL.
 - The host is sourced from the shared helper `server/lib/bookingLinkUrl.ts` (`buildBookingLink(slug)`), which reads `FRONTEND_URL` and falls back to `https://account.gigaid.ai`. The default already covers production, so `FRONTEND_URL` only needs to be overridden for staging/dev environments.
