@@ -231,8 +231,8 @@ export class DatabaseStorage implements IStorage {
       username: insertUser.username ?? null,
       email: insertUser.email ?? null,
     });
-    if (!baseSlug || baseSlug === "pro") return fallback;
-    return ensureUniqueSlug(baseSlug, (s) => this.slugExists(s));
+    const seed = !baseSlug || baseSlug === "pro" ? fallback : baseSlug;
+    return ensureUniqueSlug(seed, (s) => this.slugExists(s));
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {

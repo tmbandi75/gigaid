@@ -152,15 +152,15 @@ router.post("/claim-page", async (req: Request, res: Response) => {
 
         // Prefer a name-based slug (e.g. `larry-payne`) over the legacy
         // `user-<hex>` placeholder so the share link the new claimer gets
-        // is brand-friendly from the very first send. The slug-existence
-        // check runs against the main DB (outside this transaction); since
-        // this is a brand-new user with a unique id, there's no self-row
-        // to worry about and the worst case is a benign `-2` suffix.
+        // is brand-friendly from the very first send. Both the name-based
+        // and fallback paths route through ensureUniqueSlug for consistent
+        // collision handling. The slug-existence check runs against the
+        // main DB (outside this transaction); since this is a brand-new
+        // user with a unique id, the worst case is a benign `-2` suffix.
         const fallbackSlug = `user-${newId.slice(0, 8).toLowerCase()}`;
         const baseSlug = name?.trim() ? generateBookingSlug({ name }) : null;
-        const publicProfileSlug = baseSlug && baseSlug !== "pro"
-          ? await ensureUniqueSlug(baseSlug, (s) => storage.slugExists(s))
-          : fallbackSlug;
+        const seedSlug = baseSlug && baseSlug !== "pro" ? baseSlug : fallbackSlug;
+        const publicProfileSlug = await ensureUniqueSlug(seedSlug, (s) => storage.slugExists(s));
 
         const [created] = await trx.insert(users).values({
           id: newId,
