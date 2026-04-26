@@ -49,15 +49,20 @@ import {
   type StripeDispute, type InsertStripeDispute,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { generateBookingSlug } from "./lib/bookingSlug";
+import { generateBookingSlug, ensureUniqueSlug } from "./lib/bookingSlug";
 
 /**
  * Pick a name-based default slug for a brand-new MemStorage user when none
- * was supplied. Mirrors db-storage.computeDefaultSlugForNewUser but does
- * not check uniqueness — MemStorage is only used in tests/in-memory mode
- * where collisions are extremely unlikely and would surface immediately.
+ * was supplied. Mirrors db-storage.computeDefaultSlugForNewUser, including
+ * its uniqueness check via ensureUniqueSlug — which keeps in-memory tests
+ * behaviorally consistent with the production DB path (e.g. two users
+ * named "John Smith" get distinct slugs `john-smith` and `john-smith-2`).
  */
-function defaultSlugForNewMemUser(insertUser: Partial<InsertUser>, id: string): string {
+async function defaultSlugForNewMemUser(
+  insertUser: Partial<InsertUser>,
+  id: string,
+  slugExists: (slug: string) => Promise<boolean>,
+): Promise<string> {
   const fallback = `user-${id.slice(0, 8).toLowerCase()}`;
   const baseSlug = generateBookingSlug({
     name: insertUser.name ?? null,
@@ -65,8 +70,8 @@ function defaultSlugForNewMemUser(insertUser: Partial<InsertUser>, id: string): 
     username: insertUser.username ?? null,
     email: insertUser.email ?? null,
   });
-  if (!baseSlug || baseSlug === "pro") return fallback;
-  return baseSlug;
+  const seed = !baseSlug || baseSlug === "pro" ? fallback : baseSlug;
+  return ensureUniqueSlug(seed, slugExists);
 }
 
 export interface IStorage {
@@ -1030,7 +1035,7 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const defaultSlug = defaultSlugForNewMemUser(insertUser, id);
+    const defaultSlug = await defaultSlugForNewMemUser(insertUser, id, (s) => this.slugExists(s));
     const user: User = { 
       ...insertUser, 
       id,
@@ -1103,7 +1108,7 @@ export class MemStorage implements IStorage {
         notifyByEmail: true,
         lastActiveAt: new Date().toISOString(),
         publicProfileEnabled: true,
-        publicProfileSlug: defaultSlugForNewMemUser(updates as Partial<InsertUser>, id),
+        publicProfileSlug: await defaultSlugForNewMemUser(updates as Partial<InsertUser>, id, (s) => this.slugExists(s)),
         showReviewsOnBooking: true,
         referralCode: null,
         referredBy: null,
