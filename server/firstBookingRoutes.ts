@@ -8,6 +8,7 @@ import { signAppJwt, verifyAppJwt, isAppJwtConfigured } from "./appJwt";
 import { isAuthenticated } from "./replit_integrations/auth/replitAuth";
 import { FIRST_BOOKING_DISQUALIFYING_EVENT_TYPES } from "./postJobMomentum";
 import { buildBookingLink } from "./lib/bookingLinkUrl";
+import { generateBookingSlug, ensureUniqueSlug } from "./lib/bookingSlug";
 import { logger } from "./lib/logger";
 import { randomUUID } from "crypto";
 
@@ -149,13 +150,25 @@ router.post("/claim-page", async (req: Request, res: Response) => {
         const newId = randomUUID();
         const nowIso = new Date().toISOString();
 
+        // Prefer a name-based slug (e.g. `larry-payne`) over the legacy
+        // `user-<hex>` placeholder so the share link the new claimer gets
+        // is brand-friendly from the very first send. The slug-existence
+        // check runs against the main DB (outside this transaction); since
+        // this is a brand-new user with a unique id, there's no self-row
+        // to worry about and the worst case is a benign `-2` suffix.
+        const fallbackSlug = `user-${newId.slice(0, 8).toLowerCase()}`;
+        const baseSlug = name?.trim() ? generateBookingSlug({ name }) : null;
+        const publicProfileSlug = baseSlug && baseSlug !== "pro"
+          ? await ensureUniqueSlug(baseSlug, (s) => storage.slugExists(s))
+          : fallbackSlug;
+
         const [created] = await trx.insert(users).values({
           id: newId,
           username: `claim-${newId.slice(0, 8)}`,
           password: randomUUID(),
           name: name ?? null,
           publicProfileEnabled: false,
-          publicProfileSlug: `user-${newId.slice(0, 8).toLowerCase()}`,
+          publicProfileSlug,
           onboardingCompleted: false,
           authProvider: "claim",
           defaultServiceType: serviceType ?? page.category ?? null,

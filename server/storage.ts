@@ -49,6 +49,25 @@ import {
   type StripeDispute, type InsertStripeDispute,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { generateBookingSlug } from "./lib/bookingSlug";
+
+/**
+ * Pick a name-based default slug for a brand-new MemStorage user when none
+ * was supplied. Mirrors db-storage.computeDefaultSlugForNewUser but does
+ * not check uniqueness — MemStorage is only used in tests/in-memory mode
+ * where collisions are extremely unlikely and would surface immediately.
+ */
+function defaultSlugForNewMemUser(insertUser: Partial<InsertUser>, id: string): string {
+  const fallback = `user-${id.slice(0, 8).toLowerCase()}`;
+  const baseSlug = generateBookingSlug({
+    name: insertUser.name ?? null,
+    businessName: insertUser.businessName ?? null,
+    username: insertUser.username ?? null,
+    email: insertUser.email ?? null,
+  });
+  if (!baseSlug || baseSlug === "pro") return fallback;
+  return baseSlug;
+}
 
 export interface IStorage {
   // Users
@@ -1011,6 +1030,7 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
+    const defaultSlug = defaultSlugForNewMemUser(insertUser, id);
     const user: User = { 
       ...insertUser, 
       id,
@@ -1033,7 +1053,7 @@ export class MemStorage implements IStorage {
       notifyByEmail: true,
       lastActiveAt: new Date().toISOString(),
       publicProfileEnabled: true,
-      publicProfileSlug: `user-${id.slice(0, 8).toLowerCase()}`,
+      publicProfileSlug: insertUser.publicProfileSlug ?? defaultSlug,
       showReviewsOnBooking: true,
       referralCode: `REF${id.slice(0, 8).toUpperCase()}`,
       referredBy: null,
@@ -1083,7 +1103,7 @@ export class MemStorage implements IStorage {
         notifyByEmail: true,
         lastActiveAt: new Date().toISOString(),
         publicProfileEnabled: true,
-        publicProfileSlug: `user-${id.slice(0, 8).toLowerCase()}`,
+        publicProfileSlug: defaultSlugForNewMemUser(updates as Partial<InsertUser>, id),
         showReviewsOnBooking: true,
         referralCode: null,
         referredBy: null,

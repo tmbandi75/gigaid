@@ -87,7 +87,7 @@ import {
 import { registerRevenueCatWebhookRoutes } from "./revenuecatWebhookRoutes";
 import { isStoreSubscriptionActiveInDb, syncSubscriberFromRevenueCat } from "./revenuecatSync";
 import { registerTestRoutes } from "./testRoutes";
-import { generateBookingSlug, ensureUniqueSlug, validateSlug } from "./lib/bookingSlug";
+import { generateBookingSlug, ensureUniqueSlug, validateSlug, isLegacyDefaultSlug } from "./lib/bookingSlug";
 import { buildBookingLink } from "./lib/bookingLinkUrl";
 import { logger } from "./lib/logger";
 
@@ -655,7 +655,7 @@ export async function registerRoutes(
         });
       }
 
-      if (!user.publicProfileSlug || /^user-\d+$/.test(user.publicProfileSlug)) {
+      if (!user.publicProfileSlug || isLegacyDefaultSlug(user.publicProfileSlug)) {
         const baseSlug = generateBookingSlug(user);
         const newSlug = await ensureUniqueSlug(
           baseSlug,

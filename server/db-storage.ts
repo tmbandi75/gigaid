@@ -1,5 +1,6 @@
 import { eq, and, desc, asc, lte, gte, or, ne, isNull, isNotNull, sql, notInArray, lt, inArray, like } from "drizzle-orm";
 import { db } from "./db";
+import { generateBookingSlug, ensureUniqueSlug } from "./lib/bookingSlug";
 import { 
   users, otpCodes, sessions, jobs, leads, invoices, reminders,
   crewMembers, referrals, bookingRequests, bookingEvents, voiceNotes,
@@ -211,8 +212,32 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
+  /**
+   * Picks the public-profile slug a brand-new user should get when the
+   * caller didn't pass one. Prefers a name-based slug derived from
+   * businessName/name/username/email so customers see a branded link
+   * (`/book/larry-payne`) instead of the placeholder `/book/user-b727046e`.
+   * Falls back to the legacy `user-<id-prefix>` form only when none of those
+   * fields are present, and uses ensureUniqueSlug to dodge collisions.
+   */
+  private async computeDefaultSlugForNewUser(
+    insertUser: InsertUser,
+    id: string,
+  ): Promise<string> {
+    const fallback = `user-${id.slice(0, 8).toLowerCase()}`;
+    const baseSlug = generateBookingSlug({
+      name: insertUser.name ?? null,
+      businessName: insertUser.businessName ?? null,
+      username: insertUser.username ?? null,
+      email: insertUser.email ?? null,
+    });
+    if (!baseSlug || baseSlug === "pro") return fallback;
+    return ensureUniqueSlug(baseSlug, (s) => this.slugExists(s));
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
+    const defaultSlug = await this.computeDefaultSlugForNewUser(insertUser, id);
     const [user] = await db.insert(users).values({
       id,
       username: insertUser.username,
@@ -236,7 +261,7 @@ export class DatabaseStorage implements IStorage {
       notifyByEmail: insertUser.notifyByEmail ?? true,
       lastActiveAt: insertUser.lastActiveAt ?? new Date().toISOString(),
       publicProfileEnabled: insertUser.publicProfileEnabled ?? true,
-      publicProfileSlug: insertUser.publicProfileSlug ?? `user-${id.slice(0, 8).toLowerCase()}`,
+      publicProfileSlug: insertUser.publicProfileSlug ?? defaultSlug,
       showReviewsOnBooking: insertUser.showReviewsOnBooking ?? true,
       referralCode: insertUser.referralCode ?? `REF${id.slice(0, 8).toUpperCase()}`,
       referredBy: insertUser.referredBy ?? null,
