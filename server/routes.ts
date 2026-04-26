@@ -88,6 +88,7 @@ import { registerRevenueCatWebhookRoutes } from "./revenuecatWebhookRoutes";
 import { isStoreSubscriptionActiveInDb, syncSubscriberFromRevenueCat } from "./revenuecatSync";
 import { registerTestRoutes } from "./testRoutes";
 import { generateBookingSlug, ensureUniqueSlug, validateSlug } from "./lib/bookingSlug";
+import { buildBookingLink } from "./lib/bookingLinkUrl";
 import { logger } from "./lib/logger";
 
 const quoteCache = new Map<string, { result: any; timestamp: number }>();
@@ -669,7 +670,7 @@ export async function registerRoutes(
       }
 
       const bookingLink = user.publicProfileSlug 
-        ? `https://gigaid.ai/book/${user.publicProfileSlug}`
+        ? buildBookingLink(user.publicProfileSlug)
         : null;
       
       // Get services count - check both provider_services table and user.services array
@@ -733,7 +734,7 @@ export async function registerRoutes(
       }
       
       const bookingLink = user.publicProfileSlug 
-        ? `https://gigaid.ai/book/${user.publicProfileSlug}`
+        ? buildBookingLink(user.publicProfileSlug)
         : null;
       
       // Get services count - check both provider_services table and user.services array
@@ -7676,7 +7677,7 @@ Final price confirmed onsite.`;
         return res.status(400).json({ error: "Booking link not set up yet" });
       }
 
-      const bookingUrl = `https://gigaid.ai/book/${user.publicProfileSlug}`;
+      const bookingUrl = buildBookingLink(user.publicProfileSlug);
       
       const message = `Here's your GigAid booking link! Share it with your next customer: ${bookingUrl}`;
 
@@ -12568,10 +12569,11 @@ Return ONLY the message text, no JSON or formatting.`
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5000";
       const invoiceUrl = `${frontendUrl}/invoice/${publicToken}`;
       
-      // Generate booking link for the client
+      // Generate booking link for the client (always uses account.gigaid.ai
+      // host via the shared helper — never the localhost dev fallback above).
       const user = await storage.getUser(userId);
       const bookingLink = user?.publicProfileSlug 
-        ? `${frontendUrl}/book/${user.publicProfileSlug}`
+        ? buildBookingLink(user.publicProfileSlug)
         : null;
       
       // Use override amount if user adjusted it, otherwise use prefilled

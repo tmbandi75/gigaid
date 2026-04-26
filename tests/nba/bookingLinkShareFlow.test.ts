@@ -41,7 +41,7 @@ const mockedCopyText = copyTextToClipboard as jest.MockedFunction<
 >;
 const mockedApiFetch = apiFetch as jest.MockedFunction<typeof apiFetch>;
 
-const BOOKING_LINK = "https://gigaid.app/book/jane-1234";
+const BOOKING_LINK = "https://account.gigaid.ai/book/jane-1234";
 const USER_ID = "user-99";
 
 const baseShareOptions = {

@@ -85,6 +85,7 @@ import type { Referral, WeeklyAvailability } from "@shared/schema";
 import { useFeatureFlag, useUpdateFeatureFlag } from "@/hooks/use-nudges";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import { buildBookingLink, BOOKING_LINK_HOST_DISPLAY } from "@/lib/bookingBaseUrl";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import {
   getAnalyticsConsent,
@@ -809,7 +810,7 @@ export default function Settings() {
   };
 
   const copyBookingLink = async () => {
-    const link = `${window.location.origin}/book/${settings.publicProfileSlug}`;
+    const link = buildBookingLink(settings.publicProfileSlug);
     const copiedOk = await copyTextToClipboard(link);
     if (!copiedOk) {
       toast({ title: "Could not copy booking link", variant: "destructive" });
@@ -1149,7 +1150,7 @@ export default function Settings() {
                   </div>
                   <div className="flex items-center gap-2">
                     <p className="text-xs text-muted-foreground">
-                      {window.location.origin}/book/
+                      {BOOKING_LINK_HOST_DISPLAY}/book/
                       {settings.publicProfileSlug || "your-name"}
                     </p>
                     {slugChecking && (

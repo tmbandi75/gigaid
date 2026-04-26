@@ -7,6 +7,7 @@ import {
 } from "@shared/schema";
 import { hasCapability, isDeveloper } from "@shared/entitlements";
 import { generateDefaultMessage } from "./notificationCampaignValidator";
+import { buildBookingLink } from "./lib/bookingLinkUrl";
 import { logger } from "./lib/logger";
 
 const MAX_SUGGESTIONS_PER_ACCOUNT_PER_WEEK = 2;
@@ -182,7 +183,7 @@ export async function runSuggestionDetection(): Promise<void> {
         
         let bookingLink = "";
         if (user.publicProfileEnabled && user.publicProfileSlug) {
-          bookingLink = `https://gigaid.ai/book/${user.publicProfileSlug}`;
+          bookingLink = buildBookingLink(user.publicProfileSlug);
         }
         
         if (weatherSignal) {

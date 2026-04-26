@@ -34,6 +34,7 @@ import {
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { buildBookingLink } from "@/lib/bookingBaseUrl";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useUpgradeOrchestrator, UpgradeBanner, UpgradeInterceptModal } from "@/upgrade";
@@ -226,10 +227,12 @@ export default function NotifyClientsPage() {
   const servicesLoading = profileLoading;
 
   useEffect(() => {
-    if (profile?.publicProfileSlug && !bookingLink) {
-      setBookingLink(`${window.location.origin}/book/${profile.publicProfileSlug}`);
+    if (profile?.bookingLink && !bookingLink) {
+      setBookingLink(profile.bookingLink);
+    } else if (profile?.publicProfileSlug && !bookingLink) {
+      setBookingLink(buildBookingLink(profile.publicProfileSlug));
     }
-  }, [profile?.publicProfileSlug]);
+  }, [profile?.bookingLink, profile?.publicProfileSlug]);
 
   const { data: eligibleClients } = useQuery<{ count: number; clients: any[] }>({
     queryKey: QUERY_KEYS.eligibleClients(channel),

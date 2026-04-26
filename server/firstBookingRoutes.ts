@@ -7,6 +7,7 @@ import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { signAppJwt, verifyAppJwt, isAppJwtConfigured } from "./appJwt";
 import { isAuthenticated } from "./replit_integrations/auth/replitAuth";
 import { FIRST_BOOKING_DISQUALIFYING_EVENT_TYPES } from "./postJobMomentum";
+import { buildBookingLink } from "./lib/bookingLinkUrl";
 import { logger } from "./lib/logger";
 import { randomUUID } from "crypto";
 
@@ -39,12 +40,6 @@ const VARIANT_REQUIRED_EVENT_TYPES = new Set<string>([
   "page_viewed",
   "page_claimed",
 ]);
-
-function publicOriginFromReq(req: Request): string {
-  const proto = (req.headers["x-forwarded-proto"] as string)?.split(",")[0] || req.protocol || "https";
-  const host = req.get("host") || "gigaid.ai";
-  return `${proto}://${host}`;
-}
 
 function normalizePhone(phone?: string | null): string | undefined {
   if (!phone) return undefined;
@@ -192,7 +187,7 @@ router.post("/claim-page", async (req: Request, res: Response) => {
       // only enqueue rows. SMS rows require a phone; email rows require an
       // email — each is skipped independently.
       const now = new Date();
-      const bookingUrl = `${publicOriginFromReq(req)}/book/${pageId}`;
+      const bookingUrl = buildBookingLink(pageId);
       const metadata = JSON.stringify({ pageId, bookingUrl, source: "first_booking" });
       const nowIso = now.toISOString();
 
@@ -297,7 +292,7 @@ router.get("/first-booking/banner-state", isAuthenticated, async (req: Request, 
       return res.json({ shouldShow: false, pageId: page.id, bookingUrl: null });
     }
 
-    const bookingUrl = `${publicOriginFromReq(req)}/book/${page.id}`;
+    const bookingUrl = buildBookingLink(page.id);
     return res.json({ shouldShow: true, pageId: page.id, bookingUrl });
   } catch (err: any) {
     logger.error("[FirstBooking] banner-state error:", err?.message);

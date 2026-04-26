@@ -174,3 +174,8 @@ For visitors landing on **pre-generated, unclaimed** booking pages from the Grow
 ### Apple Review Mode flag
 - Set `VITE_APPLE_REVIEW_MODE=true` in deployment env to enable review-mode UI gating. Read via `import { isAppleReviewMode } from "@/lib/env"`. When on, the SplashPage decorative background shapes and the Pricing FAQ "Contact Support" teaser card are hidden so reviewers see a focused login + checkout flow. Default is off; auth, paywall, and checkout behavior are unchanged.
 
+### Booking link host (Task #128)
+- Every public booking link the app generates uses the `account.gigaid.ai` host so customers see a consistent URL (e.g. `https://account.gigaid.ai/book/<slug>`) across email, SMS, follow-ups, the campaign engine, and the in-app share UI — never the request's Host header, never localhost, never the legacy `gigaid.ai/book/...` URL.
+- The host is sourced from the shared helper `server/lib/bookingLinkUrl.ts` (`buildBookingLink(slug)`), which reads `FRONTEND_URL` and falls back to `https://account.gigaid.ai`. The default already covers production, so `FRONTEND_URL` only needs to be overridden for staging/dev environments.
+- Client-side surfaces that need the link without an API round-trip (Settings slug-edit preview, FirstBookingPage, OnboardingChecklist) use `client/src/lib/bookingBaseUrl.ts` (`buildBookingLink`/`BOOKING_LINK_HOST_DISPLAY`), which mirrors the same default and supports a `VITE_BOOKING_BASE_URL` override. Anything that already has the link from `/api/profile` or `/api/booking/link` should use that value directly.
+

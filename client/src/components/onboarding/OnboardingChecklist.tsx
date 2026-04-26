@@ -12,6 +12,7 @@ import confetti from "canvas-confetti";
 import { SendBookingLinkDialog } from "./SendBookingLinkDialog";
 import { AddServiceDialog } from "@/components/settings/AddServiceDialog";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import { buildBookingLink } from "@/lib/bookingBaseUrl";
 
 interface OnboardingStep {
   id: string;
@@ -117,7 +118,7 @@ export function OnboardingChecklist({ currentStep, onStepClick, onComplete, book
 
   const handleCopyBookingLink = async () => {
     if (bookingSlug) {
-      const bookingUrl = `${window.location.origin}/book/${bookingSlug}`;
+      const bookingUrl = buildBookingLink(bookingSlug);
       const copiedOk = await copyTextToClipboard(bookingUrl);
       if (copiedOk) {
         toast({

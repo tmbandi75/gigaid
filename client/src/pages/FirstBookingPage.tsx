@@ -4,6 +4,7 @@ import { ArrowRight, Calendar, Check, CheckCircle2, Copy, Loader2, Send } from "
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { getAuthToken } from "@/lib/authToken";
+import { buildBookingLink } from "@/lib/bookingBaseUrl";
 
 interface BookingPageDto {
   id: string;
@@ -54,7 +55,7 @@ export default function FirstBookingPage() {
 
   const bookingUrl = useMemo(() => {
     if (!pageId) return "";
-    return `${window.location.origin}/book/${pageId}`;
+    return buildBookingLink(pageId);
   }, [pageId]);
 
   const smsBody = `Book me here and pay your deposit so we can lock it in: ${bookingUrl}`;
