@@ -61,7 +61,6 @@ VITE_FIREBASE_APP_ID = "1:1028384687867:web:4fa0509917f178cc80d25e"
 VITE_FIREBASE_API_KEY = "AIzaSyBdyS79wNb_GBqARmJmzrBr2ZsdsC_51l8"
 VITE_REVENUECAT_API_KEY_IOS = "appl_smduSoTpQpwjvuhvuTryLiJIhRG"
 VITE_REVENUECAT_API_KEY_ANDROID = "goog_duORNEKFeAjmfoUTBScBwstBISG"
-ADMIN_EMAILS = "thierrymbandi@gmail.com,thierrymbandi@icloud.com,ctmbandi10@gmail.com,thierry.ddssd@outlook.com,thierrymbanuyguygyugdi@gmail.com"
 
 [userenv.development]
 GIGAID_ADMIN_API_KEY = "test-admin-key-local"
