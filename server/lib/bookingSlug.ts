@@ -23,12 +23,17 @@ const PROFANITY_WORDS = new Set([
 ]);
 
 /**
- * Matches the placeholder slugs we used to assign at signup before we had
- * a smart default: `user-<first 8 hex chars of the user's UUID>`, e.g.
- * `user-b727046e`. The 8-char bound is deliberate — anything shorter or
- * longer (e.g. `user-cafe`, `user-myhandle`, `user-12345`) is treated as
- * a slug the user picked on purpose and is left alone. The bound also
- * covers the rare older numeric variant since digits are a subset of hex.
+ * Matches our system-assigned placeholder slugs. Two historical shapes are
+ * covered:
+ *  - The current default `user-<first N hex chars of UUID>` (e.g.
+ *    `user-b727046e`, `user-abc123`).
+ *  - The older numeric variant `user-<digits>` (e.g. `user-1234`).
+ * Both reduce to "starts with `user-` and the rest is hex (digits ⊂ hex)".
+ *
+ * Policy: the `user-*` namespace is reserved for system placeholders —
+ * users can't manually pick a slug shaped like one of ours. This matches
+ * the prior intent of the validator (which already rejected `^user-\d+$`)
+ * and is now extended to hex so the same rule covers the current default.
  *
  * Used in two places:
  *  - /api/profile auto-upgrades any account whose slug matches this shape
@@ -36,7 +41,7 @@ const PROFANITY_WORDS = new Set([
  *  - validateSlug rejects manual entry of slugs in this shape so users
  *    can't reintroduce the placeholder pattern by hand.
  */
-export const LEGACY_DEFAULT_SLUG_REGEX = /^user-[a-f0-9]{8}$/i;
+export const LEGACY_DEFAULT_SLUG_REGEX = /^user-[a-f0-9]+$/i;
 
 export function isLegacyDefaultSlug(slug: string | null | undefined): boolean {
   return !!slug && LEGACY_DEFAULT_SLUG_REGEX.test(slug);
