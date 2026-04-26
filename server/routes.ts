@@ -6716,10 +6716,11 @@ export async function registerRoutes(
       const method = typeof req.body?.method === "string" ? req.body.method.slice(0, 32) : "unknown";
       const screen = normalizeBookingLinkScreen(req.body?.screen);
       const platform = getClientPlatform(req);
-      // `target` records which share destination the user picked
-      // (e.g. "messages", "mail", "whatsapp"). Only iOS exposes this
-      // hint via the OS share sheet today, so most rows will store
-      // `unknown`. The `copy` method always rolls up under "copy".
+      // `target` is the share destination the user picked
+      // (e.g. "messages", "whatsapp"), normalized client-side from the
+      // OS share sheet's chosen-component / activityType hint. The
+      // `copy` method always rolls up under "copy"; missing values
+      // (older clients, dismissed sheets) bucket as "unknown".
       const rawTarget = typeof req.body?.target === "string" ? req.body.target.slice(0, 64) : "";
       const target = rawTarget || (method === "copy" ? "copy" : "unknown");
       const user = await storage.getUser(userId);

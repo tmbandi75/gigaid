@@ -50,9 +50,9 @@ export interface AttemptShareBookingLinkOptions {
 export interface AttemptShareBookingLinkResult {
   shared: boolean;
   /**
-   * The normalized share target the OS told us the user picked
-   * (e.g. "messages", "mail"). Only available on platforms that
-   * expose this hint (currently iOS); undefined elsewhere.
+   * Normalized share target the OS reported (e.g. "messages",
+   * "whatsapp"). Available on iOS and Android; undefined on platforms
+   * that don't expose it or when the user dismissed the share sheet.
    */
   target?: string;
 }
@@ -65,9 +65,8 @@ export interface AttemptShareBookingLinkResult {
  * NEW_USER (regression fixed in Task #89).
  *
  * Returns the chosen share target (e.g. "messages", "mail") when the
- * platform exposes it (Task #108). The same target is forwarded to the
- * `/api/track/booking-link-shared` handler so the admin share funnel
- * can break completions down by destination.
+ * platform exposes it. Forwarded to `/api/track/booking-link-shared`
+ * so the admin share funnel can break completions down by destination.
  */
 export async function attemptShareBookingLink(
   opts: AttemptShareBookingLinkOptions,

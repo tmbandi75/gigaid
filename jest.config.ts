@@ -80,6 +80,23 @@ const config: Config = {
       testTimeout: 15000,
       modulePathIgnorePatterns: ['<rootDir>/.cache/'],
     },
+    {
+      displayName: 'lib',
+      testEnvironment: 'jsdom',
+      testMatch: ['<rootDir>/tests/lib/**/*.test.ts'],
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/client/src/$1',
+        '^@shared/(.*)$': '<rootDir>/shared/$1',
+      },
+      transform: {
+        '^.+\\.tsx?$': ['ts-jest', {
+          tsconfig: 'tsconfig.json',
+          diagnostics: false,
+        }],
+      },
+      testTimeout: 10000,
+      modulePathIgnorePatterns: ['<rootDir>/.cache/'],
+    },
   ],
 };
 
