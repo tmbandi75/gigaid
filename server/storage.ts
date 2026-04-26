@@ -961,10 +961,26 @@ export class MemStorage implements IStorage {
     if (userBySlug) {
       return userBySlug;
     }
-    
+
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (uuidRegex.test(slug)) {
       return Array.from(this.users.values()).find(u => u.id === slug);
+    }
+
+    // Legacy auto-generated slug: `user-<first 8 hex chars of UUID>`. Mirrors
+    // the db-storage fallback so behavior is consistent across environments.
+    // Require exactly one id-prefix match to avoid sending visitors to the
+    // wrong worker on a collision.
+    const legacyShortIdMatch = slug.match(/^user-([0-9a-f]{8})$/i);
+    if (legacyShortIdMatch) {
+      const prefix = legacyShortIdMatch[1].toLowerCase();
+      const candidates = Array.from(this.users.values()).filter(u =>
+        u.id.toLowerCase().startsWith(prefix),
+      );
+      if (candidates.length === 1) {
+        return candidates[0];
+      }
+      return undefined;
     }
 
     const userPrefixMatch = slug.match(/^user-(.+)$/);
@@ -979,7 +995,7 @@ export class MemStorage implements IStorage {
         return user;
       }
     }
-    
+
     return undefined;
   }
 

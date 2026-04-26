@@ -1,4 +1,4 @@
-import { eq, and, desc, asc, lte, gte, or, ne, isNull, isNotNull, sql, notInArray, lt, inArray } from "drizzle-orm";
+import { eq, and, desc, asc, lte, gte, or, ne, isNull, isNotNull, sql, notInArray, lt, inArray, like } from "drizzle-orm";
 import { db } from "./db";
 import { 
   users, otpCodes, sessions, jobs, leads, invoices, reminders,
@@ -155,11 +155,31 @@ export class DatabaseStorage implements IStorage {
     if (userBySlug) {
       return userBySlug;
     }
-    
+
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (uuidRegex.test(slug)) {
       const [userById] = await db.select().from(users).where(eq(users.id, slug));
       return userById || undefined;
+    }
+
+    // Legacy auto-generated slug: `user-<first 8 hex chars of UUID>`. Customers
+    // who customized their public slug still have flyers/SMS/QR codes in the
+    // wild pointing at this form. Resolve by id-prefix and let the caller's
+    // redirect path forward the visitor to the user's current slug. Require
+    // exactly one match so an ambiguous prefix collision still 404s rather
+    // than silently sending the visitor to the wrong worker.
+    const legacyShortIdMatch = slug.match(/^user-([0-9a-f]{8})$/i);
+    if (legacyShortIdMatch) {
+      const prefix = legacyShortIdMatch[1].toLowerCase();
+      const candidates = await db
+        .select()
+        .from(users)
+        .where(like(users.id, `${prefix}%`))
+        .limit(2);
+      if (candidates.length === 1) {
+        return candidates[0];
+      }
+      return undefined;
     }
 
     const userPrefixMatch = slug.match(/^user-(.+)$/);
@@ -170,7 +190,7 @@ export class DatabaseStorage implements IStorage {
         return userById;
       }
     }
-    
+
     return undefined;
   }
 
