@@ -36,7 +36,7 @@ interface QuoteEstimate {
   suggestedPriceMedian: number;
   source: "historical" | "ai";
   rationale: string;
-  averageDuration?: number;
+  avgDurationMinutes?: number;
   sampleSize?: number;
 }
 
@@ -244,15 +244,15 @@ export default function AutoQuotePage() {
                     )}
                   </p>
                 </div>
-                {result.averageDuration && (
-                  <div className="p-4 rounded-lg bg-muted/50 text-center">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Avg Duration</p>
-                    <p className="text-xl font-bold flex items-center justify-center gap-1" data-testid="text-avg-duration">
-                      <Clock className="h-4 w-4" />
-                      {result.averageDuration} min
-                    </p>
-                  </div>
-                )}
+                <div className="p-4 rounded-lg bg-muted/50 text-center">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Avg Duration</p>
+                  <p className="text-xl font-bold flex items-center justify-center gap-1" data-testid="text-avg-duration">
+                    <Clock className="h-4 w-4" />
+                    {Number.isFinite(result.avgDurationMinutes)
+                      ? `${result.avgDurationMinutes} min`
+                      : "--"}
+                  </p>
+                </div>
               </div>
 
               <div className="p-4 rounded-lg bg-muted/50">

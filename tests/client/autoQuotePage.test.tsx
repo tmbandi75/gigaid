@@ -158,4 +158,50 @@ describe("AutoQuotePage Smart Pricing card — Task #159 contract", () => {
     expect(screen.queryByTestId("text-price-range")).toBeNull();
     expect(screen.queryByTestId("text-suggested-price")).toBeNull();
   });
+
+  // ---- Task #165: Avg Duration tile contract -----------------------
+  // The page used to read `result.averageDuration` to decide whether
+  // to render the duration tile, but the API only ever returns the
+  // value as `avgDurationMinutes`. The tile was therefore never
+  // rendered. These cases lock the canonical field name and the
+  // missing-value fallback.
+  it("renders the Avg Duration tile with the minute count when API returns avgDurationMinutes", () => {
+    mutationState = { data: apiResponse, isPending: false };
+    render(<AutoQuotePage />);
+
+    const duration = screen.getByTestId("text-avg-duration");
+    expect(duration.textContent).toContain("60 min");
+    expect(duration.textContent).not.toContain("--");
+  });
+
+  it("renders the Avg Duration tile with a placeholder when avgDurationMinutes is missing", () => {
+    const { avgDurationMinutes: _omit, ...withoutDuration } = apiResponse;
+    mutationState = { data: withoutDuration, isPending: false };
+    render(<AutoQuotePage />);
+
+    const duration = screen.getByTestId("text-avg-duration");
+    expect(duration.textContent).toContain("--");
+    expect(duration.textContent).not.toMatch(/\d+\s*min/);
+  });
+
+  it.each([
+    ["NaN", Number.NaN],
+    ["Infinity", Number.POSITIVE_INFINITY],
+    ["-Infinity", Number.NEGATIVE_INFINITY],
+  ])(
+    "renders the Avg Duration tile with the placeholder when avgDurationMinutes is %s (non-finite)",
+    (_label, value) => {
+      mutationState = {
+        data: { ...apiResponse, avgDurationMinutes: value },
+        isPending: false,
+      };
+      render(<AutoQuotePage />);
+
+      const duration = screen.getByTestId("text-avg-duration");
+      expect(duration.textContent).toContain("--");
+      expect(duration.textContent).not.toContain("NaN");
+      expect(duration.textContent).not.toContain("Infinity");
+      expect(duration.textContent).not.toMatch(/\d+\s*min/);
+    },
+  );
 });

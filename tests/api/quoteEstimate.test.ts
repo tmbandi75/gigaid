@@ -73,7 +73,10 @@ const REQUIRED_PRICE_FIELDS = [
 // Fields the frontend used to read by mistake. If any of these reappear
 // at the top level of the response, the test should flag it so we
 // don't accidentally introduce another field-name mismatch.
-const FORBIDDEN_LEGACY_FIELDS = ['low', 'high', 'median'] as const;
+// Task #165: `averageDuration` is added here because the page used to
+// read that name while the route only ever returned `avgDurationMinutes`,
+// so the duration tile silently never rendered.
+const FORBIDDEN_LEGACY_FIELDS = ['low', 'high', 'median', 'averageDuration'] as const;
 
 describe('POST /api/quote-estimate field contract (Task #159)', () => {
   let tokenA: string;
@@ -120,10 +123,19 @@ describe('POST /api/quote-estimate field contract (Task #159)', () => {
       expect(data[field]).toBeGreaterThan(0);
     }
 
+    // Task #165: the duration tile reads `avgDurationMinutes`. Lock
+    // the canonical name on every successful response so the tile
+    // never silently disappears again.
+    expect(data).toHaveProperty('avgDurationMinutes');
+    expect(typeof data.avgDurationMinutes).toBe('number');
+    expect(Number.isFinite(data.avgDurationMinutes)).toBe(true);
+    expect(data.avgDurationMinutes).toBeGreaterThan(0);
+
     // Guard against the historical mismatch returning. The server
     // must NOT expose the short `low` / `high` / `median` names at
     // the top level, because that's what the broken interface used to
-    // read.
+    // read. `averageDuration` is forbidden for the same reason
+    // (Task #165).
     for (const legacy of FORBIDDEN_LEGACY_FIELDS) {
       expect(data).not.toHaveProperty(legacy);
     }
@@ -157,6 +169,15 @@ describe('POST /api/quote-estimate field contract (Task #159)', () => {
       expect(Number.isFinite(data[field])).toBe(true);
       expect(data[field]).toBeGreaterThan(0);
     }
+
+    // Task #165: the duration field must also be present on the
+    // fallback branch, under the canonical `avgDurationMinutes`
+    // name. The static default object in server/routes.ts sets it
+    // to 60.
+    expect(data).toHaveProperty('avgDurationMinutes');
+    expect(typeof data.avgDurationMinutes).toBe('number');
+    expect(Number.isFinite(data.avgDurationMinutes)).toBe(true);
+    expect(data.avgDurationMinutes).toBeGreaterThan(0);
 
     for (const legacy of FORBIDDEN_LEGACY_FIELDS) {
       expect(data).not.toHaveProperty(legacy);
