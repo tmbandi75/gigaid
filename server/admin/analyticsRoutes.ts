@@ -5,6 +5,7 @@ import { eq, sql, desc, and, gte, lte, isNull, isNotNull, count } from "drizzle-
 import { adminMiddleware, AdminRequest, requireRole } from "../copilot/adminMiddleware";
 import { logger } from "../lib/logger";
 import { Plan, PLAN_PRICES_CENTS } from "@shared/plans";
+import { safeParseJsonColumn } from "./jsonColumn";
 
 const router = Router();
 
@@ -52,7 +53,11 @@ router.get("/user/:userId/timeline", adminMiddleware, async (req: AdminRequest, 
       name: r.name,
       source: r.source,
       actorId: r.actor_id,
-      context: r.extra ? (typeof r.extra === 'string' ? JSON.parse(r.extra) : r.extra) : null,
+      context: safeParseJsonColumn(r.extra, {
+        endpoint: "analytics_user_timeline",
+        rowId: r.timestamp,
+        column: "extra",
+      }),
     }));
 
     res.json({ timeline, hasMore });

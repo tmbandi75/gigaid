@@ -18,6 +18,7 @@ import { eq, desc, and, or, ilike, gte, count, sql, isNull, isNotNull, lte } fro
 import { adminMiddleware, AdminRequest } from "../copilot/adminMiddleware";
 import { getUncachableStripeClient } from "../stripeClient";
 import { logger } from "../lib/logger";
+import { safeParseJsonColumn } from "./jsonColumn";
 
 const router = Router();
 
@@ -502,23 +503,6 @@ router.get("/:userId", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch user" });
   }
 });
-
-function safeParseJsonColumn(
-  raw: unknown,
-  ctx: { endpoint: string; rowId: unknown; column: string },
-): unknown {
-  if (raw === null || raw === undefined) return null;
-  if (typeof raw !== "string") return raw;
-  try {
-    return JSON.parse(raw);
-  } catch (err) {
-    logger.warn(
-      `[Admin Users] ${ctx.endpoint}: failed to JSON.parse ${ctx.column} for row ${String(ctx.rowId)}; returning null`,
-      err,
-    );
-    return null;
-  }
-}
 
 router.get("/:userId/timeline", async (req, res) => {
   try {

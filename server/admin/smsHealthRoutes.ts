@@ -5,6 +5,7 @@ import { and, desc, eq, gte, ilike, isNotNull, lte, ne, or, sql, count } from "d
 import { adminMiddleware, type AdminRequest } from "../copilot/adminMiddleware";
 import { logger } from "../lib/logger";
 import { loadDuplicatePhoneGroups } from "./duplicatePhones";
+import { safeParseJsonColumn } from "./jsonColumn";
 
 const router = Router();
 
@@ -401,16 +402,18 @@ router.get("/clear-phone-audit", async (req, res) => {
 
     const events = rows.map((r) => {
       let previousPhoneE164: string | null = null;
-      if (r.payload) {
-        try {
-          const parsed = JSON.parse(r.payload);
-          if (parsed && typeof parsed.previousPhoneE164 === "string") {
-            previousPhoneE164 = parsed.previousPhoneE164;
-          }
-        } catch {
-          // Tolerate legacy/malformed payloads — the rest of the row
-          // is still useful even if we can't parse the previous phone.
-        }
+      const parsed = safeParseJsonColumn(r.payload, {
+        endpoint: "sms_clear_phone_audit",
+        rowId: r.id,
+        column: "payload",
+      });
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        !Array.isArray(parsed) &&
+        typeof (parsed as Record<string, unknown>).previousPhoneE164 === "string"
+      ) {
+        previousPhoneE164 = (parsed as Record<string, string>).previousPhoneE164;
       }
       return {
         id: r.id,

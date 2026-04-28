@@ -4,6 +4,7 @@ import { users, eventsCanonical, adminActionAudit } from "@shared/schema";
 import { eq, desc, gte, sql, count } from "drizzle-orm";
 import { adminMiddleware, AdminRequest, requireRole } from "../copilot/adminMiddleware";
 import { logger } from "../lib/logger";
+import { safeParseJsonColumn } from "./jsonColumn";
 
 const router = Router();
 
@@ -234,10 +235,19 @@ router.post("/backfill/:userId", async (req: AdminRequest, res: Response) => {
 
     for (const event of filteredEvents) {
       try {
+        const parsedContext = safeParseJsonColumn(event.context, {
+          endpoint: "customerio_backfill",
+          rowId: event.id,
+          column: "context",
+        });
+        const data =
+          parsedContext && typeof parsedContext === "object" && !Array.isArray(parsedContext)
+            ? parsedContext
+            : {};
         await customerioRequest("POST", `/customers/${userId}/events`, {
           name: event.eventName,
           timestamp: Math.floor(new Date(event.occurredAt || Date.now()).getTime() / 1000),
-          data: event.context ? JSON.parse(event.context) : {},
+          data,
         });
         synced++;
       } catch (err) {

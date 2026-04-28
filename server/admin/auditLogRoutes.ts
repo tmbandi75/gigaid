@@ -4,6 +4,7 @@ import { adminActionAudit, users } from "@shared/schema";
 import { eq, desc, and, gte, lte, ilike, count, sql, or } from "drizzle-orm";
 import { adminMiddleware } from "../copilot/adminMiddleware";
 import { logger } from "../lib/logger";
+import { safeParseJsonColumn } from "./jsonColumn";
 
 const router = Router();
 
@@ -213,7 +214,11 @@ router.get("/:logId", async (req, res) => {
       ...log,
       actor,
       target,
-      payloadParsed: log.payload ? JSON.parse(log.payload) : null,
+      payloadParsed: safeParseJsonColumn(log.payload, {
+        endpoint: "audit_log_detail",
+        rowId: log.id,
+        column: "payload",
+      }),
     });
   } catch (error) {
     logger.error("[Audit Log] Detail error:", error);
