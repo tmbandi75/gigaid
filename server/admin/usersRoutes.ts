@@ -1489,6 +1489,43 @@ router.get("/:userId/sms-opt-out-events", async (req, res) => {
     const requestedLimit = parseInt((req.query.limit as string) || "20", 10) || 20;
     const limit = Math.min(Math.max(requestedLimit, 1), 100);
 
+    // Look up the user's normalized phone so we can also surface STOP rows
+    // the resolver couldn't pin to anyone but that arrived from this user's
+    // phone number — those are exactly the "I sent STOP but you kept
+    // texting me" cases admins need to investigate without leaving the page.
+    const [target] = await db
+      .select({ phoneE164: users.phoneE164 })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    const phoneE164 = target?.phoneE164 ?? null;
+
+    // candidateMatch = "we deliberately think this is from this user even
+    // though the resolver didn't attach it" (userId NULL but the raw From
+    // equals this user's stored E.164). Kept separate from the "matched"
+    // confirmed rows so the UI can label them.
+    const matchedCondition = and(
+      eq(smsOptOutEvents.userId, userId),
+      eq(smsOptOutEvents.resolution, "matched"),
+    );
+    // Restrict the candidate rows to today's two known "userId is null"
+    // resolution states. If a future resolution value is added we'd rather
+    // omit it here (and surface it explicitly later) than silently render
+    // it under the "Unmatched (same phone)" UI fallback.
+    const whereCondition = phoneE164
+      ? or(
+          matchedCondition,
+          and(
+            isNull(smsOptOutEvents.userId),
+            eq(smsOptOutEvents.fromPhoneRaw, phoneE164),
+            or(
+              eq(smsOptOutEvents.resolution, "unmatched"),
+              eq(smsOptOutEvents.resolution, "ambiguous"),
+            ),
+          ),
+        )
+      : matchedCondition;
+
     const rows = await db
       .select({
         id: smsOptOutEvents.id,
@@ -1497,18 +1534,21 @@ router.get("/:userId/sms-opt-out-events", async (req, res) => {
         twilioSid: smsOptOutEvents.twilioSid,
         resolution: smsOptOutEvents.resolution,
         createdAt: smsOptOutEvents.createdAt,
+        rowUserId: smsOptOutEvents.userId,
       })
       .from(smsOptOutEvents)
-      .where(and(
-        eq(smsOptOutEvents.userId, userId),
-        eq(smsOptOutEvents.resolution, "matched"),
-      ))
+      .where(whereCondition)
       .orderBy(desc(smsOptOutEvents.createdAt))
       .limit(limit);
 
-    const events = rows.map(row => ({
+    const events = rows.map(({ rowUserId, ...row }) => ({
       ...row,
       body: truncateBodySnippet(row.body),
+      // matchKind tells the UI whether this row was attached to this user
+      // by the resolver ("matched") or merely shares the user's stored
+      // phone number ("phone_candidate"). The latter still carries the
+      // original `resolution` (unmatched | ambiguous) for context.
+      matchKind: rowUserId === userId ? "matched" : "phone_candidate",
     }));
 
     res.json({ events });

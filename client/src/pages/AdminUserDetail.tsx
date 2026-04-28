@@ -527,6 +527,10 @@ interface SmsOptOutEventRow {
   twilioSid: string | null;
   resolution: string;
   createdAt: string;
+  // "matched"        = resolver attached this row to this user
+  // "phone_candidate" = userId is null but the From phone equals this user's
+  //                    stored E.164, so it's likely (but not confirmed) theirs
+  matchKind: "matched" | "phone_candidate";
 }
 
 function SmsOptOutEventsSection({ userId }: { userId: string }) {
@@ -561,7 +565,9 @@ function SmsOptOutEventsSection({ userId }: { userId: string }) {
           STOP Audit History ({events.length})
         </CardTitle>
         <CardDescription>
-          Inbound STOP webhooks matched to this user (most recent first).
+          Inbound STOP webhooks matched to this user, plus any unmatched or
+          ambiguous STOPs that arrived from this user's phone number (most
+          recent first).
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -574,7 +580,7 @@ function SmsOptOutEventsSection({ userId }: { userId: string }) {
             className="text-muted-foreground text-center py-4"
             data-testid="text-sms-opt-out-events-empty"
           >
-            No matched STOP events for this user.
+            No STOP events for this user.
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -583,15 +589,18 @@ function SmsOptOutEventsSection({ userId }: { userId: string }) {
                 <tr>
                   <th className="py-2 pr-3">When</th>
                   <th className="py-2 pr-3">From</th>
+                  <th className="py-2 pr-3">Status</th>
                   <th className="py-2 pr-3">Body</th>
                   <th className="py-2 pr-3">Twilio SID</th>
                 </tr>
               </thead>
               <tbody>
-                {events.map((e) => (
+                {events.map((e) => {
+                  const isCandidate = e.matchKind === "phone_candidate";
+                  return (
                   <tr
                     key={e.id}
-                    className="border-t align-top"
+                    className={`border-t align-top ${isCandidate ? "bg-muted/40" : ""}`}
                     data-testid={`row-sms-opt-out-event-${e.id}`}
                   >
                     <td
@@ -605,6 +614,23 @@ function SmsOptOutEventsSection({ userId }: { userId: string }) {
                       data-testid={`text-sms-opt-out-from-${e.id}`}
                     >
                       {e.fromPhoneMasked}
+                    </td>
+                    <td
+                      className="py-2 pr-3"
+                      data-testid={`badge-sms-opt-out-status-${e.id}`}
+                    >
+                      {isCandidate ? (
+                        <Badge
+                          variant="outline"
+                          title="Resolver did not attach this STOP to this user, but it came from their phone number."
+                        >
+                          {e.resolution === "ambiguous"
+                            ? "Ambiguous (same phone)"
+                            : "Unmatched (same phone)"}
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">Matched</Badge>
+                      )}
                     </td>
                     <td
                       className="py-2 pr-3 text-muted-foreground"
@@ -639,7 +665,8 @@ function SmsOptOutEventsSection({ userId }: { userId: string }) {
                       )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
