@@ -7130,7 +7130,13 @@ export async function registerRoutes(
       breakdown: "Fallback estimate — please refine.",
       fallback: true as const,
     };
+    if (process.env.NODE_ENV !== "production" && req.headers["x-test-pricing-mode"] === "force-fallback") {
+      return res.json(fallbackEstimate);
+    }
     try {
+      if (process.env.NODE_ENV !== "production" && req.headers["x-test-pricing-mode"] === "force-throw") {
+        throw new Error("[test] forced throw to exercise catch-path fallback");
+      }
       const { description: rawDescription, slug } = req.body;
       const description = (rawDescription || "").toString();
       if (!description) {
@@ -7455,7 +7461,13 @@ Final price confirmed onsite.`;
       formattedOutput: "$50 – $150",
       fallback: true as const,
     };
+    if (process.env.NODE_ENV !== "production" && req.headers["x-test-pricing-mode"] === "force-fallback") {
+      return res.json(inAppFallback);
+    }
     try {
+      if (process.env.NODE_ENV !== "production" && req.headers["x-test-pricing-mode"] === "force-throw") {
+        throw new Error("[test] forced throw to exercise catch-path fallback");
+      }
       const { category, description: rawDescription, squareFootage, photos } = req.body;
       const description = (rawDescription || "").toString();
 
@@ -14561,6 +14573,9 @@ Return ONLY the message text, no JSON or formatting.`
       avgDurationMinutes: 60,
       fallback: true as const,
     };
+    if (process.env.NODE_ENV !== "production" && req.headers["x-test-pricing-mode"] === "force-fallback") {
+      return res.json(quoteFallback);
+    }
     try {
       const userId = (req as any).userId;
       const { jobType, location, description: rawDescription } = req.body;
@@ -14667,6 +14682,10 @@ Respond in JSON format only:
 
   // ============ PRICE OPTIMIZATION ============
   app.get("/api/price-optimization", requireAuth, async (req, res) => {
+    const priceOptFallback = { insights: [] as any[], fallback: true as const };
+    if (process.env.NODE_ENV !== "production" && req.headers["x-test-pricing-mode"] === "force-fallback") {
+      return res.json(priceOptFallback);
+    }
     try {
       const userId = (req as any).userId;
       const { db } = await import("./db");
