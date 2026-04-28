@@ -137,22 +137,39 @@ jest.mock("../../server/storage", () => ({
 jest.mock("openid-client", () => ({ discovery: jest.fn() }), { virtual: true });
 jest.mock("openid-client/passport", () => ({ Strategy: class {} }), { virtual: true });
 
-// Avoid touching real Stripe credentials at module load time.
+// Avoid touching real Stripe credentials at module load time. The shared
+// `mockStripe` singleton lets each test stub out specific methods (e.g.
+// `subscriptions.retrieve`) without rebuilding the client per call.
+const mockStripe = {
+  subscriptions: {
+    retrieve: jest.fn(),
+    update: jest.fn(),
+    cancel: jest.fn(),
+  },
+  customers: {
+    update: jest.fn(),
+  },
+  refunds: {
+    create: jest.fn(),
+  },
+};
+
 jest.mock("../../server/stripeClient", () => ({
-  getUncachableStripeClient: jest.fn(async () => ({
-    subscriptions: {
-      retrieve: jest.fn(),
-      update: jest.fn(),
-      cancel: jest.fn(),
-    },
-  })),
+  getUncachableStripeClient: jest.fn(async () => mockStripe),
 }));
 
 import express from "express";
 import request from "supertest";
 import { isAdminUser, clearAdminCache } from "../../server/copilot/adminMiddleware";
 import { signAppJwt } from "../../server/appJwt";
-import { adminActionKeys } from "../../shared/schema";
+import {
+  adminActionKeys,
+  adminActionAudit,
+  userFlags,
+  userAdminNotes,
+  messagingSuppression,
+  users,
+} from "../../shared/schema";
 import adminUsersRoutes from "../../server/admin/usersRoutes";
 
 function buildApp() {
@@ -179,6 +196,18 @@ beforeEach(() => {
   dbMock.update.mockClear();
   dbMock.delete.mockClear();
   clearAdminCache();
+  mockStripe.subscriptions.retrieve.mockReset();
+  mockStripe.subscriptions.update.mockReset();
+  mockStripe.subscriptions.cancel.mockReset();
+  mockStripe.customers.update.mockReset();
+  mockStripe.refunds.create.mockReset();
+  mockStripe.subscriptions.retrieve.mockResolvedValue({
+    items: { data: [{ id: "si_default" }] },
+  });
+  mockStripe.subscriptions.update.mockResolvedValue({});
+  mockStripe.subscriptions.cancel.mockResolvedValue({});
+  mockStripe.customers.update.mockResolvedValue({});
+  mockStripe.refunds.create.mockResolvedValue({ id: "re_default" });
 });
 
 describe("isAdminUser allowlist", () => {
@@ -408,4 +437,453 @@ describe("POST /api/admin/users/:userId/actions", () => {
     });
     expect(auditValues.createdAt).toBeTruthy();
   });
+});
+
+// -----------------------------------------------------------------------------
+// Per-action coverage for POST /api/admin/users/:userId/actions.
+//
+// Every entry in `adminActionKeys` (shared/schema.ts) is exercised below. For
+// each action we assert two things:
+//   1. The expected side-effect insert/update/Stripe call happened.
+//   2. A correctly-shaped row was appended to `adminActionAudit`.
+// -----------------------------------------------------------------------------
+
+const TARGET = "demo-user";
+
+function pushUserLookup(email = "demo@example.com") {
+  dbState.selectQueue.push([{ email }]);
+}
+
+function pushTargetUser(row: Record<string, unknown>) {
+  dbState.selectQueue.push([row]);
+}
+
+function findInsert(table: unknown) {
+  return dbState.insertCalls.find((c) => c.table === table);
+}
+
+function findUpdate(table: unknown) {
+  return dbState.updateCalls.find((c) => c.table === table);
+}
+
+function lastAuditInsert() {
+  const auditCall = dbState.insertCalls[dbState.insertCalls.length - 1];
+  expect(auditCall).toBeTruthy();
+  expect(auditCall.table).toBe(adminActionAudit);
+  return auditCall.values as Record<string, unknown>;
+}
+
+function expectAuditRow(actionKey: string, reason: string, target = TARGET) {
+  const audit = lastAuditInsert();
+  expect(audit).toMatchObject({
+    actorUserId: "demo-user",
+    targetUserId: target,
+    actionKey,
+    reason,
+    source: "admin_ui",
+  });
+  expect(audit.createdAt).toBeTruthy();
+  return audit;
+}
+
+async function postAction(
+  actionKey: string,
+  opts: { reason?: string; payload?: unknown; userId?: string } = {},
+) {
+  return request(buildApp())
+    .post(`/api/admin/users/${opts.userId || TARGET}/actions`)
+    .set("Authorization", `Bearer ${adminToken()}`)
+    .send({
+      action_key: actionKey,
+      reason: opts.reason ?? `${actionKey} reason`,
+      payload: opts.payload,
+    });
+}
+
+describe("POST /api/admin/users/:userId/actions per-action coverage", () => {
+  it("covers every adminActionKeys entry with a dedicated test", () => {
+    // Sanity check: if a new action key is added to shared/schema.ts, this
+    // suite should be extended too. The list below MUST stay in sync with the
+    // describe blocks further down.
+    const covered = new Set([
+      "user_flagged",
+      "add_note",
+      "reset_onboarding_state",
+      "trigger_webhook_retry",
+      "suppress_messaging",
+      "unsuppress_messaging",
+      "send_one_off_push",
+      "billing_upgrade",
+      "billing_downgrade",
+      "billing_grant_comp",
+      "billing_revoke_comp",
+      "billing_pause",
+      "billing_resume",
+      "billing_cancel",
+      "billing_apply_credit",
+      "billing_refund",
+      "account_disable",
+      "account_enable",
+      "admin_created",
+      "admin_updated",
+      "admin_deactivated",
+    ]);
+    for (const key of adminActionKeys) {
+      expect(covered.has(key)).toBe(true);
+    }
+    expect(covered.size).toBe(adminActionKeys.length);
+  });
+
+  it("user_flagged inserts into userFlags and writes audit row", async () => {
+    pushUserLookup();
+    const res = await postAction("user_flagged", { reason: "Spammy account" });
+    expect(res.status).toBe(200);
+
+    const insert = findInsert(userFlags);
+    expect(insert).toBeTruthy();
+    expect(insert!.values).toMatchObject({
+      userId: TARGET,
+      flaggedBy: "demo-user",
+      reason: "Spammy account",
+    });
+    expectAuditRow("user_flagged", "Spammy account");
+  });
+
+  it("add_note inserts into userAdminNotes and writes audit row", async () => {
+    pushUserLookup();
+    const res = await postAction("add_note", {
+      reason: "Logging context",
+      payload: { note: "Customer called about billing" },
+    });
+    expect(res.status).toBe(200);
+
+    const insert = findInsert(userAdminNotes);
+    expect(insert).toBeTruthy();
+    expect(insert!.values).toMatchObject({
+      actorUserId: "demo-user",
+      targetUserId: TARGET,
+      note: "Customer called about billing",
+    });
+    expectAuditRow("add_note", "Logging context");
+  });
+
+  it("reset_onboarding_state updates users and writes audit row", async () => {
+    pushUserLookup();
+    const res = await postAction("reset_onboarding_state", {
+      reason: "Onboarding stuck",
+    });
+    expect(res.status).toBe(200);
+
+    const update = findUpdate(users);
+    expect(update).toBeTruthy();
+    expect(update!.set).toMatchObject({
+      onboardingCompleted: false,
+      onboardingStep: 0,
+    });
+    expectAuditRow("reset_onboarding_state", "Onboarding stuck");
+  });
+
+  it("trigger_webhook_retry writes audit row (no DB side effect)", async () => {
+    pushUserLookup();
+    const res = await postAction("trigger_webhook_retry", {
+      reason: "Webhook failed",
+    });
+    expect(res.status).toBe(200);
+
+    expect(findInsert(userFlags)).toBeUndefined();
+    expect(findInsert(userAdminNotes)).toBeUndefined();
+    expect(findInsert(messagingSuppression)).toBeUndefined();
+    expect(findUpdate(users)).toBeUndefined();
+    expectAuditRow("trigger_webhook_retry", "Webhook failed");
+  });
+
+  it("suppress_messaging inserts into messagingSuppression and writes audit row", async () => {
+    pushUserLookup();
+    const res = await postAction("suppress_messaging", {
+      reason: "User asked to pause",
+      payload: { duration_hours: 12 },
+    });
+    expect(res.status).toBe(200);
+
+    const insert = findInsert(messagingSuppression);
+    expect(insert).toBeTruthy();
+    expect(insert!.values).toMatchObject({
+      userId: TARGET,
+      suppressedBy: "demo-user",
+      reason: "User asked to pause",
+    });
+    const v = insert!.values as Record<string, unknown>;
+    expect(v.suppressUntil).toBeTruthy();
+    expectAuditRow("suppress_messaging", "User asked to pause");
+  });
+
+  it("unsuppress_messaging updates messagingSuppression and writes audit row", async () => {
+    pushUserLookup();
+    const res = await postAction("unsuppress_messaging", {
+      reason: "Resuming sends",
+    });
+    expect(res.status).toBe(200);
+
+    const update = findUpdate(messagingSuppression);
+    expect(update).toBeTruthy();
+    expect(update!.set).toMatchObject({
+      unsuppressedBy: "demo-user",
+    });
+    expect((update!.set as Record<string, unknown>).unsuppressedAt).toBeTruthy();
+    expectAuditRow("unsuppress_messaging", "Resuming sends");
+  });
+
+  it("send_one_off_push under the daily cap writes audit row", async () => {
+    pushUserLookup();
+    // Rate-limit count select: still well under the cap.
+    dbState.selectQueue.push([{ count: 3 }]);
+
+    const res = await postAction("send_one_off_push", {
+      reason: "Reminder push",
+      payload: { message: "Hi there" },
+    });
+    expect(res.status).toBe(200);
+    expectAuditRow("send_one_off_push", "Reminder push");
+  });
+
+  it("send_one_off_push returns 429 once the daily cap is reached", async () => {
+    pushUserLookup();
+    // Rate-limit count select: at the cap (>= 20).
+    dbState.selectQueue.push([{ count: 20 }]);
+
+    const res = await postAction("send_one_off_push", {
+      reason: "Reminder push",
+      payload: { message: "Should be blocked" },
+    });
+    expect(res.status).toBe(429);
+    expect(res.body.error).toMatch(/rate limit/i);
+
+    // No audit row should have been written when we short-circuited.
+    expect(findInsert(adminActionAudit)).toBeUndefined();
+  });
+
+  it("billing_upgrade calls Stripe and writes audit row", async () => {
+    pushUserLookup();
+    pushTargetUser({ stripeCustomerId: "cus_1", stripeSubscriptionId: "sub_1" });
+    mockStripe.subscriptions.retrieve.mockResolvedValueOnce({
+      items: { data: [{ id: "si_abc" }] },
+    });
+
+    const res = await postAction("billing_upgrade", {
+      reason: "Upgrade to pro yearly",
+      payload: { priceId: "price_yearly" },
+    });
+    expect(res.status).toBe(200);
+
+    expect(mockStripe.subscriptions.retrieve).toHaveBeenCalledWith("sub_1");
+    expect(mockStripe.subscriptions.update).toHaveBeenCalledWith("sub_1", {
+      items: [{ id: "si_abc", price: "price_yearly" }],
+      proration_behavior: "create_prorations",
+    });
+    expectAuditRow("billing_upgrade", "Upgrade to pro yearly");
+  });
+
+  it("billing_downgrade calls Stripe and writes audit row", async () => {
+    pushUserLookup();
+    pushTargetUser({ stripeCustomerId: "cus_1", stripeSubscriptionId: "sub_1" });
+    mockStripe.subscriptions.retrieve.mockResolvedValueOnce({
+      items: { data: [{ id: "si_xyz" }] },
+    });
+
+    const res = await postAction("billing_downgrade", {
+      reason: "Downgrade requested",
+      payload: { priceId: "price_basic" },
+    });
+    expect(res.status).toBe(200);
+
+    expect(mockStripe.subscriptions.update).toHaveBeenCalledWith("sub_1", {
+      items: [{ id: "si_xyz", price: "price_basic" }],
+      proration_behavior: "create_prorations",
+    });
+    expectAuditRow("billing_downgrade", "Downgrade requested");
+  });
+
+  it("billing_grant_comp updates users (isPro=true) and writes audit row", async () => {
+    pushUserLookup();
+    const res = await postAction("billing_grant_comp", {
+      reason: "Comp 2 months",
+      payload: { months: 2 },
+    });
+    expect(res.status).toBe(200);
+
+    const update = findUpdate(users);
+    expect(update).toBeTruthy();
+    expect(update!.set).toMatchObject({
+      isPro: true,
+      compAccessGrantedBy: "demo-user",
+    });
+    const setVals = update!.set as Record<string, unknown>;
+    expect(setVals.compAccessGrantedAt).toBeTruthy();
+    expect(setVals.compAccessExpiresAt).toBeTruthy();
+    expectAuditRow("billing_grant_comp", "Comp 2 months");
+  });
+
+  it("billing_revoke_comp updates users (isPro=false) and writes audit row", async () => {
+    pushUserLookup();
+    const res = await postAction("billing_revoke_comp", {
+      reason: "Revoking comp",
+    });
+    expect(res.status).toBe(200);
+
+    const update = findUpdate(users);
+    expect(update).toBeTruthy();
+    expect(update!.set).toMatchObject({
+      isPro: false,
+      compAccessRevokedBy: "demo-user",
+    });
+    expect((update!.set as Record<string, unknown>).compAccessRevokedAt).toBeTruthy();
+    expectAuditRow("billing_revoke_comp", "Revoking comp");
+  });
+
+  it("billing_pause calls Stripe pause and writes audit row", async () => {
+    pushUserLookup();
+    pushTargetUser({ stripeSubscriptionId: "sub_1" });
+
+    const res = await postAction("billing_pause", { reason: "Pausing now" });
+    expect(res.status).toBe(200);
+
+    expect(mockStripe.subscriptions.update).toHaveBeenCalledWith("sub_1", {
+      pause_collection: { behavior: "void" },
+    });
+    expectAuditRow("billing_pause", "Pausing now");
+  });
+
+  it("billing_resume calls Stripe resume and writes audit row", async () => {
+    pushUserLookup();
+    pushTargetUser({ stripeSubscriptionId: "sub_1" });
+
+    const res = await postAction("billing_resume", { reason: "Resuming" });
+    expect(res.status).toBe(200);
+
+    expect(mockStripe.subscriptions.update).toHaveBeenCalledWith("sub_1", {
+      pause_collection: null,
+    });
+    expectAuditRow("billing_resume", "Resuming");
+  });
+
+  it("billing_cancel (default) sets cancel_at_period_end and writes audit row", async () => {
+    pushUserLookup();
+    pushTargetUser({ stripeSubscriptionId: "sub_1" });
+
+    const res = await postAction("billing_cancel", {
+      reason: "Cancel at end of period",
+    });
+    expect(res.status).toBe(200);
+
+    expect(mockStripe.subscriptions.update).toHaveBeenCalledWith("sub_1", {
+      cancel_at_period_end: true,
+    });
+    expect(mockStripe.subscriptions.cancel).not.toHaveBeenCalled();
+    expectAuditRow("billing_cancel", "Cancel at end of period");
+  });
+
+  it("billing_cancel (immediate) calls Stripe cancel and writes audit row", async () => {
+    pushUserLookup();
+    pushTargetUser({ stripeSubscriptionId: "sub_1" });
+
+    const res = await postAction("billing_cancel", {
+      reason: "Cancel immediately",
+      payload: { immediate: true },
+    });
+    expect(res.status).toBe(200);
+
+    expect(mockStripe.subscriptions.cancel).toHaveBeenCalledWith("sub_1");
+    expectAuditRow("billing_cancel", "Cancel immediately");
+  });
+
+  it("billing_apply_credit calls Stripe customers.update and writes audit row", async () => {
+    pushUserLookup();
+    pushTargetUser({ stripeCustomerId: "cus_1" });
+
+    const res = await postAction("billing_apply_credit", {
+      reason: "Goodwill credit",
+      payload: { amountCents: 2500 },
+    });
+    expect(res.status).toBe(200);
+
+    expect(mockStripe.customers.update).toHaveBeenCalledWith("cus_1", {
+      balance: -2500,
+    });
+    expectAuditRow("billing_apply_credit", "Goodwill credit");
+  });
+
+  it("billing_refund calls Stripe refunds.create and writes audit row", async () => {
+    pushUserLookup();
+
+    const res = await postAction("billing_refund", {
+      reason: "Refund duplicate charge",
+      payload: { chargeId: "ch_1", amountCents: 1000 },
+    });
+    expect(res.status).toBe(200);
+
+    expect(mockStripe.refunds.create).toHaveBeenCalledWith({
+      charge: "ch_1",
+      amount: 1000,
+    });
+    expectAuditRow("billing_refund", "Refund duplicate charge");
+  });
+
+  it("account_disable updates users (isDisabled=true) and writes audit row", async () => {
+    pushUserLookup();
+
+    const res = await postAction("account_disable", {
+      reason: "Policy violation",
+    });
+    expect(res.status).toBe(200);
+
+    const update = findUpdate(users);
+    expect(update).toBeTruthy();
+    expect(update!.set).toMatchObject({
+      isDisabled: true,
+      disabledBy: "demo-user",
+      disabledReason: "Policy violation",
+    });
+    expect((update!.set as Record<string, unknown>).disabledAt).toBeTruthy();
+    expectAuditRow("account_disable", "Policy violation");
+  });
+
+  it("account_enable updates users (isDisabled=false) and writes audit row", async () => {
+    pushUserLookup();
+
+    const res = await postAction("account_enable", {
+      reason: "Restoring access",
+    });
+    expect(res.status).toBe(200);
+
+    const update = findUpdate(users);
+    expect(update).toBeTruthy();
+    expect(update!.set).toMatchObject({
+      isDisabled: false,
+      enabledBy: "demo-user",
+    });
+    expect((update!.set as Record<string, unknown>).enabledAt).toBeTruthy();
+    expectAuditRow("account_enable", "Restoring access");
+  });
+
+  // The admin_* keys are accepted by the POST /actions allowlist but have no
+  // dedicated switch branch on this endpoint (the admin-management routes
+  // emit them directly). They should still be auditable through this route
+  // without raising or causing unrelated side-effects.
+  it.each(["admin_created", "admin_updated", "admin_deactivated"] as const)(
+    "%s writes audit row with no other DB side effect",
+    async (actionKey) => {
+      pushUserLookup();
+      const reason = `${actionKey} reason`;
+      const res = await postAction(actionKey, { reason });
+      expect(res.status).toBe(200);
+
+      expect(findInsert(userFlags)).toBeUndefined();
+      expect(findInsert(userAdminNotes)).toBeUndefined();
+      expect(findInsert(messagingSuppression)).toBeUndefined();
+      expect(findUpdate(users)).toBeUndefined();
+      expect(findUpdate(messagingSuppression)).toBeUndefined();
+
+      expectAuditRow(actionKey, reason);
+    },
+  );
 });
