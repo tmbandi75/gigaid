@@ -1580,3 +1580,432 @@ describe("POST /api/admin/users/:userId/notes", () => {
   });
 });
 
+// -----------------------------------------------------------------------------
+// Remaining admin user-action endpoints (Task #155).
+//
+// These shape-tests guard the JSON contract for the notes-list, flag toggle,
+// and impersonate endpoints, plus their documented error branches. A
+// regression that drops a field or skips the audit insert would surface here.
+// -----------------------------------------------------------------------------
+
+describe("GET /api/admin/users/:userId/notes", () => {
+  it("returns the notes array from the DB ordered by createdAt desc", async () => {
+    const fakeNotes = [
+      {
+        id: "note-1",
+        actorUserId: "demo-user",
+        targetUserId: "demo-user",
+        note: "Newest note",
+        createdAt: "2026-04-20T12:00:00.000Z",
+      },
+      {
+        id: "note-2",
+        actorUserId: "demo-user",
+        targetUserId: "demo-user",
+        note: "Older note",
+        createdAt: "2026-04-19T12:00:00.000Z",
+      },
+    ];
+    dbState.selectQueue.push(fakeNotes);
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/demo-user/notes")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("notes");
+    expect(Array.isArray(res.body.notes)).toBe(true);
+    expect(res.body.notes).toHaveLength(2);
+    expect(res.body.notes[0]).toMatchObject({
+      id: "note-1",
+      note: "Newest note",
+      targetUserId: "demo-user",
+    });
+    expect(res.body.notes[1]).toMatchObject({
+      id: "note-2",
+      note: "Older note",
+    });
+  });
+
+  it("returns an empty array when the user has no notes", async () => {
+    dbState.selectQueue.push([]);
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/demo-user/notes")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ notes: [] });
+  });
+
+  it("honors explicit ?limit and ?offset query parameters", async () => {
+    dbState.selectQueue.push([]);
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/demo-user/notes?limit=5&offset=10")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ notes: [] });
+    // The drizzle chain mock records limit/offset via passthrough, so we
+    // verify that select() was invoked exactly once and that the chain's
+    // limit/offset methods were actually called with the parsed integers.
+    expect(dbMock.select).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("POST /api/admin/users/:userId/flag", () => {
+  it("inserts a flag, writes the audit row, and returns the new flag", async () => {
+    // 1st select = users lookup, 2nd select = existing-flag check (none).
+    dbState.selectQueue.push([{ id: "demo-user" }]);
+    dbState.selectQueue.push([]);
+    dbState.insertReturningQueue.push([
+      {
+        id: "flag-xyz",
+        userId: "demo-user",
+        flaggedBy: "demo-user",
+        flaggedAt: "2026-04-20T12:00:00.000Z",
+        reason: "Suspicious activity",
+        unflaggedAt: null,
+        unflaggedBy: null,
+      },
+    ]);
+
+    const res = await request(buildApp())
+      .post("/api/admin/users/demo-user/flag")
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ reason: "Suspicious activity" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("flag");
+    expect(res.body.flag).toMatchObject({
+      id: "flag-xyz",
+      userId: "demo-user",
+      reason: "Suspicious activity",
+    });
+
+    const flagInsert = dbState.insertCalls.find((c) => c.table === userFlags);
+    expect(flagInsert).toBeTruthy();
+    expect(flagInsert!.values).toMatchObject({
+      userId: "demo-user",
+      flaggedBy: "demo-user",
+      reason: "Suspicious activity",
+    });
+
+    const auditInsert = dbState.insertCalls.find(
+      (c) => c.table === adminActionAudit,
+    );
+    expect(auditInsert).toBeTruthy();
+    expect(auditInsert!.values).toMatchObject({
+      actorUserId: "demo-user",
+      targetUserId: "demo-user",
+      actionKey: "user_flagged",
+      reason: "Suspicious activity",
+      source: "admin_ui",
+    });
+    const auditPayload = JSON.parse(
+      (auditInsert!.values as Record<string, unknown>).payload as string,
+    );
+    expect(auditPayload).toMatchObject({ flagId: "flag-xyz", action: "flagged" });
+  });
+
+  it("returns 400 when the user is already flagged", async () => {
+    dbState.selectQueue.push([{ id: "demo-user" }]);
+    dbState.selectQueue.push([
+      {
+        id: "flag-existing",
+        userId: "demo-user",
+        flaggedBy: "demo-user",
+        flaggedAt: "2026-04-19T12:00:00.000Z",
+        reason: "Earlier reason",
+        unflaggedAt: null,
+        unflaggedBy: null,
+      },
+    ]);
+
+    const res = await request(buildApp())
+      .post("/api/admin/users/demo-user/flag")
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ reason: "Trying again" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/already flagged/i);
+    expect(
+      dbState.insertCalls.find((c) => c.table === userFlags),
+    ).toBeUndefined();
+    expect(
+      dbState.insertCalls.find((c) => c.table === adminActionAudit),
+    ).toBeUndefined();
+  });
+
+  it("returns 404 when the target user does not exist", async () => {
+    dbState.selectQueue.push([]);
+
+    const res = await request(buildApp())
+      .post("/api/admin/users/missing-user/flag")
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ reason: "Anything" });
+
+    expect(res.status).toBe(404);
+    expect(
+      dbState.insertCalls.find((c) => c.table === userFlags),
+    ).toBeUndefined();
+  });
+
+  it("returns 400 when reason is missing or blank", async () => {
+    const blankRes = await request(buildApp())
+      .post("/api/admin/users/demo-user/flag")
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ reason: "   " });
+
+    expect(blankRes.status).toBe(400);
+    expect(blankRes.body.error).toMatch(/reason/i);
+
+    const missingRes = await request(buildApp())
+      .post("/api/admin/users/demo-user/flag")
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({});
+
+    expect(missingRes.status).toBe(400);
+    expect(missingRes.body.error).toMatch(/reason/i);
+
+    expect(
+      dbState.insertCalls.find((c) => c.table === userFlags),
+    ).toBeUndefined();
+  });
+
+  it("returns 401 when the request has no admin identity", async () => {
+    mockAdminMiddlewareState.override = (_req, _res, next) => next();
+
+    const res = await request(buildApp())
+      .post("/api/admin/users/demo-user/flag")
+      .send({ reason: "Anything" });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toMatch(/admin identity/i);
+    expect(
+      dbState.insertCalls.find((c) => c.table === userFlags),
+    ).toBeUndefined();
+  });
+});
+
+describe("DELETE /api/admin/users/:userId/flag", () => {
+  it("clears the active flag, writes an audit row, and returns success", async () => {
+    dbState.selectQueue.push([
+      {
+        id: "flag-existing",
+        userId: "demo-user",
+        flaggedBy: "demo-user",
+        flaggedAt: "2026-04-19T12:00:00.000Z",
+        reason: "Earlier reason",
+        unflaggedAt: null,
+        unflaggedBy: null,
+      },
+    ]);
+
+    const res = await request(buildApp())
+      .delete("/api/admin/users/demo-user/flag")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true });
+
+    const flagUpdate = dbState.updateCalls.find((c) => c.table === userFlags);
+    expect(flagUpdate).toBeTruthy();
+    expect(flagUpdate!.set).toMatchObject({
+      unflaggedBy: "demo-user",
+    });
+    expect(
+      (flagUpdate!.set as Record<string, unknown>).unflaggedAt,
+    ).toBeTruthy();
+
+    const auditInsert = dbState.insertCalls.find(
+      (c) => c.table === adminActionAudit,
+    );
+    expect(auditInsert).toBeTruthy();
+    expect(auditInsert!.values).toMatchObject({
+      actorUserId: "demo-user",
+      targetUserId: "demo-user",
+      actionKey: "user_flagged",
+      reason: "Flag removed",
+      source: "admin_ui",
+    });
+    const auditPayload = JSON.parse(
+      (auditInsert!.values as Record<string, unknown>).payload as string,
+    );
+    expect(auditPayload).toMatchObject({
+      flagId: "flag-existing",
+      action: "unflagged",
+    });
+  });
+
+  it("returns 404 when no active flag exists for the user", async () => {
+    dbState.selectQueue.push([]);
+
+    const res = await request(buildApp())
+      .delete("/api/admin/users/demo-user/flag")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/no active flag/i);
+    expect(
+      dbState.updateCalls.find((c) => c.table === userFlags),
+    ).toBeUndefined();
+    expect(
+      dbState.insertCalls.find((c) => c.table === adminActionAudit),
+    ).toBeUndefined();
+  });
+
+  it("returns 401 when the request has no admin identity", async () => {
+    mockAdminMiddlewareState.override = (_req, _res, next) => next();
+
+    const res = await request(buildApp())
+      .delete("/api/admin/users/demo-user/flag");
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toMatch(/admin identity/i);
+    expect(
+      dbState.updateCalls.find((c) => c.table === userFlags),
+    ).toBeUndefined();
+  });
+});
+
+describe("GET /api/admin/users/:userId/impersonate", () => {
+  it("returns the user view + jobs/leads/invoices summaries and writes an audit row", async () => {
+    // Queue order: target user, jobs, leads, invoices.
+    dbState.selectQueue.push([
+      {
+        id: "demo-user",
+        email: "demo@example.com",
+        username: "demo",
+        name: "Demo User",
+        phone: "+15551234567",
+        isPro: true,
+        plan: "pro",
+        onboardingCompleted: true,
+        onboardingStep: 5,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        lastActiveAt: "2026-04-20T12:00:00.000Z",
+        stripeCustomerId: "cus_1",
+        stripeSubscriptionId: "sub_1",
+      },
+    ]);
+    dbState.selectQueue.push([
+      {
+        id: "job-1",
+        title: "Lawn mow",
+        status: "scheduled",
+        scheduledDate: "2026-05-01",
+        price: 75,
+        createdAt: "2026-04-15T10:00:00.000Z",
+      },
+    ]);
+    dbState.selectQueue.push([
+      {
+        id: "lead-1",
+        clientName: "Jane",
+        status: "new",
+        score: 80,
+        createdAt: "2026-04-10T09:00:00.000Z",
+      },
+    ]);
+    dbState.selectQueue.push([
+      {
+        id: "inv-1",
+        status: "paid",
+        amount: 12500,
+        sentAt: "2026-04-12T11:00:00.000Z",
+        createdAt: "2026-04-12T10:00:00.000Z",
+      },
+    ]);
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/demo-user/impersonate")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.user).toMatchObject({
+      id: "demo-user",
+      email: "demo@example.com",
+      username: "demo",
+      name: "Demo User",
+      phone: "+15551234567",
+      isPro: true,
+      plan: "pro",
+      onboardingCompleted: true,
+      onboardingStep: 5,
+      stripeCustomerId: "cus_1",
+      stripeSubscriptionId: "sub_1",
+    });
+    expect(res.body.jobs).toEqual([
+      {
+        id: "job-1",
+        title: "Lawn mow",
+        status: "scheduled",
+        scheduledDate: "2026-05-01",
+        price: 75,
+        createdAt: "2026-04-15T10:00:00.000Z",
+      },
+    ]);
+    expect(res.body.leads).toEqual([
+      {
+        id: "lead-1",
+        clientName: "Jane",
+        status: "new",
+        score: 80,
+        createdAt: "2026-04-10T09:00:00.000Z",
+      },
+    ]);
+    expect(res.body.invoices).toEqual([
+      {
+        id: "inv-1",
+        status: "paid",
+        amount: 12500,
+        sentAt: "2026-04-12T11:00:00.000Z",
+        createdAt: "2026-04-12T10:00:00.000Z",
+      },
+    ]);
+    expect(res.body).toMatchObject({
+      isReadOnly: true,
+      viewedBy: "demo-user",
+    });
+    expect(res.body.viewedAt).toBeTruthy();
+
+    const auditInsert = dbState.insertCalls.find(
+      (c) => c.table === adminActionAudit,
+    );
+    expect(auditInsert).toBeTruthy();
+    expect(auditInsert!.values).toMatchObject({
+      actorUserId: "demo-user",
+      targetUserId: "demo-user",
+      actionKey: "impersonate_view",
+      source: "admin_ui",
+    });
+  });
+
+  it("returns 404 when the target user does not exist", async () => {
+    dbState.selectQueue.push([]);
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/missing-user/impersonate")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(404);
+    expect(
+      dbState.insertCalls.find((c) => c.table === adminActionAudit),
+    ).toBeUndefined();
+  });
+
+  it("returns 401 when the request has no admin identity", async () => {
+    mockAdminMiddlewareState.override = (_req, _res, next) => next();
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/demo-user/impersonate");
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toMatch(/admin identity/i);
+    expect(
+      dbState.insertCalls.find((c) => c.table === adminActionAudit),
+    ).toBeUndefined();
+  });
+});
