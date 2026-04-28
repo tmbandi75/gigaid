@@ -503,6 +503,23 @@ router.get("/:userId", async (req, res) => {
   }
 });
 
+function safeParseJsonColumn(
+  raw: unknown,
+  ctx: { endpoint: string; rowId: unknown; column: string },
+): unknown {
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw !== "string") return raw;
+  try {
+    return JSON.parse(raw);
+  } catch (err) {
+    logger.warn(
+      `[Admin Users] ${ctx.endpoint}: failed to JSON.parse ${ctx.column} for row ${String(ctx.rowId)}; returning null`,
+      err,
+    );
+    return null;
+  }
+}
+
 router.get("/:userId/timeline", async (req, res) => {
   try {
     const { userId } = req.params;
@@ -520,7 +537,11 @@ router.get("/:userId/timeline", async (req, res) => {
         eventName: e.eventName,
         occurredAt: e.occurredAt,
         source: e.source,
-        context: e.context ? JSON.parse(e.context) : null,
+        context: safeParseJsonColumn(e.context, {
+          endpoint: "timeline",
+          rowId: e.id,
+          column: "context",
+        }),
       })),
     });
   } catch (error) {
@@ -634,7 +655,11 @@ router.get("/:userId/audit", async (req, res) => {
         actorEmail: a.actorEmail,
         actionKey: a.actionKey,
         reason: a.reason,
-        payload: a.payload ? JSON.parse(a.payload) : null,
+        payload: safeParseJsonColumn(a.payload, {
+          endpoint: "audit",
+          rowId: a.id,
+          column: "payload",
+        }),
       })),
     });
   } catch (error) {

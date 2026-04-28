@@ -1233,6 +1233,47 @@ describe("GET /api/admin/users/:userId/timeline", () => {
       context: null,
     });
   });
+
+  it("returns 200 with context: null for rows whose stored context is malformed JSON", async () => {
+    const goodCtx = { source: "web" };
+    dbState.selectQueue.push([
+      {
+        id: "evt-good",
+        eventName: "booking_link_copied",
+        occurredAt: "2026-04-20T12:00:00.000Z",
+        source: "client",
+        context: JSON.stringify(goodCtx),
+      },
+      {
+        id: "evt-bad",
+        eventName: "first_booking_created",
+        occurredAt: "2026-04-19T08:30:00.000Z",
+        source: "server",
+        context: "{not valid json",
+      },
+    ]);
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/demo-user/timeline")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.events).toHaveLength(2);
+    expect(res.body.events[0]).toEqual({
+      id: "evt-good",
+      eventName: "booking_link_copied",
+      occurredAt: "2026-04-20T12:00:00.000Z",
+      source: "client",
+      context: goodCtx,
+    });
+    expect(res.body.events[1]).toEqual({
+      id: "evt-bad",
+      eventName: "first_booking_created",
+      occurredAt: "2026-04-19T08:30:00.000Z",
+      source: "server",
+      context: null,
+    });
+  });
 });
 
 describe("GET /api/admin/users/:userId/messaging", () => {
@@ -1392,6 +1433,47 @@ describe("GET /api/admin/users/:userId/audit", () => {
       payload,
     });
     expect(res.body.actions[1].payload).toBeNull();
+  });
+
+  it("returns 200 with payload: null for rows whose stored payload is malformed JSON", async () => {
+    const goodPayload = { noteId: "note-123" };
+    dbState.selectQueue.push([
+      {
+        id: "audit-good",
+        createdAt: "2026-04-20T12:00:00.000Z",
+        actorUserId: "demo-user",
+        actorEmail: "demo@example.com",
+        actionKey: "add_note",
+        reason: "Logging context",
+        payload: JSON.stringify(goodPayload),
+      },
+      {
+        id: "audit-bad",
+        createdAt: "2026-04-19T12:00:00.000Z",
+        actorUserId: "demo-user",
+        actorEmail: "demo@example.com",
+        actionKey: "user_flagged",
+        reason: "Spammy account",
+        payload: "{truncated payload",
+      },
+    ]);
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/demo-user/audit")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.actions).toHaveLength(2);
+    expect(res.body.actions[0].payload).toEqual(goodPayload);
+    expect(res.body.actions[1]).toEqual({
+      id: "audit-bad",
+      createdAt: "2026-04-19T12:00:00.000Z",
+      actorUserId: "demo-user",
+      actorEmail: "demo@example.com",
+      actionKey: "user_flagged",
+      reason: "Spammy account",
+      payload: null,
+    });
   });
 });
 
