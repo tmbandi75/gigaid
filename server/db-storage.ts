@@ -2332,6 +2332,49 @@ export class DatabaseStorage implements IStorage {
   }
 
   async trackBookingPageEvent(pageId: string, type: BookingPageEventType, opts?: { variant?: string | null; metadata?: string | null }): Promise<void> {
+    // `first_booking_viewed` must be at-most-once per booking page so
+    // that page reloads and revisits don't inflate view counts and
+    // corrupt "viewed -> copied" / "viewed -> shared" funnel math. The
+    // partial unique index `booking_page_events_first_view_unique_idx`
+    // (defined in shared/schema.ts on (page_id) WHERE
+    // type = 'first_booking_viewed') is the database-level guarantee.
+    //
+    // We additionally do a check-then-insert here so the storage helper
+    // is correct even in environments where the index has not yet been
+    // pushed: the SELECT short-circuits the common reload case, and
+    // a unique-violation (Postgres SQLSTATE 23505) is swallowed as the
+    // race tiebreaker between two concurrent first-time views. Every
+    // other event type (page_viewed, page_claimed, link_copied,
+    // link_shared) takes the original insert path and is recorded every
+    // time, exactly as before.
+    if (type === "first_booking_viewed") {
+      const existing = await db
+        .select({ id: bookingPageEvents.id })
+        .from(bookingPageEvents)
+        .where(and(
+          eq(bookingPageEvents.pageId, pageId),
+          eq(bookingPageEvents.type, "first_booking_viewed"),
+        ))
+        .limit(1);
+      if (existing.length > 0) return;
+      try {
+        await db.insert(bookingPageEvents).values({
+          pageId,
+          type,
+          variant: opts?.variant ?? null,
+          metadata: opts?.metadata ?? null,
+        });
+      } catch (err: unknown) {
+        // Postgres signals unique-constraint violations with SQLSTATE
+        // 23505. node-postgres surfaces it on `err.code`. If we lost the
+        // race for the first row, swallow it — the event is still
+        // recorded exactly once. Anything else is a real error.
+        const code = (err as { code?: unknown } | null)?.code;
+        if (code === "23505") return;
+        throw err;
+      }
+      return;
+    }
     await db.insert(bookingPageEvents).values({
       pageId,
       type,

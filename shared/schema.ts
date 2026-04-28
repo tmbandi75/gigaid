@@ -2379,6 +2379,20 @@ export const bookingPageEvents = pgTable("booking_page_events", {
 }, (table) => [
   index("booking_page_events_page_idx").on(table.pageId, table.type),
   index("booking_page_events_variant_idx").on(table.variant, table.type),
+  // Partial unique index: a `first_booking_viewed` event should be recorded
+  // at most once per booking page (which, post-claim, is 1:1 with its owner).
+  // The frontend already ref-guards within a single mount, but reloads and
+  // revisits used to record a fresh event each time, inflating view counts
+  // and corrupting "viewed -> copied" / "viewed -> shared" funnel math. The
+  // storage helper `trackBookingPageEvent` does a check-then-insert for
+  // this event type and swallows a unique-violation (Postgres SQLSTATE
+  // 23505) as the race tiebreaker; this index is the database-level
+  // guarantee that backstops it. Every other event type (page_viewed,
+  // page_claimed, link_copied, link_shared) is unaffected because the
+  // predicate excludes them.
+  uniqueIndex("booking_page_events_first_view_unique_idx")
+    .on(table.pageId)
+    .where(sql`type = 'first_booking_viewed'`),
 ]);
 
 export const unclaimedHeadlineVariants = ["back_and_forth", "deposit_first", "speed_first", "social_proof"] as const;
