@@ -151,6 +151,13 @@ interface ClearPhoneTarget {
   label: string;
 }
 
+interface ClearUnreachableTarget {
+  userId: string;
+  label: string;
+  phone: string | null;
+  failureCount: number;
+}
+
 const REASON_LABELS: Record<string, string> = {
   user_opted_out: "User opted out (STOP)",
   phone_unreachable: "Phone unreachable (auto-paused)",
@@ -286,6 +293,9 @@ export default function AdminSmsHealth() {
   const { toast } = useToast();
   const [clearTarget, setClearTarget] = useState<ClearPhoneTarget | null>(null);
   const [clearReason, setClearReason] = useState("");
+  const [unreachableTarget, setUnreachableTarget] =
+    useState<ClearUnreachableTarget | null>(null);
+  const [unreachableReason, setUnreachableReason] = useState("");
 
   const clearPhoneMutation = useApiMutation<
     unknown,
@@ -306,6 +316,35 @@ export default function AdminSmsHealth() {
       onError: (error) => {
         toast({
           title: "Could not clear phone",
+          description: error.message || "Please try again",
+          variant: "destructive",
+        });
+      },
+    },
+  );
+
+  // Reset the auto-pause flag (phoneUnreachable) + the failure-streak
+  // counters that drove it. Refreshes the SMS health summary so the row
+  // either drops out of the chronic-bounce list or reflects "One-off".
+  const clearUnreachableMutation = useApiMutation<
+    unknown,
+    { userId: string; reason: string }
+  >(
+    async ({ userId, reason }) =>
+      apiFetch(`/api/admin/sms/users/${userId}/clear-unreachable`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      }),
+    [QUERY_KEYS.adminSmsHealthSummary()],
+    {
+      onSuccess: () => {
+        toast({ title: "Auto-pause cleared" });
+        setUnreachableTarget(null);
+        setUnreachableReason("");
+      },
+      onError: (error) => {
+        toast({
+          title: "Could not clear auto-pause",
           description: error.message || "Please try again",
           variant: "destructive",
         });
@@ -1269,15 +1308,40 @@ export default function AdminSmsHealth() {
                             {formatDate(u.smsConfirmationLastFailureAt)}
                           </td>
                           <td className="py-2 pr-3 text-right">
-                            <Link href={`/admin/users/${u.id}`}>
-                              <Badge
-                                variant="outline"
-                                className="cursor-pointer"
-                                data-testid={`link-confirmation-failure-user-${u.id}`}
-                              >
-                                View
-                              </Badge>
-                            </Link>
+                            <div className="flex items-center justify-end gap-2">
+                              {u.phoneUnreachable && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setUnreachableTarget({
+                                      userId: u.id,
+                                      label:
+                                        u.name ||
+                                        u.username ||
+                                        u.email ||
+                                        u.id,
+                                      phone: u.phone,
+                                      failureCount:
+                                        u.smsConfirmationFailureCount ?? 0,
+                                    });
+                                    setUnreachableReason("");
+                                  }}
+                                  data-testid={`button-clear-unreachable-${u.id}`}
+                                >
+                                  Clear auto-pause
+                                </Button>
+                              )}
+                              <Link href={`/admin/users/${u.id}`}>
+                                <Badge
+                                  variant="outline"
+                                  className="cursor-pointer"
+                                  data-testid={`link-confirmation-failure-user-${u.id}`}
+                                >
+                                  View
+                                </Badge>
+                              </Link>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1289,6 +1353,77 @@ export default function AdminSmsHealth() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={unreachableTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !clearUnreachableMutation.isPending) {
+            setUnreachableTarget(null);
+            setUnreachableReason("");
+          }
+        }}
+      >
+        <DialogContent data-testid="dialog-clear-unreachable">
+          <DialogHeader>
+            <DialogTitle>Clear auto-pause</DialogTitle>
+            <DialogDescription>
+              This re-enables outbound SMS for{" "}
+              <span className="font-medium">{unreachableTarget?.label}</span>
+              {unreachableTarget?.phone ? (
+                <>
+                  {" "}
+                  (<span className="font-mono">{unreachableTarget.phone}</span>)
+                </>
+              ) : null}
+              . The failure streak counter (
+              {unreachableTarget?.failureCount ?? 0}) will reset and the
+              action is recorded in the admin audit trail.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="clear-unreachable-reason">Reason (required)</Label>
+            <Textarea
+              id="clear-unreachable-reason"
+              value={unreachableReason}
+              onChange={(e) => setUnreachableReason(e.target.value)}
+              placeholder="e.g. User confirmed they fixed their carrier; re-test outbound."
+              rows={3}
+              data-testid="input-clear-unreachable-reason"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setUnreachableTarget(null);
+                setUnreachableReason("");
+              }}
+              disabled={clearUnreachableMutation.isPending}
+              data-testid="button-cancel-clear-unreachable"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (!unreachableTarget || !unreachableReason.trim()) return;
+                clearUnreachableMutation.mutate({
+                  userId: unreachableTarget.userId,
+                  reason: unreachableReason.trim(),
+                });
+              }}
+              disabled={
+                !unreachableReason.trim() || clearUnreachableMutation.isPending
+              }
+              data-testid="button-confirm-clear-unreachable"
+            >
+              {clearUnreachableMutation.isPending && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
+              Clear auto-pause
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

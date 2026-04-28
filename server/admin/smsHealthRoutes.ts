@@ -355,6 +355,90 @@ router.post("/users/:userId/clear-phone", async (req: AdminRequest, res) => {
   }
 });
 
+// Manual reset for the auto-pause flag set by the resume-confirmation
+// failure streak. When the streak crosses PHONE_UNREACHABLE_THRESHOLD we
+// flip phoneUnreachable=true so further outbound SMS is suppressed; this
+// endpoint lets an admin clear that state when they know the number was
+// fixed (or want to re-test) without waiting for the user to resume from
+// Settings. Resets the four state fields the streak tracker writes:
+// smsConfirmationFailureCount, smsConfirmationFirstFailureAt,
+// phoneUnreachable, phoneUnreachableAt. The diagnostic last-failure code
+// / message / timestamp are intentionally left intact so the admin row
+// still shows what most recently bounced.
+router.post("/users/:userId/clear-unreachable", async (req: AdminRequest, res) => {
+  try {
+    const { userId } = req.params;
+    if (!req.adminUserId) {
+      return res.status(401).json({ error: "Admin identity required" });
+    }
+    const reason = ((req.body && req.body.reason) || "").toString().trim();
+    if (!reason) {
+      // Force a written reason so the audit log is meaningful — clearing
+      // the auto-pause flag re-enables outbound SMS to a number we
+      // previously concluded was unreachable.
+      return res.status(400).json({ error: "reason is required" });
+    }
+
+    const [target] = await db
+      .select({
+        id: users.id,
+        smsConfirmationFailureCount: users.smsConfirmationFailureCount,
+        smsConfirmationFirstFailureAt: users.smsConfirmationFirstFailureAt,
+        phoneUnreachable: users.phoneUnreachable,
+        phoneUnreachableAt: users.phoneUnreachableAt,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!target) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const previous = {
+      smsConfirmationFailureCount: target.smsConfirmationFailureCount ?? 0,
+      smsConfirmationFirstFailureAt: target.smsConfirmationFirstFailureAt,
+      phoneUnreachable: target.phoneUnreachable ?? false,
+      phoneUnreachableAt: target.phoneUnreachableAt,
+    };
+
+    // Transactional so the user-row reset and the audit entry land
+    // together — the audit trail is the only forensic record of who
+    // re-enabled outbound SMS.
+    await db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({
+          smsConfirmationFailureCount: 0,
+          smsConfirmationFirstFailureAt: null,
+          phoneUnreachable: false,
+          phoneUnreachableAt: null,
+        })
+        .where(eq(users.id, userId));
+
+      await tx.insert(adminActionAudit).values({
+        createdAt: new Date().toISOString(),
+        actorUserId: req.adminUserId!,
+        actorEmail: req.userEmail || null,
+        targetUserId: userId,
+        actionKey: "sms_clear_phone_unreachable",
+        reason,
+        payload: JSON.stringify(previous),
+        source: "admin_ui",
+      });
+    });
+
+    logger.info(
+      `[Admin SMS Health] Cleared phone_unreachable for user ${userId} (actor=${req.adminUserId}, prevCount=${previous.smsConfirmationFailureCount}, prevUnreachable=${previous.phoneUnreachable})`,
+    );
+
+    res.json({ success: true, userId, previous });
+  } catch (error) {
+    logger.error("[Admin SMS Health] clear-unreachable error:", error);
+    res.status(500).json({ error: "Failed to clear phone unreachable flag" });
+  }
+});
+
 // Recent clear-phone audit rows. Surfaces the last N
 // `sms_clear_phone_e164` actions (actor, target, reason, timestamp,
 // previous phone) on the duplicate-phone diagnostic so support doesn't
