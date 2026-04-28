@@ -132,6 +132,26 @@ jest.mock("../../server/storage", () => ({
   storage: { getUser: jest.fn() },
 }));
 
+// Allow individual tests to swap out the real adminMiddleware (which always
+// sets req.adminUserId on success) for a stub. This is needed to exercise the
+// in-handler `if (!req.adminUserId)` 401 guards on routes like POST /:userId/notes.
+const mockAdminMiddlewareState: {
+  override: ((req: unknown, res: unknown, next: () => void) => void) | null;
+} = { override: null };
+
+jest.mock("../../server/copilot/adminMiddleware", () => {
+  const actual = jest.requireActual("../../server/copilot/adminMiddleware");
+  return {
+    ...actual,
+    adminMiddleware: (req: unknown, res: unknown, next: () => void) => {
+      if (mockAdminMiddlewareState.override) {
+        return mockAdminMiddlewareState.override(req, res, next);
+      }
+      return actual.adminMiddleware(req, res, next);
+    },
+  };
+});
+
 // openid-client is ESM-only; replitAuth imports it at module top but only uses
 // it inside setupAuth, which the tests never call.
 jest.mock("openid-client", () => ({ discovery: jest.fn() }), { virtual: true });
@@ -196,6 +216,7 @@ beforeEach(() => {
   dbMock.update.mockClear();
   dbMock.delete.mockClear();
   clearAdminCache();
+  mockAdminMiddlewareState.override = null;
   mockStripe.subscriptions.retrieve.mockReset();
   mockStripe.subscriptions.update.mockReset();
   mockStripe.subscriptions.cancel.mockReset();
@@ -1158,3 +1179,322 @@ describe("POST /api/admin/users/:userId/actions billing validation", () => {
     });
   });
 });
+
+// -----------------------------------------------------------------------------
+// Read-only admin user detail / history endpoints (Task #152).
+//
+// These shape-tests guard the JSON contract for the four GET endpoints that the
+// admin UI depends on (timeline, messaging, payments, audit). A regression that
+// drops a field, inverts a boolean, or forgets to JSON.parse a stored column
+// would surface here.
+// -----------------------------------------------------------------------------
+
+describe("GET /api/admin/users/:userId/timeline", () => {
+  it("returns events with parsed JSON context", async () => {
+    const ctx = { source: "web", details: { foo: "bar" } };
+    dbState.selectQueue.push([
+      {
+        id: "evt-1",
+        eventName: "booking_link_copied",
+        occurredAt: "2026-04-20T12:00:00.000Z",
+        source: "client",
+        context: JSON.stringify(ctx),
+      },
+      {
+        id: "evt-2",
+        eventName: "first_booking_created",
+        occurredAt: "2026-04-19T08:30:00.000Z",
+        source: "server",
+        context: null,
+      },
+    ]);
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/demo-user/timeline")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("events");
+    expect(Array.isArray(res.body.events)).toBe(true);
+    expect(res.body.events).toHaveLength(2);
+
+    expect(res.body.events[0]).toEqual({
+      id: "evt-1",
+      eventName: "booking_link_copied",
+      occurredAt: "2026-04-20T12:00:00.000Z",
+      source: "client",
+      context: ctx,
+    });
+    expect(res.body.events[1]).toEqual({
+      id: "evt-2",
+      eventName: "first_booking_created",
+      occurredAt: "2026-04-19T08:30:00.000Z",
+      source: "server",
+      context: null,
+    });
+  });
+});
+
+describe("GET /api/admin/users/:userId/messaging", () => {
+  it("returns preferences and an active suppression block when one exists", async () => {
+    // 1st select = user row, 2nd select = active suppression
+    dbState.selectQueue.push([
+      {
+        email: "demo@example.com",
+        phone: "+15551234567",
+        notifyBySms: true,
+        notifyByEmail: false,
+      },
+    ]);
+    dbState.selectQueue.push([
+      {
+        suppressUntil: "2099-01-01T00:00:00.000Z",
+        reason: "User asked to pause",
+      },
+    ]);
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/demo-user/messaging")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      customerIo: { status: "link_out_only" },
+      oneSignal: { status: "link_out_only", pushEnabled: true },
+      preferences: { notifyBySms: true, notifyByEmail: false },
+      suppression: {
+        active: true,
+        until: "2099-01-01T00:00:00.000Z",
+        reason: "User asked to pause",
+      },
+    });
+    expect(res.body.customerIo).toHaveProperty("note");
+    expect(res.body.oneSignal).toHaveProperty("note");
+  });
+
+  it("returns suppression: null when no active suppression exists", async () => {
+    dbState.selectQueue.push([
+      {
+        email: "demo@example.com",
+        phone: null,
+        notifyBySms: false,
+        notifyByEmail: true,
+      },
+    ]);
+    dbState.selectQueue.push([]);
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/demo-user/messaging")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.suppression).toBeNull();
+    expect(res.body.preferences).toEqual({
+      notifyBySms: false,
+      notifyByEmail: true,
+    });
+    expect(res.body.oneSignal.pushEnabled).toBe(false);
+  });
+});
+
+describe("GET /api/admin/users/:userId/payments", () => {
+  it("returns subscription, stripeConnect, and invoice counts", async () => {
+    // 1st select = user row, 2nd = invoices total, 3rd = invoices paid
+    dbState.selectQueue.push([
+      {
+        isPro: true,
+        proExpiresAt: "2027-01-01T00:00:00.000Z",
+        stripeConnectAccountId: "acct_123",
+        stripeConnectStatus: "active",
+      },
+    ]);
+    dbState.selectQueue.push([{ count: 9 }]);
+    dbState.selectQueue.push([{ count: 7 }]);
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/demo-user/payments")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      subscription: { isPro: true, expiresAt: "2027-01-01T00:00:00.000Z" },
+      stripeConnect: { accountId: "acct_123", status: "active" },
+      invoices: { total: 9, paid: 7 },
+    });
+    expect(res.body).toHaveProperty("note");
+  });
+
+  it("falls back to safe defaults when the user has no Stripe linkage", async () => {
+    dbState.selectQueue.push([
+      {
+        isPro: false,
+        proExpiresAt: null,
+        stripeConnectAccountId: null,
+        stripeConnectStatus: null,
+      },
+    ]);
+    dbState.selectQueue.push([{ count: 0 }]);
+    dbState.selectQueue.push([{ count: 0 }]);
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/demo-user/payments")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.subscription).toEqual({ isPro: false, expiresAt: null });
+    expect(res.body.stripeConnect).toEqual({
+      accountId: null,
+      status: "not_connected",
+    });
+    expect(res.body.invoices).toEqual({ total: 0, paid: 0 });
+  });
+});
+
+describe("GET /api/admin/users/:userId/audit", () => {
+  it("returns audit actions with parsed JSON payload", async () => {
+    const payload = { noteId: "note-123" };
+    dbState.selectQueue.push([
+      {
+        id: "audit-1",
+        createdAt: "2026-04-20T12:00:00.000Z",
+        actorUserId: "demo-user",
+        actorEmail: "demo@example.com",
+        actionKey: "add_note",
+        reason: "Logging context",
+        payload: JSON.stringify(payload),
+      },
+      {
+        id: "audit-2",
+        createdAt: "2026-04-19T12:00:00.000Z",
+        actorUserId: "demo-user",
+        actorEmail: "demo@example.com",
+        actionKey: "user_flagged",
+        reason: "Spammy account",
+        payload: null,
+      },
+    ]);
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/demo-user/audit")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("actions");
+    expect(res.body.actions).toHaveLength(2);
+
+    expect(res.body.actions[0]).toEqual({
+      id: "audit-1",
+      createdAt: "2026-04-20T12:00:00.000Z",
+      actorUserId: "demo-user",
+      actorEmail: "demo@example.com",
+      actionKey: "add_note",
+      reason: "Logging context",
+      payload,
+    });
+    expect(res.body.actions[1].payload).toBeNull();
+  });
+});
+
+describe("POST /api/admin/users/:userId/notes", () => {
+  it("inserts a note and returns the new row including its id", async () => {
+    // First select = target user lookup; we then queue an explicit returning
+    // row so the response payload contains a deterministic id.
+    dbState.selectQueue.push([{ id: "demo-user" }]);
+    dbState.insertReturningQueue.push([
+      {
+        id: "note-xyz",
+        actorUserId: "demo-user",
+        targetUserId: "demo-user",
+        note: "Customer called about billing",
+        createdAt: "2026-04-20T12:00:00.000Z",
+      },
+    ]);
+
+    const res = await request(buildApp())
+      .post("/api/admin/users/demo-user/notes")
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ note: "  Customer called about billing  " });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("note");
+    expect(res.body.note).toMatchObject({
+      id: "note-xyz",
+      targetUserId: "demo-user",
+      note: "Customer called about billing",
+    });
+
+    // The note insert should be the first (notes), then the audit insert.
+    const noteInsert = dbState.insertCalls.find((c) => c.table === userAdminNotes);
+    expect(noteInsert).toBeTruthy();
+    expect(noteInsert!.values).toMatchObject({
+      actorUserId: "demo-user",
+      targetUserId: "demo-user",
+      note: "Customer called about billing",
+    });
+
+    const auditInsert = dbState.insertCalls.find(
+      (c) => c.table === adminActionAudit,
+    );
+    expect(auditInsert).toBeTruthy();
+    expect(auditInsert!.values).toMatchObject({
+      actorUserId: "demo-user",
+      targetUserId: "demo-user",
+      actionKey: "add_note",
+      source: "admin_ui",
+    });
+  });
+
+  it("rejects a missing or blank note with 400", async () => {
+    const blankRes = await request(buildApp())
+      .post("/api/admin/users/demo-user/notes")
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ note: "   " });
+
+    expect(blankRes.status).toBe(400);
+    expect(blankRes.body.error).toMatch(/note/i);
+
+    const missingRes = await request(buildApp())
+      .post("/api/admin/users/demo-user/notes")
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({});
+
+    expect(missingRes.status).toBe(400);
+    expect(missingRes.body.error).toMatch(/note/i);
+
+    // Neither attempt should have triggered a notes insert.
+    expect(
+      dbState.insertCalls.find((c) => c.table === userAdminNotes),
+    ).toBeUndefined();
+  });
+
+  it("returns 404 when the target user does not exist", async () => {
+    dbState.selectQueue.push([]);
+
+    const res = await request(buildApp())
+      .post("/api/admin/users/missing-user/notes")
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ note: "Anything" });
+
+    expect(res.status).toBe(404);
+    expect(
+      dbState.insertCalls.find((c) => c.table === userAdminNotes),
+    ).toBeUndefined();
+  });
+
+  it("returns 401 when the request has no admin identity", async () => {
+    // Bypass adminMiddleware so the in-handler `if (!req.adminUserId)` guard
+    // is reachable. The override leaves req.adminUserId unset.
+    mockAdminMiddlewareState.override = (_req, _res, next) => next();
+
+    const res = await request(buildApp())
+      .post("/api/admin/users/demo-user/notes")
+      .send({ note: "Anything" });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toMatch(/admin identity/i);
+    expect(
+      dbState.insertCalls.find((c) => c.table === userAdminNotes),
+    ).toBeUndefined();
+  });
+});
+
