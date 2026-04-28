@@ -19,6 +19,7 @@ import {
   Loader2,
   CheckCircle,
 } from "lucide-react";
+import { isFinitePositiveNumber } from "@/lib/safePrice";
 
 interface PriceInsight {
   serviceType: string;
@@ -172,14 +173,18 @@ export default function PriceOptimizationPage() {
                           <DollarSign className="h-3.5 w-3.5" />
                           <span className="text-xs">Avg Price</span>
                         </div>
-                        <p className="text-lg font-semibold">{formatPrice(insight.avgPrice)}</p>
+                        <p className="text-lg font-semibold">
+                          {isFinitePositiveNumber(insight.avgPrice) ? formatPrice(insight.avgPrice) : "--"}
+                        </p>
                       </div>
                       <div className="rounded-lg bg-muted/40 p-3 col-span-2 sm:col-span-1" data-testid={`stat-hourly-rate-${insight.serviceType}`}>
                         <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
                           <DollarSign className="h-3.5 w-3.5" />
                           <span className="text-xs">Hourly Rate</span>
                         </div>
-                        <p className="text-lg font-semibold">{formatPrice(insight.hourlyRate)}/hr</p>
+                        <p className="text-lg font-semibold">
+                          {isFinitePositiveNumber(insight.hourlyRate) ? `${formatPrice(insight.hourlyRate)}/hr` : "--"}
+                        </p>
                       </div>
                     </div>
 

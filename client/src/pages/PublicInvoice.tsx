@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { SupportTicketForm } from "@/components/SupportTicketForm";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { isFiniteNumber, isFinitePositiveNumber } from "@/lib/safePrice";
 import { 
   FileText, 
   CheckCircle, 
@@ -174,10 +175,12 @@ export default function PublicInvoice() {
   const statusInfo = statusConfig[invoice.status] || statusConfig.draft;
   const StatusIcon = statusInfo.icon;
 
-  const subtotal = invoice.amount;
-  const tax = invoice.tax || 0;
-  const discount = invoice.discount || 0;
+  const subtotal = isFiniteNumber(invoice.amount) ? Number(invoice.amount) : 0;
+  const tax = isFiniteNumber(invoice.tax) ? Number(invoice.tax) : 0;
+  const discount = isFiniteNumber(invoice.discount) ? Number(invoice.discount) : 0;
   const total = subtotal + tax - discount;
+  const subtotalDisplay = isFinitePositiveNumber(subtotal) ? formatCurrency(subtotal) : "--";
+  const totalDisplay = isFinitePositiveNumber(total) ? formatCurrency(total) : "--";
 
   const hasPaymentMethods = Object.keys(paymentMethods).length > 0;
 
@@ -238,7 +241,7 @@ export default function PublicInvoice() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span data-testid="text-subtotal">{formatCurrency(subtotal)}</span>
+                <span data-testid="text-subtotal">{subtotalDisplay}</span>
               </div>
               {tax > 0 && (
                 <div className="flex justify-between">
@@ -255,7 +258,7 @@ export default function PublicInvoice() {
               <Separator />
               <div className="flex justify-between text-lg font-semibold">
                 <span>Total</span>
-                <span data-testid="text-total">{formatCurrency(total)}</span>
+                <span data-testid="text-total">{totalDisplay}</span>
               </div>
             </div>
 

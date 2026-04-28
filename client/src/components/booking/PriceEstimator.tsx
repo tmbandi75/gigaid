@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
+import { safePriceRangeString } from "@/lib/safePrice";
 import { DollarSign, Loader2, Sparkles } from "lucide-react";
 
 interface PriceEstimate {
@@ -83,7 +84,7 @@ export function PriceEstimator({ slug }: PriceEstimatorProps) {
           <div className="p-4 rounded-lg bg-primary/10 border border-primary/20" data-testid="price-estimate-result">
             <div className="flex items-center gap-2 mb-2">
               <DollarSign className="h-5 w-5 text-primary" />
-              <span className="text-lg font-bold text-primary">{estimate.estimateRange}</span>
+              <span className="text-lg font-bold text-primary" data-testid="text-estimate-range">{safePriceRangeString(estimate.estimateRange)}</span>
             </div>
             {estimate.breakdown && (
               <p className="text-sm text-muted-foreground">{estimate.breakdown}</p>

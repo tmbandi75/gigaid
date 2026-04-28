@@ -28,6 +28,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import { isFinitePositiveNumber, safePriceCents, safePriceRange } from "@/lib/safePrice";
 
 interface QuoteEstimate {
   low: number;
@@ -72,6 +73,10 @@ export default function AutoQuotePage() {
 
   const handleUsePrice = async () => {
     if (!estimateMutation.data) return;
+    if (!isFinitePositiveNumber(estimateMutation.data.median)) {
+      toast({ title: "Suggested price unavailable" });
+      return;
+    }
     const dollars = (estimateMutation.data.median / 100).toFixed(2);
     const copiedOk = await copyTextToClipboard(dollars);
     if (copiedOk) {
@@ -85,7 +90,7 @@ export default function AutoQuotePage() {
     const params = new URLSearchParams();
     if (jobType) params.set("serviceType", jobType);
     if (description) params.set("description", description);
-    if (estimateMutation.data) {
+    if (estimateMutation.data && isFinitePositiveNumber(estimateMutation.data.median)) {
       params.set("price", String(estimateMutation.data.median));
     }
     navigate(`/jobs/new?${params.toString()}`);
@@ -218,14 +223,25 @@ export default function AutoQuotePage() {
                 <div className="p-4 rounded-lg bg-muted/50 text-center">
                   <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Price Range</p>
                   <p className="text-xl font-bold" data-testid="text-price-range">
-                    ${(result.low / 100).toFixed(0)} - ${(result.high / 100).toFixed(0)}
+                    {isFinitePositiveNumber(result.low) && isFinitePositiveNumber(result.high)
+                      ? `$${(result.low / 100).toFixed(0)} - $${(result.high / 100).toFixed(0)}`
+                      : safePriceRange(
+                          isFinitePositiveNumber(result.low) ? result.low / 100 : null,
+                          isFinitePositiveNumber(result.high) ? result.high / 100 : null,
+                        )}
                   </p>
                 </div>
                 <div className="p-4 rounded-lg bg-primary/10 text-center">
                   <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Suggested Price</p>
                   <p className="text-2xl font-bold text-primary" data-testid="text-suggested-price">
-                    <DollarSign className="h-5 w-5 inline -mt-1" />
-                    {(result.median / 100).toFixed(0)}
+                    {isFinitePositiveNumber(result.median) ? (
+                      <>
+                        <DollarSign className="h-5 w-5 inline -mt-1" />
+                        {(result.median / 100).toFixed(0)}
+                      </>
+                    ) : (
+                      safePriceCents(result.median)
+                    )}
                   </p>
                 </div>
                 {result.averageDuration && (

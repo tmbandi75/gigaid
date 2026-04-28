@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SupportTicketForm } from "@/components/SupportTicketForm";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { isFinitePositiveNumber } from "@/lib/safePrice";
 import { 
   Loader2, 
   DollarSign,
@@ -139,7 +140,7 @@ export default function ConfirmPrice() {
                 {data.serviceType || "Service"}
               </p>
               <p className="text-3xl font-bold text-primary" data-testid="text-price">
-                {formatCurrency(data.agreedPrice)}
+                {isFinitePositiveNumber(data.agreedPrice) ? formatCurrency(data.agreedPrice) : "--"}
               </p>
             </div>
 

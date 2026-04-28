@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
+import { isFinitePositiveNumber, safePriceRange } from "@/lib/safePrice";
 import { serviceCategories, type ServiceCategory } from "@shared/service-categories";
 import { CATEGORY_ESTIMATION_PROFILES, type EstimationProfile } from "@shared/estimation-profiles";
 import { logger } from "@/lib/logger";
@@ -348,8 +349,10 @@ export function EstimationTool({ onEstimateComplete }: EstimationToolProps) {
 
             <div className="text-center py-3">
               <p className="text-sm text-muted-foreground mb-1">Estimated Price Range</p>
-              <p className="text-3xl font-bold text-green-600">
-                {formatCurrency(result.priceRange.min)} - {formatCurrency(result.priceRange.max)}
+              <p className="text-3xl font-bold text-green-600" data-testid="text-estimate-range">
+                {isFinitePositiveNumber(result.priceRange?.min) && isFinitePositiveNumber(result.priceRange?.max)
+                  ? `${formatCurrency(result.priceRange.min)} - ${formatCurrency(result.priceRange.max)}`
+                  : safePriceRange(result.priceRange?.min, result.priceRange?.max)}
               </p>
             </div>
 

@@ -7189,8 +7189,14 @@ export async function registerRoutes(
   });
 
   app.post("/api/public/ai/estimate-price", async (req, res) => {
+    const fallbackEstimate = {
+      estimateRange: "$50 – $150",
+      breakdown: "Fallback estimate — please refine.",
+      fallback: true as const,
+    };
     try {
-      const { description, slug } = req.body;
+      const { description: rawDescription, slug } = req.body;
+      const description = (rawDescription || "").toString();
       if (!description) {
         return res.status(400).json({ error: "Missing description" });
       }
@@ -7206,10 +7212,21 @@ export async function registerRoutes(
 
       const { estimatePrice } = await import("./ai/aiService");
       const result = await estimatePrice({ description, services });
+
+      const range = typeof result?.estimateRange === "string" ? result.estimateRange.trim() : "";
+      const rangeNumbers = range.match(/-?\$-?\d+(?:\.\d+)?/g) || [];
+      const rangeNumericOk = rangeNumbers.length > 0 && rangeNumbers.every((n: string) => {
+        const parsed = parseFloat(n.replace(/\$/g, ""));
+        return Number.isFinite(parsed) && parsed > 0;
+      });
+      if (!range || /\$NaN|undefined|null/i.test(range) || !rangeNumericOk) {
+        logger.warn("[Pricing] /api/public/ai/estimate-price returned invalid estimateRange, using fallback");
+        return res.json(fallbackEstimate);
+      }
       res.json(result);
     } catch (error) {
       logger.error("Error estimating price:", error);
-      res.json({ estimateRange: "Contact for quote" });
+      res.json(fallbackEstimate);
     }
   });
 
@@ -7492,9 +7509,20 @@ Final price confirmed onsite.`;
 
   // In-app estimation tool (provider-only, always enabled)
   app.post("/api/estimation/in-app", async (req, res) => {
+    const inAppFallback = {
+      priceRange: { min: 5000, max: 15000 },
+      confidence: "low" as const,
+      factors: [] as string[],
+      disclaimers: ["Fallback price — AI estimate unavailable."],
+      aiGenerated: false,
+      photosAnalyzed: false,
+      formattedOutput: "$50 – $150",
+      fallback: true as const,
+    };
     try {
-      const { category, description, squareFootage, photos } = req.body;
-      
+      const { category, description: rawDescription, squareFootage, photos } = req.body;
+      const description = (rawDescription || "").toString();
+
       if (!category || !description) {
         return res.status(400).json({ error: "Category and description are required" });
       }
@@ -7517,10 +7545,17 @@ Final price confirmed onsite.`;
         disclaimers.push("Photo-based estimates are approximate and used only to assist pricing");
       }
 
-      const factors = estimate.factors || [];
-      const lowDollars = Math.round(estimate.priceRange.min / 100);
-      const highDollars = Math.round(estimate.priceRange.max / 100);
-      
+      const factors = estimate?.factors || [];
+      const minVal = estimate?.priceRange?.min;
+      const maxVal = estimate?.priceRange?.max;
+      if (!estimate || !Number.isFinite(minVal) || !Number.isFinite(maxVal)) {
+        logger.warn("[Pricing] /api/estimation/in-app produced non-finite priceRange, using fallback");
+        return res.json(inAppFallback);
+      }
+
+      const lowDollars = Math.round((minVal as number) / 100);
+      const highDollars = Math.round((maxVal as number) / 100);
+
       const formattedOutput = `Suggested Estimate:
 $${lowDollars} – $${highDollars}
 
@@ -14751,10 +14786,20 @@ Return ONLY the message text, no JSON or formatting.`
 
   // ============ AUTO-QUOTE GENERATOR ============
   app.post("/api/quote-estimate", requireAuth, async (req, res) => {
+    const quoteFallback = {
+      source: "default" as const,
+      suggestedPriceLow: 5000,
+      suggestedPriceHigh: 15000,
+      suggestedPriceMedian: 9000,
+      rationale: "Fallback range — pricing data unavailable.",
+      avgDurationMinutes: 60,
+      fallback: true as const,
+    };
     try {
       const userId = (req as any).userId;
-      const { jobType, location, description } = req.body;
-      
+      const { jobType, location, description: rawDescription } = req.body;
+      const description = (rawDescription || "").toString();
+
       if (!jobType) return res.status(400).json({ error: "jobType is required" });
       
       const cacheKey = `${userId}:${jobType}:${location?.toLowerCase().trim() || 'none'}`;
@@ -14836,6 +14881,14 @@ Respond in JSON format only:
         }
       }
       
+      const lowOk = Number.isFinite(quoteResult?.suggestedPriceLow);
+      const highOk = Number.isFinite(quoteResult?.suggestedPriceHigh);
+      const medianOk = Number.isFinite(quoteResult?.suggestedPriceMedian);
+      if (!quoteResult || !lowOk || !highOk || !medianOk) {
+        logger.warn("[Pricing] /api/quote-estimate produced non-finite price fields, using fallback");
+        return res.json(quoteFallback);
+      }
+
       quoteCache.set(cacheKey, { result: quoteResult, timestamp: Date.now() });
       pruneQuoteCache();
       
@@ -14902,7 +14955,15 @@ Respond in JSON format only:
         };
       });
       
-      res.json({ insights: insights.filter(i => i.totalJobs >= 2) });
+      const filtered = insights.filter(i => i.totalJobs >= 2);
+      const cleaned = filtered.filter(i => Number.isFinite(i.avgPrice) && Number.isFinite(i.hourlyRate));
+      if (cleaned.length === 0) {
+        if (filtered.length > 0) {
+          logger.warn("[Pricing] /api/price-optimization dropped all insights with non-finite avgPrice/hourlyRate");
+        }
+        return res.json({ insights: [], fallback: true });
+      }
+      res.json({ insights: cleaned });
     } catch (error: any) {
       logger.error("Error fetching price optimization:", error);
       res.status(500).json({ error: "Failed to fetch price optimization" });
