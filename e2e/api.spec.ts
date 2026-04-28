@@ -84,17 +84,6 @@ test.describe('API Endpoints', () => {
     });
   });
 
-  test.describe('Admin Tests API', () => {
-    test('POST /api/test/admin-users should run admin tests', async ({ request }) => {
-      const response = await request.post(`${baseUrl}/api/test/admin-users`);
-      expect(response.status()).toBe(200);
-      
-      const data = await response.json();
-      expect(data.passed).toBe(true);
-      expect(data.total).toBeGreaterThan(0);
-    });
-  });
-
   test.describe('Copilot API', () => {
     test('GET /api/copilot/metrics should return metrics', async ({ request }) => {
       const response = await request.get(`${baseUrl}/api/copilot/metrics`);

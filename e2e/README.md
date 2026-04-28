@@ -63,7 +63,7 @@ npx playwright show-report
 
 ## Test Coverage
 
-### API Tests (11 tests)
+### API Tests (10 tests)
 - ✅ Jobs API - GET /api/jobs
 - ✅ Leads API - GET /api/leads
 - ✅ Invoices API - GET /api/invoices
@@ -72,7 +72,6 @@ npx playwright show-report
 - ✅ Admin user detail - GET /api/admin/users/:id
 - ✅ Admin actions validation (reason required)
 - ✅ Admin actions validation (invalid keys rejected)
-- ✅ Admin tests API - POST /api/test/admin-users
 - ✅ Copilot metrics API
 - ✅ Copilot focus API
 
@@ -100,8 +99,8 @@ The Playwright configuration is in `playwright.config.ts`:
 In addition to Playwright tests, the app has backend API tests:
 
 ```bash
-# Run admin panel tests
-curl -X POST http://localhost:5000/api/test/admin-users
+# Run admin panel tests (Jest)
+npx jest --selectProjects=api tests/api/adminUsers.test.ts
 
 # Run no-silent-completion tests
 curl -X POST http://localhost:5000/api/test/no-silent-completion
