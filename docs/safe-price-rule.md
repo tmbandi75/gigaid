@@ -112,3 +112,47 @@ The same scanner is registered as the `safe-price-scan` validation command so
 it runs automatically before a task can be merged. If any client file
 introduces a raw `$` price pattern the scan fails, the merge is blocked, and
 the offending file/line/snippet appears in the validation log.
+
+## Pre-push and CI enforcement (Task #172)
+
+The validation workflows only fire inside the editor / agent. To catch a
+regression no matter who pushes, both gates also run:
+
+1. **Pre-push git hook** — `scripts/git-hooks/pre-push` calls
+   `scripts/safe-price-checks.sh`, which runs the standalone ESLint config
+   (`eslint.safeprice.config.js`) and the Jest scanner
+   (`noRawPriceTemplates`) back-to-back. The hook is wired up by
+   `scripts/install-git-hooks.sh`, which sets
+   `git config core.hooksPath scripts/git-hooks`. The post-merge script
+   (`scripts/post-merge.sh`) runs the installer after every task merge so
+   contributors don't have to remember.
+
+   To install manually after a fresh clone:
+
+   ```sh
+   ./scripts/install-git-hooks.sh
+   ```
+
+2. **GitHub Actions** — `.github/workflows/safe-price.yml` runs the same
+   `scripts/safe-price-checks.sh` on every `push` and `pull_request`. The
+   PR cannot be merged if either gate fails.
+
+### Bypassing the hook (emergencies only)
+
+Both bypass mechanisms exist for genuine emergencies (e.g. shipping a hotfix
+when the scan tripped on a known false positive that's already being fixed
+in another PR). Don't use them to ship real raw-`$` patterns — CI will
+still block the PR.
+
+```sh
+# Skip the hook for one push:
+SKIP_SAFE_PRICE=1 git push
+
+# Or, equivalently (skips ALL local hooks):
+git push --no-verify
+```
+
+There is no way to bypass the GitHub Actions check without re-running it
+green — that is intentional, since the hook is the developer's safety net
+and CI is the team's.
+

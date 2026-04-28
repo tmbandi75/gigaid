@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Pre-push hook: blocks the push if any raw `$` price formatting was
+# introduced. Mirrors the `safe-price-eslint` and `safe-price-scan`
+# validation workflows so a developer who ignored their editor warnings
+# cannot ship a regression.
+#
+# Bypass (emergencies only):
+#   SKIP_SAFE_PRICE=1 git push ...
+#   git push --no-verify ...
+#
+# Install: ./scripts/install-git-hooks.sh (also runs automatically via
+# scripts/post-merge.sh after every task merge).
+
+set -euo pipefail
+
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+exec "$ROOT_DIR/scripts/safe-price-checks.sh"
