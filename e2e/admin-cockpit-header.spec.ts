@@ -58,6 +58,16 @@ async function installHarnessStubs(page: Page) {
     }
   });
 
+  // Seed an auth token so apiFetch allows mutating requests (POST /refresh).
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem('gigaid_auth_token', 'e2e-admin-token');
+      localStorage.setItem('gigaid_token_uid', 'e2e-admin-user');
+    } catch {
+      // Ignore storage errors during init.
+    }
+  });
+
   // Catch-all first; specific routes registered after take precedence in Playwright.
   await page.route('**/api/**', (route: Route) => {
     if (route.request().method() === 'GET') {
@@ -171,4 +181,77 @@ test.describe('Admin Cockpit header navigation', () => {
       expect(markerStillSet).toBe(true);
     });
   }
+});
+
+test.describe('Admin Cockpit refresh button confirmation', () => {
+  test('shows a success toast when the refresh request succeeds', async ({ page }) => {
+    await installHarnessStubs(page);
+    await page.route('**/api/admin/cockpit/refresh', (route: Route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true }),
+      }),
+    );
+    await gotoHarness(page);
+
+    const refresh = page.locator('[data-testid="button-refresh"]');
+    await expect(refresh).toBeVisible();
+    await refresh.click();
+
+    const toast = page.locator('[data-testid="toast-default"]').first();
+    await expect(toast).toBeVisible();
+    await expect(toast.locator('[data-testid="toast-title"]')).toHaveText('Data refreshed');
+  });
+
+  test('shows a destructive toast when the refresh request fails', async ({ page }) => {
+    await installHarnessStubs(page);
+    await page.route('**/api/admin/cockpit/refresh', (route: Route) =>
+      route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'boom' }),
+      }),
+    );
+    await gotoHarness(page);
+
+    const refresh = page.locator('[data-testid="button-refresh"]');
+    await expect(refresh).toBeVisible();
+    await refresh.click();
+
+    const toast = page.locator('[data-testid="toast-destructive"]').first();
+    await expect(toast).toBeVisible();
+    await expect(toast.locator('[data-testid="toast-title"]')).toHaveText('Failed to refresh');
+  });
+
+  test('disables the refresh button while the request is in flight', async ({ page }) => {
+    await installHarnessStubs(page);
+
+    let releaseRefresh: (() => void) | null = null;
+    const refreshGate = new Promise<void>((resolve) => {
+      releaseRefresh = resolve;
+    });
+
+    await page.route('**/api/admin/cockpit/refresh', async (route: Route) => {
+      await refreshGate;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true }),
+      });
+    });
+
+    await gotoHarness(page);
+
+    const refresh = page.locator('[data-testid="button-refresh"]');
+    await expect(refresh).toBeEnabled();
+    await refresh.click();
+
+    // While the in-flight request is held open, the button must be disabled.
+    await expect(refresh).toBeDisabled();
+
+    // Release the stubbed response and confirm the button becomes enabled again.
+    releaseRefresh?.();
+    await expect(refresh).toBeEnabled();
+  });
 });
