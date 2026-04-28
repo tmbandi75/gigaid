@@ -545,6 +545,12 @@ function SmsOptOutEventsSection({ userId }: { userId: string }) {
     },
   });
 
+  const { data: externalLinks } = useQuery<any>({
+    queryKey: QUERY_KEYS.adminExternalLinks(),
+  });
+  const twilioMessageUrlTemplate: string | undefined =
+    externalLinks?.twilio?.messageUrlTemplate;
+
   const events = data?.events || [];
 
   return (
@@ -610,7 +616,27 @@ function SmsOptOutEventsSection({ userId }: { userId: string }) {
                       className="py-2 pr-3 font-mono text-xs text-muted-foreground"
                       data-testid={`text-sms-opt-out-sid-${e.id}`}
                     >
-                      {e.twilioSid || "—"}
+                      {e.twilioSid ? (
+                        twilioMessageUrlTemplate ? (
+                          <a
+                            href={twilioMessageUrlTemplate.replace(
+                              "{{TWILIO_SID}}",
+                              encodeURIComponent(e.twilioSid),
+                            )}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-primary hover:underline"
+                            data-testid={`link-sms-opt-out-sid-${e.id}`}
+                          >
+                            {e.twilioSid}
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        ) : (
+                          e.twilioSid
+                        )
+                      ) : (
+                        "—"
+                      )}
                     </td>
                   </tr>
                 ))}

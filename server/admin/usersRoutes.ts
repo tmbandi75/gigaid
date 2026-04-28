@@ -1029,6 +1029,12 @@ router.get("/links/external", async (req, res) => {
       baseUrl: process.env.STRIPE_DASHBOARD_BASE_URL || "https://dashboard.stripe.com",
       customerUrlTemplate: "https://dashboard.stripe.com/customers/{{CUSTOMER_ID}}",
     },
+    twilio: {
+      baseUrl: process.env.TWILIO_DASHBOARD_BASE_URL || "https://console.twilio.com",
+      messageUrlTemplate:
+        process.env.TWILIO_MESSAGE_URL_TEMPLATE ||
+        "https://console.twilio.com/us1/monitor/logs/sms/{{TWILIO_SID}}",
+    },
   });
 });
 
