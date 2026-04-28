@@ -338,72 +338,8 @@ export async function registerRoutes(
     return res.status(200).json({ ok: true });
   });
 
-  // Simple admin status check (uses regular auth, no admin middleware)
-  app.get("/api/admin/status", isAuthenticated, async (req: Request, res: Response) => {
-    // Get user ID from JWT Bearer token (Firebase auth) or Replit Auth session
-    let userId: string | null = null;
-    let userEmail: string | null = null;
-    
-    const authHeader = req.headers.authorization;
-    if (authHeader?.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      const payload = verifyAppJwt(token);
-      if (payload?.sub) {
-        userId = payload.sub;
-        userEmail = payload.email_normalized || null;
-      }
-    }
-    
-    // Fall back to Replit Auth session
-    if (!userId) {
-      const user = req.user as any;
-      userId = user?.claims?.sub || null;
-    }
-    
-    // If we have a userId, look up the user's email from database
-    if (userId && !userEmail) {
-      const dbUser = await storage.getUser(userId);
-      userEmail = dbUser?.email || null;
-    }
-    
-    logger.debug("[AdminStatus] Checking admin for user");
-    
-    if (!userId && !userEmail) {
-      logger.debug("[AdminStatus] No userId or email found, returning false");
-      return res.json({ isAdmin: false });
-    }
-    
-    // Import isAdminUser dynamically to check admin status
-    const { isAdminUser } = await import("./copilot/adminMiddleware");
-    const isAdmin = isAdminUser(userId || undefined, userEmail || undefined);
-    logger.debug("[AdminStatus] Bootstrap admin check: isAdmin=", isAdmin);
-    
-    if (isAdmin) {
-      return res.json({ isAdmin: true, role: "super_admin" });
-    }
-    
-    // Check database for admin record
-    const { db } = await import("./db");
-    const { admins } = await import("@shared/schema");
-    const { eq, or } = await import("drizzle-orm");
-    
-    const conditions = [];
-    if (userId) conditions.push(eq(admins.userId, userId));
-    if (userEmail) conditions.push(eq(admins.email, userEmail));
-    
-    if (conditions.length > 0) {
-      const [dbAdmin] = await db.select()
-        .from(admins)
-        .where(or(...conditions))
-        .limit(1);
-      
-      if (dbAdmin && dbAdmin.isActive) {
-        return res.json({ isAdmin: true, role: dbAdmin.role });
-      }
-    }
-    
-    return res.json({ isAdmin: false });
-  });
+  const { handleAdminStatus } = await import("./copilot/adminStatusHandler");
+  app.get("/api/admin/status", isAuthenticated, handleAdminStatus);
 
   app.use("/api", leadEmailRoutes);
   app.use("/api/auth", mobileAuthRoutes);
