@@ -1,0 +1,130 @@
+{
+  "colorScheme": "light",
+  "fonts": [
+    {
+      "family": "Roboto",
+      "role": "body"
+    }
+  ],
+  "colors": {
+    "primary": "#6366F1",
+    "secondary": "#4F46E5",
+    "accent": "#2563EB",
+    "background": "#FFFFFF",
+    "textPrimary": "#2563EB",
+    "link": "#2563EB"
+  },
+  "typography": {
+    "fontFamilies": {
+      "primary": "Roboto",
+      "heading": "Roboto"
+    },
+    "fontStacks": {
+      "heading": [
+        "Roboto",
+        "sans-serif"
+      ],
+      "body": [
+        "Roboto",
+        "sans-serif"
+      ],
+      "paragraph": [
+        "Roboto",
+        "sans-serif"
+      ]
+    },
+    "fontSizes": {
+      "h1": "30px",
+      "h2": "20px",
+      "body": "14px"
+    }
+  },
+  "spacing": {
+    "baseUnit": 4,
+    "borderRadius": "6px"
+  },
+  "components": {
+    "input": {
+      "background": "#FFFFFF",
+      "textColor": "#374151",
+      "borderColor": null,
+      "borderRadius": "9999px",
+      "borderRadiusCorners": {
+        "topLeft": "9999px",
+        "topRight": "9999px",
+        "bottomRight": "9999px",
+        "bottomLeft": "9999px"
+      },
+      "shadow": "none"
+    },
+    "buttonPrimary": {
+      "background": "#2563EB",
+      "textColor": "#FFFFFF",
+      "borderColor": "#005BBD",
+      "borderRadius": "9999px",
+      "borderRadiusCorners": {
+        "topLeft": "9999px",
+        "topRight": "9999px",
+        "bottomRight": "9999px",
+        "bottomLeft": "9999px"
+      },
+      "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.1) 0px 4px 6px -4px"
+    },
+    "buttonSecondary": {
+      "background": "#FFFFFF",
+      "textColor": "#FFFFFF",
+      "borderColor": "#E6E6E6",
+      "borderRadius": "9999px",
+      "borderRadiusCorners": {
+        "topLeft": "9999px",
+        "topRight": "9999px",
+        "bottomRight": "9999px",
+        "bottomLeft": "9999px"
+      },
+      "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px"
+    }
+  },
+  "images": {
+    "logo": null,
+    "favicon": "https://gig-aid--thierrymbandi.replit.app/favicon.png",
+    "ogImage": null
+  },
+  "__llm_button_reasoning": {
+    "primary": {
+      "index": 0,
+      "text": "Sign in",
+      "reasoning": "Button #0 has a vibrant blue background (#2563EB), which is a strong indicator of a primary CTA. The text 'Sign in' is action-oriented, making it the main call-to-action."
+    },
+    "secondary": {
+      "index": 1,
+      "text": "Continue with Apple",
+      "reasoning": "Button #1 has a white background, which is distinct from the primary button's vibrant blue. It offers an alternative sign-in method, making it a suitable secondary action."
+    },
+    "confidence": 0.95
+  },
+  "personality": {
+    "tone": "modern",
+    "energy": "medium",
+    "targetAudience": "gig workers and freelancers"
+  },
+  "designSystem": {
+    "framework": "tailwind",
+    "componentLibrary": ""
+  },
+  "confidence": {
+    "buttons": 0.95,
+    "colors": 0.9,
+    "overall": 0.925
+  },
+  "__llm_metadata": {
+    "logoSelection": {
+      "llmCalled": false,
+      "llmSucceeded": false,
+      "finalSource": "none"
+    },
+    "buttonClassification": {
+      "llmCalled": true,
+      "llmSucceeded": true
+    }
+  }
+}
