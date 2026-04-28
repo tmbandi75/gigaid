@@ -150,11 +150,17 @@ describe("safePriceRangeString", () => {
     expect(safePriceRangeString(null)).toBe("--");
     expect(safePriceRangeString(undefined)).toBe("--");
     expect(safePriceRangeString(123)).toBe("--");
+    expect(safePriceRangeString(NaN)).toBe("--");
+    expect(safePriceRangeString({})).toBe("--");
+    expect(safePriceRangeString([])).toBe("--");
+    expect(safePriceRangeString(true)).toBe("--");
+    expect(safePriceRangeString(false)).toBe("--");
   });
 
   it("returns the placeholder for empty / whitespace strings", () => {
     expect(safePriceRangeString("")).toBe("--");
     expect(safePriceRangeString("   ")).toBe("--");
+    expect(safePriceRangeString("\t\n")).toBe("--");
   });
 
   it("returns the placeholder when the string contains $NaN/undefined/null", () => {
@@ -162,20 +168,59 @@ describe("safePriceRangeString", () => {
     expect(safePriceRangeString("$50 – $NaN")).toBe("--");
     expect(safePriceRangeString("$undefined")).toBe("--");
     expect(safePriceRangeString("$null")).toBe("--");
+    expect(safePriceRangeString("price is undefined")).toBe("--");
+    expect(safePriceRangeString("value: null")).toBe("--");
+  });
+
+  it("treats the bad-token check as case-insensitive", () => {
+    // The regex inside the helper uses the /i flag, so any casing of
+    // "$NaN", "undefined", or "null" must trip the placeholder branch.
+    expect(safePriceRangeString("$nan")).toBe("--");
+    expect(safePriceRangeString("$NAN")).toBe("--");
+    expect(safePriceRangeString("UNDEFINED amount")).toBe("--");
+    expect(safePriceRangeString("NULL")).toBe("--");
   });
 
   it("returns the placeholder when no $-numbers can be parsed", () => {
     expect(safePriceRangeString("call for pricing")).toBe("--");
+    // Numbers without a leading "$" are not considered prices by this
+    // helper — it requires the explicit $ marker so it can't be tricked
+    // into echoing arbitrary numeric text from the model.
+    expect(safePriceRangeString("50 to 100 dollars")).toBe("--");
   });
 
   it("returns the placeholder when any parsed amount is non-positive", () => {
     expect(safePriceRangeString("$0 – $100")).toBe("--");
     expect(safePriceRangeString("$-5 – $100")).toBe("--");
+    expect(safePriceRangeString("$50 – $0")).toBe("--");
+    expect(safePriceRangeString("$50 – $-10")).toBe("--");
+    expect(safePriceRangeString("$0")).toBe("--");
+    expect(safePriceRangeString("$0.00")).toBe("--");
   });
 
   it("preserves a valid pre-formatted price range string", () => {
     expect(safePriceRangeString("$50 – $100")).toBe("$50 – $100");
     expect(safePriceRangeString("starting at $99")).toBe("starting at $99");
+    // A single positive $-amount is accepted (the regex requires >= 1
+    // match, not a full range).
+    expect(safePriceRangeString("$25")).toBe("$25");
+    // Decimals are parsed and accepted as long as they're positive.
+    expect(safePriceRangeString("$49.99 – $199.95")).toBe("$49.99 – $199.95");
+  });
+
+  it("trims surrounding whitespace from a valid range string", () => {
+    // The helper returns the trimmed string, not the raw input, so any
+    // leading/trailing whitespace from the model is normalised away.
+    expect(safePriceRangeString("  $50 – $100  ")).toBe("$50 – $100");
+  });
+
+  it("respects a custom placeholder", () => {
+    expect(safePriceRangeString(null, { placeholder: "TBD" })).toBe("TBD");
+    expect(safePriceRangeString("$NaN", { placeholder: "TBD" })).toBe("TBD");
+    expect(safePriceRangeString("$0 – $100", { placeholder: "n/a" })).toBe(
+      "n/a",
+    );
+    expect(safePriceRangeString("", { placeholder: "" })).toBe("");
   });
 });
 
