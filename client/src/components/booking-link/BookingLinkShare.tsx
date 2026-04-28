@@ -12,18 +12,13 @@ import {
   copyBookingLinkToClipboard,
 } from "@/lib/bookingLinkShareFlow";
 import { recordCopy, recordShareTap } from "@/lib/bookingLinkAnalytics";
+import { trackEvent } from "@/components/PostHogProvider";
 import { useAuth } from "@/hooks/use-auth";
 
 type BookingLinkShareProps = {
   variant: "primary" | "inline" | "compact";
   context: "plan" | "leads" | "jobs" | "bookings";
 };
-
-function trackEvent(eventName: string, properties?: Record<string, unknown>) {
-  if (typeof window !== 'undefined' && (window as { posthog?: { capture: (event: string, props?: Record<string, unknown>) => void } }).posthog) {
-    (window as { posthog?: { capture: (event: string, props?: Record<string, unknown>) => void } }).posthog?.capture(eventName, properties);
-  }
-}
 
 export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
   const { toast } = useToast();

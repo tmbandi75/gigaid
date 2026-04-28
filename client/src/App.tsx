@@ -84,6 +84,7 @@ import ProfitWarningsPage from "@/pages/ProfitWarningsPage";
 import ViewAllStats from "@/pages/ViewAllStats";
 import NotFound from "@/pages/not-found";
 import E2ENbaHarness from "@/pages/E2ENbaHarness";
+import E2EBookingLinkShareHarness from "@/pages/E2EBookingLinkShareHarness";
 import { AppErrorBoundary } from "@/components/ErrorBoundary";
 import { logClientEnv } from "./debug/envProbe";
 import { logger } from "@/lib/logger";
@@ -334,6 +335,12 @@ function App() {
                 <Route path="/force-logout" component={ForceLogout} />
                 {import.meta.env.DEV && (
                   <Route path="/_e2e/nba" component={E2ENbaHarness} />
+                )}
+                {import.meta.env.DEV && (
+                  <Route
+                    path="/_e2e/booking-link-share"
+                    component={E2EBookingLinkShareHarness}
+                  />
                 )}
                 {import.meta.env.DEV && (
                   <Route path="/_e2e/admin-cockpit" component={AdminCockpit} />
