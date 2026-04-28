@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { db } from "../db";
-import { users, leads, jobs, invoices, eventsCanonical, metricsDaily, adminActionAudit } from "@shared/schema";
+import { users, leads, jobs, invoices, eventsCanonical, metricsDaily, adminActionAudit, bookingPages, bookingPageEvents } from "@shared/schema";
 import { eq, sql, desc, and, gte, lte, isNull, isNotNull, count } from "drizzle-orm";
 import { adminMiddleware, AdminRequest, requireRole } from "../copilot/adminMiddleware";
 import { logger } from "../lib/logger";
@@ -619,6 +619,272 @@ router.get("/share-funnel", adminMiddleware, async (req: AdminRequest, res: Resp
   } catch (error) {
     logger.error("[Analytics] Error fetching share funnel:", error);
     res.status(500).json({ error: "Failed to fetch share funnel" });
+  }
+});
+
+// First Booking funnel: aggregates the journey of pre-generated booking
+// pages (created by the Growth Engine and unclaimed by default) into a
+// classic funnel: pages generated → viewed → claimed → link shared →
+// first invoice paid by the converted user. Per-category breakdown lets
+// us tell which acquisition cohorts (e.g. "moving" vs "cleaning") are
+// converting vs stuck mid-funnel.
+//
+// Time filter applies to the page's `created_at` so that "last 7d" means
+// "of the pages we generated in the last 7 days, how many made it through
+// each step". Conversion (paid invoice) checks any paid invoice owned by
+// the claimer — a claimed user only ever shows up here once because the
+// claim flow creates a brand-new user, so the first paid invoice for that
+// user is the first invoice paid attributable to this acquisition page.
+
+function parseFunnelWindowDays(raw: unknown): number | null {
+  if (raw === undefined || raw === null) return 30;
+  const value = String(raw).toLowerCase();
+  if (value === "all" || value === "0") return null;
+  const n = parseInt(value, 10);
+  if (Number.isFinite(n) && n > 0 && n <= 365 * 5) return n;
+  return 30;
+}
+
+function windowStartIso(days: number | null): string | null {
+  if (days === null) return null;
+  const start = new Date();
+  start.setUTCDate(start.getUTCDate() - days);
+  start.setUTCHours(0, 0, 0, 0);
+  return start.toISOString();
+}
+
+// Cohort filter: this report is about Growth-Engine-generated unclaimed
+// booking pages. The `booking_pages` table also stores user-created pages
+// (source = 'user_created'), which represent providers' personal booking
+// links — they are NOT acquisition pages and would pollute the funnel
+// numbers (a `user_created` page is "claimed" the moment it exists, so
+// counting it would inflate the claim rate to ~100% and the per-category
+// breakdown would be meaningless). We restrict every funnel query to
+// source = 'growth_engine'.
+const FUNNEL_SOURCE = "growth_engine";
+
+router.get("/first-booking-funnel", adminMiddleware, async (req: AdminRequest, res: Response) => {
+  try {
+    const days = parseFunnelWindowDays(req.query.days);
+    const windowStart = windowStartIso(days);
+
+    const result = await db.execute(sql`
+      WITH page_event_flags AS (
+        SELECT
+          p.id,
+          COALESCE(NULLIF(p.category, ''), 'uncategorized') AS category,
+          COALESCE(NULLIF(p.source, ''), 'unknown') AS source,
+          p.claimed,
+          p.claimed_by_user_id,
+          EXISTS (
+            SELECT 1 FROM booking_page_events e
+            WHERE e.page_id = p.id AND e.type = 'page_viewed'
+          ) AS viewed,
+          EXISTS (
+            SELECT 1 FROM booking_page_events e
+            WHERE e.page_id = p.id AND e.type IN ('link_copied', 'link_shared')
+          ) AS shared,
+          (
+            p.claimed_by_user_id IS NOT NULL AND EXISTS (
+              SELECT 1 FROM invoices i
+              WHERE i.user_id = p.claimed_by_user_id
+                AND i.paid_at IS NOT NULL
+            )
+          ) AS paid
+        FROM booking_pages p
+        WHERE p.source = ${FUNNEL_SOURCE}
+          AND (${windowStart}::text IS NULL OR p.created_at >= ${windowStart})
+      )
+      SELECT
+        category,
+        COUNT(*)::int AS generated,
+        SUM(CASE WHEN viewed THEN 1 ELSE 0 END)::int AS viewed,
+        SUM(CASE WHEN claimed THEN 1 ELSE 0 END)::int AS claimed,
+        SUM(CASE WHEN shared THEN 1 ELSE 0 END)::int AS shared,
+        SUM(CASE WHEN paid THEN 1 ELSE 0 END)::int AS paid
+      FROM page_event_flags
+      GROUP BY category
+      ORDER BY generated DESC, category ASC
+    `);
+
+    const categories = (result.rows as any[]).map((r) => ({
+      category: r.category as string,
+      generated: Number(r.generated || 0),
+      viewed: Number(r.viewed || 0),
+      claimed: Number(r.claimed || 0),
+      shared: Number(r.shared || 0),
+      paid: Number(r.paid || 0),
+    }));
+
+    const totals = categories.reduce(
+      (acc, row) => ({
+        generated: acc.generated + row.generated,
+        viewed: acc.viewed + row.viewed,
+        claimed: acc.claimed + row.claimed,
+        shared: acc.shared + row.shared,
+        paid: acc.paid + row.paid,
+      }),
+      { generated: 0, viewed: 0, claimed: 0, shared: 0, paid: 0 },
+    );
+
+    res.json({
+      window: days === null ? "all" : `${days}d`,
+      totals,
+      categories,
+    });
+  } catch (error) {
+    logger.error("[Analytics] Error fetching first-booking funnel:", error);
+    res.status(500).json({ error: "Failed to fetch first-booking funnel" });
+  }
+});
+
+router.get("/first-booking-funnel/pages", adminMiddleware, async (req: AdminRequest, res: Response) => {
+  try {
+    const days = parseFunnelWindowDays(req.query.days);
+    const windowStart = windowStartIso(days);
+    const limit = Math.min(parseInt(String(req.query.limit ?? "100"), 10) || 100, 500);
+
+    const result = await db.execute(sql`
+      SELECT
+        p.id,
+        COALESCE(NULLIF(p.category, ''), 'uncategorized') AS category,
+        COALESCE(NULLIF(p.source, ''), 'unknown') AS source,
+        p.location,
+        p.claimed,
+        p.claimed_at,
+        p.claimed_by_user_id,
+        p.created_at,
+        EXISTS (
+          SELECT 1 FROM booking_page_events e
+          WHERE e.page_id = p.id AND e.type = 'page_viewed'
+        ) AS viewed,
+        EXISTS (
+          SELECT 1 FROM booking_page_events e
+          WHERE e.page_id = p.id AND e.type IN ('link_copied', 'link_shared')
+        ) AS shared,
+        (
+          SELECT MIN(i.paid_at) FROM invoices i
+          WHERE p.claimed_by_user_id IS NOT NULL
+            AND i.user_id = p.claimed_by_user_id
+            AND i.paid_at IS NOT NULL
+        ) AS first_paid_at
+      FROM booking_pages p
+      WHERE p.source = ${FUNNEL_SOURCE}
+        AND (${windowStart}::text IS NULL OR p.created_at >= ${windowStart})
+      ORDER BY p.created_at DESC
+      LIMIT ${limit}
+    `);
+
+    const pages = (result.rows as any[]).map((r) => ({
+      id: r.id as string,
+      category: r.category as string,
+      source: r.source as string,
+      location: (r.location as string | null) ?? null,
+      claimed: !!r.claimed,
+      claimedAt: (r.claimed_at as string | null) ?? null,
+      claimedByUserId: (r.claimed_by_user_id as string | null) ?? null,
+      createdAt: r.created_at as string,
+      viewed: !!r.viewed,
+      shared: !!r.shared,
+      firstPaidAt: (r.first_paid_at as string | null) ?? null,
+    }));
+
+    res.json({
+      window: days === null ? "all" : `${days}d`,
+      limit,
+      pages,
+    });
+  } catch (error) {
+    logger.error("[Analytics] Error fetching first-booking pages list:", error);
+    res.status(500).json({ error: "Failed to fetch first-booking pages list" });
+  }
+});
+
+router.get("/first-booking-funnel/pages/:pageId", adminMiddleware, async (req: AdminRequest, res: Response) => {
+  try {
+    const pageId = req.params.pageId;
+    if (!pageId) {
+      return res.status(400).json({ error: "Missing pageId" });
+    }
+
+    const [page] = await db
+      .select()
+      .from(bookingPages)
+      .where(eq(bookingPages.id, pageId))
+      .limit(1);
+
+    if (!page) {
+      return res.status(404).json({ error: "Page not found" });
+    }
+    // Mirror the cohort filter from the aggregate/list endpoints — this
+    // detail view is only meaningful for Growth Engine acquisition pages.
+    // user_created pages have their own UI elsewhere.
+    if (page.source !== FUNNEL_SOURCE) {
+      return res.status(404).json({ error: "Page not found" });
+    }
+
+    const events = await db
+      .select({
+        id: bookingPageEvents.id,
+        type: bookingPageEvents.type,
+        variant: bookingPageEvents.variant,
+        metadata: bookingPageEvents.metadata,
+        createdAt: bookingPageEvents.createdAt,
+      })
+      .from(bookingPageEvents)
+      .where(eq(bookingPageEvents.pageId, pageId))
+      .orderBy(bookingPageEvents.createdAt);
+
+    let claimer: { id: string; name: string | null; email: string | null } | null = null;
+    let firstPaidAt: string | null = null;
+    let totalPaidInvoices = 0;
+    if (page.claimedByUserId) {
+      const [u] = await db
+        .select({ id: users.id, name: users.name, email: users.email })
+        .from(users)
+        .where(eq(users.id, page.claimedByUserId))
+        .limit(1);
+      if (u) claimer = { id: u.id, name: u.name ?? null, email: u.email ?? null };
+
+      const paidRow = await db.execute(sql`
+        SELECT MIN(paid_at) AS first_paid_at, COUNT(*)::int AS total_paid
+        FROM invoices
+        WHERE user_id = ${page.claimedByUserId}
+          AND paid_at IS NOT NULL
+      `);
+      const row = (paidRow.rows as any[])[0];
+      if (row) {
+        firstPaidAt = (row.first_paid_at as string | null) ?? null;
+        totalPaidInvoices = Number(row.total_paid || 0);
+      }
+    }
+
+    res.json({
+      page: {
+        id: page.id,
+        category: page.category,
+        location: page.location,
+        source: page.source,
+        phone: page.phone,
+        claimed: page.claimed,
+        claimedAt: page.claimedAt,
+        claimedByUserId: page.claimedByUserId,
+        createdAt: page.createdAt,
+      },
+      claimer,
+      firstPaidAt,
+      totalPaidInvoices,
+      events: events.map((e) => ({
+        id: e.id,
+        type: e.type,
+        variant: e.variant,
+        metadata: e.metadata,
+        createdAt: e.createdAt,
+      })),
+    });
+  } catch (error) {
+    logger.error("[Analytics] Error fetching first-booking page detail:", error);
+    res.status(500).json({ error: "Failed to fetch first-booking page detail" });
   }
 });
 

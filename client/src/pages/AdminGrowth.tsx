@@ -86,6 +86,11 @@ import {
   Mail,
   Phone,
   MapPin,
+  Eye,
+  Share2,
+  CheckCircle,
+  DollarSign,
+  Clock,
 } from "lucide-react";
 import { apiFetch } from "@/lib/apiFetch";
 import { QUERY_KEYS } from "@/lib/queryKeys";
@@ -94,7 +99,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { cn } from "@/lib/utils";
 
-type TabKey = "overview" | "leads" | "outreach" | "channels";
+type TabKey = "overview" | "leads" | "outreach" | "channels" | "first-booking";
 
 interface OverviewData {
   period: number;
@@ -1715,6 +1720,570 @@ function ChannelsTab() {
   );
 }
 
+/* ─────────────────────────── FIRST BOOKING ─────────────────────────── */
+
+interface FirstBookingTotals {
+  generated: number;
+  viewed: number;
+  claimed: number;
+  shared: number;
+  paid: number;
+}
+
+interface FirstBookingCategoryRow extends FirstBookingTotals {
+  category: string;
+}
+
+interface FirstBookingFunnelData {
+  window: string;
+  totals: FirstBookingTotals;
+  categories: FirstBookingCategoryRow[];
+}
+
+interface FirstBookingPageRow {
+  id: string;
+  category: string;
+  source: string;
+  location: string | null;
+  claimed: boolean;
+  claimedAt: string | null;
+  claimedByUserId: string | null;
+  createdAt: string;
+  viewed: boolean;
+  shared: boolean;
+  firstPaidAt: string | null;
+}
+
+interface FirstBookingPagesData {
+  window: string;
+  limit: number;
+  pages: FirstBookingPageRow[];
+}
+
+interface FirstBookingPageDetail {
+  page: {
+    id: string;
+    category: string | null;
+    location: string | null;
+    source: string | null;
+    phone: string | null;
+    claimed: boolean;
+    claimedAt: string | null;
+    claimedByUserId: string | null;
+    createdAt: string;
+  };
+  claimer: { id: string; name: string | null; email: string | null } | null;
+  firstPaidAt: string | null;
+  totalPaidInvoices: number;
+  events: Array<{
+    id: string;
+    type: string;
+    variant: string | null;
+    metadata: string | null;
+    createdAt: string;
+  }>;
+}
+
+const FUNNEL_WINDOWS: { value: string; label: string }[] = [
+  { value: "7", label: "Last 7 days" },
+  { value: "30", label: "Last 30 days" },
+  { value: "all", label: "All time" },
+];
+
+function pct(numerator: number, denominator: number): string {
+  if (!denominator) return "0%";
+  return `${((numerator / denominator) * 100).toFixed(1)}%`;
+}
+
+function formatDateTime(value: string | null | undefined): string {
+  if (!value) return "—";
+  try {
+    return format(new Date(value), "MMM d, yyyy HH:mm");
+  } catch {
+    return value;
+  }
+}
+
+function FunnelStageCard({
+  label,
+  value,
+  baseline,
+  icon: Icon,
+  accent,
+}: {
+  label: string;
+  value: number;
+  baseline: number;
+  icon: typeof Users;
+  accent: string;
+}) {
+  return (
+    <Card
+      className="border bg-card"
+      data-testid={`card-funnel-stage-${label.toLowerCase().replace(/\s+/g, "-")}`}
+    >
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {label}
+          </p>
+          <div
+            className={cn(
+              "h-8 w-8 rounded-lg flex items-center justify-center bg-background/60",
+              accent,
+            )}
+          >
+            <Icon className="h-4 w-4" />
+          </div>
+        </div>
+        <p
+          className="mt-2 text-2xl font-bold tabular-nums"
+          data-testid={`text-funnel-stage-value-${label.toLowerCase().replace(/\s+/g, "-")}`}
+        >
+          {value.toLocaleString()}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {baseline > 0 ? `${pct(value, baseline)} of generated` : "—"}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+const eventTypeLabels: Record<string, string> = {
+  page_viewed: "Page viewed",
+  page_claimed: "Page claimed",
+  link_copied: "Link copied",
+  link_shared: "Link shared",
+  first_booking_viewed: "First booking viewed",
+};
+
+function FirstBookingPageDetailSheet({
+  pageId,
+  open,
+  onOpenChange,
+}: {
+  pageId: string | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { data, isLoading, error } = useQuery<FirstBookingPageDetail>({
+    queryKey: QUERY_KEYS.adminFirstBookingFunnelPage(pageId ?? ""),
+    queryFn: () =>
+      apiFetch(`/api/admin/analytics/first-booking-funnel/pages/${pageId}`),
+    enabled: !!pageId && open,
+    retry: false,
+  });
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className="sm:max-w-lg w-full overflow-y-auto"
+        data-testid="sheet-first-booking-page-detail"
+      >
+        <SheetHeader>
+          <SheetTitle>Booking page detail</SheetTitle>
+          <SheetDescription>
+            Full event timeline and conversion status for this page.
+          </SheetDescription>
+        </SheetHeader>
+        {isLoading ? (
+          <div className="space-y-3 mt-6">
+            <Skeleton className="h-6 w-1/2" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+        ) : error || !data ? (
+          <div
+            className="mt-6 rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
+            data-testid="text-detail-error"
+          >
+            <p className="font-medium">Couldn't load this booking page.</p>
+            <p className="mt-1 text-destructive/80">
+              {error instanceof Error
+                ? error.message
+                : "The page may have been removed or isn't part of the First Booking funnel."}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-5 mt-6">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <p className="text-xs uppercase text-muted-foreground tracking-wide">
+                  Category
+                </p>
+                <p className="font-medium" data-testid="text-detail-category">
+                  {data.page.category || "uncategorized"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-muted-foreground tracking-wide">
+                  Source
+                </p>
+                <p className="font-medium" data-testid="text-detail-source">
+                  {data.page.source || "unknown"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-muted-foreground tracking-wide">
+                  Location
+                </p>
+                <p className="font-medium">{data.page.location || "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-muted-foreground tracking-wide">
+                  Created
+                </p>
+                <p className="font-medium">{formatDateTime(data.page.createdAt)}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-muted-foreground tracking-wide">
+                  Claimed
+                </p>
+                <p className="font-medium">
+                  {data.page.claimed ? formatDateTime(data.page.claimedAt) : "Not claimed"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-muted-foreground tracking-wide">
+                  First invoice paid
+                </p>
+                <p className="font-medium" data-testid="text-detail-first-paid">
+                  {formatDateTime(data.firstPaidAt)}
+                </p>
+              </div>
+            </div>
+
+            {data.claimer && (
+              <Card className="bg-muted/40 border-none">
+                <CardContent className="p-3 text-sm">
+                  <p className="text-xs uppercase text-muted-foreground tracking-wide mb-1">
+                    Converted user
+                  </p>
+                  <p className="font-medium">
+                    {data.claimer.name || "Unnamed"}{" "}
+                    <span className="text-muted-foreground font-normal">
+                      ({data.claimer.id.slice(0, 8)})
+                    </span>
+                  </p>
+                  <p className="text-muted-foreground">{data.claimer.email || "no email"}</p>
+                  <p className="text-muted-foreground mt-1">
+                    {data.totalPaidInvoices.toLocaleString()} paid invoice
+                    {data.totalPaidInvoices === 1 ? "" : "s"}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            <div>
+              <h3 className="text-sm font-semibold mb-2">Event timeline</h3>
+              {data.events.length === 0 ? (
+                <p
+                  className="text-sm text-muted-foreground"
+                  data-testid="text-detail-no-events"
+                >
+                  No events recorded yet for this page.
+                </p>
+              ) : (
+                <ol className="space-y-2" data-testid="list-detail-events">
+                  {data.events.map((ev) => (
+                    <li
+                      key={ev.id}
+                      className="flex items-start gap-3 rounded-md border bg-background p-3 text-sm"
+                      data-testid={`row-event-${ev.id}`}
+                    >
+                      <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0">
+                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">
+                          {eventTypeLabels[ev.type] ?? ev.type}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDateTime(ev.createdAt)}
+                          {ev.variant ? ` • variant: ${ev.variant}` : ""}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function FirstBookingTab() {
+  const [windowValue, setWindowValue] = useState<string>("30");
+  const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const funnelQuery = useQuery<FirstBookingFunnelData>({
+    queryKey: QUERY_KEYS.adminFirstBookingFunnel(windowValue),
+    queryFn: () =>
+      apiFetch(
+        `/api/admin/analytics/first-booking-funnel?days=${encodeURIComponent(windowValue)}`,
+      ),
+    retry: false,
+  });
+
+  const pagesQuery = useQuery<FirstBookingPagesData>({
+    queryKey: QUERY_KEYS.adminFirstBookingFunnelPages(windowValue),
+    queryFn: () =>
+      apiFetch(
+        `/api/admin/analytics/first-booking-funnel/pages?days=${encodeURIComponent(windowValue)}&limit=200`,
+      ),
+    retry: false,
+  });
+
+  const totals = funnelQuery.data?.totals ?? {
+    generated: 0,
+    viewed: 0,
+    claimed: 0,
+    shared: 0,
+    paid: 0,
+  };
+  const baseline = totals.generated;
+
+  const stages = [
+    { key: "generated", label: "Generated", icon: Plus, accent: "text-blue-600 dark:text-blue-400", value: totals.generated },
+    { key: "viewed", label: "Viewed", icon: Eye, accent: "text-cyan-600 dark:text-cyan-400", value: totals.viewed },
+    { key: "claimed", label: "Claimed", icon: CheckCircle, accent: "text-violet-600 dark:text-violet-400", value: totals.claimed },
+    { key: "shared", label: "Shared", icon: Share2, accent: "text-amber-600 dark:text-amber-400", value: totals.shared },
+    { key: "paid", label: "First Invoice Paid", icon: DollarSign, accent: "text-emerald-600 dark:text-emerald-400", value: totals.paid },
+  ] as const;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-sm text-muted-foreground">
+          Funnel for{" "}
+          <span className="font-medium text-foreground">
+            {FUNNEL_WINDOWS.find((w) => w.value === windowValue)?.label ?? "Last 30 days"}
+          </span>
+          . Time filter applies to the page&apos;s creation date.
+        </div>
+        <Select value={windowValue} onValueChange={setWindowValue}>
+          <SelectTrigger
+            className="w-44"
+            data-testid="select-first-booking-window"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {FUNNEL_WINDOWS.map((w) => (
+              <SelectItem
+                key={w.value}
+                value={w.value}
+                data-testid={`select-first-booking-window-option-${w.value}`}
+              >
+                {w.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Funnel stages */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        {stages.map((s) => (
+          <FunnelStageCard
+            key={s.key}
+            label={s.label}
+            value={s.value}
+            baseline={baseline}
+            icon={s.icon}
+            accent={s.accent}
+          />
+        ))}
+      </div>
+
+      {/* Per-category breakdown */}
+      <Card className="border bg-card" data-testid="card-funnel-by-category">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-violet-500" />
+            By category
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {funnelQuery.isLoading ? (
+            <div className="space-y-2">
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} className="h-8 w-full" />
+              ))}
+            </div>
+          ) : funnelQuery.data && funnelQuery.data.categories.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Category</TableHead>
+                    <TableHead className="text-right">Generated</TableHead>
+                    <TableHead className="text-right">Viewed</TableHead>
+                    <TableHead className="text-right">Claimed</TableHead>
+                    <TableHead className="text-right">Shared</TableHead>
+                    <TableHead className="text-right">Paid</TableHead>
+                    <TableHead className="text-right">View → Paid</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {funnelQuery.data.categories.map((row) => (
+                    <TableRow
+                      key={row.category}
+                      data-testid={`row-funnel-category-${row.category}`}
+                    >
+                      <TableCell className="font-medium capitalize">
+                        {row.category}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {row.generated.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {row.viewed.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {row.claimed.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {row.shared.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {row.paid.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {pct(row.paid, row.viewed)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <EmptyState
+              icon={BarChart3}
+              title="No booking pages yet"
+              description="Once the Growth Engine generates pages in this window, the breakdown will appear here."
+              testId="text-funnel-categories-empty"
+            />
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Pages list */}
+      <Card className="border bg-card" data-testid="card-funnel-pages">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Inbox className="h-4 w-4 text-blue-500" />
+            Pages ({pagesQuery.data?.pages.length ?? 0})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {pagesQuery.isLoading ? (
+            <div className="space-y-2">
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} className="h-8 w-full" />
+              ))}
+            </div>
+          ) : pagesQuery.data && pagesQuery.data.pages.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Page</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Stage</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pagesQuery.data.pages.map((p) => {
+                    const stage = p.firstPaidAt
+                      ? "paid"
+                      : p.shared
+                      ? "shared"
+                      : p.claimed
+                      ? "claimed"
+                      : p.viewed
+                      ? "viewed"
+                      : "generated";
+                    const stageColor: Record<string, string> = {
+                      paid: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20",
+                      shared: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20",
+                      claimed: "bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/20",
+                      viewed: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-500/20",
+                      generated: "bg-muted text-muted-foreground border-border",
+                    };
+                    return (
+                      <TableRow
+                        key={p.id}
+                        data-testid={`row-funnel-page-${p.id}`}
+                      >
+                        <TableCell className="font-mono text-xs">
+                          {p.id.slice(0, 8)}
+                        </TableCell>
+                        <TableCell className="capitalize">{p.category}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs">
+                          {formatDateTime(p.createdAt)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={cn("capitalize", stageColor[stage])}
+                            data-testid={`badge-funnel-page-stage-${p.id}`}
+                          >
+                            {stage}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPageId(p.id);
+                              setSheetOpen(true);
+                            }}
+                            data-testid={`button-funnel-page-detail-${p.id}`}
+                          >
+                            View timeline
+                            <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <EmptyState
+              icon={Inbox}
+              title="No pages in this window"
+              description="Pages generated by the Growth Engine will show up here as soon as they exist."
+              testId="text-funnel-pages-empty"
+            />
+          )}
+        </CardContent>
+      </Card>
+
+      <FirstBookingPageDetailSheet
+        pageId={selectedPageId}
+        open={sheetOpen}
+        onOpenChange={(open) => {
+          setSheetOpen(open);
+          if (!open) setSelectedPageId(null);
+        }}
+      />
+    </div>
+  );
+}
+
 /* ─────────────────────────────── PAGE ─────────────────────────────── */
 
 const tabs: { key: TabKey; label: string; icon: typeof Users }[] = [
@@ -1722,6 +2291,7 @@ const tabs: { key: TabKey; label: string; icon: typeof Users }[] = [
   { key: "leads", label: "Leads", icon: UserPlus },
   { key: "outreach", label: "Outreach", icon: Send },
   { key: "channels", label: "Channels", icon: BarChart3 },
+  { key: "first-booking", label: "First Booking", icon: Sparkles },
 ];
 
 export default function AdminGrowth() {
@@ -1735,6 +2305,7 @@ export default function AdminGrowth() {
     leads: leadsCount,
     outreach: outreachCount,
     channels: null,
+    "first-booking": null,
   };
 
   return (
@@ -1814,6 +2385,9 @@ export default function AdminGrowth() {
           </TabsContent>
           <TabsContent value="channels" className="m-0">
             <ChannelsTab />
+          </TabsContent>
+          <TabsContent value="first-booking" className="m-0">
+            <FirstBookingTab />
           </TabsContent>
         </Tabs>
       </div>
