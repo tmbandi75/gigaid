@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { db } from "../db";
-import { users, leads, jobs, invoices, eventsCanonical, metricsDaily, adminActionAudit, bookingPages, bookingPageEvents } from "@shared/schema";
+import { users, leads, jobs, invoices, eventsCanonical, metricsDaily, adminActionAudit, bookingPages, bookingPageEvents, outboundMessages, outboundMessageEvents } from "@shared/schema";
 import { eq, sql, desc, and, gte, lte, isNull, isNotNull, count } from "drizzle-orm";
 import { adminMiddleware, AdminRequest, requireRole } from "../copilot/adminMiddleware";
 import { logger } from "../lib/logger";
@@ -885,6 +885,146 @@ router.get("/first-booking-funnel/pages/:pageId", adminMiddleware, async (req: A
   } catch (error) {
     logger.error("[Analytics] Error fetching first-booking page detail:", error);
     res.status(500).json({ error: "Failed to fetch first-booking page detail" });
+  }
+});
+
+// First-booking email open / click / downstream-conversion report (Task #81).
+// Aggregates outbound_messages of types `first_booking_email_2h` and
+// `first_booking_email_48h` over the last `days` days (default 30) and joins
+// against outbound_message_events to compute open and click rates per touch.
+// Downstream first-booking attribution uses jobs.createdAt > sentAt against
+// the same userId — a user is considered "first-booking converted" if their
+// earliest job was created after the touch was sent.
+router.get("/first-booking-emails", adminMiddleware, async (req: AdminRequest, res: Response) => {
+  try {
+    const days = Math.max(1, Math.min(180, parseInt(req.query.days as string) || 30));
+    const sinceIso = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    const FIRST_BOOKING_EMAIL_TYPES = ["first_booking_email_2h", "first_booking_email_48h"];
+
+    // Per-touch aggregation. We compute:
+    //   sent = COUNT(*) of sent rows
+    //   uniqueOpens / uniqueClicks = DISTINCT outbound_message_id with a matching event
+    //   opens / clicks = total event count
+    //   firstBookingsAfter = users with at least one job created after the touch was sent
+    const result = await db.execute(sql`
+      WITH sent_touches AS (
+        SELECT
+          om.id              AS message_id,
+          om.user_id         AS user_id,
+          om.type            AS touch_type,
+          om.sent_at         AS sent_at
+        FROM outbound_messages om
+        WHERE om.channel = 'email'
+          AND om.type IN ('first_booking_email_2h', 'first_booking_email_48h')
+          AND om.status = 'sent'
+          AND om.sent_at IS NOT NULL
+          AND om.sent_at >= ${sinceIso}
+      ),
+      event_counts AS (
+        SELECT
+          ome.outbound_message_id,
+          ome.message_type,
+          COUNT(*) FILTER (WHERE ome.event_type = 'open')          AS opens,
+          COUNT(*) FILTER (WHERE ome.event_type = 'click')         AS clicks,
+          COUNT(*) FILTER (WHERE ome.event_type = 'delivered')     AS delivereds,
+          COUNT(*) FILTER (WHERE ome.event_type = 'bounce')        AS bounces,
+          COUNT(*) FILTER (WHERE ome.event_type = 'spamreport')    AS spamreports,
+          MAX(CASE WHEN ome.event_type = 'open'  THEN 1 ELSE 0 END) AS any_open,
+          MAX(CASE WHEN ome.event_type = 'click' THEN 1 ELSE 0 END) AS any_click
+        FROM outbound_message_events ome
+        WHERE ome.message_type IN ('first_booking_email_2h', 'first_booking_email_48h')
+        GROUP BY ome.outbound_message_id, ome.message_type
+      ),
+      first_jobs AS (
+        SELECT user_id, MIN(created_at) AS first_job_at
+        FROM jobs
+        WHERE user_id IN (SELECT user_id FROM sent_touches)
+        GROUP BY user_id
+      )
+      SELECT
+        s.touch_type,
+        COUNT(*)::int                                                          AS sent,
+        COALESCE(SUM(ec.delivereds), 0)::int                                   AS delivereds,
+        COALESCE(SUM(ec.bounces), 0)::int                                      AS bounces,
+        COALESCE(SUM(ec.spamreports), 0)::int                                  AS spamreports,
+        COALESCE(SUM(ec.opens), 0)::int                                        AS opens,
+        COALESCE(SUM(ec.clicks), 0)::int                                       AS clicks,
+        COALESCE(SUM(ec.any_open), 0)::int                                     AS unique_opens,
+        COALESCE(SUM(ec.any_click), 0)::int                                    AS unique_clicks,
+        SUM(CASE WHEN fj.first_job_at IS NOT NULL AND fj.first_job_at > s.sent_at THEN 1 ELSE 0 END)::int AS first_bookings_after
+      FROM sent_touches s
+      LEFT JOIN event_counts ec ON ec.outbound_message_id = s.message_id
+      LEFT JOIN first_jobs   fj ON fj.user_id            = s.user_id
+      GROUP BY s.touch_type
+      ORDER BY s.touch_type
+    `);
+
+    const touches = (result.rows as any[]).map((r) => {
+      const sent = Number(r.sent || 0);
+      const uniqueOpens = Number(r.unique_opens || 0);
+      const uniqueClicks = Number(r.unique_clicks || 0);
+      const firstBookingsAfter = Number(r.first_bookings_after || 0);
+      const ratio = (n: number) => (sent > 0 ? +(n / sent * 100).toFixed(2) : 0);
+      return {
+        touchType: r.touch_type,
+        sent,
+        delivered: Number(r.delivereds || 0),
+        bounces: Number(r.bounces || 0),
+        spamReports: Number(r.spamreports || 0),
+        opens: Number(r.opens || 0),
+        clicks: Number(r.clicks || 0),
+        uniqueOpens,
+        uniqueClicks,
+        openRate: ratio(uniqueOpens),
+        clickRate: ratio(uniqueClicks),
+        clickToOpenRate: uniqueOpens > 0 ? +((uniqueClicks / uniqueOpens) * 100).toFixed(2) : 0,
+        firstBookingsAfter,
+        downstreamFirstBookingRate: ratio(firstBookingsAfter),
+      };
+    });
+
+    // Make sure both touch types always appear in the response (zeroed if no data).
+    for (const t of FIRST_BOOKING_EMAIL_TYPES) {
+      if (!touches.find((row) => row.touchType === t)) {
+        touches.push({
+          touchType: t,
+          sent: 0,
+          delivered: 0,
+          bounces: 0,
+          spamReports: 0,
+          opens: 0,
+          clicks: 0,
+          uniqueOpens: 0,
+          uniqueClicks: 0,
+          openRate: 0,
+          clickRate: 0,
+          clickToOpenRate: 0,
+          firstBookingsAfter: 0,
+          downstreamFirstBookingRate: 0,
+        });
+      }
+    }
+    touches.sort((a, b) => a.touchType.localeCompare(b.touchType));
+
+    res.json({
+      windowDays: days,
+      since: sinceIso,
+      touches,
+      notes: {
+        openRate:
+          "Unique opens divided by sent rows. Counts a recipient at most once per touch.",
+        clickRate:
+          "Unique clicks (any URL in the email body) divided by sent rows. Counts a recipient at most once per touch.",
+        downstreamFirstBookingRate:
+          "Share of recipients whose earliest job was created strictly after this touch's sent_at. This is a directional proxy for conversion — it does not prove the touch caused the booking, just that a booking happened afterwards.",
+        ingestion:
+          "Open and click events are populated by SendGrid's event webhook (POST /api/webhooks/sendgrid/events). If the webhook is not yet configured in SendGrid, sent counts will populate but opens/clicks will be zero.",
+      },
+    });
+  } catch (error) {
+    logger.error("[Analytics] Error fetching first-booking email metrics:", error);
+    res.status(500).json({ error: "Failed to fetch first-booking email metrics" });
   }
 });
 

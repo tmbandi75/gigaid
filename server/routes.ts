@@ -282,6 +282,12 @@ export async function registerRoutes(
   registerStripeWebhookRoutes(app, storage);
 
   registerRevenueCatWebhookRoutes(app, storage);
+
+  // SendGrid event webhook (open/click/delivery for first-booking emails —
+  // Task #81). Mounted before JSON body parsing so the raw payload is
+  // available for signature verification.
+  const { registerSendGridWebhookRoutes } = await import("./sendgridWebhookRoutes");
+  registerSendGridWebhookRoutes(app);
   
   // Start Stripe webhook retry scheduler (every 60 seconds)
   startWebhookRetryScheduler(storage, 60000);

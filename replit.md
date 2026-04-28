@@ -173,6 +173,12 @@ For visitors landing on **pre-generated, unclaimed** booking pages from the Grow
 - `/first-booking/:pageId` is a standalone route (no sidebar, no app nav) with Copy Link + Send via Text. Both actions hit `POST /api/booking-pages/:pageId/events`, which also cancels pending nudge messages.
 - Files: `server/firstBookingRoutes.ts`, `client/src/pages/UnclaimedBookingPage.tsx`, `client/src/pages/FirstBookingPage.tsx`.
 
+### First-booking email open / click analytics (Task #81)
+- Outbound first-booking emails (`first_booking_email_2h`, `first_booking_email_48h`) are sent through SendGrid with `customArgs` carrying `outbound_message_id`, `message_type`, and `user_id`. The SendGrid `X-Message-Id` is also persisted to `outbound_messages.provider_message_id` for fallback attribution when events arrive without customArgs.
+- Open and click events are ingested via the SendGrid event webhook at `POST /api/webhooks/sendgrid/events` (`server/sendgridWebhookRoutes.ts`). Events are written to a new `outbound_message_events` table (one row per delivered/open/click/bounce/dropped/etc. event) with `sg_event_id` deduped via a partial unique index. The handler is mounted before the global JSON body parser so the raw payload is available for optional ECDSA signature verification (set `SENDGRID_WEBHOOK_VERIFICATION_KEY` to enable).
+- Setup in SendGrid: enable "Event Webhook" with all event types ticked, point it at `https://<host>/api/webhooks/sendgrid/events`. Click tracking is on by default in SendGrid, so no per-link redirect instrumentation is needed.
+- Admin metrics endpoint: `GET /api/admin/analytics/first-booking-emails?days=N` (default 30, max 180) returns per-touch sent / opens / clicks / unique-opens / unique-clicks / open rate / click rate / click-to-open rate / downstream-first-booking rate. The downstream rate is a directional proxy (any user job created after `sent_at`), not strict causal attribution.
+
 ### Apple Review Mode flag
 - Set `VITE_APPLE_REVIEW_MODE=true` in deployment env to enable review-mode UI gating. Read via `import { isAppleReviewMode } from "@/lib/env"`. When on, the SplashPage decorative background shapes and the Pricing FAQ "Contact Support" teaser card are hidden so reviewers see a focused login + checkout flow. Default is off; auth, paywall, and checkout behavior are unchanged.
 

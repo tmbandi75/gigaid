@@ -2284,7 +2284,13 @@ export const outboundMessages = pgTable("outbound_messages", {
   
   templateRendered: text("template_rendered"), // Final rendered message
   metadata: text("metadata"), // JSON: job_title, invoice_id, etc
-  
+
+  // Set on email sends to round-trip the SendGrid message id (the `sg_message_id`
+  // field on every event in the SendGrid event webhook payload). Lets us
+  // correlate webhook events back to the originating outbound_messages row when
+  // SendGrid omits our customArgs (some bounce/dropped events do).
+  providerMessageId: text("provider_message_id"),
+
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at"),
 }, (table) => [
@@ -2300,6 +2306,8 @@ export const outboundMessages = pgTable("outbound_messages", {
     .where(sql`type IN ('first_booking_nudge_10m', 'first_booking_nudge_24h', 'first_booking_nudge_72h', 'first_booking_email_2h', 'first_booking_email_48h') AND status IN ('scheduled', 'queued', 'sent')`),
   // Used by the rate limiter to count recent SMS sends per user.
   index("outbound_messages_user_channel_sent_idx").on(table.userId, table.channel, table.sentAt),
+  // Lookup by SendGrid message id when the webhook arrives without customArgs.
+  index("outbound_messages_provider_message_id_idx").on(table.providerMessageId),
 ]);
 
 export const insertOutboundMessageSchema = createInsertSchema(outboundMessages).omit({
@@ -2308,6 +2316,68 @@ export const insertOutboundMessageSchema = createInsertSchema(outboundMessages).
 
 export type InsertOutboundMessage = z.infer<typeof insertOutboundMessageSchema>;
 export type OutboundMessage = typeof outboundMessages.$inferSelect;
+
+// ============================================================================
+// OUTBOUND MESSAGE EVENTS (Task #81)
+// One row per SendGrid event-webhook delivery (open, click, delivered, etc.)
+// for outbound emails. Currently populated only for first-booking emails so we
+// can compute open / click / downstream-first-booking rates per touch.
+// ============================================================================
+
+export const outboundMessageEventTypes = [
+  "processed",
+  "delivered",
+  "open",
+  "click",
+  "bounce",
+  "dropped",
+  "deferred",
+  "spamreport",
+  "unsubscribe",
+  "group_unsubscribe",
+  "group_resubscribe",
+] as const;
+export type OutboundMessageEventType = typeof outboundMessageEventTypes[number];
+
+export const outboundMessageEvents = pgTable("outbound_message_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  outboundMessageId: varchar("outbound_message_id").notNull(),
+  // Mirrored from outbound_messages.type so per-touch aggregations don't have
+  // to JOIN. Always populated by the webhook handler from the parent row.
+  messageType: text("message_type").notNull(),
+  eventType: text("event_type").notNull(),
+  // ISO timestamp from the SendGrid event payload (`timestamp` is unix seconds).
+  occurredAt: text("occurred_at").notNull(),
+  // Click events carry the URL that was clicked. NULL for other event types.
+  url: text("url"),
+  userAgent: text("user_agent"),
+  ip: text("ip"),
+  // SendGrid's per-event id. Used to dedupe re-deliveries of the same event.
+  sgEventId: text("sg_event_id"),
+  // SendGrid's per-message id (X-Message-Id header). Useful for grouping all
+  // events from a single send and for the fallback lookup on outbound_messages.
+  sgMessageId: text("sg_message_id"),
+  // Full event payload, persisted as JSON for forensic / audit use.
+  rawPayload: text("raw_payload"),
+  createdAt: text("created_at").notNull().default(sql`now()`),
+}, (table) => [
+  index("outbound_message_events_message_idx").on(table.outboundMessageId, table.eventType),
+  index("outbound_message_events_type_event_idx").on(table.messageType, table.eventType),
+  index("outbound_message_events_occurred_idx").on(table.occurredAt),
+  // Dedupe re-deliveries from SendGrid. Plain unique index — Postgres treats
+  // multiple NULLs as distinct, so we can safely insert events that lack an
+  // sg_event_id (defensive — should never happen) without breaking ON CONFLICT
+  // inference for the dedupe upsert. (A partial unique index here would force
+  // every upsert to repeat the WHERE predicate as a `targetWhere` clause.)
+  uniqueIndex("outbound_message_events_sg_event_id_idx").on(table.sgEventId),
+]);
+
+export const insertOutboundMessageEventSchema = createInsertSchema(outboundMessageEvents).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertOutboundMessageEvent = z.infer<typeof insertOutboundMessageEventSchema>;
+export type OutboundMessageEvent = typeof outboundMessageEvents.$inferSelect;
 
 // Audit trail of inbound STOP webhook deliveries. We persist every STOP we
 // receive (matched or not) so the admin SMS Health view can surface

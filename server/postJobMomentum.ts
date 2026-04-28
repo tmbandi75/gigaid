@@ -1008,13 +1008,42 @@ async function attemptSendMessage(message: OutboundMessage): Promise<SendOutcome
         bookingUrl,
       );
       const { sendEmail } = await import("./sendgrid");
-      const ok = await sendEmail({
-        to: liveEmail,
-        subject: rendered.subject,
-        text: rendered.text,
-        html: rendered.html,
-      });
-      if (ok) return { kind: "sent", body: rendered.text };
+      // customArgs round-trip on every SendGrid event-webhook payload
+      // (Task #81). The webhook handler reads `outbound_message_id` to
+      // attribute open/click events back to this row.
+      const sendResult = await sendEmail(
+        {
+          to: liveEmail,
+          subject: rendered.subject,
+          text: rendered.text,
+          html: rendered.html,
+          customArgs: {
+            outbound_message_id: message.id,
+            message_type: message.type,
+            user_id: message.userId,
+          },
+        },
+        { withResult: true },
+      );
+      if (sendResult.ok) {
+        // Persist the SendGrid `X-Message-Id` so the webhook handler can
+        // still attribute events when customArgs are stripped (some
+        // bounce/dropped events ship without them).
+        if (sendResult.messageId) {
+          try {
+            await db
+              .update(outboundMessages)
+              .set({ providerMessageId: sendResult.messageId, updatedAt: new Date().toISOString() })
+              .where(eq(outboundMessages.id, message.id));
+          } catch (err) {
+            logger.error(
+              `[OutboundMessages] Failed to persist providerMessageId for ${message.id}:`,
+              err,
+            );
+          }
+        }
+        return { kind: "sent", body: rendered.text };
+      }
       logger.info(`[OutboundMessages] SendGrid not configured / failed, deferring ${message.id}`);
       return { kind: "deferred", reason: "no_provider" };
     }
