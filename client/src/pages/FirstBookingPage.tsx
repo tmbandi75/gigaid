@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getAuthToken } from "@/lib/authToken";
 import { buildBookingLink } from "@/lib/bookingBaseUrl";
 import { SecureAccountCard } from "@/components/first-booking/SecureAccountCard";
+import { SmsOptOutBanner } from "@/components/settings/SmsOptOutBanner";
 
 interface BookingPageDto {
   id: string;
@@ -132,6 +133,7 @@ export default function FirstBookingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white" data-testid="page-first-booking">
       <div className="mx-auto max-w-md px-6 pt-20 pb-12 space-y-8">
+        <SmsOptOutBanner />
         <div className="text-center space-y-3">
           <h1 className="text-3xl font-bold text-slate-900" data-testid="text-first-booking-headline">
             Send this to your next customer

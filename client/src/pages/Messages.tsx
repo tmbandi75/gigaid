@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useUpgradeOrchestrator, UpgradeBanner, UpgradeNudgeModal, incrementStallCounter, UpgradeInterceptModal } from "@/upgrade";
 import { ApproachingLimitBanner } from "@/components/upgrade/ApproachingLimitBanner";
+import { SmsOptOutBanner } from "@/components/settings/SmsOptOutBanner";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiFetch } from "@/lib/apiFetch";
@@ -444,7 +445,8 @@ export default function Messages() {
     <div className="flex flex-col h-full max-h-[calc(100vh-120px)]" data-testid="page-messages">
       {renderMobileHeader()}
 
-      <div className="px-3 pt-2">
+      <div className="px-3 pt-2 space-y-2">
+        <SmsOptOutBanner />
         <ApproachingLimitBanner capability="sms.two_way" source="messages" />
       </div>
 
@@ -506,7 +508,8 @@ export default function Messages() {
       {renderDesktopHeader()}
 
       <div className="flex-1 overflow-hidden max-w-7xl mx-auto w-full px-6 lg:px-8 py-6">
-        <div className="mb-3">
+        <div className="mb-3 space-y-2">
+          <SmsOptOutBanner />
           <ApproachingLimitBanner capability="sms.two_way" source="messages" />
         </div>
         <div className="grid grid-cols-12 gap-6 h-full">

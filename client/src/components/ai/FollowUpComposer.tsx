@@ -16,6 +16,7 @@ import type { Job, Lead } from "@shared/schema";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { logger } from "@/lib/logger";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import { SmsOptOutBanner } from "@/components/settings/SmsOptOutBanner";
 
 interface MessageUsage {
   outboundSent: number;
@@ -201,6 +202,7 @@ export function FollowUpComposer() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <SmsOptOutBanner />
         <div className="space-y-2">
           <Label>Select Client</Label>
           {clientOptions.length === 0 ? (

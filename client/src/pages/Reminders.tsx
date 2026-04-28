@@ -16,6 +16,7 @@ import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { RemindersDesktopView } from "@/components/reminders/RemindersDesktopView";
+import { SmsOptOutBanner } from "@/components/settings/SmsOptOutBanner";
 import { 
   Bell, 
   Plus, 
@@ -347,6 +348,7 @@ export default function Reminders() {
 
       {isMobile ? (
         <div className="content-container space-y-4">
+          <SmsOptOutBanner />
           <Tabs value={filterStatus} onValueChange={(v) => setFilterStatus(v as FilterStatus)}>
             <TabsList className="w-full grid grid-cols-4">
               <TabsTrigger value="all" data-testid="tab-all">
@@ -470,16 +472,21 @@ export default function Reminders() {
           )}
         </div>
       ) : (
-        <RemindersDesktopView
-          reminders={reminders}
-          pendingCount={pendingCount}
-          sentCount={sentCount}
-          failedCount={failedCount}
-          onEdit={handleReminderClick}
-          onDelete={(id) => deleteMutation.mutate(id)}
-          isDeleting={deleteMutation.isPending}
-          formatDateTime={formatDateTime}
-        />
+        <div className="space-y-4">
+          <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-4">
+            <SmsOptOutBanner />
+          </div>
+          <RemindersDesktopView
+            reminders={reminders}
+            pendingCount={pendingCount}
+            sentCount={sentCount}
+            failedCount={failedCount}
+            onEdit={handleReminderClick}
+            onDelete={(id) => deleteMutation.mutate(id)}
+            isDeleting={deleteMutation.isPending}
+            formatDateTime={formatDateTime}
+          />
+        </div>
       )}
 
       {/* Create/Edit Reminder Dialog */}
