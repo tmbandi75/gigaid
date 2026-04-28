@@ -172,6 +172,11 @@ const mockStripe = {
   refunds: {
     create: jest.fn(),
   },
+  invoices: {
+    list: jest.fn(),
+    pay: jest.fn(),
+    retrieve: jest.fn(),
+  },
 };
 
 jest.mock("../../server/stripeClient", () => ({
@@ -188,6 +193,7 @@ import {
   userFlags,
   userAdminNotes,
   messagingSuppression,
+  outboundMessages,
   users,
 } from "../../shared/schema";
 import adminUsersRoutes from "../../server/admin/usersRoutes";
@@ -222,6 +228,9 @@ beforeEach(() => {
   mockStripe.subscriptions.cancel.mockReset();
   mockStripe.customers.update.mockReset();
   mockStripe.refunds.create.mockReset();
+  mockStripe.invoices.list.mockReset();
+  mockStripe.invoices.pay.mockReset();
+  mockStripe.invoices.retrieve.mockReset();
   mockStripe.subscriptions.retrieve.mockResolvedValue({
     items: { data: [{ id: "si_default" }] },
   });
@@ -2007,5 +2016,452 @@ describe("GET /api/admin/users/:userId/impersonate", () => {
     expect(
       dbState.insertCalls.find((c) => c.table === adminActionAudit),
     ).toBeUndefined();
+  });
+});
+
+// -----------------------------------------------------------------------------
+// Remaining admin payments and message endpoints (Task #158).
+//
+// Covers POST /:userId/retry-payment, GET /:userId/failed-invoices,
+// GET /:userId/outbound-messages, and GET /links/external. Mocks Stripe
+// invoices and the chainable drizzle select for outbound_messages.
+// -----------------------------------------------------------------------------
+
+describe("POST /api/admin/users/:userId/retry-payment", () => {
+  it("happy path: pays the supplied invoice, writes audit, and returns the invoice shape", async () => {
+    pushTargetUser({ id: "demo-user", stripeCustomerId: "cus_1" });
+    mockStripe.invoices.retrieve.mockResolvedValueOnce({
+      id: "in_123",
+      customer: "cus_1",
+    });
+    mockStripe.invoices.pay.mockResolvedValueOnce({
+      id: "in_123",
+      status: "paid",
+      amount_due: 0,
+      amount_paid: 2500,
+    });
+
+    const res = await request(buildApp())
+      .post("/api/admin/users/demo-user/retry-payment")
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ invoiceId: "in_123" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      success: true,
+      invoice: {
+        id: "in_123",
+        status: "paid",
+        amountDue: 0,
+        amountPaid: 2500,
+      },
+    });
+    expect(mockStripe.invoices.pay).toHaveBeenCalledWith("in_123");
+    expect(mockStripe.invoices.list).not.toHaveBeenCalled();
+
+    const auditCall = dbState.insertCalls.find(
+      (c) => c.table === adminActionAudit,
+    );
+    expect(auditCall).toBeTruthy();
+    expect(auditCall!.values).toMatchObject({
+      actorUserId: "demo-user",
+      targetUserId: "demo-user",
+      actionKey: "billing_retry_payment",
+      reason: "Admin retried failed payment",
+      source: "admin_ui",
+    });
+    const payload = JSON.parse(
+      (auditCall!.values as Record<string, string>).payload as string,
+    );
+    expect(payload).toEqual({
+      invoiceId: "in_123",
+      status: "paid",
+      amountDue: 0,
+    });
+  });
+
+  it("happy path with no invoiceId: lists open invoices, pays the first, and returns its shape", async () => {
+    pushTargetUser({ id: "demo-user", stripeCustomerId: "cus_1" });
+    mockStripe.invoices.list.mockResolvedValueOnce({
+      data: [{ id: "in_open" }],
+    });
+    mockStripe.invoices.pay.mockResolvedValueOnce({
+      id: "in_open",
+      status: "paid",
+      amount_due: 0,
+      amount_paid: 1500,
+    });
+
+    const res = await request(buildApp())
+      .post("/api/admin/users/demo-user/retry-payment")
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({});
+
+    expect(res.status).toBe(200);
+    expect(res.body.invoice).toMatchObject({
+      id: "in_open",
+      status: "paid",
+      amountDue: 0,
+      amountPaid: 1500,
+    });
+    expect(mockStripe.invoices.list).toHaveBeenCalledWith({
+      customer: "cus_1",
+      status: "open",
+      limit: 1,
+    });
+    expect(mockStripe.invoices.pay).toHaveBeenCalledWith("in_open");
+  });
+
+  it("returns 401 when the request has no admin identity", async () => {
+    mockAdminMiddlewareState.override = (_req, _res, next) => next();
+
+    const res = await request(buildApp())
+      .post("/api/admin/users/demo-user/retry-payment")
+      .send({ invoiceId: "in_123" });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toMatch(/admin identity/i);
+    expect(mockStripe.invoices.pay).not.toHaveBeenCalled();
+    expect(
+      dbState.insertCalls.find((c) => c.table === adminActionAudit),
+    ).toBeUndefined();
+  });
+
+  it("returns 404 when the target user does not exist", async () => {
+    dbState.selectQueue.push([]);
+
+    const res = await request(buildApp())
+      .post("/api/admin/users/missing-user/retry-payment")
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ invoiceId: "in_123" });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("User not found");
+    expect(mockStripe.invoices.pay).not.toHaveBeenCalled();
+    expect(
+      dbState.insertCalls.find((c) => c.table === adminActionAudit),
+    ).toBeUndefined();
+  });
+
+  it("returns 400 when the target user has no Stripe customer", async () => {
+    pushTargetUser({ id: "demo-user", stripeCustomerId: null });
+
+    const res = await request(buildApp())
+      .post("/api/admin/users/demo-user/retry-payment")
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ invoiceId: "in_123" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("User has no Stripe customer ID");
+    expect(mockStripe.invoices.pay).not.toHaveBeenCalled();
+    expect(
+      dbState.insertCalls.find((c) => c.table === adminActionAudit),
+    ).toBeUndefined();
+  });
+
+  it("returns 400 when no invoiceId is supplied and Stripe finds no open invoices", async () => {
+    pushTargetUser({ id: "demo-user", stripeCustomerId: "cus_1" });
+    mockStripe.invoices.list.mockResolvedValueOnce({ data: [] });
+
+    const res = await request(buildApp())
+      .post("/api/admin/users/demo-user/retry-payment")
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({});
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("No open invoices found to retry");
+    expect(mockStripe.invoices.pay).not.toHaveBeenCalled();
+    expect(
+      dbState.insertCalls.find((c) => c.table === adminActionAudit),
+    ).toBeUndefined();
+  });
+
+  it("returns 500 with the Stripe error message when invoice payment fails", async () => {
+    pushTargetUser({ id: "demo-user", stripeCustomerId: "cus_1" });
+    mockStripe.invoices.retrieve.mockResolvedValueOnce({
+      id: "in_123",
+      customer: "cus_1",
+    });
+    mockStripe.invoices.pay.mockRejectedValueOnce(
+      new Error("card declined"),
+    );
+
+    const res = await request(buildApp())
+      .post("/api/admin/users/demo-user/retry-payment")
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ invoiceId: "in_123" });
+
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBe("card declined");
+    expect(
+      dbState.insertCalls.find((c) => c.table === adminActionAudit),
+    ).toBeUndefined();
+  });
+
+  it("returns 404 with 'Invoice not found' when Stripe reports the invoiceId does not exist", async () => {
+    pushTargetUser({ id: "demo-user", stripeCustomerId: "cus_1" });
+    const stripeMissing = Object.assign(new Error("No such invoice: in_missing"), {
+      code: "resource_missing",
+      statusCode: 404,
+    });
+    mockStripe.invoices.retrieve.mockRejectedValueOnce(stripeMissing);
+
+    const res = await request(buildApp())
+      .post("/api/admin/users/demo-user/retry-payment")
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ invoiceId: "in_missing" });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("Invoice not found");
+    expect(mockStripe.invoices.pay).not.toHaveBeenCalled();
+    expect(
+      dbState.insertCalls.find((c) => c.table === adminActionAudit),
+    ).toBeUndefined();
+  });
+
+  it("returns 404 with 'Invoice does not belong to this user' when the invoice's customer differs from the target user", async () => {
+    pushTargetUser({ id: "demo-user", stripeCustomerId: "cus_1" });
+    // The invoice exists but is attached to a different Stripe customer.
+    mockStripe.invoices.retrieve.mockResolvedValueOnce({
+      id: "in_other",
+      customer: "cus_other",
+    });
+
+    const res = await request(buildApp())
+      .post("/api/admin/users/demo-user/retry-payment")
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ invoiceId: "in_other" });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("Invoice does not belong to this user");
+    expect(mockStripe.invoices.pay).not.toHaveBeenCalled();
+    expect(
+      dbState.insertCalls.find((c) => c.table === adminActionAudit),
+    ).toBeUndefined();
+  });
+
+  it("treats an expanded customer object on the invoice the same as a string id for ownership", async () => {
+    pushTargetUser({ id: "demo-user", stripeCustomerId: "cus_1" });
+    // Stripe may return the customer expanded as an object instead of the id;
+    // ownership check must compare the nested id.
+    mockStripe.invoices.retrieve.mockResolvedValueOnce({
+      id: "in_expanded",
+      customer: { id: "cus_other" },
+    });
+
+    const res = await request(buildApp())
+      .post("/api/admin/users/demo-user/retry-payment")
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ invoiceId: "in_expanded" });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("Invoice does not belong to this user");
+    expect(mockStripe.invoices.pay).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/admin/users/:userId/failed-invoices", () => {
+  it("returns merged open + uncollectible invoices in the documented shape", async () => {
+    pushTargetUser({ stripeCustomerId: "cus_1" });
+    mockStripe.invoices.list
+      .mockResolvedValueOnce({
+        data: [
+          {
+            id: "in_open",
+            status: "open",
+            amount_due: 2500,
+            amount_paid: 0,
+            created: 1700000000,
+            due_date: 1700100000,
+            attempt_count: 2,
+            next_payment_attempt: 1700200000,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        data: [
+          {
+            id: "in_unc",
+            status: "uncollectible",
+            amount_due: 1500,
+            amount_paid: 0,
+            created: 1699000000,
+            due_date: null,
+            attempt_count: 4,
+            next_payment_attempt: null,
+          },
+        ],
+      });
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/demo-user/failed-invoices")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.invoices).toEqual([
+      {
+        id: "in_open",
+        status: "open",
+        amountDue: 2500,
+        amountPaid: 0,
+        created: new Date(1700000000 * 1000).toISOString(),
+        dueDate: new Date(1700100000 * 1000).toISOString(),
+        attemptCount: 2,
+        lastAttempt: new Date(1700200000 * 1000).toISOString(),
+      },
+      {
+        id: "in_unc",
+        status: "uncollectible",
+        amountDue: 1500,
+        amountPaid: 0,
+        created: new Date(1699000000 * 1000).toISOString(),
+        dueDate: null,
+        attemptCount: 4,
+        lastAttempt: null,
+      },
+    ]);
+
+    expect(mockStripe.invoices.list).toHaveBeenCalledTimes(2);
+    expect(mockStripe.invoices.list).toHaveBeenNthCalledWith(1, {
+      customer: "cus_1",
+      status: "open",
+      limit: 10,
+    });
+    expect(mockStripe.invoices.list).toHaveBeenNthCalledWith(2, {
+      customer: "cus_1",
+      status: "uncollectible",
+      limit: 10,
+    });
+
+    const auditCall = dbState.insertCalls.find(
+      (c) => c.table === adminActionAudit,
+    );
+    expect(auditCall).toBeTruthy();
+    expect(auditCall!.values).toMatchObject({
+      actorUserId: "demo-user",
+      targetUserId: "demo-user",
+      actionKey: "billing_view_failed_invoices",
+      source: "admin_ui",
+    });
+    const payload = JSON.parse(
+      (auditCall!.values as Record<string, string>).payload as string,
+    );
+    expect(payload).toEqual({ count: 2 });
+  });
+
+  it("returns an empty list (no audit, no Stripe call) when the user has no Stripe customer", async () => {
+    pushTargetUser({ stripeCustomerId: null });
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/demo-user/failed-invoices")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ invoices: [] });
+    expect(mockStripe.invoices.list).not.toHaveBeenCalled();
+    expect(
+      dbState.insertCalls.find((c) => c.table === adminActionAudit),
+    ).toBeUndefined();
+  });
+});
+
+describe("GET /api/admin/users/:userId/outbound-messages", () => {
+  it("returns the messages array from the DB in the documented shape", async () => {
+    const fakeRows = [
+      {
+        id: "msg-1",
+        channel: "sms",
+        type: "first_booking_nudge",
+        status: "sent",
+        toAddress: "+15551234567",
+        scheduledFor: "2026-04-20T12:00:00.000Z",
+        sentAt: "2026-04-20T12:01:00.000Z",
+        canceledAt: null,
+        failureReason: null,
+        createdAt: "2026-04-20T11:59:00.000Z",
+        updatedAt: "2026-04-20T12:01:00.000Z",
+      },
+      {
+        id: "msg-2",
+        channel: "email",
+        type: "welcome",
+        status: "failed",
+        toAddress: "demo@example.com",
+        scheduledFor: null,
+        sentAt: null,
+        canceledAt: null,
+        failureReason: "bounced",
+        createdAt: "2026-04-19T10:00:00.000Z",
+        updatedAt: "2026-04-19T10:00:30.000Z",
+      },
+    ];
+    dbState.selectQueue.push(fakeRows);
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/demo-user/outbound-messages")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ messages: fakeRows });
+    expect(dbMock.select).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns an empty array when the user has no outbound messages", async () => {
+    dbState.selectQueue.push([]);
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/demo-user/outbound-messages")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ messages: [] });
+  });
+
+  it("references the outboundMessages table when building the select", async () => {
+    dbState.selectQueue.push([]);
+
+    await request(buildApp())
+      .get("/api/admin/users/demo-user/outbound-messages")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    // The select projection is pulled from the outboundMessages columns; if a
+    // future refactor accidentally swaps tables this assertion will catch it.
+    const selectArg = dbMock.select.mock.calls[0]?.[0] as
+      | Record<string, unknown>
+      | undefined;
+    expect(selectArg).toBeDefined();
+    expect(selectArg!.id).toBe(outboundMessages.id);
+    expect(selectArg!.channel).toBe(outboundMessages.channel);
+    expect(selectArg!.failureReason).toBe(outboundMessages.failureReason);
+  });
+});
+
+describe("GET /api/admin/users/links/external", () => {
+  it("returns the documented JSON shape with the four provider blocks", async () => {
+    const res = await request(buildApp())
+      .get("/api/admin/users/links/external")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    for (const provider of ["amplitude", "customerIo", "oneSignal", "stripe"]) {
+      expect(res.body).toHaveProperty(provider);
+    }
+
+    expect(res.body.amplitude).toEqual({
+      baseUrl: expect.any(String),
+      userUrlTemplate: expect.stringContaining("{{USER_ID}}"),
+    });
+    expect(res.body.customerIo).toEqual({
+      baseUrl: expect.any(String),
+      userUrlTemplate: expect.stringContaining("{{USER_ID}}"),
+    });
+    expect(res.body.oneSignal).toEqual({
+      baseUrl: expect.any(String),
+      userUrlTemplate: expect.stringContaining("{{USER_ID}}"),
+    });
+    expect(res.body.stripe).toEqual({
+      baseUrl: expect.any(String),
+      customerUrlTemplate: expect.stringContaining("{{CUSTOMER_ID}}"),
+    });
   });
 });

@@ -1333,7 +1333,24 @@ router.post("/:userId/retry-payment", async (req: AdminRequest, res) => {
 
     let retryResult;
     if (invoiceId) {
-      // Retry specific invoice
+      // Retry specific invoice. Verify the invoice exists and belongs to the
+      // target user's Stripe customer before attempting payment so admins
+      // cannot accidentally retry an invoice on the wrong account.
+      let existing;
+      try {
+        existing = await stripe.invoices.retrieve(invoiceId);
+      } catch (lookupErr: any) {
+        if (lookupErr?.code === "resource_missing" || lookupErr?.statusCode === 404) {
+          return res.status(404).json({ error: "Invoice not found" });
+        }
+        throw lookupErr;
+      }
+      const invoiceCustomer = typeof existing.customer === "string"
+        ? existing.customer
+        : existing.customer?.id;
+      if (invoiceCustomer !== targetUser.stripeCustomerId) {
+        return res.status(404).json({ error: "Invoice does not belong to this user" });
+      }
       retryResult = await stripe.invoices.pay(invoiceId);
     } else {
       // Find and retry the latest open/unpaid invoice
