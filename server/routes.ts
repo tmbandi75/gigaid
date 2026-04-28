@@ -14311,6 +14311,51 @@ Return ONLY the message text, no JSON or formatting.`
     }
   });
 
+  // Recent SMS rows that were canceled because the user hit the rolling 24h
+  // SMS cap. Powers the "SMS activity" panel in Settings so users can self-
+  // diagnose missing nudges/reminders. Returns the last 7 days, newest first.
+  app.get("/api/sms/rate-limited-recent", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { db } = await import("./db");
+      const { outboundMessages } = await import("@shared/schema");
+      const { eq, and, gte, desc } = await import("drizzle-orm");
+
+      const sevenDaysAgo = new Date(
+        Date.now() - 7 * 24 * 60 * 60 * 1000,
+      ).toISOString();
+
+      const rows = await db
+        .select({
+          id: outboundMessages.id,
+          type: outboundMessages.type,
+          channel: outboundMessages.channel,
+          toAddress: outboundMessages.toAddress,
+          scheduledFor: outboundMessages.scheduledFor,
+          canceledAt: outboundMessages.canceledAt,
+        })
+        .from(outboundMessages)
+        .where(
+          and(
+            eq(outboundMessages.userId, userId),
+            eq(outboundMessages.channel, "sms"),
+            eq(outboundMessages.status, "canceled"),
+            eq(outboundMessages.failureReason, "rate_limited"),
+            gte(outboundMessages.canceledAt, sevenDaysAgo),
+          ),
+        )
+        .orderBy(desc(outboundMessages.canceledAt))
+        .limit(50);
+
+      res.json({ messages: rows });
+    } catch (error: any) {
+      logger.error("Error fetching rate-limited SMS history:", error);
+      res
+        .status(500)
+        .json({ error: "Failed to fetch rate-limited SMS history" });
+    }
+  });
+
   // ============ JOB TEMPLATES ============
   app.get("/api/job-templates", async (req, res) => {
     try {

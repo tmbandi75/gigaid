@@ -69,6 +69,7 @@ import { PhoneLinkDialog } from "@/components/mobile-auth/PhoneLinkDialog";
 import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { AutomationSettings } from "@/components/settings/AutomationSettings";
 import { MessagingSettings } from "@/components/settings/MessagingSettings";
+import { SmsActivityPanel } from "@/components/settings/SmsActivityPanel";
 import { ChangePasswordDialog } from "@/components/settings/ChangePasswordDialog";
 import { SubscriptionSettings } from "@/components/settings/SubscriptionSettings";
 import { SettingsSectionAccordion } from "@/components/settings/SettingsSectionAccordion";
@@ -1630,6 +1631,7 @@ export default function Settings() {
                     data-testid="switch-notify-email"
                   />
                 </div>
+                <SmsActivityPanel />
               </div>
             </div>
 
