@@ -11,6 +11,12 @@ process.env.APP_JWT_SECRET = process.env.APP_JWT_SECRET || "test-secret-admin-us
 process.env.ADMIN_USER_IDS = "demo-user";
 process.env.ADMIN_EMAILS = "admin@example.com";
 process.env.DATABASE_URL = process.env.DATABASE_URL || "postgres://localhost/unused";
+// Known Stripe price IDs the admin plan-change actions are allowed to forward
+// to Stripe. These mirror the plan price env vars defined in
+// server/billing/plans.ts and let the existing happy-path tests below (which
+// use "price_yearly" and "price_basic") pass the validation guard.
+process.env.STRIPE_PRICE_PRO_MONTHLY = "price_basic";
+process.env.STRIPE_PRICE_PRO_YEARLY = "price_yearly";
 
 type InsertCall = { table: unknown; values: unknown };
 type UpdateCall = { table: unknown; set: unknown };
@@ -1009,6 +1015,25 @@ describe("POST /api/admin/users/:userId/actions billing validation", () => {
 
         expect(res.status).toBe(400);
         expect(res.body.error).toBe("New price ID is required for plan changes");
+        expect(mockStripe.subscriptions.retrieve).not.toHaveBeenCalled();
+        expect(mockStripe.subscriptions.update).not.toHaveBeenCalled();
+        expectNoAuditRow();
+      },
+    );
+
+    it.each(["billing_upgrade", "billing_downgrade"] as const)(
+      "%s returns 400 when priceId is not in the known plan price list",
+      async (actionKey) => {
+        pushUserLookup();
+        pushTargetUser({ stripeCustomerId: "cus_1", stripeSubscriptionId: "sub_1" });
+
+        const res = await postAction(actionKey, {
+          reason: "Plan change",
+          payload: { priceId: "price_typo_or_stale" },
+        });
+
+        expect(res.status).toBe(400);
+        expect(res.body.error).toBe("Unknown price ID");
         expect(mockStripe.subscriptions.retrieve).not.toHaveBeenCalled();
         expect(mockStripe.subscriptions.update).not.toHaveBeenCalled();
         expectNoAuditRow();

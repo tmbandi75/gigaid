@@ -1,0 +1,35 @@
+import { Plan } from "@shared/plans";
+
+export type BillingCadence = "monthly" | "yearly";
+
+const PLAN_PRICE_ENV_VARS: Record<Plan, Partial<Record<BillingCadence, string>>> = {
+  [Plan.FREE]: {},
+  [Plan.PRO]: {
+    monthly: "STRIPE_PRICE_PRO_MONTHLY",
+    yearly: "STRIPE_PRICE_PRO_YEARLY",
+  },
+  [Plan.PRO_PLUS]: {
+    monthly: "STRIPE_PRICE_PRO_PLUS_MONTHLY",
+    yearly: "STRIPE_PRICE_PRO_PLUS_YEARLY",
+  },
+  [Plan.BUSINESS]: {
+    monthly: "STRIPE_PRICE_BUSINESS_MONTHLY",
+    yearly: "STRIPE_PRICE_BUSINESS_YEARLY",
+  },
+};
+
+export function getKnownPlanPriceIds(): Set<string> {
+  const ids = new Set<string>();
+  for (const cadences of Object.values(PLAN_PRICE_ENV_VARS)) {
+    for (const envVar of Object.values(cadences)) {
+      if (!envVar) continue;
+      const value = process.env[envVar]?.trim();
+      if (value) ids.add(value);
+    }
+  }
+  return ids;
+}
+
+export function isKnownPlanPriceId(priceId: string): boolean {
+  return getKnownPlanPriceIds().has(priceId);
+}

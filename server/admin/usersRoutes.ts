@@ -20,6 +20,7 @@ import { getUncachableStripeClient } from "../stripeClient";
 import { logger } from "../lib/logger";
 import { safeParseJsonColumn } from "./jsonColumn";
 import { safePriceCentsExact } from "@shared/safePrice";
+import { isKnownPlanPriceId } from "../billing/plans";
 
 const router = Router();
 
@@ -776,7 +777,11 @@ router.post("/:userId/actions", async (req, res) => {
         if (!newPriceId) {
           return res.status(400).json({ error: "New price ID is required for plan changes" });
         }
-        
+
+        if (!isKnownPlanPriceId(newPriceId)) {
+          return res.status(400).json({ error: "Unknown price ID" });
+        }
+
         try {
           const stripe = await getUncachableStripeClient();
           const subscription = await stripe.subscriptions.retrieve(targetUser.stripeSubscriptionId);
