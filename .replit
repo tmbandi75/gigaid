@@ -38,6 +38,10 @@ args = "Start application"
 task = "workflow.run"
 args = "safe-price-scan"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "safe-price-eslint"
+
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -57,6 +61,17 @@ args = "npx jest --selectProjects lib --testPathPatterns noRawPriceTemplates --c
 
 [workflows.workflow.metadata]
 isValidation = true
+
+[[workflows.workflow]]
+name = "safe-price-eslint"
+author = "agent"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npx eslint --config eslint.safeprice.config.js 'client/src/**/*.{ts,tsx}' 'server/**/*.{ts,tsx}' 'shared/**/*.{ts,tsx}'"
 
 [agent]
 integrations = ["javascript_object_storage:2.0.0", "stripe:2.0.0", "twilio:1.0.0"]
