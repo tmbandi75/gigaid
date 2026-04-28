@@ -88,7 +88,7 @@ import {
 import { registerRevenueCatWebhookRoutes } from "./revenuecatWebhookRoutes";
 import { isStoreSubscriptionActiveInDb, syncSubscriberFromRevenueCat } from "./revenuecatSync";
 import { registerTestRoutes } from "./testRoutes";
-import { generateBookingSlug, ensureUniqueSlug, validateSlug, isLegacyDefaultSlug } from "./lib/bookingSlug";
+import { generateBookingSlug, ensureUniqueSlug, writeUserSlugWithRetry, validateSlug, isLegacyDefaultSlug } from "./lib/bookingSlug";
 import { buildBookingLink } from "./lib/bookingLinkUrl";
 import { logger } from "./lib/logger";
 
@@ -594,14 +594,22 @@ export async function registerRoutes(
 
       if (!user.publicProfileSlug || isLegacyDefaultSlug(user.publicProfileSlug)) {
         const baseSlug = generateBookingSlug(user);
-        const newSlug = await ensureUniqueSlug(
+        // Two simultaneous auto-upgrades for users with the same first name
+        // (e.g. two newly-named "John") would both pass slugExists and then
+        // race the update. The DB partial-unique index rejects the loser
+        // with SQLSTATE 23505; writeUserSlugWithRetry advances to
+        // `john-2` and re-tries until the update sticks.
+        const { slug: newSlug } = await writeUserSlugWithRetry(
           baseSlug,
-          (s) => storage.slugExists(s, user.id)
+          async (candidate) => {
+            await storage.updateUser(user.id, {
+              publicProfileSlug: candidate,
+              publicProfileEnabled: true,
+            });
+            return candidate;
+          },
+          { checkExists: (s) => storage.slugExists(s, user.id) },
         );
-        await storage.updateUser(user.id, {
-          publicProfileSlug: newSlug,
-          publicProfileEnabled: true,
-        });
         user.publicProfileSlug = newSlug;
         user.publicProfileEnabled = true;
       }
@@ -725,7 +733,7 @@ export async function registerRoutes(
         }
       }
       
-      if (publicProfileSlug !== undefined) {
+      if (publicProfileSlug !== undefined && publicProfileSlug !== null) {
         const slugValidation = validateSlug(publicProfileSlug);
         if (!slugValidation.valid) {
           return res.status(400).json({ error: slugValidation.reason });
@@ -766,8 +774,25 @@ export async function registerRoutes(
       // Payday onboarding fields
       if (paydayOnboardingCompleted !== undefined) updates.paydayOnboardingCompleted = paydayOnboardingCompleted;
       if (paydayOnboardingStep !== undefined) updates.paydayOnboardingStep = paydayOnboardingStep;
-      
-      const updatedUser = await storage.updateUser((req as any).userId, updates);
+
+      // If we're writing a non-null slug, run the update through the
+      // retry helper so a concurrent claim on the same slug surfaces as
+      // a clean auto-suffix instead of a 500 from the DB unique index.
+      // When the caller is clearing the slug (publicProfileSlug === null)
+      // or not touching it at all, fall through to a plain updateUser.
+      let updatedUser;
+      if (publicProfileSlug !== undefined && publicProfileSlug !== null) {
+        const out = await writeUserSlugWithRetry(
+          publicProfileSlug,
+          async (slug) => {
+            return storage.updateUser((req as any).userId, { ...updates, publicProfileSlug: slug });
+          },
+          { checkExists: (s) => storage.slugExists(s, (req as any).userId) },
+        );
+        updatedUser = out.result;
+      } else {
+        updatedUser = await storage.updateUser((req as any).userId, updates);
+      }
       
       res.json({
         id: updatedUser?.id || (req as any).userId,
@@ -6605,21 +6630,51 @@ export async function registerRoutes(
         noShowProtectionEnabled,
         noShowProtectionDepositPercent,
       };
-      
+
       // Track first time booking link creation
-      if (publicProfileEnabled && publicProfileSlug && 
+      let trackBookingLinkCreated = false;
+      if (publicProfileEnabled && publicProfileSlug &&
           existingUser && !existingUser.bookingLinkCreatedAt) {
         updates.bookingLinkCreatedAt = new Date().toISOString();
+        trackBookingLinkCreated = true;
+      }
+
+      // The slug pre-check above is best-effort: under a concurrent write
+      // (two users settling on the same custom slug at the same instant)
+      // the DB partial-unique index will reject the loser. Wrap the slug
+      // write in writeUserSlugWithRetry so the user sees a saved slug
+      // (auto-suffixed to e.g. `larry-payne-2`) instead of a 500. When
+      // the user is clearing the slug (publicProfileSlug == null), no
+      // retry is needed.
+      let user;
+      let finalSlug: string | null | undefined = publicProfileSlug;
+      if (publicProfileSlug) {
+        const result = await writeUserSlugWithRetry(
+          publicProfileSlug,
+          async (candidate) => {
+            const next = { ...updates, publicProfileSlug: candidate };
+            return storage.updateUser((req as any).userId, next);
+          },
+          // No checkExists — the route handler already pre-checked above
+          // and the only thing we're guarding against here is the
+          // narrow concurrent-write race. Skipping the redundant probe
+          // keeps the happy path a single round-trip.
+        );
+        user = result.result;
+        finalSlug = result.slug;
+      } else {
+        user = await storage.updateUser((req as any).userId, updates);
+      }
+
+      if (trackBookingLinkCreated) {
         emitCanonicalEvent({
           eventName: "booking_link_created",
           userId: (req as any).userId,
-          context: { slug: publicProfileSlug },
+          context: { slug: finalSlug ?? publicProfileSlug },
           source: "web",
         });
       }
-      
-      const user = await storage.updateUser((req as any).userId, updates);
-      
+
       res.json(user);
     } catch (error) {
       res.status(500).json({ error: "Failed to update settings" });

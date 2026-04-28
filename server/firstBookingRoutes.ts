@@ -8,7 +8,7 @@ import { signAppJwt, verifyAppJwt, isAppJwtConfigured } from "./appJwt";
 import { isAuthenticated } from "./replit_integrations/auth/replitAuth";
 import { FIRST_BOOKING_DISQUALIFYING_EVENT_TYPES } from "./postJobMomentum";
 import { buildBookingLink } from "./lib/bookingLinkUrl";
-import { generateBookingSlug, ensureUniqueSlug } from "./lib/bookingSlug";
+import { generateBookingSlug, writeUserSlugWithRetry } from "./lib/bookingSlug";
 import { logger } from "./lib/logger";
 import { randomUUID } from "crypto";
 
@@ -146,44 +146,49 @@ router.post("/claim-page", async (req: Request, res: Response) => {
     let userId: string;
 
     try {
-      const tx = await db.transaction(async (trx) => {
-        const newId = randomUUID();
-        const nowIso = new Date().toISOString();
+      // Prefer a name-based slug (e.g. `larry-payne`) over the legacy
+      // `user-<hex>` placeholder so the share link the new claimer gets is
+      // brand-friendly from the very first send. The DB enforces slug
+      // uniqueness (see `users_public_profile_slug_unique_idx`), so we
+      // wrap the whole transaction in `writeUserSlugWithRetry` — if a
+      // concurrent writer takes our chosen slug first, the entire
+      // transaction is retried with the next-available suffix. Re-running
+      // the transaction is safe because nothing outside it is mutated yet.
+      const newId = randomUUID();
+      const fallbackSlug = `user-${newId.slice(0, 8).toLowerCase()}`;
+      const baseSlugCandidate = name?.trim() ? generateBookingSlug({ name }) : null;
+      const baseSlug = baseSlugCandidate && baseSlugCandidate !== "pro"
+        ? baseSlugCandidate
+        : fallbackSlug;
 
-        // Prefer a name-based slug (e.g. `larry-payne`) over the legacy
-        // `user-<hex>` placeholder so the share link the new claimer gets
-        // is brand-friendly from the very first send. Both the name-based
-        // and fallback paths route through ensureUniqueSlug for consistent
-        // collision handling. The slug-existence check runs against the
-        // main DB (outside this transaction); since this is a brand-new
-        // user with a unique id, the worst case is a benign `-2` suffix.
-        const fallbackSlug = `user-${newId.slice(0, 8).toLowerCase()}`;
-        const baseSlug = name?.trim() ? generateBookingSlug({ name }) : null;
-        const seedSlug = baseSlug && baseSlug !== "pro" ? baseSlug : fallbackSlug;
-        const publicProfileSlug = await ensureUniqueSlug(seedSlug, (s) => storage.slugExists(s));
+      const tx = await writeUserSlugWithRetry(
+        baseSlug,
+        async (publicProfileSlug) => db.transaction(async (trx) => {
+          const nowIso = new Date().toISOString();
+          const [created] = await trx.insert(users).values({
+            id: newId,
+            username: `claim-${newId.slice(0, 8)}`,
+            password: randomUUID(),
+            name: name ?? null,
+            publicProfileEnabled: false,
+            publicProfileSlug,
+            onboardingCompleted: false,
+            authProvider: "claim",
+            defaultServiceType: serviceType ?? page.category ?? null,
+            createdAt: nowIso,
+          }).returning();
 
-        const [created] = await trx.insert(users).values({
-          id: newId,
-          username: `claim-${newId.slice(0, 8)}`,
-          password: randomUUID(),
-          name: name ?? null,
-          publicProfileEnabled: false,
-          publicProfileSlug,
-          onboardingCompleted: false,
-          authProvider: "claim",
-          defaultServiceType: serviceType ?? page.category ?? null,
-          createdAt: nowIso,
-        }).returning();
+          const [claimed] = await trx.update(bookingPages)
+            .set({ claimed: true, claimedAt: nowIso, claimedByUserId: created.id, updatedAt: nowIso })
+            .where(and(eq(bookingPages.id, pageId), eq(bookingPages.claimed, false)))
+            .returning();
 
-        const [claimed] = await trx.update(bookingPages)
-          .set({ claimed: true, claimedAt: nowIso, claimedByUserId: created.id, updatedAt: nowIso })
-          .where(and(eq(bookingPages.id, pageId), eq(bookingPages.claimed, false)))
-          .returning();
-
-        if (!claimed) throw new Error("ALREADY_CLAIMED");
-        return { userId: created.id };
-      });
-      userId = tx.userId;
+          if (!claimed) throw new Error("ALREADY_CLAIMED");
+          return { userId: created.id };
+        }),
+        { checkExists: (s) => storage.slugExists(s) },
+      );
+      userId = tx.result.userId;
     } catch (err: any) {
       if (err?.message === "ALREADY_CLAIMED") {
         return res.status(409).json({ error: "Page was just claimed by another session" });

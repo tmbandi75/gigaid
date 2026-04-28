@@ -1,6 +1,6 @@
 import { eq, and, desc, asc, lte, gte, or, ne, isNull, isNotNull, sql, notInArray, lt, inArray, like } from "drizzle-orm";
 import { db } from "./db";
-import { generateBookingSlug, ensureUniqueSlug } from "./lib/bookingSlug";
+import { generateBookingSlug, ensureUniqueSlug, writeUserSlugWithRetry } from "./lib/bookingSlug";
 import { 
   users, otpCodes, sessions, jobs, leads, invoices, reminders,
   crewMembers, referrals, bookingRequests, bookingEvents, voiceNotes,
@@ -213,17 +213,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   /**
-   * Picks the public-profile slug a brand-new user should get when the
-   * caller didn't pass one. Prefers a name-based slug derived from
-   * businessName/name/username/email so customers see a branded link
-   * (`/book/larry-payne`) instead of the placeholder `/book/user-b727046e`.
-   * Falls back to the legacy `user-<id-prefix>` form only when none of those
-   * fields are present, and uses ensureUniqueSlug to dodge collisions.
+   * Picks the **base** slug for a brand-new user: name-derived when possible
+   * (`larry-payne`), or the legacy `user-<id-prefix>` placeholder when no
+   * name fields are present. Returned as-is — the caller is expected to
+   * pass it into `writeUserSlugWithRetry` so a concurrent insert that
+   * grabs the same slug first gets resolved to `larry-payne-2`, etc.
    */
-  private async computeDefaultSlugForNewUser(
+  private computeBaseSlugForNewUser(
     insertUser: InsertUser,
     id: string,
-  ): Promise<string> {
+  ): string {
     const fallback = `user-${id.slice(0, 8).toLowerCase()}`;
     const baseSlug = generateBookingSlug({
       name: insertUser.name ?? null,
@@ -231,14 +230,22 @@ export class DatabaseStorage implements IStorage {
       username: insertUser.username ?? null,
       email: insertUser.email ?? null,
     });
-    const seed = !baseSlug || baseSlug === "pro" ? fallback : baseSlug;
-    return ensureUniqueSlug(seed, (s) => this.slugExists(s));
+    return !baseSlug || baseSlug === "pro" ? fallback : baseSlug;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const defaultSlug = await this.computeDefaultSlugForNewUser(insertUser, id);
-    const [user] = await db.insert(users).values({
+    // If the caller pinned an exact slug, honor it as the *base* — the retry
+    // helper will still auto-suffix (`-2`, `-3`, ...) if that exact slug is
+    // already taken when the insert hits the DB unique index. Skipping the
+    // pre-existence probe in that case preserves the caller's exact slug
+    // when it is in fact free. When the caller has no opinion we derive a
+    // base + pre-probe so concurrent signups cleanly land on different
+    // suffixes without any failed writes.
+    const explicitSlug = insertUser.publicProfileSlug ?? null;
+    const baseSlug = explicitSlug ?? this.computeBaseSlugForNewUser(insertUser, id);
+
+    const insertRow = (slug: string) => db.insert(users).values({
       id,
       username: insertUser.username,
       password: insertUser.password,
@@ -261,7 +268,7 @@ export class DatabaseStorage implements IStorage {
       notifyByEmail: insertUser.notifyByEmail ?? true,
       lastActiveAt: insertUser.lastActiveAt ?? new Date().toISOString(),
       publicProfileEnabled: insertUser.publicProfileEnabled ?? true,
-      publicProfileSlug: insertUser.publicProfileSlug ?? defaultSlug,
+      publicProfileSlug: slug,
       showReviewsOnBooking: insertUser.showReviewsOnBooking ?? true,
       referralCode: insertUser.referralCode ?? `REF${id.slice(0, 8).toUpperCase()}`,
       referredBy: insertUser.referredBy ?? null,
@@ -279,7 +286,16 @@ export class DatabaseStorage implements IStorage {
       lateRescheduleRetainPctSecond: insertUser.lateRescheduleRetainPctSecond ?? 60,
       lateRescheduleRetainPctCap: insertUser.lateRescheduleRetainPctCap ?? 75,
     }).returning();
-    return user;
+
+    const { result } = await writeUserSlugWithRetry(
+      baseSlug,
+      async (slug) => {
+        const [row] = await insertRow(slug);
+        return row;
+      },
+      { checkExists: explicitSlug ? undefined : (s) => this.slugExists(s) },
+    );
+    return result;
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {

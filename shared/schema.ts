@@ -180,7 +180,18 @@ export const users = pgTable("users", {
 
   // Apple Review demo account protection
   isReviewAccount: boolean("is_review_account").default(false),
-});
+}, (table) => [
+  // Database-level guarantee that no two users can ever share the same
+  // booking-link slug. Partial so multiple users can still legitimately have
+  // a NULL slug (e.g. accounts that haven't picked one yet, soft-deleted
+  // rows). Application code that writes this column MUST be ready for the
+  // insert/update to fail with a unique-violation (Postgres SQLSTATE 23505)
+  // and retry with the next-available suffix — see
+  // `writeUserSlugWithRetry` in `server/lib/bookingSlug.ts`.
+  uniqueIndex("users_public_profile_slug_unique_idx")
+    .on(table.publicProfileSlug)
+    .where(sql`public_profile_slug IS NOT NULL`),
+]);
 
 // Privacy events table (internal logging without external analytics)
 export const privacyEvents = pgTable("privacy_events", {

@@ -111,6 +111,40 @@ export function validateSlug(slug: string): SlugValidationResult {
   return { valid: true };
 }
 
+/**
+ * Slug uniqueness contract
+ * ------------------------
+ * The `users.public_profile_slug` column has a partial UNIQUE index
+ * (`users_public_profile_slug_unique_idx`) declared in `shared/schema.ts`.
+ * That index — not this file — is the source of truth: two writers landing
+ * the same slug at the same instant will both pass an application-side
+ * `slugExists` probe, and one of the writes will be rejected by the
+ * database with Postgres SQLSTATE `23505`.
+ *
+ * Any code path that writes a slug must therefore:
+ *   1. Pick a likely-available candidate via `ensureUniqueSlug` (best-effort
+ *      probe), AND
+ *   2. Wrap the write in `writeUserSlugWithRetry`, which catches the unique
+ *      violation and re-tries with the next-available suffix so users never
+ *      see a 500.
+ *
+ * The three known writers are:
+ *   - `server/db-storage.ts:createUser` (new user signup),
+ *   - `server/firstBookingRoutes.ts` claim transaction (claim-page upgrade),
+ *   - `server/routes.ts:/api/profile` auto-upgrade and `/api/settings` save.
+ *
+ * Future writers must follow the same pattern — the schema comment on the
+ * column also points back here.
+ */
+
+/**
+ * Best-effort pre-check: probe `checkExists(candidate)` and walk through
+ * `${baseSlug}-2`, `${baseSlug}-3`, ... until a candidate appears free.
+ *
+ * Even when this returns a slug that looked free, the DB write that follows
+ * can still fail with a unique violation (concurrent writer raced past us).
+ * Always pair this with `writeUserSlugWithRetry`.
+ */
 export async function ensureUniqueSlug(
   baseSlug: string,
   checkExists: (slug: string) => Promise<boolean>,
@@ -129,4 +163,92 @@ export async function ensureUniqueSlug(
   }
 
   return candidate;
+}
+
+/**
+ * Returns true iff `err` looks like a Postgres unique-violation triggered
+ * by the `public_profile_slug` partial unique index. We deliberately *only*
+ * swallow conflicts on this column — a unique-violation on, say,
+ * `username` or `firebase_uid` is a real bug and must propagate.
+ */
+export function isSlugUniqueViolation(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as any;
+  const code = e.code ?? e.cause?.code;
+  if (code !== "23505") return false;
+
+  const haystacks: string[] = [];
+  for (const candidate of [
+    e.constraint,
+    e.constraint_name,
+    e.cause?.constraint,
+    e.cause?.constraint_name,
+    e.detail,
+    e.cause?.detail,
+    e.message,
+    e.cause?.message,
+  ]) {
+    if (typeof candidate === "string") haystacks.push(candidate);
+  }
+  return haystacks.some((s) => s.includes("public_profile_slug"));
+}
+
+/**
+ * Run `write(candidate)` and, if it fails with a slug unique-violation,
+ * advance to the next-available suffix and try again. Up to `maxAttempts`
+ * suffixes are tried before giving up; after that we fall back to a
+ * timestamp-suffixed candidate (matches `ensureUniqueSlug`'s escape hatch)
+ * for one final attempt before re-throwing.
+ *
+ * `checkExists` is optional — when supplied, we run the same pre-check as
+ * `ensureUniqueSlug` to avoid the DB round-trip in the common case.
+ *
+ * The `write` callback receives the slug to use. It must be idempotent
+ * with respect to side effects unrelated to the slug column, since it can
+ * be invoked more than once. For inserts wrapped in a transaction, that
+ * means the entire transaction must be retried by the caller — see
+ * `server/firstBookingRoutes.ts` for the canonical example.
+ */
+export async function writeUserSlugWithRetry<T>(
+  baseSlug: string,
+  write: (candidate: string) => Promise<T>,
+  options?: {
+    checkExists?: (slug: string) => Promise<boolean>;
+    maxAttempts?: number;
+  },
+): Promise<{ slug: string; result: T }> {
+  const maxAttempts = options?.maxAttempts ?? 100;
+
+  let candidate = baseSlug;
+  let suffix = 2;
+
+  if (options?.checkExists) {
+    while (await options.checkExists(candidate)) {
+      candidate = `${baseSlug}-${suffix}`;
+      suffix++;
+      if (suffix > maxAttempts) {
+        candidate = `${baseSlug}-${Date.now().toString(36).slice(-4)}`;
+        break;
+      }
+    }
+  }
+
+  let attempts = 0;
+  while (true) {
+    try {
+      const result = await write(candidate);
+      return { slug: candidate, result };
+    } catch (err) {
+      if (!isSlugUniqueViolation(err)) throw err;
+      attempts++;
+      if (attempts > maxAttempts) {
+        throw err;
+      }
+      candidate = `${baseSlug}-${suffix}`;
+      suffix++;
+      if (suffix > maxAttempts) {
+        candidate = `${baseSlug}-${Date.now().toString(36).slice(-4)}`;
+      }
+    }
+  }
 }
