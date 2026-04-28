@@ -102,8 +102,8 @@ In addition to Playwright tests, the app has backend API tests:
 # Run admin panel tests (Jest)
 npx jest --selectProjects=api tests/api/adminUsers.test.ts
 
-# Run no-silent-completion tests
-curl -X POST http://localhost:5000/api/test/no-silent-completion
+# Run no-silent-completion regression tests (Jest)
+npx jest --selectProjects=api tests/api/noSilentCompletion.test.ts
 ```
 
 ## CI/CD Integration
