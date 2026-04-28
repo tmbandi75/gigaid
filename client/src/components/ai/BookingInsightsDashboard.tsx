@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, TrendingUp, Calendar, Users, Clock, Lightbulb } from "lucide-react";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { formatCurrency as baseFormatCurrency } from "@/lib/formatCurrency";
 
 interface BookingInsights {
   topDays: Array<{ day: string; count: number }>;
@@ -39,14 +40,8 @@ export function BookingInsightsDashboard() {
     );
   }
 
-  const formatCurrency = (cents: number | null | undefined) => {
-    if (cents == null || !Number.isFinite(cents)) return "--";
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-    }).format(cents / 100);
-  };
+  const formatCurrency = (cents: number | null | undefined) =>
+    baseFormatCurrency(cents, { maximumFractionDigits: 2 });
 
   return (
     <div className="space-y-4" data-testid="booking-insights-dashboard">

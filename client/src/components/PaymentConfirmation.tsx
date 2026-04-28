@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { apiFetch } from "@/lib/apiFetch";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -164,12 +165,8 @@ export function PaymentConfirmation({
     }
   };
 
-  const formatAmount = (cents: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(cents / 100);
-  };
+  const formatAmount = (cents: number) =>
+    formatCurrency(cents, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("en-US", {

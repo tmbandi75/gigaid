@@ -24,6 +24,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { formatCurrency as baseFormatCurrency } from "@/lib/formatCurrency";
 import type { Invoice } from "@shared/schema";
 
 interface InvoicesTableViewProps {
@@ -37,12 +38,7 @@ function formatDate(dateStr: string): string {
 }
 
 function formatCurrency(cents: number | null | undefined): string {
-  if (cents == null || !Number.isFinite(cents)) return "--";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  }).format(cents / 100);
+  return baseFormatCurrency(cents, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function isOverdue(createdAt: string, status: string): boolean {

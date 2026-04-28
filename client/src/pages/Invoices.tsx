@@ -24,6 +24,7 @@ import { useState } from "react";
 import type { Invoice, AiNudge, JobPayment } from "@shared/schema";
 import { apiFetch } from "@/lib/apiFetch";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
 import { NudgeChips } from "@/components/nudges/NudgeChip";
@@ -92,15 +93,6 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function formatCurrency(cents: number | null | undefined): string {
-  if (cents == null || !Number.isFinite(cents)) return "--";
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
-}
 
 interface InvoiceCardProps {
   invoice: Invoice;

@@ -9,6 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { getPostActionMessage } from "@/encouragement/encouragementToast";
 import {
   ArrowLeft,
@@ -82,8 +83,7 @@ function formatTime(timeString: string | null): string {
 }
 
 function formatPrice(cents: number | null | undefined): string {
-  if (cents == null || !Number.isFinite(cents)) return "--";
-  return `$${(cents / 100).toFixed(2)}`;
+  return formatCurrency(cents, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export default function JobSummary() {

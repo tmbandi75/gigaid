@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/apiFetch";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -162,10 +163,7 @@ export default function QuickBook() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const formatPrice = (cents?: number) => {
-    if (!cents) return "";
-    return `$${(cents / 100).toFixed(0)}`;
-  };
+  const formatPrice = (cents?: number) => (cents ? formatCurrency(cents) : "");
 
   const formatDateTime = (dateTimeStr?: string) => {
     if (!dateTimeStr) return "";

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
 import { queryClient } from "@/lib/queryClient";
@@ -39,11 +40,7 @@ interface PriceOptimizationResponse {
 }
 
 function formatPrice(cents: number): string {
-  return (cents / 100).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-  });
+  return formatCurrency(cents, { maximumFractionDigits: 2 });
 }
 
 function capitalize(s: string): string {

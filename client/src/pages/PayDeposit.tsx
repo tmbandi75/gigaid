@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { formatCurrency as baseFormatCurrency } from "@/lib/formatCurrency";
 
 interface DepositData {
   job: {
@@ -59,13 +60,7 @@ const paymentMethods = [
 ];
 
 function formatCurrency(cents: number | null | undefined): string {
-  if (cents == null || !Number.isFinite(cents)) return "--";
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(cents / 100);
+  return baseFormatCurrency(cents, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 interface StripePaymentFormProps {

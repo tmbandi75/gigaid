@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { formatCurrency } from "@/lib/formatCurrency";
 import {
   ArrowLeft,
   DollarSign,
@@ -37,15 +38,6 @@ interface MoneyDashboardData {
   hotLeadCount: number;
 }
 
-function formatCurrency(cents: number | null | undefined): string {
-  if (cents == null || !Number.isFinite(cents)) return "--";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
-}
 
 function StatCard({
   icon: Icon,

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { isFinitePositiveNumber, safePriceRange } from "@/lib/safePrice";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { serviceCategories, type ServiceCategory } from "@shared/service-categories";
 import { CATEGORY_ESTIMATION_PROFILES, type EstimationProfile } from "@shared/estimation-profiles";
 import { logger } from "@/lib/logger";
@@ -152,15 +153,6 @@ export function EstimationTool({ onEstimateComplete }: EstimationToolProps) {
     });
   };
 
-  const formatCurrency = (cents: number | null | undefined) => {
-    if (cents == null || !Number.isFinite(cents)) return "--";
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(cents / 100);
-  };
 
   const getConfidenceBadge = (confidence: string) => {
     switch (confidence) {

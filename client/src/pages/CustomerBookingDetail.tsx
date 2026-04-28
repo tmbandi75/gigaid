@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiFetch } from "@/lib/apiFetch";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { formatCurrency as baseFormatCurrency } from "@/lib/formatCurrency";
 import { queryClient } from "@/lib/queryClient";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
@@ -113,13 +114,8 @@ function PaymentForm({ token, bookingId, depositAmountCents, depositCurrency, on
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
-  const formatCurrency = (cents: number | null | undefined, currency: string = "usd") => {
-    if (cents == null || !Number.isFinite(cents)) return "--";
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency.toUpperCase(),
-    }).format(cents / 100);
-  };
+  const formatCurrency = (cents: number | null | undefined, currency: string = "usd") =>
+    baseFormatCurrency(cents, { currency });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -371,13 +367,8 @@ export default function CustomerBookingDetail() {
     }
   );
 
-  const formatCurrency = (cents: number | null | undefined, currency: string = "usd") => {
-    if (cents == null || !Number.isFinite(cents)) return "--";
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency.toUpperCase(),
-    }).format(cents / 100);
-  };
+  const formatCurrency = (cents: number | null | undefined, currency: string = "usd") =>
+    baseFormatCurrency(cents, { currency });
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("en-US", {

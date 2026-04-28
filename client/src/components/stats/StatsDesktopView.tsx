@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/formatCurrency";
 import {
   DollarSign,
   TrendingUp,
@@ -37,15 +38,6 @@ interface StatsDesktopViewProps {
   paidJobsCount: number;
 }
 
-function formatCurrency(cents: number | null | undefined): string {
-  if (cents == null || !Number.isFinite(cents)) return "--";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
-}
 
 function DesktopStatCard({
   icon: Icon,

@@ -30,6 +30,7 @@ import { useSendText } from "@/hooks/use-send-text";
 import { incrementStallCounter } from "@/upgrade";
 import { apiFetch } from "@/lib/apiFetch";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { formatCurrency as baseFormatCurrency } from "@/lib/formatCurrency";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { PaymentConfirmation } from "@/components/PaymentConfirmation";
 import { copyTextToClipboard } from "@/lib/clipboard";
@@ -126,13 +127,7 @@ function formatShortDate(dateStr: string): string {
 }
 
 function formatCurrency(cents: number | null | undefined): string {
-  if (cents == null || !Number.isFinite(cents)) return "--";
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(cents / 100);
+  return baseFormatCurrency(cents, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 const paymentMethods = [

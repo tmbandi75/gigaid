@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SupportTicketForm } from "@/components/SupportTicketForm";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { formatCurrency as baseFormatCurrency } from "@/lib/formatCurrency";
 import { isFinitePositiveNumber } from "@/lib/safePrice";
 import { 
   Loader2, 
@@ -36,12 +37,7 @@ interface PriceConfirmationData {
 }
 
 function formatCurrency(cents: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(cents / 100);
+  return baseFormatCurrency(cents, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export default function ConfirmPrice() {

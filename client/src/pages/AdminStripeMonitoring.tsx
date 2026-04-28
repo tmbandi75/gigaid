@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { apiFetch } from "@/lib/apiFetch";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { formatCurrency as baseFormatCurrency } from "@/lib/formatCurrency";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -103,11 +104,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function formatCurrency(amount: number | null | undefined, currency: string = "usd") {
-  if (amount == null || !Number.isFinite(amount)) return "--";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currency.toUpperCase(),
-  }).format(amount / 100);
+  return baseFormatCurrency(amount, { currency });
 }
 
 export default function AdminStripeMonitoring() {

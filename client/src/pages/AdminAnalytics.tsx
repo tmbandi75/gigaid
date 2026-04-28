@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { formatCurrency as baseFormatCurrency } from "@/lib/formatCurrency";
 import { TrendingUp, Users, DollarSign, BarChart3, Target, Loader2, Sparkles, ArrowUpRight, ArrowLeft, Share2, Info } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -183,8 +184,7 @@ function formatTargetLabel(target: string): string {
 }
 
 function formatCurrency(cents: number | null | undefined): string {
-  if (cents == null || !Number.isFinite(cents)) return "--";
-  return `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 0 })}`;
+  return baseFormatCurrency(cents, { maximumFractionDigits: 2 });
 }
 
 function FunnelBar({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {

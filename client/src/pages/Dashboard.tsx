@@ -41,6 +41,7 @@ import {
 import type { DashboardSummary, Job, Lead } from "@shared/schema";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
 import { FirstBookingBanner } from "@/components/dashboard/FirstBookingBanner";
 import { JobQuotaMeter } from "@/components/upgrade/JobQuotaMeter";
@@ -89,15 +90,6 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
-function formatCurrency(cents: number | null | undefined): string {
-  if (cents == null || !Number.isFinite(cents)) return "--";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
-}
 
 function getGreeting(): string {
   const hour = new Date().getHours();

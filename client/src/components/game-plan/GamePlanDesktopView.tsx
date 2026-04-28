@@ -6,6 +6,7 @@ import { ActivationChecklist } from "@/components/activation/ActivationChecklist
 import { CampaignSuggestionBanner } from "@/components/CampaignSuggestionBanner";
 import { NextBestActionCard, deriveNBAState, type DashboardSummary } from "@/components/dashboard/NextBestActionCard";
 import { shouldDemoteNBAMoneyTone, shouldSuppressBookingLinkPrimary } from "@/lib/nbaStyling";
+import { formatCurrency } from "@/lib/formatCurrency";
 import {
   FileText,
   DollarSign,
@@ -95,15 +96,6 @@ interface GamePlanDesktopViewProps {
   userId?: string;
 }
 
-function formatCurrency(cents: number | null | undefined): string {
-  if (cents == null || !Number.isFinite(cents)) return "--";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
-}
 
 function formatRelativeTime(dateStr: string): string {
   const date = new Date(dateStr);

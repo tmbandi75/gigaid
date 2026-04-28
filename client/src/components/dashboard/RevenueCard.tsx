@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, DollarSign } from "lucide-react";
+import { formatCurrency } from "@/lib/formatCurrency";
 
 interface RevenueCardProps {
   totalEarnings: number;
@@ -8,12 +9,7 @@ interface RevenueCardProps {
 }
 
 export function RevenueCard({ totalEarnings, isLoading, periodLabel = "This Period" }: RevenueCardProps) {
-  const formattedEarnings = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(totalEarnings / 100);
+  const formattedEarnings = formatCurrency(totalEarnings);
 
   if (isLoading) {
     return (

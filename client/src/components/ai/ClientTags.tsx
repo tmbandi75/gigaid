@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
+import { formatCurrency as baseFormatCurrency } from "@/lib/formatCurrency";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { Tags, Loader2, Sparkles, Lightbulb } from "lucide-react";
 
@@ -70,14 +71,8 @@ export function ClientTags({ clientHistory, onTagsGenerated }: ClientTagsProps) 
     return tagColors[tag] || "bg-muted text-muted-foreground";
   };
 
-  const formatCurrency = (cents: number | null | undefined) => {
-    if (cents == null || !Number.isFinite(cents)) return "--";
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-    }).format(cents / 100);
-  };
+  const formatCurrency = (cents: number | null | undefined) =>
+    baseFormatCurrency(cents, { maximumFractionDigits: 2 });
 
   return (
     <Card>

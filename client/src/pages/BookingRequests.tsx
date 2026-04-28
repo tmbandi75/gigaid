@@ -37,6 +37,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { formatCurrency as baseFormatCurrency } from "@/lib/formatCurrency";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import {
   Calendar,
@@ -206,13 +207,8 @@ export default function BookingRequests() {
     }
   );
 
-  const formatCurrency = (cents: number | null | undefined, currency: string = "usd") => {
-    if (cents == null || !Number.isFinite(cents)) return "--";
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency.toUpperCase(),
-    }).format(cents / 100);
-  };
+  const formatCurrency = (cents: number | null | undefined, currency: string = "usd") =>
+    baseFormatCurrency(cents, { currency });
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("en-US", {

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { formatCurrency as baseFormatCurrency } from "@/lib/formatCurrency";
 
 interface Job {
   id: string;
@@ -38,8 +39,7 @@ function formatDate(dateStr: string): string {
 }
 
 function formatCurrency(amount: number | null | undefined): string {
-  if (amount == null || !Number.isFinite(amount)) return "--";
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 }).format(amount / 100);
+  return baseFormatCurrency(amount, { maximumFractionDigits: 2 });
 }
 
 export function CustomerContextPanel({ clientPhone, clientName }: CustomerContextPanelProps) {

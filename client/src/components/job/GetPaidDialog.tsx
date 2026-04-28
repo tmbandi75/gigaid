@@ -6,6 +6,7 @@ import { useLocation } from "wouter";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { 
   DollarSign, 
   Banknote, 
@@ -182,13 +183,8 @@ export function GetPaidDialog({ open, onClose, jobId, jobTitle, amount, clientNa
     onClose();
   };
 
-  const formatAmount = (cents: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-    }).format(cents / 100);
-  };
+  const formatAmount = (cents: number) =>
+    formatCurrency(cents, { maximumFractionDigits: 2 });
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>

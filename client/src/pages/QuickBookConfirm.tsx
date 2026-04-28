@@ -9,6 +9,7 @@ import { Calendar, MapPin, DollarSign, Clock, User, Shield, CheckCircle, Loader2
 import { SupportTicketForm } from "@/components/SupportTicketForm";
 import type { ParsedJobFields } from "@shared/schema";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { formatCurrency } from "@/lib/formatCurrency";
 
 interface DraftPublicData {
   id: string;
@@ -65,10 +66,8 @@ export default function QuickBookConfirm() {
     }
   );
 
-  const formatPrice = (cents?: number) => {
-    if (!cents) return "N/A";
-    return `$${(cents / 100).toFixed(0)}`;
-  };
+  const formatPrice = (cents?: number) =>
+    cents ? formatCurrency(cents) : "N/A";
 
   const formatDateTime = (dateTimeStr?: string) => {
     if (!dateTimeStr) return "To be scheduled";

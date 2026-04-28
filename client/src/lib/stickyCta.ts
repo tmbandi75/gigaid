@@ -8,6 +8,9 @@ import {
   Share2,
 } from "lucide-react";
 import type { NBAState } from "./nbaState";
+import { formatCurrency } from "./formatCurrency";
+
+export { formatCurrency } from "./formatCurrency";
 
 export interface ActionItem {
   id: string;
@@ -34,16 +37,6 @@ export interface StickyCtaInfo {
   label: string;
   route: string;
   icon: StickyCtaIcon;
-}
-
-export function formatCurrency(cents: number | null | undefined): string {
-  if (cents == null || !Number.isFinite(cents)) return "--";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
 }
 
 export function getIconForType(type: string): StickyCtaIcon {

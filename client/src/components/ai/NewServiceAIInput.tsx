@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { Sparkles, Loader2, Plus, Check, X, Edit } from "lucide-react";
 
@@ -77,10 +78,7 @@ export function NewServiceAIInput({ onServicesCreated }: NewServiceAIInputProps)
     setSuggestions(updated);
   };
 
-  const formatPrice = (cents: number | null | undefined) => {
-    if (cents == null || !Number.isFinite(cents)) return "--";
-    return `$${(cents / 100).toFixed(0)}`;
-  };
+  const formatPrice = (cents: number | null | undefined) => formatCurrency(cents);
 
   return (
     <Card>

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { formatCurrency } from "@/lib/formatCurrency";
 import {
   DollarSign,
   Briefcase,
@@ -130,16 +131,6 @@ export default function OwnerView() {
       </div>
     );
   }
-
-  const formatCurrency = (cents: number | null | undefined) => {
-    if (cents == null || !Number.isFinite(cents)) return "--";
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(cents / 100);
-  };
 
   const renderMobileHeader = () => (
     <div 

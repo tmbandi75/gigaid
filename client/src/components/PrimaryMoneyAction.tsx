@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { CapabilityGate } from "@/components/CapabilityGate";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { ArrowRight, DollarSign } from "lucide-react";
 
 interface GamePlanData {
@@ -34,12 +35,7 @@ export function PrimaryMoneyAction({ className }: PrimaryMoneyActionProps) {
     const priorityAmount = gamePlan?.priorityItem?.amount ?? 0;
     const displayCents = priorityAmount > 0 ? priorityAmount : waiting > 0 ? waiting : 0;
     if (displayCents > 0) {
-      dynamicAmount = new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(displayCents / 100);
+      dynamicAmount = formatCurrency(displayCents);
     }
   } catch {
     dynamicAmount = "";

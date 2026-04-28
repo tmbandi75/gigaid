@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { formatCurrency as baseFormatCurrency } from "@/lib/formatCurrency";
 import { 
   DollarSign, 
   TrendingUp,
@@ -103,10 +104,8 @@ export default function AdminBilling() {
     queryKey: QUERY_KEYS.adminAnalyticsLtv(),
   });
 
-  const formatCurrency = (cents: number | null | undefined) => {
-    if (cents == null || !Number.isFinite(cents)) return "--";
-    return `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
+  const formatCurrency = (cents: number | null | undefined) =>
+    baseFormatCurrency(cents, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   if (revenueLoading) {
     return (
