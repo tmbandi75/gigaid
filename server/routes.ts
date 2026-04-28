@@ -68,7 +68,7 @@ import { logCapabilityAttempt } from "@shared/capabilityLogger";
 import { hasCapability, isDeveloper } from "@shared/entitlements";
 import { isHardGated } from "@shared/gatingConfig";
 import { canCreateJob, canSendSms, canUseAutoFollowups, PLAN_LIMITS } from "@shared/planLimits";
-import { Plan, PLAN_PRICES_CENTS } from "@shared/plans";
+import { Plan, PLAN_PRICES_CENTS, formatPlanSwitchedMessage } from "@shared/plans";
 import { canPerform, type CanPerformResult } from "@shared/capabilities/canPerform";
 import type { Plan as CapPlan, Capability } from "@shared/capabilities/plans";
 import {
@@ -9003,7 +9003,7 @@ Return ONLY the message text, no JSON or formatting.`
             success: true,
             message: isUpgrade
               ? `Upgraded to ${newPlanName}. Prorated charges applied.`
-              : `Switched to ${newPlanName}. Your new rate of ${safePriceCents(planPrices[newPlan])}/mo starts next billing cycle.`,
+              : formatPlanSwitchedMessage(newPlanName, planPrices[newPlan]),
             effectiveAt: isUpgrade ? "immediate" : "period_end",
             effectiveDate: isUpgrade
               ? null

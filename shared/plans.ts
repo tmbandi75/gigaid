@@ -1,3 +1,5 @@
+import { safePriceCentsExact } from "./safePrice";
+
 export enum Plan {
   FREE = "free",
   PRO = "pro",
@@ -82,3 +84,16 @@ export const PLAN_PRICES_DOLLARS: Record<Plan, number> = {
   [Plan.PRO_PLUS]: PLAN_PRICES_CENTS[Plan.PRO_PLUS] / 100,
   [Plan.BUSINESS]: PLAN_PRICES_CENTS[Plan.BUSINESS] / 100,
 };
+
+/**
+ * Builds the user-facing confirmation message rendered when a customer
+ * downgrades to another paid plan via `/api/subscription/change-plan`.
+ * Uses `safePriceCentsExact` so plan prices with cents (e.g. $19.99)
+ * are rendered with cents preserved instead of rounded to whole dollars.
+ */
+export function formatPlanSwitchedMessage(
+  planName: string,
+  planPriceCents: number,
+): string {
+  return `Switched to ${planName}. Your new rate of ${safePriceCentsExact(planPriceCents)}/mo starts next billing cycle.`;
+}
