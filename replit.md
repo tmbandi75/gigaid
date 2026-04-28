@@ -28,6 +28,8 @@ Pages use `isMobile ? <MobileView> : <DesktopView>` or `block md:hidden` / `hidd
 ### Backend
 The backend is built with Node.js and Express.js, using TypeScript and ESM modules. It exposes a RESTful JSON API. esbuild is used for server builds, while Vite handles client-side builds.
 
+In development, the `Start application` workflow runs `tsx watch --clear-screen=false server/index.ts` so any change under `server/` triggers an automatic reload (visible in the workflow logs as `[tsx] change in ./… Restarting…`). Sessions live in PostgreSQL via `connect-pg-simple`, so reloads do not log the dev user out. Production deployment is unchanged — it builds with `npm run build` and runs `node ./dist/index.cjs`. Note: `package.json`'s `dev` script still invokes `tsx server/index.ts` (no watch); the watch flag lives only in the workflow command, since `package.json` is locked for the agent.
+
 ### Data Layer
 Drizzle ORM is used with a PostgreSQL dialect. The schema is defined in `shared/schema.ts` with Zod validation. Data is stored in-memory for development and in PostgreSQL for production. Key entities include Users, Jobs, Leads, Invoices, and various growth/tracking-related data.
 
