@@ -106,6 +106,19 @@ export default function FollowUpSettingsPage() {
   });
 
   useEffect(() => {
+    const root = document.documentElement;
+    const previous = root.style.getPropertyValue("--sticky-cta-offset");
+    root.style.setProperty("--sticky-cta-offset", "5.5rem");
+    return () => {
+      if (previous) {
+        root.style.setProperty("--sticky-cta-offset", previous);
+      } else {
+        root.style.removeProperty("--sticky-cta-offset");
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (data) {
       const mapped = RULE_ORDER.map((type) => {
         const existing = data.find((r) => r.ruleType === type);
@@ -351,7 +364,10 @@ export default function FollowUpSettingsPage() {
         })}
       </div>
 
-      <div className="fixed bottom-20 left-0 right-0 px-4 pb-4 bg-gradient-to-t from-background via-background to-transparent pt-6 z-10">
+      <div
+        className="fixed left-0 right-0 px-4 pb-4 bg-gradient-to-t from-background via-background to-transparent pt-6 z-10"
+        style={{ bottom: "calc(5rem + var(--safe-area-inset-bottom))" }}
+      >
         <div className="max-w-2xl mx-auto">
           <Button
             onClick={() => mutation.mutate()}
