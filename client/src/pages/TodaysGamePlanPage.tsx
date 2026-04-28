@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
@@ -229,6 +229,21 @@ export default function TodaysGamePlanPage() {
     () => getStickyCtaInfo(stats, priorityItem, nbaState),
     [stats, priorityItem, nbaState]
   );
+
+  const stickyCtaActive = isMobile && !!stickyCtaInfo;
+  useEffect(() => {
+    if (!stickyCtaActive) return;
+    const root = document.documentElement;
+    const previous = root.style.getPropertyValue("--sticky-cta-offset");
+    root.style.setProperty("--sticky-cta-offset", "4.5rem");
+    return () => {
+      if (previous) {
+        root.style.setProperty("--sticky-cta-offset", previous);
+      } else {
+        root.style.removeProperty("--sticky-cta-offset");
+      }
+    };
+  }, [stickyCtaActive]);
 
   if (isLoading) {
     return (
@@ -731,7 +746,11 @@ export default function TodaysGamePlanPage() {
 
       {/* Sticky bottom CTA (mobile only) — driven by money-waiting, invoice priority, or NBA primary */}
       {isMobile && stickyCtaInfo && (
-        <div className="fixed bottom-16 left-0 right-0 p-3 z-50" data-testid="sticky-cta-wrapper">
+        <div
+          className="fixed left-0 right-0 p-3 z-50"
+          style={{ bottom: "calc(4rem + var(--safe-area-inset-bottom))" }}
+          data-testid="sticky-cta-wrapper"
+        >
           <div className="max-w-lg mx-auto">
             <Button
               size="lg"

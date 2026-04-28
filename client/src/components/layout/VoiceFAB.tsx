@@ -101,7 +101,11 @@ export function VoiceFAB() {
     <>
       <Button
         size="icon"
-        className="fixed bottom-24 right-4 z-40 h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90"
+        className="fixed right-4 z-40 h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90"
+        style={{
+          bottom:
+            "calc(6rem + var(--safe-area-inset-bottom) + var(--sticky-cta-offset, 0px))",
+        }}
         onClick={handleOpen}
         data-testid="button-voice-fab"
         aria-label="Quick add job"
