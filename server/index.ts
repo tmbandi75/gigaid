@@ -17,6 +17,7 @@ import { startChurnScheduler } from "./churn/churnScheduler";
 import { initSentry, setupProcessHandlers } from "./sentry";
 import { centralErrorHandler } from "./errorHandler";
 import { logger } from "./lib/logger";
+import { getKnownPlanPriceIds, getPlanPriceEnvVarNames } from "./billing/plans";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -57,7 +58,23 @@ function validateRequiredEnv(): void {
   }
 }
 
+function warnIfNoPlanPriceIdsConfigured(): void {
+  if (getKnownPlanPriceIds().size > 0) return;
+  const envVars = getPlanPriceEnvVarNames().join(", ");
+  const message =
+    `No Stripe plan price IDs configured. Admin plan changes ` +
+    `(billing_upgrade / billing_downgrade) will fail with ` +
+    `"Unknown price ID" until the following env vars are set: ${envVars}. ` +
+    `See docs/runbooks/stripe-plan-price-ids.md.`;
+  if (isProduction) {
+    logger.warn(`[startup] ${message}`);
+  } else {
+    logger.info(`[startup] ${message}`);
+  }
+}
+
 validateRequiredEnv();
+warnIfNoPlanPriceIdsConfigured();
 initSentry();
 setupProcessHandlers();
 

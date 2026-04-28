@@ -34,7 +34,7 @@ In development, the `Start application` workflow runs `tsx watch --clear-screen=
 Drizzle ORM is used with a PostgreSQL dialect. The schema is defined in `shared/schema.ts` with Zod validation. Data is stored in-memory for development and in PostgreSQL for production. Key entities include Users, Jobs, Leads, Invoices, and various growth/tracking-related data.
 
 ### Core Features
-- **Payment Processing**: Integrates Stripe Connect for secure payments, deposits, and dispute resolution. Stripe credentials are sourced from `STRIPE_SECRET_KEY` and `STRIPE_PUBLISHABLE_KEY` environment secrets (live mode), falling back to the Replit Stripe connector if not set.
+- **Payment Processing**: Integrates Stripe Connect for secure payments, deposits, and dispute resolution. Stripe credentials are sourced from `STRIPE_SECRET_KEY` and `STRIPE_PUBLISHABLE_KEY` environment secrets (live mode), falling back to the Replit Stripe connector if not set. Admin plan-change actions (`billing_upgrade` / `billing_downgrade`) additionally require the per-plan/cadence price IDs `STRIPE_PRICE_PRO_{MONTHLY,YEARLY}`, `STRIPE_PRICE_PRO_PLUS_{MONTHLY,YEARLY}`, and `STRIPE_PRICE_BUSINESS_{MONTHLY,YEARLY}` to be set in each environment — see `docs/runbooks/stripe-plan-price-ids.md` for the runbook (and the boot-time warning logged when none are set).
 - **Mapping Integration**: Utilizes Google Maps for geocoding, location tracking, and navigation.
 - **AI Micro-Nudges System**: Provides contextual AI recommendations for task management.
 - **Today's Money Plan**: A global action queue prioritizing revenue-generating tasks.

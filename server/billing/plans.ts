@@ -33,3 +33,13 @@ export function getKnownPlanPriceIds(): Set<string> {
 export function isKnownPlanPriceId(priceId: string): boolean {
   return getKnownPlanPriceIds().has(priceId);
 }
+
+export function getPlanPriceEnvVarNames(): string[] {
+  const names: string[] = [];
+  for (const cadences of Object.values(PLAN_PRICE_ENV_VARS)) {
+    for (const envVar of Object.values(cadences)) {
+      if (envVar) names.push(envVar);
+    }
+  }
+  return names;
+}
