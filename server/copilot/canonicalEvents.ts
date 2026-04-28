@@ -11,7 +11,21 @@ export interface EmitEventParams {
   occurredAt?: string;
 }
 
-export async function emitCanonicalEvent(params: EmitEventParams): Promise<void> {
+export interface EmitEventOptions {
+  /**
+   * When true, a failed insert into `events_canonical` is re-thrown to the
+   * caller instead of being swallowed. Use this for tracking endpoints
+   * that should fail loudly (return 5xx) so the client can retry rather
+   * than silently dropping the event. The integration fan-out is still
+   * best-effort and never throws regardless of this flag.
+   */
+  throwOnInsertFailure?: boolean;
+}
+
+export async function emitCanonicalEvent(
+  params: EmitEventParams,
+  options: EmitEventOptions = {},
+): Promise<void> {
   const {
     eventName,
     userId,
@@ -21,25 +35,46 @@ export async function emitCanonicalEvent(params: EmitEventParams): Promise<void>
     occurredAt = new Date().toISOString(),
   } = params;
 
+  const event: InsertEventsCanonical = {
+    occurredAt,
+    userId: userId || null,
+    orgId: orgId || null,
+    eventName,
+    context: context ? JSON.stringify(context) : null,
+    source,
+    version: 1,
+  };
+
   try {
-    const event: InsertEventsCanonical = {
-      occurredAt,
-      userId: userId || null,
-      orgId: orgId || null,
-      eventName,
-      context: context ? JSON.stringify(context) : null,
-      source,
-      version: 1,
-    };
-
     await db.insert(eventsCanonical).values(event);
-
-    await fanOutToIntegrations(eventName, params);
-    
     logger.info(`[CanonicalEvent] ${eventName} emitted for user ${userId || "system"}`);
   } catch (error) {
-    logger.error(`[CanonicalEvent] Failed to emit ${eventName}:`, error);
+    const errMsg = error instanceof Error ? error.message : String(error);
+    logger.error(
+      `[CanonicalEvent] DB insert failed for ${eventName}`,
+      {
+        eventName,
+        userId: userId || null,
+        orgId: orgId || null,
+        source,
+        error: errMsg,
+      },
+    );
+    if (options.throwOnInsertFailure) {
+      throw error;
+    }
+    return;
   }
+
+  // Fan-out to third-party integrations (Amplitude / Customer.io / OneSignal)
+  // is intentionally NOT awaited. The canonical event row is the source of
+  // truth and is already durably written; the integrations are best-effort
+  // mirrors. Detaching them here keeps caller latency tied only to the
+  // local DB insert — important for hot paths like the
+  // /api/track/booking-link-* handlers that block the user's share UI.
+  void fanOutToIntegrations(eventName, params).catch((error) => {
+    logger.error(`[CanonicalEvent] Detached fan-out failed for ${eventName}:`, error);
+  });
 }
 
 async function fanOutToIntegrations(eventName: string, params: EmitEventParams): Promise<void> {

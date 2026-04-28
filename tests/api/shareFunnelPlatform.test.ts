@@ -125,36 +125,29 @@ dbDescribe("Booking Link Share Funnel — platform breakdown", () => {
     });
   }
 
-  // The tracking handlers fire `emitCanonicalEvent` without awaiting the
-  // DB insert (so the user's share UI doesn't block on analytics). Tests
-  // therefore must poll briefly for the row instead of querying once
-  // and assuming the write is already visible.
-  async function waitForEvent(
+  // The /api/track/booking-link-* handlers now await the canonical event
+  // insert before returning 200, so the row is guaranteed to be visible
+  // by the time the HTTP response lands. A single DB read is enough —
+  // we keep this helper as a thin wrapper so tests stay readable and so
+  // a future regression that re-introduces fire-and-forget writes is
+  // caught immediately (instead of hidden by a longer poll loop).
+  async function readEvents(
     userId: string,
     eventName: string,
-    minCount = 1,
-    timeoutMs = 5000,
   ): Promise<Array<{ context: string | null }>> {
     const { db } = await import("../../server/db");
     const { eventsCanonical } = await import("@shared/schema");
     const { eq, and, desc } = await import("drizzle-orm");
-    const start = Date.now();
-    let rows: Array<{ context: string | null }> = [];
-    while (Date.now() - start < timeoutMs) {
-      rows = await db
-        .select({ context: eventsCanonical.context })
-        .from(eventsCanonical)
-        .where(
-          and(
-            eq(eventsCanonical.userId, userId),
-            eq(eventsCanonical.eventName, eventName),
-          ),
-        )
-        .orderBy(desc(eventsCanonical.occurredAt));
-      if (rows.length >= minCount) return rows;
-      await new Promise((r) => setTimeout(r, 100));
-    }
-    return rows;
+    return db
+      .select({ context: eventsCanonical.context })
+      .from(eventsCanonical)
+      .where(
+        and(
+          eq(eventsCanonical.userId, userId),
+          eq(eventsCanonical.eventName, eventName),
+        ),
+      )
+      .orderBy(desc(eventsCanonical.occurredAt));
   }
 
   describe("X-Client-Platform header is recorded into events_canonical.context", () => {
@@ -162,7 +155,7 @@ dbDescribe("Booking Link Share Funnel — platform breakdown", () => {
       const res = await track("/api/track/booking-link-share-tap", tokenIos, "ios");
       expect(res.status).toBe(200);
 
-      const rows = await waitForEvent(dbUserIdIos, "booking_link_share_tap");
+      const rows = await readEvents(dbUserIdIos, "booking_link_share_tap");
       expect(rows.length).toBeGreaterThanOrEqual(1);
       const ctx = JSON.parse(rows[0].context || "{}");
       expect(ctx.platform).toBe("ios");
@@ -177,7 +170,7 @@ dbDescribe("Booking Link Share Funnel — platform breakdown", () => {
       const res = await track("/api/track/booking-link-shared", tokenAndroid, "android");
       expect(res.status).toBe(200);
 
-      const rows = await waitForEvent(dbUserIdAndroid, "booking_link_share_completed");
+      const rows = await readEvents(dbUserIdAndroid, "booking_link_share_completed");
       expect(rows.length).toBeGreaterThanOrEqual(1);
       const ctx = JSON.parse(rows[0].context || "{}");
       expect(ctx.platform).toBe("android");
@@ -188,7 +181,7 @@ dbDescribe("Booking Link Share Funnel — platform breakdown", () => {
       const res = await track("/api/track/booking-link-copied", tokenWeb, "web");
       expect(res.status).toBe(200);
 
-      const rows = await waitForEvent(dbUserIdWeb, "booking_link_copied");
+      const rows = await readEvents(dbUserIdWeb, "booking_link_copied");
       expect(rows.length).toBeGreaterThanOrEqual(1);
       const ctx = JSON.parse(rows[0].context || "{}");
       expect(ctx.platform).toBe("web");
@@ -199,7 +192,7 @@ dbDescribe("Booking Link Share Funnel — platform breakdown", () => {
       const res = await track("/api/track/booking-link-share-tap", tokenUnknown, null);
       expect(res.status).toBe(200);
 
-      const rows = await waitForEvent(dbUserIdUnknown, "booking_link_share_tap");
+      const rows = await readEvents(dbUserIdUnknown, "booking_link_share_tap");
       expect(rows.length).toBeGreaterThanOrEqual(1);
       const ctx = JSON.parse(rows[0].context || "{}");
       expect(ctx.platform).toBe("unknown");
@@ -212,7 +205,7 @@ dbDescribe("Booking Link Share Funnel — platform breakdown", () => {
       const res = await track("/api/track/booking-link-copied", tokenUnknown, "windows-phone-7");
       expect(res.status).toBe(200);
 
-      const rows = await waitForEvent(dbUserIdUnknown, "booking_link_copied");
+      const rows = await readEvents(dbUserIdUnknown, "booking_link_copied");
       expect(rows.length).toBeGreaterThanOrEqual(1);
       const ctx = JSON.parse(rows[0].context || "{}");
       expect(ctx.platform).toBe("unknown");
@@ -257,17 +250,9 @@ dbDescribe("Booking Link Share Funnel — platform breakdown", () => {
       // both normalized to "unknown". No completions for unknown to confirm
       // the rate guard returns 0 (not NaN/Infinity).
 
-      // Wait for the fire-and-forget canonical event inserts to land so
-      // the aggregation report sees them.
-      await waitForEvent(dbUserIdIos, "booking_link_share_tap", 2);
-      await waitForEvent(dbUserIdIos, "booking_link_share_completed", 1);
-      await waitForEvent(dbUserIdAndroid, "booking_link_share_tap", 1);
-      await waitForEvent(dbUserIdAndroid, "booking_link_copied", 1);
-      await waitForEvent(dbUserIdWeb, "booking_link_share_tap", 3);
-      await waitForEvent(dbUserIdWeb, "booking_link_share_completed", 2);
-      await waitForEvent(dbUserIdWeb, "booking_link_copied", 2);
-      await waitForEvent(dbUserIdUnknown, "booking_link_share_tap", 1);
-      await waitForEvent(dbUserIdUnknown, "booking_link_copied", 1);
+      // No need to poll for the inserts: the tracking handlers now await
+      // the canonical event write before returning 200, so the rows are
+      // guaranteed to be visible to the admin aggregation query below.
     });
 
     it("returns a platforms array with the correct per-platform counts and tap->completion rate", async () => {

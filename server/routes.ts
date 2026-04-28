@@ -6663,24 +6663,39 @@ export async function registerRoutes(
       const target = rawTarget || (method === "copy" ? "copy" : "unknown");
       const user = await storage.getUser(userId);
       if (user && !user.bookingLinkSharedAt) {
+        // Insert the milestone event BEFORE flipping the user marker so
+        // a transient DB blip on the event insert doesn't leave us in a
+        // state where the marker says "shared" but no event ever landed.
+        // If the event insert succeeds and the user update fails, the
+        // client will retry — `bookingLinkSharedAt` is still null so
+        // the milestone fires again (analytics dedupes on userId).
+        await emitCanonicalEvent(
+          {
+            eventName: "booking_link_shared",
+            userId,
+            context: { method, screen, platform, target },
+            source: "web",
+          },
+          { throwOnInsertFailure: true },
+        );
         await storage.updateUser(userId, {
           bookingLinkSharedAt: new Date().toISOString(),
         });
-        emitCanonicalEvent({
-          eventName: "booking_link_shared",
+      }
+      await emitCanonicalEvent(
+        {
+          eventName: "booking_link_share_completed",
           userId,
           context: { method, screen, platform, target },
           source: "web",
-        });
-      }
-      emitCanonicalEvent({
-        eventName: "booking_link_share_completed",
-        userId,
-        context: { method, screen, platform, target },
-        source: "web",
-      });
+        },
+        { throwOnInsertFailure: true },
+      );
       res.json({ success: true });
     } catch (error) {
+      logger.error("[BookingLinkShare] Failed to record share event", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       res.status(500).json({ error: "Failed to track share" });
     }
   });
@@ -6693,14 +6708,20 @@ export async function registerRoutes(
       const userId = (req as any).userId as string;
       const screen = normalizeBookingLinkScreen(req.body?.screen);
       const platform = getClientPlatform(req);
-      emitCanonicalEvent({
-        eventName: "booking_link_share_tap",
-        userId,
-        context: { screen, platform },
-        source: "web",
-      });
+      await emitCanonicalEvent(
+        {
+          eventName: "booking_link_share_tap",
+          userId,
+          context: { screen, platform },
+          source: "web",
+        },
+        { throwOnInsertFailure: true },
+      );
       res.json({ success: true });
     } catch (error) {
+      logger.error("[BookingLinkShare] Failed to record share tap event", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       res.status(500).json({ error: "Failed to track share tap" });
     }
   });
@@ -6712,14 +6733,20 @@ export async function registerRoutes(
       const userId = (req as any).userId as string;
       const screen = normalizeBookingLinkScreen(req.body?.screen);
       const platform = getClientPlatform(req);
-      emitCanonicalEvent({
-        eventName: "booking_link_copied",
-        userId,
-        context: { screen, platform },
-        source: "web",
-      });
+      await emitCanonicalEvent(
+        {
+          eventName: "booking_link_copied",
+          userId,
+          context: { screen, platform },
+          source: "web",
+        },
+        { throwOnInsertFailure: true },
+      );
       res.json({ success: true });
     } catch (error) {
+      logger.error("[BookingLinkShare] Failed to record copy event", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       res.status(500).json({ error: "Failed to track copy" });
     }
   });
