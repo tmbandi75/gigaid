@@ -270,4 +270,110 @@ describe("safe price helper enforcement", () => {
       unlinkSync(tmp);
     }
   });
+
+  // Server-side regression coverage: the same patterns must be rejected when
+  // they appear in `server/` notification template files (SMS / email bodies,
+  // webhook payloads, etc.). These synthetic files are written into `server/`
+  // to prove the AST scanner covers that directory and that the per-directory
+  // wiring in `scanRoot(SERVER_DIR)` is intact.
+  it("detects a synthetic template-literal violation in a server SMS template", () => {
+    const tmp = join(SERVER_DIR, "__synthetic_violation_test_sms_tl__.ts");
+    writeFileSync(
+      tmp,
+      "export function buildSmsBody(amountCents: number) {\n" +
+        "  return `Your invoice total is $${(amountCents / 100).toFixed(2)}.`;\n" +
+        "}\n",
+      "utf8",
+    );
+    try {
+      const violations = scanFile(tmp);
+      expect(violations.some((v) => v.kind === "template-literal")).toBe(true);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it("detects a synthetic `\"$\" + value` violation in a server email template", () => {
+    const tmp = join(SERVER_DIR, "__synthetic_violation_test_email_concat__.ts");
+    writeFileSync(
+      tmp,
+      "export function buildEmailBody(amount: number) {\n" +
+        '  return "Thanks for paying $" + amount + " today.";\n' +
+        "}\n",
+      "utf8",
+    );
+    try {
+      const violations = scanFile(tmp);
+      expect(violations.some((v) => v.kind === "string-concat")).toBe(true);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it("detects a synthetic array-join violation in a server template", () => {
+    const tmp = join(SERVER_DIR, "__synthetic_violation_test_template_join__.ts");
+    writeFileSync(
+      tmp,
+      "export function buildLine(amount: number) {\n" +
+        '  return ["Total ", "$", amount].join("");\n' +
+        "}\n",
+      "utf8",
+    );
+    try {
+      const violations = scanFile(tmp);
+      expect(violations.some((v) => v.kind === "string-concat")).toBe(true);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  // End-to-end wiring check: write a violating file into `server/` and
+  // assert that the directory-level `scanRoot(SERVER_DIR)` call (the same
+  // call used by the "rejects raw `$` prefix patterns in server/" test) picks
+  // it up. This guards against an accidental future change that drops
+  // `server/` from the scan scope without the dedicated server-directory
+  // suite catching it.
+  it("scanRoot(SERVER_DIR) picks up a synthetic server-side violation", () => {
+    const tmp = join(SERVER_DIR, "__synthetic_violation_test_scanroot__.ts");
+    const relTmp = "server/__synthetic_violation_test_scanroot__.ts";
+    writeFileSync(
+      tmp,
+      "export function buildSmsBody(amountCents: number) {\n" +
+        "  return `Total: $${amountCents / 100}.`;\n" +
+        "}\n",
+      "utf8",
+    );
+    try {
+      const violations = scanRoot(SERVER_DIR);
+      expect(
+        violations.some(
+          (v) => v.file === relTmp && v.kind === "template-literal",
+        ),
+      ).toBe(true);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  // Negative case: a server template that uses the safePrice helper from
+  // `@shared/safePrice` must NOT trigger any violations. This guards against
+  // accidental over-flagging that would force template authors to bypass the
+  // helper.
+  it("does not flag server templates that use the safePrice helper", () => {
+    const tmp = join(SERVER_DIR, "__synthetic_clean_test_helper__.ts");
+    writeFileSync(
+      tmp,
+      'import { safePriceCentsExact } from "@shared/safePrice";\n' +
+        "export function buildSmsBody(amountCents: number) {\n" +
+        "  return `Your invoice total is ${safePriceCentsExact(amountCents)}.`;\n" +
+        "}\n",
+      "utf8",
+    );
+    try {
+      const violations = scanFile(tmp);
+      expect(violations).toEqual([]);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
 });

@@ -1,14 +1,23 @@
 # Safe Price Rule
 
-All currency / price values rendered in the client must go through the helpers
-exported from `client/src/lib/safePrice.ts`. This rule prevents bugs like
-`$NaN`, `$undefined`, `$Infinity`, or `$0.00` slipping into the UI when the
-underlying value is missing or non-finite.
+All currency / price values rendered in the client **and** all prices
+embedded in server-rendered notifications (SMS bodies, email bodies, webhook
+payloads, push copy, AI prompts, log messages, etc.) must go through the
+helpers exported from `shared/safePrice.ts` (re-exported as
+`client/src/lib/safePrice.ts` for the client). This rule prevents bugs like
+`$NaN`, `$undefined`, `$Infinity`, or `$0.00` slipping into a customer's UI,
+text message, or email when the underlying value is missing or non-finite.
+
+A bug in a UI surface is annoying but visible — a bug in an outbound SMS or
+email is much harder to catch (the customer sees `$NaN` and the team only
+finds out via a support ticket). The scanner therefore covers both the
+client and the server.
 
 ## The Rule
 
-Inside `client/src/**/*.{ts,tsx}` (excluding `client/src/lib/safePrice.ts`),
-none of the following patterns are allowed:
+Inside `client/src/**/*.{ts,tsx}`, `server/**/*.{ts,tsx}`, and
+`shared/**/*.{ts,tsx}` (excluding the helper sources `client/src/lib/safePrice.ts`
+and `shared/safePrice.ts`), none of the following patterns are allowed:
 
 1. **Raw `` `$${...}` `` template literals.** Anywhere a price is built into a
    string, use the appropriate helper instead of prefixing `$` yourself.
@@ -18,11 +27,21 @@ none of the following patterns are allowed:
    `"Price: $" + value`, etc.
 4. **Array `join` of a `$` literal** — e.g. `["$", value].join("")`.
 
-A Jest test (`tests/lib/noRawPriceTemplates.test.ts`) walks every client TS/TSX
-file with `@typescript-eslint/typescript-estree` and fails CI if any of these
-patterns appears. The scanner is wired into the `safe-price-scan` validation
-command, which acts as a pre-merge gate — a failing scan blocks the task from
-being marked complete and the offending file/line is printed in the run log.
+A Jest test (`tests/lib/noRawPriceTemplates.test.ts`) walks every TS/TSX file
+under `client/src`, `server/`, and `shared/` with
+`@typescript-eslint/typescript-estree` and fails CI if any of these patterns
+appears. There is one separate `it(...)` block per directory so the failure
+log clearly identifies which surface (`client/src`, `server/`, or `shared/`)
+introduced the violation. The scanner is wired into the `safe-price-scan`
+validation command, which acts as a pre-merge gate — a failing scan blocks
+the task from being marked complete and the offending file/line is printed
+in the run log.
+
+A complementary ESLint rule (`eslint-rules/no-raw-price-format.cjs`,
+registered as `safe-price/no-raw-price-format` in
+`eslint.safeprice.config.js`) enforces the same patterns at lint time across
+`client/src/**`, `server/**`, and `shared/**`, and is wired into the
+`safe-price-eslint` validation command for redundant pre-merge enforcement.
 
 ## Helpers
 
@@ -63,6 +82,44 @@ const formatCurrency = (cents: number | null | undefined) =>
   safePriceCentsLocale(cents, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 ```
 
+### Server-side notification templates
+
+Outbound SMS bodies, email bodies, push notifications, AI prompts, and webhook
+payload strings live in `server/` (e.g. `server/routes.ts`,
+`server/nudgeGenerator.ts`, `server/postJobMomentum.ts`,
+`server/admin/*Routes.ts`). Build their price strings the same way as the
+client, importing from `@shared/safePrice`:
+
+```ts
+import {
+  safePriceCentsExact,
+  safePriceRange,
+  safePriceLocale,
+} from "@shared/safePrice";
+
+// Twilio SMS body
+const message =
+  `Hi ${clientName}, your invoice for ${serviceType} is ` +
+  `${safePriceCentsExact(invoice.amount)}. Pay here: ${invoiceUrl}`;
+
+// SendGrid email body
+await sendEmail({
+  to: client.email,
+  subject: `Estimate from ${businessName}`,
+  text: `Estimated total: ${safePriceRange(low, high)}.`,
+});
+```
+
+Do **not** build these strings as `` `... $${value} ...` `` or
+`"$" + value`. Even if upstream code looks safe today, a missing field or a
+bad cast can ship `$NaN` directly to a customer's phone, and the scanner is
+the only thing standing between that bug and an outbound message.
+
+The scanner enforces the same rules in `server/` as it does in `client/src/`,
+and the test suite locks in dedicated regression coverage for SMS / email
+template paths (synthetic violations are written into `server/` to confirm
+they get caught).
+
 ### Custom placeholder
 
 If your UI needs a non-default placeholder (e.g. an empty string while a
@@ -76,9 +133,9 @@ safePriceCents(cents, { placeholder: "N/A" });
 ## How to extend
 
 If you find yourself reaching for a new format, add a new helper to
-`client/src/lib/safePrice.ts` (with unit tests in
-`tests/lib/safePrice.test.ts`) rather than re-introducing raw `$`
-concatenation. The helper should:
+`shared/safePrice.ts` (with unit tests in `tests/lib/safePrice.test.ts`) so
+that both the client and the server pick it up automatically — never
+re-introduce raw `$` concatenation in either surface. The helper should:
 
 1. Validate the input with `isFinitePositiveNumber` (or an explicit reason if
    you intentionally want to allow zero / negative values).
@@ -108,10 +165,13 @@ to the appropriate helper, then re-run.
 
 ## Pre-merge enforcement
 
-The same scanner is registered as the `safe-price-scan` validation command so
-it runs automatically before a task can be merged. If any client file
-introduces a raw `$` price pattern the scan fails, the merge is blocked, and
-the offending file/line/snippet appears in the validation log.
+The same scanner is registered as the `safe-price-scan` validation command,
+and the matching ESLint rule is registered as the `safe-price-eslint`
+validation command. Both run automatically before a task can be merged and
+cover `client/src/**`, `server/**`, and `shared/**`. If any file (UI
+component, SMS template, email body, AI prompt, log line, etc.) introduces
+a raw `$` price pattern the scan fails, the merge is blocked, and the
+offending file/line/snippet appears in the validation log.
 
 ## Pre-push and CI enforcement (Task #172)
 
@@ -155,4 +215,3 @@ git push --no-verify
 There is no way to bypass the GitHub Actions check without re-running it
 green — that is intentional, since the hook is the developer's safety net
 and CI is the team's.
-
