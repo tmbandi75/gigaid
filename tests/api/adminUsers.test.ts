@@ -887,3 +887,274 @@ describe("POST /api/admin/users/:userId/actions per-action coverage", () => {
     },
   );
 });
+
+// -----------------------------------------------------------------------------
+// Validation branches for billing actions on POST /api/admin/users/:userId/actions.
+//
+// These tests guard the pre-Stripe guards in `usersRoutes.ts` so a refactor
+// can't silently drop a validation check and let an admin trigger Stripe with
+// bad data. For each rejected branch we assert:
+//   * the HTTP status (400 for validation errors, 500 for Stripe failures),
+//   * the error message text returned by the handler,
+//   * that NO row was written to `adminActionAudit` for the rejected call.
+// -----------------------------------------------------------------------------
+
+describe("POST /api/admin/users/:userId/actions billing validation", () => {
+  function expectNoAuditRow() {
+    expect(findInsert(adminActionAudit)).toBeUndefined();
+  }
+
+  describe("billing_upgrade / billing_downgrade", () => {
+    it.each(["billing_upgrade", "billing_downgrade"] as const)(
+      "%s returns 400 when the target has no active subscription",
+      async (actionKey) => {
+        pushUserLookup();
+        pushTargetUser({ stripeCustomerId: "cus_1", stripeSubscriptionId: null });
+
+        const res = await postAction(actionKey, {
+          reason: "Plan change",
+          payload: { priceId: "price_yearly" },
+        });
+
+        expect(res.status).toBe(400);
+        expect(res.body.error).toBe("User has no active subscription to modify");
+        expect(mockStripe.subscriptions.retrieve).not.toHaveBeenCalled();
+        expect(mockStripe.subscriptions.update).not.toHaveBeenCalled();
+        expectNoAuditRow();
+      },
+    );
+
+    it.each(["billing_upgrade", "billing_downgrade"] as const)(
+      "%s returns 400 when payload is missing priceId",
+      async (actionKey) => {
+        pushUserLookup();
+        pushTargetUser({ stripeCustomerId: "cus_1", stripeSubscriptionId: "sub_1" });
+
+        const res = await postAction(actionKey, {
+          reason: "Plan change",
+          payload: {},
+        });
+
+        expect(res.status).toBe(400);
+        expect(res.body.error).toBe("New price ID is required for plan changes");
+        expect(mockStripe.subscriptions.retrieve).not.toHaveBeenCalled();
+        expect(mockStripe.subscriptions.update).not.toHaveBeenCalled();
+        expectNoAuditRow();
+      },
+    );
+
+    it("billing_upgrade returns 500 with the Stripe error message when Stripe rejects", async () => {
+      pushUserLookup();
+      pushTargetUser({ stripeCustomerId: "cus_1", stripeSubscriptionId: "sub_1" });
+      mockStripe.subscriptions.retrieve.mockRejectedValueOnce(
+        new Error("subscription not found"),
+      );
+
+      const res = await postAction("billing_upgrade", {
+        reason: "Plan change",
+        payload: { priceId: "price_yearly" },
+      });
+
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe("Stripe error: subscription not found");
+      expectNoAuditRow();
+    });
+  });
+
+  describe("billing_pause / billing_resume / billing_cancel", () => {
+    it.each([
+      ["billing_pause", "User has no active subscription to pause"],
+      ["billing_resume", "User has no subscription to resume"],
+      ["billing_cancel", "User has no subscription to cancel"],
+    ] as const)(
+      "%s returns 400 when the target has no active subscription",
+      async (actionKey, expectedMessage) => {
+        pushUserLookup();
+        pushTargetUser({ stripeSubscriptionId: null });
+
+        const res = await postAction(actionKey, { reason: "Try it" });
+
+        expect(res.status).toBe(400);
+        expect(res.body.error).toBe(expectedMessage);
+        expect(mockStripe.subscriptions.update).not.toHaveBeenCalled();
+        expect(mockStripe.subscriptions.cancel).not.toHaveBeenCalled();
+        expectNoAuditRow();
+      },
+    );
+
+    it("billing_pause returns 500 with the Stripe error message when Stripe rejects", async () => {
+      pushUserLookup();
+      pushTargetUser({ stripeSubscriptionId: "sub_1" });
+      mockStripe.subscriptions.update.mockRejectedValueOnce(
+        new Error("pause failed"),
+      );
+
+      const res = await postAction("billing_pause", { reason: "Pause now" });
+
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe("Stripe error: pause failed");
+      expectNoAuditRow();
+    });
+
+    it("billing_resume returns 500 with the Stripe error message when Stripe rejects", async () => {
+      pushUserLookup();
+      pushTargetUser({ stripeSubscriptionId: "sub_1" });
+      mockStripe.subscriptions.update.mockRejectedValueOnce(
+        new Error("resume failed"),
+      );
+
+      const res = await postAction("billing_resume", { reason: "Resume" });
+
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe("Stripe error: resume failed");
+      expectNoAuditRow();
+    });
+
+    it("billing_cancel (immediate) returns 500 with the Stripe error message when Stripe rejects", async () => {
+      pushUserLookup();
+      pushTargetUser({ stripeSubscriptionId: "sub_1" });
+      mockStripe.subscriptions.cancel.mockRejectedValueOnce(
+        new Error("cancel failed"),
+      );
+
+      const res = await postAction("billing_cancel", {
+        reason: "Cancel now",
+        payload: { immediate: true },
+      });
+
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe("Stripe error: cancel failed");
+      expectNoAuditRow();
+    });
+  });
+
+  describe("billing_apply_credit", () => {
+    it("returns 400 when the target has no Stripe customer record", async () => {
+      pushUserLookup();
+      pushTargetUser({ stripeCustomerId: null });
+
+      const res = await postAction("billing_apply_credit", {
+        reason: "Goodwill credit",
+        payload: { amountCents: 2500 },
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("User has no Stripe customer record");
+      expect(mockStripe.customers.update).not.toHaveBeenCalled();
+      expectNoAuditRow();
+    });
+
+    it("returns 400 when amountCents is missing", async () => {
+      pushUserLookup();
+      pushTargetUser({ stripeCustomerId: "cus_1" });
+
+      const res = await postAction("billing_apply_credit", {
+        reason: "Goodwill credit",
+        payload: {},
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe(
+        "Credit amount (in cents) is required and must be positive",
+      );
+      expect(mockStripe.customers.update).not.toHaveBeenCalled();
+      expectNoAuditRow();
+    });
+
+    it("returns 400 when amountCents is zero", async () => {
+      pushUserLookup();
+      pushTargetUser({ stripeCustomerId: "cus_1" });
+
+      const res = await postAction("billing_apply_credit", {
+        reason: "Goodwill credit",
+        payload: { amountCents: 0 },
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe(
+        "Credit amount (in cents) is required and must be positive",
+      );
+      expect(mockStripe.customers.update).not.toHaveBeenCalled();
+      expectNoAuditRow();
+    });
+
+    it("returns 400 when amountCents is negative", async () => {
+      pushUserLookup();
+      pushTargetUser({ stripeCustomerId: "cus_1" });
+
+      const res = await postAction("billing_apply_credit", {
+        reason: "Goodwill credit",
+        payload: { amountCents: -100 },
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe(
+        "Credit amount (in cents) is required and must be positive",
+      );
+      expect(mockStripe.customers.update).not.toHaveBeenCalled();
+      expectNoAuditRow();
+    });
+
+    it("returns 500 with the Stripe error message when Stripe rejects", async () => {
+      pushUserLookup();
+      pushTargetUser({ stripeCustomerId: "cus_1" });
+      mockStripe.customers.update.mockRejectedValueOnce(
+        new Error("customer update failed"),
+      );
+
+      const res = await postAction("billing_apply_credit", {
+        reason: "Goodwill credit",
+        payload: { amountCents: 2500 },
+      });
+
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe("Stripe error: customer update failed");
+      expectNoAuditRow();
+    });
+  });
+
+  describe("billing_refund", () => {
+    it("returns 400 when chargeId is missing", async () => {
+      pushUserLookup();
+
+      const res = await postAction("billing_refund", {
+        reason: "Refund duplicate charge",
+        payload: { amountCents: 1000 },
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("Charge ID is required for refunds");
+      expect(mockStripe.refunds.create).not.toHaveBeenCalled();
+      expectNoAuditRow();
+    });
+
+    it("returns 400 when payload is missing entirely", async () => {
+      pushUserLookup();
+
+      const res = await postAction("billing_refund", {
+        reason: "Refund duplicate charge",
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("Charge ID is required for refunds");
+      expect(mockStripe.refunds.create).not.toHaveBeenCalled();
+      expectNoAuditRow();
+    });
+
+    it("returns 500 with the Stripe error message when Stripe rejects", async () => {
+      pushUserLookup();
+      mockStripe.refunds.create.mockRejectedValueOnce(
+        new Error("refund failed"),
+      );
+
+      const res = await postAction("billing_refund", {
+        reason: "Refund duplicate charge",
+        payload: { chargeId: "ch_1", amountCents: 1000 },
+      });
+
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe("Stripe error: refund failed");
+      expectNoAuditRow();
+    });
+  });
+});
