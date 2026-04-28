@@ -14484,6 +14484,27 @@ Return ONLY the message text, no JSON or formatting.`
     }
   });
 
+  app.post("/api/admin/seed-system-templates", async (req, res) => {
+    try {
+      const { adminMiddleware } = await import("./copilot/adminMiddleware");
+      await new Promise<void>((resolve, reject) => {
+        adminMiddleware(req, res, (err?: any) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+      if (res.headersSent) return;
+      const { db } = await import("./db");
+      const { seedJobTemplates } = await import("./seed/jobTemplates");
+      const result = await seedJobTemplates(db);
+      return res.json({ ok: true, ...result });
+    } catch (error: any) {
+      if (res.headersSent) return;
+      logger.error("Error seeding system job templates:", error);
+      return res.status(500).json({ error: "Failed to seed system templates" });
+    }
+  });
+
   app.post("/api/job-templates/create-job", requireAuth, async (req, res) => {
     try {
       const { db } = await import("./db");

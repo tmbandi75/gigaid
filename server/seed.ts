@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { logger } from "./lib/logger";
+import { seedJobTemplates } from "./seed/jobTemplates";
 import {
   users,
   jobs,
@@ -1093,6 +1094,8 @@ export async function seedDatabase() {
       });
     }
     logger.info("[Seed] AI nudges seeded");
+
+    await seedJobTemplates(db);
 
     logger.info("[Seed] Database seeding completed successfully!");
     return true;
