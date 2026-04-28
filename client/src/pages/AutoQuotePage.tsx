@@ -31,9 +31,9 @@ import { copyTextToClipboard } from "@/lib/clipboard";
 import { isFinitePositiveNumber, safePriceCents, safePriceRange } from "@/lib/safePrice";
 
 interface QuoteEstimate {
-  low: number;
-  high: number;
-  median: number;
+  suggestedPriceLow: number;
+  suggestedPriceHigh: number;
+  suggestedPriceMedian: number;
   source: "historical" | "ai";
   rationale: string;
   averageDuration?: number;
@@ -73,11 +73,11 @@ export default function AutoQuotePage() {
 
   const handleUsePrice = async () => {
     if (!estimateMutation.data) return;
-    if (!isFinitePositiveNumber(estimateMutation.data.median)) {
+    if (!isFinitePositiveNumber(estimateMutation.data.suggestedPriceMedian)) {
       toast({ title: "Suggested price unavailable" });
       return;
     }
-    const dollars = (estimateMutation.data.median / 100).toFixed(2);
+    const dollars = (estimateMutation.data.suggestedPriceMedian / 100).toFixed(2);
     const copiedOk = await copyTextToClipboard(dollars);
     if (copiedOk) {
       toast({ title: `$${dollars} copied to clipboard` });
@@ -90,8 +90,8 @@ export default function AutoQuotePage() {
     const params = new URLSearchParams();
     if (jobType) params.set("serviceType", jobType);
     if (description) params.set("description", description);
-    if (estimateMutation.data && isFinitePositiveNumber(estimateMutation.data.median)) {
-      params.set("price", String(estimateMutation.data.median));
+    if (estimateMutation.data && isFinitePositiveNumber(estimateMutation.data.suggestedPriceMedian)) {
+      params.set("price", String(estimateMutation.data.suggestedPriceMedian));
     }
     navigate(`/jobs/new?${params.toString()}`);
   };
@@ -223,24 +223,24 @@ export default function AutoQuotePage() {
                 <div className="p-4 rounded-lg bg-muted/50 text-center">
                   <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Price Range</p>
                   <p className="text-xl font-bold" data-testid="text-price-range">
-                    {isFinitePositiveNumber(result.low) && isFinitePositiveNumber(result.high)
-                      ? `$${(result.low / 100).toFixed(0)} - $${(result.high / 100).toFixed(0)}`
+                    {isFinitePositiveNumber(result.suggestedPriceLow) && isFinitePositiveNumber(result.suggestedPriceHigh)
+                      ? `$${(result.suggestedPriceLow / 100).toFixed(0)} - $${(result.suggestedPriceHigh / 100).toFixed(0)}`
                       : safePriceRange(
-                          isFinitePositiveNumber(result.low) ? result.low / 100 : null,
-                          isFinitePositiveNumber(result.high) ? result.high / 100 : null,
+                          isFinitePositiveNumber(result.suggestedPriceLow) ? result.suggestedPriceLow / 100 : null,
+                          isFinitePositiveNumber(result.suggestedPriceHigh) ? result.suggestedPriceHigh / 100 : null,
                         )}
                   </p>
                 </div>
                 <div className="p-4 rounded-lg bg-primary/10 text-center">
                   <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Suggested Price</p>
                   <p className="text-2xl font-bold text-primary" data-testid="text-suggested-price">
-                    {isFinitePositiveNumber(result.median) ? (
+                    {isFinitePositiveNumber(result.suggestedPriceMedian) ? (
                       <>
                         <DollarSign className="h-5 w-5 inline -mt-1" />
-                        {(result.median / 100).toFixed(0)}
+                        {(result.suggestedPriceMedian / 100).toFixed(0)}
                       </>
                     ) : (
-                      safePriceCents(result.median)
+                      safePriceCents(result.suggestedPriceMedian)
                     )}
                   </p>
                 </div>
