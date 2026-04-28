@@ -28,9 +28,12 @@ import { getAuthToken } from "@/lib/authToken";
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowUpDown,
   BellOff,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Download,
   HelpCircle,
   Loader2,
@@ -223,9 +226,80 @@ function ReasonRow({
 
 const PAGE_SIZE = 50;
 
+type OptOutSortKey =
+  | "optOutAt_desc"
+  | "optOutAt_asc"
+  | "name_asc"
+  | "name_desc"
+  | "email_asc"
+  | "email_desc";
+
+const DEFAULT_OPT_OUT_SORT: OptOutSortKey = "optOutAt_desc";
+
+const VALID_OPT_OUT_SORTS: ReadonlySet<OptOutSortKey> = new Set<OptOutSortKey>([
+  "optOutAt_desc",
+  "optOutAt_asc",
+  "name_asc",
+  "name_desc",
+  "email_asc",
+  "email_desc",
+]);
+
+type SortField = "optOutAt" | "name" | "email";
+
+function parseSort(value: OptOutSortKey): { field: SortField; dir: "asc" | "desc" } {
+  const [field, dir] = value.split("_") as [SortField, "asc" | "desc"];
+  return { field, dir };
+}
+
+function buildSortKey(field: SortField, dir: "asc" | "desc"): OptOutSortKey {
+  return `${field}_${dir}` as OptOutSortKey;
+}
+
 interface OptOutsResponse {
   users: OptOutUser[];
+  sort?: OptOutSortKey;
   pagination: { total: number; limit: number; offset: number };
+}
+
+function SortableHeader({
+  label,
+  field,
+  sortState,
+  onToggle,
+}: {
+  label: string;
+  field: SortField;
+  sortState: { field: SortField; dir: "asc" | "desc" };
+  onToggle: (field: SortField) => void;
+}) {
+  const active = sortState.field === field;
+  const Icon = !active
+    ? ArrowUpDown
+    : sortState.dir === "asc"
+      ? ChevronUp
+      : ChevronDown;
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(field)}
+      className={`inline-flex items-center gap-1 uppercase tracking-wide text-xs font-medium hover:text-foreground transition-colors ${
+        active ? "text-foreground" : "text-muted-foreground"
+      }`}
+      data-testid={`button-sort-${field}`}
+    >
+      {label}
+      <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+    </button>
+  );
+}
+
+function ariaSortFor(
+  field: SortField,
+  sortState: { field: SortField; dir: "asc" | "desc" },
+): "ascending" | "descending" | "none" {
+  if (sortState.field !== field) return "none";
+  return sortState.dir === "asc" ? "ascending" : "descending";
 }
 
 export default function AdminSmsHealth() {
@@ -236,6 +310,7 @@ export default function AdminSmsHealth() {
   const [until, setUntil] = useState("");
   const [page, setPage] = useState(1);
   const [clearAuditPage, setClearAuditPage] = useState(1);
+  const [sort, setSort] = useState<OptOutSortKey>(DEFAULT_OPT_OUT_SORT);
 
   const filterParams = useMemo(() => {
     const params = new URLSearchParams();
@@ -245,8 +320,11 @@ export default function AdminSmsHealth() {
       // Make `until` inclusive of the selected day.
       params.set("until", `${until}T23:59:59.999Z`);
     }
+    if (VALID_OPT_OUT_SORTS.has(sort) && sort !== DEFAULT_OPT_OUT_SORT) {
+      params.set("sort", sort);
+    }
     return params;
-  }, [search, since, until]);
+  }, [search, since, until, sort]);
 
   const optOutQueryParams = useMemo(() => {
     const params = new URLSearchParams(filterParams);
@@ -254,6 +332,20 @@ export default function AdminSmsHealth() {
     params.set("offset", String((page - 1) * PAGE_SIZE));
     return params.toString();
   }, [filterParams, page]);
+
+  const sortState = useMemo(() => parseSort(sort), [sort]);
+
+  const toggleSort = (field: SortField) => {
+    setPage(1);
+    setSort((current) => {
+      const parsed = parseSort(current);
+      if (parsed.field !== field) {
+        // First click on a different column: pick a sensible default direction.
+        return buildSortKey(field, field === "optOutAt" ? "desc" : "asc");
+      }
+      return buildSortKey(field, parsed.dir === "asc" ? "desc" : "asc");
+    });
+  };
 
   const summaryQuery = useQuery<SmsHealthSummary>({
     queryKey: QUERY_KEYS.adminSmsHealthSummary(),
@@ -916,10 +1008,40 @@ export default function AdminSmsHealth() {
               <table className="w-full text-sm">
                 <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
-                    <th className="py-2 pr-3">User</th>
-                    <th className="py-2 pr-3">Email</th>
+                    <th
+                      className="py-2 pr-3"
+                      aria-sort={ariaSortFor("name", sortState)}
+                    >
+                      <SortableHeader
+                        label="User"
+                        field="name"
+                        sortState={sortState}
+                        onToggle={toggleSort}
+                      />
+                    </th>
+                    <th
+                      className="py-2 pr-3"
+                      aria-sort={ariaSortFor("email", sortState)}
+                    >
+                      <SortableHeader
+                        label="Email"
+                        field="email"
+                        sortState={sortState}
+                        onToggle={toggleSort}
+                      />
+                    </th>
                     <th className="py-2 pr-3">Phone</th>
-                    <th className="py-2 pr-3">Opted out at</th>
+                    <th
+                      className="py-2 pr-3"
+                      aria-sort={ariaSortFor("optOutAt", sortState)}
+                    >
+                      <SortableHeader
+                        label="Opted out at"
+                        field="optOutAt"
+                        sortState={sortState}
+                        onToggle={toggleSort}
+                      />
+                    </th>
                     <th className="py-2 pr-3" />
                   </tr>
                 </thead>

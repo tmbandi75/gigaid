@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { db } from "../db";
 import { outboundMessages, smsOptOutEvents, users, adminActionAudit } from "@shared/schema";
-import { and, desc, eq, gte, ilike, isNotNull, lte, ne, or, sql, count } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, isNotNull, lte, ne, or, sql, count } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import { adminMiddleware, type AdminRequest } from "../copilot/adminMiddleware";
 import { logger } from "../lib/logger";
 import { loadDuplicatePhoneGroups } from "./duplicatePhones";
@@ -192,6 +193,30 @@ router.get("/summary", async (_req, res) => {
   }
 });
 
+// Allow-list of sort options exposed via the `sort` query param. Each value
+// maps to one or more ORDER BY expressions. We always tie-break on users.id
+// so pagination is stable across page boundaries.
+const OPT_OUT_SORT_OPTIONS = {
+  optOutAt_desc: [sql`${users.smsOptOutAt} DESC NULLS LAST`, desc(users.id)],
+  optOutAt_asc: [sql`${users.smsOptOutAt} ASC NULLS LAST`, asc(users.id)],
+  name_asc: [sql`${users.name} ASC NULLS LAST`, asc(users.id)],
+  name_desc: [sql`${users.name} DESC NULLS LAST`, desc(users.id)],
+  email_asc: [sql`${users.email} ASC NULLS LAST`, asc(users.id)],
+  email_desc: [sql`${users.email} DESC NULLS LAST`, desc(users.id)],
+} as const satisfies Record<string, SQL[]>;
+
+export type OptOutSortKey = keyof typeof OPT_OUT_SORT_OPTIONS;
+
+const DEFAULT_OPT_OUT_SORT: OptOutSortKey = "optOutAt_desc";
+
+function parseOptOutSort(query: Record<string, any>): OptOutSortKey {
+  const raw = typeof query.sort === "string" ? query.sort.trim() : "";
+  if (raw && raw in OPT_OUT_SORT_OPTIONS) {
+    return raw as OptOutSortKey;
+  }
+  return DEFAULT_OPT_OUT_SORT;
+}
+
 function buildOptOutFilters(query: Record<string, any>) {
   const conditions = [eq(users.smsOptOut, true)];
 
@@ -224,6 +249,8 @@ router.get("/opt-outs", async (req, res) => {
     );
     const offset = Math.max(parseInt((req.query.offset as string) || "0", 10) || 0, 0);
     const where = buildOptOutFilters(req.query as Record<string, any>);
+    const sortKey = parseOptOutSort(req.query as Record<string, any>);
+    const orderBy = OPT_OUT_SORT_OPTIONS[sortKey];
 
     const [totalRow] = await db
       .select({ c: count() })
@@ -241,12 +268,13 @@ router.get("/opt-outs", async (req, res) => {
       })
       .from(users)
       .where(where)
-      .orderBy(sql`${users.smsOptOutAt} DESC NULLS LAST`, desc(users.id))
+      .orderBy(...orderBy)
       .limit(limit)
       .offset(offset);
 
     res.json({
       users: rows,
+      sort: sortKey,
       pagination: {
         total: Number(totalRow?.c || 0),
         limit,
@@ -581,6 +609,8 @@ function csvEscape(value: unknown): string {
 router.get("/opt-outs/export", async (req, res) => {
   try {
     const where = buildOptOutFilters(req.query as Record<string, any>);
+    const sortKey = parseOptOutSort(req.query as Record<string, any>);
+    const orderBy = OPT_OUT_SORT_OPTIONS[sortKey];
 
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader(
@@ -611,7 +641,7 @@ router.get("/opt-outs/export", async (req, res) => {
         })
         .from(users)
         .where(where)
-        .orderBy(sql`${users.smsOptOutAt} DESC NULLS LAST`, desc(users.id))
+        .orderBy(...orderBy)
         .limit(pageSize)
         .offset(offset);
 
