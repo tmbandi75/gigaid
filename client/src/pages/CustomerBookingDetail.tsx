@@ -113,7 +113,8 @@ function PaymentForm({ token, bookingId, depositAmountCents, depositCurrency, on
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
-  const formatCurrency = (cents: number, currency: string = "usd") => {
+  const formatCurrency = (cents: number | null | undefined, currency: string = "usd") => {
+    if (cents == null || !Number.isFinite(cents)) return "--";
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: currency.toUpperCase(),
@@ -371,7 +372,7 @@ export default function CustomerBookingDetail() {
   );
 
   const formatCurrency = (cents: number | null | undefined, currency: string = "usd") => {
-    if (cents == null) return "$0.00";
+    if (cents == null || !Number.isFinite(cents)) return "--";
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: currency.toUpperCase(),

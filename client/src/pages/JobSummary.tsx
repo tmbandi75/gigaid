@@ -81,8 +81,8 @@ function formatTime(timeString: string | null): string {
   return `${hour12}:${minutes} ${ampm}`;
 }
 
-function formatPrice(cents: number | null): string {
-  if (!cents) return "$0.00";
+function formatPrice(cents: number | null | undefined): string {
+  if (cents == null || !Number.isFinite(cents)) return "--";
   return `$${(cents / 100).toFixed(2)}`;
 }
 

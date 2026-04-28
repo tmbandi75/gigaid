@@ -44,7 +44,7 @@ interface BookingListPanelProps {
   onSelectBooking: (booking: BookingRequest) => void;
   formatDate: (dateStr: string) => string;
   formatTime: (timeStr: string) => string;
-  formatCurrency: (cents: number, currency?: string) => string;
+  formatCurrency: (cents: number | null | undefined, currency?: string) => string;
 }
 
 const statusColors: Record<string, string> = {

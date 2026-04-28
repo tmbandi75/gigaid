@@ -182,7 +182,8 @@ function formatTargetLabel(target: string): string {
   return cleaned || target;
 }
 
-function formatCurrency(cents: number): string {
+function formatCurrency(cents: number | null | undefined): string {
+  if (cents == null || !Number.isFinite(cents)) return "--";
   return `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 0 })}`;
 }
 

@@ -40,7 +40,7 @@ interface BookingRequestsDesktopViewProps {
   onSelectBooking: (booking: BookingRequest) => void;
   formatDate: (dateStr: string) => string;
   formatTime: (timeStr: string) => string;
-  formatCurrency: (cents: number, currency?: string) => string;
+  formatCurrency: (cents: number | null | undefined, currency?: string) => string;
   onCopyLink: (token: string) => void;
   onRecordPayment: () => void;
   onWaiveFee?: (bookingId: number) => void;

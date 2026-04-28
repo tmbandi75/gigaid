@@ -71,7 +71,7 @@ interface InvoiceViewDesktopViewProps {
   onSendText: (params: { phoneNumber: string; message: string }) => void;
   onPaymentConfirmed: () => void;
   onIncrementStall: () => void;
-  formatCurrency: (cents: number) => string;
+  formatCurrency: (cents: number | null | undefined) => string;
   formatDate: (dateStr: string) => string;
   formatShortDate: (dateStr: string) => string;
 }

@@ -102,7 +102,8 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function formatCurrency(amount: number, currency: string = "usd") {
+function formatCurrency(amount: number | null | undefined, currency: string = "usd") {
+  if (amount == null || !Number.isFinite(amount)) return "--";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: currency.toUpperCase(),

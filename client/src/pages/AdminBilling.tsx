@@ -103,7 +103,8 @@ export default function AdminBilling() {
     queryKey: QUERY_KEYS.adminAnalyticsLtv(),
   });
 
-  const formatCurrency = (cents: number) => {
+  const formatCurrency = (cents: number | null | undefined) => {
+    if (cents == null || !Number.isFinite(cents)) return "--";
     return `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 

@@ -36,7 +36,8 @@ export interface StickyCtaInfo {
   icon: StickyCtaIcon;
 }
 
-export function formatCurrency(cents: number): string {
+export function formatCurrency(cents: number | null | undefined): string {
+  if (cents == null || !Number.isFinite(cents)) return "--";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",

@@ -37,7 +37,8 @@ interface MoneyDashboardData {
   hotLeadCount: number;
 }
 
-function formatCurrency(cents: number): string {
+function formatCurrency(cents: number | null | undefined): string {
+  if (cents == null || !Number.isFinite(cents)) return "--";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",

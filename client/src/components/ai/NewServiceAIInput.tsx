@@ -77,7 +77,8 @@ export function NewServiceAIInput({ onServicesCreated }: NewServiceAIInputProps)
     setSuggestions(updated);
   };
 
-  const formatPrice = (cents: number) => {
+  const formatPrice = (cents: number | null | undefined) => {
+    if (cents == null || !Number.isFinite(cents)) return "--";
     return `$${(cents / 100).toFixed(0)}`;
   };
 

@@ -152,7 +152,8 @@ export function EstimationTool({ onEstimateComplete }: EstimationToolProps) {
     });
   };
 
-  const formatCurrency = (cents: number) => {
+  const formatCurrency = (cents: number | null | undefined) => {
+    if (cents == null || !Number.isFinite(cents)) return "--";
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",

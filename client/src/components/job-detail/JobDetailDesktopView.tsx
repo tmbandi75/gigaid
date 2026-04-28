@@ -71,7 +71,7 @@ interface JobDetailDesktopViewProps {
   updateClientDepositPending: boolean;
   formatDate: (d: string | null) => string;
   formatTime: (t: string | null) => string;
-  formatPrice: (c: number | null) => string;
+  formatPrice: (c: number | null | undefined) => string;
 }
 
 export function JobDetailDesktopView({

@@ -206,7 +206,8 @@ export default function BookingRequests() {
     }
   );
 
-  const formatCurrency = (cents: number, currency: string = "usd") => {
+  const formatCurrency = (cents: number | null | undefined, currency: string = "usd") => {
+    if (cents == null || !Number.isFinite(cents)) return "--";
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: currency.toUpperCase(),
