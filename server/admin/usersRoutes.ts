@@ -19,6 +19,7 @@ import { adminMiddleware, AdminRequest } from "../copilot/adminMiddleware";
 import { getUncachableStripeClient } from "../stripeClient";
 import { logger } from "../lib/logger";
 import { safeParseJsonColumn } from "./jsonColumn";
+import { safePriceCentsExact } from "@shared/safePrice";
 
 const router = Router();
 
@@ -920,7 +921,7 @@ router.post("/:userId/actions", async (req, res) => {
           await stripe.customers.update(targetUser.stripeCustomerId, {
             balance: -Math.abs(creditAmountCents),
           });
-          logger.info(`[Admin] Applied $${(creditAmountCents / 100).toFixed(2)} credit to user ${userId}`);
+          logger.info(`[Admin] Applied ${safePriceCentsExact(creditAmountCents)} credit to user ${userId}`);
         } catch (stripeError: any) {
           logger.error("[Admin] Stripe credit error:", stripeError);
           return res.status(500).json({ error: `Stripe error: ${stripeError.message}` });

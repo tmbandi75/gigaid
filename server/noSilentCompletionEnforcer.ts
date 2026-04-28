@@ -16,6 +16,7 @@
 import { storage } from "./storage";
 import type { Job, InsertAiNudge } from "@shared/schema";
 import { logger } from "./lib/logger";
+import { safePriceCents } from "@shared/safePrice";
 
 const NUDGE_TYPE = "job_unresolved_payment";
 const NUDGE_PRIORITY = 100; // Maximum priority - cannot be bypassed
@@ -100,7 +101,7 @@ function createUnresolvedPaymentNudge(job: Job, userId: string): InsertAiNudge {
   const today = new Date().toISOString().split("T")[0];
   const dedupeKey = `${userId}:job:${job.id}:${NUDGE_TYPE}:${today}`;
   
-  const priceStr = job.price ? `$${(job.price / 100).toFixed(0)}` : "Unknown";
+  const priceStr = job.price ? safePriceCents(job.price) : "Unknown";
   
   return {
     userId,

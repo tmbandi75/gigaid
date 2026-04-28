@@ -1,5 +1,6 @@
 import { IStorage } from "./storage";
 import type { ActionQueueItem, InsertActionQueueItem, Lead, Job, Invoice } from "@shared/schema";
+import { safePriceLocale } from "@shared/safePrice";
 
 interface ActionItem {
   sourceType: "lead" | "job" | "invoice";
@@ -203,7 +204,7 @@ export class ActionQueueGenerator {
           sourceId: job.id,
           actionType: "create_invoice",
           title: `Invoice: ${job.title}`,
-          subtitle: amount > 0 ? `$${amount.toLocaleString()} to collect` : (job.clientName || 'Client'),
+          subtitle: amount > 0 ? `${safePriceLocale(amount)} to collect` : (job.clientName || 'Client'),
           explainText: daysSinceCompleted === 0 
             ? "Job just completed - send invoice while client is happy"
             : `Completed ${daysSinceCompleted} days ago - invoice ASAP`,
@@ -240,7 +241,7 @@ export class ActionQueueGenerator {
           sourceId: invoice.id,
           actionType: "chase_overdue",
           title: `Chase: Invoice #${invoice.invoiceNumber}`,
-          subtitle: `$${amount.toLocaleString()} - sent ${daysSinceSent} days ago`,
+          subtitle: `${safePriceLocale(amount)} - sent ${daysSinceSent} days ago`,
           explainText: daysSinceSent >= 14
             ? "2+ weeks since sent - consider a phone call"
             : `Sent ${daysSinceSent} days ago - a friendly reminder works`,
@@ -256,7 +257,7 @@ export class ActionQueueGenerator {
           sourceId: invoice.id,
           actionType: "follow_up_invoice",
           title: `Follow up: Invoice #${invoice.invoiceNumber}`,
-          subtitle: `$${amount.toLocaleString()} - ${daysSinceSent} days since sent`,
+          subtitle: `${safePriceLocale(amount)} - ${daysSinceSent} days since sent`,
           explainText: "Invoice sent a few days ago - a gentle heads-up can speed things up",
           priorityScore: 78,
           ctaPrimaryLabel: "Send Reminder",
@@ -278,7 +279,7 @@ export class ActionQueueGenerator {
           sourceId: invoice.id,
           actionType: "send_draft",
           title: `Send: Invoice #${invoice.invoiceNumber}`,
-          subtitle: `$${amount.toLocaleString()} draft`,
+          subtitle: `${safePriceLocale(amount)} draft`,
           explainText: daysSinceCreated === 0
             ? "Draft created today - send it while fresh"
             : `Draft waiting ${daysSinceCreated} days - finish and send`,

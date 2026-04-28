@@ -1,4 +1,5 @@
 import { getOpenAI } from "./openaiClient";
+import { safePriceCentsExact } from "@shared/safePrice";
 
 export interface ParsedLead {
   clientName: string;
@@ -207,7 +208,7 @@ export async function generateFollowUpReply(params: {
   const { conversationHistory, nextStep, providerName, priceCents } = params;
 
   const stepInstructions = {
-    quote: `Provide a quote${priceCents ? ` of $${(priceCents / 100).toFixed(2)}` : ""} and ask for confirmation.`,
+    quote: `Provide a quote${priceCents ? ` of ${safePriceCentsExact(priceCents)}` : ""} and ask for confirmation.`,
     schedule: "Propose specific times to schedule the job.",
     clarify: "Ask clarifying questions to better understand the job.",
     close: "Confirm the booking details and thank the client.",

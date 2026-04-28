@@ -1,5 +1,6 @@
 import { IStorage } from "./storage";
 import { InsertAiNudge, AiNudge, Lead, Job, Invoice } from "@shared/schema";
+import { safePriceCentsExact } from "@shared/safePrice";
 
 const STALE_LEAD_DAYS = 7;
 const HOT_LEAD_RESPONSE_HOURS = 24;
@@ -153,7 +154,7 @@ export class NudgeService {
             priority: invoice.status === "overdue" ? 85 : 65,
             status: "active",
             createdAt: now.toISOString(),
-            explainText: `Invoice #${invoice.id.slice(-6)} for $${(invoice.amount / 100).toFixed(2)} is ${daysSinceCreated} days old. Send a reminder?`,
+            explainText: `Invoice #${invoice.id.slice(-6)} for ${safePriceCentsExact(invoice.amount)} is ${daysSinceCreated} days old. Send a reminder?`,
             actionPayload: JSON.stringify({
               invoiceId: invoice.id,
               action: "send_reminder",

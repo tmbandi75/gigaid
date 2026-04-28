@@ -1,3 +1,5 @@
+import { safePriceRange } from "./safePrice";
+
 export type EstimationFlow = "INSTANT_ESTIMATE" | "PROVIDER_REVIEW_REQUIRED" | "NO_PREBOOK_ESTIMATE";
 export type PricingType = "range" | "tiered" | "flat" | "flat_range";
 export type MeasurementType = "area" | "linear";
@@ -219,8 +221,9 @@ export interface AIEstimateOutput {
 
 export function formatAIEstimate(estimate: AIEstimateOutput): string {
   const basedOnList = estimate.basedOn.map((item) => `• ${item}`).join("\n");
+  const range = safePriceRange(estimate.lowEstimate, estimate.highEstimate);
   return `Suggested Estimate:
-$${estimate.lowEstimate} – $${estimate.highEstimate}
+${range}
 
 Confidence:
 ${estimate.confidence}

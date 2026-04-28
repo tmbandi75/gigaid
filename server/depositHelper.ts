@@ -1,4 +1,5 @@
 import { Job, JobPayment, DerivedDepositState, DepositMetadata, parseDepositMetadata } from "@shared/schema";
+import { safePriceCentsExact } from "@shared/safePrice";
 
 // Compute derived deposit state from job and its payments
 export function computeDepositState(
@@ -95,7 +96,7 @@ export function calculateDepositAmount(
 
 // Format deposit for display
 export function formatDepositDisplay(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
+  return safePriceCentsExact(cents);
 }
 
 // Get cancellation outcome based on rules

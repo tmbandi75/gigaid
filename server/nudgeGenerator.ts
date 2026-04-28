@@ -1,5 +1,6 @@
 import { storage } from "./storage";
 import type { Lead, Invoice, Job, AiNudge, InsertAiNudge, JobResolution } from "@shared/schema";
+import { safePrice, safePriceExact } from "@shared/safePrice";
 
 interface NudgeCandidate {
   entityType: "lead" | "invoice" | "job";
@@ -176,9 +177,9 @@ function generateInvoiceNudges(invoice: Invoice, userId: string): NudgeCandidate
         entityId: invoice.id,
         nudgeType: "invoice_reminder",
         priority: 90,
-        explainText: `I'm tracking $${amount.toFixed(0)} owed to you. A gentle nudge keeps it moving.`,
+        explainText: `I'm tracking ${safePrice(amount)} owed to you. A gentle nudge keeps it moving.`,
         actionPayload: {
-          reminderMessage: `Hi ${invoice.clientName}! Just a friendly reminder about invoice #${invoice.invoiceNumber} for $${amount.toFixed(2)}. Let me know if you have any questions! Payment link: {link}`,
+          reminderMessage: `Hi ${invoice.clientName}! Just a friendly reminder about invoice #${invoice.invoiceNumber} for ${safePriceExact(amount)}. Let me know if you have any questions! Payment link: {link}`,
           escalationLevel: "gentle",
         },
       });
@@ -191,9 +192,9 @@ function generateInvoiceNudges(invoice: Invoice, userId: string): NudgeCandidate
         entityId: invoice.id,
         nudgeType: "invoice_reminder_firm",
         priority: 92,
-        explainText: `$${amount.toFixed(0)} has been waiting 3+ days. I'm keeping an eye on this for you.`,
+        explainText: `${safePrice(amount)} has been waiting 3+ days. I'm keeping an eye on this for you.`,
         actionPayload: {
-          reminderMessage: `Hi ${invoice.clientName}, following up on invoice #${invoice.invoiceNumber} for $${amount.toFixed(2)} sent a few days ago. Would appreciate if you could take a look when you get a chance. Payment link: {link}`,
+          reminderMessage: `Hi ${invoice.clientName}, following up on invoice #${invoice.invoiceNumber} for ${safePriceExact(amount)} sent a few days ago. Would appreciate if you could take a look when you get a chance. Payment link: {link}`,
           escalationLevel: "firm",
         },
       });
@@ -206,9 +207,9 @@ function generateInvoiceNudges(invoice: Invoice, userId: string): NudgeCandidate
         entityId: invoice.id,
         nudgeType: "invoice_overdue_escalation",
         priority: 95,
-        explainText: `Warning: $${amount.toFixed(0)} is 7+ days overdue. I don't want you to lose this.`,
+        explainText: `Warning: ${safePrice(amount)} is 7+ days overdue. I don't want you to lose this.`,
         actionPayload: {
-          firmerMessage: `Hi ${invoice.clientName}, I noticed invoice #${invoice.invoiceNumber} ($${amount.toFixed(2)}) from over a week ago is still outstanding. Please let me know if there's an issue I can help resolve.`,
+          firmerMessage: `Hi ${invoice.clientName}, I noticed invoice #${invoice.invoiceNumber} (${safePriceExact(amount)}) from over a week ago is still outstanding. Please let me know if there's an issue I can help resolve.`,
           escalationLevel: "urgent",
         },
       });
@@ -295,7 +296,7 @@ function generateJobNudges(
       nudgeType: "job_invoice_escalation",
       priority: 90, // High priority escalation
       explainText: amount > 0 
-        ? `I'm guarding $${amount.toFixed(0)} that's been waiting 48+ hours. Let's secure it.`
+        ? `I'm guarding ${safePrice(amount)} that's been waiting 48+ hours. Let's secure it.`
         : "This job's payment is still open. I'm watching it for you.",
       actionPayload: {
         resolutionType: resolution.resolutionType,

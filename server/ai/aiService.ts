@@ -1,6 +1,7 @@
 import { getOpenAI, getOpenAIDirect } from "./openaiClient";
 import type { Job } from "@shared/schema";
 import { logger } from "../lib/logger";
+import { safePriceCents } from "@shared/safePrice";
 
 export interface JobDraft {
   service: string;
@@ -398,7 +399,7 @@ export async function estimatePrice(params: {
         content: `You are a price estimation assistant for gig services.
 
 Available services and their base prices:
-${services.map(s => `- ${s.name}: ${s.price ? `$${(s.price / 100).toFixed(0)}` : "Price varies"}`).join("\n")}
+${services.map(s => `- ${s.name}: ${s.price ? safePriceCents(s.price) : "Price varies"}`).join("\n")}
 
 Given the job description, provide a reasonable price estimate range.
 Consider job complexity, time needed, and standard rates.
@@ -973,7 +974,7 @@ export async function generateProviderEstimate(params: CategoryEstimateParams & 
     contextInfo.push(`Linear: ${measurementLinear} ft`);
   }
   if (providerHistory?.avgPrice) {
-    contextInfo.push(`Provider's average price for similar jobs: $${Math.round(providerHistory.avgPrice / 100)}`);
+    contextInfo.push(`Provider's average price for similar jobs: ${safePriceCents(providerHistory.avgPrice)}`);
   }
   if (providerHistory?.completedJobs) {
     contextInfo.push(`Provider has completed ${providerHistory.completedJobs} similar jobs`);

@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { logger } from "./lib/logger";
+import { safePriceCentsExact } from "@shared/safePrice";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -39,7 +40,7 @@ export async function generateCelebrationMessage(context: CelebrationContext): P
       userPrompt += ". Generate a personalized congratulations message.";
     } else if (context.type === "payment_received") {
       userPrompt = `The user just received a payment`;
-      if (context.amount) userPrompt += ` of $${(context.amount / 100).toFixed(2)}`;
+      if (context.amount) userPrompt += ` of ${safePriceCentsExact(context.amount)}`;
       if (context.clientName) userPrompt += ` from ${context.clientName}`;
       userPrompt += ". Generate a personalized congratulations message.";
     }

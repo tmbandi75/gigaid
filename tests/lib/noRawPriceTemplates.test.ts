@@ -9,9 +9,15 @@ import {
 
 const ROOT = join(__dirname, "..", "..");
 const CLIENT_SRC = join(ROOT, "client", "src");
+const SERVER_DIR = join(ROOT, "server");
+const SHARED_DIR = join(ROOT, "shared");
 
+// The helper itself is the *one* place raw `$` prefix patterns are
+// allowed — that is the whole point of the helper. Every other surface
+// (UI, emails, SMS, PDFs, webhook payloads) goes through it.
 const ALLOWLIST = new Set<string>([
   "client/src/lib/safePrice.ts",
+  "shared/safePrice.ts",
 ]);
 
 type ViolationKind =
@@ -169,37 +175,52 @@ function scanFile(absPath: string): Violation[] {
   return violations;
 }
 
+function scanRoot(root: string): Violation[] {
+  const files = globSync("**/*.{ts,tsx}", {
+    cwd: root,
+    absolute: true,
+    ignore: ["**/*.d.ts"],
+  });
+
+  expect(files.length).toBeGreaterThan(0);
+
+  const violations: Violation[] = [];
+  for (const file of files) {
+    const rel = relative(ROOT, file).split(/[\\/]/).join("/");
+    if (ALLOWLIST.has(rel)) continue;
+    violations.push(...scanFile(file));
+  }
+  return violations;
+}
+
+function reportViolations(label: string, violations: Violation[]): void {
+  if (violations.length === 0) return;
+  const formatted = violations
+    .map(
+      (v) =>
+        `  [${v.kind}] ${v.file}:${v.line}:${v.column}\n      ${v.snippet}`,
+    )
+    .join("\n");
+  throw new Error(
+    `Found ${violations.length} raw price formatting violation(s) in ${label}.\n` +
+      `Use safePrice / safePriceCents / safePriceCentsExact / safePriceExact / ` +
+      `safePriceCentsLocale / safePriceLocale / safePriceRange / formatCurrency ` +
+      `from @shared/safePrice (or @/lib/safePrice on the client) instead:\n` +
+      formatted,
+  );
+}
+
 describe("safe price helper enforcement", () => {
   it("rejects raw `$` prefix patterns in client/src", () => {
-    const files = globSync("**/*.{ts,tsx}", {
-      cwd: CLIENT_SRC,
-      absolute: true,
-      ignore: ["**/*.d.ts"],
-    });
+    reportViolations("client/src", scanRoot(CLIENT_SRC));
+  });
 
-    expect(files.length).toBeGreaterThan(0);
+  it("rejects raw `$` prefix patterns in server/", () => {
+    reportViolations("server/", scanRoot(SERVER_DIR));
+  });
 
-    const allViolations: Violation[] = [];
-    for (const file of files) {
-      const rel = relative(ROOT, file).split(/[\\/]/).join("/");
-      if (ALLOWLIST.has(rel)) continue;
-      allViolations.push(...scanFile(file));
-    }
-
-    if (allViolations.length > 0) {
-      const formatted = allViolations
-        .map(
-          (v) =>
-            `  [${v.kind}] ${v.file}:${v.line}:${v.column}\n      ${v.snippet}`,
-        )
-        .join("\n");
-      throw new Error(
-        `Found ${allViolations.length} raw price formatting violation(s).\n` +
-          `Use safePrice / safePriceCents / safePriceCentsExact / safePriceExact / ` +
-          `safePriceCentsLocale / safePriceRange / formatCurrency from @/lib/safePrice instead:\n` +
-          formatted,
-      );
-    }
+  it("rejects raw `$` prefix patterns in shared/", () => {
+    reportViolations("shared/", scanRoot(SHARED_DIR));
   });
 
   it("detects a synthetic template-literal violation", () => {

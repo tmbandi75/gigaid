@@ -26,6 +26,7 @@ import {
   type PaymentConfig,
 } from "@shared/schema";
 import { z } from "zod";
+import { safePriceCents, safePriceCentsExact, safePriceExact, safePriceRange, safePrice } from "@shared/safePrice";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { parseTextToPlan, suggestScheduleSlots, generateFollowUp } from "./ai/aiService";
 import { parseSharedContent, generateQuickReplies } from "./ai/shareParser";
@@ -1451,7 +1452,7 @@ export async function registerRoutes(
             type: "invoice",
             priority: daysSinceCreated > 3 ? 1 : 5,
             title: `Send invoice to ${inv.clientName}`,
-            subtitle: `$${(inv.amount / 100).toFixed(0)} • Draft`,
+            subtitle: `${safePriceCents(inv.amount)} • Draft`,
             actionLabel: "Send Invoice",
             actionRoute: `/invoices/${inv.id}/view`,
             urgency: daysSinceCreated > 3 ? "critical" : "high",
@@ -1466,7 +1467,7 @@ export async function registerRoutes(
               type: "invoice",
               priority: 2,
               title: `Payment overdue from ${inv.clientName}`,
-              subtitle: `$${(inv.amount / 100).toFixed(0)} • ${daysSinceSent} days`,
+              subtitle: `${safePriceCents(inv.amount)} • ${daysSinceSent} days`,
               actionLabel: "Send Reminder",
               actionRoute: `/invoices/${inv.id}/view`,
               urgency: "critical",
@@ -1478,7 +1479,7 @@ export async function registerRoutes(
               type: "invoice",
               priority: 6,
               title: `Waiting on ${inv.clientName}`,
-              subtitle: `$${(inv.amount / 100).toFixed(0)} • ${daysSinceSent} days`,
+              subtitle: `${safePriceCents(inv.amount)} • ${daysSinceSent} days`,
               actionLabel: "Follow Up",
               actionRoute: `/invoices/${inv.id}/view`,
               urgency: "high",
@@ -3407,7 +3408,7 @@ export async function registerRoutes(
       const baseUrl = process.env.FRONTEND_URL || "https://account.gigaid.ai";
       const confirmationUrl = `${baseUrl}/confirm-price/${confirmation.confirmationToken}`;
       
-      const priceFormatted = `$${(confirmation.agreedPrice / 100).toFixed(2)}`;
+      const priceFormatted = safePriceCentsExact(confirmation.agreedPrice);
       const message = `Hi ${lead.clientName}, ${provider?.businessName || provider?.name || "Your service provider"} has sent you a price confirmation for ${confirmation.serviceType || "your service"}: ${priceFormatted}. Please confirm: ${confirmationUrl}`;
       
       let smsSent = false;
@@ -5694,8 +5695,8 @@ export async function registerRoutes(
         redeemedCount: unredeemed.length,
         appliedToStripe: stripeApplied,
         message: stripeApplied
-          ? `$${(totalCredit / 100).toFixed(2)} credit applied to your next invoice`
-          : `$${(totalCredit / 100).toFixed(2)} credit saved to your account`,
+          ? `${safePriceCentsExact(totalCredit)} credit applied to your next invoice`
+          : `${safePriceCentsExact(totalCredit)} credit saved to your account`,
       });
     } catch (error) {
       logger.error("Failed to redeem referral rewards:", error);
@@ -7218,7 +7219,7 @@ export async function registerRoutes(
 
       const basedOn = result.basedOn || ["Service category", "Job details"];
       const formattedOutput = `Suggested Estimate:
-$${result.lowEstimate} – $${result.highEstimate}
+${safePriceRange(result.lowEstimate, result.highEstimate)}
 
 Confidence:
 ${result.confidence}
@@ -7389,7 +7390,7 @@ Final price confirmed onsite.`;
       const confirmUrl = `${baseUrl}/confirm-estimate/${request.confirmToken}`;
 
       if (request.clientPhone) {
-        const message = `${user?.businessName || user?.name || "Your provider"} has reviewed your request and prepared an estimate of $${request.providerEstimateLow} - $${request.providerEstimateHigh}. View and confirm: ${confirmUrl}`;
+        const message = `${user?.businessName || user?.name || "Your provider"} has reviewed your request and prepared an estimate of ${safePriceRange(request.providerEstimateLow, request.providerEstimateHigh)}. View and confirm: ${confirmUrl}`;
         await sendSMS(request.clientPhone, message);
       }
 
@@ -7505,7 +7506,7 @@ Final price confirmed onsite.`;
       const highDollars = Math.round((maxVal as number) / 100);
 
       const formattedOutput = `Suggested Estimate:
-$${lowDollars} – $${highDollars}
+${safePriceRange(lowDollars, highDollars)}
 
 Confidence:
 ${estimate.confidence.charAt(0).toUpperCase() + estimate.confidence.slice(1)}
@@ -9002,7 +9003,7 @@ Return ONLY the message text, no JSON or formatting.`
             success: true,
             message: isUpgrade
               ? `Upgraded to ${newPlanName}. Prorated charges applied.`
-              : `Switched to ${newPlanName}. Your new rate of $${planPrices[newPlan] / 100}/mo starts next billing cycle.`,
+              : `Switched to ${newPlanName}. Your new rate of ${safePriceCents(planPrices[newPlan])}/mo starts next billing cycle.`,
             effectiveAt: isUpgrade ? "immediate" : "period_end",
             effectiveDate: isUpgrade
               ? null
@@ -11400,7 +11401,7 @@ Return ONLY the message text, no JSON or formatting.`
 
       // Add invoice nodes
       invoices.forEach((inv, i) => {
-        const label = `#${inv.invoiceNumber}\\n$${(inv.amount / 100).toFixed(2)}`;
+        const label = `#${inv.invoiceNumber}\\n${safePriceCentsExact(inv.amount)}`;
         dot += `    invoice_${i} [label="${label.replace(/"/g, '\\"')}"];\n`;
       });
 
@@ -12208,7 +12209,7 @@ Return ONLY the message text, no JSON or formatting.`
             priority: 92, // High priority for revenue protection
             status: "active",
             createdAt: new Date().toISOString(),
-            explainText: `$${amount.toFixed(0)} job completed but no invoice. Don't leave money on the table!`,
+            explainText: `${safePrice(amount)} job completed but no invoice. Don't leave money on the table!`,
             actionPayload: JSON.stringify({
               invoicePrefill: {
                 clientName: job.clientName,
@@ -12590,12 +12591,12 @@ Return ONLY the message text, no JSON or formatting.`
       // Try to send the invoice with booking link
       let sent = false;
       let sendMessage = "Invoice created as draft";
-      const amountFormatted = ((action.prefilledAmount || 0) / 100).toFixed(2);
+      const amountFormatted = safePriceCentsExact(action.prefilledAmount || 0);
       
       // Compose email with both invoice and booking link
       const emailHtml = `
         <p>Hi ${action.prefilledClientName || "there"},</p>
-        <p>You have a new invoice for <strong>$${amountFormatted}</strong>.</p>
+        <p>You have a new invoice for <strong>${amountFormatted}</strong>.</p>
         <p><a href="${invoiceUrl}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:white;text-decoration:none;border-radius:6px;">View and Pay Invoice</a></p>
         ${bookingLink ? `<p style="margin-top:16px;">Ready to lock in a time? <a href="${bookingLink}">Book your appointment</a></p>` : ""}
         <p style="margin-top:24px;color:#666;">Thanks,<br>${user?.businessName || user?.name || "Your Service Provider"}</p>
@@ -12628,8 +12629,8 @@ Return ONLY the message text, no JSON or formatting.`
       if (!sent && action.prefilledClientPhone) {
         try {
           const smsMessage = bookingLink
-            ? `Invoice for $${amountFormatted}: ${invoiceUrl}\n\nReady to book? ${bookingLink}`
-            : `Invoice for $${amountFormatted}: ${invoiceUrl}`;
+            ? `Invoice for ${amountFormatted}: ${invoiceUrl}\n\nReady to book? ${bookingLink}`
+            : `Invoice for ${amountFormatted}: ${invoiceUrl}`;
           
           const smsRes2 = await sendSMS(action.prefilledClientPhone, smsMessage);
           if (smsRes2.success) {
@@ -14613,7 +14614,7 @@ Return ONLY the message text, no JSON or formatting.`
           suggestedPriceLow: low,
           suggestedPriceHigh: high,
           suggestedPriceMedian: median,
-          rationale: `Based on ${completedJobs.length} similar ${jobType} jobs you've completed. Your typical price range is $${(low/100).toFixed(0)}-$${(high/100).toFixed(0)} with a median of $${(median/100).toFixed(0)}.`,
+          rationale: `Based on ${completedJobs.length} similar ${jobType} jobs you've completed. Your typical price range is ${safePriceCents(low)}-${safePriceCents(high)} with a median of ${safePriceCents(median)}.`,
           avgDurationMinutes: Math.round(avgDuration),
           sampleSize: completedJobs.length,
         };
@@ -14824,7 +14825,7 @@ Respond in JSON format only:
               jobId: job.id,
               title: job.title,
               type: "low_margin",
-              message: `Effective rate of $${(hourlyRate/100).toFixed(0)}/hr is below recommended minimum ($25/hr).`,
+              message: `Effective rate of ${safePriceCents(hourlyRate)}/hr is below recommended minimum ($25/hr).`,
               severity: hourlyRate < 1500 ? "high" : "medium",
             });
           }
@@ -14840,7 +14841,7 @@ Respond in JSON format only:
               jobId: job.id,
               title: job.title,
               type: "slow_payer",
-              message: `Unpaid for ${Math.round(daysSinceCompletion)} days. Outstanding: $${(totalInvoiced/100).toFixed(2)}.`,
+              message: `Unpaid for ${Math.round(daysSinceCompletion)} days. Outstanding: ${safePriceCentsExact(totalInvoiced)}.`,
               severity: daysSinceCompletion > 14 ? "high" : "medium",
             });
           }
@@ -14855,7 +14856,7 @@ Respond in JSON format only:
               jobId: job.id,
               title: job.title,
               type: "high_travel",
-              message: `Estimated travel cost of $${(travelCostEstimate/100).toFixed(0)} eats ${Math.round((travelCostEstimate/job.price)*100)}% of job price.`,
+              message: `Estimated travel cost of ${safePriceCents(travelCostEstimate)} eats ${Math.round((travelCostEstimate/job.price)*100)}% of job price.`,
               severity: profitAfterTravel < 0 ? "high" : "medium",
             });
           }
@@ -14871,7 +14872,7 @@ Respond in JSON format only:
               jobId: job.id,
               title: job.title,
               type: "underpriced",
-              message: `This job may be underpriced at $${(hourlyRate/100).toFixed(0)}/hr. Consider adjusting before starting.`,
+              message: `This job may be underpriced at ${safePriceCents(hourlyRate)}/hr. Consider adjusting before starting.`,
               severity: "medium",
             });
           }

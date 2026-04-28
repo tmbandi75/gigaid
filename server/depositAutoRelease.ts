@@ -1,5 +1,6 @@
 import { storage } from "./storage";
 import { logger } from "./lib/logger";
+import { safePriceCentsExact } from "@shared/safePrice";
 
 async function releaseDeposit(bookingId: string) {
   try {
@@ -62,7 +63,7 @@ async function releaseDeposit(bookingId: string) {
       }),
     });
 
-    logger.info(`[AutoRelease] Released deposit for booking ${bookingId}: $${(releaseAmount / 100).toFixed(2)}`);
+    logger.info(`[AutoRelease] Released deposit for booking ${bookingId}: ${safePriceCentsExact(releaseAmount)}`);
   } catch (error) {
     logger.error(`[AutoRelease] Failed to release deposit for booking ${bookingId}:`, error);
   }
