@@ -95,7 +95,7 @@ There are a few easy ways to get your link in front of customers:
 - Print it on a **business card** or flyer for in-person hand-offs
 - Reply to neighborhood requests on **Nextdoor, Craigslist, or Facebook Marketplace** with your link
 
-![Sharing your booking link — animated walkthrough](support-media/share-booking-link.gif)
+![What your customer sees on your booking link — real screen recording](support-media/share-booking-link.gif)
 
 ### What happens when someone books?
 
@@ -252,7 +252,7 @@ From any completed job, tap **Send Invoice**. We'll prefill the customer, the am
 
 The customer gets a text and/or email with a link to pay by card. Once they pay, the money lands in your Stripe account, and Stripe sends it to your bank on its normal payout schedule.
 
-![Sending an invoice — animated walkthrough](support-media/send-invoice.gif)
+![What your customer sees when they get an invoice — real screen recording](support-media/send-invoice.gif)
 
 ### Recording cash, Zelle, Venmo, or check
 
