@@ -33,6 +33,11 @@ any edits to `support-manual.md`.
 | Sharing the booking link | **Real capture** (`_capture.mjs`) — customer-side view of `/book/<slug>` | `share-booking-link.gif` | `share-booking-link.mp4` | §2 Booking Link & Public Page → *Sharing your link* | "How do I share my booking link?" |
 | Sending an invoice | **Real capture** (`_capture.mjs`) — customer-side view of `/invoice/<token>` | `send-invoice.gif` | `send-invoice.mp4` | §5 Invoices & Payments → *Sending an invoice* | "How do I send an invoice?" |
 | Using Quick Capture | Synthetic (`_generate.mjs`) | `quick-capture.gif` | `quick-capture.mp4` | §7 AI Features → *Quick Capture* | "What is Quick Capture and how do I use it?" |
+| AI Follow-Up Composer | Synthetic (`_generate.mjs`) | `follow-up-composer.gif` | `follow-up-composer.mp4` | §7 AI Features → *Follow-Up Composer* | "How do I send an AI follow-up to a quiet lead?" |
+| Drive Mode | Synthetic (`_generate.mjs`) | `drive-mode.gif` | `drive-mode.mp4` | §4 Jobs → *Drive Mode* | "What is Drive Mode and how do I use it?" |
+| Owner View dashboard | Synthetic (`_generate.mjs`) | `owner-view.gif` | `owner-view.mp4` | §7 AI Features → *Owner View* | "What does the Owner View dashboard show me?" |
+| Requiring a deposit on bookings | Synthetic (`_generate.mjs`) | `require-deposit.gif` | `require-deposit.mp4` | §2 Booking Link & Public Page → *Requiring a deposit on bookings* | "How do I require a deposit on bookings?" |
+| Marking an invoice paid by cash/Zelle | Synthetic (`_generate.mjs`) | `mark-paid-cash.gif` | `mark-paid-cash.mp4` | §5 Invoices & Payments → *Recording cash, Zelle, Venmo, or check* | "How do I mark an invoice paid by cash/Zelle/Venmo/check?" |
 
 ## Regenerating
 

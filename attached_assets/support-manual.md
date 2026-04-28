@@ -113,6 +113,8 @@ If you want to make sure people show up, you can require a small deposit when th
 
 Customers pay the deposit by card right on the booking page. The money is held by Stripe and released to you after the job is complete.
 
+![Requiring a deposit on bookings — animated walkthrough](support-media/require-deposit.gif)
+
 > **Heads up:** Deposit requirements need a connected Stripe account. Free plan members can require one deposit per month. Pro+ and Business get unlimited deposits.
 
 ---
@@ -218,6 +220,8 @@ When you mark a job complete, we'll prompt you to send an invoice (if you haven'
 
 When you're driving to a job, tap the **Drive Mode** button on the home screen or job detail page. This gives you a simplified, big-button view designed for use in the car: customer name, address, "Navigate" button, and a one-tap "I'm on my way" text to the customer.
 
+![Drive Mode — animated walkthrough](support-media/drive-mode.gif)
+
 > Please don't tap your phone while actually driving. Use voice or pull over.
 
 ### Plan limits on jobs
@@ -257,6 +261,8 @@ The customer gets a text and/or email with a link to pay by card. Once they pay,
 ### Recording cash, Zelle, Venmo, or check
 
 Not every customer pays by card. When you get cash, Zelle, Venmo, Cash App, or a check, just tap the invoice or job and select **Mark as Paid**. Pick the payment method, add a note if you want, and we'll log it in your reports.
+
+![Marking an invoice paid by cash or Zelle — animated walkthrough](support-media/mark-paid-cash.gif)
 
 ### Deposits
 
@@ -344,6 +350,8 @@ Not sure what to charge? Open any lead or job (or use it on your public booking 
 
 On any lead, tap **Follow Up**. The Follow-Up Composer writes a friendly, professional message for you. Pick a tone — friendly, professional, or casual — and tweak the message before sending. Great for those leads that have gone quiet for a few days.
 
+![AI Follow-Up Composer — animated walkthrough](support-media/follow-up-composer.gif)
+
 ### AI Co-Pilot
 
 Tap the **Sparkle** icon (or open **More → AI Co-Pilot**) to chat with the **AI Co-Pilot**. Ask it anything: "What jobs do I have tomorrow?", "Draft a quote for a kitchen remodel," or "Which customers haven't paid yet?" It pulls from your data and answers in plain English.
@@ -396,6 +404,8 @@ Pro+ and Business plans get **Profit Alerts** at **More → Profit Alerts**. We 
 ### Owner View
 
 The **Owner View** dashboard (under **More → Owner View**) gives you a bird's-eye summary: total revenue, top-earning service, slowest day of the week, average response time to leads, and more.
+
+![Owner View dashboard — animated walkthrough](support-media/owner-view.gif)
 
 ### Coaching tips
 
