@@ -1,0 +1,93 @@
+Apply a SAFE, NON-BREAKING patch to fix the pricing NaN issue in the GigAid app.
+
+DO NOT refactor existing logic, DO NOT rename variables, and DO NOT change API contracts. Only add defensive guards and fallbacks.
+
+### FRONTEND FIX
+
+1. Add a small helper function in the pricing UI file (or a utils file if one already exists):
+
+```javascript
+function safePrice(value) {
+  const num = Number(value);
+  if (!isFinite(num) || num <= 0) return "--";
+  return `$${Math.round(num)}`;
+}
+```
+
+2. Update ONLY the display layer where price values are rendered:
+
+* Replace any direct rendering like:
+  `$${value}`
+
+* With:
+  `safePrice(value)`
+
+This ensures NaN never appears in the UI.
+
+3. Do NOT change state structure or API calls.
+
+---
+
+### BACKEND FIX (API ROUTE ONLY)
+
+Inside the existing pricing API handler:
+
+1. BEFORE returning the response, add validation:
+
+```javascript
+const min = Number(result.min);
+const max = Number(result.max);
+const suggested = Number(result.suggested);
+
+if (!isFinite(min) || !isFinite(max) || !isFinite(suggested)) {
+  console.error("Invalid pricing detected, using fallback");
+
+  return res.status(200).json({
+    min: 50,
+    max: 150,
+    suggested: 90,
+    fallback: true
+  });
+}
+```
+
+2. If result is null/undefined, also fallback:
+
+```javascript
+if (!result) {
+  return res.status(200).json({
+    min: 50,
+    max: 150,
+    suggested: 90,
+    fallback: true
+  });
+}
+```
+
+3. Do NOT modify how pricing is calculated internally.
+
+---
+
+### OPTIONAL (SAFE MICRO-IMPROVEMENT)
+
+Before sending data to pricing logic, lightly normalize description WITHOUT changing structure:
+
+```javascript
+const normalizedDescription = (description || "").toLowerCase();
+```
+
+Use this only if already passing description forward.
+
+---
+
+### SUCCESS CRITERIA
+
+* UI never shows $NaN
+* API always returns valid numbers
+* No existing features break
+* No refactoring or architectural changes
+* Patch is minimal and additive only
+
+---
+
+Do NOT change anything outside of these scoped updates.
