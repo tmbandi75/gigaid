@@ -50,10 +50,32 @@ export async function getTwilioFromPhoneNumber() {
 }
 
 export async function sendSMS(to: string, message: string): Promise<{ success: boolean; errorCode?: string; errorMessage?: string }> {
+  // Resolve credentials separately so that "Twilio not configured" (dev /
+  // stubbed environments) is reported with the same NO_FROM_NUMBER errorCode
+  // the scheduler already treats as a clean deferral. Without this, a missing
+  // Replit Connectors token bubbled up as SEND_FAILED and caused the
+  // first-booking nudge rows to be marked `failed` on the very first tick.
+  // We fetch credentials once and build the client locally to avoid the
+  // duplicate connector lookup that two top-level helpers would incur.
+  let client: ReturnType<typeof twilio>;
+  let fromNumber: string | undefined;
   try {
-    const client = await getTwilioClient();
-    const fromNumber = await getTwilioFromPhoneNumber();
-    
+    const creds = await getCredentials();
+    client = twilio(creds.apiKey, creds.apiKeySecret, { accountSid: creds.accountSid });
+    fromNumber = creds.phoneNumber;
+  } catch (error: any) {
+    const msg = String(error?.message || '');
+    if (
+      msg.includes('Twilio not connected') ||
+      msg.includes('X_REPLIT_TOKEN not found')
+    ) {
+      logger.info('[Twilio] Not configured in this environment, skipping SMS send (deferring)');
+      return { success: false, errorCode: 'NO_FROM_NUMBER', errorMessage: 'SMS service is not configured' };
+    }
+    throw error;
+  }
+
+  try {
     if (!fromNumber) {
       logger.error('No Twilio phone number configured');
       return { success: false, errorCode: 'NO_FROM_NUMBER', errorMessage: 'SMS service is not fully configured' };

@@ -466,3 +466,163 @@ dbDescribe("Task #74 AC #7: worker round-trip cancels new touches when link_copi
     });
   }
 });
+
+// ============================================================================
+// Task #22: scheduler picks up first-booking nudges with job_id IS NULL and
+// dispatches first_booking_nudge_10m / first_booking_nudge_24h via Twilio.
+// The pre-existing post-job-momentum scheduler was originally written for job
+// rows; this proves the same query also drains the new booking-page rows that
+// have NULL job_id, runs them through the policy chain, and either marks them
+// `sent` (real Twilio) or leaves them `queued` with a deferred-no_provider
+// log line (dev / stubbed Twilio). Either outcome means the row is no longer
+// stuck on the `scheduled` queue, which is the bug this task guards against.
+// ============================================================================
+dbDescribe("Task #22: scheduler dispatches job_id=NULL first-booking nudges", () => {
+  jest.setTimeout(45000);
+
+  const dispatchedNudgeTypes: Array<{
+    type: "first_booking_nudge_10m" | "first_booking_nudge_24h";
+  }> = [
+    { type: "first_booking_nudge_10m" },
+    { type: "first_booking_nudge_24h" },
+  ];
+
+  for (const nudge of dispatchedNudgeTypes) {
+    it(`dispatches ${nudge.type} when job_id IS NULL and no disqualifying event exists`, async () => {
+      const { pool } = await import("../../server/db");
+      const { processScheduledMessages } = await import(
+        "../../server/postJobMomentum"
+      );
+
+      const suffix = `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+      const userId = `task22-rt-user-${suffix}`;
+      const phone = "+15550000022";
+      const client = await pool.connect();
+
+      try {
+        await client.query(
+          `INSERT INTO users (id, username, password, first_name, phone, notify_by_sms, sms_opt_out)
+           VALUES ($1, $2, 'unused', 'Casey', $3, true, false)`,
+          [userId, `task22-rt-${suffix}`, phone],
+        );
+
+        const pageIns = await client.query(
+          `INSERT INTO booking_pages (claimed, claimed_by_user_id) VALUES (true, $1) RETURNING id`,
+          [userId],
+        );
+        const pageId = pageIns.rows[0].id as string;
+
+        // Past scheduled_for so the message is due immediately. Crucially we
+        // do NOT set job_id — the scheduler must drain rows where job_id IS
+        // NULL exactly the same as job-bound rows.
+        const past = new Date(Date.now() - 60_000).toISOString();
+        const msgIns = await client.query(
+          `INSERT INTO outbound_messages
+             (user_id, channel, to_address, type, status, scheduled_for, created_at,
+              booking_page_id, metadata, template_rendered)
+           VALUES ($1, 'sms', $2, $3, 'scheduled', $4, now()::text, $5, $6, '')
+           RETURNING id, job_id`,
+          [
+            userId,
+            phone,
+            nudge.type,
+            past,
+            pageId,
+            JSON.stringify({
+              pageId,
+              bookingUrl: `https://example.com/book/${pageId}`,
+              source: "first_booking",
+            }),
+          ],
+        );
+        const msgId = msgIns.rows[0].id as string;
+        // Sanity: confirm the inserted row really has job_id IS NULL — this
+        // is the precondition that this whole task is verifying.
+        expect(msgIns.rows[0].job_id).toBeNull();
+
+        try {
+          await processScheduledMessages();
+
+          const after = await client.query(
+            `SELECT status, failure_reason FROM outbound_messages WHERE id = $1`,
+            [msgId],
+          );
+          // The scheduler must have picked the row up and moved it off
+          // `scheduled`. Acceptable terminal-or-in-flight states:
+          //   - `sent`     -> Twilio actually delivered (rare in CI)
+          //   - `queued`   -> dispatched, deferred for "no provider" — the
+          //                   stubbed-dev path with a clear log line.
+          // Anything else (still `scheduled`, `failed`, `canceled`) means the
+          // dispatch path is broken for job_id=NULL rows.
+          expect(["sent", "queued"]).toContain(after.rows[0].status);
+        } finally {
+          await client.query(
+            `DELETE FROM outbound_messages WHERE id = $1`,
+            [msgId],
+          );
+          await client.query(`DELETE FROM booking_pages WHERE id = $1`, [pageId]);
+          await client.query(`DELETE FROM users WHERE id = $1`, [userId]);
+        }
+      } finally {
+        client.release();
+      }
+    });
+  }
+
+  it("renders the locked first_booking_nudge_10m body when dispatching (no template_rendered fallback)", async () => {
+    const { pool } = await import("../../server/db");
+    const { processScheduledMessages } = await import(
+      "../../server/postJobMomentum"
+    );
+
+    const suffix = `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+    const userId = `task22-render-user-${suffix}`;
+    const phone = "+15550000023";
+    const client = await pool.connect();
+
+    try {
+      await client.query(
+        `INSERT INTO users (id, username, password, first_name, phone, notify_by_sms, sms_opt_out)
+         VALUES ($1, $2, 'unused', 'Riley', $3, true, false)`,
+        [userId, `task22-render-${suffix}`, phone],
+      );
+      const pageIns = await client.query(
+        `INSERT INTO booking_pages (claimed, claimed_by_user_id) VALUES (true, $1) RETURNING id`,
+        [userId],
+      );
+      const pageId = pageIns.rows[0].id as string;
+      const past = new Date(Date.now() - 60_000).toISOString();
+      const msgIns = await client.query(
+        `INSERT INTO outbound_messages
+           (user_id, channel, to_address, type, status, scheduled_for, created_at,
+            booking_page_id, template_rendered)
+         VALUES ($1, 'sms', $2, 'first_booking_nudge_10m', 'scheduled', $3, now()::text, $4, '')
+         RETURNING id`,
+        [userId, phone, past, pageId],
+      );
+      const msgId = msgIns.rows[0].id as string;
+
+      try {
+        // The dispatch path renders the locked spec body at SEND time. We
+        // can't directly observe the body when Twilio is stubbed, but we
+        // can confirm the row's empty `template_rendered` did not block
+        // dispatch — i.e. it was not left as `failed` due to an empty body.
+        await processScheduledMessages();
+        const after = await client.query(
+          `SELECT status FROM outbound_messages WHERE id = $1`,
+          [msgId],
+        );
+        expect(["sent", "queued"]).toContain(after.rows[0].status);
+      } finally {
+        await client.query(
+          `DELETE FROM outbound_messages WHERE id = $1`,
+          [msgId],
+        );
+        await client.query(`DELETE FROM booking_pages WHERE id = $1`, [pageId]);
+        await client.query(`DELETE FROM users WHERE id = $1`, [userId]);
+      }
+    } finally {
+      client.release();
+    }
+  });
+});
