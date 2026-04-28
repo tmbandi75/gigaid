@@ -97,3 +97,18 @@ export function formatPlanSwitchedMessage(
 ): string {
   return `Switched to ${planName}. Your new rate of ${safePriceCentsExact(planPriceCents)}/mo starts next billing cycle.`;
 }
+
+/**
+ * Builds the user-facing confirmation message rendered when a customer
+ * upgrades to a higher paid plan via `/api/subscription/change-plan`.
+ * Mirrors `formatPlanSwitchedMessage` but takes effect immediately and
+ * notes that prorated charges are applied for the remainder of the
+ * current billing cycle, so users know exactly what their new monthly
+ * bill will be.
+ */
+export function formatPlanUpgradedMessage(
+  planName: string,
+  planPriceCents: number,
+): string {
+  return `Upgraded to ${planName}. Your new rate of ${safePriceCentsExact(planPriceCents)}/mo, with prorated charges applied for the rest of this billing cycle.`;
+}
