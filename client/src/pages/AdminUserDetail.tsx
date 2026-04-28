@@ -520,6 +520,109 @@ function OutboundMessagesSection({ userId }: { userId: string }) {
   );
 }
 
+interface SmsOptOutEventRow {
+  id: string;
+  fromPhoneMasked: string;
+  body: string | null;
+  twilioSid: string | null;
+  resolution: string;
+  createdAt: string;
+}
+
+function SmsOptOutEventsSection({ userId }: { userId: string }) {
+  const { data, isLoading } = useQuery<{ events: SmsOptOutEventRow[] }>({
+    queryKey: QUERY_KEYS.adminUserSmsOptOutEvents(userId),
+    queryFn: async () => {
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(
+        `/api/admin/users/${userId}/sms-opt-out-events?limit=20`,
+        { credentials: "include", headers },
+      );
+      if (!res.ok) throw new Error("Failed to fetch SMS opt-out events");
+      return res.json();
+    },
+  });
+
+  const events = data?.events || [];
+
+  return (
+    <Card data-testid="card-sms-opt-out-events">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <BellOff className="h-4 w-4" />
+          STOP Audit History ({events.length})
+        </CardTitle>
+        <CardDescription>
+          Inbound STOP webhooks matched to this user (most recent first).
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex justify-center py-6">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : events.length === 0 ? (
+          <p
+            className="text-muted-foreground text-center py-4"
+            data-testid="text-sms-opt-out-events-empty"
+          >
+            No matched STOP events for this user.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="py-2 pr-3">When</th>
+                  <th className="py-2 pr-3">From</th>
+                  <th className="py-2 pr-3">Body</th>
+                  <th className="py-2 pr-3">Twilio SID</th>
+                </tr>
+              </thead>
+              <tbody>
+                {events.map((e) => (
+                  <tr
+                    key={e.id}
+                    className="border-t align-top"
+                    data-testid={`row-sms-opt-out-event-${e.id}`}
+                  >
+                    <td
+                      className="py-2 pr-3 whitespace-nowrap text-muted-foreground"
+                      data-testid={`text-sms-opt-out-when-${e.id}`}
+                    >
+                      {new Date(e.createdAt).toLocaleString()}
+                    </td>
+                    <td
+                      className="py-2 pr-3 font-mono text-xs"
+                      data-testid={`text-sms-opt-out-from-${e.id}`}
+                    >
+                      {e.fromPhoneMasked}
+                    </td>
+                    <td
+                      className="py-2 pr-3 text-muted-foreground"
+                      data-testid={`text-sms-opt-out-body-${e.id}`}
+                    >
+                      {e.body || "—"}
+                    </td>
+                    <td
+                      className="py-2 pr-3 font-mono text-xs text-muted-foreground"
+                      data-testid={`text-sms-opt-out-sid-${e.id}`}
+                    >
+                      {e.twilioSid || "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function ExternalLinksSection({ userId }: { userId: string }) {
   const { data } = useQuery<any>({
     queryKey: QUERY_KEYS.adminExternalLinks(),
@@ -1311,9 +1414,10 @@ export default function AdminUserDetail() {
         </div>
 
         <Tabs defaultValue="timeline">
-          <TabsList className="w-full grid grid-cols-5">
+          <TabsList className="w-full grid grid-cols-6">
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="messages" data-testid="tab-outbound-messages">Outbound Messages</TabsTrigger>
+            <TabsTrigger value="stop-audit" data-testid="tab-stop-audit">STOP Audit</TabsTrigger>
             <TabsTrigger value="audit">Audit Log</TabsTrigger>
             <TabsTrigger value="links">External Links</TabsTrigger>
             <TabsTrigger value="actions">Actions</TabsTrigger>
@@ -1323,6 +1427,9 @@ export default function AdminUserDetail() {
           </TabsContent>
           <TabsContent value="messages" className="mt-4">
             <OutboundMessagesSection userId={userId} />
+          </TabsContent>
+          <TabsContent value="stop-audit" className="mt-4">
+            <SmsOptOutEventsSection userId={userId} />
           </TabsContent>
           <TabsContent value="audit" className="mt-4">
             <AuditSection userId={userId} />

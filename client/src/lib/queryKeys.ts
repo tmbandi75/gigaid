@@ -138,6 +138,7 @@ export const QUERY_KEYS = {
       ? ([`/api/admin/sms/clear-phone-audit?${queryParams}`] as const)
       : (["/api/admin/sms/clear-phone-audit"] as const),
   adminUserOutboundMessages: (userId: string) => ["/api/admin/users", userId, "outbound-messages"] as const,
+  adminUserSmsOptOutEvents: (userId: string) => ["/api/admin/users", userId, "sms-opt-out-events"] as const,
   adminSystemJobs: () => ["/api/admin/system/jobs"] as const,
   adminSystemErrors: () => ["/api/admin/system/errors"] as const,
   adminAnalyticsCohorts: () => ["/api/admin/analytics/cohorts"] as const,

@@ -12,6 +12,7 @@ import {
   messagingSuppression,
   adminActionKeys,
   outboundMessages,
+  smsOptOutEvents,
   type AdminActionKey
 } from "@shared/schema";
 import { eq, desc, and, or, ilike, gte, count, sql, isNull, isNotNull, lte } from "drizzle-orm";
@@ -1458,6 +1459,56 @@ router.get("/:userId/failed-invoices", async (req: AdminRequest, res) => {
   } catch (error) {
     logger.error("[Admin Users] Failed invoices error:", error);
     res.status(500).json({ error: "Failed to fetch invoices" });
+  }
+});
+
+// Recent matched STOP webhook deliveries for a single user. Provides a
+// per-user audit trail (timestamp, masked From, body snippet, Twilio SID)
+// that admins can review without leaving the user detail page. Only rows
+// the resolver matched to this user are returned.
+// Cap the body snippet length so the audit panel stays compact and does
+// not echo unbounded inbound text (the source body is already capped at
+// 30 chars upstream, but we re-trim defensively here).
+const SMS_OPT_OUT_BODY_SNIPPET_MAX = 80;
+
+function truncateBodySnippet(body: string | null): string | null {
+  if (body === null || body === undefined) return null;
+  if (body.length <= SMS_OPT_OUT_BODY_SNIPPET_MAX) return body;
+  return `${body.slice(0, SMS_OPT_OUT_BODY_SNIPPET_MAX - 1)}…`;
+}
+
+router.get("/:userId/sms-opt-out-events", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const requestedLimit = parseInt((req.query.limit as string) || "20", 10) || 20;
+    const limit = Math.min(Math.max(requestedLimit, 1), 100);
+
+    const rows = await db
+      .select({
+        id: smsOptOutEvents.id,
+        fromPhoneMasked: smsOptOutEvents.fromPhoneMasked,
+        body: smsOptOutEvents.body,
+        twilioSid: smsOptOutEvents.twilioSid,
+        resolution: smsOptOutEvents.resolution,
+        createdAt: smsOptOutEvents.createdAt,
+      })
+      .from(smsOptOutEvents)
+      .where(and(
+        eq(smsOptOutEvents.userId, userId),
+        eq(smsOptOutEvents.resolution, "matched"),
+      ))
+      .orderBy(desc(smsOptOutEvents.createdAt))
+      .limit(limit);
+
+    const events = rows.map(row => ({
+      ...row,
+      body: truncateBodySnippet(row.body),
+    }));
+
+    res.json({ events });
+  } catch (error) {
+    logger.error("[Admin Users] SMS opt-out events error:", error);
+    res.status(500).json({ error: "Failed to fetch SMS opt-out events" });
   }
 });
 
