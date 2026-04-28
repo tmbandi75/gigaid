@@ -152,6 +152,43 @@ export default function Settings() {
     phoneLinkFlowDoneRef.current?.();
     phoneLinkFlowDoneRef.current = null;
   };
+
+  // Scroll into view when a hash anchor (e.g. "#sms-activity" from the
+  // held-back-text toast) is present. The element may not be mounted
+  // immediately on first render, so we briefly retry.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash?.replace(/^#/, "");
+    if (!hash) return;
+
+    let attempts = 0;
+    const maxAttempts = 20; // ~2s of polling
+    let cancelled = false;
+    const tryScroll = () => {
+      if (cancelled) return;
+      const el = document.getElementById(hash);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        // Clear the hash so re-opening Settings later doesn't auto-scroll
+        // again. Use replaceState so we don't push a history entry.
+        try {
+          const url = `${window.location.pathname}${window.location.search}`;
+          window.history.replaceState(null, "", url);
+        } catch {
+          /* non-fatal */
+        }
+        return;
+      }
+      attempts += 1;
+      if (attempts < maxAttempts) {
+        setTimeout(tryScroll, 100);
+      }
+    };
+    tryScroll();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   useEffect(() => {
     if (profileQuery.data) {
       setAnalyticsEnabled(profileQuery.data.analyticsEnabled ?? false);

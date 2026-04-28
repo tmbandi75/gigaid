@@ -14,6 +14,7 @@ import { useEffect, type ReactNode } from "react";
 import { getPlatform } from "@/lib/platform";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscriptionRestore } from "@/hooks/useSubscriptionRestore";
+import { useSmsHeldBackToast } from "@/hooks/useSmsHeldBackToast";
 import SplashPage from "@/pages/SplashPage";
 import ForceLogout from "@/pages/force-logout";
 
@@ -221,6 +222,7 @@ function AuthenticatedApp() {
   const { firebaseUser, authLoading, lastAuthEventTs, callbackCount, isTokenReady } = useFirebaseAuth();
   const { user } = useAuth();
   useSubscriptionRestore(user);
+  useSmsHeldBackToast(user);
   
   // CRITICAL: Block ALL routing decisions until Firebase auth state is resolved
   // No redirects, no rendering decisions until authLoading === false

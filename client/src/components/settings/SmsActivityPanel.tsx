@@ -66,7 +66,11 @@ export function SmsActivityPanel() {
   const messages = data?.messages ?? [];
 
   return (
-    <div className="space-y-2" data-testid="panel-sms-activity">
+    <div
+      id="sms-activity"
+      className="space-y-2 scroll-mt-20"
+      data-testid="panel-sms-activity"
+    >
       <div className="flex items-center justify-between gap-2">
         <p className="font-medium text-sm">SMS activity</p>
         <span className="text-xs text-muted-foreground">Last 7 days</span>
