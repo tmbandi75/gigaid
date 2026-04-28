@@ -2,15 +2,17 @@ import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, bookingPages, bookingPageEvents, outboundMessages, bookingPageEventTypes, unclaimedHeadlineVariants } from "@shared/schema";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { users, bookingPages, bookingPageEvents, outboundMessages, otpCodes, bookingPageEventTypes, unclaimedHeadlineVariants } from "@shared/schema";
+import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { signAppJwt, verifyAppJwt, isAppJwtConfigured } from "./appJwt";
 import { isAuthenticated } from "./replit_integrations/auth/replitAuth";
 import { FIRST_BOOKING_DISQUALIFYING_EVENT_TYPES } from "./postJobMomentum";
 import { buildBookingLink } from "./lib/bookingLinkUrl";
 import { generateBookingSlug, writeUserSlugWithRetry } from "./lib/bookingSlug";
 import { logger } from "./lib/logger";
-import { randomUUID } from "crypto";
+import { randomUUID, randomInt } from "crypto";
+import { verifyFirebaseIdToken, isFirebaseConfigured } from "./firebaseAdmin";
+import { sendSMS } from "./twilio";
 
 const router = Router();
 
@@ -315,6 +317,297 @@ router.get("/first-booking/banner-state", isAuthenticated, async (req: Request, 
   } catch (err: any) {
     logger.error("[FirstBooking] banner-state error:", err?.message);
     return res.status(500).json({ error: "Lookup failed" });
+  }
+});
+
+// =====================================================================
+// "Secure your account" flow for users who claimed a booking page.
+// A claim creates a lightweight account with no email, no password, and
+// no verified phone — just a JWT in localStorage. If the browser is
+// cleared the user loses access permanently. These endpoints let the
+// first-booking screen attach a recoverable identity to that account:
+//   * link a Firebase identity (email+password / Google / Apple)
+//   * verify the user's phone via SMS code (recorded as phoneVerifiedAt
+//     so future claim flows can safely merge by phone)
+// All endpoints require the caller's claim JWT. They refuse to operate
+// on accounts that already have a Firebase identity, on the assumption
+// that those users went through the regular Firebase exchange flow.
+// =====================================================================
+
+const SECURE_OTP_TTL_MINUTES = 10;
+const SECURE_OTP_MIN_RESEND_SECONDS = 30;
+
+function normalizePhoneE164(input?: string | null): string | null {
+  if (!input) return null;
+  const digits = String(input).replace(/\D/g, "");
+  if (!digits) return null;
+  // Default to US country code when caller omits it (matches the
+  // formatting Twilio applies inside sendSMS).
+  const withCc = digits.length === 10 ? `1${digits}` : digits;
+  return `+${withCc}`;
+}
+
+async function requireClaimUser(
+  req: Request,
+  res: Response,
+): Promise<{ id: string } | null> {
+  const userId = getUserIdFromBearer(req);
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return null;
+  }
+  const [user] = await db
+    .select({
+      id: users.id,
+      firebaseUid: users.firebaseUid,
+      authProvider: users.authProvider,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (!user) {
+    res.status(401).json({ error: "Unauthorized" });
+    return null;
+  }
+  return { id: user.id };
+}
+
+router.get("/secure-account/status", async (req: Request, res: Response) => {
+  try {
+    const userId = getUserIdFromBearer(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+    const [user] = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        phone: users.phone,
+        phoneE164: users.phoneE164,
+        firebaseUid: users.firebaseUid,
+        authProvider: users.authProvider,
+        phoneVerifiedAt: users.phoneVerifiedAt,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
+    return res.json({
+      hasRecoverableIdentity: !!user.firebaseUid,
+      hasVerifiedPhone: !!user.phoneVerifiedAt,
+      email: user.email ?? null,
+      phone: user.phoneE164 ?? user.phone ?? null,
+      authProvider: user.authProvider ?? null,
+    });
+  } catch (err: any) {
+    logger.error("[FirstBooking] secure-account status error:", err?.message);
+    return res.status(500).json({ error: "Lookup failed" });
+  }
+});
+
+const linkFirebaseSchema = z.object({
+  idToken: z.string().min(10),
+});
+
+router.post("/secure-account/link-firebase", async (req: Request, res: Response) => {
+  try {
+    const caller = await requireClaimUser(req, res);
+    if (!caller) return;
+
+    if (!isAppJwtConfigured()) {
+      return res.status(503).json({ error: "Authentication is not fully configured." });
+    }
+    if (!isFirebaseConfigured()) {
+      return res.status(503).json({ error: "Firebase authentication is not configured." });
+    }
+
+    const parsed = linkFirebaseSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "idToken is required" });
+
+    const decoded = await verifyFirebaseIdToken(parsed.data.idToken);
+    if (!decoded) return res.status(401).json({ error: "Invalid Firebase token" });
+
+    const firebaseUid = decoded.uid;
+    const email = decoded.email;
+    const emailNormalized = email ? email.toLowerCase().trim() : undefined;
+    const phoneFromToken = decoded.phone_number;
+    const name = decoded.name;
+    const photo = decoded.picture;
+
+    // Refuse to silently steal a Firebase identity that another user is
+    // already using. The owner of that identity should sign in normally
+    // (POST /api/auth/web/firebase) instead, and we can decide later
+    // whether to merge.
+    const conflictClauses = [eq(users.firebaseUid, firebaseUid)];
+    if (emailNormalized) conflictClauses.push(eq(users.emailNormalized, emailNormalized));
+    if (phoneFromToken) conflictClauses.push(eq(users.phoneE164, phoneFromToken));
+    const conflictRows = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(
+        sql`${users.id} <> ${caller.id}`,
+        or(...conflictClauses),
+      ));
+    if (conflictRows.length > 0) {
+      return res.status(409).json({
+        error: "This identity is already linked to a different account. Sign in with it instead.",
+        code: "identity_in_use",
+      });
+    }
+
+    const now = new Date().toISOString();
+    const updates: Record<string, unknown> = {
+      firebaseUid,
+      authProvider: "firebase",
+      updatedAt: now,
+    };
+    if (email) updates.email = email;
+    if (emailNormalized) updates.emailNormalized = emailNormalized;
+    if (phoneFromToken) {
+      updates.phone = phoneFromToken;
+      updates.phoneE164 = phoneFromToken;
+      // Firebase only issues a phone provider sign-in after it has itself
+      // verified the SMS code, so trust this as a verified phone too.
+      updates.phoneVerifiedAt = now;
+    }
+    if (name) updates.name = name;
+    if (photo) updates.photo = photo;
+
+    await db.update(users).set(updates).where(eq(users.id, caller.id));
+
+    const newToken = signAppJwt({
+      sub: caller.id,
+      provider: "firebase",
+      email_normalized: emailNormalized,
+      firebase_uid: firebaseUid,
+    });
+
+    return res.json({
+      ok: true,
+      token: newToken,
+      user: {
+        id: caller.id,
+        email: email ?? null,
+        phone: phoneFromToken ?? null,
+        authProvider: "firebase",
+      },
+    });
+  } catch (err: any) {
+    logger.error("[FirstBooking] link-firebase error:", err?.message);
+    return res.status(500).json({ error: "Link failed" });
+  }
+});
+
+const sendOtpSchema = z.object({
+  phone: z.string().trim().min(7).max(32),
+});
+
+router.post("/secure-account/send-otp", async (req: Request, res: Response) => {
+  try {
+    const caller = await requireClaimUser(req, res);
+    if (!caller) return;
+
+    const parsed = sendOtpSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Phone is required" });
+    const phoneE164 = normalizePhoneE164(parsed.data.phone);
+    if (!phoneE164) return res.status(400).json({ error: "Invalid phone number" });
+
+    // Cheap resend-throttle to keep a hostile or buggy client from billing
+    // us for repeated SMS sends to the same number. We look at the most
+    // recent OTP for this phone and refuse if it was issued less than
+    // SECURE_OTP_MIN_RESEND_SECONDS ago.
+    const [latest] = await db
+      .select()
+      .from(otpCodes)
+      .where(eq(otpCodes.identifier, phoneE164))
+      .orderBy(desc(otpCodes.createdAt))
+      .limit(1);
+    if (latest) {
+      const createdAt = new Date(latest.createdAt as string).getTime();
+      const ageSec = (Date.now() - createdAt) / 1000;
+      if (Number.isFinite(ageSec) && ageSec < SECURE_OTP_MIN_RESEND_SECONDS) {
+        return res.status(429).json({
+          error: "Please wait a few seconds before requesting another code.",
+          retryAfterSeconds: Math.ceil(SECURE_OTP_MIN_RESEND_SECONDS - ageSec),
+        });
+      }
+    }
+
+    const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+    const expiresAt = new Date(Date.now() + SECURE_OTP_TTL_MINUTES * 60 * 1000).toISOString();
+
+    await storage.createOtp({
+      identifier: phoneE164,
+      code,
+      type: "phone",
+      expiresAt,
+    });
+
+    const body = `Your GigAid verification code is ${code}. It expires in ${SECURE_OTP_TTL_MINUTES} minutes.`;
+    const result = await sendSMS(phoneE164, body);
+    if (!result.success) {
+      logger.warn("[FirstBooking] secure-account OTP send failed:", result.errorCode, result.errorMessage);
+      return res.status(502).json({
+        error: result.errorMessage || "Failed to send verification code.",
+        code: result.errorCode || "SEND_FAILED",
+      });
+    }
+    return res.json({ ok: true, expiresInSeconds: SECURE_OTP_TTL_MINUTES * 60 });
+  } catch (err: any) {
+    logger.error("[FirstBooking] secure-account send-otp error:", err?.message);
+    return res.status(500).json({ error: "Failed to send code" });
+  }
+});
+
+const verifyOtpSchema = z.object({
+  phone: z.string().trim().min(7).max(32),
+  code: z.string().trim().regex(/^\d{6}$/, "Code must be 6 digits"),
+});
+
+router.post("/secure-account/verify-otp", async (req: Request, res: Response) => {
+  try {
+    const caller = await requireClaimUser(req, res);
+    if (!caller) return;
+
+    const parsed = verifyOtpSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Phone and 6-digit code are required" });
+    const phoneE164 = normalizePhoneE164(parsed.data.phone);
+    if (!phoneE164) return res.status(400).json({ error: "Invalid phone number" });
+
+    const otp = await storage.getOtp(phoneE164, parsed.data.code);
+    if (!otp) return res.status(400).json({ error: "Invalid code" });
+    if (otp.verified) return res.status(400).json({ error: "Code already used" });
+    const exp = new Date(otp.expiresAt).getTime();
+    if (!Number.isFinite(exp) || Date.now() > exp) {
+      return res.status(400).json({ error: "Code has expired. Send a new one." });
+    }
+
+    // Refuse to attach this phone to multiple users. If the verified
+    // number already belongs to a different real account, surface that
+    // so the user can sign in there instead of creating a duplicate.
+    const phoneOwners = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.phoneE164, phoneE164), sql`${users.id} <> ${caller.id}`));
+    if (phoneOwners.length > 0) {
+      return res.status(409).json({
+        error: "This phone number is already in use on another account.",
+        code: "phone_in_use",
+      });
+    }
+
+    await storage.verifyOtp(otp.id);
+
+    const now = new Date().toISOString();
+    await db.update(users).set({
+      phone: phoneE164,
+      phoneE164,
+      phoneVerifiedAt: now,
+      updatedAt: now,
+    }).where(eq(users.id, caller.id));
+
+    return res.json({ ok: true, phone: phoneE164, phoneVerifiedAt: now });
+  } catch (err: any) {
+    logger.error("[FirstBooking] secure-account verify-otp error:", err?.message);
+    return res.status(500).json({ error: "Failed to verify code" });
   }
 });
 

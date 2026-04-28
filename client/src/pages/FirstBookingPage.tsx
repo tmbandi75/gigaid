@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { getAuthToken } from "@/lib/authToken";
 import { buildBookingLink } from "@/lib/bookingBaseUrl";
+import { SecureAccountCard } from "@/components/first-booking/SecureAccountCard";
 
 interface BookingPageDto {
   id: string;
@@ -183,6 +184,8 @@ export default function FirstBookingPage() {
             </p>
           )}
         </div>
+
+        <SecureAccountCard />
 
         <div
           className="flex items-center justify-between gap-1 rounded-2xl border border-slate-200 bg-white px-3 py-4 shadow-sm sm:gap-2 sm:px-4"

@@ -180,6 +180,11 @@ export const users = pgTable("users", {
 
   // Apple Review demo account protection
   isReviewAccount: boolean("is_review_account").default(false),
+
+  // Phone verification (set when the user completes a self-service OTP
+  // challenge, e.g. on the post-claim "Secure your account" flow). When
+  // set we trust this phone for future identity-merge operations.
+  phoneVerifiedAt: text("phone_verified_at"),
 }, (table) => [
   // Database-level guarantee that no two users can ever share the same
   // booking-link slug. Partial so multiple users can still legitimately have
