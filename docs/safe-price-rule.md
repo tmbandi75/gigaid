@@ -20,7 +20,9 @@ none of the following patterns are allowed:
 
 A Jest test (`tests/lib/noRawPriceTemplates.test.ts`) walks every client TS/TSX
 file with `@typescript-eslint/typescript-estree` and fails CI if any of these
-patterns appears.
+patterns appears. The scanner is wired into the `safe-price-scan` validation
+command, which acts as a pre-merge gate — a failing scan blocks the task from
+being marked complete and the offending file/line is printed in the run log.
 
 ## Helpers
 
@@ -103,3 +105,10 @@ npx jest --selectProjects lib --testPathPatterns noRawPriceTemplates --no-cache
 
 The test will print every offending file, line, and snippet. Migrate the call
 to the appropriate helper, then re-run.
+
+## Pre-merge enforcement
+
+The same scanner is registered as the `safe-price-scan` validation command so
+it runs automatically before a task can be merged. If any client file
+introduces a raw `$` price pattern the scan fails, the merge is blocked, and
+the offending file/line/snippet appears in the validation log.
