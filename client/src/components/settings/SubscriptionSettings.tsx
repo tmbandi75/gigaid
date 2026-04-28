@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { safePriceCentsExact, safePriceExact } from "@/lib/safePrice";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
@@ -566,7 +567,7 @@ export function SubscriptionSettings() {
                 </span>
                 {!isFree && (
                   <span className="text-sm text-muted-foreground" data-testid="badge-plan-price">
-                    ${price.toFixed(2)}/month
+                    {safePriceExact(price)}/month
                   </span>
                 )}
               </div>
@@ -696,7 +697,7 @@ export function SubscriptionSettings() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-sm">{plan.name}</span>
                         {plan.price > 0 ? (
-                          <span className="text-xs text-muted-foreground font-medium">${plan.price.toFixed(2)}/mo</span>
+                          <span className="text-xs text-muted-foreground font-medium">{safePriceExact(plan.price)}/mo</span>
                         ) : (
                           <span className="text-xs text-muted-foreground font-medium">Free</span>
                         )}
@@ -929,7 +930,7 @@ export function SubscriptionSettings() {
                     <div className="flex items-center gap-2 shrink-0">
                       <div className="text-right">
                         <p className="text-sm font-medium">
-                          ${(invoice.amount / 100).toFixed(2)}
+                          {safePriceCentsExact(invoice.amount)}
                         </p>
                         <Badge
                           variant={invoice.status === "paid" ? "secondary" : "outline"}

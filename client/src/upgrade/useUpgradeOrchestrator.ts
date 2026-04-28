@@ -4,6 +4,7 @@ import { trackEvent } from "@/components/PostHogProvider";
 import { THRESHOLDS, MONETIZABLE_MOMENTS } from "./upgradeConfig";
 import { canShowPrompt, markPromptShown, getOrAssignVariant } from "./upgradeState";
 import { getCopy } from "./upgradeCopy";
+import { safePriceCents } from "@/lib/safePrice";
 import type {
   UpgradeTriggerType,
   UpgradeVariant,
@@ -192,7 +193,7 @@ export function useUpgradeOrchestrator({
 
       const copy = getCopy(capabilityKey, variant, "stall_detected");
       const stallTitle = moneyAtRisk && moneyAtRisk > 0
-        ? `$${(moneyAtRisk / 100).toFixed(0)} at risk`
+        ? `${safePriceCents(moneyAtRisk)} at risk`
         : copy.title;
 
       const payload = buildPayload("stall_detected", {

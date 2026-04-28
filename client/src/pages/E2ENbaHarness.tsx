@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { safePriceCents } from "@/lib/safePrice";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -97,7 +98,7 @@ export default function E2ENbaHarness() {
           >
             <CardContent className="p-5">
               <p className="text-3xl font-bold text-foreground mb-1">
-                ${(stats.moneyWaiting / 100).toFixed(0)}
+                {safePriceCents(stats.moneyWaiting)}
               </p>
               <p className="text-sm text-muted-foreground mb-4">
                 waiting to be collected

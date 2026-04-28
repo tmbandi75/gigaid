@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { safePriceCents, safePriceCentsExact, safePriceExact } from "@/lib/safePrice";
 import { getCurrentPosition } from "@/lib/nativeGeolocation";
 import { useLocation, useParams, useSearch, Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -199,7 +200,7 @@ function DepositSection({ job }: { job: Job }) {
                   Deposit Received
                 </>
               ) : (
-                `$${(depositStatus.depositOutstandingCents / 100).toFixed(2)} pending`
+                `${safePriceCentsExact(depositStatus.depositOutstandingCents)} pending`
               )}
             </Badge>
           )}
@@ -209,16 +210,16 @@ function DepositSection({ job }: { job: Job }) {
           <div className="space-y-2 p-3 rounded-lg bg-muted/50">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Deposit requested:</span>
-              <span className="font-medium">${(depositStatus.depositRequestedCents / 100).toFixed(2)}</span>
+              <span className="font-medium">{safePriceCentsExact(depositStatus.depositRequestedCents)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Deposit paid:</span>
-              <span className="font-medium text-emerald-600">${(depositStatus.depositPaidCents / 100).toFixed(2)}</span>
+              <span className="font-medium text-emerald-600">{safePriceCentsExact(depositStatus.depositPaidCents)}</span>
             </div>
             {depositStatus.depositOutstandingCents > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Outstanding:</span>
-                <span className="font-medium text-amber-600">${(depositStatus.depositOutstandingCents / 100).toFixed(2)}</span>
+                <span className="font-medium text-amber-600">{safePriceCentsExact(depositStatus.depositOutstandingCents)}</span>
               </div>
             )}
           </div>
@@ -280,11 +281,11 @@ function DepositSection({ job }: { job: Job }) {
               <div className="flex justify-between">
                 <span className="text-emerald-700 dark:text-emerald-400">Deposit preview:</span>
                 <span className="font-semibold text-emerald-700 dark:text-emerald-400">
-                  ${depositPreview.toFixed(2)}
+                  {safePriceExact(depositPreview)}
                 </span>
               </div>
               <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-1">
-                of ${priceInDollars.toFixed(2)} job total (max 30%)
+                of {safePriceExact(priceInDollars)} job total (max 30%)
               </p>
             </div>
 
@@ -1045,7 +1046,7 @@ export default function JobForm() {
                                   <div className="min-w-0 flex-1">
                                     <p className="text-sm font-medium truncate">{template.name}</p>
                                     <div className="flex items-center gap-2 mt-0.5">
-                                      <span className="text-xs text-muted-foreground">${(template.defaultPriceCents / 100).toFixed(0)}</span>
+                                      <span className="text-xs text-muted-foreground">{safePriceCents(template.defaultPriceCents)}</span>
                                       <span className="text-xs text-muted-foreground/50">|</span>
                                       <span className="text-xs text-muted-foreground">{template.estimatedDurationMinutes}min</span>
                                     </div>

@@ -30,6 +30,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import type { DashboardSummary, Job, Lead, Invoice } from "@shared/schema";
+import { safePriceCents } from "@/lib/safePrice";
 
 interface MoneyDashboardData {
   weeklyRevenue: number;
@@ -415,9 +416,7 @@ export default function ViewAllStats() {
                         />
                         <YAxis
                           tick={{ fontSize: 10 }}
-                          tickFormatter={(v) =>
-                            `$${Math.round(v / 100)}`
-                          }
+                          tickFormatter={(v) => safePriceCents(v)}
                           className="text-muted-foreground"
                           width={45}
                         />

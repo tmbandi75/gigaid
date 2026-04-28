@@ -18,6 +18,7 @@ import { isHardGated } from "@shared/gatingConfig";
 import { Plan, PLAN_PRICES_DOLLARS } from "@shared/plans";
 import { STRIPE_ENABLED } from "@shared/stripeConfig";
 import { startSubscriptionUpgrade } from "@/lib/stripeCheckout";
+import { safePriceExact } from "@/lib/safePrice";
 import {
   Dialog,
   DialogContent,
@@ -844,7 +845,7 @@ export default function BookingRequests() {
         onOpenChange={setShowBlockingIntercept}
         title="Protect this job with a deposit"
         description="Deposits prevent no-shows and late cancellations. Available on Pro+."
-        price={`$${PLAN_PRICES_DOLLARS[Plan.PRO_PLUS].toFixed(2)} / month`}
+        price={`${safePriceExact(PLAN_PRICES_DOLLARS[Plan.PRO_PLUS])} / month`}
         onConfirm={() => {
           startSubscriptionUpgrade({
             plan: "pro_plus",

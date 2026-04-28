@@ -1,5 +1,11 @@
 type SafePriceOpts = { placeholder?: string };
 
+type SafePriceLocaleOpts = SafePriceOpts & {
+  locale?: string | string[];
+  minimumFractionDigits?: number;
+  maximumFractionDigits?: number;
+};
+
 const DEFAULT_PLACEHOLDER = "--";
 
 function toFiniteNumber(value: unknown): number | null {
@@ -41,6 +47,49 @@ export function safePriceRange(
   if (lowNum === null || highNum === null) return placeholder;
   if (lowNum <= 0 || highNum <= 0) return placeholder;
   return `$${Math.round(lowNum)} – $${Math.round(highNum)}`;
+}
+
+/**
+ * Formats a dollar amount with exactly two decimal places (e.g. "$49.00").
+ * Use this for surfaces that need two-decimal precision (plan prices,
+ * deposit amounts already-in-dollars). Returns the placeholder for any
+ * non-finite / non-positive input so "$NaN" can never escape.
+ */
+export function safePriceExact(value: unknown, opts: SafePriceOpts = {}): string {
+  const placeholder = opts.placeholder ?? DEFAULT_PLACEHOLDER;
+  const num = toFiniteNumber(value);
+  if (num === null || num <= 0) return placeholder;
+  return `$${num.toFixed(2)}`;
+}
+
+/**
+ * Cents → "$X.YY" (two decimals). Use for deposit/invoice/referral
+ * surfaces that need penny precision.
+ */
+export function safePriceCentsExact(cents: unknown, opts: SafePriceOpts = {}): string {
+  const placeholder = opts.placeholder ?? DEFAULT_PLACEHOLDER;
+  const num = toFiniteNumber(cents);
+  if (num === null || num <= 0) return placeholder;
+  return `$${(num / 100).toFixed(2)}`;
+}
+
+/**
+ * Cents → locale-formatted "$X,XXX[.YY]" using Intl thousands grouping.
+ * Defaults to whole dollars (no decimals); pass `minimumFractionDigits`
+ * / `maximumFractionDigits` for penny precision (admin billing).
+ */
+export function safePriceCentsLocale(
+  cents: unknown,
+  opts: SafePriceLocaleOpts = {},
+): string {
+  const placeholder = opts.placeholder ?? DEFAULT_PLACEHOLDER;
+  const num = toFiniteNumber(cents);
+  if (num === null || num <= 0) return placeholder;
+  const formatted = (num / 100).toLocaleString(opts.locale, {
+    minimumFractionDigits: opts.minimumFractionDigits ?? 0,
+    maximumFractionDigits: opts.maximumFractionDigits ?? 0,
+  });
+  return `$${formatted}`;
 }
 
 export function isFinitePositiveNumber(value: unknown): boolean {

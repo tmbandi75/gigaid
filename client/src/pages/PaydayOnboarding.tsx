@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { safePriceCents } from "@/lib/safePrice";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/apiFetch";
@@ -506,7 +507,7 @@ function StepTemplates({ onNext }: { onNext: () => void }) {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">{tpl.name}</p>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  {tpl.price != null && <span>${(tpl.price / 100).toFixed(0)}</span>}
+                  {tpl.price != null && <span>{safePriceCents(tpl.price)}</span>}
                   {tpl.duration != null && <span>{tpl.duration} min</span>}
                 </div>
               </div>

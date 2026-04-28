@@ -1,4 +1,5 @@
 import { useLocation, useParams } from "wouter";
+import { safePriceCentsExact } from "@/lib/safePrice";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -459,7 +460,7 @@ export default function LeadSummary() {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Price:</span>
                   <span className="font-bold text-lg" data-testid="text-pc-price">
-                    ${((activePriceConfirmation.agreedPrice || 0) / 100).toFixed(2)}
+                    {safePriceCentsExact(activePriceConfirmation.agreedPrice)}
                   </span>
                 </div>
                 {activePriceConfirmation.notes && (

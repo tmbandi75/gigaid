@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { safePriceCentsExact } from "@/lib/safePrice";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
@@ -170,7 +171,7 @@ export default function Referrals() {
               <p className="text-xs text-muted-foreground">Referred</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-foreground" data-testid="text-total-rewards">${((referralData?.totalRewards || 0) / 100).toFixed(2)}</p>
+              <p className="text-2xl font-bold text-foreground" data-testid="text-total-rewards">{safePriceCentsExact(referralData?.totalRewards)}</p>
               <p className="text-xs text-muted-foreground">Rewards</p>
             </div>
           </div>
@@ -266,7 +267,7 @@ export default function Referrals() {
               <div className="h-12 w-12 mx-auto mb-2 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
                 <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
-              <p className="text-3xl font-bold text-green-600">${(totalRewards / 100).toFixed(2)}</p>
+              <p className="text-3xl font-bold text-green-600">{safePriceCentsExact(totalRewards)}</p>
               <p className="text-sm text-muted-foreground">Total Rewards</p>
             </CardContent>
           </Card>
@@ -282,7 +283,7 @@ export default function Referrals() {
                   </div>
                   <div>
                     <p className="font-semibold text-lg">
-                      ${(redeemableAmount / 100).toFixed(2)} Available
+                      {safePriceCentsExact(redeemableAmount)} Available
                     </p>
                     <p className="text-sm text-muted-foreground">
                       From {redeemableReferrals.length} referral{redeemableReferrals.length !== 1 ? "s" : ""}
@@ -366,7 +367,7 @@ export default function Referrals() {
                       </Badge>
                     ) : referral.status === "rewarded" && referral.rewardAmount && referral.rewardAmount > 0 ? (
                       <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                        +${(referral.rewardAmount / 100).toFixed(2)}
+                        +{safePriceCentsExact(referral.rewardAmount)}
                       </Badge>
                     ) : referral.status === "signed_up" ? (
                       <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">

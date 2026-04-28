@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { formatCurrency as baseFormatCurrency } from "@/lib/formatCurrency";
+import { safePrice, safePriceExact } from "@/lib/safePrice";
 import { TrendingUp, Users, DollarSign, BarChart3, Target, Loader2, Sparkles, ArrowUpRight, ArrowLeft, Share2, Info } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -654,7 +655,7 @@ export default function AdminAnalytics() {
                         <Badge variant="secondary">{p.plan}</Badge>
                         <span className="text-sm text-muted-foreground">({p.customers} customers)</span>
                       </div>
-                      <span className="font-bold">${p.mrr.toLocaleString()}</span>
+                      <span className="font-bold">{safePriceExact(p.mrr).replace(/\.00$/, "")}</span>
                     </div>
                   ))}
                 </div>
@@ -1022,7 +1023,7 @@ export default function AdminAnalytics() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Avg LTV</span>
-                        <span className="font-bold text-emerald-600">${p.avgLtv}</span>
+                        <span className="font-bold text-emerald-600">{safePrice(p.avgLtv)}</span>
                       </div>
                     </div>
                   </div>

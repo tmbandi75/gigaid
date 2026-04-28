@@ -5,6 +5,7 @@ import { Check, Zap, Shield, Users, ArrowLeft, Loader2, Star, TrendingUp } from 
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Plan, PLAN_PRICES_DOLLARS } from "@shared/plans";
+import { safePriceExact } from "@/lib/safePrice";
 import { startSubscriptionUpgrade, SubscriptionPlan } from "@/lib/stripeCheckout";
 import { Link, useLocation } from "wouter";
 import { useState, useEffect, useRef } from "react";
@@ -66,7 +67,7 @@ const PLANS: PlanInfo[] = [
     id: Plan.PRO,
     name: "Pro",
     price: PLAN_PRICES_DOLLARS[Plan.PRO],
-    priceLabel: `$${PLAN_PRICES_DOLLARS[Plan.PRO].toFixed(2)}`,
+    priceLabel: safePriceExact(PLAN_PRICES_DOLLARS[Plan.PRO]),
     monthlyPrice: "/month",
     cta: "Start Pro Trial",
     description: "For growing professionals",
@@ -86,7 +87,7 @@ const PLANS: PlanInfo[] = [
     id: Plan.PRO_PLUS,
     name: "Pro+",
     price: PLAN_PRICES_DOLLARS[Plan.PRO_PLUS],
-    priceLabel: `$${PLAN_PRICES_DOLLARS[Plan.PRO_PLUS].toFixed(2)}`,
+    priceLabel: safePriceExact(PLAN_PRICES_DOLLARS[Plan.PRO_PLUS]),
     monthlyPrice: "/month",
     cta: "Get Pro+",
     description: "Protect your time and money",
@@ -108,7 +109,7 @@ const PLANS: PlanInfo[] = [
     id: Plan.BUSINESS,
     name: "Business",
     price: PLAN_PRICES_DOLLARS[Plan.BUSINESS],
-    priceLabel: `$${PLAN_PRICES_DOLLARS[Plan.BUSINESS].toFixed(2)}`,
+    priceLabel: safePriceExact(PLAN_PRICES_DOLLARS[Plan.BUSINESS]),
     monthlyPrice: "/month",
     cta: "Go Business",
     description: "Scale your operation",

@@ -8,6 +8,9 @@
 import {
   safePrice,
   safePriceCents,
+  safePriceCentsExact,
+  safePriceCentsLocale,
+  safePriceExact,
   safePriceRange,
   safePriceRangeString,
   isFinitePositiveNumber,
@@ -221,6 +224,99 @@ describe("safePriceRangeString", () => {
       "n/a",
     );
     expect(safePriceRangeString("", { placeholder: "" })).toBe("");
+  });
+});
+
+describe("safePriceExact", () => {
+  it.each(BAD_INPUTS)(
+    "returns the default placeholder for %s",
+    (_label, value) => {
+      const out = safePriceExact(value);
+      expect(out).toBe("--");
+      expect(out).not.toMatch(/NaN/i);
+    },
+  );
+
+  it("returns the placeholder for 0 and negative dollars", () => {
+    expect(safePriceExact(0)).toBe("--");
+    expect(safePriceExact(-49)).toBe("--");
+  });
+
+  it("formats positive dollars with two decimals", () => {
+    expect(safePriceExact(49)).toBe("$49.00");
+    expect(safePriceExact(99.9)).toBe("$99.90");
+    expect(safePriceExact(0.5)).toBe("$0.50");
+  });
+
+  it("respects a custom placeholder", () => {
+    expect(safePriceExact(undefined, { placeholder: "TBD" })).toBe("TBD");
+  });
+});
+
+describe("safePriceCentsExact", () => {
+  it.each(BAD_INPUTS)(
+    "returns the default placeholder for %s",
+    (_label, value) => {
+      const out = safePriceCentsExact(value);
+      expect(out).toBe("--");
+      expect(out).not.toMatch(/NaN/i);
+    },
+  );
+
+  it("returns the placeholder for 0 and negative cents", () => {
+    expect(safePriceCentsExact(0)).toBe("--");
+    expect(safePriceCentsExact(-1500)).toBe("--");
+  });
+
+  it("formats positive cents with two decimals", () => {
+    expect(safePriceCentsExact(100)).toBe("$1.00");
+    expect(safePriceCentsExact(1500)).toBe("$15.00");
+    expect(safePriceCentsExact(149)).toBe("$1.49");
+    expect(safePriceCentsExact(99950)).toBe("$999.50");
+  });
+
+  it("respects a custom placeholder", () => {
+    expect(safePriceCentsExact(null, { placeholder: "—" })).toBe("—");
+  });
+});
+
+describe("safePriceCentsLocale", () => {
+  it.each(BAD_INPUTS)(
+    "returns the default placeholder for %s",
+    (_label, value) => {
+      const out = safePriceCentsLocale(value);
+      expect(out).toBe("--");
+      expect(out).not.toMatch(/NaN/i);
+    },
+  );
+
+  it("returns the placeholder for 0 and negative cents", () => {
+    expect(safePriceCentsLocale(0)).toBe("--");
+    expect(safePriceCentsLocale(-100)).toBe("--");
+  });
+
+  it("formats positive cents in whole dollars by default", () => {
+    expect(safePriceCentsLocale(123456)).toBe("$1,235");
+    expect(safePriceCentsLocale(100)).toBe("$1");
+  });
+
+  it("honors fraction-digit overrides for penny precision", () => {
+    expect(
+      safePriceCentsLocale(123456, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
+    ).toBe("$1,234.56");
+    expect(
+      safePriceCentsLocale(149, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
+    ).toBe("$1.49");
+  });
+
+  it("respects a custom placeholder", () => {
+    expect(safePriceCentsLocale(undefined, { placeholder: "n/a" })).toBe("n/a");
   });
 });
 

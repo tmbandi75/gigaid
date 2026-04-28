@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { safePrice } from "@/lib/safePrice";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -1577,7 +1578,7 @@ function ChannelsTab() {
               Flagged when activation &lt;{" "}
               <span className="font-medium text-foreground">{LOW_ACTIVATION_THRESHOLD}%</span>{" "}
               or CAC &gt;{" "}
-              <span className="font-medium text-foreground">${HIGH_CAC_THRESHOLD}</span>
+              <span className="font-medium text-foreground">{safePrice(HIGH_CAC_THRESHOLD)}</span>
             </span>
           </div>
         </div>
@@ -1674,7 +1675,7 @@ function ChannelsTab() {
                                 : "bg-muted text-muted-foreground",
                             )}
                           >
-                            ${cac}
+                            {safePrice(cac)}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">—</span>

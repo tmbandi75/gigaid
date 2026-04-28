@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { safePrice } from "@/lib/safePrice";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -429,7 +430,7 @@ export function CategoryEstimator({
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground mb-1">Suggested Estimate</p>
                   <p className="text-2xl font-bold text-primary">
-                    ${estimate.lowEstimate} – ${estimate.highEstimate}
+                    {safePrice(estimate.lowEstimate)} – {safePrice(estimate.highEstimate)}
                   </p>
                 </div>
                 

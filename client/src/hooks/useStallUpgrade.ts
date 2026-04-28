@@ -3,6 +3,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { trackEvent } from "@/components/PostHogProvider";
 import { useCanPerform } from "@/hooks/useCapability";
+import { safePriceCents } from "@/lib/safePrice";
 
 interface StallDetection {
   id: string;
@@ -24,11 +25,11 @@ interface StallUpgradePrompt {
 const STALL_MESSAGES: Record<string, { title: string; description: (money: number) => string }> = {
   no_response: {
     title: 'Leads going cold',
-    description: (money) => `You have ${money > 0 ? `$${(money / 100).toFixed(0)} at risk from` : ''} leads without responses. Auto follow-ups on Pro keep the conversation alive.`,
+    description: (money) => `You have ${money > 0 ? `${safePriceCents(money)} at risk from` : ''} leads without responses. Auto follow-ups on Pro keep the conversation alive.`,
   },
   overdue: {
     title: 'Overdue invoices piling up',
-    description: (money) => `${money > 0 ? `$${(money / 100).toFixed(0)} in` : 'You have'} overdue invoices. Pro sends automatic payment reminders so you don't have to chase.`,
+    description: (money) => `${money > 0 ? `${safePriceCents(money)} in` : 'You have'} overdue invoices. Pro sends automatic payment reminders so you don't have to chase.`,
   },
   idle: {
     title: 'Jobs sitting idle',
@@ -40,7 +41,7 @@ const STALL_MESSAGES: Record<string, { title: string; description: (money: numbe
   },
   viewed_unpaid: {
     title: 'Clients viewed but haven\'t paid',
-    description: (money) => `${money > 0 ? `$${(money / 100).toFixed(0)} in` : ''} invoices were viewed but unpaid. Pro sends gentle follow-ups automatically.`,
+    description: (money) => `${money > 0 ? `${safePriceCents(money)} in` : ''} invoices were viewed but unpaid. Pro sends gentle follow-ups automatically.`,
   },
 };
 

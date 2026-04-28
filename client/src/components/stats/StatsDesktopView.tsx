@@ -20,6 +20,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { safePriceCents } from "@/lib/safePrice";
 
 interface StatsDesktopViewProps {
   stats: {
@@ -125,7 +126,7 @@ export function StatsDesktopView({ stats, insights, paidJobsCount }: StatsDeskto
                     />
                     <YAxis
                       tick={{ fontSize: 11 }}
-                      tickFormatter={(v) => `$${Math.round(v / 100)}`}
+                      tickFormatter={(v) => safePriceCents(v)}
                       className="text-muted-foreground"
                       width={50}
                     />

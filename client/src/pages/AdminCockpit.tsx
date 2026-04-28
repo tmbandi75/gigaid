@@ -34,6 +34,7 @@ import { apiFetch } from "@/lib/apiFetch";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { useToast } from "@/hooks/use-toast";
+import { safePriceCentsLocale } from "@/lib/safePrice";
 import { cn } from "@/lib/utils";
 
 interface KPIMetric {
@@ -151,7 +152,7 @@ function MetricCard({
   gradient?: string;
 }) {
   const formatValue = (v: number) => {
-    if (format === "currency") return `$${(v / 100).toLocaleString()}`;
+    if (format === "currency") return safePriceCentsLocale(v);
     if (format === "percent") return `${v.toFixed(1)}%`;
     return v.toLocaleString();
   };

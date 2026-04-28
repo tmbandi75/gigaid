@@ -1,4 +1,5 @@
 import { useLocation } from "wouter";
+import { safePriceExact } from "@/lib/safePrice";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Shield, AlertTriangle, DollarSign, CheckCircle } from "lucide-react";
@@ -61,7 +62,7 @@ export default function ProPlusContext() {
           <CardContent className="p-6">
             <div className="flex items-baseline gap-1">
               <span className="text-3xl font-bold text-amber-900 dark:text-amber-100">
-                ${PLAN_PRICES_DOLLARS[Plan.PRO_PLUS].toFixed(2)}
+                {safePriceExact(PLAN_PRICES_DOLLARS[Plan.PRO_PLUS])}
               </span>
               <span className="text-muted-foreground">/ month</span>
             </div>

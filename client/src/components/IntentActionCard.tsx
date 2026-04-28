@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useLocation } from "wouter";
 import type { ReadyAction } from "@shared/schema";
+import { safePriceCents } from "@/lib/safePrice";
 
 interface IntentActionCardProps {
   entityType: "lead" | "job";
@@ -41,7 +42,7 @@ function EditableAmount({ amount, onChange }: EditableAmountProps) {
   const [editValue, setEditValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   
-  const displayAmount = `$${(amount / 100).toFixed(0)}`;
+  const displayAmount = safePriceCents(amount);
   
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -108,7 +109,7 @@ function EditableAmountLarge({ amount, onChange }: EditableAmountProps) {
   const [editValue, setEditValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   
-  const displayAmount = `$${(amount / 100).toFixed(0)}`;
+  const displayAmount = safePriceCents(amount);
   
   useEffect(() => {
     if (isEditing && inputRef.current) {

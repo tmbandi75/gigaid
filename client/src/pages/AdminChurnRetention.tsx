@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { safePriceCents } from "@/lib/safePrice";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -444,7 +445,7 @@ function AtRiskUsersTab({
                           {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : "Never"}
                         </td>
                         <td className="py-3 px-2 text-right">{user.jobs7d}</td>
-                        <td className="py-3 px-2 text-right">${((user.revenue30d ?? 0) / 100).toFixed(0)}</td>
+                        <td className="py-3 px-2 text-right">{safePriceCents(user.revenue30d)}</td>
                         <td className="py-3 px-2 text-center">
                           {user.noPay14d ? (
                             <Badge variant="destructive" className="text-xs">Yes</Badge>

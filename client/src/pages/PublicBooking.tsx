@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { safePriceCentsExact } from "@/lib/safePrice";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -490,7 +491,7 @@ export default function PublicBooking() {
                   Booking Submitted
                 </CardTitle>
                 <CardDescription>
-                  Your booking has been created. A deposit of ${(depositPaymentInfo.amount / 100).toFixed(2)} is required to confirm your time slot.
+                  Your booking has been created. A deposit of {safePriceCentsExact(depositPaymentInfo.amount)} is required to confirm your time slot.
                   The provider will contact you with payment instructions.
                 </CardDescription>
               </CardHeader>
@@ -525,7 +526,7 @@ export default function PublicBooking() {
             <CardContent>
               <div className="mb-4 p-3 rounded-lg bg-muted" data-testid="text-deposit-amount">
                 <p className="text-sm font-medium">
-                  Deposit Amount: <span className="text-primary">${(depositPaymentInfo.amount / 100).toFixed(2)}</span>
+                  Deposit Amount: <span className="text-primary">{safePriceCentsExact(depositPaymentInfo.amount)}</span>
                 </p>
               </div>
               {stripePromise ? (
@@ -1112,7 +1113,7 @@ export default function PublicBooking() {
                       <p className="text-sm text-muted-foreground">
                         {profile.depositType === "percent" 
                           ? `${profile.depositValue}% of the service cost`
-                          : `$${(profile.depositValue / 100).toFixed(2)}`
+                          : safePriceCentsExact(profile.depositValue)
                         } will be collected to confirm your booking.
                       </p>
                     </div>

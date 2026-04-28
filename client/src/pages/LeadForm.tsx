@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { safePriceCentsExact } from "@/lib/safePrice";
 import { useLocation, useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -546,7 +547,7 @@ export default function LeadForm() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Price</span>
                     <span className="font-medium" data-testid="text-pc-price">
-                      ${(activePriceConfirmation.agreedPrice / 100).toFixed(2)}
+                      {safePriceCentsExact(activePriceConfirmation.agreedPrice)}
                     </span>
                   </div>
                   {activePriceConfirmation.status !== "confirmed" && (

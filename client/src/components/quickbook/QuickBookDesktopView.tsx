@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { safePrice } from "@/lib/safePrice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -409,7 +410,7 @@ export function QuickBookDesktopView({
                   <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
                     <Check className="h-4 w-4" />
                     <span className="font-medium text-sm">
-                      ${depositAmount} deposit now / Remaining after the job
+                      {safePrice(depositAmount)} deposit now / Remaining after the job
                     </span>
                   </div>
 

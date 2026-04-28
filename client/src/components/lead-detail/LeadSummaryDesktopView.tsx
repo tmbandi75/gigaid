@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { safePriceCentsExact } from "@/lib/safePrice";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -351,7 +352,7 @@ export function LeadSummaryDesktopView({
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Price:</span>
                   <span className="font-bold text-lg" data-testid="text-pc-price-panel">
-                    ${((activePriceConfirmation.agreedPrice || 0) / 100).toFixed(2)}
+                    {safePriceCentsExact(activePriceConfirmation.agreedPrice)}
                   </span>
                 </div>
                 {activePriceConfirmation.notes && (

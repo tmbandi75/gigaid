@@ -12,6 +12,7 @@ import { TodayInsightsPanel } from "./TodayInsightsPanel";
 import { RecommendedActionsPanel } from "./RecommendedActionsPanel";
 import { AiAssistantPanel } from "./AiAssistantPanel";
 import { ToolGridSection } from "./ToolGridSection";
+import { safePriceCentsLocale } from "@/lib/safePrice";
 
 interface AIFeature {
   id: string;
@@ -53,7 +54,7 @@ function BusinessHealthPanel({ summary, isLoading }: { summary: DashboardSummary
     {
       label: "Earnings",
       value: summary?.weeklyStats?.earningsThisWeek != null
-        ? `$${(summary.weeklyStats.earningsThisWeek / 100).toLocaleString()}`
+        ? safePriceCentsLocale(summary.weeklyStats.earningsThisWeek)
         : null,
       sublabel: "this week",
       icon: BarChart3,

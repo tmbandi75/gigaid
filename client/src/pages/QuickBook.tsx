@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/apiFetch";
 import { formatCurrency } from "@/lib/formatCurrency";
+import { safePrice } from "@/lib/safePrice";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -437,7 +438,7 @@ export default function QuickBook() {
                 <div className="flex items-center gap-2 text-green-600">
                   <Check className="h-4 w-4" />
                   <span className="font-medium">
-                    ${depositAmount} deposit now / Remaining after the job
+                    {safePrice(depositAmount)} deposit now / Remaining after the job
                   </span>
                 </div>
                 

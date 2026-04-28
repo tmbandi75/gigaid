@@ -28,7 +28,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { copyTextToClipboard } from "@/lib/clipboard";
-import { isFinitePositiveNumber, safePriceCents, safePriceRange } from "@/lib/safePrice";
+import { isFinitePositiveNumber, safePrice, safePriceCents, safePriceRange } from "@/lib/safePrice";
 
 interface QuoteEstimate {
   suggestedPriceLow: number;
@@ -80,9 +80,9 @@ export default function AutoQuotePage() {
     const dollars = (estimateMutation.data.suggestedPriceMedian / 100).toFixed(2);
     const copiedOk = await copyTextToClipboard(dollars);
     if (copiedOk) {
-      toast({ title: `$${dollars} copied to clipboard` });
+      toast({ title: `${safePrice(dollars)} copied to clipboard` });
     } else {
-      toast({ title: `Suggested price: $${dollars}` });
+      toast({ title: `Suggested price: ${safePrice(dollars)}` });
     }
   };
 
@@ -224,7 +224,7 @@ export default function AutoQuotePage() {
                   <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Price Range</p>
                   <p className="text-xl font-bold" data-testid="text-price-range">
                     {isFinitePositiveNumber(result.suggestedPriceLow) && isFinitePositiveNumber(result.suggestedPriceHigh)
-                      ? `$${(result.suggestedPriceLow / 100).toFixed(0)} - $${(result.suggestedPriceHigh / 100).toFixed(0)}`
+                      ? `${safePriceCents(result.suggestedPriceLow)} - ${safePriceCents(result.suggestedPriceHigh)}`
                       : safePriceRange(
                           isFinitePositiveNumber(result.suggestedPriceLow) ? result.suggestedPriceLow / 100 : null,
                           isFinitePositiveNumber(result.suggestedPriceHigh) ? result.suggestedPriceHigh / 100 : null,

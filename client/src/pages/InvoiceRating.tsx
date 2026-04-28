@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { safePriceCentsExact } from "@/lib/safePrice";
 import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -111,7 +112,7 @@ export default function InvoiceRating() {
             <p className="text-sm text-muted-foreground">Service Provided</p>
             <p className="font-medium">{invoice.serviceDescription}</p>
             <p className="text-lg font-bold mt-1">
-              ${(invoice.amount / 100).toFixed(2)}
+              {safePriceCentsExact(invoice.amount)}
             </p>
           </div>
 
