@@ -168,6 +168,7 @@ const mockStripe = {
   },
   customers: {
     update: jest.fn(),
+    createBalanceTransaction: jest.fn(),
   },
   refunds: {
     create: jest.fn(),
@@ -227,6 +228,7 @@ beforeEach(() => {
   mockStripe.subscriptions.update.mockReset();
   mockStripe.subscriptions.cancel.mockReset();
   mockStripe.customers.update.mockReset();
+  mockStripe.customers.createBalanceTransaction.mockReset();
   mockStripe.refunds.create.mockReset();
   mockStripe.invoices.list.mockReset();
   mockStripe.invoices.pay.mockReset();
@@ -237,6 +239,7 @@ beforeEach(() => {
   mockStripe.subscriptions.update.mockResolvedValue({});
   mockStripe.subscriptions.cancel.mockResolvedValue({});
   mockStripe.customers.update.mockResolvedValue({});
+  mockStripe.customers.createBalanceTransaction.mockResolvedValue({ id: "cbtxn_default" });
   mockStripe.refunds.create.mockResolvedValue({ id: "re_default" });
 });
 
@@ -826,7 +829,7 @@ describe("POST /api/admin/users/:userId/actions per-action coverage", () => {
     expectAuditRow("billing_cancel", "Cancel immediately");
   });
 
-  it("billing_apply_credit calls Stripe customers.update and writes audit row", async () => {
+  it("billing_apply_credit creates a Stripe balance transaction and writes audit row", async () => {
     pushUserLookup();
     pushTargetUser({ stripeCustomerId: "cus_1" });
 
@@ -836,10 +839,49 @@ describe("POST /api/admin/users/:userId/actions per-action coverage", () => {
     });
     expect(res.status).toBe(200);
 
-    expect(mockStripe.customers.update).toHaveBeenCalledWith("cus_1", {
-      balance: -2500,
-    });
+    expect(mockStripe.customers.update).not.toHaveBeenCalled();
+    expect(mockStripe.customers.createBalanceTransaction).toHaveBeenCalledWith(
+      "cus_1",
+      expect.objectContaining({
+        amount: -2500,
+        currency: "usd",
+      }),
+    );
     expectAuditRow("billing_apply_credit", "Goodwill credit");
+  });
+
+  it("billing_apply_credit stacks repeated credits instead of overwriting them", async () => {
+    pushUserLookup();
+    pushTargetUser({ stripeCustomerId: "cus_1" });
+    const firstRes = await postAction("billing_apply_credit", {
+      reason: "First credit",
+      payload: { amountCents: 2500 },
+    });
+    expect(firstRes.status).toBe(200);
+
+    pushUserLookup();
+    pushTargetUser({ stripeCustomerId: "cus_1" });
+    const secondRes = await postAction("billing_apply_credit", {
+      reason: "Second credit",
+      payload: { amountCents: 1000 },
+    });
+    expect(secondRes.status).toBe(200);
+
+    expect(mockStripe.customers.createBalanceTransaction).toHaveBeenCalledTimes(2);
+    expect(mockStripe.customers.createBalanceTransaction).toHaveBeenNthCalledWith(
+      1,
+      "cus_1",
+      expect.objectContaining({ amount: -2500, currency: "usd" }),
+    );
+    expect(mockStripe.customers.createBalanceTransaction).toHaveBeenNthCalledWith(
+      2,
+      "cus_1",
+      expect.objectContaining({ amount: -1000, currency: "usd" }),
+    );
+
+    const totalCreditCents = mockStripe.customers.createBalanceTransaction.mock.calls
+      .reduce((sum, call) => sum + Math.abs((call[1] as { amount: number }).amount), 0);
+    expect(totalCreditCents).toBe(3500);
   });
 
   it("billing_refund calls Stripe refunds.create and writes audit row", async () => {
@@ -1122,14 +1164,15 @@ describe("POST /api/admin/users/:userId/actions billing validation", () => {
         "Credit amount (in cents) is required and must be positive",
       );
       expect(mockStripe.customers.update).not.toHaveBeenCalled();
+      expect(mockStripe.customers.createBalanceTransaction).not.toHaveBeenCalled();
       expectNoAuditRow();
     });
 
     it("returns 500 with the Stripe error message when Stripe rejects", async () => {
       pushUserLookup();
       pushTargetUser({ stripeCustomerId: "cus_1" });
-      mockStripe.customers.update.mockRejectedValueOnce(
-        new Error("customer update failed"),
+      mockStripe.customers.createBalanceTransaction.mockRejectedValueOnce(
+        new Error("balance transaction failed"),
       );
 
       const res = await postAction("billing_apply_credit", {
@@ -1138,7 +1181,7 @@ describe("POST /api/admin/users/:userId/actions billing validation", () => {
       });
 
       expect(res.status).toBe(500);
-      expect(res.body.error).toBe("Stripe error: customer update failed");
+      expect(res.body.error).toBe("Stripe error: balance transaction failed");
       expectNoAuditRow();
     });
   });

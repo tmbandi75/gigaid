@@ -918,8 +918,16 @@ router.post("/:userId/actions", async (req, res) => {
         
         try {
           const stripe = await getUncachableStripeClient();
-          await stripe.customers.update(targetUser.stripeCustomerId, {
-            balance: -Math.abs(creditAmountCents),
+          await stripe.customers.createBalanceTransaction(targetUser.stripeCustomerId, {
+            amount: -Math.abs(creditAmountCents),
+            currency: "usd",
+            description: reason
+              ? `Admin credit: ${reason}`
+              : "Admin credit applied",
+            metadata: {
+              userId,
+              appliedBy: actorUserId,
+            },
           });
           logger.info(`[Admin] Applied ${safePriceCentsExact(creditAmountCents)} credit to user ${userId}`);
         } catch (stripeError: any) {
