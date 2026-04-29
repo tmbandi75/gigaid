@@ -547,6 +547,12 @@ interface SmsOptOutEventRow {
   matchKind: "matched" | "phone_candidate";
 }
 
+interface AttachTarget {
+  eventId: string;
+  fromPhoneMasked: string;
+  resolution: string;
+}
+
 function SmsOptOutEventsSection({ userId }: { userId: string }) {
   const { data, isLoading } = useQuery<{ events: SmsOptOutEventRow[] }>({
     queryKey: QUERY_KEYS.adminUserSmsOptOutEvents(userId),
@@ -568,6 +574,52 @@ function SmsOptOutEventsSection({ userId }: { userId: string }) {
   });
   const twilioMessageUrlTemplate: string | undefined =
     externalLinks?.twilio?.messageUrlTemplate;
+
+  const { toast } = useToast();
+  const [attachTarget, setAttachTarget] = useState<AttachTarget | null>(null);
+  const [attachReason, setAttachReason] = useState("");
+
+  // Mirrors the AdminSmsHealth "Clear phone" mutation: posts a written
+  // reason, refreshes the panel + the messaging-suppression view (since
+  // attaching also opts the user out), and surfaces toasts on either
+  // outcome so the admin can see whether suppression was already active.
+  const attachMutation = useApiMutation<
+    { success: true; alreadySuppressed: boolean },
+    { eventId: string; reason: string }
+  >(
+    async ({ eventId, reason }) =>
+      apiFetch(
+        `/api/admin/users/${userId}/sms-opt-out-events/${eventId}/attach`,
+        {
+          method: "POST",
+          body: JSON.stringify({ reason }),
+        },
+      ),
+    [
+      QUERY_KEYS.adminUserSmsOptOutEvents(userId),
+      QUERY_KEYS.adminUserMessaging(userId),
+      QUERY_KEYS.adminUserAudit(userId),
+    ],
+    {
+      onSuccess: (result) => {
+        toast({
+          title: "STOP attached to this user",
+          description: result?.alreadySuppressed
+            ? "Suppression was already active; STOP event reattached."
+            : "User opted out of further SMS.",
+        });
+        setAttachTarget(null);
+        setAttachReason("");
+      },
+      onError: (error) => {
+        toast({
+          title: "Could not attach STOP event",
+          description: error.message || "Please try again",
+          variant: "destructive",
+        });
+      },
+    },
+  );
 
   const events = data?.events || [];
 
@@ -606,6 +658,7 @@ function SmsOptOutEventsSection({ userId }: { userId: string }) {
                   <th className="py-2 pr-3">Status</th>
                   <th className="py-2 pr-3">Body</th>
                   <th className="py-2 pr-3">Twilio SID</th>
+                  <th className="py-2 pr-3 sr-only">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -678,6 +731,25 @@ function SmsOptOutEventsSection({ userId }: { userId: string }) {
                         "—"
                       )}
                     </td>
+                    <td className="py-2 pr-3 whitespace-nowrap text-right">
+                      {isCandidate ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setAttachTarget({
+                              eventId: e.id,
+                              fromPhoneMasked: e.fromPhoneMasked,
+                              resolution: e.resolution,
+                            });
+                            setAttachReason("");
+                          }}
+                          data-testid={`button-attach-sms-opt-out-${e.id}`}
+                        >
+                          Attach to this user
+                        </Button>
+                      ) : null}
+                    </td>
                   </tr>
                   );
                 })}
@@ -686,6 +758,78 @@ function SmsOptOutEventsSection({ userId }: { userId: string }) {
           </div>
         )}
       </CardContent>
+      <Dialog
+        open={attachTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !attachMutation.isPending) {
+            setAttachTarget(null);
+            setAttachReason("");
+          }
+        }}
+      >
+        <DialogContent data-testid="dialog-attach-sms-opt-out">
+          <DialogHeader>
+            <DialogTitle>Attach STOP event to this user</DialogTitle>
+            <DialogDescription>
+              This will attach the{" "}
+              {attachTarget?.resolution === "ambiguous"
+                ? "ambiguous"
+                : "unmatched"}{" "}
+              STOP event from{" "}
+              <span className="font-mono">
+                {attachTarget?.fromPhoneMasked}
+              </span>{" "}
+              to this user, mark it as matched, and (if not already) opt them
+              out of further SMS. The action is logged in the admin audit
+              trail.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="attach-sms-opt-out-reason">
+              Reason (required)
+            </Label>
+            <Textarea
+              id="attach-sms-opt-out-reason"
+              value={attachReason}
+              onChange={(e) => setAttachReason(e.target.value)}
+              placeholder="e.g. User confirmed via support chat that this STOP came from them."
+              rows={3}
+              data-testid="input-attach-sms-opt-out-reason"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAttachTarget(null);
+                setAttachReason("");
+              }}
+              disabled={attachMutation.isPending}
+              data-testid="button-cancel-attach-sms-opt-out"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (!attachTarget || !attachReason.trim()) return;
+                attachMutation.mutate({
+                  eventId: attachTarget.eventId,
+                  reason: attachReason.trim(),
+                });
+              }}
+              disabled={
+                !attachReason.trim() || attachMutation.isPending
+              }
+              data-testid="button-confirm-attach-sms-opt-out"
+            >
+              {attachMutation.isPending && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
+              Attach to this user
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

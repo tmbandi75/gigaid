@@ -1575,6 +1575,203 @@ router.get("/:userId/sms-opt-out-events", async (req, res) => {
   }
 });
 
+// Attach a "same phone" STOP audit row to this user. The row must currently
+// be unattached (userId IS NULL) AND its raw From must equal this user's
+// stored E.164 — i.e. it must be one of the candidate rows the GET above
+// surfaces with matchKind="phone_candidate". This closes the loop on STOPs
+// the resolver couldn't pin (unmatched/ambiguous) but a human admin has
+// confirmed are really this user. Mirrors the "Clear phone" flow in SMS
+// Health: requires a written reason, audited under admin_action_audit, and
+// performed transactionally so we never end up with the event reattached
+// but no audit row (or vice-versa).
+router.post(
+  "/:userId/sms-opt-out-events/:eventId/attach",
+  async (req: AdminRequest, res) => {
+    try {
+      const { userId, eventId } = req.params;
+      if (!req.adminUserId) {
+        return res.status(401).json({ error: "Admin identity required" });
+      }
+      const reason = ((req.body && req.body.reason) || "").toString().trim();
+      if (!reason) {
+        // Mirrors sms_clear_phone_e164: force a written reason so the
+        // audit log is meaningful — attaching a STOP event opts the user
+        // out of further marketing SMS.
+        return res.status(400).json({ error: "reason is required" });
+      }
+
+      const [target] = await db
+        .select({ id: users.id, phoneE164: users.phoneE164 })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      if (!target) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      if (!target.phoneE164) {
+        // No stored phone means there's no "same phone" candidate to
+        // claim — the GET endpoint wouldn't have surfaced any either.
+        return res
+          .status(400)
+          .json({ error: "User has no stored phone number" });
+      }
+
+      const [event] = await db
+        .select({
+          id: smsOptOutEvents.id,
+          userId: smsOptOutEvents.userId,
+          fromPhoneRaw: smsOptOutEvents.fromPhoneRaw,
+          fromPhoneMasked: smsOptOutEvents.fromPhoneMasked,
+          resolution: smsOptOutEvents.resolution,
+          twilioSid: smsOptOutEvents.twilioSid,
+        })
+        .from(smsOptOutEvents)
+        .where(eq(smsOptOutEvents.id, eventId))
+        .limit(1);
+
+      if (!event) {
+        return res.status(404).json({ error: "STOP event not found" });
+      }
+      // Reject anything that wouldn't have appeared as a "phone_candidate"
+      // row in the panel. We don't allow re-attaching an already-attached
+      // row (even to the same user) because the only legitimate
+      // transition this endpoint serves is unmatched/ambiguous → matched.
+      if (event.userId !== null) {
+        return res
+          .status(409)
+          .json({ error: "STOP event is already attached to a user" });
+      }
+      if (event.fromPhoneRaw !== target.phoneE164) {
+        return res
+          .status(409)
+          .json({ error: "STOP event did not arrive from this user's phone" });
+      }
+      if (
+        event.resolution !== "unmatched" &&
+        event.resolution !== "ambiguous"
+      ) {
+        return res
+          .status(409)
+          .json({ error: "STOP event is not in an attachable state" });
+      }
+
+      const previousResolution = event.resolution;
+      const now = new Date().toISOString();
+
+      // Only suppress if the user doesn't already have an active
+      // suppression. Mirrors the lookup the existing `messaging` panel
+      // uses (userId match, no unsuppressedAt, future suppressUntil) so
+      // we don't double-suppress and so the audit payload truthfully
+      // reflects whether this action also flipped suppression.
+      const [activeSuppression] = await db
+        .select({ id: messagingSuppression.id })
+        .from(messagingSuppression)
+        .where(
+          and(
+            eq(messagingSuppression.userId, userId),
+            isNull(messagingSuppression.unsuppressedAt),
+            gte(messagingSuppression.suppressUntil, now),
+          ),
+        )
+        .limit(1);
+      const alreadySuppressed = !!activeSuppression;
+
+      // STOP is a permanent opt-out signal; pick a far-future suppress
+      // window rather than the 24h default the generic action handler
+      // uses so the user actually stays opted out until an admin
+      // explicitly unsuppresses.
+      const STOP_SUPPRESS_YEARS = 10;
+      const suppressUntil = new Date(
+        Date.now() + STOP_SUPPRESS_YEARS * 365 * 24 * 60 * 60 * 1000,
+      ).toISOString();
+
+      // Re-assert the eligibility checks inside the UPDATE WHERE clause so
+      // two concurrent attach requests can't both pass the pre-checks and
+      // race-overwrite each other. We require .returning() to confirm the
+      // row was actually updated; if zero rows came back another writer
+      // (or a stale duplicate request) won the race, and we abort the
+      // transaction so we don't insert a misleading audit/suppression row.
+      const txResult = await db.transaction(async (tx) => {
+        const updated = await tx
+          .update(smsOptOutEvents)
+          .set({ userId, resolution: "matched" })
+          .where(
+            and(
+              eq(smsOptOutEvents.id, eventId),
+              isNull(smsOptOutEvents.userId),
+              eq(smsOptOutEvents.fromPhoneRaw, target.phoneE164!),
+              or(
+                eq(smsOptOutEvents.resolution, "unmatched"),
+                eq(smsOptOutEvents.resolution, "ambiguous"),
+              ),
+            ),
+          )
+          .returning({ id: smsOptOutEvents.id });
+
+        if (updated.length === 0) {
+          // Lost the race or the row is no longer eligible — let the
+          // caller retry against fresh state.
+          return { raced: true } as const;
+        }
+
+        if (!alreadySuppressed) {
+          await tx.insert(messagingSuppression).values({
+            userId,
+            suppressedAt: now,
+            suppressedBy: req.adminUserId!,
+            suppressUntil,
+            reason: `STOP attached from ${event.fromPhoneMasked}: ${reason}`,
+          });
+        }
+
+        await tx.insert(adminActionAudit).values({
+          createdAt: now,
+          actorUserId: req.adminUserId!,
+          actorEmail: req.userEmail || null,
+          targetUserId: userId,
+          actionKey: "sms_attach_optout_event_to_user",
+          reason,
+          payload: JSON.stringify({
+            eventId,
+            previousResolution,
+            fromPhoneMasked: event.fromPhoneMasked,
+            twilioSid: event.twilioSid,
+            alreadySuppressed,
+          }),
+          source: "admin_ui",
+        });
+
+        return { raced: false } as const;
+      });
+
+      if (txResult.raced) {
+        return res.status(409).json({
+          error:
+            "STOP event is no longer in an attachable state — refresh and try again",
+        });
+      }
+
+      logger.info(
+        `[Admin Users] Attached STOP event ${eventId} to user ${userId} (actor=${req.adminUserId}, prevResolution=${previousResolution}, alreadySuppressed=${alreadySuppressed})`,
+      );
+
+      res.json({
+        success: true,
+        userId,
+        eventId,
+        previousResolution,
+        alreadySuppressed,
+      });
+    } catch (error) {
+      logger.error("[Admin Users] Attach SMS opt-out event error:", error);
+      res
+        .status(500)
+        .json({ error: "Failed to attach STOP event to this user" });
+    }
+  },
+);
+
 // Outbound message log for a single user (last N entries with status & failureReason).
 router.get("/:userId/outbound-messages", async (req, res) => {
   try {

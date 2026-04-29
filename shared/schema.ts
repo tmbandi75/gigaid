@@ -1631,7 +1631,8 @@ export const adminActionKeys = [
   "account_enable",
   "admin_created",
   "admin_updated",
-  "admin_deactivated"
+  "admin_deactivated",
+  "sms_attach_optout_event_to_user"
 ] as const;
 export type AdminActionKey = (typeof adminActionKeys)[number];
 
