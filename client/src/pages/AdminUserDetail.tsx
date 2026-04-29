@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -51,7 +51,8 @@ import {
   Send,
   CheckCircle,
   XCircle,
-  Sparkles
+  Sparkles,
+  Gauge
 } from "lucide-react";
 import { Link } from "wouter";
 import { apiFetch } from "@/lib/apiFetch";
@@ -976,6 +977,219 @@ function MessagingSection({ userId }: { userId: string }) {
   );
 }
 
+interface SmsRateLimitData {
+  plan: string | null;
+  override: number | null;
+  planDefault: number | null;
+  planUnlimited: boolean;
+  effectiveCap: number | null;
+  effectiveUnlimited: boolean;
+}
+
+function describeCap(value: number | null, unlimited: boolean): string {
+  if (unlimited) return "Unlimited";
+  if (value === null) return "—";
+  return `${value} / 24h`;
+}
+
+function SmsRateLimitSection({ userId }: { userId: string }) {
+  const { toast } = useToast();
+  const { data, isLoading } = useQuery<SmsRateLimitData>({
+    queryKey: QUERY_KEYS.adminUserSmsRateLimit(userId),
+    queryFn: async () => {
+      const token = getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`/api/admin/users/${userId}/sms-rate-limit`, {
+        credentials: "include",
+        headers,
+      });
+      if (!res.ok) throw new Error("Failed to fetch SMS rate limit");
+      return res.json();
+    },
+  });
+
+  // The select picks between three modes: plan default (null on server),
+  // unlimited (0), and a custom positive cap.
+  const [mode, setMode] = useState<"default" | "unlimited" | "custom">("default");
+  const [customValue, setCustomValue] = useState<string>("");
+  const [reason, setReason] = useState("");
+
+  // Sync local form state from the fetched override whenever the server-side
+  // value changes (initial load, refetch after save, or navigating to a
+  // different user). Keyed on `userId` + `data?.override` so switching between
+  // two admin user-detail pages doesn't leak stale mode/custom values from
+  // the previous user.
+  useEffect(() => {
+    if (!data) return;
+    if (data.override === null) {
+      setMode("default");
+      setCustomValue("");
+    } else if (data.override === 0) {
+      setMode("unlimited");
+      setCustomValue("");
+    } else {
+      setMode("custom");
+      setCustomValue(String(data.override));
+    }
+    setReason("");
+  }, [userId, data?.override]);
+
+  const saveMutation = useApiMutation<
+    SmsRateLimitData,
+    { override: number | null; reason: string }
+  >(
+    async (vars) =>
+      apiFetch(`/api/admin/users/${userId}/sms-rate-limit`, {
+        method: "PUT",
+        body: JSON.stringify(vars),
+      }),
+    [
+      QUERY_KEYS.adminUserSmsRateLimit(userId),
+      QUERY_KEYS.adminUserAudit(userId),
+    ],
+    {
+      onSuccess: () => {
+        toast({ title: "SMS daily cap updated" });
+        setReason("");
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Could not update SMS daily cap",
+          description: error.message || "Please try again",
+          variant: "destructive",
+        });
+      },
+    },
+  );
+
+  const handleSave = () => {
+    if (!reason.trim()) {
+      toast({ title: "Reason is required", variant: "destructive" });
+      return;
+    }
+    let override: number | null;
+    if (mode === "default") {
+      override = null;
+    } else if (mode === "unlimited") {
+      override = 0;
+    } else {
+      const parsed = Number(customValue);
+      if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 1) {
+        toast({
+          title: "Enter a positive whole number",
+          description: "Use 0 / Unlimited above to remove the daily cap.",
+          variant: "destructive",
+        });
+        return;
+      }
+      override = parsed;
+    }
+    saveMutation.mutate({ override, reason: reason.trim() });
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card data-testid="card-sms-rate-limit">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Gauge className="h-4 w-4" />
+          SMS Daily Cap
+        </CardTitle>
+        <CardDescription>
+          Per-user override for the rolling 24h SMS limit. Blank = use plan
+          default, 0 = unlimited. Takes effect on the next outbound SMS.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <Label className="text-muted-foreground text-xs">Plan default</Label>
+            <p className="font-medium" data-testid="text-sms-rate-limit-plan-default">
+              {describeCap(data?.planDefault ?? null, data?.planUnlimited ?? false)}
+            </p>
+          </div>
+          <div>
+            <Label className="text-muted-foreground text-xs">Effective cap now</Label>
+            <p className="font-medium" data-testid="text-sms-rate-limit-effective">
+              {describeCap(data?.effectiveCap ?? null, data?.effectiveUnlimited ?? false)}
+            </p>
+          </div>
+        </div>
+
+        <Separator />
+
+        <div className="space-y-2">
+          <Label className="text-xs">Override</Label>
+          <Select
+            value={mode}
+            onValueChange={(v) => setMode(v as "default" | "unlimited" | "custom")}
+          >
+            <SelectTrigger data-testid="select-sms-rate-limit-mode">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="default" data-testid="option-sms-rate-limit-default">
+                Use plan default
+              </SelectItem>
+              <SelectItem value="unlimited" data-testid="option-sms-rate-limit-unlimited">
+                Unlimited (0)
+              </SelectItem>
+              <SelectItem value="custom" data-testid="option-sms-rate-limit-custom">
+                Custom cap…
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          {mode === "custom" && (
+            <Input
+              type="number"
+              min={1}
+              step={1}
+              placeholder="e.g. 25"
+              value={customValue}
+              onChange={(e) => setCustomValue(e.target.value)}
+              data-testid="input-sms-rate-limit-custom"
+            />
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-xs">Reason (required, audited)</Label>
+          <Textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Why are you changing this customer's SMS cap?"
+            rows={2}
+            data-testid="input-sms-rate-limit-reason"
+          />
+        </div>
+
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={saveMutation.isPending}
+          data-testid="button-save-sms-rate-limit"
+        >
+          {saveMutation.isPending ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : null}
+          Save override
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 function PaymentsSection({ userId }: { userId: string }) {
   const { data, isLoading } = useQuery<PaymentsData>({
     queryKey: QUERY_KEYS.adminUserPayments(userId),
@@ -1804,6 +2018,10 @@ export default function AdminUserDetail() {
         <div className="grid md:grid-cols-2 gap-4">
           <MessagingSection userId={userId} />
           <PaymentsSection userId={userId} />
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <SmsRateLimitSection userId={userId} />
         </div>
 
         <Tabs defaultValue="timeline">

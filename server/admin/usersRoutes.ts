@@ -13,8 +13,11 @@ import {
   adminActionKeys,
   outboundMessages,
   smsOptOutEvents,
+  userAutomationSettings,
   type AdminActionKey
 } from "@shared/schema";
+import { Plan } from "@shared/plans";
+import { resolveSmsRateLimit } from "../postJobMomentum";
 import { eq, desc, and, or, ilike, gte, count, sql, isNull, isNotNull, lte } from "drizzle-orm";
 import { adminMiddleware, AdminRequest } from "../copilot/adminMiddleware";
 import { getUncachableStripeClient } from "../stripeClient";
@@ -597,6 +600,148 @@ router.get("/:userId/messaging", async (req, res) => {
   } catch (error) {
     logger.error("[Admin Users] Messaging error:", error);
     res.status(500).json({ error: "Failed to fetch messaging status" });
+  }
+});
+
+// Per-user SMS rolling-24h cap override (read).
+// Surfaces the current override stored on `userAutomationSettings`, the plan
+// default the resolver would fall back to, and what the effective cap is right
+// now. UI uses this to render the override editor with sensible context.
+router.get("/:userId/sms-rate-limit", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const [user] = await db
+      .select({ plan: users.plan })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const [settings] = await db
+      .select({ override: userAutomationSettings.smsRateLimitPer24hOverride })
+      .from(userAutomationSettings)
+      .where(eq(userAutomationSettings.userId, userId))
+      .limit(1);
+
+    const override = settings?.override ?? null;
+    const plan = (user.plan as Plan | null | undefined) ?? null;
+    const planDefault = resolveSmsRateLimit(plan, null);
+    const effectiveCap = resolveSmsRateLimit(plan, override);
+
+    res.json({
+      plan,
+      override,
+      planDefault: planDefault ?? null,
+      planUnlimited: planDefault === undefined,
+      effectiveCap: effectiveCap ?? null,
+      effectiveUnlimited: effectiveCap === undefined,
+    });
+  } catch (error) {
+    logger.error("[Admin Users] SMS rate limit GET error:", error);
+    res.status(500).json({ error: "Failed to fetch SMS rate limit override" });
+  }
+});
+
+// Per-user SMS rolling-24h cap override (update).
+// Body: { override: number | null, reason: string }
+//   - override === null  -> clear the override (revert to plan default)
+//   - override === 0     -> explicit "unlimited" (matches resolveSmsRateLimit)
+//   - override > 0       -> explicit cap (must be a non-negative integer)
+// The change is read by `resolveSmsRateLimit` on the next outbound SMS, so it
+// takes effect immediately without a code deploy. Audited via
+// `sms_rate_limit_override_set`.
+router.put("/:userId/sms-rate-limit", async (req: AdminRequest, res) => {
+  try {
+    const { userId } = req.params;
+    const { override, reason } = req.body ?? {};
+    const actorUserId = req.adminUserId || (req as any).adminUserId || "demo-user";
+
+    if (!reason || typeof reason !== "string" || reason.trim().length === 0) {
+      return res.status(400).json({ error: "Reason is required" });
+    }
+
+    let normalizedOverride: number | null;
+    if (override === null || override === undefined || override === "") {
+      normalizedOverride = null;
+    } else if (typeof override === "number" && Number.isFinite(override) && Number.isInteger(override) && override >= 0) {
+      normalizedOverride = override;
+    } else {
+      return res.status(400).json({
+        error: "override must be null (revert to plan default), 0 (unlimited), or a positive integer",
+      });
+    }
+
+    const [user] = await db
+      .select({ plan: users.plan })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const now = new Date().toISOString();
+
+    const [existing] = await db
+      .select({ id: userAutomationSettings.id, override: userAutomationSettings.smsRateLimitPer24hOverride })
+      .from(userAutomationSettings)
+      .where(eq(userAutomationSettings.userId, userId))
+      .limit(1);
+
+    const previousOverride = existing?.override ?? null;
+
+    if (existing) {
+      await db
+        .update(userAutomationSettings)
+        .set({
+          smsRateLimitPer24hOverride: normalizedOverride,
+          updatedAt: now,
+        })
+        .where(eq(userAutomationSettings.userId, userId));
+    } else {
+      await db
+        .insert(userAutomationSettings)
+        .values({
+          userId,
+          smsRateLimitPer24hOverride: normalizedOverride,
+          createdAt: now,
+        });
+    }
+
+    await db.insert(adminActionAudit).values({
+      createdAt: now,
+      actorUserId,
+      actorEmail: req.userEmail || null,
+      targetUserId: userId,
+      actionKey: "sms_rate_limit_override_set",
+      reason: reason.trim(),
+      payload: JSON.stringify({
+        previousOverride,
+        newOverride: normalizedOverride,
+      }),
+      source: "admin_ui",
+    });
+
+    const plan = (user.plan as Plan | null | undefined) ?? null;
+    const planDefault = resolveSmsRateLimit(plan, null);
+    const effectiveCap = resolveSmsRateLimit(plan, normalizedOverride);
+
+    res.json({
+      plan,
+      override: normalizedOverride,
+      planDefault: planDefault ?? null,
+      planUnlimited: planDefault === undefined,
+      effectiveCap: effectiveCap ?? null,
+      effectiveUnlimited: effectiveCap === undefined,
+    });
+  } catch (error) {
+    logger.error("[Admin Users] SMS rate limit PUT error:", error);
+    res.status(500).json({ error: "Failed to update SMS rate limit override" });
   }
 });
 

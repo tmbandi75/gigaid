@@ -107,6 +107,7 @@ export const QUERY_KEYS = {
   adminUserTimeline: (userId: string) => ["/api/admin/users", userId, "timeline"] as const,
   adminUserAudit: (userId: string) => ["/api/admin/users", userId, "audit"] as const,
   adminUserMessaging: (userId: string) => ["/api/admin/users", userId, "messaging"] as const,
+  adminUserSmsRateLimit: (userId: string) => ["/api/admin/users", userId, "sms-rate-limit"] as const,
   adminUserPayments: (userId: string) => ["/api/admin/users", userId, "payments"] as const,
   adminExternalLinks: () => ["/api/admin/users/links/external"] as const,
   adminUsers: () => ["/api/admin/users"] as const,
