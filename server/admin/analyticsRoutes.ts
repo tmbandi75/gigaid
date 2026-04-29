@@ -659,14 +659,49 @@ function windowStartIso(days: number | null): string | null {
 // links — they are NOT acquisition pages and would pollute the funnel
 // numbers (a `user_created` page is "claimed" the moment it exists, so
 // counting it would inflate the claim rate to ~100% and the per-category
-// breakdown would be meaningless). We restrict every funnel query to
-// source = 'growth_engine'.
+// breakdown would be meaningless). By default every funnel query is
+// restricted to source = 'growth_engine'. Admins can override the source
+// (e.g. to inspect another acquisition channel) via the `source` query
+// param, and `source=all` removes the source filter entirely.
 const FUNNEL_SOURCE = "growth_engine";
+
+// Sentinel value used by both the `source` and `location` query params to
+// mean "do not filter on this column". The frontend renders these as the
+// "All" option in each dropdown.
+const FUNNEL_FILTER_ALL = "all";
+
+// Resolves the `source` query param. Omitted -> default cohort
+// ('growth_engine'). 'all' (case-insensitive) -> no source filter. Any
+// other value -> filter to exactly that source. The value is trimmed but
+// otherwise passed through unchanged so it matches the source string
+// stored in `booking_pages.source` (which is itself lower-case today,
+// e.g. 'growth_engine' / 'user_created').
+function parseFunnelSource(raw: unknown): string | null {
+  if (raw === undefined || raw === null) return FUNNEL_SOURCE;
+  const value = String(raw).trim();
+  if (value === "") return FUNNEL_SOURCE;
+  if (value.toLowerCase() === FUNNEL_FILTER_ALL) return null;
+  return value;
+}
+
+// Resolves the `location` query param. Omitted or 'all' -> no location
+// filter. Any other value -> filter to exactly that location string. We
+// preserve the case of the stored value (e.g. "Brooklyn") so admins can
+// pick the exact value from the dropdown without guessing capitalization.
+function parseFunnelLocation(raw: unknown): string | null {
+  if (raw === undefined || raw === null) return null;
+  const value = String(raw).trim();
+  if (value === "") return null;
+  if (value.toLowerCase() === FUNNEL_FILTER_ALL) return null;
+  return value;
+}
 
 router.get("/first-booking-funnel", adminMiddleware, async (req: AdminRequest, res: Response) => {
   try {
     const days = parseFunnelWindowDays(req.query.days);
     const windowStart = windowStartIso(days);
+    const sourceFilter = parseFunnelSource(req.query.source);
+    const locationFilter = parseFunnelLocation(req.query.location);
 
     const result = await db.execute(sql`
       WITH page_event_flags AS (
@@ -692,7 +727,8 @@ router.get("/first-booking-funnel", adminMiddleware, async (req: AdminRequest, r
             )
           ) AS paid
         FROM booking_pages p
-        WHERE p.source = ${FUNNEL_SOURCE}
+        WHERE (${sourceFilter}::text IS NULL OR p.source = ${sourceFilter})
+          AND (${locationFilter}::text IS NULL OR p.location = ${locationFilter})
           AND (${windowStart}::text IS NULL OR p.created_at >= ${windowStart})
       )
       SELECT
@@ -706,6 +742,28 @@ router.get("/first-booking-funnel", adminMiddleware, async (req: AdminRequest, r
       GROUP BY category
       ORDER BY generated DESC, category ASC
     `);
+
+    // Populate the source/location dropdowns from the actual data inside
+    // the same time window. We deliberately do NOT apply the source or
+    // location filters when building these option lists — otherwise the
+    // dropdown options would shrink as the user filters and you couldn't
+    // switch back to a previously visible value.
+    const filterOptions = await db.execute(sql`
+      SELECT
+        COALESCE(NULLIF(p.source, ''), 'unknown') AS source,
+        p.location AS location
+      FROM booking_pages p
+      WHERE (${windowStart}::text IS NULL OR p.created_at >= ${windowStart})
+    `);
+
+    const sourceSet = new Set<string>();
+    const locationSet = new Set<string>();
+    for (const row of filterOptions.rows as any[]) {
+      const src = (row.source as string | null) ?? "unknown";
+      sourceSet.add(src);
+      const loc = row.location as string | null;
+      if (loc && String(loc).trim() !== "") locationSet.add(String(loc));
+    }
 
     const categories = (result.rows as any[]).map((r) => ({
       category: r.category as string,
@@ -729,6 +787,14 @@ router.get("/first-booking-funnel", adminMiddleware, async (req: AdminRequest, r
 
     res.json({
       window: days === null ? "all" : `${days}d`,
+      filters: {
+        source: sourceFilter ?? FUNNEL_FILTER_ALL,
+        location: locationFilter ?? FUNNEL_FILTER_ALL,
+      },
+      filterOptions: {
+        sources: Array.from(sourceSet).sort((a, b) => a.localeCompare(b)),
+        locations: Array.from(locationSet).sort((a, b) => a.localeCompare(b)),
+      },
       totals,
       categories,
     });
@@ -742,6 +808,8 @@ router.get("/first-booking-funnel/pages", adminMiddleware, async (req: AdminRequ
   try {
     const days = parseFunnelWindowDays(req.query.days);
     const windowStart = windowStartIso(days);
+    const sourceFilter = parseFunnelSource(req.query.source);
+    const locationFilter = parseFunnelLocation(req.query.location);
     const limit = Math.min(parseInt(String(req.query.limit ?? "100"), 10) || 100, 500);
 
     const result = await db.execute(sql`
@@ -769,7 +837,8 @@ router.get("/first-booking-funnel/pages", adminMiddleware, async (req: AdminRequ
             AND i.paid_at IS NOT NULL
         ) AS first_paid_at
       FROM booking_pages p
-      WHERE p.source = ${FUNNEL_SOURCE}
+      WHERE (${sourceFilter}::text IS NULL OR p.source = ${sourceFilter})
+        AND (${locationFilter}::text IS NULL OR p.location = ${locationFilter})
         AND (${windowStart}::text IS NULL OR p.created_at >= ${windowStart})
       ORDER BY p.created_at DESC
       LIMIT ${limit}

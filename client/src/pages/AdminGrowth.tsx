@@ -1736,6 +1736,8 @@ interface FirstBookingCategoryRow extends FirstBookingTotals {
 
 interface FirstBookingFunnelData {
   window: string;
+  filters: { source: string; location: string };
+  filterOptions: { sources: string[]; locations: string[] };
   totals: FirstBookingTotals;
   categories: FirstBookingCategoryRow[];
 }
@@ -2018,26 +2020,46 @@ function FirstBookingPageDetailSheet({
   );
 }
 
+// Sentinel value for the source/location dropdowns. When picked, the
+// frontend sends `source=all` / `location=all` to the API and the backend
+// drops that filter from the WHERE clause. We avoid using "" as the value
+// because shadcn's <SelectItem> rejects empty strings.
+const FUNNEL_FILTER_ALL_VALUE = "all";
+
 function FirstBookingTab() {
   const [windowValue, setWindowValue] = useState<string>("30");
+  // Default the source dropdown to the existing cohort ('growth_engine')
+  // so opening the tab keeps showing the historical First Booking funnel.
+  // Switching to "All" or another source reveals other acquisition data.
+  const [sourceValue, setSourceValue] = useState<string>("growth_engine");
+  const [locationValue, setLocationValue] = useState<string>(FUNNEL_FILTER_ALL_VALUE);
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
+  const funnelParams = new URLSearchParams({
+    days: windowValue,
+    source: sourceValue,
+    location: locationValue,
+  });
+
   const funnelQuery = useQuery<FirstBookingFunnelData>({
-    queryKey: QUERY_KEYS.adminFirstBookingFunnel(windowValue),
+    queryKey: QUERY_KEYS.adminFirstBookingFunnel(windowValue, sourceValue, locationValue),
     queryFn: () =>
-      apiFetch(
-        `/api/admin/analytics/first-booking-funnel?days=${encodeURIComponent(windowValue)}`,
-      ),
+      apiFetch(`/api/admin/analytics/first-booking-funnel?${funnelParams.toString()}`),
     retry: false,
   });
 
+  const pagesParams = new URLSearchParams({
+    days: windowValue,
+    source: sourceValue,
+    location: locationValue,
+    limit: "200",
+  });
+
   const pagesQuery = useQuery<FirstBookingPagesData>({
-    queryKey: QUERY_KEYS.adminFirstBookingFunnelPages(windowValue),
+    queryKey: QUERY_KEYS.adminFirstBookingFunnelPages(windowValue, sourceValue, locationValue),
     queryFn: () =>
-      apiFetch(
-        `/api/admin/analytics/first-booking-funnel/pages?days=${encodeURIComponent(windowValue)}&limit=200`,
-      ),
+      apiFetch(`/api/admin/analytics/first-booking-funnel/pages?${pagesParams.toString()}`),
     retry: false,
   });
 
@@ -2058,9 +2080,26 @@ function FirstBookingTab() {
     { key: "paid", label: "First Invoice Paid", icon: DollarSign, accent: "text-emerald-600 dark:text-emerald-400", value: totals.paid },
   ] as const;
 
+  // Dropdown options come from the funnel response so admins always see
+  // exactly the source/location values that exist in their data within
+  // the current time window. We always include the current selection
+  // even if it's missing from the response (e.g. the value disappeared
+  // after the user filtered to a smaller time window) so the Select stays
+  // in sync with the controlled state.
+  const sourceOptions = Array.from(
+    new Set([...(funnelQuery.data?.filterOptions.sources ?? []), sourceValue].filter(
+      (v) => v && v !== FUNNEL_FILTER_ALL_VALUE,
+    )),
+  ).sort((a, b) => a.localeCompare(b));
+  const locationOptions = Array.from(
+    new Set([...(funnelQuery.data?.filterOptions.locations ?? []), locationValue].filter(
+      (v) => v && v !== FUNNEL_FILTER_ALL_VALUE,
+    )),
+  ).sort((a, b) => a.localeCompare(b));
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm text-muted-foreground">
           Funnel for{" "}
           <span className="font-medium text-foreground">
@@ -2068,25 +2107,77 @@ function FirstBookingTab() {
           </span>
           . Time filter applies to the page&apos;s creation date.
         </div>
-        <Select value={windowValue} onValueChange={setWindowValue}>
-          <SelectTrigger
-            className="w-44"
-            data-testid="select-first-booking-window"
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {FUNNEL_WINDOWS.map((w) => (
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={sourceValue} onValueChange={setSourceValue}>
+            <SelectTrigger
+              className="w-44"
+              data-testid="select-first-booking-source"
+            >
+              <SelectValue placeholder="Source" />
+            </SelectTrigger>
+            <SelectContent>
               <SelectItem
-                key={w.value}
-                value={w.value}
-                data-testid={`select-first-booking-window-option-${w.value}`}
+                value={FUNNEL_FILTER_ALL_VALUE}
+                data-testid="select-first-booking-source-option-all"
               >
-                {w.label}
+                All sources
               </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+              {sourceOptions.map((s) => (
+                <SelectItem
+                  key={s}
+                  value={s}
+                  data-testid={`select-first-booking-source-option-${s}`}
+                >
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={locationValue} onValueChange={setLocationValue}>
+            <SelectTrigger
+              className="w-48"
+              data-testid="select-first-booking-location"
+            >
+              <SelectValue placeholder="Location" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem
+                value={FUNNEL_FILTER_ALL_VALUE}
+                data-testid="select-first-booking-location-option-all"
+              >
+                All locations
+              </SelectItem>
+              {locationOptions.map((l) => (
+                <SelectItem
+                  key={l}
+                  value={l}
+                  data-testid={`select-first-booking-location-option-${l}`}
+                >
+                  {l}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={windowValue} onValueChange={setWindowValue}>
+            <SelectTrigger
+              className="w-44"
+              data-testid="select-first-booking-window"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {FUNNEL_WINDOWS.map((w) => (
+                <SelectItem
+                  key={w.value}
+                  value={w.value}
+                  data-testid={`select-first-booking-window-option-${w.value}`}
+                >
+                  {w.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Funnel stages */}

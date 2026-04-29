@@ -189,7 +189,9 @@ export const QUERY_KEYS = {
   adminGrowthLeads: () => ["/api/admin/growth/leads"] as const,
   adminGrowthOutreach: () => ["/api/admin/growth/outreach"] as const,
   adminGrowthChannels: () => ["/api/admin/growth/channels"] as const,
-  adminFirstBookingFunnel: (window: string) => ["/api/admin/analytics/first-booking-funnel", window] as const,
-  adminFirstBookingFunnelPages: (window: string) => ["/api/admin/analytics/first-booking-funnel/pages", window] as const,
+  adminFirstBookingFunnel: (window: string, source: string, location: string) =>
+    ["/api/admin/analytics/first-booking-funnel", window, source, location] as const,
+  adminFirstBookingFunnelPages: (window: string, source: string, location: string) =>
+    ["/api/admin/analytics/first-booking-funnel/pages", window, source, location] as const,
   adminFirstBookingFunnelPage: (pageId: string) => ["/api/admin/analytics/first-booking-funnel/pages", pageId, "detail"] as const,
 };
