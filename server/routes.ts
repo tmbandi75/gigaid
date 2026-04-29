@@ -5,6 +5,7 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 import { storage } from "./storage";
+import { rewriteSupportMediaGifsToVideo } from "./supportManualMedia";
 import { readCapabilityUsage, readAllCapabilityUsage } from "./capabilityUsage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { 
@@ -197,16 +198,27 @@ export async function registerRoutes(
 
   // Public support manual endpoint - serves the markdown so the marketing site
   // (support.gigaid.ai) can fetch it directly. No auth required.
-  app.get("/support-manual.md", (_req: Request, res: Response) => {
+  //
+  // The on-disk manual embeds each demo clip as a GIF (![alt](support-media/x.gif))
+  // because GIFs render anywhere images do — that keeps the in-app help, email
+  // digests, and any other Markdown-only surface working. The published support
+  // site, however, can render raw HTML, so we swap each GIF embed for a sharper,
+  // smaller MP4 served via a <video> element. The GIF is reused as the poster
+  // (and inner <img> fallback) so browsers that block autoplay still show the
+  // animated demo, and ancient browsers without <video> support fall through to
+  // the original GIF. Pass ?raw=1 to bypass the swap and get the unmodified
+  // markdown (useful for debugging or for Markdown-only consumers).
+  app.get("/support-manual.md", (req: Request, res: Response) => {
     const manualPath = path.resolve(process.cwd(), "attached_assets/support-manual.md");
     fs.readFile(manualPath, "utf8", (err, data) => {
       if (err) {
         res.status(404).type("text/plain").send("Support manual not found");
         return;
       }
+      const body = req.query.raw === "1" ? data : rewriteSupportMediaGifsToVideo(data);
       res.set("Access-Control-Allow-Origin", "*");
       res.set("Cache-Control", "public, max-age=300");
-      res.type("text/markdown; charset=utf-8").send(data);
+      res.type("text/markdown; charset=utf-8").send(body);
     });
   });
 
