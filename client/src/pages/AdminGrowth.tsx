@@ -92,6 +92,16 @@ import {
   DollarSign,
   Clock,
 } from "lucide-react";
+import {
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { apiFetch } from "@/lib/apiFetch";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useApiMutation } from "@/hooks/useApiMutation";
@@ -1734,12 +1744,17 @@ interface FirstBookingCategoryRow extends FirstBookingTotals {
   category: string;
 }
 
+interface FirstBookingSeriesPoint extends FirstBookingTotals {
+  date: string;
+}
+
 interface FirstBookingFunnelData {
   window: string;
   filters: { source: string; location: string };
   filterOptions: { sources: string[]; locations: string[] };
   totals: FirstBookingTotals;
   categories: FirstBookingCategoryRow[];
+  series?: FirstBookingSeriesPoint[];
 }
 
 interface FirstBookingPageRow {
@@ -1795,6 +1810,130 @@ const FUNNEL_WINDOWS: { value: string; label: string }[] = [
 function pct(numerator: number, denominator: number): string {
   if (!denominator) return "0%";
   return `${((numerator / denominator) * 100).toFixed(1)}%`;
+}
+
+function formatFunnelChartDate(date: string): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return date;
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+const FIRST_BOOKING_STAGE_LINES: Array<{
+  key: keyof FirstBookingTotals;
+  label: string;
+  color: string;
+  dashed?: boolean;
+}> = [
+  { key: "generated", label: "Generated", color: "#2563eb" },
+  { key: "viewed", label: "Viewed", color: "#06b6d4" },
+  { key: "claimed", label: "Claimed", color: "#7c3aed" },
+  { key: "shared", label: "Shared", color: "#f59e0b", dashed: true },
+  { key: "paid", label: "First Invoice Paid", color: "#10b981" },
+];
+
+function FirstBookingTrendChart({
+  series,
+  isLoading,
+}: {
+  series: FirstBookingSeriesPoint[];
+  isLoading: boolean;
+}) {
+  const hasAnyActivity = series.some(
+    (p) =>
+      p.generated > 0 ||
+      p.viewed > 0 ||
+      p.claimed > 0 ||
+      p.shared > 0 ||
+      p.paid > 0,
+  );
+
+  return (
+    <Card className="border bg-card" data-testid="card-funnel-trend">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-semibold flex items-center gap-2">
+          <TrendingUp className="h-4 w-4 text-violet-500" />
+          Daily trend
+        </CardTitle>
+        <p className="text-xs text-muted-foreground mt-1">
+          Each line counts the day a page first reached that stage. Sums match
+          the totals above.
+        </p>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {isLoading ? (
+          <Skeleton className="h-64 w-full" />
+        ) : series.length === 0 ? (
+          <EmptyState
+            icon={TrendingUp}
+            title="No trend to chart yet"
+            description="Once Growth Engine pages move through the funnel in this window, a daily breakdown will appear here."
+            testId="text-funnel-trend-empty"
+          />
+        ) : !hasAnyActivity ? (
+          <p
+            className="text-sm text-muted-foreground"
+            data-testid="text-funnel-trend-empty"
+          >
+            No funnel activity recorded in this window.
+          </p>
+        ) : (
+          <div className="h-64 w-full" data-testid="chart-funnel-trend">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={series}
+                margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={formatFunnelChartDate}
+                  minTickGap={20}
+                  className="text-muted-foreground"
+                />
+                <YAxis
+                  tick={{ fontSize: 11 }}
+                  allowDecimals={false}
+                  className="text-muted-foreground"
+                  width={36}
+                />
+                <Tooltip
+                  labelFormatter={(label: string) =>
+                    formatFunnelChartDate(label)
+                  }
+                  contentStyle={{
+                    borderRadius: "8px",
+                    border: "1px solid hsl(var(--border))",
+                    background: "hsl(var(--card))",
+                    color: "hsl(var(--foreground))",
+                    fontSize: "12px",
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: "12px" }} />
+                {FIRST_BOOKING_STAGE_LINES.map((line) => (
+                  <Line
+                    key={line.key}
+                    type="monotone"
+                    dataKey={line.key}
+                    name={line.label}
+                    stroke={line.color}
+                    strokeWidth={2}
+                    strokeDasharray={line.dashed ? "4 3" : undefined}
+                    dot={false}
+                    activeDot={{ r: 4 }}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 function formatDateTime(value: string | null | undefined): string {
@@ -2193,6 +2332,12 @@ function FirstBookingTab() {
           />
         ))}
       </div>
+
+      {/* Daily trend chart */}
+      <FirstBookingTrendChart
+        series={funnelQuery.data?.series ?? []}
+        isLoading={funnelQuery.isLoading}
+      />
 
       {/* Per-category breakdown */}
       <Card className="border bg-card" data-testid="card-funnel-by-category">

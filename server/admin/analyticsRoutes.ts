@@ -785,6 +785,124 @@ router.get("/first-booking-funnel", adminMiddleware, async (req: AdminRequest, r
       { generated: 0, viewed: 0, claimed: 0, shared: 0, paid: 0 },
     );
 
+    // Daily rollup for the trend chart. For each page we derive the day
+    // it first hit each stage (generated = created_at, viewed = first
+    // page_viewed event, claimed = claimed_at, shared = first
+    // link_copied/link_shared event, paid = first paid invoice for the
+    // claimer). Each page contributes at most 1 per stage per day, which
+    // matches the per-page binary counting used for `totals` and
+    // `categories` above. Cohort filter (source = 'growth_engine') and
+    // the time window on `created_at` mirror the aggregate query, so the
+    // sum of each series equals its corresponding total.
+    const seriesResult = await db.execute(sql`
+      WITH page_event_dates AS (
+        SELECT
+          p.id,
+          LEFT(p.created_at, 10) AS generated_day,
+          LEFT(p.claimed_at, 10) AS claimed_day,
+          (
+            SELECT LEFT(MIN(e.created_at), 10) FROM booking_page_events e
+            WHERE e.page_id = p.id AND e.type = 'page_viewed'
+          ) AS viewed_day,
+          (
+            SELECT LEFT(MIN(e.created_at), 10) FROM booking_page_events e
+            WHERE e.page_id = p.id AND e.type IN ('link_copied', 'link_shared')
+          ) AS shared_day,
+          CASE WHEN p.claimed_by_user_id IS NOT NULL THEN (
+            SELECT LEFT(MIN(i.paid_at), 10) FROM invoices i
+            WHERE i.user_id = p.claimed_by_user_id
+              AND i.paid_at IS NOT NULL
+          ) END AS paid_day
+        FROM booking_pages p
+        WHERE p.source = ${FUNNEL_SOURCE}
+          AND (${windowStart}::text IS NULL OR p.created_at >= ${windowStart})
+      )
+      SELECT
+        day,
+        SUM(generated)::int AS generated,
+        SUM(viewed)::int AS viewed,
+        SUM(claimed)::int AS claimed,
+        SUM(shared)::int AS shared,
+        SUM(paid)::int AS paid
+      FROM (
+        SELECT generated_day AS day, 1 AS generated, 0 AS viewed, 0 AS claimed, 0 AS shared, 0 AS paid
+          FROM page_event_dates WHERE generated_day IS NOT NULL
+        UNION ALL
+        SELECT viewed_day AS day, 0, 1, 0, 0, 0
+          FROM page_event_dates WHERE viewed_day IS NOT NULL
+        UNION ALL
+        SELECT claimed_day AS day, 0, 0, 1, 0, 0
+          FROM page_event_dates WHERE claimed_day IS NOT NULL
+        UNION ALL
+        SELECT shared_day AS day, 0, 0, 0, 1, 0
+          FROM page_event_dates WHERE shared_day IS NOT NULL
+        UNION ALL
+        SELECT paid_day AS day, 0, 0, 0, 0, 1
+          FROM page_event_dates WHERE paid_day IS NOT NULL
+      ) t
+      GROUP BY day
+      ORDER BY day
+    `);
+
+    type DayCounts = {
+      generated: number;
+      viewed: number;
+      claimed: number;
+      shared: number;
+      paid: number;
+    };
+    const emptyCounts = (): DayCounts => ({
+      generated: 0,
+      viewed: 0,
+      claimed: 0,
+      shared: 0,
+      paid: 0,
+    });
+
+    const seriesMap = new Map<string, DayCounts>();
+    for (const r of seriesResult.rows as any[]) {
+      const day = r.day as string | null;
+      if (!day) continue;
+      seriesMap.set(day, {
+        generated: Number(r.generated || 0),
+        viewed: Number(r.viewed || 0),
+        claimed: Number(r.claimed || 0),
+        shared: Number(r.shared || 0),
+        paid: Number(r.paid || 0),
+      });
+    }
+
+    // Determine the chart's continuous date range. For a fixed window
+    // (7d / 30d) we anchor to the requested windowStart so the x-axis
+    // shows the full period even if some days have no activity. For
+    // "all" we anchor to the earliest non-empty day in the result so the
+    // chart isn't dominated by an indefinite empty prefix; if there is
+    // no data we return an empty series.
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().slice(0, 10);
+
+    let startStr: string | null = null;
+    if (windowStart) {
+      startStr = windowStart.slice(0, 10);
+    } else if (seriesMap.size > 0) {
+      startStr = Array.from(seriesMap.keys()).sort()[0];
+    }
+
+    const series: Array<{ date: string } & DayCounts> = [];
+    if (startStr) {
+      const cursor = new Date(`${startStr}T00:00:00Z`);
+      const end = new Date(`${todayStr}T00:00:00Z`);
+      // Make sure we always include at least one bucket so the chart
+      // component can distinguish "no data yet" from "loading".
+      while (cursor.getTime() <= end.getTime()) {
+        const key = cursor.toISOString().slice(0, 10);
+        const counts = seriesMap.get(key) ?? emptyCounts();
+        series.push({ date: key, ...counts });
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+      }
+    }
+
     res.json({
       window: days === null ? "all" : `${days}d`,
       filters: {
@@ -797,6 +915,7 @@ router.get("/first-booking-funnel", adminMiddleware, async (req: AdminRequest, r
       },
       totals,
       categories,
+      series,
     });
   } catch (error) {
     logger.error("[Analytics] Error fetching first-booking funnel:", error);

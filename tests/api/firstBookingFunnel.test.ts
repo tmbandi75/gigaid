@@ -216,6 +216,45 @@ dbDescribe("First Booking funnel — admin report", () => {
     expect(data.totals.paid).toBe(sum("paid"));
   });
 
+  it("returns a per-day series whose stage sums match the totals", async () => {
+    const data = await getJson("/api/admin/analytics/first-booking-funnel?days=30");
+
+    expect(Array.isArray(data.series)).toBe(true);
+    // 30d window must produce a continuous range — at least the 30 days
+    // up through today, so the chart x-axis is stable even on quiet days.
+    expect(data.series.length).toBeGreaterThanOrEqual(30);
+
+    // Days are ISO YYYY-MM-DD strings and strictly ordered.
+    for (let i = 1; i < data.series.length; i++) {
+      expect(data.series[i].date > data.series[i - 1].date).toBe(true);
+    }
+
+    // Each day's stage counts are non-negative and never exceed the
+    // totals (we only ever count a page once per stage per day).
+    const stageKeys = ["generated", "viewed", "claimed", "shared", "paid"] as const;
+    for (const key of stageKeys) {
+      const seriesSum = data.series.reduce(
+        (acc: number, point: any) => acc + Number(point[key] || 0),
+        0,
+      );
+      // The sum across the daily series must equal the aggregate total
+      // for that stage (the per-page binary count) — every page that
+      // hit the stage contributes exactly once on the day it did so.
+      expect(seriesSum).toBe(data.totals[key]);
+    }
+
+    // The fixtures all happen "today" (UTC), so today's bucket must
+    // carry the bulk of the activity.
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const today = data.series.find((p: any) => p.date === todayKey);
+    expect(today).toBeDefined();
+    expect(today.generated).toBeGreaterThanOrEqual(5);
+    expect(today.viewed).toBeGreaterThanOrEqual(4);
+    expect(today.claimed).toBeGreaterThanOrEqual(3);
+    expect(today.shared).toBeGreaterThanOrEqual(2);
+    expect(today.paid).toBeGreaterThanOrEqual(1);
+  });
+
   it("excludes user_created (non Growth-Engine) pages from the funnel", async () => {
     const data = await getJson("/api/admin/analytics/first-booking-funnel?days=30");
     const pages = await getJson(
