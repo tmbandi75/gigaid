@@ -8,6 +8,20 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { PLAN_NAMES, Plan } from "@shared/plans";
 import { getAuthToken } from "@/lib/authToken";
 import {
   Dialog,
@@ -1112,6 +1126,26 @@ function ActionsSection({ userId, profile }: { userId: string; profile: UserProf
   );
 }
 
+interface PlanPriceConfig {
+  plan: Plan;
+  cadence: "monthly" | "yearly";
+  envVar: string;
+  priceId: string | null;
+  configured: boolean;
+}
+
+interface PlanPricesResponse {
+  plans: PlanPriceConfig[];
+  runbookUrl: string;
+}
+
+const RUNBOOK_HREF = "/docs/runbooks/stripe-plan-price-ids.md";
+
+function planPriceLabel(p: PlanPriceConfig): string {
+  const cadenceLabel = p.cadence === "monthly" ? "Monthly" : "Yearly";
+  return `${PLAN_NAMES[p.plan] ?? p.plan} — ${cadenceLabel}`;
+}
+
 function BillingActionsSection({ userId, profile }: { userId: string; profile: UserProfile }) {
   const { toast } = useToast();
   const [actionDialog, setActionDialog] = useState<string | null>(null);
@@ -1119,6 +1153,17 @@ function BillingActionsSection({ userId, profile }: { userId: string; profile: U
   const [compMonths, setCompMonths] = useState("1");
   const [creditAmount, setCreditAmount] = useState("");
   const [cancelImmediate, setCancelImmediate] = useState(false);
+  const [selectedPriceKey, setSelectedPriceKey] = useState<string>("");
+
+  const planPricesQuery = useQuery<PlanPricesResponse>({
+    queryKey: QUERY_KEYS.adminUsersPlanPrices(),
+  });
+  const planPrices = planPricesQuery.data?.plans ?? [];
+  const runbookUrl = planPricesQuery.data?.runbookUrl ?? RUNBOOK_HREF;
+  const configuredCount = planPrices.filter((p) => p.configured).length;
+  const missingPlanPrices = planPrices.filter((p) => !p.configured);
+  const planPriceByKey = (key: string) =>
+    planPrices.find((p) => `${p.plan}:${p.cadence}` === key);
 
   const actionMutation = useApiMutation(
     async ({ action_key, payload }: { action_key: string; payload?: any }) =>
@@ -1135,6 +1180,7 @@ function BillingActionsSection({ userId, profile }: { userId: string; profile: U
         setCompMonths("1");
         setCreditAmount("");
         setCancelImmediate(false);
+        setSelectedPriceKey("");
       },
       onError: (error: any) => {
         toast({ 
@@ -1167,6 +1213,44 @@ function BillingActionsSection({ userId, profile }: { userId: string; profile: U
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start"
+            onClick={() => setActionDialog("change_plan")}
+            data-testid="button-billing-change-plan"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Change Plan
+          </Button>
+
+          {planPricesQuery.isSuccess && missingPlanPrices.length > 0 && (
+            <div
+              className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100"
+              data-testid="alert-billing-plan-prices-missing"
+            >
+              {configuredCount === 0 ? (
+                <>
+                  No Stripe plan prices configured in this environment.
+                </>
+              ) : (
+                <>
+                  {missingPlanPrices.length} plan/cadence pair
+                  {missingPlanPrices.length === 1 ? "" : "s"} missing a Stripe price ID.
+                </>
+              )}{" "}
+              <a
+                href={runbookUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="underline"
+                data-testid="link-billing-plan-prices-runbook"
+              >
+                Setup runbook
+              </a>
+            </div>
+          )}
+
           <Button
             variant="outline"
             size="sm"
@@ -1265,6 +1349,7 @@ function BillingActionsSection({ userId, profile }: { userId: string; profile: U
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
+              {actionDialog === "change_plan" && "Change Plan"}
               {actionDialog === "grant_comp" && "Grant Comp Access"}
               {actionDialog === "revoke_comp" && "Revoke Comp Access"}
               {actionDialog === "pause" && "Pause Billing"}
@@ -1280,6 +1365,83 @@ function BillingActionsSection({ userId, profile }: { userId: string; profile: U
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            {actionDialog === "change_plan" && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="select-billing-plan-price">
+                    New plan / cadence
+                  </Label>
+                  <TooltipProvider delayDuration={150}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <a
+                          href={runbookUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-muted-foreground underline"
+                          data-testid="link-billing-plan-prices-runbook-tooltip"
+                        >
+                          Why are some disabled?
+                        </a>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="max-w-xs text-xs">
+                        Plans whose Stripe price ID env var isn't set in this
+                        environment are disabled. See the runbook for setup.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <Select
+                  value={selectedPriceKey}
+                  onValueChange={setSelectedPriceKey}
+                >
+                  <SelectTrigger
+                    id="select-billing-plan-price"
+                    data-testid="select-billing-plan-price"
+                  >
+                    <SelectValue placeholder="Select a plan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {planPrices.map((p) => {
+                      const key = `${p.plan}:${p.cadence}`;
+                      return (
+                        <SelectItem
+                          key={key}
+                          value={key}
+                          disabled={!p.configured}
+                          data-testid={`select-item-billing-plan-${p.plan}-${p.cadence}`}
+                        >
+                          {planPriceLabel(p)}
+                          {!p.configured && (
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              ({p.envVar} not set)
+                            </span>
+                          )}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                {planPricesQuery.isSuccess && configuredCount === 0 && (
+                  <p
+                    className="text-xs text-amber-700 dark:text-amber-300"
+                    data-testid="text-billing-no-plan-prices"
+                  >
+                    No Stripe plan prices are configured in this environment.{" "}
+                    <a
+                      href={runbookUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline"
+                    >
+                      See the runbook
+                    </a>{" "}
+                    for setup instructions.
+                  </p>
+                )}
+              </div>
+            )}
+
             {actionDialog === "grant_comp" && (
               <div className="space-y-2">
                 <Label>Duration (months)</Label>
@@ -1346,6 +1508,25 @@ function BillingActionsSection({ userId, profile }: { userId: string; profile: U
             <Button
               onClick={() => {
                 switch (actionDialog) {
+                  case "change_plan": {
+                    const selected = planPriceByKey(selectedPriceKey);
+                    if (!selected || !selected.configured || !selected.priceId) {
+                      toast({
+                        title: "Pick an available plan",
+                        description:
+                          "That plan/cadence has no Stripe price ID configured. See the runbook.",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    const isUpgrade =
+                      selected.cadence === "yearly" || !profile.isPro;
+                    handleAction(
+                      isUpgrade ? "billing_upgrade" : "billing_downgrade",
+                      { priceId: selected.priceId },
+                    );
+                    break;
+                  }
                   case "grant_comp":
                     handleAction("billing_grant_comp", { months: parseInt(compMonths) || 1 });
                     break;
@@ -1374,7 +1555,13 @@ function BillingActionsSection({ userId, profile }: { userId: string; profile: U
                     break;
                 }
               }}
-              disabled={actionMutation.isPending || !reason.trim()}
+              disabled={
+                actionMutation.isPending ||
+                !reason.trim() ||
+                (actionDialog === "change_plan" &&
+                  (!selectedPriceKey ||
+                    !planPriceByKey(selectedPriceKey)?.configured))
+              }
               data-testid="button-billing-confirm"
             >
               {actionMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}

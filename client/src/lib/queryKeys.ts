@@ -110,6 +110,7 @@ export const QUERY_KEYS = {
   adminUserPayments: (userId: string) => ["/api/admin/users", userId, "payments"] as const,
   adminExternalLinks: () => ["/api/admin/users/links/external"] as const,
   adminUsers: () => ["/api/admin/users"] as const,
+  adminUsersPlanPrices: () => ["/api/admin/users/plan-prices"] as const,
   adminAuditLogs: () => ["/api/admin/audit-logs"] as const,
   adminAnalytics: () => ["/api/admin/analytics"] as const,
   adminAnalyticsGrowth: () => ["/api/admin/analytics/growth"] as const,

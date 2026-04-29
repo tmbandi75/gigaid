@@ -2533,3 +2533,102 @@ describe("GET /api/admin/users/links/external", () => {
     });
   });
 });
+
+describe("GET /api/admin/users/plan-prices", () => {
+  // Snapshot the env vars under test so we can restore them after each
+  // case — the route reads `process.env` lazily on every call.
+  const TRACKED_ENV_VARS = [
+    "STRIPE_PRICE_PRO_MONTHLY",
+    "STRIPE_PRICE_PRO_YEARLY",
+    "STRIPE_PRICE_PRO_PLUS_MONTHLY",
+    "STRIPE_PRICE_PRO_PLUS_YEARLY",
+    "STRIPE_PRICE_BUSINESS_MONTHLY",
+    "STRIPE_PRICE_BUSINESS_YEARLY",
+  ] as const;
+  const originalEnv: Record<string, string | undefined> = {};
+
+  beforeEach(() => {
+    for (const key of TRACKED_ENV_VARS) {
+      originalEnv[key] = process.env[key];
+    }
+  });
+
+  afterEach(() => {
+    for (const key of TRACKED_ENV_VARS) {
+      if (originalEnv[key] === undefined) delete process.env[key];
+      else process.env[key] = originalEnv[key];
+    }
+  });
+
+  it("requires admin auth", async () => {
+    const res = await request(buildApp()).get("/api/admin/users/plan-prices");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns one entry per (plan, cadence) pair, flagging unconfigured ones", async () => {
+    process.env.STRIPE_PRICE_PRO_MONTHLY = "price_pro_monthly_xyz";
+    process.env.STRIPE_PRICE_PRO_YEARLY = "price_pro_yearly_xyz";
+    delete process.env.STRIPE_PRICE_PRO_PLUS_MONTHLY;
+    delete process.env.STRIPE_PRICE_PRO_PLUS_YEARLY;
+    delete process.env.STRIPE_PRICE_BUSINESS_MONTHLY;
+    delete process.env.STRIPE_PRICE_BUSINESS_YEARLY;
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/plan-prices")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.runbookUrl).toMatch(/stripe-plan-price-ids/);
+    expect(Array.isArray(res.body.plans)).toBe(true);
+    // 3 paid plans × 2 cadences = 6 entries (Free is excluded — no env vars).
+    expect(res.body.plans).toHaveLength(6);
+
+    const byKey = new Map<string, any>(
+      res.body.plans.map((p: any) => [`${p.plan}:${p.cadence}`, p]),
+    );
+
+    const proMonthly = byKey.get("pro:monthly");
+    expect(proMonthly).toMatchObject({
+      plan: "pro",
+      cadence: "monthly",
+      envVar: "STRIPE_PRICE_PRO_MONTHLY",
+      priceId: "price_pro_monthly_xyz",
+      configured: true,
+    });
+
+    const businessYearly = byKey.get("business:yearly");
+    expect(businessYearly).toMatchObject({
+      plan: "business",
+      cadence: "yearly",
+      envVar: "STRIPE_PRICE_BUSINESS_YEARLY",
+      priceId: null,
+      configured: false,
+    });
+
+    const configuredCount = res.body.plans.filter(
+      (p: any) => p.configured,
+    ).length;
+    expect(configuredCount).toBe(2);
+  });
+
+  it("treats whitespace-only env vars as unconfigured", async () => {
+    process.env.STRIPE_PRICE_PRO_MONTHLY = "   ";
+    process.env.STRIPE_PRICE_PRO_YEARLY = "price_real";
+    delete process.env.STRIPE_PRICE_PRO_PLUS_MONTHLY;
+    delete process.env.STRIPE_PRICE_PRO_PLUS_YEARLY;
+    delete process.env.STRIPE_PRICE_BUSINESS_MONTHLY;
+    delete process.env.STRIPE_PRICE_BUSINESS_YEARLY;
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/plan-prices")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    const byKey = new Map<string, any>(
+      res.body.plans.map((p: any) => [`${p.plan}:${p.cadence}`, p]),
+    );
+    expect(byKey.get("pro:monthly").configured).toBe(false);
+    expect(byKey.get("pro:monthly").priceId).toBeNull();
+    expect(byKey.get("pro:yearly").configured).toBe(true);
+  });
+});

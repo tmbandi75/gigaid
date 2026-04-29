@@ -21,7 +21,7 @@ import { getUncachableStripeClient } from "../stripeClient";
 import { logger } from "../lib/logger";
 import { safeParseJsonColumn } from "./jsonColumn";
 import { safePriceCentsExact } from "@shared/safePrice";
-import { isKnownPlanPriceId } from "../billing/plans";
+import { isKnownPlanPriceId, getConfiguredPlanPrices } from "../billing/plans";
 
 const router = Router();
 
@@ -407,6 +407,23 @@ router.get("/views", async (req, res) => {
   } catch (error) {
     logger.error("[Admin Users] Views error:", error);
     res.status(500).json({ error: "Failed to fetch view" });
+  }
+});
+
+// Returns which (plan, cadence) pairs have a configured Stripe price ID in
+// this environment, so the admin "Change plan" UI can flag unavailable pairs
+// instead of letting plan-change actions fail with `400 Unknown price ID`.
+// See docs/runbooks/stripe-plan-price-ids.md for how to set the env vars.
+router.get("/plan-prices", async (_req, res) => {
+  try {
+    const prices = getConfiguredPlanPrices();
+    res.json({
+      plans: prices,
+      runbookUrl: "/docs/runbooks/stripe-plan-price-ids.md",
+    });
+  } catch (error) {
+    logger.error("[Admin Users] Plan prices error:", error);
+    res.status(500).json({ error: "Failed to load plan price configuration" });
   }
 });
 

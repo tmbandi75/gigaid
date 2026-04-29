@@ -43,3 +43,32 @@ export function getPlanPriceEnvVarNames(): string[] {
   }
   return names;
 }
+
+export interface PlanPriceConfig {
+  plan: Plan;
+  cadence: BillingCadence;
+  envVar: string;
+  priceId: string | null;
+  configured: boolean;
+}
+
+export function getConfiguredPlanPrices(): PlanPriceConfig[] {
+  const result: PlanPriceConfig[] = [];
+  for (const [plan, cadences] of Object.entries(PLAN_PRICE_ENV_VARS) as Array<
+    [Plan, Partial<Record<BillingCadence, string>>]
+  >) {
+    for (const [cadence, envVar] of Object.entries(cadences) as Array<
+      [BillingCadence, string]
+    >) {
+      const value = process.env[envVar]?.trim() || null;
+      result.push({
+        plan,
+        cadence,
+        envVar,
+        priceId: value,
+        configured: !!value,
+      });
+    }
+  }
+  return result;
+}
