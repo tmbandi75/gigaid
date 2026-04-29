@@ -672,6 +672,133 @@ dbDescribe("Task #22: scheduler dispatches job_id=NULL first-booking nudges", ()
     });
   }
 
+  // Task #194: a row that has been deferred (left as `queued`) for longer
+  // than DEFERRED_QUEUED_MAX_AGE_MS must be marked `failed` with a structured
+  // failure_reason, so a misconfigured / down SMS provider in production
+  // doesn't grow the queue forever silently.
+  //
+  // The cap keys off the time the row entered `queued` (updated_at), NOT off
+  // scheduled_for, so a very-overdue row that was JUST deferred (scheduler
+  // came up after a long downtime) does not get incorrectly capped on its
+  // first deferral tick.
+  it("Task #194: caps long-deferred queued rows, leaves recent ones AND newly-deferred-but-overdue rows alone", async () => {
+    const { pool } = await import("../../server/db");
+    const {
+      processScheduledMessages,
+      DEFERRED_QUEUED_MAX_AGE_MS,
+      PROVIDER_UNAVAILABLE_TIMEOUT_REASON,
+    } = await import("../../server/postJobMomentum");
+
+    const suffix = `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+    const userId = `task194-user-${suffix}`;
+    const phone = "+15550000194";
+    const client = await pool.connect();
+
+    try {
+      await client.query(
+        `INSERT INTO users (id, username, password, first_name, phone, notify_by_sms, sms_opt_out)
+         VALUES ($1, $2, 'unused', 'Sky', $3, true, false)`,
+        [userId, `task194-${suffix}`, phone],
+      );
+      const pageIns = await client.query(
+        `INSERT INTO booking_pages (claimed, claimed_by_user_id) VALUES (true, $1) RETURNING id`,
+        [userId],
+      );
+      const pageId = pageIns.rows[0].id as string;
+
+      // Stuck row: status='queued', updated_at older than the cap (i.e. the
+      // row first went to queued more than 7 days ago and has been sitting
+      // there). Simulates the production scenario where Twilio kept returning
+      // NO_FROM_NUMBER tick after tick for over 7 days.
+      const stuckTs = new Date(
+        Date.now() - DEFERRED_QUEUED_MAX_AGE_MS - 60_000,
+      ).toISOString();
+      const stuckIns = await client.query(
+        `INSERT INTO outbound_messages
+           (user_id, channel, to_address, type, status, scheduled_for, created_at,
+            updated_at, booking_page_id, template_rendered)
+         VALUES ($1, 'sms', $2, 'first_booking_nudge_10m', 'queued', $3, $3, $3, $4, '')
+         RETURNING id`,
+        [userId, phone, stuckTs, pageId],
+      );
+      const stuckId = stuckIns.rows[0].id as string;
+
+      // Recent row: queued and updated recently. Must be left alone.
+      const recentTs = new Date(Date.now() - 60_000).toISOString();
+      const recentIns = await client.query(
+        `INSERT INTO outbound_messages
+           (user_id, channel, to_address, type, status, scheduled_for, created_at,
+            updated_at, template_rendered)
+         VALUES ($1, 'sms', $2, 'followup', 'queued', $3, $3, $3, '')
+         RETURNING id`,
+        [userId, phone, recentTs],
+      );
+      const recentId = recentIns.rows[0].id as string;
+
+      // Regression: scheduled_for is very old (e.g. scheduler was down for
+      // weeks), but the row JUST transitioned to queued (updated_at is now).
+      // Must NOT be capped — it has not actually been deferred long.
+      const overdueScheduledFor = new Date(
+        Date.now() - DEFERRED_QUEUED_MAX_AGE_MS - 5 * 60_000,
+      ).toISOString();
+      const overdueIns = await client.query(
+        `INSERT INTO outbound_messages
+           (user_id, channel, to_address, type, status, scheduled_for, created_at,
+            updated_at, template_rendered)
+         VALUES ($1, 'sms', $2, 'followup', 'queued', $3, $4, $5, '')
+         RETURNING id`,
+        [
+          userId,
+          phone,
+          overdueScheduledFor,
+          overdueScheduledFor, // created long ago
+          new Date().toISOString(), // but updated_at = now (just deferred)
+        ],
+      );
+      const overdueId = overdueIns.rows[0].id as string;
+
+      try {
+        await processScheduledMessages();
+
+        const stuckAfter = await client.query(
+          `SELECT status, failure_reason FROM outbound_messages WHERE id = $1`,
+          [stuckId],
+        );
+        expect(stuckAfter.rows[0].status).toBe("failed");
+        expect(stuckAfter.rows[0].failure_reason).toBe(
+          PROVIDER_UNAVAILABLE_TIMEOUT_REASON,
+        );
+        // Sanity: matches the locked string admin dashboards pattern-match.
+        expect(PROVIDER_UNAVAILABLE_TIMEOUT_REASON).toBe(
+          "provider_unavailable_timeout",
+        );
+
+        const recentAfter = await client.query(
+          `SELECT status, failure_reason FROM outbound_messages WHERE id = $1`,
+          [recentId],
+        );
+        expect(recentAfter.rows[0].status).toBe("queued");
+        expect(recentAfter.rows[0].failure_reason).toBeNull();
+
+        const overdueAfter = await client.query(
+          `SELECT status, failure_reason FROM outbound_messages WHERE id = $1`,
+          [overdueId],
+        );
+        expect(overdueAfter.rows[0].status).toBe("queued");
+        expect(overdueAfter.rows[0].failure_reason).toBeNull();
+      } finally {
+        await client.query(
+          `DELETE FROM outbound_messages WHERE id = ANY($1::text[])`,
+          [[stuckId, recentId, overdueId]],
+        );
+        await client.query(`DELETE FROM booking_pages WHERE id = $1`, [pageId]);
+        await client.query(`DELETE FROM users WHERE id = $1`, [userId]);
+      }
+    } finally {
+      client.release();
+    }
+  });
+
   it("renders the locked first_booking_nudge_10m body when dispatching (no template_rendered fallback)", async () => {
     const { pool } = await import("../../server/db");
     const { processScheduledMessages } = await import(

@@ -264,6 +264,17 @@ export const FIRST_BOOKING_EMAIL_RESOLVE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 // Re-check cadence while waiting on a destination email.
 export const FIRST_BOOKING_EMAIL_RECHECK_MINUTES = 6 * 60;
 
+// Task #194: cap how long a row may sit in `queued` after the scheduler
+// dispatched it but the provider was unavailable (e.g. Twilio not configured
+// or in an outage). Without this cap a misconfigured provider in production
+// would leave nudges queued indefinitely with no eventual give-up. Mirrors
+// `FIRST_BOOKING_EMAIL_RESOLVE_WINDOW_MS` so SMS deferrals and email-resolve
+// waits give up on the same horizon.
+export const DEFERRED_QUEUED_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+// Locked failure_reason for stuck-queued rows. Admin dashboards and tests
+// pattern-match this string directly, so keep it stable.
+export const PROVIDER_UNAVAILABLE_TIMEOUT_REASON = "provider_unavailable_timeout";
+
 // Cancellation reasons surfaced via outbound_messages.failure_reason. Locked
 // strings — admin dashboards and tests both pattern-match these directly.
 export const CANCEL_REASONS = {
@@ -727,7 +738,61 @@ export async function getScheduledMessagesForJob(jobId: string, userId: string):
 // Scheduler worker: process due messages
 export async function processScheduledMessages(): Promise<number> {
   const now = new Date().toISOString();
-  
+
+  // Task #194: first, sweep `queued` rows that have been deferred for longer
+  // than DEFERRED_QUEUED_MAX_AGE_MS (e.g. SMS nudges left queued because the
+  // provider keeps returning NO_FROM_NUMBER) and mark them `failed` with a
+  // structured failure_reason. This prevents the queue from growing forever
+  // when the provider is misconfigured or in an outage, and the warn-level
+  // log line surfaces the outage to admins watching the SMS health view.
+  //
+  // Age is keyed off the time the row entered `queued`, not `scheduled_for`.
+  // The scheduler sets `updated_at` to "now" on the scheduled->queued
+  // transition (and on any later requeue), so for a stuck-queued row
+  // `updated_at` IS the "deferred since" timestamp. We COALESCE to
+  // `scheduled_for` only as a safety net for older rows that pre-date the
+  // updated_at write — every freshly-queued row has updated_at set.
+  const deferredCutoffIso = new Date(
+    Date.now() - DEFERRED_QUEUED_MAX_AGE_MS,
+  ).toISOString();
+  const stuckDeferred = await db
+    .select()
+    .from(outboundMessages)
+    .where(
+      and(
+        eq(outboundMessages.status, "queued"),
+        sql`COALESCE(${outboundMessages.updatedAt}, ${outboundMessages.scheduledFor}) <= ${deferredCutoffIso}`,
+      ),
+    )
+    .limit(50);
+
+  for (const stuck of stuckDeferred) {
+    // Atomic on `queued` so we never clobber a row another worker just flipped
+    // to `sent` (the sent-is-terminal trigger backs this up at the DB layer).
+    const flipped = await db
+      .update(outboundMessages)
+      .set({
+        status: "failed",
+        failureReason: PROVIDER_UNAVAILABLE_TIMEOUT_REASON,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(
+        and(
+          eq(outboundMessages.id, stuck.id),
+          eq(outboundMessages.status, "queued"),
+        ),
+      )
+      .returning({ id: outboundMessages.id });
+    if (flipped.length > 0) {
+      // Warn (not info) so this stands out in admin log scans the first time
+      // a row hits the cap — the signal that the provider has been down long
+      // enough to start losing nudges.
+      logger.warn(
+        `[OutboundMessages] ALERT provider_unavailable_timeout: marked ${stuck.id} (${stuck.type}/${stuck.channel}) failed after >${DEFERRED_QUEUED_MAX_AGE_MS}ms queued. SMS provider may be misconfigured or down.`,
+      );
+    }
+  }
+
   // Find messages that are scheduled and due
   const dueMessages = await db
     .select()
