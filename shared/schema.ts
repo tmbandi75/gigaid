@@ -73,7 +73,7 @@ export const users = pgTable("users", {
   phoneUnreachableAt: text("phone_unreachable_at"),
   lastActiveAt: text("last_active_at"),
   publicProfileEnabled: boolean("public_profile_enabled").default(true),
-  publicProfileSlug: text("public_profile_slug"),
+  publicProfileSlug: text("public_profile_slug").notNull(),
   showReviewsOnBooking: boolean("show_reviews_on_booking").default(true),
   referralCode: text("referral_code"),
   referredBy: text("referred_by"),
@@ -187,9 +187,12 @@ export const users = pgTable("users", {
   phoneVerifiedAt: text("phone_verified_at"),
 }, (table) => [
   // Database-level guarantee that no two users can ever share the same
-  // booking-link slug. Partial so multiple users can still legitimately have
-  // a NULL slug (e.g. accounts that haven't picked one yet, soft-deleted
-  // rows). Application code that writes this column MUST be ready for the
+  // booking-link slug. The column is also NOT NULL (see above) so every
+  // account is reachable via its public booking URL — the historical
+  // `WHERE public_profile_slug IS NOT NULL` clause is kept on the index for
+  // backward compatibility with the existing migration definition; it is now
+  // a no-op predicate because the column itself rejects NULL.
+  // Application code that writes this column MUST be ready for the
   // insert/update to fail with a unique-violation (Postgres SQLSTATE 23505)
   // and retry with the next-available suffix — see
   // `writeUserSlugWithRetry` in `server/lib/bookingSlug.ts`.

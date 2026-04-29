@@ -10,7 +10,11 @@ function makeUser(id: string, overrides: Partial<User> = {}): User {
     email: null,
     displayName: null,
     publicProfileEnabled: true,
-    publicProfileSlug: null,
+    // Every account is required to have a non-null booking-link slug at the
+    // DB layer (see `users.public_profile_slug NOT NULL` in the schema).
+    // Callers always override this with a meaningful value below; the
+    // placeholder here keeps the default consistent with the invariant.
+    publicProfileSlug: `placeholder-${id.slice(0, 8)}`,
     ...overrides,
   } as unknown as User;
 }

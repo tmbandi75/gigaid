@@ -5,6 +5,28 @@ import { and, eq, isNotNull, or } from 'drizzle-orm';
 import { users } from '@shared/schema';
 import { db } from './db';
 import { logger } from "./lib/logger";
+import { generateBookingSlug, writeUserSlugWithRetry } from './lib/bookingSlug';
+import { storage } from './storage';
+
+// `users.public_profile_slug` is NOT NULL — every account must always have a
+// booking link (Task #217). Mobile/web Firebase signups bypass `createUser`,
+// so we derive the same kind of base slug here that `DbStorage.createUser`
+// would have produced and let `writeUserSlugWithRetry` auto-suffix on a
+// race with another concurrent signup picking the same slug.
+function deriveBaseSlugForFirebaseSignup(opts: {
+  name?: string | null;
+  email?: string | null;
+  username: string;
+  fallbackId: string;
+}): string {
+  const fallback = `user-${opts.fallbackId.slice(0, 8).toLowerCase()}`;
+  const baseSlug = generateBookingSlug({
+    name: opts.name ?? null,
+    username: opts.username,
+    email: opts.email ?? null,
+  });
+  return !baseSlug || baseSlug === 'pro' ? fallback : baseSlug;
+}
 
 const router = Router();
 
@@ -278,25 +300,40 @@ router.post('/mobile/firebase', async (req: Request, res: Response) => {
       }
 
       const username = emailNormalized || `firebase_${firebaseUid}`;
-      
-      const [newUser] = await db
-        .insert(users)
-        .values({
-          username,
-          password: '',
-          email,
-          emailNormalized,
-          phone: phoneE164,
-          phoneE164,
-          name,
-          photo,
-          firebaseUid,
-          authProvider: 'firebase',
-          createdAt: now,
-          updatedAt: now,
-          onboardingState: 'not_started',
-        })
-        .returning();
+
+      const baseSlug = deriveBaseSlugForFirebaseSignup({
+        name,
+        email,
+        username,
+        fallbackId: firebaseUid,
+      });
+
+      const { result: newUser } = await writeUserSlugWithRetry(
+        baseSlug,
+        async (publicProfileSlug) => {
+          const [row] = await db
+            .insert(users)
+            .values({
+              username,
+              password: '',
+              email,
+              emailNormalized,
+              phone: phoneE164,
+              phoneE164,
+              name,
+              photo,
+              firebaseUid,
+              authProvider: 'firebase',
+              publicProfileSlug,
+              createdAt: now,
+              updatedAt: now,
+              onboardingState: 'not_started',
+            })
+            .returning();
+          return row;
+        },
+        { checkExists: (s) => storage.slugExists(s) },
+      );
 
       userId = newUser.id;
       linkedBy = 'new_user';
@@ -538,25 +575,40 @@ router.post('/web/firebase', async (req: Request, res: Response) => {
 
       // Create new user
       const username = emailNormalized || `firebase_${firebaseUid}`;
-      
-      const [newUser] = await db
-        .insert(users)
-        .values({
-          username,
-          password: '',
-          email,
-          emailNormalized,
-          phone: phoneE164,
-          phoneE164,
-          name,
-          photo,
-          firebaseUid,
-          authProvider: 'firebase',
-          createdAt: now,
-          updatedAt: now,
-          onboardingState: 'not_started',
-        })
-        .returning();
+
+      const baseSlug = deriveBaseSlugForFirebaseSignup({
+        name,
+        email,
+        username,
+        fallbackId: firebaseUid,
+      });
+
+      const { result: newUser } = await writeUserSlugWithRetry(
+        baseSlug,
+        async (publicProfileSlug) => {
+          const [row] = await db
+            .insert(users)
+            .values({
+              username,
+              password: '',
+              email,
+              emailNormalized,
+              phone: phoneE164,
+              phoneE164,
+              name,
+              photo,
+              firebaseUid,
+              authProvider: 'firebase',
+              publicProfileSlug,
+              createdAt: now,
+              updatedAt: now,
+              onboardingState: 'not_started',
+            })
+            .returning();
+          return row;
+        },
+        { checkExists: (s) => storage.slugExists(s) },
+      );
 
       userId = newUser.id;
       linkedBy = 'new_user';

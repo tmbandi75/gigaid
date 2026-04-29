@@ -401,7 +401,7 @@ describe("GET /api/admin/users/:userId (user detail)", () => {
         id: "demo-user", email: "demo@example.com", username: "demo",
         name: "Demo User", phone: null, isPro: false, proExpiresAt: null,
         onboardingCompleted: true, onboardingStep: 5, lastActiveAt: null,
-        createdAt: null, publicProfileSlug: null, stripeCustomerId: null,
+        createdAt: null, publicProfileSlug: "demo-user-slug", stripeCustomerId: null,
         stripeSubscriptionId: null,
       },
     ]);

@@ -133,6 +133,10 @@ dbDescribe("GET /api/admin/sms/opt-outs sort options", () => {
           password: "test-sort-suite",
           name: plan.name,
           email: `${plan.emailLocal}@gigaid.test`,
+          // `public_profile_slug` is NOT NULL (Task #217). Derive a unique
+          // per-row slug from the TAG so concurrent test runs don't
+          // collide on the unique index.
+          publicProfileSlug: `${TAG}-slug-${plan.idx}`,
           smsOptOut: true,
           smsOptOutAt: plan.optOutAt,
           notifyBySms: false,

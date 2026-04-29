@@ -766,7 +766,16 @@ export async function registerRoutes(
       }
 
       const updates: Record<string, any> = {};
-      if (publicProfileSlug !== undefined) updates.publicProfileSlug = publicProfileSlug;
+      // `users.public_profile_slug` is NOT NULL — every account always has a
+      // booking link. Silently drop a null/empty payload here so a stale
+      // client (e.g. an old "clear my slug" UI) can't trigger a 500 by
+      // pushing an invariant violation at the DB. The slug a user already
+      // owns stays in place. (Non-empty strings are also pre-validated by
+      // `validateSlug` above, so anything reaching the assignment below is
+      // both non-null and well-formed.)
+      if (publicProfileSlug) {
+        updates.publicProfileSlug = publicProfileSlug;
+      }
       if (publicProfileEnabled !== undefined) updates.publicProfileEnabled = publicProfileEnabled;
       if (name !== undefined) updates.name = name;
       if (firstName !== undefined) updates.firstName = firstName;
@@ -6904,7 +6913,11 @@ export async function registerRoutes(
       const existingUser = await storage.getUser((req as any).userId);
       const updates: Record<string, any> = {
         publicProfileEnabled,
-        publicProfileSlug,
+        // `publicProfileSlug` is NOT NULL at the DB layer (see schema). We
+        // only forward a slug write when the caller provided a real value;
+        // a null/empty payload is treated as "leave the existing slug
+        // alone" so a stale client can't violate the invariant.
+        ...(publicProfileSlug ? { publicProfileSlug } : {}),
         notifyBySms,
         notifyByEmail,
         businessName,

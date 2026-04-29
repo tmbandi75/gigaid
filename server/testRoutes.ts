@@ -195,11 +195,16 @@ export function registerTestRoutes(app: any, storage: IStorage) {
       }
 
       if (req.body.resetProfile) {
+        // Note: we deliberately do NOT clear `publicProfileSlug` here.
+        // The column is NOT NULL at the DB level (every account must always
+        // have a booking link) and the slug a user already owns is theirs
+        // for the lifetime of the account — wiping it would just force a
+        // unique-collision retry on the next save without any benefit to
+        // the test reset flow.
         await storage.updateUser(user.id, {
           services: [],
           defaultPrice: null,
           publicProfileEnabled: false,
-          publicProfileSlug: null,
           stripeConnectStatus: null,
           activationServicesDone: false,
           activationPricingDone: false,

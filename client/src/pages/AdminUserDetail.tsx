@@ -72,7 +72,7 @@ interface UserProfile {
   onboardingStep: number;
   lastActiveAt: string | null;
   createdAt: string | null;
-  publicProfileSlug: string | null;
+  publicProfileSlug: string;
   isFlagged: boolean;
   flagReason: string | null;
   isMessagingSuppressed: boolean;

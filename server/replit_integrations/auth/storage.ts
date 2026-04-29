@@ -2,6 +2,8 @@ import { users, jobs, leads, invoices, aiNudges, nextActions, type User, type In
 import { db } from "../../db";
 import { eq, sql } from "drizzle-orm";
 import { logger } from "../../lib/logger";
+import { generateBookingSlug, writeUserSlugWithRetry } from "../../lib/bookingSlug";
+import { storage } from "../../storage";
 
 // Auth user data from OIDC claims
 interface AuthUserData {
@@ -60,27 +62,52 @@ class AuthStorage implements IAuthStorage {
     
     // Create new user with default plan = "free"
     const now = new Date().toISOString();
-    const [user] = await db
-      .insert(users)
-      .values({
-        id: userData.id,
-        username: userData.email || userData.id, // Use email as username, fallback to id
-        password: "", // Empty password for OAuth users
-        email: userData.email,
-        emailNormalized: emailNormalized,
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        name: userData.firstName && userData.lastName 
-          ? `${userData.firstName} ${userData.lastName}` 
-          : userData.firstName || userData.lastName || null,
-        photo: userData.profileImageUrl,
-        authProvider: 'replit',
-        plan: "free", // Default plan for new users
-        createdAt: now,
-        updatedAt: now,
-        lastActiveAt: now,
-      })
-      .returning();
+    const username = userData.email || userData.id; // Use email as username, fallback to id
+    const fullName = userData.firstName && userData.lastName
+      ? `${userData.firstName} ${userData.lastName}`
+      : userData.firstName || userData.lastName || null;
+
+    // `users.public_profile_slug` is NOT NULL (Task #217 — every account
+    // always has a booking link). Replit OIDC signups bypass `createUser`,
+    // so we mirror the same slug derivation here and let
+    // `writeUserSlugWithRetry` handle a unique-violation race with another
+    // concurrent signup landing on the same slug.
+    const fallbackSlug = `user-${userData.id.slice(0, 8).toLowerCase()}`;
+    const baseCandidate = generateBookingSlug({
+      name: fullName,
+      username,
+      email: userData.email ?? null,
+    });
+    const baseSlug =
+      !baseCandidate || baseCandidate === "pro" ? fallbackSlug : baseCandidate;
+
+    const { result: user } = await writeUserSlugWithRetry(
+      baseSlug,
+      async (publicProfileSlug) => {
+        const [row] = await db
+          .insert(users)
+          .values({
+            id: userData.id,
+            username,
+            password: "", // Empty password for OAuth users
+            email: userData.email,
+            emailNormalized: emailNormalized,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            name: fullName,
+            photo: userData.profileImageUrl,
+            authProvider: 'replit',
+            plan: "free", // Default plan for new users
+            publicProfileSlug,
+            createdAt: now,
+            updatedAt: now,
+            lastActiveAt: now,
+          })
+          .returning();
+        return row;
+      },
+      { checkExists: (s) => storage.slugExists(s) },
+    );
     
     // Transfer demo data to the new user if demo-user exists
     await this.transferDemoData(userData.id);

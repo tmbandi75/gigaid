@@ -109,13 +109,16 @@ dbDescribe("First Booking funnel — admin report", () => {
     ] as any);
 
     // Users for the claimers (so the join in the detail endpoint resolves).
+    // `users.public_profile_slug` is NOT NULL (Task #217). Each seeded
+    // claimer needs a unique non-null slug; we derive one from the
+    // username so it stays unique within and across runs.
     await db.insert(schema.users).values([
-      { id: movingClaimer, username: `claim-${moving3}`, password: "x", authProvider: "claim", createdAt: nowIso },
-      { id: cleaningClaimer, username: `claim-${cleaning2}`, password: "x", authProvider: "claim", createdAt: nowIso },
-      { id: movingClaimerNoPaid, username: `claim-${moving2}`, password: "x", authProvider: "claim", createdAt: nowIso },
+      { id: movingClaimer, username: `claim-${moving3}`, password: "x", authProvider: "claim", publicProfileSlug: `slug-claim-${moving3}`, createdAt: nowIso },
+      { id: cleaningClaimer, username: `claim-${cleaning2}`, password: "x", authProvider: "claim", publicProfileSlug: `slug-claim-${cleaning2}`, createdAt: nowIso },
+      { id: movingClaimerNoPaid, username: `claim-${moving2}`, password: "x", authProvider: "claim", publicProfileSlug: `slug-claim-${moving2}`, createdAt: nowIso },
       // Owner of the user_created page — also has a paid invoice. If the
       // funnel filter is broken, this paid invoice would be counted too.
-      { id: userCreatedClaimer, username: `claim-${userCreatedPage}`, password: "x", authProvider: "claim", createdAt: nowIso },
+      { id: userCreatedClaimer, username: `claim-${userCreatedPage}`, password: "x", authProvider: "claim", publicProfileSlug: `slug-claim-${userCreatedPage}`, createdAt: nowIso },
     ] as any);
 
     // Paid invoice for moving3's claimer only — drives the funnel's

@@ -15,7 +15,7 @@
 const HAS_DB = !!process.env.DATABASE_URL;
 const d = HAS_DB ? describe : describe.skip;
 
-d("users.public_profile_slug partial unique index (DB-bound)", () => {
+d("users.public_profile_slug unique index + NOT NULL (DB-bound)", () => {
   let db: typeof import("../../server/db")["db"];
   let pool: typeof import("../../server/db")["pool"];
   let schema: typeof import("../../shared/schema");
@@ -37,8 +37,7 @@ d("users.public_profile_slug partial unique index (DB-bound)", () => {
         inArray(schema.users.username, [
           `${suiteId}-a`,
           `${suiteId}-b`,
-          `${suiteId}-null-a`,
-          `${suiteId}-null-b`,
+          `${suiteId}-null`,
         ]),
       );
     await pool.end().catch(() => undefined);
@@ -61,19 +60,17 @@ d("users.public_profile_slug partial unique index (DB-bound)", () => {
     ).rejects.toMatchObject({ code: "23505" });
   });
 
-  it("allows multiple users to share NULL slug (partial index)", async () => {
-    await db.insert(schema.users).values({
-      username: `${suiteId}-null-a`,
-      password: "x",
-      publicProfileSlug: null,
-    } as any);
-    await db.insert(schema.users).values({
-      username: `${suiteId}-null-b`,
-      password: "x",
-      publicProfileSlug: null,
-    } as any);
-
-    // No throw === partial index honored.
-    expect(true).toBe(true);
+  it("rejects an insert with a NULL slug (column is NOT NULL)", async () => {
+    // The column-level NOT NULL constraint is the database half of the
+    // "every account always has a booking link" invariant. Bypassing
+    // `createUser` (which always derives a slug) and inserting NULL
+    // directly must fail with Postgres's not_null_violation (23502).
+    await expect(
+      db.insert(schema.users).values({
+        username: `${suiteId}-null`,
+        password: "x",
+        publicProfileSlug: null,
+      } as any),
+    ).rejects.toMatchObject({ code: "23502" });
   });
 });
