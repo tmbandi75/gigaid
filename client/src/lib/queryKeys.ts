@@ -63,6 +63,7 @@ export const QUERY_KEYS = {
   smsUnreadCount: () => ["/api/sms/unread-count"] as const,
   scheduledMessages: () => ["/api/scheduled-messages"] as const,
   smsRateLimitedRecent: () => ["/api/sms/rate-limited-recent"] as const,
+  smsRateLimitStatus: () => ["/api/sms/rate-limit-status"] as const,
 
   reviews: () => ["/api/reviews"] as const,
   reminders: () => ["/api/reminders"] as const,

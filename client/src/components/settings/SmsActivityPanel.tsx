@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { Info, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { QUERY_KEYS } from "@/lib/queryKeys";
+import { SmsRateLimitStatus } from "@/components/settings/SmsRateLimitStatus";
 
 interface RateLimitedSms {
   id: string;
@@ -79,6 +80,8 @@ export function SmsActivityPanel() {
         Texts we held back because you hit your daily safety limit.
       </p>
 
+      <SmsRateLimitStatus />
+
       {isLoading ? (
         <div
           className="flex items-center gap-2 text-xs text-muted-foreground py-2"
@@ -103,19 +106,6 @@ export function SmsActivityPanel() {
         </p>
       ) : (
         <>
-          <div
-            className="rounded-md border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/40 p-3 flex items-start gap-2"
-            data-testid="text-sms-activity-explainer"
-          >
-            <Info
-              className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0"
-              aria-hidden="true"
-            />
-            <p className="text-xs text-amber-900 dark:text-amber-100">
-              You've hit the 3-text-per-day safety limit. The next scheduled
-              text will go out automatically once that window clears.
-            </p>
-          </div>
           <ul
             className="divide-y divide-border rounded-md border border-border"
             data-testid="list-sms-rate-limited"

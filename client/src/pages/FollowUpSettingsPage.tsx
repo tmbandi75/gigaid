@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { ApproachingLimitBanner } from "@/components/upgrade/ApproachingLimitBanner";
 import { SmsOptOutBanner } from "@/components/settings/SmsOptOutBanner";
+import { SmsRateLimitStatus } from "@/components/settings/SmsRateLimitStatus";
 import { useLocation } from "wouter";
 
 interface FollowUpRule {
@@ -180,6 +181,7 @@ export default function FollowUpSettingsPage() {
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6 pb-32">
       <ApproachingLimitBanner capability="sms.auto_followups" source="follow_up_settings" />
       <SmsOptOutBanner />
+      <SmsRateLimitStatus />
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"

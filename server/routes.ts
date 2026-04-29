@@ -14385,6 +14385,50 @@ Return ONLY the message text, no JSON or formatting.`
     }
   });
 
+  // Current rolling-24h SMS usage and the user's effective cap. Powers the
+  // "X of Y SMS sent today" disclosure in the Auto Follow-Ups / messaging
+  // settings screens. The cap mirrors what `resolveSmsRateLimit` returns
+  // for this user's plan + per-user override; `unlimited: true` means there
+  // is no cap (Business plan or an override of <=0).
+  app.get("/api/sms/rate-limit-status", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { db } = await import("./db");
+      const { users, userAutomationSettings } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const { resolveSmsRateLimit, countSentSmsLast24h } = await import(
+        "./postJobMomentum"
+      );
+
+      const [user] = await db
+        .select({ plan: users.plan })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      const [autoSettings] = await db
+        .select({ override: userAutomationSettings.smsRateLimitPer24hOverride })
+        .from(userAutomationSettings)
+        .where(eq(userAutomationSettings.userId, userId))
+        .limit(1);
+
+      const cap = resolveSmsRateLimit(
+        (user?.plan as CapPlan | null | undefined) ?? null,
+        autoSettings?.override ?? null,
+      );
+      const used = await countSentSmsLast24h(userId);
+
+      res.json({
+        used,
+        cap: cap ?? null,
+        unlimited: cap === undefined,
+      });
+    } catch (error: any) {
+      logger.error("Error fetching SMS rate limit status:", error);
+      res.status(500).json({ error: "Failed to fetch SMS rate limit status" });
+    }
+  });
+
   // ============ JOB TEMPLATES ============
   app.get("/api/job-templates", async (req, res) => {
     try {
