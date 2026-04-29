@@ -494,6 +494,7 @@ router.get("/:userId", async (req, res) => {
         name: user.name,
         phone: user.phone,
         isPro: user.isPro,
+        plan: user.plan,
         proExpiresAt: user.proExpiresAt,
         onboardingCompleted: user.onboardingCompleted,
         onboardingStep: user.onboardingStep,

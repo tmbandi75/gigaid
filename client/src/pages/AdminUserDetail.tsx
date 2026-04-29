@@ -22,6 +22,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { PLAN_NAMES, Plan } from "@shared/plans";
+import { PLAN_ORDER, type Plan as PlanTier } from "@shared/capabilities/plans";
 import { safePriceCentsExact } from "@shared/safePrice";
 import { getAuthToken } from "@/lib/authToken";
 import {
@@ -67,6 +68,7 @@ interface UserProfile {
   name: string | null;
   phone: string | null;
   isPro: boolean;
+  plan: string | null;
   proExpiresAt: string | null;
   onboardingCompleted: boolean;
   onboardingStep: number;
@@ -1922,8 +1924,27 @@ function BillingActionsSection({ userId, profile }: { userId: string; profile: U
                       });
                       return;
                     }
-                    const isUpgrade =
-                      selected.cadence === "yearly" || !profile.isPro;
+                    const normalizePlanTier = (value: string | null | undefined): PlanTier => {
+                      const candidate = (value ?? "free") as PlanTier;
+                      return PLAN_ORDER.includes(candidate) ? candidate : "free";
+                    };
+                    const currentPlanTier = normalizePlanTier(profile.plan);
+                    const selectedPlanTier = normalizePlanTier(selected.plan as unknown as string);
+                    const currentLevel = PLAN_ORDER.indexOf(currentPlanTier);
+                    const selectedLevel = PLAN_ORDER.indexOf(selectedPlanTier);
+                    let isUpgrade: boolean;
+                    if (selectedLevel !== currentLevel) {
+                      // Tier change: direction is determined purely by tier
+                      // (Free → Pro+ is always an upgrade; Business → Pro is
+                      // always a downgrade), independent of cadence.
+                      isUpgrade = selectedLevel > currentLevel;
+                    } else {
+                      // Same tier, cadence-only switch: treat the move to a
+                      // yearly cadence as the upgrade direction (greater
+                      // commitment, prepaid) and the move to monthly as the
+                      // downgrade direction.
+                      isUpgrade = selected.cadence === "yearly";
+                    }
                     handleAction(
                       isUpgrade ? "billing_upgrade" : "billing_downgrade",
                       { priceId: selected.priceId },
