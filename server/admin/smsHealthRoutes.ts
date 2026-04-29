@@ -5,6 +5,7 @@ import { and, asc, desc, eq, gte, ilike, isNotNull, lte, ne, or, sql, count } fr
 import type { SQL } from "drizzle-orm";
 import { adminMiddleware, type AdminRequest } from "../copilot/adminMiddleware";
 import { logger } from "../lib/logger";
+import { SMS_RESUME_CONFIRM_BODY } from "../lib/smsResumeConfirm";
 import { loadDuplicatePhoneGroups } from "./duplicatePhones";
 import { safeParseJsonColumn } from "./jsonColumn";
 
@@ -380,6 +381,138 @@ router.post("/users/:userId/clear-phone", async (req: AdminRequest, res) => {
   } catch (error) {
     logger.error("[Admin SMS Health] clear-phone error:", error);
     res.status(500).json({ error: "Failed to clear phone_e164" });
+  }
+});
+
+// Manually re-enable SMS for a user who is currently opted out. Mirrors
+// the user-initiated "Resume SMS" action in Settings (POST
+// /api/profile/sms/resume) so support can flip a roster row from
+// /admin/sms without drilling into the user detail page. Clears
+// smsOptOut + smsOptOutAt, restores notifyBySms=true (the legacy
+// preference toggled off when STOP arrives — see twilioStopOptOut.ts),
+// records a structured audit row, and sends the same resume
+// confirmation SMS the in-app flow uses.
+router.post("/users/:userId/re-enable", async (req: AdminRequest, res) => {
+  try {
+    const { userId } = req.params;
+    if (!req.adminUserId) {
+      return res.status(401).json({ error: "Admin identity required" });
+    }
+    const reason = ((req.body && req.body.reason) || "").toString().trim();
+    if (!reason) {
+      // Force a written reason so the audit log is meaningful — manually
+      // re-enabling SMS bypasses the user's STOP signal, so we want a
+      // record of why support did it (e.g. "User emailed support
+      // asking to resume").
+      return res.status(400).json({ error: "reason is required" });
+    }
+
+    const [target] = await db
+      .select({
+        id: users.id,
+        phone: users.phone,
+        smsOptOut: users.smsOptOut,
+        smsOptOutAt: users.smsOptOutAt,
+        notifyBySms: users.notifyBySms,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!target) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (!target.smsOptOut) {
+      // Idempotent: nothing to flip. Avoid writing a misleading audit
+      // row for a no-op.
+      return res
+        .status(409)
+        .json({ error: "User is not currently opted out" });
+    }
+
+    const previous = {
+      smsOptOut: target.smsOptOut ?? false,
+      smsOptOutAt: target.smsOptOutAt,
+      notifyBySms: target.notifyBySms ?? null,
+    };
+
+    // Transactional so the user-row update and the audit entry land
+    // together — the audit trail is the only forensic record of who
+    // re-enabled SMS for a previously-opted-out account.
+    await db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({
+          smsOptOut: false,
+          smsOptOutAt: null,
+          notifyBySms: true,
+        })
+        .where(eq(users.id, userId));
+
+      await tx.insert(adminActionAudit).values({
+        createdAt: new Date().toISOString(),
+        actorUserId: req.adminUserId!,
+        actorEmail: req.userEmail || null,
+        targetUserId: userId,
+        actionKey: "sms_re_enable_opt_out",
+        reason,
+        payload: JSON.stringify(previous),
+        source: "admin_ui",
+      });
+    });
+
+    logger.info(
+      `[Admin SMS Health] Re-enabled SMS for user ${userId} (actor=${req.adminUserId})`,
+    );
+
+    // Send the same confirmation SMS used by the in-app /sms/resume
+    // flow. We don't fail the action if the text bounces — the opt-out
+    // flag has already been cleared at this point — but we report
+    // delivery status back to the UI so the operator knows whether
+    // the user was notified.
+    let confirmationSent = false;
+    let confirmationWarning: string | undefined;
+    let confirmationFailureCode: string | undefined;
+    const phone = target.phone;
+    if (!phone) {
+      confirmationWarning = "No phone number on file for confirmation text.";
+      confirmationFailureCode = "NO_PHONE";
+    } else {
+      try {
+        const { sendSMS } = await import("../twilio");
+        const result = await sendSMS(phone, SMS_RESUME_CONFIRM_BODY);
+        if (result.success) {
+          confirmationSent = true;
+        } else {
+          confirmationWarning =
+            result.errorMessage || "Couldn't send confirmation text.";
+          confirmationFailureCode = result.errorCode || "SEND_FAILED";
+          logger.warn(
+            `[Admin SMS Health] Re-enable confirmation SMS failed for user ${userId}: ${confirmationFailureCode}`,
+          );
+        }
+      } catch (smsErr) {
+        confirmationWarning = "Couldn't send confirmation text.";
+        confirmationFailureCode = "SEND_THREW";
+        logger.error(
+          `[Admin SMS Health] Re-enable confirmation SMS threw for user ${userId}:`,
+          smsErr,
+        );
+      }
+    }
+
+    res.json({
+      success: true,
+      userId,
+      previous,
+      confirmationSent,
+      confirmationWarning,
+      confirmationFailureCode,
+    });
+  } catch (error) {
+    logger.error("[Admin SMS Health] re-enable error:", error);
+    res.status(500).json({ error: "Failed to re-enable SMS" });
   }
 });
 

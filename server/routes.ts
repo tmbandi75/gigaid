@@ -92,6 +92,7 @@ import { registerTestRoutes } from "./testRoutes";
 import { generateBookingSlug, ensureUniqueSlug, writeUserSlugWithRetry, validateSlug, isLegacyDefaultSlug } from "./lib/bookingSlug";
 import { buildBookingLink } from "./lib/bookingLinkUrl";
 import { logger } from "./lib/logger";
+import { SMS_RESUME_CONFIRM_BODY } from "./lib/smsResumeConfirm";
 
 const quoteCache = new Map<string, { result: any; timestamp: number }>();
 const QUOTE_CACHE_TTL = 3600000;
@@ -181,8 +182,6 @@ async function resolvePublicBookingOwner(slug: string): Promise<{
 // Process-local; resets on restart, which is fine for "rapid taps" protection.
 const SMS_RESUME_CONFIRM_WINDOW_MS = 60_000;
 const smsResumeConfirmCache = new Map<string, number>();
-const SMS_RESUME_CONFIRM_BODY =
-  "You're re-subscribed to GigAid messages. Reply STOP at any time to opt out.";
 // Number of consecutive resume-confirmation failures that flip a user into
 // the "phone unreachable" state. Tuned conservatively so a single transient
 // Twilio blip doesn't pause messaging, but a repeatedly-bad number does.

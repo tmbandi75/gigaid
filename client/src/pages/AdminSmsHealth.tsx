@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import {
@@ -159,6 +160,12 @@ interface ClearUnreachableTarget {
   label: string;
   phone: string | null;
   failureCount: number;
+}
+
+interface ReEnableTarget {
+  userId: string;
+  label: string;
+  phone: string | null;
 }
 
 const REASON_LABELS: Record<string, string> = {
@@ -388,6 +395,10 @@ export default function AdminSmsHealth() {
   const [unreachableTarget, setUnreachableTarget] =
     useState<ClearUnreachableTarget | null>(null);
   const [unreachableReason, setUnreachableReason] = useState("");
+  const [reEnableTarget, setReEnableTarget] = useState<ReEnableTarget | null>(
+    null,
+  );
+  const [reEnableReason, setReEnableReason] = useState("");
 
   const clearPhoneMutation = useApiMutation<
     unknown,
@@ -437,6 +448,62 @@ export default function AdminSmsHealth() {
       onError: (error) => {
         toast({
           title: "Could not clear auto-pause",
+          description: error.message || "Please try again",
+          variant: "destructive",
+        });
+      },
+    },
+  );
+
+  // Re-enable SMS for an opted-out user from the roster. Mirrors the
+  // user-initiated /sms/resume flow but originates from admin support;
+  // the server clears smsOptOut/smsOptOutAt, writes an audit row, and
+  // sends the standard resume confirmation SMS. Toast surfaces whether
+  // the confirmation text actually delivered so support knows if they
+  // need to follow up.
+  const reEnableMutation = useApiMutation<
+    {
+      success: boolean;
+      confirmationSent: boolean;
+      confirmationWarning?: string;
+    },
+    { userId: string; reason: string }
+  >(
+    async ({ userId, reason }) =>
+      apiFetch(`/api/admin/sms/users/${userId}/re-enable`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      }),
+    [QUERY_KEYS.adminSmsHealthSummary()],
+    {
+      onSuccess: (data) => {
+        if (data?.confirmationSent) {
+          toast({
+            title: "SMS re-enabled",
+            description: "Confirmation text sent to the user.",
+          });
+        } else {
+          toast({
+            title: "SMS re-enabled",
+            description:
+              data?.confirmationWarning ||
+              "Couldn't send the confirmation text — flag is still cleared.",
+          });
+        }
+        setReEnableTarget(null);
+        setReEnableReason("");
+        // Roster row should drop out — invalidate every paginated/filtered
+        // opt-outs query so we don't have to know which one is on screen.
+        queryClient.invalidateQueries({
+          predicate: (q) =>
+            Array.isArray(q.queryKey) &&
+            typeof q.queryKey[0] === "string" &&
+            (q.queryKey[0] as string).startsWith("/api/admin/sms/opt-outs"),
+        });
+      },
+      onError: (error) => {
+        toast({
+          title: "Could not re-enable SMS",
           description: error.message || "Please try again",
           variant: "destructive",
         });
@@ -1065,15 +1132,33 @@ export default function AdminSmsHealth() {
                         {formatDate(u.smsOptOutAt)}
                       </td>
                       <td className="py-2 pr-3 text-right">
-                        <Link href={`/admin/users/${u.id}`}>
-                          <Badge
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
                             variant="outline"
-                            className="cursor-pointer"
-                            data-testid={`link-optout-user-${u.id}`}
+                            size="sm"
+                            onClick={() => {
+                              setReEnableTarget({
+                                userId: u.id,
+                                label:
+                                  u.name || u.username || u.email || u.id,
+                                phone: u.phone,
+                              });
+                              setReEnableReason("");
+                            }}
+                            data-testid={`button-reenable-sms-${u.id}`}
                           >
-                            View
-                          </Badge>
-                        </Link>
+                            Re-enable SMS
+                          </Button>
+                          <Link href={`/admin/users/${u.id}`}>
+                            <Badge
+                              variant="outline"
+                              className="cursor-pointer"
+                              data-testid={`link-optout-user-${u.id}`}
+                            >
+                              View
+                            </Badge>
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1542,6 +1627,77 @@ export default function AdminSmsHealth() {
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
               Clear auto-pause
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={reEnableTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !reEnableMutation.isPending) {
+            setReEnableTarget(null);
+            setReEnableReason("");
+          }
+        }}
+      >
+        <DialogContent data-testid="dialog-reenable-sms">
+          <DialogHeader>
+            <DialogTitle>Re-enable SMS</DialogTitle>
+            <DialogDescription>
+              This clears the SMS opt-out flag for{" "}
+              <span className="font-medium">{reEnableTarget?.label}</span>
+              {reEnableTarget?.phone ? (
+                <>
+                  {" "}
+                  (<span className="font-mono">{reEnableTarget.phone}</span>)
+                </>
+              ) : null}
+              . They&apos;ll start receiving GigAid texts again and we&apos;ll
+              send them the standard resume confirmation SMS. The action is
+              recorded in the admin audit trail.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="reenable-sms-reason">Reason (required)</Label>
+            <Textarea
+              id="reenable-sms-reason"
+              value={reEnableReason}
+              onChange={(e) => setReEnableReason(e.target.value)}
+              placeholder="e.g. User emailed support asking to resume texts after accidental STOP."
+              rows={3}
+              data-testid="input-reenable-sms-reason"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setReEnableTarget(null);
+                setReEnableReason("");
+              }}
+              disabled={reEnableMutation.isPending}
+              data-testid="button-cancel-reenable-sms"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (!reEnableTarget || !reEnableReason.trim()) return;
+                reEnableMutation.mutate({
+                  userId: reEnableTarget.userId,
+                  reason: reEnableReason.trim(),
+                });
+              }}
+              disabled={
+                !reEnableReason.trim() || reEnableMutation.isPending
+              }
+              data-testid="button-confirm-reenable-sms"
+            >
+              {reEnableMutation.isPending && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
+              Re-enable SMS
             </Button>
           </DialogFooter>
         </DialogContent>
