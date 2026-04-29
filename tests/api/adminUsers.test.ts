@@ -2595,6 +2595,16 @@ describe("GET /api/admin/users/plan-prices", () => {
       priceId: "price_pro_monthly_xyz",
       configured: true,
     });
+    // Monthly entries carry the canonical PLAN_PRICES_CENTS amount so the
+    // admin Change-Plan dropdown can show "$X/mo" next to each option.
+    expect(typeof proMonthly.priceCents).toBe("number");
+    expect(proMonthly.priceCents).toBeGreaterThan(0);
+
+    const proYearly = byKey.get("pro:yearly");
+    // Yearly Stripe prices aren't tracked in shared/plans.ts, so the API
+    // must return null for the yearly cadence rather than reusing the
+    // monthly amount and misleading admins.
+    expect(proYearly.priceCents).toBeNull();
 
     const businessYearly = byKey.get("business:yearly");
     expect(businessYearly).toMatchObject({
@@ -2603,6 +2613,7 @@ describe("GET /api/admin/users/plan-prices", () => {
       envVar: "STRIPE_PRICE_BUSINESS_YEARLY",
       priceId: null,
       configured: false,
+      priceCents: null,
     });
 
     const configuredCount = res.body.plans.filter(

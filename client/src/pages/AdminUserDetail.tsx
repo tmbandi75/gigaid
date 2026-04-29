@@ -22,6 +22,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { PLAN_NAMES, Plan } from "@shared/plans";
+import { safePriceCentsExact } from "@shared/safePrice";
 import { getAuthToken } from "@/lib/authToken";
 import {
   Dialog,
@@ -1276,6 +1277,7 @@ interface PlanPriceConfig {
   envVar: string;
   priceId: string | null;
   configured: boolean;
+  priceCents: number | null;
 }
 
 interface PlanPricesResponse {
@@ -1287,7 +1289,14 @@ const RUNBOOK_HREF = "/docs/runbooks/stripe-plan-price-ids.md";
 
 function planPriceLabel(p: PlanPriceConfig): string {
   const cadenceLabel = p.cadence === "monthly" ? "Monthly" : "Yearly";
-  return `${PLAN_NAMES[p.plan] ?? p.plan} — ${cadenceLabel}`;
+  const planName = PLAN_NAMES[p.plan] ?? p.plan;
+  // Yearly Stripe prices aren't tracked in shared/plans.ts, so priceCents
+  // is only populated for the monthly cadence. Omit the trailing price
+  // segment when we don't have a number to show.
+  if (typeof p.priceCents === "number" && p.priceCents > 0) {
+    return `${planName} · ${cadenceLabel} · ${safePriceCentsExact(p.priceCents)}/mo`;
+  }
+  return `${planName} · ${cadenceLabel}`;
 }
 
 function BillingActionsSection({ userId, profile }: { userId: string; profile: UserProfile }) {

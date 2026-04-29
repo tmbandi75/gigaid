@@ -1,4 +1,4 @@
-import { Plan } from "@shared/plans";
+import { Plan, PLAN_PRICES_CENTS } from "@shared/plans";
 import { logger } from "../lib/logger";
 
 export type BillingCadence = "monthly" | "yearly";
@@ -51,6 +51,12 @@ export interface PlanPriceConfig {
   envVar: string;
   priceId: string | null;
   configured: boolean;
+  // Monthly base price in cents. Populated for the "monthly" cadence
+  // from PLAN_PRICES_CENTS so the admin Change-Plan dropdown can
+  // display the price next to each option (e.g. "Pro · Monthly · $19.99/mo").
+  // Yearly Stripe prices are not tracked in source, so this is null
+  // for the "yearly" cadence and the UI omits the price for those rows.
+  priceCents: number | null;
 }
 
 export function getConfiguredPlanPrices(): PlanPriceConfig[] {
@@ -62,12 +68,17 @@ export function getConfiguredPlanPrices(): PlanPriceConfig[] {
       [BillingCadence, string]
     >) {
       const value = process.env[envVar]?.trim() || null;
+      const monthlyCents = PLAN_PRICES_CENTS[plan];
       result.push({
         plan,
         cadence,
         envVar,
         priceId: value,
         configured: !!value,
+        priceCents:
+          cadence === "monthly" && typeof monthlyCents === "number" && monthlyCents > 0
+            ? monthlyCents
+            : null,
       });
     }
   }
