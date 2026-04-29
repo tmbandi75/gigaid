@@ -67,6 +67,7 @@ import { StripeConnectSettings } from "@/components/settings/StripeConnectSettin
 import { EmailSignatureSettings } from "@/components/settings/EmailSignatureSettings";
 import { AccountLinking } from "@/components/mobile-auth/AccountLinking";
 import { PhoneLinkDialog } from "@/components/mobile-auth/PhoneLinkDialog";
+import { WebPhoneEditDialog } from "@/components/mobile-auth/WebPhoneEditDialog";
 import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { AutomationSettings } from "@/components/settings/AutomationSettings";
 import { MessagingSettings } from "@/components/settings/MessagingSettings";
@@ -649,21 +650,31 @@ export default function Settings() {
   const accountLinkingRef = useRef<HTMLDivElement | null>(null);
   const [highlightAccountLinking, setHighlightAccountLinking] = useState(false);
   const autoRetryAfterPhoneLinkRef = useRef(false);
-  const phoneEditorRef = useRef<HTMLInputElement | null>(null);
-  const [phoneEditorOpen, setPhoneEditorOpen] = useState(false);
-  const [phoneEditorValue, setPhoneEditorValue] = useState("");
-  const [phoneEditorError, setPhoneEditorError] = useState<string | null>(null);
-  const openPhoneEditor = () => {
-    setPhoneEditorValue(profile?.phone ?? "");
-    setPhoneEditorError(null);
-    setPhoneEditorOpen(true);
-    window.setTimeout(() => {
-      phoneEditorRef.current?.focus();
-      phoneEditorRef.current?.select();
-    }, 50);
+  // Web (non-Capacitor) phone editor dialog. The native flow lives in
+  // PhoneLinkDialog and is gated on isNativePlatform(). Web users hitting
+  // the bounce banner or the AccountLinking section get this OTP-verified
+  // editor instead, which talks to /api/profile/phone/{send,verify}-otp.
+  const [webPhoneEditOpen, setWebPhoneEditOpen] = useState(false);
+  const autoRetryAfterPhoneEditRef = useRef(false);
+  const openWebPhoneEditor = (autoRetryResume: boolean) => {
+    autoRetryAfterPhoneEditRef.current = autoRetryResume;
+    setWebPhoneEditOpen(true);
   };
   const focusPhoneNumberField = () => {
-    openPhoneEditor();
+    // Banner CTA: open the verifying editor and gently flash the
+    // AccountLinking section so the user knows where the editor lives.
+    // On native we open the existing PhoneLinkDialog flow; on web we open
+    // the new OTP-verified WebPhoneEditDialog.
+    const autoRetry = Boolean(
+      profile?.smsConfirmationLastFailureAt || profile?.phoneUnreachable,
+    );
+    if (isNativePlatform()) {
+      autoRetryAfterPhoneLinkRef.current = autoRetry;
+      phoneLinkFlowDoneRef.current = () => {};
+      setPhoneLinkOpen(true);
+    } else {
+      openWebPhoneEditor(autoRetry);
+    }
     const el = accountLinkingRef.current;
     if (el) {
       try {
@@ -675,14 +686,20 @@ export default function Settings() {
       window.setTimeout(() => setHighlightAccountLinking(false), 2000);
     }
   };
-  const resumeSmsMutation = useApiMutation<{
-    success: boolean;
-    confirmationSent?: boolean;
-    confirmationWarning?: string;
-  }>(
-    () =>
+  const resumeSmsMutation = useApiMutation<
+    {
+      success: boolean;
+      confirmationSent?: boolean;
+      confirmationWarning?: string;
+    },
+    { forceConfirmationSend?: boolean } | void
+  >(
+    (vars) =>
       apiFetch("/api/profile/sms/resume", {
         method: "POST",
+        body: JSON.stringify({
+          forceConfirmationSend: !!vars?.forceConfirmationSend,
+        }),
       }),
     [QUERY_KEYS.profile()],
     {
@@ -716,49 +733,27 @@ export default function Settings() {
     },
   );
 
-  const updatePhoneFromBannerMutation = useApiMutation<
-    { phone?: string | null },
-    string
-  >(
-    (newPhone) =>
-      apiFetch("/api/profile", {
-        method: "PATCH",
-        body: JSON.stringify({ phone: newPhone }),
-        headers: { "Content-Type": "application/json" },
-      }),
-    [QUERY_KEYS.profile()],
-    {
-      onSuccess: () => {
-        setPhoneEditorOpen(false);
-        setPhoneEditorError(null);
-        toast({
-          title: "Phone number updated",
-          description: "Re-sending your SMS confirmation now…",
-        });
-        resumeSmsMutation.mutate();
-      },
-      onError: () => {
-        setPhoneEditorError(
-          "We couldn't save that number. Double-check it and try again.",
-        );
-      },
-    },
-  );
-
-  const handleSavePhoneFromBanner = () => {
-    const trimmed = phoneEditorValue.trim();
-    if (!trimmed) {
-      setPhoneEditorError("Enter a phone number so we can text you.");
-      return;
+  // Called by both the SMS bounce banner CTA and the AccountLinking
+  // "Change" affordance once the new number has been verified server-side.
+  // Refreshes the profile cache, surfaces a success toast, and (if the
+  // edit was triggered from a confirmation-failure state) automatically
+  // re-runs the SMS resume so the user gets a fresh confirmation text on
+  // the new number without a second tap.
+  const handleWebPhoneUpdated = (newPhone: string) => {
+    setWebPhoneEditOpen(false);
+    void queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
+    toast({
+      title: "Phone number updated",
+      description: autoRetryAfterPhoneEditRef.current
+        ? `Re-sending your SMS confirmation to ${newPhone}…`
+        : `${newPhone} is verified and saved.`,
+    });
+    if (autoRetryAfterPhoneEditRef.current) {
+      autoRetryAfterPhoneEditRef.current = false;
+      // Force the resume endpoint to send a fresh confirmation SMS even
+      // though verify-otp has already cleared the lingering failure state.
+      resumeSmsMutation.mutate({ forceConfirmationSend: true });
     }
-    if (trimmed === (profile?.phone ?? "").trim()) {
-      setPhoneEditorError(
-        "That's the same number we tried before. Edit it or use Try again.",
-      );
-      return;
-    }
-    setPhoneEditorError(null);
-    updatePhoneFromBannerMutation.mutate(trimmed);
   };
 
   const [isDeleting, setIsDeleting] = useState(false);
@@ -1480,112 +1475,34 @@ export default function Settings() {
                         </p>
                       </div>
                     </div>
-                    {phoneEditorOpen ? (
-                      <div
-                        className="pl-6 space-y-2"
-                        data-testid="form-sms-confirmation-update-phone"
+                    <div className="flex flex-wrap gap-2 pl-6">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-red-400 text-red-900 hover:bg-red-100 dark:border-red-600 dark:text-red-100 dark:hover:bg-red-900/40"
+                        onClick={focusPhoneNumberField}
+                        data-testid="button-sms-confirmation-update-phone"
                       >
-                        <Label
-                          htmlFor="sms-confirmation-phone-input"
-                          className="text-xs text-red-900 dark:text-red-100"
-                        >
-                          Phone number
-                        </Label>
-                        <Input
-                          id="sms-confirmation-phone-input"
-                          ref={phoneEditorRef}
-                          type="tel"
-                          autoComplete="tel"
-                          inputMode="tel"
-                          value={phoneEditorValue}
-                          onChange={(e) => {
-                            setPhoneEditorValue(e.target.value);
-                            if (phoneEditorError) setPhoneEditorError(null);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              handleSavePhoneFromBanner();
-                            }
-                          }}
-                          placeholder="+15551234567"
-                          disabled={updatePhoneFromBannerMutation.isPending}
-                          className="bg-white dark:bg-red-950/60"
-                          data-testid="input-sms-confirmation-phone"
-                        />
-                        {phoneEditorError && (
-                          <p
-                            className="text-xs text-red-900 dark:text-red-100"
-                            data-testid="text-sms-confirmation-phone-error"
-                          >
-                            {phoneEditorError}
-                          </p>
+                        Update phone number
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-red-900 hover:bg-red-100 dark:text-red-100 dark:hover:bg-red-900/40"
+                        onClick={() => resumeSmsMutation.mutate()}
+                        disabled={resumeSmsMutation.isPending}
+                        data-testid="button-sms-confirmation-try-again"
+                      >
+                        {resumeSmsMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Retrying...
+                          </>
+                        ) : (
+                          "Try again"
                         )}
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            size="sm"
-                            onClick={handleSavePhoneFromBanner}
-                            disabled={
-                              updatePhoneFromBannerMutation.isPending ||
-                              resumeSmsMutation.isPending
-                            }
-                            data-testid="button-sms-confirmation-save-phone"
-                          >
-                            {updatePhoneFromBannerMutation.isPending ||
-                            resumeSmsMutation.isPending ? (
-                              <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Saving…
-                              </>
-                            ) : (
-                              "Save and re-send confirmation"
-                            )}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-red-900 hover:bg-red-100 dark:text-red-100 dark:hover:bg-red-900/40"
-                            onClick={() => {
-                              setPhoneEditorOpen(false);
-                              setPhoneEditorError(null);
-                            }}
-                            disabled={updatePhoneFromBannerMutation.isPending}
-                            data-testid="button-sms-confirmation-cancel-phone"
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-wrap gap-2 pl-6">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-red-400 text-red-900 hover:bg-red-100 dark:border-red-600 dark:text-red-100 dark:hover:bg-red-900/40"
-                          onClick={focusPhoneNumberField}
-                          data-testid="button-sms-confirmation-update-phone"
-                        >
-                          Update phone number
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-red-900 hover:bg-red-100 dark:text-red-100 dark:hover:bg-red-900/40"
-                          onClick={() => resumeSmsMutation.mutate()}
-                          disabled={resumeSmsMutation.isPending}
-                          data-testid="button-sms-confirmation-try-again"
-                        >
-                          {resumeSmsMutation.isPending ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Retrying...
-                            </>
-                          ) : (
-                            "Try again"
-                          )}
-                        </Button>
-                      </div>
-                    )}
+                      </Button>
+                    </div>
                   </div>
                 )}
                 {profile?.smsOptOut && (
@@ -1796,6 +1713,18 @@ export default function Settings() {
                             );
                             setPhoneLinkOpen(true);
                           })
+                      : async () => {
+                          openWebPhoneEditor(
+                            Boolean(profile?.smsConfirmationLastFailureAt),
+                          );
+                        }
+                  }
+                  onChangePhone={
+                    !isNativePlatform()
+                      ? () =>
+                          openWebPhoneEditor(
+                            Boolean(profile?.smsConfirmationLastFailureAt),
+                          )
                       : undefined
                   }
                   onLinkEmail={() => {
@@ -1806,7 +1735,7 @@ export default function Settings() {
                     });
                   }}
                 />
-                {isNativePlatform() && (
+                {isNativePlatform() ? (
                   <PhoneLinkDialog
                     open={phoneLinkOpen}
                     onOpenChange={(o) => {
@@ -1832,6 +1761,13 @@ export default function Settings() {
                         resumeSmsMutation.mutate();
                       }
                     }}
+                  />
+                ) : (
+                  <WebPhoneEditDialog
+                    open={webPhoneEditOpen}
+                    onOpenChange={setWebPhoneEditOpen}
+                    currentPhone={profile?.phone ?? null}
+                    onUpdated={handleWebPhoneUpdated}
                   />
                 )}
               </div>

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SiApple, SiGoogle } from 'react-icons/si';
-import { Phone, Mail, Check, Loader2 } from 'lucide-react';
+import { Phone, Mail, Check, Loader2, Pencil } from 'lucide-react';
 
 interface LinkedMethod {
   provider: 'apple' | 'google' | 'phone' | 'email';
@@ -19,6 +19,12 @@ interface AccountLinkingProps {
   onLinkApple?: () => Promise<void>;
   onLinkGoogle?: () => Promise<void>;
   onLinkPhone?: () => Promise<void>;
+  /**
+   * Replace the phone number on file. When provided and a phone is already
+   * linked, an "Edit" affordance is rendered next to the phone display so
+   * web users can update / re-verify the number without losing it first.
+   */
+  onChangePhone?: () => void;
   onLinkEmail?: () => void;
 }
 
@@ -44,6 +50,7 @@ export function AccountLinking({
   onLinkApple,
   onLinkGoogle,
   onLinkPhone,
+  onChangePhone,
   onLinkEmail,
 }: AccountLinkingProps) {
   const [isLinking, setIsLinking] = useState<string | null>(null);
@@ -118,10 +125,25 @@ export function AccountLinking({
               <Phone className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm">{phone}</span>
             </div>
-            <Badge variant="outline" className="gap-1">
-              <Check className="h-3 w-3" />
-              Verified
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="gap-1">
+                <Check className="h-3 w-3" />
+                Verified
+              </Badge>
+              {onChangePhone && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 gap-1 text-xs"
+                  onClick={onChangePhone}
+                  data-testid="button-change-phone"
+                >
+                  <Pencil className="h-3 w-3" />
+                  Change
+                </Button>
+              )}
+            </div>
           </div>
         )}
 

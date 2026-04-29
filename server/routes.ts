@@ -906,6 +906,250 @@ export async function registerRoutes(
     }
   });
 
+  // ==========================================================
+  // POST /api/profile/phone/send-otp + /api/profile/phone/verify-otp
+  //
+  // Browser-side phone-number editor for the Settings page. The native
+  // (iOS/Android) build links the phone via `@capacitor-firebase/authentication`
+  // through PhoneLinkDialog, but on the web there is no equivalent flow —
+  // hence Task #73, where web users could see the failed-confirmation banner
+  // but had no way to fix the number short of opening the mobile app.
+  //
+  // Both endpoints require an authenticated session, mirror the OTP shape
+  // already used by /api/first-booking/secure-account/{send,verify}-otp
+  // (10-minute TTL, 30-second resend throttle, 6-digit codes), and on
+  // success update users.phone / users.phoneE164 / users.phoneVerifiedAt.
+  // Lingering smsConfirmation* / phoneUnreachable failure state is left
+  // in place here on purpose: the client immediately calls
+  // /api/profile/sms/resume with forceConfirmationSend right after a
+  // successful verify, and that endpoint clears the failure state only
+  // once a fresh confirmation SMS to the new number actually succeeds
+  // (so the bounce banner stays honest if the new number also bounces).
+  // ==========================================================
+  const PROFILE_PHONE_OTP_TTL_MINUTES = 10;
+  const PROFILE_PHONE_OTP_MIN_RESEND_SECONDS = 30;
+
+  function normalizeProfilePhoneE164(input?: string | null): string | null {
+    if (!input) return null;
+    const digits = String(input).replace(/\D/g, "");
+    if (!digits) return null;
+    // Default to US country code when caller omits it (matches the
+    // formatting Twilio applies inside sendSMS).
+    const withCc = digits.length === 10 ? `1${digits}` : digits;
+    if (withCc.length < 7 || withCc.length > 15) return null;
+    return `+${withCc}`;
+  }
+
+  const profilePhoneSendOtpSchema = z.object({
+    phone: z.string().trim().min(7).max(32),
+  });
+
+  app.post(
+    "/api/profile/phone/send-otp",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const userId = (req as any).userId;
+        const user = await storage.getUser(userId);
+        if (!user) {
+          return res.status(404).json({ error: "User not found" });
+        }
+
+        const parsed = profilePhoneSendOtpSchema.safeParse(req.body);
+        if (!parsed.success) {
+          return res.status(400).json({ error: "Phone number is required" });
+        }
+        const phoneE164 = normalizeProfilePhoneE164(parsed.data.phone);
+        if (!phoneE164) {
+          return res.status(400).json({ error: "Invalid phone number" });
+        }
+
+        // Reject early if the requested number already belongs to someone
+        // else, so the user doesn't burn an SMS on a number they can't claim.
+        const { users: usersTable, otpCodes } = await import("@shared/schema");
+        const { db } = await import("./db");
+        const { and: dbAnd, eq, sql, desc } = await import("drizzle-orm");
+        const existingOwner = await db
+          .select({ id: usersTable.id })
+          .from(usersTable)
+          .where(
+            dbAnd(
+              eq(usersTable.phoneE164, phoneE164),
+              sql`${usersTable.id} <> ${userId}`,
+            ),
+          );
+        if (existingOwner.length > 0) {
+          return res.status(409).json({
+            error:
+              "This phone number is already in use on another account.",
+            code: "phone_in_use",
+          });
+        }
+
+        // Resend-throttle so a hostile or buggy client can't fan out
+        // back-to-back SMS sends to the same number.
+        const [latest] = await db
+          .select()
+          .from(otpCodes)
+          .where(eq(otpCodes.identifier, phoneE164))
+          .orderBy(desc(otpCodes.createdAt))
+          .limit(1);
+        if (latest) {
+          const createdAt = new Date(latest.createdAt as string).getTime();
+          const ageSec = (Date.now() - createdAt) / 1000;
+          if (
+            Number.isFinite(ageSec) &&
+            ageSec < PROFILE_PHONE_OTP_MIN_RESEND_SECONDS
+          ) {
+            return res.status(429).json({
+              error:
+                "Please wait a few seconds before requesting another code.",
+              retryAfterSeconds: Math.ceil(
+                PROFILE_PHONE_OTP_MIN_RESEND_SECONDS - ageSec,
+              ),
+            });
+          }
+        }
+
+        const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
+        const expiresAt = new Date(
+          Date.now() + PROFILE_PHONE_OTP_TTL_MINUTES * 60 * 1000,
+        ).toISOString();
+
+        await storage.createOtp({
+          identifier: phoneE164,
+          code,
+          type: "phone",
+          expiresAt,
+        });
+
+        const body = `Your GigAid verification code is ${code}. It expires in ${PROFILE_PHONE_OTP_TTL_MINUTES} minutes.`;
+        const result = await sendSMS(phoneE164, body);
+        if (!result.success) {
+          logger.warn(
+            "[ProfilePhoneOtp] send-otp failed:",
+            result.errorCode,
+            result.errorMessage,
+          );
+          return res.status(502).json({
+            error:
+              result.errorMessage ||
+              "Couldn't send a verification text. Try again.",
+            code: result.errorCode || "SEND_FAILED",
+          });
+        }
+        return res.json({
+          ok: true,
+          expiresInSeconds: PROFILE_PHONE_OTP_TTL_MINUTES * 60,
+        });
+      } catch (err: any) {
+        logger.error(
+          "[ProfilePhoneOtp] send-otp error:",
+          err?.message || err,
+        );
+        return res.status(500).json({ error: "Failed to send code" });
+      }
+    },
+  );
+
+  const profilePhoneVerifyOtpSchema = z.object({
+    phone: z.string().trim().min(7).max(32),
+    code: z.string().trim().regex(/^\d{6}$/, "Code must be 6 digits"),
+  });
+
+  app.post(
+    "/api/profile/phone/verify-otp",
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const userId = (req as any).userId;
+        const user = await storage.getUser(userId);
+        if (!user) {
+          return res.status(404).json({ error: "User not found" });
+        }
+
+        const parsed = profilePhoneVerifyOtpSchema.safeParse(req.body);
+        if (!parsed.success) {
+          return res
+            .status(400)
+            .json({ error: "Phone and 6-digit code are required" });
+        }
+        const phoneE164 = normalizeProfilePhoneE164(parsed.data.phone);
+        if (!phoneE164) {
+          return res.status(400).json({ error: "Invalid phone number" });
+        }
+
+        const otp = await storage.getOtp(phoneE164, parsed.data.code);
+        if (!otp) return res.status(400).json({ error: "Invalid code" });
+        if (otp.verified)
+          return res.status(400).json({ error: "Code already used" });
+        const exp = new Date(otp.expiresAt).getTime();
+        if (!Number.isFinite(exp) || Date.now() > exp) {
+          return res
+            .status(400)
+            .json({ error: "Code has expired. Send a new one." });
+        }
+
+        const { users: usersTable } = await import("@shared/schema");
+        const { db } = await import("./db");
+        const { and: dbAnd, eq, sql } = await import("drizzle-orm");
+
+        // Re-check for cross-user collisions inside the verify call so a
+        // race between send-otp and verify-otp can't steal a number.
+        const phoneOwners = await db
+          .select({ id: usersTable.id })
+          .from(usersTable)
+          .where(
+            dbAnd(
+              eq(usersTable.phoneE164, phoneE164),
+              sql`${usersTable.id} <> ${userId}`,
+            ),
+          );
+        if (phoneOwners.length > 0) {
+          return res.status(409).json({
+            error:
+              "This phone number is already in use on another account.",
+            code: "phone_in_use",
+          });
+        }
+
+        await storage.verifyOtp(otp.id);
+
+        const now = new Date().toISOString();
+        // Persist only the new phone here. We deliberately do NOT clear the
+        // smsConfirmation* / phoneUnreachable fields in this handler — the
+        // client immediately calls /api/profile/sms/resume with
+        // forceConfirmationSend so a fresh confirmation SMS lands on the
+        // new number, and that endpoint clears the failure state on a
+        // successful send (or records a fresh failure if the new number
+        // also bounces). This keeps the bounce banner / "phone unreachable"
+        // state honest until we've actually proven the new number works.
+        await db
+          .update(usersTable)
+          .set({
+            phone: phoneE164,
+            phoneE164,
+            phoneVerifiedAt: now,
+            updatedAt: now,
+          })
+          .where(eq(usersTable.id, userId));
+
+        // Drop any in-memory dedupe entry from a previous /sms/resume attempt
+        // so the auto-retry that fires immediately after this verify can
+        // actually send the confirmation SMS to the new number.
+        smsResumeConfirmCache.delete(userId);
+
+        return res.json({ ok: true, phone: phoneE164, phoneVerifiedAt: now });
+      } catch (err: any) {
+        logger.error(
+          "[ProfilePhoneOtp] verify-otp error:",
+          err?.message || err,
+        );
+        return res.status(500).json({ error: "Failed to verify code" });
+      }
+    },
+  );
+
   // POST /api/profile/sms/resume - Re-enable SMS for a user that previously
   // texted STOP. Requires explicit confirmation from the client (button in
   // Settings) and clears both smsOptOut and smsOptOutAt. Also restores the
@@ -922,7 +1166,25 @@ export async function registerRoutes(
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      if (!user.smsOptOut) {
+      // Three cases trigger this endpoint:
+      //   1) user previously texted STOP and wants to opt back in,
+      //   2) user is opted-in but has a lingering smsConfirmation* failure
+      //      (auto-detected),
+      //   3) the client explicitly asks for a fresh confirmation send via
+      //      `forceConfirmationSend: true` — used by the web phone-edit
+      //      flow right after a successful verify-otp so we send a
+      //      confirmation SMS to the brand-new number even though the
+      //      failure flags have already been (or are about to be) cleared.
+      // Only short-circuit when none of those conditions apply.
+      const forceConfirmationSend =
+        req.body && (req.body as any).forceConfirmationSend === true;
+      const hasLingeringConfirmationFailure =
+        !!user.smsConfirmationLastFailureAt || !!user.phoneUnreachable;
+      if (
+        !user.smsOptOut &&
+        !hasLingeringConfirmationFailure &&
+        !forceConfirmationSend
+      ) {
         return res.json({
           success: true,
           smsOptOut: false,
@@ -934,16 +1196,21 @@ export async function registerRoutes(
       const { users: usersTable } = await import("@shared/schema");
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
-      await db
-        .update(usersTable)
-        .set({
-          smsOptOut: false,
-          smsOptOutAt: null,
-          notifyBySms: true,
-        })
-        .where(eq(usersTable.id, userId));
-
-      logger.info(`[SMS Resume] User ${userId} re-enabled SMS via in-app action`);
+      if (user.smsOptOut) {
+        await db
+          .update(usersTable)
+          .set({
+            smsOptOut: false,
+            smsOptOutAt: null,
+            notifyBySms: true,
+          })
+          .where(eq(usersTable.id, userId));
+        logger.info(`[SMS Resume] User ${userId} re-enabled SMS via in-app action`);
+      } else {
+        logger.info(
+          `[SMS Resume] User ${userId} retrying confirmation SMS (lingering failure, smsOptOut already false)`,
+        );
+      }
 
       // De-dupe / rate-limit the confirmation SMS per user.
       let confirmationSent = false;
