@@ -40,6 +40,11 @@ export default [
       // safe-price rule the rest of the codebase already enforces.
       "reports/**/*.{ts,tsx}",
       "exports/**/*.{ts,tsx}",
+      // Test fixtures and Playwright e2e specs (Task #178). Catches raw
+      // `$` formatting that would otherwise hide in fixture/seed data
+      // and silently get copy-pasted into product code.
+      "tests/**/*.{ts,tsx}",
+      "e2e/**/*.{ts,tsx}",
     ],
     languageOptions: baseLanguageOptions,
     plugins: { "safe-price": safePricePlugin },

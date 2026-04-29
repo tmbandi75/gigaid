@@ -17,13 +17,26 @@ const SHARED_DIR = join(ROOT, "shared");
 // builder added there is rejected the moment it concatenates raw `$`.
 const REPORTS_DIR = join(ROOT, "reports");
 const EXPORTS_DIR = join(ROOT, "exports");
+// Test fixtures and Playwright e2e specs (Task #178). Catches raw `$`
+// formatting hidden in fixture/seed data that could later be copy-pasted
+// into product code.
+const TESTS_DIR = join(ROOT, "tests");
+const E2E_DIR = join(ROOT, "e2e");
 
 // The helper itself is the *one* place raw `$` prefix patterns are
 // allowed — that is the whole point of the helper. Every other surface
 // (UI, emails, SMS, PDFs, webhook payloads) goes through it.
+//
+// The `tests/monetization/stripe-tests.ts` entry is an unavoidable
+// fixture violation: it builds human-readable plan-price labels
+// (e.g. "Pro plan price is $19/mo") for the monetization test report.
+// Values come from `PLAN_PRICES_CENTS`, never user input, and the strings
+// are not rendered to end users — they're console/JSON test output only.
+// Mirrors the matching entry in `eslint-rules/no-raw-price-format.cjs`.
 const ALLOWLIST = new Set<string>([
   "client/src/lib/safePrice.ts",
   "shared/safePrice.ts",
+  "tests/monetization/stripe-tests.ts",
 ]);
 
 type ViolationKind =
@@ -264,6 +277,14 @@ describe("safe price helper enforcement", () => {
     reportViolations("exports/", scanRootOptional(EXPORTS_DIR));
   });
 
+  it("rejects raw `$` prefix patterns in tests/", () => {
+    reportViolations("tests/", scanRoot(TESTS_DIR));
+  });
+
+  it("rejects raw `$` prefix patterns in e2e/", () => {
+    reportViolations("e2e/", scanRoot(E2E_DIR));
+  });
+
   it("detects a synthetic template-literal violation", () => {
     const tmp = join(CLIENT_SRC, "__synthetic_violation_test_tl__.ts");
     writeFileSync(tmp, "const x = 5;\nconst s = `$${x}`;\n", "utf8");
@@ -394,6 +415,69 @@ describe("safe price helper enforcement", () => {
     } finally {
       unlinkSync(tmp);
     }
+  });
+
+  // End-to-end wiring check for `tests/`: write a violating file into the
+  // `tests/` tree (mimicking a fixture or seed) and assert the directory-level
+  // `scanRoot(TESTS_DIR)` call picks it up. Guards against an accidental
+  // regression of Task #178 where someone drops `tests/` from the scope.
+  it("scanRoot(TESTS_DIR) picks up a synthetic tests-tree violation", () => {
+    const tmp = join(TESTS_DIR, "__synthetic_violation_test_tests_scanroot__.ts");
+    const relTmp = "tests/__synthetic_violation_test_tests_scanroot__.ts";
+    writeFileSync(
+      tmp,
+      "export function fixturePriceLabel(amountCents: number) {\n" +
+        "  return `Total: $${amountCents / 100}.`;\n" +
+        "}\n",
+      "utf8",
+    );
+    try {
+      const violations = scanRoot(TESTS_DIR);
+      expect(
+        violations.some(
+          (v) => v.file === relTmp && v.kind === "template-literal",
+        ),
+      ).toBe(true);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  // End-to-end wiring check for `e2e/`: same idea as above, but for the
+  // Playwright e2e tree which historically wasn't covered by the gate.
+  it("scanRoot(E2E_DIR) picks up a synthetic e2e-tree violation", () => {
+    const tmp = join(E2E_DIR, "__synthetic_violation_test_e2e_scanroot__.ts");
+    const relTmp = "e2e/__synthetic_violation_test_e2e_scanroot__.ts";
+    writeFileSync(
+      tmp,
+      "export function expectedPriceLabel(amountCents: number) {\n" +
+        '  return "Total $" + (amountCents / 100);\n' +
+        "}\n",
+      "utf8",
+    );
+    try {
+      const violations = scanRoot(E2E_DIR);
+      expect(
+        violations.some(
+          (v) => v.file === relTmp && v.kind === "string-concat",
+        ),
+      ).toBe(true);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  // The allowlist must skip flagged files in any covered directory, not just
+  // `client/src/lib/safePrice.ts` and `shared/safePrice.ts`. Asserting the
+  // `tests/monetization/stripe-tests.ts` entry from ALLOWLIST is honored
+  // ensures no future ALLOWLIST refactor silently drops it (which would make
+  // the whole `tests/` scan fail on every push).
+  it("scanRoot(TESTS_DIR) honors the allowlisted fixture file", () => {
+    const violations = scanRoot(TESTS_DIR);
+    const flagged = violations.filter(
+      (v) => v.file === "tests/monetization/stripe-tests.ts",
+    );
+    expect(flagged).toEqual([]);
   });
 
   // Negative case: a server template that uses the safePrice helper from

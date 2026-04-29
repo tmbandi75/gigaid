@@ -5,6 +5,11 @@ const path = require("path");
 const ALLOWLIST = new Set([
   "client/src/lib/safePrice.ts",
   "shared/safePrice.ts",
+  // Test fixture file: emits human-readable plan price labels
+  // (e.g. "Pro plan price is $19/mo") for the monetization test report.
+  // The values come from PLAN_PRICES_CENTS, never user input, and are
+  // not rendered to end users — they're console/JSON test output only.
+  "tests/monetization/stripe-tests.ts",
 ]);
 
 const HELPER_HINT =

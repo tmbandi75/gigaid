@@ -69,12 +69,12 @@ isValidation = true
 name = "safe-price-eslint"
 author = "agent"
 
-[workflows.workflow.metadata]
-isValidation = true
-
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npx eslint --config eslint.safeprice.config.js --no-error-on-unmatched-pattern 'client/src/**/*.{ts,tsx}' 'server/**/*.{ts,tsx}' 'shared/**/*.{ts,tsx}' 'reports/**/*.{ts,tsx}' 'exports/**/*.{ts,tsx}'"
+args = "npx eslint --config eslint.safeprice.config.js --no-error-on-unmatched-pattern 'client/src/**/*.{ts,tsx}' 'server/**/*.{ts,tsx}' 'shared/**/*.{ts,tsx}' 'reports/**/*.{ts,tsx}' 'exports/**/*.{ts,tsx}' 'tests/**/*.{ts,tsx}' 'e2e/**/*.{ts,tsx}'"
+
+[workflows.workflow.metadata]
+isValidation = true
 
 [agent]
 integrations = ["javascript_object_storage:2.0.0", "stripe:2.0.0", "twilio:1.0.0"]

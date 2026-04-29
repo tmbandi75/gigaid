@@ -30,7 +30,9 @@ npx eslint \
   'server/**/*.{ts,tsx}' \
   'shared/**/*.{ts,tsx}' \
   'reports/**/*.{ts,tsx}' \
-  'exports/**/*.{ts,tsx}'
+  'exports/**/*.{ts,tsx}' \
+  'tests/**/*.{ts,tsx}' \
+  'e2e/**/*.{ts,tsx}'
 
 echo "[safe-price] Running Jest scanner (noRawPriceTemplates)…"
 npx jest \
