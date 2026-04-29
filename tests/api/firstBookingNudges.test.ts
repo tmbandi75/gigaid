@@ -10,6 +10,7 @@ import {
 } from "../../server/postJobMomentum";
 import {
   resolveOptOutUserId,
+  resolveOptOutWithReason,
   maskPhone,
   type OptOutResolverDeps,
 } from "../../server/optOutResolver";
@@ -256,6 +257,108 @@ describe("Task #48 AC #1: ambiguity-safe STOP resolution (real resolveOptOutUser
     expect(maskPhone("+15551234567")).toBe("+15***4567");
     expect(maskPhone(null)).toBe("unknown");
     expect(maskPhone("+1234")).toBe("***");
+  });
+});
+
+// ============================================================================
+// Task #62: resolveOptOutWithReason — same dispatch as resolveOptOutUserId
+// but also classifies the outcome as matched / unmatched / ambiguous so the
+// audit row in sms_optout_events records *why* a STOP went unattributed.
+// ============================================================================
+
+describe("Task #62: resolveOptOutWithReason classifies STOP audit reasons", () => {
+  function makeDeps(
+    phoneMatches: string[],
+    outboundUserIds: string[],
+  ): OptOutResolverDeps {
+    return {
+      findUsersByPhoneE164: jest.fn(async () => phoneMatches.map((id) => ({ id }))),
+      findRecentOutboundUserIds: jest.fn(async () => outboundUserIds),
+    };
+  }
+
+  it("returns matched + the userId when exactly one phone_e164 row exists", async () => {
+    const deps = makeDeps(["u-1"], []);
+    await expect(resolveOptOutWithReason("+15551110000", deps)).resolves.toEqual({
+      userId: "u-1",
+      resolution: "matched",
+    });
+    expect(deps.findUsersByPhoneE164).toHaveBeenCalledWith("+15551110000");
+    // Outbound history must NOT be consulted when the phone match is unambiguous.
+    expect(deps.findRecentOutboundUserIds).not.toHaveBeenCalled();
+  });
+
+  it("returns ambiguous (userId=null) when 2+ users share the same phone_e164", async () => {
+    const deps = makeDeps(["u-1", "u-2"], ["u-7"]);
+    await expect(resolveOptOutWithReason("+15551110000", deps)).resolves.toEqual({
+      userId: null,
+      resolution: "ambiguous",
+    });
+    // Must not fall through to the outbound history pass.
+    expect(deps.findRecentOutboundUserIds).not.toHaveBeenCalled();
+  });
+
+  it("returns matched via outbound history when exactly one distinct userId is found", async () => {
+    const deps = makeDeps([], ["u-3", "u-3", "u-3"]);
+    await expect(resolveOptOutWithReason("+15551110000", deps)).resolves.toEqual({
+      userId: "u-3",
+      resolution: "matched",
+    });
+    expect(deps.findRecentOutboundUserIds).toHaveBeenCalledWith("+15551110000");
+  });
+
+  it("returns ambiguous when outbound history yields multiple distinct userIds", async () => {
+    const deps = makeDeps([], ["u-1", "u-2"]);
+    await expect(resolveOptOutWithReason("+15551110000", deps)).resolves.toEqual({
+      userId: null,
+      resolution: "ambiguous",
+    });
+  });
+
+  it("returns unmatched (userId=null) when no user can be identified at all", async () => {
+    const deps = makeDeps([], []);
+    await expect(resolveOptOutWithReason("+15551110000", deps)).resolves.toEqual({
+      userId: null,
+      resolution: "unmatched",
+    });
+  });
+
+  it("phone_e164 single match wins over an ambiguous outbound history", async () => {
+    const deps = makeDeps(["u-winner"], ["u-x", "u-y"]);
+    await expect(resolveOptOutWithReason("+15551110000", deps)).resolves.toEqual({
+      userId: "u-winner",
+      resolution: "matched",
+    });
+    expect(deps.findRecentOutboundUserIds).not.toHaveBeenCalled();
+  });
+
+  it("filters empty/null outbound userIds before deciding distinctness (still matched)", async () => {
+    const deps = makeDeps([], ["u-only", "", "u-only"]);
+    await expect(resolveOptOutWithReason("+15551110000", deps)).resolves.toEqual({
+      userId: "u-only",
+      resolution: "matched",
+    });
+  });
+
+  it("matches resolveOptOutUserId on the resolved userId for every reason class", async () => {
+    // Cross-check the two helpers can never disagree on who the user is —
+    // resolveOptOutWithReason must be a strict superset of resolveOptOutUserId.
+    const cases: { phone: string[]; outbound: string[] }[] = [
+      { phone: ["u-1"], outbound: [] },
+      { phone: ["u-1", "u-2"], outbound: ["u-7"] },
+      { phone: [], outbound: ["u-3", "u-3"] },
+      { phone: [], outbound: ["u-1", "u-2"] },
+      { phone: [], outbound: [] },
+      { phone: ["u-w"], outbound: ["u-x", "u-y"] },
+    ];
+    for (const c of cases) {
+      const deps1 = makeDeps(c.phone, c.outbound);
+      const deps2 = makeDeps(c.phone, c.outbound);
+      const idOnly = await resolveOptOutUserId("+15551110000", deps1);
+      const withReason = await resolveOptOutWithReason("+15551110000", deps2);
+      expect(withReason.userId).toBe(idOnly);
+      expect(["matched", "unmatched", "ambiguous"]).toContain(withReason.resolution);
+    }
   });
 });
 
