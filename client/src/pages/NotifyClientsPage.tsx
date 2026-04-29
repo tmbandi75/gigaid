@@ -47,6 +47,8 @@ import {
 import { findCategoryForService } from "@shared/service-categories";
 import NotifyClientsDesktopView from "@/components/notify-clients/NotifyClientsDesktopView";
 import { SmsOptOutBanner } from "@/components/settings/SmsOptOutBanner";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { useSmsOptOut, SMS_OPT_OUT_TOOLTIP } from "@/hooks/useSmsOptOut";
 
 const categoryIdToSchemaCategory: Record<string, ServiceCategory> = {
   "handyman": "handyman_repairs",
@@ -192,6 +194,7 @@ export default function NotifyClientsPage() {
   const notificationCap = useCanPerform('notifications.event_driven');
   const notifyUpgrade = useUpgradeOrchestrator({ capabilityKey: 'notifications.event_driven', surface: 'notifications' });
   const [interceptModalOpen, setInterceptModalOpen] = useState(false);
+  const { smsOptOut } = useSmsOptOut();
 
   const [step, setStep] = useState<Step>("service");
   const [selectedServiceId, setSelectedServiceId] = useState<string>("");
@@ -558,24 +561,42 @@ export default function NotifyClientsPage() {
         )}
       </div>
 
-      <Button 
-        className="w-full rounded-xl h-12 text-sm font-semibold" 
-        onClick={handleValidate}
-        disabled={!eventReason || !bookingLink || validateMutation.isPending}
-        data-testid="button-review-message"
-      >
-        {validateMutation.isPending ? (
-          <div className="flex items-center gap-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-foreground border-t-transparent" />
-            Validating...
-          </div>
-        ) : (
-          <>
-            <Sparkles className="h-4 w-4 mr-2" />
-            Review & Send
-          </>
-        )}
-      </Button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="block">
+              <Button
+                className="w-full rounded-xl h-12 text-sm font-semibold"
+                onClick={handleValidate}
+                disabled={
+                  !eventReason ||
+                  !bookingLink ||
+                  validateMutation.isPending ||
+                  (smsOptOut && channel === "sms")
+                }
+                data-testid="button-review-message"
+              >
+                {validateMutation.isPending ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-foreground border-t-transparent" />
+                    Validating...
+                  </div>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Review & Send
+                  </>
+                )}
+              </Button>
+            </span>
+          </TooltipTrigger>
+          {smsOptOut && channel === "sms" && (
+            <TooltipContent data-testid="tooltip-sms-paused-notify-compose">
+              {SMS_OPT_OUT_TOOLTIP}
+            </TooltipContent>
+          )}
+        </Tooltip>
+      </TooltipProvider>
     </div>
   );
 
@@ -713,24 +734,37 @@ export default function NotifyClientsPage() {
           )}
 
           <div className="space-y-2 pt-2">
-            <Button 
-              className="w-full rounded-xl h-12 text-sm font-semibold" 
-              onClick={handleSend}
-              disabled={sendMutation.isPending}
-              data-testid="button-send-notifications"
-            >
-              {sendMutation.isPending ? (
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-foreground border-t-transparent" />
-                  Sending...
-                </div>
-              ) : (
-                <>
-                  <Send className="h-4 w-4 mr-2" />
-                  Send to {validationResult.eligibleClientCount} Client{validationResult.eligibleClientCount !== 1 ? "s" : ""}
-                </>
-              )}
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="block">
+                    <Button
+                      className="w-full rounded-xl h-12 text-sm font-semibold"
+                      onClick={handleSend}
+                      disabled={sendMutation.isPending || (smsOptOut && channel === "sms")}
+                      data-testid="button-send-notifications"
+                    >
+                      {sendMutation.isPending ? (
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-foreground border-t-transparent" />
+                          Sending...
+                        </div>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4 mr-2" />
+                          Send to {validationResult.eligibleClientCount} Client{validationResult.eligibleClientCount !== 1 ? "s" : ""}
+                        </>
+                      )}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {smsOptOut && channel === "sms" && (
+                  <TooltipContent data-testid="tooltip-sms-paused-notify-review">
+                    {SMS_OPT_OUT_TOOLTIP}
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
             <Button 
               variant="ghost" 
               className="w-full rounded-xl text-xs" 

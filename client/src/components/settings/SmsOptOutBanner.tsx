@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,10 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
 import { QUERY_KEYS } from "@/lib/queryKeys";
-
-interface SmsOptOutProfile {
-  smsOptOut?: boolean;
-}
+import { useSmsOptOut } from "@/hooks/useSmsOptOut";
 
 interface SmsOptOutBannerProps {
   className?: string;
@@ -30,9 +26,7 @@ export function SmsOptOutBanner({ className }: SmsOptOutBannerProps) {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const { data: profile } = useQuery<SmsOptOutProfile>({
-    queryKey: QUERY_KEYS.profile(),
-  });
+  const { smsOptOut } = useSmsOptOut();
 
   const resumeSmsMutation = useApiMutation<{
     success: boolean;
@@ -75,7 +69,7 @@ export function SmsOptOutBanner({ className }: SmsOptOutBannerProps) {
     },
   );
 
-  if (!profile?.smsOptOut) {
+  if (!smsOptOut) {
     return null;
   }
 

@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
@@ -17,6 +17,7 @@ import { QUERY_KEYS } from "@/lib/queryKeys";
 import { logger } from "@/lib/logger";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { SmsOptOutBanner } from "@/components/settings/SmsOptOutBanner";
+import { useSmsOptOut, SMS_OPT_OUT_TOOLTIP } from "@/hooks/useSmsOptOut";
 
 interface MessageUsage {
   outboundSent: number;
@@ -51,6 +52,7 @@ export function FollowUpComposer() {
   const [isSending, setIsSending] = useState(false);
   const [showFirstSendTooltip, setShowFirstSendTooltip] = useState(false);
   const [inboxInterceptOpen, setInboxInterceptOpen] = useState(false);
+  const { smsOptOut } = useSmsOptOut();
 
   const { data: jobs = [] } = useQuery<Job[]>({
     queryKey: QUERY_KEYS.jobs(),
@@ -331,38 +333,61 @@ export function FollowUpComposer() {
                 )}
                 {copied ? "Copied!" : "Copy & send via phone"}
               </Button>
-              <Tooltip open={showFirstSendTooltip}>
-                <TooltipTrigger asChild>
-                  <Button 
-                    onClick={handleSend} 
-                    className="w-full" 
-                    disabled={sendMutation.isPending || !selectedClient?.phone}
-                    data-testid="button-send-followup"
-                  >
-                    {sendMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4 mr-2" />
-                    )}
-                    Send from GigAid
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-xs p-3" data-testid="tooltip-first-send">
-                  <div className="flex items-start gap-2">
-                    <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                    <div className="text-sm">
-                      <p className="font-medium">Replies will go to your phone</p>
-                      <button
-                        className="text-primary mt-1 text-left hover:underline cursor-pointer"
-                        onClick={() => setInboxInterceptOpen(true)}
-                        data-testid="button-followup-inbox-upgrade"
-                      >
-                        Tap to unlock in-app replies
-                      </button>
+              {smsOptOut ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="w-full">
+                        <Button
+                          onClick={handleSend}
+                          className="w-full"
+                          disabled
+                          data-testid="button-send-followup"
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          Send from GigAid
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-xs p-3" data-testid="tooltip-sms-paused-followup">
+                      {SMS_OPT_OUT_TOOLTIP}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <Tooltip open={showFirstSendTooltip}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleSend}
+                      className="w-full"
+                      disabled={sendMutation.isPending || !selectedClient?.phone}
+                      data-testid="button-send-followup"
+                    >
+                      {sendMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4 mr-2" />
+                      )}
+                      Send from GigAid
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs p-3" data-testid="tooltip-first-send">
+                    <div className="flex items-start gap-2">
+                      <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm">
+                        <p className="font-medium">Replies will go to your phone</p>
+                        <button
+                          className="text-primary mt-1 text-left hover:underline cursor-pointer"
+                          onClick={() => setInboxInterceptOpen(true)}
+                          data-testid="button-followup-inbox-upgrade"
+                        >
+                          Tap to unlock in-app replies
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </div>
           </>
         )}

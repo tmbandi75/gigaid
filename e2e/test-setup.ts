@@ -75,6 +75,10 @@ export async function seedInvoice(data: {
   return post('/api/test/seed-invoice', data);
 }
 
+export async function setSmsOptOut(userId: string, smsOptOut: boolean) {
+  return post('/api/test/set-sms-opt-out', { userId, smsOptOut });
+}
+
 export async function setUserPlan(userId: string, plan: string) {
   return post('/api/test/set-plan', { userId, plan });
 }

@@ -17,6 +17,8 @@ import { useApiMutation } from "@/hooks/useApiMutation";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { RemindersDesktopView } from "@/components/reminders/RemindersDesktopView";
 import { SmsOptOutBanner } from "@/components/settings/SmsOptOutBanner";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { useSmsOptOut, SMS_OPT_OUT_TOOLTIP } from "@/hooks/useSmsOptOut";
 import { 
   Bell, 
   Plus, 
@@ -50,6 +52,7 @@ function formatPhoneNumber(value: string): string {
 export default function Reminders() {
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { smsOptOut } = useSmsOptOut();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [selectedReminder, setSelectedReminder] = useState<Reminder | null>(null);
@@ -638,19 +641,36 @@ export default function Reminders() {
               }}>
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
-                disabled={createMutation.isPending || updateMutation.isPending} 
-                className="bg-violet-500 hover:bg-violet-600"
-                data-testid="button-save-reminder"
-              >
-                {(createMutation.isPending || updateMutation.isPending) ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <Send className="h-4 w-4 mr-2" />
-                )}
-                {selectedReminder ? "Update Reminder" : "Schedule Reminder"}
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button
+                        type="submit"
+                        disabled={
+                          createMutation.isPending ||
+                          updateMutation.isPending ||
+                          (smsOptOut && formData.channel === "sms")
+                        }
+                        className="bg-violet-500 hover:bg-violet-600"
+                        data-testid="button-save-reminder"
+                      >
+                        {(createMutation.isPending || updateMutation.isPending) ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Send className="h-4 w-4 mr-2" />
+                        )}
+                        {selectedReminder ? "Update Reminder" : "Schedule Reminder"}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {smsOptOut && formData.channel === "sms" && (
+                    <TooltipContent data-testid="tooltip-sms-paused-reminder">
+                      {SMS_OPT_OUT_TOOLTIP}
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </DialogFooter>
           </form>
         </DialogContent>

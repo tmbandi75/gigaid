@@ -23,6 +23,8 @@ import { Search } from "lucide-react";
 import { useUpgradeOrchestrator, UpgradeBanner, UpgradeNudgeModal, incrementStallCounter, UpgradeInterceptModal } from "@/upgrade";
 import { ApproachingLimitBanner } from "@/components/upgrade/ApproachingLimitBanner";
 import { SmsOptOutBanner } from "@/components/settings/SmsOptOutBanner";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { useSmsOptOut, SMS_OPT_OUT_TOOLTIP } from "@/hooks/useSmsOptOut";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiFetch } from "@/lib/apiFetch";
@@ -187,6 +189,7 @@ function MessageThread({
   const isAtLimit = !!(usage?.outboundLimit && usage.outboundRemaining !== null && usage.outboundRemaining <= 0);
   const smsUpgrade = useUpgradeOrchestrator({ capabilityKey: 'sms.two_way', surface: 'messages' });
   const [smsInterceptOpen, setSmsInterceptOpen] = useState(false);
+  const { smsOptOut } = useSmsOptOut();
 
   const sendMutation = useApiMutation(
     async (message: string) => {
@@ -343,19 +346,32 @@ function MessageThread({
             }}
             data-testid="textarea-reply"
           />
-          <Button
-            onClick={handleSend}
-            disabled={!reply.trim() && !isAtLimit || sendMutation.isPending}
-            size="icon"
-            aria-label="Send message"
-            data-testid="button-send-reply"
-          >
-            {sendMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    onClick={handleSend}
+                    disabled={smsOptOut || (!reply.trim() && !isAtLimit) || sendMutation.isPending}
+                    size="icon"
+                    aria-label="Send message"
+                    data-testid="button-send-reply"
+                  >
+                    {sendMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {smsOptOut && (
+                <TooltipContent data-testid="tooltip-sms-paused-reply">
+                  {SMS_OPT_OUT_TOOLTIP}
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
       {smsUpgrade.modalPayload && (

@@ -221,6 +221,28 @@ export function registerTestRoutes(app: any, storage: IStorage) {
     }
   });
 
+  router.post("/set-sms-opt-out", async (req: Request, res: Response) => {
+    try {
+      const { userId, smsOptOut } = req.body;
+      if (!userId || typeof smsOptOut !== "boolean") {
+        return res.status(400).json({ error: "Missing required fields: userId, smsOptOut" });
+      }
+
+      const user = await storage.getUserByUsername(userId) || await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      await storage.updateUser(user.id, {
+        smsOptOut,
+        smsOptOutAt: smsOptOut ? new Date().toISOString() : null,
+      });
+      return res.json({ success: true, userId: user.id, smsOptOut });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
   router.post("/create-auth-token", async (req: Request, res: Response) => {
     try {
       const { userId } = req.body;
