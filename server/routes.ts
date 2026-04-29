@@ -28,6 +28,10 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { safePriceCents, safePriceCentsExact, safePriceExact, safePriceRange, safePrice } from "@shared/safePrice";
+import {
+  notificationPriceCentsExact,
+  notificationPriceRange,
+} from "@shared/notificationPrice";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { parseTextToPlan, suggestScheduleSlots, generateFollowUp } from "./ai/aiService";
 import { parseSharedContent, generateQuickReplies } from "./ai/shareParser";
@@ -3717,7 +3721,7 @@ export async function registerRoutes(
       const baseUrl = process.env.FRONTEND_URL || "https://account.gigaid.ai";
       const confirmationUrl = `${baseUrl}/confirm-price/${confirmation.confirmationToken}`;
       
-      const priceFormatted = safePriceCentsExact(confirmation.agreedPrice);
+      const priceFormatted = notificationPriceCentsExact(confirmation.agreedPrice);
       const message = `Hi ${lead.clientName}, ${provider?.businessName || provider?.name || "Your service provider"} has sent you a price confirmation for ${confirmation.serviceType || "your service"}: ${priceFormatted}. Please confirm: ${confirmationUrl}`;
       
       let smsSent = false;
@@ -7768,7 +7772,7 @@ Final price confirmed onsite.`;
       const confirmUrl = `${baseUrl}/confirm-estimate/${request.confirmToken}`;
 
       if (request.clientPhone) {
-        const message = `${user?.businessName || user?.name || "Your provider"} has reviewed your request and prepared an estimate of ${safePriceRange(request.providerEstimateLow, request.providerEstimateHigh)}. View and confirm: ${confirmUrl}`;
+        const message = `${user?.businessName || user?.name || "Your provider"} has reviewed your request and prepared an estimate of ${notificationPriceRange(request.providerEstimateLow, request.providerEstimateHigh)}. View and confirm: ${confirmUrl}`;
         await sendSMS(request.clientPhone, message);
       }
 
@@ -12969,7 +12973,7 @@ Return ONLY the message text, no JSON or formatting.`
       // Try to send the invoice with booking link
       let sent = false;
       let sendMessage = "Invoice created as draft";
-      const amountFormatted = safePriceCentsExact(action.prefilledAmount || 0);
+      const amountFormatted = notificationPriceCentsExact(action.prefilledAmount || 0);
       
       // Compose email with both invoice and booking link
       const emailHtml = `
