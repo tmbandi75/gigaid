@@ -1,4 +1,5 @@
 import { Plan } from "@shared/plans";
+import { logger } from "../lib/logger";
 
 export type BillingCadence = "monthly" | "yearly";
 
@@ -71,4 +72,19 @@ export function getConfiguredPlanPrices(): PlanPriceConfig[] {
     }
   }
   return result;
+}
+
+export function warnIfNoPlanPriceIdsConfigured(): void {
+  if (getKnownPlanPriceIds().size > 0) return;
+  const envVars = getPlanPriceEnvVarNames().join(", ");
+  const message =
+    `No Stripe plan price IDs configured. Admin plan changes ` +
+    `(billing_upgrade / billing_downgrade) will fail with ` +
+    `"Unknown price ID" until the following env vars are set: ${envVars}. ` +
+    `See docs/runbooks/stripe-plan-price-ids.md.`;
+  if (process.env.NODE_ENV === "production") {
+    logger.warn(`[startup] ${message}`);
+  } else {
+    logger.info(`[startup] ${message}`);
+  }
 }
