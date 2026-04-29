@@ -602,7 +602,7 @@ export default function PublicBooking() {
           </Card>
           <div className="text-center pt-4">
             <a 
-              href="https://gigaid.ai" 
+              href="http://www.gigaid.ai" 
               target="_blank" 
               rel="noopener noreferrer"
               className="inline-block"
@@ -1275,14 +1275,14 @@ export default function PublicBooking() {
 
         <div className="text-center text-sm text-muted-foreground flex flex-col items-center justify-center gap-2 py-4">
           <a 
-            href="http://gigaid.ai" 
+            href="http://www.gigaid.ai" 
             target="_blank" 
             rel="noopener noreferrer"
             data-testid="link-gigaid"
           >
             <img src="/gigaid-logo.png" alt="GigAid" className="h-48 inline-block" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
           </a>
-          <span>Powered by <a href="http://gigaid.ai" target="_blank" rel="noopener noreferrer" className="hover:underline font-medium">GigAid</a></span>
+          <span>Powered by <a href="http://www.gigaid.ai" target="_blank" rel="noopener noreferrer" className="hover:underline font-medium">GigAid</a></span>
           {profile?.referralCode && (
             <a
               href={`/free-setup?ref=${profile.referralCode}`}
