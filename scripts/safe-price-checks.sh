@@ -19,11 +19,18 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 echo "[safe-price] Running ESLint (eslint.safeprice.config.js)…"
+# `reports/` and `exports/` (Task #183) currently only contain JSON / PNG
+# artifacts, so the globs may match zero files. `--no-error-on-unmatched-pattern`
+# keeps the gate green in that case while still gating any TS / TSX builder
+# later added under those roots.
 npx eslint \
   --config eslint.safeprice.config.js \
+  --no-error-on-unmatched-pattern \
   'client/src/**/*.{ts,tsx}' \
-  'server/**/*.ts' \
-  'shared/**/*.{ts,tsx}'
+  'server/**/*.{ts,tsx}' \
+  'shared/**/*.{ts,tsx}' \
+  'reports/**/*.{ts,tsx}' \
+  'exports/**/*.{ts,tsx}'
 
 echo "[safe-price] Running Jest scanner (noRawPriceTemplates)…"
 npx jest \

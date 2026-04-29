@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, unlinkSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from "fs";
 import { join, relative } from "path";
 import { sync as globSync } from "glob";
 import {
@@ -11,6 +11,12 @@ const ROOT = join(__dirname, "..", "..");
 const CLIENT_SRC = join(ROOT, "client", "src");
 const SERVER_DIR = join(ROOT, "server");
 const SHARED_DIR = join(ROOT, "shared");
+// PDF / CSV / printable-document builders historically lived in `reports/`
+// and `exports/`. Today they only hold JSON / PNG artifacts, but Task #183
+// extends the safe-price gate over those directories so any future TS/TSX
+// builder added there is rejected the moment it concatenates raw `$`.
+const REPORTS_DIR = join(ROOT, "reports");
+const EXPORTS_DIR = join(ROOT, "exports");
 
 // The helper itself is the *one* place raw `$` prefix patterns are
 // allowed — that is the whole point of the helper. Every other surface
@@ -193,6 +199,28 @@ function scanRoot(root: string): Violation[] {
   return violations;
 }
 
+// Same shape as `scanRoot`, but tolerates an empty / missing directory.
+// `reports/` and `exports/` currently only contain JSON / PNG artifacts, so
+// asserting on file count would make the gate flap whenever those dirs are
+// pruned. The dedicated synthetic write+scan tests below prove the wiring
+// still picks up any TS/TSX builder that is later added under those roots.
+function scanRootOptional(root: string): Violation[] {
+  if (!existsSync(root)) return [];
+  const files = globSync("**/*.{ts,tsx}", {
+    cwd: root,
+    absolute: true,
+    ignore: ["**/*.d.ts"],
+  });
+
+  const violations: Violation[] = [];
+  for (const file of files) {
+    const rel = relative(ROOT, file).split(/[\\/]/).join("/");
+    if (ALLOWLIST.has(rel)) continue;
+    violations.push(...scanFile(file));
+  }
+  return violations;
+}
+
 function reportViolations(label: string, violations: Violation[]): void {
   if (violations.length === 0) return;
   const formatted = violations
@@ -221,6 +249,19 @@ describe("safe price helper enforcement", () => {
 
   it("rejects raw `$` prefix patterns in shared/", () => {
     reportViolations("shared/", scanRoot(SHARED_DIR));
+  });
+
+  // PDF / CSV / printable-document builders (Task #183). `reports/` and
+  // `exports/` may legitimately be empty of TS/TSX code today (they hold
+  // generated JSON / PNG artifacts), but the gate still walks them so that
+  // any future invoice / accountant export builder added there is rejected
+  // the moment it concatenates raw `$NaN` / `$undefined` strings.
+  it("rejects raw `$` prefix patterns in reports/", () => {
+    reportViolations("reports/", scanRootOptional(REPORTS_DIR));
+  });
+
+  it("rejects raw `$` prefix patterns in exports/", () => {
+    reportViolations("exports/", scanRootOptional(EXPORTS_DIR));
   });
 
   it("detects a synthetic template-literal violation", () => {
@@ -366,6 +407,170 @@ describe("safe price helper enforcement", () => {
       'import { safePriceCentsExact } from "@shared/safePrice";\n' +
         "export function buildSmsBody(amountCents: number) {\n" +
         "  return `Your invoice total is ${safePriceCentsExact(amountCents)}.`;\n" +
+        "}\n",
+      "utf8",
+    );
+    try {
+      const violations = scanFile(tmp);
+      expect(violations).toEqual([]);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  // PDF / CSV builder regression coverage (Task #183). A bug in a UI surface
+  // is annoying but visible; a `$NaN` baked into a downloaded invoice PDF
+  // or accountant CSV ships out the door without anyone noticing until a
+  // customer escalates. These synthetic tests prove the same AST scanner
+  // catches the same patterns inside PDF / CSV builder code paths, both
+  // when the builder lives under `server/` (today's reality) and when one
+  // is later added to `reports/` or `exports/`.
+  it("detects a synthetic raw-$ template-literal in a PDF builder under server/", () => {
+    const tmp = join(SERVER_DIR, "__synthetic_violation_test_pdf_builder__.ts");
+    writeFileSync(
+      tmp,
+      "export function buildInvoicePdfRow(amountCents: number) {\n" +
+        "  // Simulates a printable-document template that bakes the\n" +
+        "  // dollar prefix in by hand instead of going through safePrice.\n" +
+        "  return `Total due: $${(amountCents / 100).toFixed(2)}`;\n" +
+        "}\n",
+      "utf8",
+    );
+    try {
+      const violations = scanFile(tmp);
+      expect(violations.some((v) => v.kind === "template-literal")).toBe(true);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it("detects a synthetic raw-$ concat in a CSV exporter under server/", () => {
+    const tmp = join(SERVER_DIR, "__synthetic_violation_test_csv_builder__.ts");
+    writeFileSync(
+      tmp,
+      "export function buildCsvAmountCell(amountCents: number) {\n" +
+        '  return "$" + (amountCents / 100).toFixed(2);\n' +
+        "}\n",
+      "utf8",
+    );
+    try {
+      const violations = scanFile(tmp);
+      expect(violations.some((v) => v.kind === "string-concat")).toBe(true);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it("detects a synthetic raw-$ array-join in a CSV row builder under server/", () => {
+    const tmp = join(SERVER_DIR, "__synthetic_violation_test_csv_join__.ts");
+    writeFileSync(
+      tmp,
+      "export function buildCsvRow(amountCents: number) {\n" +
+        '  return ["customer", ["$", amountCents / 100].join("")].join(",");\n' +
+        "}\n",
+      "utf8",
+    );
+    try {
+      const violations = scanFile(tmp);
+      expect(violations.some((v) => v.kind === "string-concat")).toBe(true);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  // End-to-end wiring check for the new directories. Write a violating
+  // builder into `reports/` and assert that the directory-level
+  // `scanRootOptional(REPORTS_DIR)` call (the same call used by the
+  // "rejects raw `$` prefix patterns in reports/" test) picks it up. This
+  // guards against an accidental future change that drops `reports/` or
+  // `exports/` from the scan scope.
+  it("scanRootOptional(REPORTS_DIR) picks up a synthetic PDF builder violation", () => {
+    if (!existsSync(REPORTS_DIR)) mkdirSync(REPORTS_DIR, { recursive: true });
+    const tmp = join(REPORTS_DIR, "__synthetic_violation_test_report_pdf__.ts");
+    const relTmp = "reports/__synthetic_violation_test_report_pdf__.ts";
+    writeFileSync(
+      tmp,
+      "export function renderInvoicePdf(amountCents: number) {\n" +
+        "  return `Pay $${(amountCents / 100).toFixed(2)}`;\n" +
+        "}\n",
+      "utf8",
+    );
+    try {
+      const violations = scanRootOptional(REPORTS_DIR);
+      expect(
+        violations.some(
+          (v) => v.file === relTmp && v.kind === "template-literal",
+        ),
+      ).toBe(true);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it("scanRootOptional(EXPORTS_DIR) picks up a synthetic CSV builder violation", () => {
+    if (!existsSync(EXPORTS_DIR)) mkdirSync(EXPORTS_DIR, { recursive: true });
+    const tmp = join(EXPORTS_DIR, "__synthetic_violation_test_export_csv__.ts");
+    const relTmp = "exports/__synthetic_violation_test_export_csv__.ts";
+    writeFileSync(
+      tmp,
+      "export function buildCsvAmountCell(amountCents: number) {\n" +
+        '  return "$" + (amountCents / 100).toFixed(2);\n' +
+        "}\n",
+      "utf8",
+    );
+    try {
+      const violations = scanRootOptional(EXPORTS_DIR);
+      expect(
+        violations.some(
+          (v) => v.file === relTmp && v.kind === "string-concat",
+        ),
+      ).toBe(true);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  // TSX parity: the directory globs include `.tsx`, so confirm the
+  // scanner picks up a JSX-text-shaped violation written into one of the
+  // new directories. Guards against an accidental future change that
+  // narrows the new roots to `.ts` only.
+  it("scanRootOptional(EXPORTS_DIR) picks up a synthetic JSX-text TSX violation", () => {
+    if (!existsSync(EXPORTS_DIR)) mkdirSync(EXPORTS_DIR, { recursive: true });
+    const tmp = join(EXPORTS_DIR, "__synthetic_violation_test_export_tsx__.tsx");
+    const relTmp = "exports/__synthetic_violation_test_export_tsx__.tsx";
+    writeFileSync(
+      tmp,
+      "export const InvoiceRow = ({ amountCents }: { amountCents: number }) => (\n" +
+        "  <tr><td>Total</td><td>${(amountCents / 100).toFixed(2)}</td></tr>\n" +
+        ");\n",
+      "utf8",
+    );
+    try {
+      const violations = scanRootOptional(EXPORTS_DIR);
+      expect(
+        violations.some(
+          (v) => v.file === relTmp && v.kind === "jsx-text",
+        ),
+      ).toBe(true);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  // Negative case for PDF / CSV builders: a printable-document template
+  // that uses the safePrice helper must NOT trigger any violations, so
+  // template authors are not forced to bypass the helper just because
+  // their output happens to be a PDF row or a CSV cell.
+  it("does not flag PDF / CSV builders that use the safePrice helper", () => {
+    const tmp = join(SERVER_DIR, "__synthetic_clean_test_pdf_csv_helper__.ts");
+    writeFileSync(
+      tmp,
+      'import { safePriceCentsExact } from "@shared/safePrice";\n' +
+        "export function buildInvoicePdfRow(amountCents: number) {\n" +
+        "  return `Total due: ${safePriceCentsExact(amountCents)}`;\n" +
+        "}\n" +
+        "export function buildCsvAmountCell(amountCents: number) {\n" +
+        "  return safePriceCentsExact(amountCents);\n" +
         "}\n",
       "utf8",
     );

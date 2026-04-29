@@ -15,9 +15,11 @@ client and the server.
 
 ## The Rule
 
-Inside `client/src/**/*.{ts,tsx}`, `server/**/*.{ts,tsx}`, and
-`shared/**/*.{ts,tsx}` (excluding the helper sources `client/src/lib/safePrice.ts`
-and `shared/safePrice.ts`), none of the following patterns are allowed:
+Inside `client/src/**/*.{ts,tsx}`, `server/**/*.{ts,tsx}`,
+`shared/**/*.{ts,tsx}`, `reports/**/*.{ts,tsx}`, and
+`exports/**/*.{ts,tsx}` (excluding the helper sources
+`client/src/lib/safePrice.ts` and `shared/safePrice.ts`), none of the
+following patterns are allowed:
 
 1. **Raw `` `$${...}` `` template literals.** Anywhere a price is built into a
    string, use the appropriate helper instead of prefixing `$` yourself.
@@ -28,20 +30,29 @@ and `shared/safePrice.ts`), none of the following patterns are allowed:
 4. **Array `join` of a `$` literal** — e.g. `["$", value].join("")`.
 
 A Jest test (`tests/lib/noRawPriceTemplates.test.ts`) walks every TS/TSX file
-under `client/src`, `server/`, and `shared/` with
+under `client/src`, `server/`, `shared/`, `reports/`, and `exports/` with
 `@typescript-eslint/typescript-estree` and fails CI if any of these patterns
 appears. There is one separate `it(...)` block per directory so the failure
-log clearly identifies which surface (`client/src`, `server/`, or `shared/`)
-introduced the violation. The scanner is wired into the `safe-price-scan`
-validation command, which acts as a pre-merge gate — a failing scan blocks
-the task from being marked complete and the offending file/line is printed
-in the run log.
+log clearly identifies which surface (`client/src`, `server/`, `shared/`,
+`reports/`, or `exports/`) introduced the violation. `reports/` and
+`exports/` may currently hold zero TS/TSX files (they store generated
+JSON / PNG artifacts today); the gate tolerates the empty case but still
+rejects any future invoice / accountant / printable-document builder added
+under those roots — see "Printable documents (PDF / CSV exports)" below.
+
+The scanner is wired into the `safe-price-scan` validation command, which
+acts as a pre-merge gate — a failing scan blocks the task from being marked
+complete and the offending file/line is printed in the run log.
 
 A complementary ESLint rule (`eslint-rules/no-raw-price-format.cjs`,
 registered as `safe-price/no-raw-price-format` in
 `eslint.safeprice.config.js`) enforces the same patterns at lint time across
-`client/src/**`, `server/**`, and `shared/**`, and is wired into the
-`safe-price-eslint` validation command for redundant pre-merge enforcement.
+`client/src/**`, `server/**`, `shared/**`, `reports/**`, and `exports/**`,
+and is wired into the `safe-price-eslint` validation command for redundant
+pre-merge enforcement. The ESLint glob is invoked with
+`--no-error-on-unmatched-pattern` so that empty `reports/` / `exports/`
+directories do not flap the gate while still gating any TS/TSX file later
+added there.
 
 ## Helpers
 
@@ -120,6 +131,45 @@ and the test suite locks in dedicated regression coverage for SMS / email
 template paths (synthetic violations are written into `server/` to confirm
 they get caught).
 
+### Printable documents (PDF / CSV exports)
+
+Invoices, receipts, accountant exports, and any other downloadable artifact
+(PDF rows, CSV cells, printable HTML, etc.) follow the same rule as outbound
+SMS / email: build every price string through the safePrice helpers from
+`@shared/safePrice`. A `$NaN` baked into a downloaded invoice ships out the
+door without anyone noticing until a customer escalates, so the gate covers
+PDF / CSV builders specifically:
+
+- The Jest scanner walks `server/**`, `reports/**`, and `exports/**` (the
+  three directories where printable-document builders live or could live)
+  and rejects raw-`$` template literals, `"$" + value` concatenation, and
+  array-`join` `$` patterns inside any `.ts` / `.tsx` builder it finds.
+- Dedicated regression tests in `tests/lib/noRawPriceTemplates.test.ts`
+  write synthetic PDF / CSV builders (template-literal, string concat, and
+  array-`join` shapes) into `server/`, `reports/`, and `exports/` and
+  assert the scanner picks them up. A negative case proves a builder that
+  uses `safePriceCentsExact(...)` is **not** flagged.
+- The ESLint rule applies to the same set of paths so the redundant
+  pre-merge enforcement catches the same shapes at lint time.
+
+Build PDF / CSV cells the same way you would build a Twilio SMS body:
+
+```ts
+import { safePriceCentsExact } from "@shared/safePrice";
+
+// PDF row
+doc.text(`Total due: ${safePriceCentsExact(invoice.amountCents)}`);
+
+// CSV amount cell
+const cell = safePriceCentsExact(invoice.amountCents);
+res.write([invoice.id, customerName, cell].map(csvEscape).join(",") + "\n");
+```
+
+Do **not** write `` `Total due: $${(amountCents / 100).toFixed(2)}` `` or
+`"$" + amount` inside a PDF / CSV builder. Even if the upstream value looks
+safe today, a missing field or a bad cast can ship `$NaN` straight into a
+customer's downloaded invoice.
+
 ### Custom placeholder
 
 If your UI needs a non-default placeholder (e.g. an empty string while a
@@ -168,10 +218,11 @@ to the appropriate helper, then re-run.
 The same scanner is registered as the `safe-price-scan` validation command,
 and the matching ESLint rule is registered as the `safe-price-eslint`
 validation command. Both run automatically before a task can be merged and
-cover `client/src/**`, `server/**`, and `shared/**`. If any file (UI
-component, SMS template, email body, AI prompt, log line, etc.) introduces
-a raw `$` price pattern the scan fails, the merge is blocked, and the
-offending file/line/snippet appears in the validation log.
+cover `client/src/**`, `server/**`, `shared/**`, `reports/**`, and
+`exports/**`. If any file (UI component, SMS template, email body, AI
+prompt, log line, PDF row, CSV cell, etc.) introduces a raw `$` price
+pattern the scan fails, the merge is blocked, and the offending
+file/line/snippet appears in the validation log.
 
 ## Pre-push and CI enforcement (Task #172)
 
