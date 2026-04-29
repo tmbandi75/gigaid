@@ -143,7 +143,60 @@ describe("eslint-rules/no-raw-price-format", () => {
           code: "const v = 5;\nconst s = `$` + v;\n",
           errors: [{ messageId: "stringConcat" }],
         },
+        // Inner-concat variants — the dollar sign is hidden behind an
+        // inner `+` BinaryExpression. The original rule only inspected
+        // the immediate left-hand side of a `+`, so these slipped past
+        // even though they emit `prefix$<value>` at runtime. The
+        // recursive `concatExpressionEndsInDollar` helper closes the gap.
+        {
+          name: "`(prefix + \"$\") + value` is rejected (inner-concat LHS ends in `$`)",
+          filename: fileIn("client/src/components/Price.ts"),
+          code: 'const prefix = "Price: ";\nconst v = 5;\nconst s = (prefix + "$") + v;\n',
+          errors: [{ messageId: "stringConcat" }],
+        },
+        {
+          name: "`prefix + \"$\" + value` (left-associative) is rejected",
+          filename: fileIn("client/src/components/Price.ts"),
+          code: 'const prefix = "Price: ";\nconst v = 5;\nconst s = prefix + "$" + v;\n',
+          errors: [{ messageId: "stringConcat" }],
+        },
+        {
+          name: "`prefix + (\"$\" + value)` is rejected via the inner `\"$\" + value` concat",
+          filename: fileIn("client/src/components/Price.ts"),
+          code: 'const prefix = "Price: ";\nconst v = 5;\nconst s = prefix + ("$" + v);\n',
+          errors: [{ messageId: "stringConcat" }],
+        },
+        {
+          name: "deep nested LHS `((a + \"X\") + \"$\") + value` is rejected",
+          filename: fileIn("client/src/components/Price.ts"),
+          code:
+            'const a = "Total ";\n' +
+            "const v = 5;\n" +
+            'const s = ((a + "X") + "$") + v;\n',
+          errors: [{ messageId: "stringConcat" }],
+        },
       ],
+    });
+  });
+
+  describe("inner-concat that resolves to a non-`$` tail is fine", () => {
+    // Sanity-check that the recursive walk only fires when the *rightmost*
+    // leaf of the LHS concat tree ends in `$`. If a literal is appended
+    // after the `$` (e.g. `(prefix + "$" + "X") + value` → "prefix$X" +
+    // value), the resulting string no longer ends in `$` immediately
+    // before the dynamic value, so the rule must stay quiet.
+    tsTester.run("no-raw-price-format (inner-concat tail)", rule, {
+      valid: [
+        {
+          name: "LHS where `$` is followed by another literal (no longer `$`-terminated) is fine",
+          filename: fileIn("client/src/components/Price.ts"),
+          code:
+            'const prefix = "Total ";\n' +
+            "const v = 5;\n" +
+            'const s = (prefix + "$" + "X") + v;\n',
+        },
+      ],
+      invalid: [],
     });
   });
 

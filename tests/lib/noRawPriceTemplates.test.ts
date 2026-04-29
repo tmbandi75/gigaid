@@ -67,6 +67,20 @@ function isStringLiteralEndingInDollar(node: TSESTree.Node): boolean {
   return false;
 }
 
+// Recursively determine whether the *rightmost* leaf of a `+` concat
+// tree is a string literal ending in `$`. Mirrors the helper of the
+// same name in `eslint-rules/no-raw-price-format.cjs` so the AST scan
+// stays in lock-step with the ESLint rule when catching inner-concat
+// variants like `(prefix + "$") + value`.
+function concatExpressionEndsInDollar(node: TSESTree.Node | null | undefined): boolean {
+  if (!node) return false;
+  if (isStringLiteralEndingInDollar(node)) return true;
+  if (node.type === AST_NODE_TYPES.BinaryExpression && node.operator === "+") {
+    return concatExpressionEndsInDollar(node.right);
+  }
+  return false;
+}
+
 function buildViolation(
   file: string,
   loc: TSESTree.SourceLocation | undefined,
@@ -162,9 +176,12 @@ function scanFile(absPath: string): Violation[] {
 
     // (3) String concatenation that prefixes `$`:
     //     "$" + value, "Price: $" + value, ["$", value].join("")
+    //     plus the inner-concat variant `(prefix + "$") + value` where
+    //     the LHS itself is a `+` BinaryExpression whose rightmost leaf
+    //     is a `$`-terminated string literal.
     if (node.type === AST_NODE_TYPES.BinaryExpression && node.operator === "+") {
       if (
-        isStringLiteralEndingInDollar(node.left) &&
+        concatExpressionEndsInDollar(node.left) &&
         node.right.type !== AST_NODE_TYPES.Literal
       ) {
         violations.push(buildViolation(relPath, node.loc, "string-concat", code));
@@ -314,6 +331,63 @@ describe("safe price helper enforcement", () => {
   it("detects a synthetic `\"$\" + value` concatenation violation", () => {
     const tmp = join(CLIENT_SRC, "__synthetic_violation_test_concat__.ts");
     writeFileSync(tmp, 'const v = 5;\nconst s = "$" + v;\n', "utf8");
+    try {
+      const violations = scanFile(tmp);
+      expect(violations.some((v) => v.kind === "string-concat")).toBe(true);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  // Inner-concat coverage (Task #180). The dollar prefix is hidden
+  // behind an inner `+` BinaryExpression, e.g. `(prefix + "$") + value`
+  // or its left-associative spelling `prefix + "$" + value`. Before
+  // Task #180 the AST scanner only inspected the immediate left-hand
+  // side of the outer `+`, so these slipped through even though they
+  // emit `prefix$<value>` at runtime.
+  it("detects a synthetic `(prefix + \"$\") + value` inner-concat violation", () => {
+    const tmp = join(CLIENT_SRC, "__synthetic_violation_test_inner_concat__.ts");
+    writeFileSync(
+      tmp,
+      'const prefix = "Price: ";\nconst v = 5;\nconst s = (prefix + "$") + v;\n',
+      "utf8",
+    );
+    try {
+      const violations = scanFile(tmp);
+      expect(violations.some((v) => v.kind === "string-concat")).toBe(true);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it("detects a synthetic left-associative `prefix + \"$\" + value` violation", () => {
+    const tmp = join(
+      CLIENT_SRC,
+      "__synthetic_violation_test_left_assoc_concat__.ts",
+    );
+    writeFileSync(
+      tmp,
+      'const prefix = "Price: ";\nconst v = 5;\nconst s = prefix + "$" + v;\n',
+      "utf8",
+    );
+    try {
+      const violations = scanFile(tmp);
+      expect(violations.some((v) => v.kind === "string-concat")).toBe(true);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it("detects a synthetic `prefix + (\"$\" + value)` inner-concat violation", () => {
+    const tmp = join(
+      CLIENT_SRC,
+      "__synthetic_violation_test_inner_paren_concat__.ts",
+    );
+    writeFileSync(
+      tmp,
+      'const prefix = "Price: ";\nconst v = 5;\nconst s = prefix + ("$" + v);\n',
+      "utf8",
+    );
     try {
       const violations = scanFile(tmp);
       expect(violations.some((v) => v.kind === "string-concat")).toBe(true);

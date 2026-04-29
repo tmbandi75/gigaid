@@ -33,6 +33,21 @@ function isStringLiteralEndingInDollar(node) {
   return false;
 }
 
+// Recursively determine whether the *rightmost* leaf of a `+` concat tree
+// is a string literal ending in `$`. This catches inner-concat variants
+// like `(prefix + "$") + value`, where the immediate left-hand side of
+// the outer `+` is itself a BinaryExpression that produces a string
+// terminating in `$`. Without this, the outer `+` slips past the rule
+// even though it would emit `prefix$<value>` at runtime.
+function concatExpressionEndsInDollar(node) {
+  if (!node) return false;
+  if (isStringLiteralEndingInDollar(node)) return true;
+  if (node.type === "BinaryExpression" && node.operator === "+") {
+    return concatExpressionEndsInDollar(node.right);
+  }
+  return false;
+}
+
 function toRelativeFromCwd(filename) {
   if (!filename || filename === "<input>" || filename === "<text>") return "";
   const rel = path.relative(process.cwd(), filename);
@@ -97,7 +112,7 @@ module.exports = {
       BinaryExpression(node) {
         if (node.operator !== "+") return;
         if (
-          isStringLiteralEndingInDollar(node.left) &&
+          concatExpressionEndsInDollar(node.left) &&
           node.right &&
           node.right.type !== "Literal"
         ) {
