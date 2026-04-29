@@ -175,6 +175,7 @@ const mockStripe = {
   customers: {
     update: jest.fn(),
     createBalanceTransaction: jest.fn(),
+    retrieve: jest.fn(),
   },
   refunds: {
     create: jest.fn(),
@@ -235,6 +236,7 @@ beforeEach(() => {
   mockStripe.subscriptions.cancel.mockReset();
   mockStripe.customers.update.mockReset();
   mockStripe.customers.createBalanceTransaction.mockReset();
+  mockStripe.customers.retrieve.mockReset();
   mockStripe.refunds.create.mockReset();
   mockStripe.invoices.list.mockReset();
   mockStripe.invoices.pay.mockReset();
@@ -1416,7 +1418,7 @@ describe("GET /api/admin/users/:userId/messaging", () => {
 });
 
 describe("GET /api/admin/users/:userId/payments", () => {
-  it("returns subscription, stripeConnect, and invoice counts", async () => {
+  it("returns subscription, stripeConnect, invoice counts, and the Stripe credit balance", async () => {
     // 1st select = user row, 2nd = invoices total, 3rd = invoices paid
     dbState.selectQueue.push([
       {
@@ -1424,10 +1426,19 @@ describe("GET /api/admin/users/:userId/payments", () => {
         proExpiresAt: "2027-01-01T00:00:00.000Z",
         stripeConnectAccountId: "acct_123",
         stripeConnectStatus: "active",
+        stripeCustomerId: "cus_1",
       },
     ]);
     dbState.selectQueue.push([{ count: 9 }]);
     dbState.selectQueue.push([{ count: 7 }]);
+
+    // Stripe stores credit as a negative balance (cents); $35.00 credit = -3500.
+    mockStripe.customers.retrieve.mockResolvedValue({
+      id: "cus_1",
+      balance: -3500,
+      currency: "usd",
+      deleted: false,
+    });
 
     const res = await request(buildApp())
       .get("/api/admin/users/demo-user/payments")
@@ -1438,17 +1449,58 @@ describe("GET /api/admin/users/:userId/payments", () => {
       subscription: { isPro: true, expiresAt: "2027-01-01T00:00:00.000Z" },
       stripeConnect: { accountId: "acct_123", status: "active" },
       invoices: { total: 9, paid: 7 },
+      stripeCredit: {
+        hasCustomer: true,
+        balanceCents: 3500,
+        currency: "USD",
+        error: null,
+      },
     });
+    expect(mockStripe.customers.retrieve).toHaveBeenCalledWith("cus_1");
     expect(res.body).toHaveProperty("note");
   });
 
-  it("falls back to safe defaults when the user has no Stripe linkage", async () => {
+  it("reports zero credit when the customer balance is positive (amount owed)", async () => {
     dbState.selectQueue.push([
       {
         isPro: false,
         proExpiresAt: null,
         stripeConnectAccountId: null,
         stripeConnectStatus: null,
+        stripeCustomerId: "cus_owes",
+      },
+    ]);
+    dbState.selectQueue.push([{ count: 0 }]);
+    dbState.selectQueue.push([{ count: 0 }]);
+
+    mockStripe.customers.retrieve.mockResolvedValue({
+      id: "cus_owes",
+      balance: 1200,
+      currency: "usd",
+      deleted: false,
+    });
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/demo-user/payments")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.stripeCredit).toEqual({
+      hasCustomer: true,
+      balanceCents: 0,
+      currency: "USD",
+      error: null,
+    });
+  });
+
+  it("returns an empty credit state and skips Stripe when the user has no customer", async () => {
+    dbState.selectQueue.push([
+      {
+        isPro: false,
+        proExpiresAt: null,
+        stripeConnectAccountId: null,
+        stripeConnectStatus: null,
+        stripeCustomerId: null,
       },
     ]);
     dbState.selectQueue.push([{ count: 0 }]);
@@ -1465,6 +1517,73 @@ describe("GET /api/admin/users/:userId/payments", () => {
       status: "not_connected",
     });
     expect(res.body.invoices).toEqual({ total: 0, paid: 0 });
+    expect(res.body.stripeCredit).toEqual({
+      hasCustomer: false,
+      balanceCents: null,
+      currency: null,
+      error: null,
+    });
+    expect(mockStripe.customers.retrieve).not.toHaveBeenCalled();
+  });
+
+  it("surfaces an error string but still returns the rest of the payload when Stripe fails", async () => {
+    dbState.selectQueue.push([
+      {
+        isPro: true,
+        proExpiresAt: null,
+        stripeConnectAccountId: null,
+        stripeConnectStatus: null,
+        stripeCustomerId: "cus_broken",
+      },
+    ]);
+    dbState.selectQueue.push([{ count: 1 }]);
+    dbState.selectQueue.push([{ count: 0 }]);
+
+    mockStripe.customers.retrieve.mockRejectedValue(new Error("Stripe down"));
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/demo-user/payments")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.invoices).toEqual({ total: 1, paid: 0 });
+    expect(res.body.stripeCredit).toEqual({
+      hasCustomer: true,
+      balanceCents: null,
+      currency: null,
+      error: "Stripe down",
+    });
+  });
+
+  it("flags deleted Stripe customers without throwing", async () => {
+    dbState.selectQueue.push([
+      {
+        isPro: false,
+        proExpiresAt: null,
+        stripeConnectAccountId: null,
+        stripeConnectStatus: null,
+        stripeCustomerId: "cus_deleted",
+      },
+    ]);
+    dbState.selectQueue.push([{ count: 0 }]);
+    dbState.selectQueue.push([{ count: 0 }]);
+
+    mockStripe.customers.retrieve.mockResolvedValue({
+      id: "cus_deleted",
+      deleted: true,
+    });
+
+    const res = await request(buildApp())
+      .get("/api/admin/users/demo-user/payments")
+      .set("Authorization", `Bearer ${adminToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.stripeCredit).toEqual({
+      hasCustomer: true,
+      balanceCents: null,
+      currency: null,
+      error: "Stripe customer is deleted",
+    });
   });
 });
 

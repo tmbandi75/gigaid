@@ -904,6 +904,12 @@ interface PaymentsData {
   subscription: { isPro: boolean; expiresAt: string | null };
   stripeConnect: { accountId: string | null; status: string };
   invoices: { total: number; paid: number };
+  stripeCredit?: {
+    hasCustomer: boolean;
+    balanceCents: number | null;
+    currency: string | null;
+    error: string | null;
+  };
   note: string;
 }
 
@@ -1250,6 +1256,36 @@ function PaymentsSection({ userId }: { userId: string }) {
             {data?.invoices?.paid || 0} / {data?.invoices?.total || 0} paid
           </span>
         </div>
+        <div className="flex justify-between items-center py-1">
+          <span className="text-sm text-muted-foreground">Stripe Credit Balance</span>
+          {(() => {
+            const credit = data?.stripeCredit;
+            if (!credit || !credit.hasCustomer) {
+              return (
+                <span className="text-sm text-muted-foreground" data-testid="text-stripe-credit-none">
+                  No Stripe customer
+                </span>
+              );
+            }
+            if (credit.error) {
+              return (
+                <span className="text-sm text-destructive" data-testid="text-stripe-credit-error">
+                  Unavailable
+                </span>
+              );
+            }
+            const cents = credit.balanceCents ?? 0;
+            const formatted = cents > 0 ? safePriceCentsExact(cents) : "$0.00";
+            return (
+              <span className="text-sm font-medium" data-testid="text-stripe-credit-balance">
+                {formatted}
+                {credit.currency && credit.currency !== "USD" ? (
+                  <span className="ml-1 text-muted-foreground">{credit.currency}</span>
+                ) : null}
+              </span>
+            );
+          })()}
+        </div>
         <div className="text-xs text-muted-foreground pt-2 border-t">
           {data?.note}
         </div>
@@ -1272,7 +1308,7 @@ function ActionsSection({ userId, profile }: { userId: string; profile: UserProf
         method: "POST",
         body: JSON.stringify({ action_key, reason: reason.trim(), payload }),
       }),
-    [QUERY_KEYS.adminUser(userId), QUERY_KEYS.adminUserAudit(userId)],
+    [QUERY_KEYS.adminUser(userId), QUERY_KEYS.adminUserAudit(userId), QUERY_KEYS.adminUserPayments(userId)],
     {
       onSuccess: () => {
         toast({ title: "Action completed and logged" });
@@ -1538,7 +1574,7 @@ function BillingActionsSection({ userId, profile }: { userId: string; profile: U
         method: "POST",
         body: JSON.stringify({ action_key, reason: reason.trim(), payload }),
       }),
-    [QUERY_KEYS.adminUser(userId), QUERY_KEYS.adminUserAudit(userId)],
+    [QUERY_KEYS.adminUser(userId), QUERY_KEYS.adminUserAudit(userId), QUERY_KEYS.adminUserPayments(userId)],
     {
       onSuccess: () => {
         toast({ title: "Billing action completed and logged" });

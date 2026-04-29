@@ -1,4 +1,5 @@
 import { Router } from "express";
+import type Stripe from "stripe";
 import { db } from "../db";
 import { 
   users,
@@ -754,6 +755,7 @@ router.get("/:userId/payments", async (req, res) => {
       proExpiresAt: users.proExpiresAt,
       stripeConnectAccountId: users.stripeConnectAccountId,
       stripeConnectStatus: users.stripeConnectStatus,
+      stripeCustomerId: users.stripeCustomerId,
     }).from(users).where(eq(users.id, userId)).limit(1);
 
     const [invoicesTotal] = await db.select({ count: count() })
@@ -763,6 +765,48 @@ router.get("/:userId/payments", async (req, res) => {
     const [invoicesPaid] = await db.select({ count: count() })
       .from(invoices)
       .where(and(eq(invoices.userId, userId), eq(invoices.status, "paid")));
+
+    // Stripe stores `customer.balance` in cents in the customer's default
+    // currency. A negative balance means the customer has credit on file
+    // that will be applied to the next invoice; a positive balance means
+    // they owe an amount that will be added. We surface the credit portion
+    // so admins can verify that stacked `billing_apply_credit` calls landed.
+    let stripeCredit: {
+      hasCustomer: boolean;
+      balanceCents: number | null;
+      currency: string | null;
+      error: string | null;
+    } = {
+      hasCustomer: Boolean(user?.stripeCustomerId),
+      balanceCents: null,
+      currency: null,
+      error: null,
+    };
+
+    if (user?.stripeCustomerId) {
+      try {
+        const stripe = await getUncachableStripeClient();
+        const customer: Stripe.Customer | Stripe.DeletedCustomer =
+          await stripe.customers.retrieve(user.stripeCustomerId);
+        if (customer.deleted) {
+          stripeCredit.error = "Stripe customer is deleted";
+        } else {
+          const rawBalance = typeof customer.balance === "number" ? customer.balance : 0;
+          // Stripe's sign convention: negative = credit available.
+          // Convert to a positive "credit cents" number for display.
+          stripeCredit.balanceCents = rawBalance < 0 ? -rawBalance : 0;
+          stripeCredit.currency = typeof customer.currency === "string"
+            ? customer.currency.toUpperCase()
+            : null;
+        }
+      } catch (stripeError: unknown) {
+        logger.error("[Admin Users] Stripe credit balance lookup failed:", stripeError);
+        stripeCredit.error =
+          stripeError instanceof Error
+            ? stripeError.message
+            : "Failed to load Stripe credit balance";
+      }
+    }
 
     res.json({
       subscription: {
@@ -777,6 +821,7 @@ router.get("/:userId/payments", async (req, res) => {
         total: invoicesTotal?.count || 0,
         paid: invoicesPaid?.count || 0,
       },
+      stripeCredit,
       note: "For full payment details, use Stripe Dashboard",
     });
   } catch (error) {
