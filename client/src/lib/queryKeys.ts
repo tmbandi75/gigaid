@@ -164,6 +164,7 @@ export const QUERY_KEYS = {
   adminAuditLogsQuery: (queryParams: string) => [`/api/admin/audit-logs?${queryParams}`] as const,
   adminAnalyticsFunnels: (days: number | string) => [`/api/admin/analytics/funnels?days=${days}`] as const,
   adminAnalyticsShareFunnel: (days: number | string) => [`/api/admin/analytics/share-funnel?days=${days}`] as const,
+  adminAnalyticsFirstBookingEmails: (days: number | string) => [`/api/admin/analytics/first-booking-emails?days=${days}`] as const,
   publicReview: (token: string) => [`/api/public/review/${token}`] as const,
 
   jobTemplates: () => ["/api/job-templates"] as const,

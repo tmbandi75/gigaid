@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { formatCurrency as baseFormatCurrency } from "@/lib/formatCurrency";
 import { safePrice, safePriceExact } from "@/lib/safePrice";
-import { TrendingUp, Users, DollarSign, BarChart3, Target, Loader2, Sparkles, ArrowUpRight, ArrowLeft, Share2, Info } from "lucide-react";
+import { TrendingUp, Users, DollarSign, BarChart3, Target, Loader2, Sparkles, ArrowUpRight, ArrowLeft, Share2, Info, Mail } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -131,6 +131,40 @@ interface ShareFunnelData {
     historical?: string;
   };
 }
+
+interface FirstBookingEmailTouch {
+  touchType: string;
+  sent: number;
+  delivered: number;
+  bounces: number;
+  spamReports: number;
+  opens: number;
+  clicks: number;
+  uniqueOpens: number;
+  uniqueClicks: number;
+  openRate: number;
+  clickRate: number;
+  clickToOpenRate: number;
+  firstBookingsAfter: number;
+  downstreamFirstBookingRate: number;
+}
+
+interface FirstBookingEmailMetrics {
+  windowDays: number;
+  since: string;
+  touches: FirstBookingEmailTouch[];
+  notes: {
+    openRate: string;
+    clickRate: string;
+    downstreamFirstBookingRate: string;
+    ingestion: string;
+  };
+}
+
+const FIRST_BOOKING_EMAIL_LABELS: Record<string, string> = {
+  first_booking_email_2h: "2h follow-up",
+  first_booking_email_48h: "48h follow-up",
+};
 
 const SURFACE_LABELS: Record<string, string> = {
   plan: "Plan (dashboard)",
@@ -550,7 +584,11 @@ export default function AdminAnalytics() {
     queryKey: QUERY_KEYS.adminAnalyticsShareFunnel(days),
   });
 
-  const isLoading = revenueLoading || cohortsLoading || funnelsLoading || ltvLoading || shareFunnelLoading;
+  const { data: firstBookingEmails, isLoading: firstBookingEmailsLoading } = useQuery<FirstBookingEmailMetrics>({
+    queryKey: QUERY_KEYS.adminAnalyticsFirstBookingEmails(days),
+  });
+
+  const isLoading = revenueLoading || cohortsLoading || funnelsLoading || ltvLoading || shareFunnelLoading || firstBookingEmailsLoading;
 
   return (
     <div className="space-y-6" data-testid="page-admin-analytics">
@@ -948,6 +986,95 @@ export default function AdminAnalytics() {
                       </p>
                     )}
                   </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm" data-testid="card-first-booking-emails">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5 text-violet-500" />
+                First-booking email performance
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {firstBookingEmails && firstBookingEmails.touches.every((t) => t.sent === 0) ? (
+                <p
+                  className="text-sm text-muted-foreground"
+                  data-testid="first-booking-emails-empty"
+                >
+                  No first-booking emails sent in this window.
+                </p>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm" data-testid="table-first-booking-emails">
+                      <thead>
+                        <tr className="text-left text-muted-foreground border-b">
+                          <th className="py-2 pr-4 font-medium">Touch</th>
+                          <th className="py-2 pr-4 font-medium text-right">Sent</th>
+                          <th className="py-2 pr-4 font-medium text-right">Delivered</th>
+                          <th className="py-2 pr-4 font-medium text-right">Opens</th>
+                          <th className="py-2 pr-4 font-medium text-right">Clicks</th>
+                          <th className="py-2 pr-4 font-medium text-right">Unique opens</th>
+                          <th className="py-2 pr-4 font-medium text-right">Unique clicks</th>
+                          <th className="py-2 pr-4 font-medium text-right">Open rate</th>
+                          <th className="py-2 pr-4 font-medium text-right">Click rate</th>
+                          <th className="py-2 pr-4 font-medium text-right">CTOR</th>
+                          <th className="py-2 font-medium text-right">First-booking rate</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {firstBookingEmails?.touches.map((t) => (
+                          <tr
+                            key={t.touchType}
+                            className="border-b last:border-b-0"
+                            data-testid={`first-booking-email-row-${t.touchType}`}
+                          >
+                            <td className="py-2 pr-4">
+                              <Badge variant="outline">
+                                {FIRST_BOOKING_EMAIL_LABELS[t.touchType] || t.touchType}
+                              </Badge>
+                            </td>
+                            <td className="py-2 pr-4 text-right tabular-nums">{t.sent.toLocaleString()}</td>
+                            <td className="py-2 pr-4 text-right tabular-nums">{t.delivered.toLocaleString()}</td>
+                            <td className="py-2 pr-4 text-right tabular-nums">{t.opens.toLocaleString()}</td>
+                            <td className="py-2 pr-4 text-right tabular-nums">{t.clicks.toLocaleString()}</td>
+                            <td className="py-2 pr-4 text-right tabular-nums">{t.uniqueOpens.toLocaleString()}</td>
+                            <td className="py-2 pr-4 text-right tabular-nums">{t.uniqueClicks.toLocaleString()}</td>
+                            <td className="py-2 pr-4 text-right tabular-nums">
+                              {t.sent > 0 ? `${t.openRate.toFixed(1)}%` : "—"}
+                            </td>
+                            <td className="py-2 pr-4 text-right tabular-nums">
+                              {t.sent > 0 ? `${t.clickRate.toFixed(1)}%` : "—"}
+                            </td>
+                            <td className="py-2 pr-4 text-right tabular-nums">
+                              {t.uniqueOpens > 0 ? `${t.clickToOpenRate.toFixed(1)}%` : "—"}
+                            </td>
+                            <td className="py-2 text-right tabular-nums">
+                              {t.sent > 0 ? `${t.downstreamFirstBookingRate.toFixed(1)}%` : "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {firstBookingEmails?.notes && (
+                    <div
+                      className="text-xs text-muted-foreground space-y-1"
+                      data-testid="first-booking-emails-notes"
+                    >
+                      <p><strong>Open rate:</strong> {firstBookingEmails.notes.openRate}</p>
+                      <p><strong>Click rate:</strong> {firstBookingEmails.notes.clickRate}</p>
+                      <p>
+                        <strong>First-booking rate:</strong>{" "}
+                        {firstBookingEmails.notes.downstreamFirstBookingRate}
+                      </p>
+                      <p><strong>Ingestion:</strong> {firstBookingEmails.notes.ingestion}</p>
+                    </div>
+                  )}
                 </>
               )}
             </CardContent>
