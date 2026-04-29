@@ -650,27 +650,35 @@ async function handleCheckoutSessionCompleted(session: any, storage: IStorage) {
   logger.info(`[Stripe Webhook] Checkout completed for user ${userId}, plan=${targetPlan}, subscription=${subscriptionId}`);
 
   const oldPlan = user.plan;
+
+  // Emit the canonical event BEFORE flipping the user's plan so a DB
+  // blip on the event insert leaves `users.plan` unchanged. The
+  // webhook retry path will then re-run with `oldPlan !== targetPlan`
+  // still true and emit `user_became_paying` exactly once on success.
+  if (oldPlan !== targetPlan) {
+    await emitCanonicalEvent(
+      {
+        eventName: "user_became_paying",
+        userId,
+        context: {
+          subscriptionId,
+          customerId,
+          oldPlan,
+          newPlan: targetPlan,
+          source: "checkout_session",
+        },
+        source: "system",
+      },
+      { throwOnInsertFailure: true },
+    );
+  }
+
   await storage.updateUser(userId, {
     plan: targetPlan,
     isPro: true,
     stripeSubscriptionId: subscriptionId,
     stripeCustomerId: customerId,
   });
-
-  if (oldPlan !== targetPlan) {
-    emitCanonicalEvent({
-      eventName: "user_became_paying",
-      userId,
-      context: {
-        subscriptionId,
-        customerId,
-        oldPlan,
-        newPlan: targetPlan,
-        source: "checkout_session",
-      },
-      source: "system",
-    });
-  }
 
   logger.info(`[Stripe Webhook] User ${userId} upgraded to ${targetPlan} via checkout session`);
 }
@@ -690,38 +698,47 @@ async function handleSubscriptionEvent(eventType: string, subscription: any, sto
       const plan = subscription.metadata?.plan || "pro_plus";
       const oldPlan = user.plan;
 
+      // Emit canonical events BEFORE flipping the user's plan. If the
+      // event insert fails the user row stays unchanged, so the webhook
+      // retry will re-evaluate `oldPlan !== plan` and re-emit on success.
+      if (oldPlan !== plan) {
+        await emitCanonicalEvent(
+          {
+            eventName: "user_became_paying",
+            userId,
+            context: {
+              subscriptionId: subscription.id,
+              customerId,
+              oldPlan,
+              newPlan: plan,
+            },
+            source: "system",
+          },
+          { throwOnInsertFailure: true },
+        );
+      }
+
+      await emitCanonicalEvent(
+        {
+          eventName: "subscription_started",
+          userId,
+          context: {
+            subscriptionId: subscription.id,
+            customerId,
+            planId: subscription.items?.data?.[0]?.price?.id,
+            amount: subscription.items?.data?.[0]?.price?.unit_amount,
+            plan,
+          },
+          source: "system",
+        },
+        { throwOnInsertFailure: true },
+      );
+
       await storage.updateUser(userId, {
         plan,
         isPro: true,
         stripeSubscriptionId: subscription.id,
         stripeCustomerId: customerId,
-      });
-
-      if (oldPlan !== plan) {
-        emitCanonicalEvent({
-          eventName: "user_became_paying",
-          userId,
-          context: {
-            subscriptionId: subscription.id,
-            customerId,
-            oldPlan,
-            newPlan: plan,
-          },
-          source: "system",
-        });
-      }
-
-      emitCanonicalEvent({
-        eventName: "subscription_started",
-        userId,
-        context: {
-          subscriptionId: subscription.id,
-          customerId,
-          planId: subscription.items?.data?.[0]?.price?.id,
-          amount: subscription.items?.data?.[0]?.price?.unit_amount,
-          plan,
-        },
-        source: "system",
       });
 
       logger.info(`[Stripe Webhook] User ${userId} upgraded to ${plan} via subscription.created`);
@@ -747,21 +764,27 @@ async function handleSubscriptionEvent(eventType: string, subscription: any, sto
         await storage.updateUser(userId, updates);
         logger.info(`[Stripe Webhook] User ${userId} subscription.updated: plan=${newPlan}, status=${status}`);
       } else if (status === "canceled" || status === "unpaid" || status === "past_due") {
+        // Emit before clearing the user's subscription so a failed insert
+        // leaves the user row untouched and the webhook retry will fire
+        // `subscription_canceled` again on success.
+        await emitCanonicalEvent(
+          {
+            eventName: "subscription_canceled",
+            userId,
+            context: {
+              subscriptionId: subscription.id,
+              status,
+              reason: "subscription_status_change",
+            },
+            source: "system",
+          },
+          { throwOnInsertFailure: true },
+        );
+
         await storage.updateUser(userId, {
           plan: "free",
           isPro: false,
           stripeSubscriptionId: null,
-        });
-
-        emitCanonicalEvent({
-          eventName: "subscription_canceled",
-          userId,
-          context: {
-            subscriptionId: subscription.id,
-            status,
-            reason: "subscription_status_change",
-          },
-          source: "system",
         });
 
         logger.info(`[Stripe Webhook] User ${userId} subscription ${status}, downgraded to free`);
@@ -770,21 +793,27 @@ async function handleSubscriptionEvent(eventType: string, subscription: any, sto
     }
 
     case "customer.subscription.deleted": {
+      // Emit before clearing the user's subscription so a failed insert
+      // leaves the user row untouched and the webhook retry will fire
+      // `subscription_canceled` again on success.
+      await emitCanonicalEvent(
+        {
+          eventName: "subscription_canceled",
+          userId,
+          context: {
+            subscriptionId: subscription.id,
+            canceledAt: subscription.canceled_at,
+            reason: subscription.cancellation_details?.reason,
+          },
+          source: "system",
+        },
+        { throwOnInsertFailure: true },
+      );
+
       await storage.updateUser(userId, {
         plan: "free",
         isPro: false,
         stripeSubscriptionId: null,
-      });
-
-      emitCanonicalEvent({
-        eventName: "subscription_canceled",
-        userId,
-        context: {
-          subscriptionId: subscription.id,
-          canceledAt: subscription.canceled_at,
-          reason: subscription.cancellation_details?.reason,
-        },
-        source: "system",
       });
 
       logger.info(`[Stripe Webhook] User ${userId} subscription deleted, downgraded to free`);

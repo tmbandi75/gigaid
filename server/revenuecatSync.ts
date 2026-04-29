@@ -349,6 +349,44 @@ export async function syncSubscriberFromRevenueCat(
   }
 
   const oldPlan = user.plan;
+
+  // Emit the canonical event BEFORE persisting any user state. If the
+  // insert fails we return ok:false (the webhook caller turns it into
+  // a 500), `user.plan` and `revenuecatLastProcessedEventId` stay
+  // untouched, so RevenueCat's retry will re-evaluate the transition
+  // and re-emit `user_became_paying` on success.
+  if (mergedPlan !== "free" && oldPlan !== mergedPlan) {
+    try {
+      await emitCanonicalEvent(
+        {
+          eventName: "user_became_paying",
+          userId: appUserId,
+          context: {
+            oldPlan,
+            newPlan: mergedPlan,
+            source: "revenuecat",
+            reason: options.reason,
+          },
+          source: "system",
+        },
+        { throwOnInsertFailure: true },
+      );
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      logger.error(
+        `[RevenueCat] Failed to emit user_became_paying for ${appUserId}`,
+        {
+          eventName: "user_became_paying",
+          userId: appUserId,
+          source: "revenuecat",
+          reason: options.reason,
+          error: errMsg,
+        },
+      );
+      return { ok: false, error: `canonical_event_insert_failed:${errMsg}` };
+    }
+  }
+
   const updates: Partial<User> = {
     plan: mergedPlan,
     isPro: mergedPlan !== "free",
@@ -363,20 +401,6 @@ export async function syncSubscriberFromRevenueCat(
   }
 
   await storage.updateUser(appUserId, updates);
-
-  if (mergedPlan !== "free" && oldPlan !== mergedPlan) {
-    emitCanonicalEvent({
-      eventName: "user_became_paying",
-      userId: appUserId,
-      context: {
-        oldPlan,
-        newPlan: mergedPlan,
-        source: "revenuecat",
-        reason: options.reason,
-      },
-      source: "system",
-    });
-  }
 
   logger.info(
     `[RevenueCat] Synced user ${appUserId} plan=${mergedPlan} store=${store ?? "n/a"} (${options.reason})`,
