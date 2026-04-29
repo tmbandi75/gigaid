@@ -666,6 +666,11 @@ export default function Settings() {
     openPhoneEditor();
     const el = accountLinkingRef.current;
     if (el) {
+      try {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      } catch {
+        /* non-fatal: jsdom and very old browsers may not implement smooth scroll */
+      }
       setHighlightAccountLinking(true);
       window.setTimeout(() => setHighlightAccountLinking(false), 2000);
     }
