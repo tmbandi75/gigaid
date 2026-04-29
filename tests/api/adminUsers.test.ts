@@ -174,6 +174,7 @@ const mockStripe = {
   },
   customers: {
     update: jest.fn(),
+    retrieve: jest.fn(),
     createBalanceTransaction: jest.fn(),
     retrieve: jest.fn(),
   },
@@ -235,6 +236,7 @@ beforeEach(() => {
   mockStripe.subscriptions.update.mockReset();
   mockStripe.subscriptions.cancel.mockReset();
   mockStripe.customers.update.mockReset();
+  mockStripe.customers.retrieve.mockReset();
   mockStripe.customers.createBalanceTransaction.mockReset();
   mockStripe.customers.retrieve.mockReset();
   mockStripe.refunds.create.mockReset();
@@ -247,6 +249,7 @@ beforeEach(() => {
   mockStripe.subscriptions.update.mockResolvedValue({});
   mockStripe.subscriptions.cancel.mockResolvedValue({});
   mockStripe.customers.update.mockResolvedValue({});
+  mockStripe.customers.retrieve.mockResolvedValue({ id: "cus_1", currency: "usd" });
   mockStripe.customers.createBalanceTransaction.mockResolvedValue({ id: "cbtxn_default" });
   mockStripe.refunds.create.mockResolvedValue({ id: "re_default" });
 });
@@ -856,6 +859,69 @@ describe("POST /api/admin/users/:userId/actions per-action coverage", () => {
       }),
     );
     expectAuditRow("billing_apply_credit", "Goodwill credit");
+  });
+
+  it("billing_apply_credit uses the customer's currency (CAD) when posting the balance transaction", async () => {
+    pushUserLookup();
+    pushTargetUser({ stripeCustomerId: "cus_1" });
+    mockStripe.customers.retrieve.mockResolvedValueOnce({ id: "cus_1", currency: "cad" });
+
+    const res = await postAction("billing_apply_credit", {
+      reason: "Goodwill credit",
+      payload: { amountCents: 2500 },
+    });
+    expect(res.status).toBe(200);
+
+    expect(mockStripe.customers.retrieve).toHaveBeenCalledWith("cus_1");
+    expect(mockStripe.customers.createBalanceTransaction).toHaveBeenCalledWith(
+      "cus_1",
+      expect.objectContaining({
+        amount: -2500,
+        currency: "cad",
+      }),
+    );
+    expectAuditRow("billing_apply_credit", "Goodwill credit");
+  });
+
+  it("billing_apply_credit falls back to USD when the customer has no currency set", async () => {
+    pushUserLookup();
+    pushTargetUser({ stripeCustomerId: "cus_1" });
+    mockStripe.customers.retrieve.mockResolvedValueOnce({ id: "cus_1", currency: null });
+
+    const res = await postAction("billing_apply_credit", {
+      reason: "Goodwill credit",
+      payload: { amountCents: 2500 },
+    });
+    expect(res.status).toBe(200);
+
+    expect(mockStripe.customers.createBalanceTransaction).toHaveBeenCalledWith(
+      "cus_1",
+      expect.objectContaining({
+        amount: -2500,
+        currency: "usd",
+      }),
+    );
+    expectAuditRow("billing_apply_credit", "Goodwill credit");
+  });
+
+  it("billing_apply_credit falls back to USD when the customer object is deleted", async () => {
+    pushUserLookup();
+    pushTargetUser({ stripeCustomerId: "cus_1" });
+    mockStripe.customers.retrieve.mockResolvedValueOnce({ id: "cus_1", deleted: true });
+
+    const res = await postAction("billing_apply_credit", {
+      reason: "Goodwill credit",
+      payload: { amountCents: 2500 },
+    });
+    expect(res.status).toBe(200);
+
+    expect(mockStripe.customers.createBalanceTransaction).toHaveBeenCalledWith(
+      "cus_1",
+      expect.objectContaining({
+        amount: -2500,
+        currency: "usd",
+      }),
+    );
   });
 
   it("billing_apply_credit stacks repeated credits instead of overwriting them", async () => {

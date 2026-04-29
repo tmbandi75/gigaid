@@ -1131,9 +1131,14 @@ router.post("/:userId/actions", async (req, res) => {
         
         try {
           const stripe = await getUncachableStripeClient();
+          const customer = await stripe.customers.retrieve(targetUser.stripeCustomerId);
+          const customerCurrency =
+            !customer.deleted && typeof customer.currency === "string" && customer.currency
+              ? customer.currency
+              : "usd";
           await stripe.customers.createBalanceTransaction(targetUser.stripeCustomerId, {
             amount: -Math.abs(creditAmountCents),
-            currency: "usd",
+            currency: customerCurrency,
             description: reason
               ? `Admin credit: ${reason}`
               : "Admin credit applied",
@@ -1142,7 +1147,7 @@ router.post("/:userId/actions", async (req, res) => {
               appliedBy: actorUserId,
             },
           });
-          logger.info(`[Admin] Applied ${safePriceCentsExact(creditAmountCents)} credit to user ${userId}`);
+          logger.info(`[Admin] Applied ${safePriceCentsExact(creditAmountCents)} ${customerCurrency.toUpperCase()} credit to user ${userId}`);
         } catch (stripeError: any) {
           logger.error("[Admin] Stripe credit error:", stripeError);
           return res.status(500).json({ error: `Stripe error: ${stripeError.message}` });
