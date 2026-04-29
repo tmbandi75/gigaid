@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useRoute } from "wouter";
-import { ArrowRight, Calendar, Check, CheckCircle2, Copy, Loader2, Send } from "lucide-react";
+import { AlertCircle, ArrowRight, Calendar, Check, CheckCircle2, Copy, Loader2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { getAuthToken } from "@/lib/authToken";
 import { buildBookingLink } from "@/lib/bookingBaseUrl";
 import { SecureAccountCard } from "@/components/first-booking/SecureAccountCard";
 import { SmsOptOutBanner } from "@/components/settings/SmsOptOutBanner";
+import { buildSlugAdjustedNotice } from "@/lib/slugAdjustedNotice";
 
 interface BookingPageDto {
   id: string;
@@ -59,6 +60,21 @@ export default function FirstBookingPage() {
     if (!pageId) return "";
     return buildBookingLink(pageId);
   }, [pageId]);
+
+  // The claim flow tacks `requestedSlug` / `adjustedSlug` query params
+  // onto the redirect URL only when a concurrent claim forced the new
+  // user's slug to be auto-suffixed. Surfaces a small inline notice so
+  // the new pro realises their saved slug isn't the bare name version.
+  // Read once at mount via window.location — wouter's routing strips
+  // the search portion before our route handler sees it.
+  const slugAdjustedNotice = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    const params = new URLSearchParams(window.location.search);
+    return buildSlugAdjustedNotice(
+      params.get("requestedSlug"),
+      params.get("adjustedSlug"),
+    );
+  }, []);
 
   const smsBody = `Book me here and pay your deposit so we can lock it in: ${bookingUrl}`;
 
@@ -142,6 +158,24 @@ export default function FirstBookingPage() {
             Instead of texting back and forth, just send this and let them book the job.
           </p>
         </div>
+
+        {slugAdjustedNotice && (
+          <div
+            className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 shadow-sm"
+            data-testid="banner-slug-adjusted"
+            role="status"
+          >
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+            <div className="space-y-1">
+              <p className="font-semibold" data-testid="text-slug-adjusted-title">
+                {slugAdjustedNotice.title}
+              </p>
+              <p data-testid="text-slug-adjusted-description">
+                {slugAdjustedNotice.description}
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Your booking link</p>

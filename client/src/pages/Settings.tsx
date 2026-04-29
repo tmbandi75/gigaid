@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiFetch } from "@/lib/apiFetch";
 import { useApiMutation } from "@/hooks/useApiMutation";
+import { buildSlugAdjustedNotice } from "@/lib/slugAdjustedNotice";
 import { getAuthToken } from "@/lib/authToken";
 import { isNativePlatform } from "@/lib/platform";
 import {
@@ -610,7 +611,7 @@ export default function Settings() {
     return () => clearTimeout(timer);
   }, [settings.publicProfileSlug, originalSlug, slugError]);
 
-  const updateMutation = useApiMutation(
+  const updateMutation = useApiMutation<any, any>(
     (data: any) =>
       apiFetch("/api/settings", {
         method: "PATCH",
@@ -618,8 +619,25 @@ export default function Settings() {
       }),
     [QUERY_KEYS.profile()],
     {
-      onSuccess: () => {
-        toast({ title: "Settings saved" });
+      onSuccess: (data, variables) => {
+        // The save succeeded — but the slug uniqueness index may have
+        // forced our requested slug to a `-2` suffix when a concurrent
+        // writer claimed it first. Compare the slug we asked for to
+        // the slug the server actually wrote and surface a small
+        // non-blocking notice so the user sees their saved link
+        // diverged from what they typed.
+        const notice = buildSlugAdjustedNotice(
+          variables?.publicProfileSlug ?? null,
+          data?.publicProfileSlug ?? null,
+        );
+        if (notice) {
+          toast({
+            title: notice.title,
+            description: notice.description,
+          });
+        } else {
+          toast({ title: "Settings saved" });
+        }
       },
       onError: () => {
         toast({ title: "Failed to save settings", variant: "destructive" });

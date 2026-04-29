@@ -146,6 +146,13 @@ router.post("/claim-page", async (req: Request, res: Response) => {
     const phone = normalizePhone(page.phone);
 
     let userId: string;
+    // Tracks the slug the claim flow asked for vs. the one we actually
+    // wrote. They diverge when a concurrent writer takes the requested
+    // slug first and `writeUserSlugWithRetry` advances to a suffixed
+    // candidate. The confirmation screen reads these in the response to
+    // show a non-blocking "we adjusted your link" notice.
+    let requestedSlug: string | null = null;
+    let finalSlug: string | null = null;
 
     try {
       // Prefer a name-based slug (e.g. `larry-payne`) over the legacy
@@ -191,6 +198,11 @@ router.post("/claim-page", async (req: Request, res: Response) => {
         { checkExists: (s) => storage.slugExists(s) },
       );
       userId = tx.result.userId;
+      // Captured for the response below so the confirmation screen can
+      // surface a non-blocking "we adjusted your link" notice when a
+      // concurrent claim forced us to pick a suffixed slug.
+      finalSlug = tx.slug;
+      requestedSlug = baseSlug;
     } catch (err: any) {
       if (err?.message === "ALREADY_CLAIMED") {
         return res.status(409).json({ error: "Page was just claimed by another session" });
@@ -271,7 +283,23 @@ router.post("/claim-page", async (req: Request, res: Response) => {
     }
 
     const token = signAppJwt({ sub: userId, provider: "claim" });
-    return res.json({ ok: true, pageId, redirect: `/first-booking/${pageId}`, token, user: { id: userId } });
+    // `slugAdjusted` is non-null only when the slug the DB actually
+    // accepted differs from the one we asked for (a concurrent claim
+    // raced past us and forced a `-2` suffix). The client uses this to
+    // surface a small notice on the confirmation screen so the new pro
+    // realises their link isn't the bare name version.
+    const slugAdjusted =
+      requestedSlug && finalSlug && requestedSlug !== finalSlug
+        ? { requested: requestedSlug, final: finalSlug }
+        : null;
+    return res.json({
+      ok: true,
+      pageId,
+      redirect: `/first-booking/${pageId}`,
+      token,
+      user: { id: userId },
+      slugAdjusted,
+    });
   } catch (err: any) {
     logger.error("[FirstBooking] claim error:", err?.message, err?.stack);
     return res.status(500).json({ error: "Claim failed" });

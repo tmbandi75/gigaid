@@ -152,7 +152,20 @@ export default function UnclaimedBookingPage({ page }: Props) {
       if (data.token) {
         setAuthToken(data.token);
       }
-      setLocation(data.redirect || `/first-booking/${page.id}`);
+      // When the server's slug write hit a concurrent collision and got
+      // auto-suffixed (e.g. `larry-payne` -> `larry-payne-2`), pass the
+      // before/after pair through to the confirmation screen so it can
+      // render a small "we adjusted your link" notice. We use query
+      // params (rather than location state) because the redirect path
+      // is opaque to us here and the FirstBookingPage routes by URL.
+      let redirect = data.redirect || `/first-booking/${page.id}`;
+      const adj = data.slugAdjusted as { requested?: string; final?: string } | null | undefined;
+      if (adj?.requested && adj?.final && adj.requested !== adj.final) {
+        const sep = redirect.includes("?") ? "&" : "?";
+        const qs = `requestedSlug=${encodeURIComponent(adj.requested)}&adjustedSlug=${encodeURIComponent(adj.final)}`;
+        redirect = `${redirect}${sep}${qs}`;
+      }
+      setLocation(redirect);
     } catch (err: any) {
       toast({
         title: "Couldn't claim the page",

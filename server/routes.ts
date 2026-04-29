@@ -6693,7 +6693,19 @@ export async function registerRoutes(
         });
       }
 
-      res.json(user);
+      // `slugAdjusted` is non-null only when the slug actually written
+      // to the DB differs from what the caller asked for — i.e. a
+      // concurrent writer raced past us and `writeUserSlugWithRetry`
+      // had to advance to a `-2` suffix. The Settings page reads this
+      // in onSuccess to show a small "we adjusted your link" toast so
+      // the user notices their saved link doesn't match what they
+      // typed. Pass-throughs (no slug change) leave it null.
+      const slugAdjusted =
+        publicProfileSlug && finalSlug && publicProfileSlug !== finalSlug
+          ? { requested: publicProfileSlug as string, final: finalSlug as string }
+          : null;
+
+      res.json({ ...user, slugAdjusted });
     } catch (error) {
       res.status(500).json({ error: "Failed to update settings" });
     }
