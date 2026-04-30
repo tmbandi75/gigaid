@@ -395,7 +395,7 @@ function escapeEmailHtml(s: string): string {
 // they just attached (email+password, Google, or Apple). Failures are
 // logged but never bubble up — the link operation itself already
 // succeeded by the time we get here.
-async function sendAccountSecuredEmail(
+export async function sendAccountSecuredEmail(
   toEmail: string,
   name: string | null | undefined,
 ): Promise<boolean> {
