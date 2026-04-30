@@ -1,0 +1,141 @@
+You are updating an existing React + Tailwind mobile UI screen (GigAid Plan/Home screen).
+
+IMPORTANT:
+- Do NOT refactor existing architecture
+- Do NOT rename files or break imports
+- Only modify the UI structure and text inside the existing screen component
+- Reuse existing components where possible
+- Keep all existing functionality intact
+
+GOAL:
+Improve conversion by making the booking link the primary action, reducing CTA overload, and adding urgency + progress tracking.
+
+-----------------------------------
+CHANGES TO IMPLEMENT
+-----------------------------------
+
+1. HERO SECTION (REPLACE TOP CONTENT)
+
+Replace the current header + booking link card with a high-impact hero section:
+
+- Title (large, bold):
+  "Get your next paid job today"
+
+- Subtitle:
+  "Most pros get booked after sharing their link 3–5 times"
+
+- Add a progress indicator (static for now):
+  "Today's progress: 0 / 5 shares"
+
+- Keep the booking link box, but:
+  - Make it visually dominant (larger padding, slightly darker background)
+  - Show full link
+  - Add primary CTA button:
+
+    BUTTON (PRIMARY - full width, blue):
+    "Copy & Send My Booking Link"
+
+  - Remove or de-emphasize the secondary "Share" button (make it text-only or smaller)
+
+-----------------------------------
+
+2. REMOVE CTA OVERLOAD
+
+- Keep ONLY ONE primary CTA in the hero section
+- All other actions should be visually secondary
+
+-----------------------------------
+
+3. REPLACE "YOU'RE ALL CAUGHT UP" STATE
+
+Find:
+"You're all caught up"
+
+Replace with:
+
+Title:
+"No active jobs — let's get you booked"
+
+Subtitle:
+"Send your link to a few people and land your next job"
+
+Buttons:
+- Primary: "Send Booking Link"
+- Secondary: "Create a Job" (outline style)
+
+-----------------------------------
+
+4. SMART SUGGESTIONS (TONE UPDATE)
+
+Update suggestion text to be more action + outcome driven:
+
+Example change:
+"Job started? Update status to track progress"
+→
+"Update this job so you get paid faster"
+
+Keep layout the same
+
+-----------------------------------
+
+5. QUICK ACTIONS (DE-EMPHASIZE)
+
+- Keep Quick Actions grid
+- Reduce visual weight:
+  - Slightly smaller icons
+  - Lower contrast background
+- These should NOT compete with the hero CTA
+
+-----------------------------------
+
+6. STICKY FOOTER BUTTON
+
+Update bottom sticky button:
+
+From:
+"View Jobs"
+
+To:
+"View Jobs & Get Paid"
+
+Keep same functionality
+
+-----------------------------------
+
+7. ADD LIGHT SOCIAL PROOF (STATIC TEXT)
+
+Under the hero CTA button, add small text:
+
+"Most users get their first booking within 24 hours"
+
+Style:
+- Small font
+- Muted color
+
+-----------------------------------
+
+8. SPACING & HIERARCHY
+
+- Increase spacing between sections
+- Ensure hero section is clearly dominant
+- Use consistent padding (p-4 or p-5)
+
+-----------------------------------
+
+9. DO NOT CHANGE BACKEND LOGIC
+
+- Do NOT modify API calls
+- Do NOT modify routing
+- Do NOT change state management
+- UI changes only
+
+-----------------------------------
+
+OUTPUT
+
+Return:
+- Updated JSX for the screen component only
+- Minimal explanation
+- Clean, production-safe code
+
+-----------------------------------
