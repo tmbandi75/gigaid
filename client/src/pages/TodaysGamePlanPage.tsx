@@ -238,6 +238,49 @@ export default function TodaysGamePlanPage() {
   const todayShareTarget =
     shareProgress?.target ?? BOOKING_LINK_DAILY_SHARE_TARGET;
 
+  // Refetch the share-progress query the moment the user's local clock
+  // crosses midnight so a pro who leaves the home screen open overnight
+  // sees "Today's progress: X / 5 shares" flip from yesterday's count to
+  // "0 / 5" within a couple of seconds of midnight — not on the next
+  // manual refresh / window-focus. We schedule a single setTimeout to
+  // the next local midnight (computed from local Date components, which
+  // matches the timezone we send to /api/booking/share-progress) and
+  // re-arm after each fire so the page survives multiple consecutive
+  // overnight sessions without remounting. We deliberately do NOT lower
+  // staleTime or add an interval refetch here so we don't introduce any
+  // mid-day flicker on focus changes (the existing 30s staleTime +
+  // refetchOnWindowFocus continues to handle wake-from-sleep cases).
+  useEffect(() => {
+    if (!user?.id) return;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const scheduleNextMidnight = () => {
+      const now = new Date();
+      // 1s past midnight in the browser's local timezone — small buffer
+      // so the server-side day boundary has definitely rolled over by
+      // the time we ask for the new count.
+      const nextMidnight = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() + 1,
+        0,
+        0,
+        1,
+        0,
+      );
+      const delayMs = Math.max(1000, nextMidnight.getTime() - now.getTime());
+      timeoutId = setTimeout(() => {
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.bookingShareProgress(browserTimeZone),
+        });
+        scheduleNextMidnight();
+      }, delayMs);
+    };
+    scheduleNextMidnight();
+    return () => {
+      if (timeoutId !== null) clearTimeout(timeoutId);
+    };
+  }, [user?.id, browserTimeZone, queryClient]);
+
   // Booking link presence drives the overlay/banner gates below — both
   // surfaces only render when the worker actually has a booking link to
   // share. Reuses the cached query the hero card already populates.
