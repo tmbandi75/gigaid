@@ -81,7 +81,7 @@ export const users = pgTable("users", {
   // user's name/email for normal signup flows — the DEFAULT only kicks in for
   // bypass paths (test fixtures, ad-hoc seed inserts, future writers we
   // haven't audited yet) and prevents a recurrence of the NULL-slug rows
-  // backfilled by `scripts/backfill-profile-slugs.ts` (Task #290).
+  // that Task #290 had to clean up.
   publicProfileSlug: text("public_profile_slug").notNull().default(sql`'user-' || substring(gen_random_uuid()::text, 1, 8)`),
   showReviewsOnBooking: boolean("show_reviews_on_booking").default(true),
   referralCode: text("referral_code"),
