@@ -7,12 +7,13 @@ import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { signAppJwt, verifyAppJwt, isAppJwtConfigured } from "./appJwt";
 import { isAuthenticated } from "./replit_integrations/auth/replitAuth";
 import { FIRST_BOOKING_DISQUALIFYING_EVENT_TYPES } from "./postJobMomentum";
-import { buildBookingLink } from "./lib/bookingLinkUrl";
+import { buildBookingLink, getBookingBaseUrl } from "./lib/bookingLinkUrl";
 import { generateBookingSlug, writeUserSlugWithRetry } from "./lib/bookingSlug";
 import { logger } from "./lib/logger";
 import { randomUUID, randomInt } from "crypto";
 import { verifyFirebaseIdToken, isFirebaseConfigured } from "./firebaseAdmin";
 import { sendSMS } from "./twilio";
+import { sendEmail } from "./sendgrid";
 
 const router = Router();
 
@@ -375,6 +376,58 @@ function normalizePhoneE164(input?: string | null): string | null {
   return `+${withCc}`;
 }
 
+function escapeEmailHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (ch) => {
+    switch (ch) {
+      case "&": return "&amp;";
+      case "<": return "&lt;";
+      case ">": return "&gt;";
+      case '"': return "&quot;";
+      case "'": return "&#39;";
+      default: return ch;
+    }
+  });
+}
+
+// Sends the "your account is secured" confirmation after a successful
+// Firebase link. The link the email surfaces points at the standard
+// /login splash so the recipient can sign back in with whatever provider
+// they just attached (email+password, Google, or Apple). Failures are
+// logged but never bubble up — the link operation itself already
+// succeeded by the time we get here.
+async function sendAccountSecuredEmail(
+  toEmail: string,
+  name: string | null | undefined,
+): Promise<boolean> {
+  const signInUrl = `${getBookingBaseUrl()}/login`;
+  const firstName = (name ?? "").trim().split(/\s+/)[0] ?? "";
+  const greeting = firstName ? `Hi ${firstName},` : "Hi,";
+  const subject = "Your GigAid account is secured";
+  const text =
+`${greeting}
+
+You've successfully secured your GigAid account. You can now sign back in any time using ${toEmail}.
+
+Sign in: ${signInUrl}
+
+Keep this email handy in case you ever need to find your way back.
+
+— Your partners at GigAid`;
+  const safeUrl = escapeEmailHtml(signInUrl);
+  const safeEmail = escapeEmailHtml(toEmail);
+  const html =
+`<p>${escapeEmailHtml(greeting)}</p>
+<p>You've successfully secured your GigAid account. You can now sign back in any time using <strong>${safeEmail}</strong>.</p>
+<p><a href="${safeUrl}" style="display:inline-block;padding:12px 20px;background:#4f46e5;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600">Sign In</a></p>
+<p style="color:#64748b;font-size:13px;margin-top:8px">${safeUrl}</p>
+<p>Keep this email handy in case you ever need to find your way back.</p>
+<p>— Your partners at GigAid</p>`;
+  // sendEmail catches its own errors and returns a boolean. Returning the
+  // result lets the caller log a route-local warning when the send is
+  // refused, instead of relying solely on the generic SendGrid error line.
+  return await sendEmail({ to: toEmail, subject, text, html });
+}
+
 async function requireClaimUser(
   req: Request,
   res: Response,
@@ -481,6 +534,16 @@ router.post("/secure-account/link-firebase", async (req: Request, res: Response)
       });
     }
 
+    // Snapshot the caller's existing email/name BEFORE the update so the
+    // welcome email send below can fall back to whatever was already on
+    // file when the Firebase token didn't include an email or display name
+    // (e.g. Apple sign-in after the first authorization).
+    const [existingUser] = await db
+      .select({ email: users.email, name: users.name })
+      .from(users)
+      .where(eq(users.id, caller.id))
+      .limit(1);
+
     const now = new Date().toISOString();
     const updates: Record<string, unknown> = {
       firebaseUid,
@@ -500,6 +563,35 @@ router.post("/secure-account/link-firebase", async (req: Request, res: Response)
     if (photo) updates.photo = photo;
 
     await db.update(users).set(updates).where(eq(users.id, caller.id));
+
+    // Send a "your account is secured" confirmation email so the user has
+    // a record of which address to sign in with and a direct link back.
+    // We deliberately skip the send when no email is on file (e.g. the
+    // user only verified their phone via Firebase phone-auth, which has
+    // no email claim) — the task spec is explicit about not emailing
+    // phone-only secures.
+    const welcomeRecipient = email ?? existingUser?.email ?? null;
+    const welcomeName = name ?? existingUser?.name ?? null;
+    if (welcomeRecipient) {
+      try {
+        const sent = await sendAccountSecuredEmail(welcomeRecipient, welcomeName);
+        if (!sent) {
+          // sendEmail swallows SendGrid errors and returns false. Log a
+          // route-local warning so this endpoint's logs surface delivery
+          // issues without having to grep the generic SendGrid line.
+          logger.warn(
+            "[FirstBooking] secure-account welcome email did not send (sendEmail returned false)",
+          );
+        }
+      } catch (emailErr: any) {
+        // Never fail the link request because of an email hiccup — the
+        // identity is already attached and the user's session is valid.
+        logger.warn(
+          "[FirstBooking] secure-account welcome email send failed:",
+          emailErr?.message,
+        );
+      }
+    }
 
     const newToken = signAppJwt({
       sub: caller.id,
