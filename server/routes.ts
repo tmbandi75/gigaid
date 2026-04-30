@@ -97,6 +97,7 @@ import { generateBookingSlug, ensureUniqueSlug, writeUserSlugWithRetry, validate
 import { buildBookingLink } from "./lib/bookingLinkUrl";
 import { logger } from "./lib/logger";
 import { SMS_RESUME_CONFIRM_BODY } from "./lib/smsResumeConfirm";
+import { BOOKING_LINK_DAILY_SHARE_TARGET } from "@shared/bookingLink";
 
 const quoteCache = new Map<string, { result: any; timestamp: number }>();
 const QUOTE_CACHE_TTL = 3600000;
@@ -113,6 +114,104 @@ function getClientPlatform(req: Request): ClientPlatform {
   const raw = String(req.headers["x-client-platform"] ?? "").toLowerCase();
   if (raw === "ios" || raw === "android" || raw === "web") return raw;
   return "unknown";
+}
+
+// Returns the UTC ISO bounds of "today" as observed by a caller in the given
+// IANA timezone (e.g. "America/New_York"). Falls back to UTC for empty or
+// invalid inputs. Used by /api/booking/share-progress so the home-screen
+// progress line resets at the user's local midnight, not UTC midnight.
+function computeTodayUtcBoundsForTz(now: Date, tz: string): {
+  startUtc: string;
+  endUtc: string;
+} {
+  const safeTz = isValidTimeZone(tz) ? tz : "UTC";
+  const ymd = formatYmdInTz(now, safeTz); // e.g. "2026-04-30"
+  const startUtc = zonedDayStartToUtc(ymd, safeTz);
+  const startMs = startUtc.getTime();
+  // 24h is right except for DST transition days where it can be 23h or 25h.
+  // Compute the next day's midnight directly so DST is handled correctly.
+  const nextYmd = addOneDay(ymd);
+  const endUtc = zonedDayStartToUtc(nextYmd, safeTz);
+  // Guard against pathological tz returning identical/inverted bounds: fall
+  // back to a flat 24h window from startMs.
+  const endMs = endUtc.getTime() > startMs ? endUtc.getTime() : startMs + 24 * 60 * 60 * 1000;
+  return {
+    startUtc: new Date(startMs).toISOString(),
+    endUtc: new Date(endMs).toISOString(),
+  };
+}
+
+function isValidTimeZone(tz: string): boolean {
+  if (!tz) return false;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function formatYmdInTz(date: Date, tz: string): string {
+  // Build YYYY-MM-DD from formatToParts so the result is independent of the
+  // ICU locale data (avoids a theoretical "en-CA" fallback returning a
+  // different separator/order on some runtimes).
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts: Record<string, string> = {};
+  for (const p of fmt.formatToParts(date)) {
+    if (p.type !== "literal") parts[p.type] = p.value;
+  }
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+// Resolve the UTC instant corresponding to YYYY-MM-DD 00:00:00 in `tz`.
+// Strategy: take the naive UTC interpretation of midnight, then ask the
+// formatter what local time that instant maps to in `tz`. The difference is
+// the tz offset at midnight, which we subtract to recover the true UTC
+// instant.
+function zonedDayStartToUtc(ymd: string, tz: string): Date {
+  const utcMidnight = new Date(`${ymd}T00:00:00Z`);
+  if (Number.isNaN(utcMidnight.getTime())) {
+    return new Date(NaN);
+  }
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const parts: Record<string, string> = {};
+  for (const p of dtf.formatToParts(utcMidnight)) {
+    if (p.type !== "literal") parts[p.type] = p.value;
+  }
+  const asLocalUtcMs = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour),
+    Number(parts.minute),
+    Number(parts.second),
+  );
+  const offsetMs = asLocalUtcMs - utcMidnight.getTime();
+  return new Date(utcMidnight.getTime() - offsetMs);
+}
+
+function addOneDay(ymd: string): string {
+  const [y, m, d] = ymd.split("-").map((s) => parseInt(s, 10));
+  // Use UTC to advance the calendar date safely.
+  const next = new Date(Date.UTC(y, m - 1, d + 1));
+  const yy = next.getUTCFullYear();
+  const mm = String(next.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(next.getUTCDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
 }
 
 function doesStoreSubscriptionApplyToClient(
@@ -7402,6 +7501,47 @@ export async function registerRoutes(
         error: error instanceof Error ? error.message : String(error),
       });
       res.status(500).json({ error: "Failed to track copy" });
+    }
+  });
+
+  // Daily aggregate of booking-link share completions for the current user.
+  // Powers the "Today's progress: X / 5 shares" line on the home-screen
+  // hero. The day boundary is computed in the caller's IANA timezone (e.g.
+  // "America/New_York") so an 11pm share counts toward the same day in the
+  // user's eyes — matching the behavior they expect from the hero copy.
+  // Falls back to UTC when no/invalid `tz` is supplied.
+  //
+  // Counts every `booking_link_share_completed` event written by
+  // /api/track/booking-link-shared (one row per copy or successful native
+  // share — multiple completions per day intentionally count separately so
+  // the progress bar advances visibly).
+  app.get("/api/booking/share-progress", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).userId as string;
+      const tzParam = typeof req.query.tz === "string" ? req.query.tz : "";
+      const { startUtc, endUtc } = computeTodayUtcBoundsForTz(new Date(), tzParam);
+
+      const { sql } = await import("drizzle-orm");
+      const { db } = await import("./db");
+      const result = await db.execute(sql`
+        SELECT COUNT(*)::int AS count
+        FROM events_canonical
+        WHERE user_id = ${userId}
+          AND event_name = 'booking_link_share_completed'
+          AND occurred_at >= ${startUtc}
+          AND occurred_at < ${endUtc}
+      `);
+      const row = result.rows?.[0] as { count?: number | string } | undefined;
+      const count = row && row.count != null ? Number(row.count) : 0;
+      res.json({
+        count: Number.isFinite(count) ? count : 0,
+        target: BOOKING_LINK_DAILY_SHARE_TARGET,
+      });
+    } catch (error) {
+      logger.error("[BookingLinkShare] Failed to compute share progress", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({ error: "Failed to fetch share progress" });
     }
   });
 

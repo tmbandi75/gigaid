@@ -1464,7 +1464,18 @@ export const eventsCanonical = pgTable("events_canonical", {
   context: text("context"), // JSON
   source: text("source").notNull().default("system"), // web, mobile, system
   version: integer("version").notNull().default(1),
-});
+}, (table) => [
+  // Powers per-user, per-event, per-day lookups such as the
+  // booking-link share-progress hero on the home screen
+  // (`GET /api/booking/share-progress`). Without this index a daily
+  // count would scan the whole `events_canonical` table on every
+  // home-screen visit.
+  index("events_canonical_user_event_occurred_idx").on(
+    table.userId,
+    table.eventName,
+    table.occurredAt,
+  ),
+]);
 
 export const insertEventsCanonicalSchema = createInsertSchema(eventsCanonical).omit({
   id: true,

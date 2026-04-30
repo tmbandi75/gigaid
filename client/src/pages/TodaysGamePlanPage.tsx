@@ -42,6 +42,10 @@ import {
   type ActionItem,
   type GamePlanStats,
 } from "@/lib/stickyCta";
+import {
+  BOOKING_LINK_DAILY_SHARE_TARGET,
+  type BookingShareProgress,
+} from "@shared/bookingLink";
 import { AddServiceDialog } from "@/components/settings/AddServiceDialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
@@ -188,6 +192,29 @@ export default function TodaysGamePlanPage() {
     staleTime: 300000,
   });
 
+  // Drives the "Today's progress: X / 5 shares" line in the mobile hero.
+  // Counted server-side from `booking_link_share_completed` events written
+  // by every share-flow surface (hero, NBA card, empty state, leads inline,
+  // jobs compact). The day boundary is computed in the user's local
+  // timezone so a 11pm share counts toward "today" as the user sees it.
+  const browserTimeZone =
+    typeof Intl !== "undefined"
+      ? Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
+      : "UTC";
+  const { data: shareProgress } = useQuery<BookingShareProgress>({
+    queryKey: QUERY_KEYS.bookingShareProgress(browserTimeZone),
+    queryFn: () =>
+      apiFetch<BookingShareProgress>(
+        `/api/booking/share-progress?tz=${encodeURIComponent(browserTimeZone)}`,
+      ),
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    enabled: !!user?.id,
+  });
+  const todayShareCount = shareProgress?.count ?? 0;
+  const todayShareTarget =
+    shareProgress?.target ?? BOOKING_LINK_DAILY_SHARE_TARGET;
+
   // Shared share/copy handler — same hook as the hero card so the two
   // surfaces never drift on toasts, analytics, or copy fallback.
   const emptyStateBookingLinkShare = useBookingLinkShareAction({
@@ -290,17 +317,11 @@ export default function TodaysGamePlanPage() {
           >
             Most pros get booked after sharing their link 3–5 times.
           </p>
-          {/*
-            STATIC PLACEHOLDER — not wired to a real share counter yet.
-            Replace `0` with the user's actual share count when the
-            booking-link share-funnel data becomes available on the
-            client (see /api/track/booking-link-shared).
-          */}
           <p
             className="text-xs font-medium text-muted-foreground mt-2"
             data-testid="text-mobile-hero-progress"
           >
-            Today's progress: 0 / 5 shares
+            Today's progress: {todayShareCount} / {todayShareTarget} shares
           </p>
           <CoachingRenderer screen="dashboard" />
         </div>

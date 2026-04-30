@@ -80,8 +80,13 @@ export function NextBestActionCard({
     }
   }, [state, userId]);
 
-  const invalidateGamePlan = () =>
+  const invalidateGamePlan = () => {
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboardGamePlan() });
+    // Refresh the home-screen "Today's progress: X / 5 shares" line so the
+    // count moves the moment the share API returns success — across every
+    // tz variant currently cached.
+    queryClient.invalidateQueries({ queryKey: ["/api/booking/share-progress"] });
+  };
 
   const doCopy = async (): Promise<boolean> => {
     if (!bookingLink) {

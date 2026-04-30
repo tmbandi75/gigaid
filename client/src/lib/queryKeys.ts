@@ -76,6 +76,7 @@ export const QUERY_KEYS = {
 
   dashboardSummary: () => ["/api/dashboard/summary"] as const,
   dashboardGamePlan: () => ["/api/dashboard/game-plan"] as const,
+  bookingShareProgress: (tz: string) => ["/api/booking/share-progress", tz] as const,
   recentActivity: () => ["/api/recent-activity"] as const,
 
   featureFlags: (key: string) => ["/api/feature-flags", key] as const,
