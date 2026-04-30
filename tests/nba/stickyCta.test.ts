@@ -130,7 +130,7 @@ describe("getStickyCtaInfo (dashboard sticky bottom CTA)", () => {
       expect(result).toEqual(
         expect.objectContaining({
           label: "Share Booking Link",
-          route: "/profile",
+          route: "/settings",
         }),
       );
     });
@@ -140,7 +140,7 @@ describe("getStickyCtaInfo (dashboard sticky bottom CTA)", () => {
       expect(result).toEqual(
         expect.objectContaining({
           label: "Share Booking Link",
-          route: "/profile",
+          route: "/settings",
         }),
       );
     });
@@ -180,7 +180,7 @@ describe("getStickyCtaInfo (dashboard sticky bottom CTA)", () => {
         "NEW_USER",
       );
       expect(result!.label).toBe("Share Booking Link");
-      expect(result!.route).toBe("/profile");
+      expect(result!.route).toBe("/settings");
     });
   });
 
@@ -240,8 +240,8 @@ describe("getNBAStickyCta (per-state nudge for the bottom CTA)", () => {
     state: NBAState;
     expected: { label: string; route: string } | null;
   }> = [
-    { state: "NEW_USER", expected: { label: "Share Booking Link", route: "/profile" } },
-    { state: "NO_JOBS_YET", expected: { label: "Share Booking Link", route: "/profile" } },
+    { state: "NEW_USER", expected: { label: "Share Booking Link", route: "/settings" } },
+    { state: "NO_JOBS_YET", expected: { label: "Share Booking Link", route: "/settings" } },
     { state: "IN_PROGRESS", expected: { label: "View Jobs", route: "/jobs" } },
     { state: "READY_TO_INVOICE", expected: { label: "Create Invoice", route: "/invoices/new" } },
     { state: "ACTIVE_USER", expected: null },
