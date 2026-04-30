@@ -15,7 +15,15 @@ type BookingLinkShareProps = {
 
 export function BookingLinkShare({ variant, context, demoted = false }: BookingLinkShareProps) {
   const isPrimary = variant === "primary";
-  const screen: BookingLinkShareScreen = context;
+  // Per-surface screen labels for PostHog so we can compare share-open →
+  // share-completed conversion across the new mobile hero, the empty-state
+  // CTA, and the legacy primary card. See docs/runbooks/booking-link-conversion.md.
+  const screen: BookingLinkShareScreen =
+    variant === "hero"
+      ? "plan_hero"
+      : variant === "primary" && context === "plan"
+        ? "plan_legacy"
+        : context;
 
   const {
     bookingLink,

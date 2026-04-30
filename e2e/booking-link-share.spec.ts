@@ -33,6 +33,16 @@ const SHARE_TEST_IDS: Record<Variant, string | null> = {
   compact: null,
 };
 
+// Per-variant PostHog `screen` label. The harness always passes context="plan",
+// so the primary card now resolves to "plan_legacy" (the new per-surface label
+// introduced for hero-vs-legacy conversion tracking). The inline/compact
+// variants continue to fall back to the raw context.
+const EXPECTED_SCREEN: Record<Variant, string> = {
+  primary: 'plan_legacy',
+  inline: 'plan',
+  compact: 'plan',
+};
+
 /**
  * Stub every API the harness page reaches for, then mock the booking-link
  * endpoint so the BookingLinkShare card renders. Also installs
@@ -213,7 +223,7 @@ test.describe('BookingLinkShare card', () => {
           const events = await getCapturedAnalytics(page);
           const copied = events.filter((e) => e.eventName === 'booking_link_copied');
           expect(copied).toHaveLength(1);
-          expect(copied[0].properties).toMatchObject({ screen: 'plan' });
+          expect(copied[0].properties).toMatchObject({ screen: EXPECTED_SCREEN[variant] });
 
           // Copy alone should not fire share_opened or shared.
           expect(events.filter((e) => e.eventName === 'booking_link_share_opened')).toHaveLength(0);
@@ -242,9 +252,12 @@ test.describe('BookingLinkShare card', () => {
           const completed = events.filter((e) => e.eventName === 'booking_link_shared');
 
           expect(opened).toHaveLength(1);
-          expect(opened[0].properties).toMatchObject({ screen: 'plan' });
+          expect(opened[0].properties).toMatchObject({ screen: EXPECTED_SCREEN[variant] });
           expect(completed).toHaveLength(1);
-          expect(completed[0].properties).toMatchObject({ screen: 'plan', method: 'share' });
+          expect(completed[0].properties).toMatchObject({
+            screen: EXPECTED_SCREEN[variant],
+            method: 'share',
+          });
         });
 
         test(`falls back to copy and fires booking_link_shared (method: copy) when share API is missing (${variant})`, async ({ page }) => {
@@ -272,9 +285,12 @@ test.describe('BookingLinkShare card', () => {
           const copied = events.filter((e) => e.eventName === 'booking_link_copied');
 
           expect(opened).toHaveLength(1);
-          expect(opened[0].properties).toMatchObject({ screen: 'plan' });
+          expect(opened[0].properties).toMatchObject({ screen: EXPECTED_SCREEN[variant] });
           expect(completed).toHaveLength(1);
-          expect(completed[0].properties).toMatchObject({ screen: 'plan', method: 'copy' });
+          expect(completed[0].properties).toMatchObject({
+            screen: EXPECTED_SCREEN[variant],
+            method: 'copy',
+          });
           expect(copied).toHaveLength(1);
         });
 

@@ -16,7 +16,9 @@ import {
 
 export type BookingLinkShareScreen =
   | "plan"
+  | "plan_hero"
   | "plan_empty"
+  | "plan_legacy"
   | "leads"
   | "jobs"
   | "bookings";
