@@ -1,11 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { BookingLinkShare } from "@/components/booking-link";
 import { FirstActionOverlay } from "@/components/booking-link/FirstActionOverlay";
 import { SharesAwayBanner } from "@/components/booking-link/SharesAwayBanner";
 import { FollowUpCard } from "@/components/booking-link/FollowUpCard";
+import { useBookingZoneToast } from "@/lib/useBookingZoneToast";
+import type { BookingShareProgress } from "@shared/bookingLink";
 
-type Variant = "primary" | "inline" | "compact" | "hero" | "funnel";
+type Variant =
+  | "primary"
+  | "inline"
+  | "compact"
+  | "hero"
+  | "funnel"
+  | "booking-zone";
 
 function readParam<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
   const search = typeof window !== "undefined" ? window.location.search : "";
@@ -14,7 +22,22 @@ function readParam<T extends string>(key: string, allowed: readonly T[], fallbac
   return (allowed as readonly string[]).includes(raw ?? "") ? (raw as T) : fallback;
 }
 
-const VARIANTS = ["primary", "inline", "compact", "hero", "funnel"] as const;
+function readNumberParam(key: string, fallback: number): number {
+  const search = typeof window !== "undefined" ? window.location.search : "";
+  const raw = new URLSearchParams(search).get(key);
+  if (raw === null) return fallback;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+const VARIANTS = [
+  "primary",
+  "inline",
+  "compact",
+  "hero",
+  "funnel",
+  "booking-zone",
+] as const;
 
 /**
  * E2E-only harness that mounts the standalone BookingLinkShare card so a
@@ -30,6 +53,14 @@ const VARIANTS = ["primary", "inline", "compact", "hero", "funnel"] as const;
  * `gigaid:booking-followup-dismissed`) actually persist across reloads
  * within a session — the contract Task #310 locks for the conversion
  * funnel.
+ *
+ * The "booking-zone" variant mounts the page-level booking-zone
+ * celebration toast hook (`useBookingZoneToast`) with a controllable
+ * share count so a Playwright spec can drive the live <3 → ≥3
+ * transition (the only path that fires the toast) and assert that the
+ * toast actually renders in the DOM AND that the page itself writes the
+ * `gigaid:booking-zone-toast-fired` sessionStorage flag — the gap left
+ * by the jsdom integration test in tests/client/todaysGamePlanFunnel.test.tsx.
  */
 export default function E2EBookingLinkShareHarness() {
   const variant = readParam<Variant>("variant", VARIANTS, "primary");
@@ -45,6 +76,8 @@ export default function E2EBookingLinkShareHarness() {
       >
         {variant === "funnel" ? (
           <FunnelHarness />
+        ) : variant === "booking-zone" ? (
+          <BookingZoneToastHarness />
         ) : (
           <BookingLinkShare variant={variant} context="plan" />
         )}
@@ -86,5 +119,40 @@ function FunnelHarness() {
         onDismiss={() => setFollowUpOpen(false)}
       />
     </>
+  );
+}
+
+/**
+ * Mounts the live `useBookingZoneToast` hook with a controllable share
+ * count so an e2e spec can drive the <3 → ≥3 transition that fires the
+ * celebratory toast. The initial count is read from `?count=` so the
+ * "reload at the same count" assertion can re-enter the page already
+ * sitting at ≥3 (which must NOT re-fire the toast).
+ *
+ * The harness exposes a single window helper, `__setBookingZoneCount`,
+ * so the test can drive the in-session transition without needing to
+ * roundtrip through a real share endpoint.
+ */
+function BookingZoneToastHarness() {
+  const initialCount = readNumberParam("count", 0);
+  const [count, setCount] = useState<number>(initialCount);
+  const shareProgress: BookingShareProgress = { count, target: 5 };
+
+  useBookingZoneToast(shareProgress);
+
+  useEffect(() => {
+    const w = window as unknown as {
+      __setBookingZoneCount?: (n: number) => void;
+    };
+    w.__setBookingZoneCount = (n: number) => setCount(n);
+    return () => {
+      delete w.__setBookingZoneCount;
+    };
+  }, []);
+
+  return (
+    <div data-testid="harness-booking-zone-state">
+      <span data-testid="harness-booking-zone-count">{count}</span>
+    </div>
   );
 }

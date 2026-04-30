@@ -1,5 +1,9 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 import { BASE_URL } from './helpers';
+import {
+  BOOKING_ZONE_TOAST_FIRED_KEY,
+  BOOKING_ZONE_TOAST_TITLE,
+} from '../client/src/lib/useBookingZoneToast';
 
 type Variant = 'primary' | 'inline' | 'compact' | 'hero' | 'funnel';
 
@@ -621,5 +625,154 @@ test.describe('Funnel surface sessionStorage persistence', () => {
       followUp: window.sessionStorage.getItem(keys.followUp),
     }), FUNNEL_DISMISSAL_KEYS as unknown as Record<string, string>);
     expect(afterDismiss).toEqual({ overlay: '1', followUp: '1' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Booking-zone celebration toast (Task #315)
+//
+// The mobile/tablet TodaysGamePlanPage fires a one-shot "you're in the
+// booking zone" toast the first time the daily share count crosses the
+// 3-shares threshold within a session, and persists a
+// `gigaid:booking-zone-toast-fired` sessionStorage flag so the celebration
+// can't replay on a refresh that lands at ≥3.
+//
+// jsdom integration coverage of the gating predicate already lives in
+// tests/client/todaysGamePlanFunnel.test.tsx but mocks `useToast` and the
+// share-progress query, so it can't see the toast actually render or
+// confirm the flag is written by the page (vs. a test helper). This block
+// drives the live <3 → ≥3 transition against a real running React tree
+// using the dedicated `booking-zone` harness variant — the harness mounts
+// the same `useBookingZoneToast` hook the page uses, with a controllable
+// share count, so the toast and sessionStorage write come from the page's
+// own code path.
+//
+// The sessionStorage key and toast title are imported from the hook
+// module so the spec stays in lockstep with the production constants
+// (a future rename would either flow through automatically or fail
+// the import / assertion deterministically rather than passing as a
+// stale string match).
+// ---------------------------------------------------------------------------
+
+async function gotoBookingZoneHarness(page: Page, initialCount: number) {
+  const url = `${BASE_URL}/_e2e/booking-link-share?variant=booking-zone&count=${initialCount}`;
+  await page.goto(url, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('[data-testid="page-e2e-booking-link-share-harness"]', {
+    timeout: 20000,
+  });
+  await page.waitForSelector('[data-testid="harness-booking-link-booking-zone"]', {
+    timeout: 20000,
+  });
+  // Wait until the harness has rendered with the requested baseline count
+  // — the count cell inside the harness is the deterministic readiness
+  // sentinel (no booking-link query / copy CTA in this variant).
+  await page.waitForFunction(
+    (expected: number) => {
+      const el = document.querySelector('[data-testid="harness-booking-zone-count"]');
+      return el?.textContent?.trim() === String(expected);
+    },
+    initialCount,
+    { timeout: 20000 },
+  );
+}
+
+test.describe('Booking-zone celebration toast', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  test('fires once on a live 2 → 3 transition and writes the sessionStorage flag from the page', async ({
+    page,
+  }) => {
+    await installHarnessStubs(page);
+    await gotoBookingZoneHarness(page, 2);
+
+    // Baseline render at count=2: hook captures 2 as the baseline and
+    // must NOT fire the toast or write the sessionStorage flag.
+    await expect(page.locator('[data-testid="toast-title"]')).toHaveCount(0);
+    expect(
+      await page.evaluate(
+        (key: string) => window.sessionStorage.getItem(key),
+        BOOKING_ZONE_TOAST_FIRED_KEY,
+      ),
+    ).toBeNull();
+
+    // Drive the live <3 → ≥3 transition through the harness's
+    // controllable count. The window helper triggers a React state
+    // update; the page's own `useBookingZoneToast` effect then runs
+    // the threshold-crossing check, calls `toast(...)`, and writes
+    // the sessionStorage flag.
+    await page.evaluate(() => {
+      const w = window as unknown as { __setBookingZoneCount: (n: number) => void };
+      w.__setBookingZoneCount(3);
+    });
+    await page.waitForFunction(() => {
+      const el = document.querySelector('[data-testid="harness-booking-zone-count"]');
+      return el?.textContent?.trim() === '3';
+    });
+
+    // The celebratory toast must render exactly once and carry the
+    // booking-zone copy. We assert on the rendered DOM (not a mocked
+    // useToast) so a future refactor that drops `<Toaster />` from
+    // App.tsx — or that swaps the toast call for a different surface
+    // entirely — is caught here. The exact title literal is imported
+    // from the hook module so a future copy change can't pass an
+    // out-of-date regex.
+    const toastTitle = page.locator('[data-testid="toast-title"]');
+    await expect(toastTitle).toHaveCount(1);
+    await expect(toastTitle).toHaveText(BOOKING_ZONE_TOAST_TITLE);
+
+    // The sessionStorage flag must be written by the page's hook, NOT
+    // by a test helper. Reading it back here proves the live effect
+    // actually persisted the celebration so a same-session remount
+    // can't replay it.
+    expect(
+      await page.evaluate(
+        (key: string) => window.sessionStorage.getItem(key),
+        BOOKING_ZONE_TOAST_FIRED_KEY,
+      ),
+    ).toBe('1');
+
+    // A subsequent in-session 3 → 4 bump must NOT enqueue a second
+    // toast — the previous baseline (3) is already in the booking
+    // zone, so the threshold-crossing predicate fails and the
+    // celebratory copy stays as the original (single) toast on
+    // screen. TOAST_LIMIT=1 in the toast hook keeps a single visible
+    // toast, so a re-fire would be visible as a NEW title appearing
+    // (Radix unmounts and remounts the Root for each enqueued toast).
+    // This locks the "exactly once" half of the contract within the
+    // same mount.
+    await page.evaluate(() => {
+      const w = window as unknown as { __setBookingZoneCount: (n: number) => void };
+      w.__setBookingZoneCount(4);
+    });
+    await page.waitForFunction(() => {
+      const el = document.querySelector('[data-testid="harness-booking-zone-count"]');
+      return el?.textContent?.trim() === '4';
+    });
+    await expect(toastTitle).toHaveCount(1);
+    await expect(toastTitle).toHaveText(BOOKING_ZONE_TOAST_TITLE);
+
+    // Reload at count=3 — sessionStorage MUST survive a same-tab
+    // navigation, AND the freshly-mounted hook must treat 3 as its
+    // baseline (NOT as a transition) so a refresh after the
+    // celebration doesn't replay the toast. This is the gap the
+    // jsdom integration test couldn't close: there, the toast call
+    // is a mocked spy, so a re-fire on the baseline render would be
+    // observable but a real toast viewport never gets exercised.
+    await gotoBookingZoneHarness(page, 3);
+    // Give the React tree a beat to mount the hook + run its first
+    // effect; if the toast were going to fire it would be in the DOM
+    // by now. The waitForTimeout is a defensive buffer against
+    // animation delays in the toast viewport.
+    await page.waitForTimeout(300);
+    await expect(page.locator('[data-testid="toast-title"]')).toHaveCount(0);
+
+    // Flag still set after the reload — proves sessionStorage (not
+    // localStorage and not an in-memory ref) is the persistence layer.
+    expect(
+      await page.evaluate(
+        (key: string) => window.sessionStorage.getItem(key),
+        BOOKING_ZONE_TOAST_FIRED_KEY,
+      ),
+    ).toBe('1');
   });
 });

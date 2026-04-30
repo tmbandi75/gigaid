@@ -66,6 +66,7 @@ import {
   FOLLOW_UP_SENT_KEY,
 } from "@/components/booking-link/FollowUpCard";
 import { useToast } from "@/hooks/use-toast";
+import { useBookingZoneToast } from "@/lib/useBookingZoneToast";
 import type { BookingLinkShareScreen } from "@/lib/useBookingLinkShareAction";
 import { useUpgradeOrchestrator, useStallSignals, UpgradeNudgeModal } from "@/upgrade";
 import { useAuth } from "@/hooks/use-auth";
@@ -336,37 +337,13 @@ export default function TodaysGamePlanPage() {
 
   // Booking-zone toast: fire ONCE per browser session the first time the
   // pro's daily share count crosses the 3-shares threshold while the page
-  // is open. We wait for the share-progress query to resolve before
+  // is open. The hook waits for the share-progress query to resolve before
   // capturing a baseline so a refresh that lands with count >= 3 doesn't
-  // mistakenly trigger the toast — only an in-session transition does.
+  // mistakenly trigger the toast — only an in-session transition does. The
+  // hook also writes the `gigaid:booking-zone-toast-fired` sessionStorage
+  // flag so a brand-new mount inside the same session can't replay it.
   const { toast } = useToast();
-  const bookingZoneBaselineRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (!shareProgress) return;
-    const current = shareProgress.count;
-    if (bookingZoneBaselineRef.current === null) {
-      bookingZoneBaselineRef.current = current;
-      return;
-    }
-    const previous = bookingZoneBaselineRef.current;
-    bookingZoneBaselineRef.current = current;
-    if (previous >= 3 || current < 3) return;
-    try {
-      if (
-        window.sessionStorage.getItem("gigaid:booking-zone-toast-fired") === "1"
-      ) {
-        return;
-      }
-      window.sessionStorage.setItem("gigaid:booking-zone-toast-fired", "1");
-    } catch {
-      // sessionStorage unavailable — accept that the toast may re-fire
-      // on subsequent transitions (extremely rare in this session).
-    }
-    toast({
-      title: "You're in the booking zone — keep going",
-      description: "Most pros land their first booking around here.",
-    });
-  }, [shareProgress, toast]);
+  useBookingZoneToast(shareProgress);
 
   // One-shot follow_up_card_shown PostHog event — fires the first time
   // the follow-up card actually becomes eligible to render in this
