@@ -9,6 +9,7 @@ import { startAutoReleaseScheduler } from "./depositAutoRelease";
 import { startWeeklySummaryScheduler } from "./weeklyEmailSummary";
 import { startNoSilentCompletionScheduler } from "./noSilentCompletionEnforcer";
 import { initializeDbEnforcement } from "./dbEnforcement";
+import { ensurePublicProfileSlugNotNull } from "./ensurePublicProfileSlugNotNull";
 import { startNextBestActionEngine } from "./nextBestActionEngine";
 import { startIntentDetectionEngine } from "./intentDetectionEngine";
 import { startIntentFollowUpScheduler } from "./intentFollowUpScheduler";
@@ -187,6 +188,12 @@ app.use((req, res, next) => {
   // Initialize database enforcement (triggers + data repair) BEFORE routes
   // CRITICAL: This ensures no job can be completed without resolution
   await initializeDbEnforcement();
+
+  // Converge users.public_profile_slug to NOT NULL (Task #323).
+  // Idempotent: backfills any leftover NULLs and applies SET NOT NULL only
+  // when the column is still nullable. Runs before routes so no request can
+  // observe the pre-converged state.
+  await ensurePublicProfileSlugNotNull();
 
   // One-time data fix for Heinz Plumbing production account
   try {
