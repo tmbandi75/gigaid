@@ -142,6 +142,16 @@ export default function Settings() {
   const { isAuthenticated, logoutAsync } = useAuth();
   const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
   const [attBlocked, setAttBlocked] = useState(false);
+  const [forceOpenGetBooked, setForceOpenGetBooked] = useState(
+    () => typeof window !== "undefined" && window.location.hash === "#get-booked"
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash === "#get-booked") {
+      setForceOpenGetBooked(true);
+    }
+  }, []);
 
   const profileQuery = useQuery<any>({ queryKey: ["/api/profile"] });
 
@@ -1153,6 +1163,7 @@ export default function Settings() {
           icon={<Globe className="h-4 w-4 text-white" />}
           iconGradient="from-blue-500 to-indigo-500"
           defaultOpen={false}
+          forceOpen={forceOpenGetBooked}
         >
           <div className="space-y-4">
             <div className="flex items-center justify-end -mt-2">

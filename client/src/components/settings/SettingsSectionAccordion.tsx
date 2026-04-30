@@ -10,6 +10,7 @@ interface SettingsSectionAccordionProps {
   iconGradient?: string;
   children: ReactNode;
   defaultOpen?: boolean;
+  forceOpen?: boolean;
   className?: string;
   headerExtra?: ReactNode;
 }
@@ -39,13 +40,21 @@ export function SettingsSectionAccordion({
   iconGradient = "from-slate-500 to-gray-500",
   children,
   defaultOpen = false,
+  forceOpen = false,
   className = "",
   headerExtra,
 }: SettingsSectionAccordionProps) {
   const [isOpen, setIsOpen] = useState(() => {
+    if (forceOpen) return true;
     const saved = readSavedState();
     return saved[id] !== undefined ? saved[id] : defaultOpen;
   });
+
+  useEffect(() => {
+    if (forceOpen) {
+      setIsOpen(true);
+    }
+  }, [forceOpen]);
 
   useEffect(() => {
     const saved = readSavedState();
@@ -54,7 +63,7 @@ export function SettingsSectionAccordion({
   }, [id, isOpen]);
 
   return (
-    <Card className={`border shadow-sm ${className}`} data-testid={`section-${id}`}>
+    <Card id={id} className={`border shadow-sm ${className}`} data-testid={`section-${id}`}>
       <CardContent className="p-0">
         <button
           type="button"

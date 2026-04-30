@@ -62,7 +62,7 @@ export function getNBAStickyCta(state: NBAState): StickyCtaInfo | null {
   switch (state) {
     case "NEW_USER":
     case "NO_JOBS_YET":
-      return { label: "Share Booking Link", route: "/settings", icon: Share2 };
+      return { label: "Share Booking Link", route: "/settings#get-booked", icon: Share2 };
     case "IN_PROGRESS":
       return { label: "View Jobs", route: "/jobs", icon: Briefcase };
     case "READY_TO_INVOICE":
