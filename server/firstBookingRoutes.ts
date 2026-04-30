@@ -428,6 +428,43 @@ Keep this email handy in case you ever need to find your way back.
   return await sendEmail({ to: toEmail, subject, text, html });
 }
 
+// Sends the "your account is secured" email when a profile-settings PATCH
+// adds (or replaces) the user's email AND the account is otherwise eligible
+// — phone-OTP-verified, no Firebase identity, no prior welcome send.
+//
+// This mirrors the atomic-claim pattern used by /api/secure-account/verify-otp
+// and /api/secure-account/link-firebase: a conditional UPDATE that only
+// succeeds when securedEmailSentAt IS NULL (and the other eligibility
+// predicates hold) guarantees exactly-once delivery even if a concurrent
+// request also tries to claim the slot. Returns { sent } so the caller can
+// log a route-local warning when the send is refused.
+export async function maybeSendProfileSecuredEmail(
+  userId: string,
+): Promise<{ claimed: boolean; sent: boolean }> {
+  const now = new Date().toISOString();
+  const claimed = await db
+    .update(users)
+    .set({ securedEmailSentAt: now })
+    .where(and(
+      eq(users.id, userId),
+      isNotNull(users.email),
+      isNotNull(users.phoneVerifiedAt),
+      isNull(users.firebaseUid),
+      isNull(users.securedEmailSentAt),
+    ))
+    .returning({ email: users.email, name: users.name });
+  if (claimed.length === 0 || !claimed[0].email) {
+    return { claimed: false, sent: false };
+  }
+  const sent = await sendAccountSecuredEmail(claimed[0].email, claimed[0].name);
+  if (!sent) {
+    logger.warn(
+      "[Profile] secure-account welcome email did not send (sendEmail returned false)",
+    );
+  }
+  return { claimed: true, sent };
+}
+
 async function requireClaimUser(
   req: Request,
   res: Response,

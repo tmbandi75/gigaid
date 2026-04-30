@@ -1038,30 +1038,8 @@ export async function registerRoutes(
       // call also tries to claim the slot.
       if (email !== undefined && typeof email === "string" && email.trim()) {
         try {
-          const { db } = await import("./db");
-          const { users: usersTable } = await import("@shared/schema");
-          const { and: dbAnd, eq, isNull, isNotNull } = await import("drizzle-orm");
-          const now = new Date().toISOString();
-          const claimed = await db
-            .update(usersTable)
-            .set({ securedEmailSentAt: now })
-            .where(dbAnd(
-              eq(usersTable.id, (req as any).userId),
-              isNotNull(usersTable.email),
-              isNotNull(usersTable.phoneVerifiedAt),
-              isNull(usersTable.firebaseUid),
-              isNull(usersTable.securedEmailSentAt),
-            ))
-            .returning({ email: usersTable.email, name: usersTable.name });
-          if (claimed.length > 0 && claimed[0].email) {
-            const { sendAccountSecuredEmail } = await import("./firstBookingRoutes");
-            const sent = await sendAccountSecuredEmail(claimed[0].email, claimed[0].name);
-            if (!sent) {
-              logger.warn(
-                "[Profile] secure-account welcome email did not send (sendEmail returned false)",
-              );
-            }
-          }
+          const { maybeSendProfileSecuredEmail } = await import("./firstBookingRoutes");
+          await maybeSendProfileSecuredEmail((req as any).userId);
         } catch (emailErr: any) {
           // Never fail the profile update because of an email hiccup —
           // the user's profile change still succeeded above.
