@@ -3,7 +3,7 @@ import { z } from "zod";
 import { storage } from "./storage";
 import { db } from "./db";
 import { users, bookingPages, bookingPageEvents, outboundMessages, otpCodes, bookingPageEventTypes, unclaimedHeadlineVariants } from "@shared/schema";
-import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, isNotNull, or, sql } from "drizzle-orm";
 import { signAppJwt, verifyAppJwt, isAppJwtConfigured } from "./appJwt";
 import { isAuthenticated } from "./replit_integrations/auth/replitAuth";
 import { FIRST_BOOKING_DISQUALIFYING_EVENT_TYPES } from "./postJobMomentum";
@@ -534,12 +534,12 @@ router.post("/secure-account/link-firebase", async (req: Request, res: Response)
       });
     }
 
-    // Snapshot the caller's existing email/name BEFORE the update so the
-    // welcome email send below can fall back to whatever was already on
-    // file when the Firebase token didn't include an email or display name
-    // (e.g. Apple sign-in after the first authorization).
+    // Snapshot the caller's existing email/name/securedEmailSentAt BEFORE
+    // the update so the welcome email send below can fall back to whatever
+    // was already on file when the Firebase token didn't include an email
+    // or display name (e.g. Apple sign-in after the first authorization).
     const [existingUser] = await db
-      .select({ email: users.email, name: users.name })
+      .select({ email: users.email, name: users.name, securedEmailSentAt: users.securedEmailSentAt })
       .from(users)
       .where(eq(users.id, caller.id))
       .limit(1);
@@ -570,18 +570,30 @@ router.post("/secure-account/link-firebase", async (req: Request, res: Response)
     // user only verified their phone via Firebase phone-auth, which has
     // no email claim) — the task spec is explicit about not emailing
     // phone-only secures.
+    //
+    // Exactly-once guarantee: we atomically claim the send slot by
+    // updating securedEmailSentAt in a conditional UPDATE that only
+    // succeeds when it is still NULL. If the OTP path already set it, the
+    // claim returns 0 rows and we skip the send entirely.
     const welcomeRecipient = email ?? existingUser?.email ?? null;
     const welcomeName = name ?? existingUser?.name ?? null;
     if (welcomeRecipient) {
       try {
-        const sent = await sendAccountSecuredEmail(welcomeRecipient, welcomeName);
-        if (!sent) {
-          // sendEmail swallows SendGrid errors and returns false. Log a
-          // route-local warning so this endpoint's logs surface delivery
-          // issues without having to grep the generic SendGrid line.
-          logger.warn(
-            "[FirstBooking] secure-account welcome email did not send (sendEmail returned false)",
-          );
+        const claimed = await db
+          .update(users)
+          .set({ securedEmailSentAt: now })
+          .where(and(eq(users.id, caller.id), isNull(users.securedEmailSentAt)))
+          .returning({ id: users.id });
+        if (claimed.length > 0) {
+          const sent = await sendAccountSecuredEmail(welcomeRecipient, welcomeName);
+          if (!sent) {
+            // sendEmail swallows SendGrid errors and returns false. Log a
+            // route-local warning so this endpoint's logs surface delivery
+            // issues without having to grep the generic SendGrid line.
+            logger.warn(
+              "[FirstBooking] secure-account welcome email did not send (sendEmail returned false)",
+            );
+          }
         }
       } catch (emailErr: any) {
         // Never fail the link request because of an email hiccup — the
@@ -723,6 +735,41 @@ router.post("/secure-account/verify-otp", async (req: Request, res: Response) =>
       phoneVerifiedAt: now,
       updatedAt: now,
     }).where(eq(users.id, caller.id));
+
+    // If the user already has an email on file and we haven't sent the
+    // secured-account email yet (via the Firebase-link path), send it now
+    // so phone-OTP users get the same confirmation.
+    //
+    // Exactly-once guarantee: we atomically claim the send slot by
+    // performing a conditional UPDATE that only succeeds when email IS NOT
+    // NULL and securedEmailSentAt IS NULL. Concurrent requests (or a
+    // later link-firebase call that already set the flag) will see 0 rows
+    // updated and skip the send entirely.
+    try {
+      const claimed = await db
+        .update(users)
+        .set({ securedEmailSentAt: now })
+        .where(and(
+          eq(users.id, caller.id),
+          isNotNull(users.email),
+          isNull(users.securedEmailSentAt),
+        ))
+        .returning({ email: users.email, name: users.name });
+      if (claimed.length > 0 && claimed[0].email) {
+        const sent = await sendAccountSecuredEmail(claimed[0].email, claimed[0].name);
+        if (!sent) {
+          logger.warn(
+            "[FirstBooking] secure-account OTP welcome email did not send (sendEmail returned false)",
+          );
+        }
+      }
+    } catch (emailErr: any) {
+      // Never fail the verify-otp request because of an email hiccup.
+      logger.warn(
+        "[FirstBooking] secure-account OTP welcome email send failed:",
+        emailErr?.message,
+      );
+    }
 
     return res.json({ ok: true, phone: phoneE164, phoneVerifiedAt: now });
   } catch (err: any) {

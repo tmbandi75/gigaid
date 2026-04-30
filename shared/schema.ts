@@ -185,6 +185,11 @@ export const users = pgTable("users", {
   // challenge, e.g. on the post-claim "Secure your account" flow). When
   // set we trust this phone for future identity-merge operations.
   phoneVerifiedAt: text("phone_verified_at"),
+
+  // Tracks when the "your account is secured" confirmation email was sent.
+  // Set by both the Firebase-link path and the OTP-only path so neither
+  // path ever sends a second copy.
+  securedEmailSentAt: text("secured_email_sent_at"),
 }, (table) => [
   // Database-level guarantee that no two users can ever share the same
   // booking-link slug. The column is also NOT NULL (see above) so every
