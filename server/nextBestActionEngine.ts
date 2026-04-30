@@ -196,19 +196,19 @@ function generateInvoiceAction(stall: StallCandidate): ActionRecommendation {
     case "draft_aging":
       return {
         recommendedAction: "send_invoice_reminder",
-        reason: "Draft invoice over 24h old. Ready to send?",
+        reason: "Send this invoice so the cash lands this week.",
         autoExecutable: false,
       };
     case "idle":
       return {
         recommendedAction: "send_invoice_reminder",
-        reason: "Invoice unpaid for 3+ days. Send reminder?",
+        reason: "Nudge this invoice so you get paid sooner.",
         autoExecutable: true, // Can auto-send gentle reminder
       };
     case "viewed_unpaid":
       return {
         recommendedAction: "auto_send_gentle_nudge",
-        reason: "Invoice viewed but unpaid. Gentle nudge?",
+        reason: "They opened it — a quick nudge should close it.",
         autoExecutable: true,
       };
     default:
@@ -220,7 +220,7 @@ function generateJobAction(stall: StallCandidate): ActionRecommendation {
   if (stall.stallType === "overdue") {
     return {
       recommendedAction: "suggest_status_update",
-      reason: "Job started? Update status to track progress.",
+      reason: "Update this job so you get paid faster.",
       autoExecutable: false,
     };
   }
@@ -231,7 +231,7 @@ function generateLeadAction(stall: StallCandidate): ActionRecommendation {
   if (stall.stallType === "no_response") {
     return {
       recommendedAction: "send_follow_up_text",
-      reason: "Lead idle 24h+. Follow up to close?",
+      reason: "Follow up now so this lead doesn't go cold.",
       autoExecutable: false, // Don't auto-send to new leads
     };
   }

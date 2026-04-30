@@ -16,11 +16,19 @@ import { trackEvent } from "@/components/PostHogProvider";
 import { useAuth } from "@/hooks/use-auth";
 
 type BookingLinkShareProps = {
-  variant: "primary" | "inline" | "compact";
+  variant: "primary" | "inline" | "compact" | "hero";
   context: "plan" | "leads" | "jobs" | "bookings";
+  /**
+   * When true (hero variant only), the primary "Copy & Send" CTA is
+   * rendered as an outline button so it doesn't compete with another
+   * primary CTA elsewhere on the screen (e.g. the green Collect Payment
+   * card or the NBA card's own primary action). The booking link still
+   * remains visible — only the button visual weight is reduced.
+   */
+  demoted?: boolean;
 };
 
-export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
+export function BookingLinkShare({ variant, context, demoted = false }: BookingLinkShareProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -100,6 +108,78 @@ export function BookingLinkShare({ variant, context }: BookingLinkShareProps) {
   };
 
   const supportsShare = canShareContent();
+
+  if (variant === "hero") {
+    // Single primary action does both: trigger native share sheet
+    // (with copy fallback on platforms without share). The secondary
+    // text-link is a quieter copy-only escape hatch so the surface
+    // never carries two competing solid buttons.
+    return (
+      <Card
+        className="border border-primary/15 shadow-md bg-primary/5 dark:bg-primary/10"
+        data-testid="card-booking-link-hero"
+      >
+        <CardContent className="p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-10 w-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+              <Link2 className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p
+                className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                data-testid="text-hero-booking-link-label"
+              >
+                Your booking link
+              </p>
+              <p
+                className="text-sm font-medium text-foreground truncate"
+                data-testid="text-hero-booking-link-url"
+              >
+                {bookingLink}
+              </p>
+            </div>
+          </div>
+          <Button
+            size="lg"
+            variant={demoted ? "outline" : "default"}
+            className="w-full"
+            onClick={handleShare}
+            data-testid="button-hero-copy-send-booking-link"
+          >
+            {copied ? (
+              <>
+                <Check className="h-4 w-4 mr-2" />
+                Link copied — paste it in a text
+              </>
+            ) : (
+              <>
+                <Share2 className="h-4 w-4 mr-2" />
+                Copy &amp; Send My Booking Link
+              </>
+            )}
+          </Button>
+          <p
+            className="text-xs text-muted-foreground text-center mt-3"
+            data-testid="text-hero-social-proof"
+          >
+            Most users get their first booking within 24 hours
+          </p>
+          <div className="flex justify-center mt-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCopy}
+              className="text-xs text-muted-foreground hover:text-foreground h-auto py-1 px-2 font-normal underline-offset-2 hover:underline"
+              data-testid="button-hero-copy-only"
+            >
+              <Copy className="h-3 w-3 mr-1" />
+              {copied ? "Copied" : "Just copy the link"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (variant === "primary") {
     return (

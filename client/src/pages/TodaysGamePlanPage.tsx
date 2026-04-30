@@ -33,6 +33,7 @@ import {
   AlertTriangle,
   ArrowRight,
   TrendingUp,
+  Share2,
 } from "lucide-react";
 import {
   formatCurrency,
@@ -47,6 +48,14 @@ import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { BookingLinkShare } from "@/components/booking-link";
 import { useUpgradeOrchestrator, useStallSignals, UpgradeNudgeModal } from "@/upgrade";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+import { canShareContent } from "@/lib/share";
+import {
+  attemptShareBookingLink,
+  copyBookingLinkToClipboard,
+} from "@/lib/bookingLinkShareFlow";
+import { trackEvent } from "@/components/PostHogProvider";
+import { recordCopy, recordShareTap } from "@/lib/bookingLinkAnalytics";
 import { getSubtitleMessage, type EncouragementData } from "@/encouragement/encouragementEngine";
 import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
 import { GamePlanDesktopView } from "@/components/game-plan/GamePlanDesktopView";
@@ -186,6 +195,77 @@ export default function TodaysGamePlanPage() {
     staleTime: 300000,
   });
 
+  // Reads from the same react-query cache that BookingLinkShare populates,
+  // so the empty-state "Send Booking Link" button can trigger the same
+  // share flow without any extra network round-trips.
+  const { data: bookingLinkData } = useQuery<{
+    bookingLink: string | null;
+    servicesCount: number;
+  }>({
+    queryKey: QUERY_KEYS.bookingLink(),
+  });
+
+  const { toast } = useToast();
+
+  const triggerBookingLinkShare = async (screen: "plan_empty"): Promise<void> => {
+    const bookingLink = bookingLinkData?.bookingLink ?? null;
+    if (!bookingLink) {
+      toast({
+        title: "Booking link not ready yet",
+        description: "Add a service first to generate your booking link.",
+      });
+      navigate("/profile");
+      return;
+    }
+    const invalidateGamePlan = () =>
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboardGamePlan() });
+
+    trackEvent("booking_link_share_opened", { screen });
+    void recordShareTap("plan");
+
+    if (!canShareContent()) {
+      const { copied: ok } = await copyBookingLinkToClipboard({
+        bookingLink,
+        userId: user?.id,
+        onLocalMark: invalidateGamePlan,
+        onApiSuccess: invalidateGamePlan,
+      });
+      if (ok) {
+        trackEvent("booking_link_copied", { screen });
+        void recordCopy("plan");
+        toast({
+          title: "Link copied",
+          description: "Your booking link is ready to share",
+        });
+        trackEvent("booking_link_shared", { screen, method: "copy" });
+      } else {
+        toast({
+          title: "Couldn't copy",
+          description: "Please copy the link manually",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
+    const { shared, target } = await attemptShareBookingLink({
+      bookingLink,
+      shareTitle: "Book my services",
+      shareText: "Schedule a job with me using this link:",
+      dialogTitle: "Share booking link",
+      userId: user?.id,
+      onLocalMark: invalidateGamePlan,
+      onApiSuccess: invalidateGamePlan,
+    });
+    if (shared) {
+      trackEvent("booking_link_shared", { screen, method: "share", target });
+    }
+  };
+
+  const handleEmptyStateSendBookingLink = () => {
+    void triggerBookingLinkShare("plan_empty");
+  };
+
   const actMutation = useApiMutation(
     (id: string) => apiFetch(`/api/next-actions/${id}/act`, { method: "POST" }),
     [QUERY_KEYS.nextActions()]
@@ -257,9 +337,37 @@ export default function TodaysGamePlanPage() {
     <div className="min-h-screen bg-background" data-testid="page-game-plan">
       {/* Header */}
       {isMobile ? (
-        <div className="px-5 pt-6 pb-5 bg-background">
-          <p className="text-t-meta font-regular text-muted-foreground mb-0.5" data-testid="text-greeting">{greeting}</p>
-          <h1 className="text-t-hero font-bold text-foreground" data-testid="text-encouragement-subtitle">{subtitleText}</h1>
+        <div className="px-5 pt-5 pb-4 bg-background">
+          <p
+            className="text-t-meta font-regular text-muted-foreground mb-1"
+            data-testid="text-greeting"
+          >
+            {greeting}
+          </p>
+          <h1
+            className="text-t-hero font-bold text-foreground leading-tight"
+            data-testid="text-mobile-hero-title"
+          >
+            Get your next paid job today
+          </h1>
+          <p
+            className="text-sm text-muted-foreground mt-2"
+            data-testid="text-mobile-hero-subtitle"
+          >
+            Most pros get booked after sharing their link 3–5 times.
+          </p>
+          {/*
+            STATIC PLACEHOLDER — not wired to a real share counter yet.
+            Replace `0` with the user's actual share count when the
+            booking-link share-funnel data becomes available on the
+            client (see /api/track/booking-link-shared).
+          */}
+          <p
+            className="text-xs font-medium text-muted-foreground mt-2"
+            data-testid="text-mobile-hero-progress"
+          >
+            Today's progress: 0 / 5 shares
+          </p>
           <CoachingRenderer screen="dashboard" />
         </div>
       ) : (
@@ -307,8 +415,27 @@ export default function TodaysGamePlanPage() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="block md:hidden space-y-4 px-4 py-4 pb-28"
+        className="block md:hidden space-y-5 px-4 py-4 pb-28"
       >
+
+        {/*
+          Hero booking-link card sits directly beneath the page header
+          (title + subtitle + static progress) so the booking link is
+          the first interactive surface on the screen — the new top-of-
+          funnel CTA. The card auto-hides itself when the user has no
+          services / no booking link yet (handled inside BookingLinkShare).
+          When another primary CTA is competing for attention (money
+          waiting OR an NBA state whose own primary IS this same Share
+          Link / Create Invoice action), the hero CTA demotes to outline
+          so we never render two primary buttons above the fold.
+        */}
+        <motion.div variants={itemVariants}>
+          <BookingLinkShare
+            variant="hero"
+            context="plan"
+            demoted={stats.moneyWaiting > 0 || suppressBookingLinkPrimary}
+          />
+        </motion.div>
 
         <ActivationChecklist />
 
@@ -385,11 +512,12 @@ export default function TodaysGamePlanPage() {
 
         <CampaignSuggestionBanner />
 
-        {!suppressBookingLinkPrimary && (
-          <motion.div variants={itemVariants}>
-            <BookingLinkShare variant="primary" context="plan" />
-          </motion.div>
-        )}
+        {/*
+          Note: the standalone BookingLinkShare(variant="primary") block
+          that used to live here has been replaced by the hero booking-
+          link card rendered at the top of this container. Keeping it
+          here would render the booking-link surface twice on mobile.
+        */}
 
         {showNBACard && (
           <motion.div variants={itemVariants}>
@@ -497,34 +625,42 @@ export default function TodaysGamePlanPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
               >
-                <Card className="border-0 shadow-sm bg-emerald-50/50 dark:bg-emerald-950/20" data-testid="card-all-caught-up">
-                  <CardContent className="p-5 text-center">
-                    <div className="h-12 w-12 rounded-2xl bg-emerald-500/15 flex items-center justify-center mx-auto mb-3">
-                      <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                <Card className="border shadow-sm" data-testid="card-all-caught-up">
+                  <CardContent className="p-4 text-center">
+                    <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                      <Briefcase className="h-6 w-6 text-primary" />
                     </div>
-                    <p className="text-t-primary font-semibold text-foreground mb-1">You're all caught up</p>
-                    <p className="text-t-body font-regular text-muted-foreground mb-4">
-                      Great time to follow up on leads or send an invoice.
+                    <p
+                      className="text-t-primary font-semibold text-foreground mb-1"
+                      data-testid="text-empty-state-title"
+                    >
+                      No active jobs — let's get you booked
                     </p>
-                    <div className="flex gap-3 justify-center">
+                    <p
+                      className="text-t-body font-regular text-muted-foreground mb-4"
+                      data-testid="text-empty-state-subtitle"
+                    >
+                      Send your link to a few people and land your next job.
+                    </p>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+                      <Button
+                        size="sm"
+                        onClick={handleEmptyStateSendBookingLink}
+                        data-testid="button-empty-state-send-booking-link"
+                        className="w-full sm:w-auto"
+                      >
+                        <Share2 className="h-4 w-4 mr-1" />
+                        Send Booking Link
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => navigate("/leads")}
-                        data-testid="button-get-ahead"
-                        className="text-t-secondary font-semibold"
+                        onClick={() => navigate("/jobs/new")}
+                        data-testid="button-empty-state-create-job"
+                        className="w-full sm:w-auto"
                       >
-                        <MessageSquare className="h-4 w-4 mr-1" />
-                        Follow Up
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => navigate("/invoices/new")}
-                        data-testid="button-send-invoice-caught-up"
-                        className="text-base text-white font-semibold"
-                      >
-                        <DollarSign className="h-4 w-4 mr-1" />
-                        Send Invoice
+                        <Plus className="h-4 w-4 mr-1" />
+                        Create a Job
                       </Button>
                     </div>
                   </CardContent>
@@ -667,50 +803,52 @@ export default function TodaysGamePlanPage() {
           </motion.section>
         )}
 
-        {/* Quick Actions - thumb-friendly grid */}
+        {/* Quick Actions — visually de-emphasized vs. the hero booking-link
+            card so the grid clearly recedes (no border, muted bg, smaller
+            icon container). Testids preserved. */}
         <motion.section variants={itemVariants}>
           <h2 className="text-t-primary font-semibold text-muted-foreground mb-2 px-1">Quick Actions</h2>
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => navigate("/jobs/new")}
-              className="flex flex-col items-center justify-center gap-1.5 p-4 min-h-[96px] rounded-xl bg-card shadow-sm hover-elevate border"
+              className="flex flex-col items-center justify-center gap-1.5 p-4 min-h-[88px] rounded-xl bg-muted/40 hover-elevate"
               data-testid="button-add-job"
             >
-              <div className="h-11 w-11 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                <Plus className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <Plus className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               </div>
               <span className="text-t-secondary font-semibold text-foreground">New Job</span>
               <span className="text-t-meta font-regular text-muted-foreground -mt-1">Create a job</span>
             </button>
             <button
               onClick={() => navigate("/invoices/new")}
-              className="flex flex-col items-center justify-center gap-1.5 p-4 min-h-[96px] rounded-xl bg-card shadow-sm hover-elevate border"
+              className="flex flex-col items-center justify-center gap-1.5 p-4 min-h-[88px] rounded-xl bg-muted/40 hover-elevate"
               data-testid="button-ask-payment"
             >
-              <div className="h-11 w-11 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                <DollarSign className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               </div>
               <span className="text-t-secondary font-semibold text-foreground">Invoice</span>
               <span className="text-t-meta font-regular text-muted-foreground -mt-1">Send & get paid</span>
             </button>
             <button
               onClick={() => navigate("/reminders")}
-              className="flex flex-col items-center justify-center gap-1.5 p-4 min-h-[96px] rounded-xl bg-card shadow-sm hover-elevate border"
+              className="flex flex-col items-center justify-center gap-1.5 p-4 min-h-[88px] rounded-xl bg-muted/40 hover-elevate"
               data-testid="button-message-client"
             >
-              <div className="h-11 w-11 rounded-xl bg-violet-500/10 flex items-center justify-center">
-                <MessageSquare className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+              <div className="h-8 w-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                <MessageSquare className="h-4 w-4 text-violet-600 dark:text-violet-400" />
               </div>
               <span className="text-t-secondary font-semibold text-foreground">Message</span>
               <span className="text-t-meta font-regular text-muted-foreground -mt-1">Text clients</span>
             </button>
             <button
               onClick={() => setShowVoiceNotes(true)}
-              className="flex flex-col items-center justify-center gap-1.5 p-4 min-h-[96px] rounded-xl bg-card shadow-sm hover-elevate border"
+              className="flex flex-col items-center justify-center gap-1.5 p-4 min-h-[88px] rounded-xl bg-muted/40 hover-elevate"
               data-testid="button-talk-it-in"
             >
-              <div className="h-11 w-11 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                <Mic className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                <Mic className="h-4 w-4 text-amber-600 dark:text-amber-400" />
               </div>
               <span className="text-t-secondary font-semibold text-foreground">Voice</span>
               <span className="text-t-meta font-regular text-muted-foreground -mt-1">Speak notes</span>
