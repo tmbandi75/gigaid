@@ -380,11 +380,13 @@ describe("SegmentedShareProgress", () => {
     expect(screen.getByTestId("icon-progress-status-flame")).toBeTruthy();
   });
 
-  it("clamps the visible count to the target when an over-target value is provided", () => {
+  it("clamps the visible count to the target when an over-target value is provided and keeps the celebratory treatment", () => {
     // Defends the segment loop against a future bug where the share
     // count could briefly exceed the target (e.g. an in-flight share
     // resolving after the target is already met). The bar should max
-    // out at `target` rather than render extra segments.
+    // out at `target` rather than render extra segments, and the
+    // celebratory state from Task #305 must persist instead of looking
+    // broken (e.g. flipping back to the "Booking zone" status).
     render(<SegmentedShareProgress count={9} target={5} />);
 
     const bar = screen.getByTestId("progress-bar-shares");
@@ -397,16 +399,120 @@ describe("SegmentedShareProgress", () => {
       expect(inner!.className).toContain("w-full");
     }
     expect(screen.getByTestId("text-progress-status").textContent).toBe(
-      "Booking zone",
+      "You've hit today's goal — keep the momentum",
     );
+    expect(screen.getByTestId("hero-share-progress-celebrated")).toBeTruthy();
+    expect(screen.getByTestId("icon-progress-status-check")).toBeTruthy();
+    // The flame from the booking-zone state must yield to the green
+    // check once the goal is reached.
+    expect(screen.queryByTestId("icon-progress-status-flame")).toBeNull();
   });
 
-  it("renders the static subtext that anchors the progress bar to the 5-shares spec copy", () => {
+  it("renders the static subtext that anchors the progress bar to the 5-shares spec copy while below target", () => {
     render(<SegmentedShareProgress count={1} target={5} />);
 
     expect(screen.getByTestId("text-progress-subtext").textContent).toBe(
       "Send to 5 people — most users get booked here",
     );
+  });
+
+  it("swaps the muted status line for the celebratory variant when the count reaches the target", () => {
+    // Task #305 — when the live count from /api/booking/share-progress
+    // hits the daily target, the hero replaces the muted "Booking zone"
+    // status with a green check and the celebratory acknowledgement.
+    // The "Send to 5 people" subtext is moot at that point and is
+    // dropped so the celebratory line is the single source of truth.
+    render(<SegmentedShareProgress count={5} target={5} />);
+
+    expect(screen.getByTestId("hero-share-progress-celebrated")).toBeTruthy();
+    expect(screen.getByTestId("text-progress-status").textContent).toBe(
+      "You've hit today's goal — keep the momentum",
+    );
+    expect(screen.getByTestId("icon-progress-status-check")).toBeTruthy();
+    expect(screen.queryByTestId("icon-progress-status-flame")).toBeNull();
+    expect(screen.queryByTestId("text-progress-subtext")).toBeNull();
+    // All five fill segments should be rendered as completed (full
+    // width) to match the celebratory acknowledgement above.
+    for (let i = 0; i < 5; i += 1) {
+      const segment = screen.getByTestId(`progress-segment-${i}`);
+      const inner = segment.firstElementChild as HTMLElement | null;
+      expect(inner!.className).toContain("w-full");
+    }
+  });
+
+  it("does not render the celebratory variant while still below the target", () => {
+    // Locks the inverse of the Task #305 behaviour so a future tweak
+    // to the threshold can't silently start celebrating early.
+    render(<SegmentedShareProgress count={4} target={5} />);
+
+    expect(screen.queryByTestId("hero-share-progress-celebrated")).toBeNull();
+    expect(screen.queryByTestId("icon-progress-status-check")).toBeNull();
+  });
+
+  it("animates the celebration on the render that crosses the target, not on a refetch that lands already at target", () => {
+    // Task #305 — the celebratory swap must animate in the moment the
+    // count flips to target, but background refetches that keep the
+    // count at/above target must NOT replay the animation. We expose
+    // the one-shot gate as `data-animate-celebration` on the
+    // celebratory container so this test can lock the behaviour
+    // without peeking into framer-motion internals.
+
+    // (1) Initial mount already at target → celebratory variant is on
+    // screen, but animation is OFF (the user landed here from a fresh
+    // page load / focus refetch, not a live transition).
+    const { rerender, unmount } = render(
+      <SegmentedShareProgress count={5} target={5} />,
+    );
+    let celebrated = screen.getByTestId("hero-share-progress-celebrated");
+    expect(celebrated.getAttribute("data-animate-celebration")).toBe("false");
+
+    // (2) A subsequent focus-refetch render that keeps us at target
+    // must also leave the animation OFF — no flashing on every 30s
+    // staleTime refetch.
+    rerender(<SegmentedShareProgress count={5} target={5} />);
+    celebrated = screen.getByTestId("hero-share-progress-celebrated");
+    expect(celebrated.getAttribute("data-animate-celebration")).toBe("false");
+
+    unmount();
+
+    // (3) Mount below target, then rerender at target. The transition
+    // render itself must enable the entrance animation — this is the
+    // failure mode flagged in the Task #305 review (an effect-driven
+    // gate would only flip AFTER the celebratory <motion.div> mounts,
+    // missing the transition render entirely).
+    const { rerender: rerenderCross } = render(
+      <SegmentedShareProgress count={4} target={5} />,
+    );
+    expect(screen.queryByTestId("hero-share-progress-celebrated")).toBeNull();
+
+    rerenderCross(<SegmentedShareProgress count={5} target={5} />);
+    celebrated = screen.getByTestId("hero-share-progress-celebrated");
+    expect(celebrated.getAttribute("data-animate-celebration")).toBe("true");
+
+    // (4) Yet another refetch render at the same at-target count must
+    // turn the animation gate back OFF — the celebration is one-shot.
+    rerenderCross(<SegmentedShareProgress count={5} target={5} />);
+    celebrated = screen.getByTestId("hero-share-progress-celebrated");
+    expect(celebrated.getAttribute("data-animate-celebration")).toBe("false");
+  });
+
+  it("re-arms the celebration animation if the count drops below target and then crosses again", () => {
+    // Defends the one-shot gate against the rare case where the count
+    // drops back below target (e.g. a share is invalidated or the day
+    // resets mid-session) and then climbs back. The next crossing
+    // should animate again — the gate is per-crossing, not per-mount.
+    const { rerender } = render(
+      <SegmentedShareProgress count={5} target={5} />,
+    );
+    let celebrated = screen.getByTestId("hero-share-progress-celebrated");
+    expect(celebrated.getAttribute("data-animate-celebration")).toBe("false");
+
+    rerender(<SegmentedShareProgress count={3} target={5} />);
+    expect(screen.queryByTestId("hero-share-progress-celebrated")).toBeNull();
+
+    rerender(<SegmentedShareProgress count={5} target={5} />);
+    celebrated = screen.getByTestId("hero-share-progress-celebrated");
+    expect(celebrated.getAttribute("data-animate-celebration")).toBe("true");
   });
 });
 
