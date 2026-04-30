@@ -142,16 +142,10 @@ export default function Settings() {
   const { isAuthenticated, logoutAsync } = useAuth();
   const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
   const [attBlocked, setAttBlocked] = useState(false);
-  const [forceOpenGetBooked, setForceOpenGetBooked] = useState(
-    () => typeof window !== "undefined" && window.location.hash === "#get-booked"
+  const [activeHash] = useState(
+    () => typeof window !== "undefined" ? window.location.hash.replace(/^#/, "") : ""
   );
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (window.location.hash === "#get-booked") {
-      setForceOpenGetBooked(true);
-    }
-  }, []);
+  const shouldForceOpen = (id: string) => activeHash === id;
 
   const profileQuery = useQuery<any>({ queryKey: ["/api/profile"] });
 
@@ -975,6 +969,7 @@ export default function Settings() {
           icon={<DollarSign className="h-4 w-4 text-white" />}
           iconGradient="from-green-500 to-emerald-500"
           defaultOpen={true}
+          forceOpen={shouldForceOpen("get-paid")}
           className="border-emerald-200 dark:border-emerald-800/40 bg-emerald-50/30 dark:bg-emerald-950/10"
           headerExtra={
             stripeEnabled && stripeStatus?.connected ? (
@@ -1163,7 +1158,7 @@ export default function Settings() {
           icon={<Globe className="h-4 w-4 text-white" />}
           iconGradient="from-blue-500 to-indigo-500"
           defaultOpen={false}
-          forceOpen={forceOpenGetBooked}
+          forceOpen={shouldForceOpen("get-booked")}
         >
           <div className="space-y-4">
             <div className="flex items-center justify-end -mt-2">
@@ -1375,6 +1370,7 @@ export default function Settings() {
           icon={<Zap className="h-4 w-4 text-white" />}
           iconGradient="from-orange-500 to-amber-500"
           defaultOpen={false}
+          forceOpen={shouldForceOpen("automate")}
         >
           <div className="space-y-6">
             <AutomationSettings />
@@ -1397,6 +1393,7 @@ export default function Settings() {
           icon={<User className="h-4 w-4 text-white" />}
           iconGradient="from-violet-500 to-purple-600"
           defaultOpen={false}
+          forceOpen={shouldForceOpen("account")}
         >
           <div className="space-y-6">
             <div className="flex items-center justify-end -mt-2">
