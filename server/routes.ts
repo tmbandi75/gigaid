@@ -191,6 +191,105 @@ const smsResumeConfirmCache = new Map<string, number>();
 // Twilio blip doesn't pause messaging, but a repeatedly-bad number does.
 export const PHONE_UNREACHABLE_THRESHOLD = 3;
 
+// ============================================================
+// In-memory rate limiting + lockout state for the browser-side
+// phone-verification endpoints (`/api/profile/phone/{send,verify}-otp`).
+//
+// Goal: stop a hostile actor with a stolen session (or any caller that
+// can hit the API repeatedly) from
+//   1. enumerating phone numbers by spraying send-otp,
+//   2. brute-forcing 6-digit codes against verify-otp, and
+//   3. running up Twilio cost.
+//
+// Process-local Map state matches the `quickbookParseRateLimits` and
+// `smsResumeConfirmCache` patterns already used in this file. Counters
+// reset on process restart, which is acceptable: any meaningful sustained
+// attack will continue to trip the limits after the restart, and the
+// resend-throttle and DB-backed OTP TTL still apply on top of these.
+// ============================================================
+const PROFILE_PHONE_OTP_DAILY_SEND_CAP = 5; // sends per user per 24h
+const PROFILE_PHONE_OTP_DAILY_WINDOW_MS = 24 * 60 * 60 * 1000;
+const PROFILE_PHONE_OTP_IP_WINDOW_MS = 60 * 1000;
+const PROFILE_PHONE_OTP_IP_SEND_LIMIT = 10; // send-otp requests per IP per minute
+const PROFILE_PHONE_OTP_IP_VERIFY_LIMIT = 20; // verify-otp requests per IP per minute
+const PROFILE_PHONE_OTP_VERIFY_LOCKOUT_THRESHOLD = 5; // bad codes
+const PROFILE_PHONE_OTP_VERIFY_LOCKOUT_MS = 15 * 60 * 1000;
+
+type RateBucket = { count: number; resetAt: number };
+const profilePhoneOtpDailyCounts = new Map<string, RateBucket>();
+const profilePhoneOtpIpCounts = new Map<string, RateBucket>();
+const profilePhoneOtpVerifyFailures = new Map<
+  string,
+  { count: number; lockedUntil: number }
+>();
+
+function getClientIp(req: Request): string {
+  // Express `req.ip` honours the `trust proxy` setting (configured in
+  // `setupAuth` -> `replitAuth.ts`). Fall back to the raw socket address
+  // and finally to a sentinel so we never key the bucket on `undefined`.
+  const ip = (req.ip || req.socket?.remoteAddress || "unknown").trim();
+  return ip || "unknown";
+}
+
+function consumeRateBucket(
+  store: Map<string, RateBucket>,
+  key: string,
+  limit: number,
+  windowMs: number,
+): { allowed: boolean; retryAfterSeconds: number; count: number } {
+  const now = Date.now();
+  const bucket = store.get(key);
+  if (!bucket || now >= bucket.resetAt) {
+    store.set(key, { count: 1, resetAt: now + windowMs });
+    return { allowed: true, retryAfterSeconds: 0, count: 1 };
+  }
+  if (bucket.count >= limit) {
+    return {
+      allowed: false,
+      retryAfterSeconds: Math.max(1, Math.ceil((bucket.resetAt - now) / 1000)),
+      count: bucket.count,
+    };
+  }
+  bucket.count += 1;
+  return { allowed: true, retryAfterSeconds: 0, count: bucket.count };
+}
+
+function getProfilePhoneOtpVerifyLockout(userId: string): number {
+  const entry = profilePhoneOtpVerifyFailures.get(userId);
+  if (!entry) return 0;
+  const now = Date.now();
+  if (entry.lockedUntil > now) return entry.lockedUntil - now;
+  if (entry.lockedUntil > 0 && entry.lockedUntil <= now) {
+    // Lockout window has elapsed: clear the slate so the user gets a
+    // fresh count of attempts after the cool-down.
+    profilePhoneOtpVerifyFailures.delete(userId);
+  }
+  return 0;
+}
+
+function recordProfilePhoneOtpVerifyFailure(userId: string): {
+  count: number;
+  lockedUntil: number;
+} {
+  const now = Date.now();
+  const existing = profilePhoneOtpVerifyFailures.get(userId);
+  if (existing && existing.lockedUntil > now) {
+    return existing;
+  }
+  const count = (existing?.count ?? 0) + 1;
+  const lockedUntil =
+    count >= PROFILE_PHONE_OTP_VERIFY_LOCKOUT_THRESHOLD
+      ? now + PROFILE_PHONE_OTP_VERIFY_LOCKOUT_MS
+      : 0;
+  const next = { count, lockedUntil };
+  profilePhoneOtpVerifyFailures.set(userId, next);
+  return next;
+}
+
+function clearProfilePhoneOtpVerifyFailures(userId: string): void {
+  profilePhoneOtpVerifyFailures.delete(userId);
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -968,6 +1067,33 @@ export async function registerRoutes(
           return res.status(404).json({ error: "User not found" });
         }
 
+        // Per-IP rate limit (applied before parsing the body so a single
+        // host can't drown the endpoint in malformed requests either).
+        // The IP key is namespaced to the route so send and verify don't
+        // share a bucket.
+        const clientIp = getClientIp(req);
+        const ipGate = consumeRateBucket(
+          profilePhoneOtpIpCounts,
+          `send:${clientIp}`,
+          PROFILE_PHONE_OTP_IP_SEND_LIMIT,
+          PROFILE_PHONE_OTP_IP_WINDOW_MS,
+        );
+        if (!ipGate.allowed) {
+          logger.warn("[ProfilePhoneOtp] send-otp IP rate limit hit", {
+            userId,
+            ip: clientIp,
+            limit: PROFILE_PHONE_OTP_IP_SEND_LIMIT,
+            windowMs: PROFILE_PHONE_OTP_IP_WINDOW_MS,
+            count: ipGate.count,
+          });
+          res.setHeader("Retry-After", String(ipGate.retryAfterSeconds));
+          return res.status(429).json({
+            error: "Too many requests from this network. Please try again shortly.",
+            code: "ip_rate_limited",
+            retryAfterSeconds: ipGate.retryAfterSeconds,
+          });
+        }
+
         const parsed = profilePhoneSendOtpSchema.safeParse(req.body);
         if (!parsed.success) {
           return res.status(400).json({ error: "Phone number is required" });
@@ -975,6 +1101,32 @@ export async function registerRoutes(
         const phoneE164 = normalizeProfilePhoneE164(parsed.data.phone);
         if (!phoneE164) {
           return res.status(400).json({ error: "Invalid phone number" });
+        }
+
+        // Per-user daily cap. Caps the *number of send-otp attempts* per
+        // 24h sliding window, not per phone number, so a hostile session
+        // can't enumerate phone numbers by rotating the requested phone
+        // on each call.
+        const dailyGate = consumeRateBucket(
+          profilePhoneOtpDailyCounts,
+          userId,
+          PROFILE_PHONE_OTP_DAILY_SEND_CAP,
+          PROFILE_PHONE_OTP_DAILY_WINDOW_MS,
+        );
+        if (!dailyGate.allowed) {
+          logger.warn("[ProfilePhoneOtp] send-otp daily cap hit", {
+            userId,
+            ip: clientIp,
+            cap: PROFILE_PHONE_OTP_DAILY_SEND_CAP,
+            windowHours: PROFILE_PHONE_OTP_DAILY_WINDOW_MS / 3_600_000,
+            phoneE164,
+          });
+          res.setHeader("Retry-After", String(dailyGate.retryAfterSeconds));
+          return res.status(429).json({
+            error: `You can only request ${PROFILE_PHONE_OTP_DAILY_SEND_CAP} verification codes per day. Try again later.`,
+            code: "daily_cap_reached",
+            retryAfterSeconds: dailyGate.retryAfterSeconds,
+          });
         }
 
         // Reject early if the requested number already belongs to someone
@@ -1081,6 +1233,49 @@ export async function registerRoutes(
           return res.status(404).json({ error: "User not found" });
         }
 
+        // Per-IP rate limit (matches send-otp; namespaced bucket so the
+        // verify path has its own counter).
+        const clientIp = getClientIp(req);
+        const ipGate = consumeRateBucket(
+          profilePhoneOtpIpCounts,
+          `verify:${clientIp}`,
+          PROFILE_PHONE_OTP_IP_VERIFY_LIMIT,
+          PROFILE_PHONE_OTP_IP_WINDOW_MS,
+        );
+        if (!ipGate.allowed) {
+          logger.warn("[ProfilePhoneOtp] verify-otp IP rate limit hit", {
+            userId,
+            ip: clientIp,
+            limit: PROFILE_PHONE_OTP_IP_VERIFY_LIMIT,
+            windowMs: PROFILE_PHONE_OTP_IP_WINDOW_MS,
+            count: ipGate.count,
+          });
+          res.setHeader("Retry-After", String(ipGate.retryAfterSeconds));
+          return res.status(429).json({
+            error: "Too many requests from this network. Please try again shortly.",
+            code: "ip_rate_limited",
+            retryAfterSeconds: ipGate.retryAfterSeconds,
+          });
+        }
+
+        // If the user has tripped the consecutive-bad-code lockout, refuse
+        // to even look at the submitted code until the cool-down expires.
+        const lockoutRemainingMs = getProfilePhoneOtpVerifyLockout(userId);
+        if (lockoutRemainingMs > 0) {
+          const retryAfterSeconds = Math.ceil(lockoutRemainingMs / 1000);
+          logger.warn("[ProfilePhoneOtp] verify-otp blocked by lockout", {
+            userId,
+            ip: clientIp,
+            retryAfterSeconds,
+          });
+          res.setHeader("Retry-After", String(retryAfterSeconds));
+          return res.status(429).json({
+            error: `Too many incorrect codes. Try again in ${Math.ceil(retryAfterSeconds / 60)} minutes.`,
+            code: "verify_locked_out",
+            retryAfterSeconds,
+          });
+        }
+
         const parsed = profilePhoneVerifyOtpSchema.safeParse(req.body);
         if (!parsed.success) {
           return res
@@ -1093,11 +1288,38 @@ export async function registerRoutes(
         }
 
         const otp = await storage.getOtp(phoneE164, parsed.data.code);
-        if (!otp) return res.status(400).json({ error: "Invalid code" });
-        if (otp.verified)
+        const recordBadCode = (label: string) => {
+          const result = recordProfilePhoneOtpVerifyFailure(userId);
+          if (result.lockedUntil > 0) {
+            logger.warn("[ProfilePhoneOtp] verify-otp lockout triggered", {
+              userId,
+              ip: clientIp,
+              consecutiveFailures: result.count,
+              lockoutMs: PROFILE_PHONE_OTP_VERIFY_LOCKOUT_MS,
+              reason: label,
+            });
+          } else {
+            logger.warn("[ProfilePhoneOtp] verify-otp bad code", {
+              userId,
+              ip: clientIp,
+              consecutiveFailures: result.count,
+              threshold: PROFILE_PHONE_OTP_VERIFY_LOCKOUT_THRESHOLD,
+              reason: label,
+            });
+          }
+          return result;
+        };
+        if (!otp) {
+          recordBadCode("invalid_code");
+          return res.status(400).json({ error: "Invalid code" });
+        }
+        if (otp.verified) {
+          recordBadCode("code_already_used");
           return res.status(400).json({ error: "Code already used" });
+        }
         const exp = new Date(otp.expiresAt).getTime();
         if (!Number.isFinite(exp) || Date.now() > exp) {
+          recordBadCode("expired");
           return res
             .status(400)
             .json({ error: "Code has expired. Send a new one." });
@@ -1119,6 +1341,11 @@ export async function registerRoutes(
             ),
           );
         if (phoneOwners.length > 0) {
+          // Treat a cross-user collision the same as a bad code for
+          // anti-enumeration purposes — otherwise an attacker who guesses a
+          // code can confirm whether a phone is already attached to another
+          // account without burning a counter.
+          recordBadCode("phone_in_use");
           return res.status(409).json({
             error:
               "This phone number is already in use on another account.",
@@ -1127,6 +1354,9 @@ export async function registerRoutes(
         }
 
         await storage.verifyOtp(otp.id);
+        // Successful verification: clear the consecutive-failure counter so
+        // a future legitimate edit isn't penalised by old typos.
+        clearProfilePhoneOtpVerifyFailures(userId);
 
         const now = new Date().toISOString();
         // Persist only the new phone here. We deliberately do NOT clear the
