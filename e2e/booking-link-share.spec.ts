@@ -50,6 +50,11 @@ const EXPECTED_SCREEN: Record<Variant, string> = {
   primary: 'plan_legacy',
   inline: 'plan',
   compact: 'plan',
+  // Hero opens the BookingLinkShareSheet directly (not a card variant)
+  // and the hero-specific describe block asserts the screen value
+  // ("plan_hero") inline rather than going through this map. We still
+  // include the entry so the Record<Variant, string> typing is exhaustive.
+  hero: 'plan_hero',
 };
 
 /**

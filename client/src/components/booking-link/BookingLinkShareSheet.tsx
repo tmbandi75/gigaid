@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, MessageCircle, MessageSquare, Check } from "lucide-react";
 import { SiWhatsapp } from "react-icons/si";
@@ -69,18 +69,29 @@ export function BookingLinkShareSheet({
     bookingLink ? messageOverride ?? defaultMessage(bookingLink) : "",
   );
   const [copied, setCopied] = useState(false);
+  // Tracks whether we've already fired the open analytics for the current
+  // open transition. We only want booking_link_share_opened +
+  // recordShareTap to fire ONCE per open — not every time bookingLink or
+  // messageOverride change while the sheet is mounted open.
+  const openLoggedRef = useRef(false);
 
   // Reset the message + copied state to the live default when the sheet opens
   // so a re-open after a previous edit starts fresh and reflects the latest
   // bookingLink value.
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      openLoggedRef.current = false;
+      return;
+    }
     if (bookingLink) {
       setMessage(messageOverride ?? defaultMessage(bookingLink));
     }
     setCopied(false);
-    trackEvent("booking_link_share_opened", { screen });
-    void recordShareTap(context);
+    if (!openLoggedRef.current) {
+      openLoggedRef.current = true;
+      trackEvent("booking_link_share_opened", { screen });
+      void recordShareTap(context);
+    }
   }, [open, bookingLink, messageOverride, screen, context]);
 
   const invalidateGamePlan = () => {
@@ -113,7 +124,7 @@ export function BookingLinkShareSheet({
     // Trigger external nav synchronously inside the click handler so
     // browsers honor the user-gesture; record completion afterward.
     if (typeof window !== "undefined") {
-      window.location.href = `sms:?&body=${encodeURIComponent(body)}`;
+      window.location.href = `sms:?body=${encodeURIComponent(body)}`;
     }
     fireCompleted("sms", "share");
     onOpenChange(false);
