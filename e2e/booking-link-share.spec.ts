@@ -344,8 +344,29 @@ test.describe('BookingLinkShare card', () => {
           expect(opened[0].properties).toMatchObject({ screen: 'plan_hero' });
         });
 
-        test('SMS button records booking_link_shared with method "sms"', async ({ page }) => {
+        test('SMS button records booking_link_shared with method "sms" and POSTs the completion write', async ({
+          page,
+        }) => {
           await installHarnessStubs(page);
+          // Capture every POST to /api/track/booking-link-shared so we can
+          // assert the SMS click triggers the server-side completion write
+          // with method=share + target=sms (the rollup the admin share
+          // funnel uses to break completions down by destination).
+          const sharedWrites: Array<Record<string, unknown>> = [];
+          await page.route('**/api/track/booking-link-shared', async (route: Route) => {
+            if (route.request().method() === 'POST') {
+              try {
+                sharedWrites.push(route.request().postDataJSON() as Record<string, unknown>);
+              } catch {
+                sharedWrites.push({});
+              }
+            }
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: '{}',
+            });
+          });
           // Stub navigation away by intercepting the sms: handler — Playwright
           // can't open sms: URLs but window.location.href assignment is fine
           // and the test only cares about the analytics + API call that happen
@@ -371,7 +392,7 @@ test.describe('BookingLinkShare card', () => {
           await clearCapturedAnalytics(page);
 
           await page.locator('[data-testid="button-share-sheet-sms"]').click();
-          await page.waitForTimeout(300);
+          await page.waitForTimeout(500);
 
           const events = await getCapturedAnalytics(page);
           const completed = events.filter((e) => e.eventName === 'booking_link_shared');
@@ -386,6 +407,15 @@ test.describe('BookingLinkShare card', () => {
           );
           expect(smsHrefs.length).toBeGreaterThan(0);
           expect(smsHrefs[0]).toContain('sms:');
+
+          // Server-side completion write: must be POSTed exactly once
+          // with method=share + target=sms so the canonical
+          // booking_link_shared event gets emitted server-side.
+          expect(sharedWrites).toHaveLength(1);
+          expect(sharedWrites[0]).toMatchObject({
+            method: 'share',
+            target: 'sms',
+          });
         });
 
         test('WhatsApp button records booking_link_shared with method "whatsapp"', async ({

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, MessageCircle, MessageSquare, Check } from "lucide-react";
 import { SiWhatsapp } from "react-icons/si";
@@ -14,9 +14,17 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { trackEvent } from "@/components/PostHogProvider";
 import { recordShareTap } from "@/lib/bookingLinkAnalytics";
@@ -80,12 +88,17 @@ export function BookingLinkShareSheet({
     queryClient.invalidateQueries({ queryKey: ["/api/booking/share-progress"] });
   };
 
-  const fireCompleted = async (
+  // Fire-and-forget so we never block the user-perceptible navigation
+  // (sms:, wa.me) on a slow analytics POST. PostHog is queued client-side
+  // and recordBookingLinkShared marks the local flag synchronously before
+  // POSTing, so the NBA still flips even if the API write is slow or
+  // fails.
+  const fireCompleted = (
     method: "sms" | "whatsapp" | "copy",
     serverMethod: "share" | "copy",
   ) => {
     trackEvent("booking_link_shared", { screen, method });
-    await recordBookingLinkShared({
+    void recordBookingLinkShared({
       method: serverMethod,
       target: method,
       userId,
@@ -94,17 +107,19 @@ export function BookingLinkShareSheet({
     });
   };
 
-  const handleSms = async () => {
+  const handleSms = () => {
     if (!bookingLink) return;
     const body = message.trim() || defaultMessage(bookingLink);
+    // Trigger external nav synchronously inside the click handler so
+    // browsers honor the user-gesture; record completion afterward.
     if (typeof window !== "undefined") {
       window.location.href = `sms:?&body=${encodeURIComponent(body)}`;
     }
-    await fireCompleted("sms", "share");
+    fireCompleted("sms", "share");
     onOpenChange(false);
   };
 
-  const handleWhatsapp = async () => {
+  const handleWhatsapp = () => {
     if (!bookingLink) return;
     const body = message.trim() || defaultMessage(bookingLink);
     if (typeof window !== "undefined") {
@@ -114,7 +129,7 @@ export function BookingLinkShareSheet({
         "noopener,noreferrer",
       );
     }
-    await fireCompleted("whatsapp", "share");
+    fireCompleted("whatsapp", "share");
     onOpenChange(false);
   };
 
@@ -132,10 +147,13 @@ export function BookingLinkShareSheet({
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    await fireCompleted("copy", "copy");
+    fireCompleted("copy", "copy");
+    // Preserve the existing "Link copied" toast title that the rest of
+    // the booking-link surfaces use, with a follow-on description that
+    // nudges the worker to send it now.
     toast({
-      title: "Copied — send it to someone now",
-      description: "Paste it into a text, DM, or email.",
+      title: "Link copied",
+      description: "Send it to someone now",
     });
   };
 
@@ -162,112 +180,135 @@ export function BookingLinkShareSheet({
     }
   };
 
+  const isMobile = useIsMobile();
+
+  const body: ReactNode = (
+    <div className="mt-4 space-y-4">
+      <div className="space-y-1.5">
+        <Label
+          htmlFor="share-sheet-link"
+          className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+        >
+          Your booking link
+        </Label>
+        <div className="flex items-center gap-2">
+          <Input
+            id="share-sheet-link"
+            readOnly
+            value={bookingLink ?? ""}
+            onClick={(e) => (e.target as HTMLInputElement).select()}
+            className="font-mono text-xs"
+            data-testid="input-share-sheet-link"
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={handleCopyLinkOnly}
+            className="shrink-0"
+            data-testid="button-share-sheet-copy-link-only"
+          >
+            <Copy className="h-4 w-4" />
+            <span className="sr-only">Copy link only</span>
+          </Button>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label
+          htmlFor="share-sheet-message"
+          className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+        >
+          Message
+        </Label>
+        <Textarea
+          id="share-sheet-message"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          rows={4}
+          className="resize-none text-sm"
+          data-testid="textarea-share-sheet-message"
+        />
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 pt-1">
+        <Button
+          type="button"
+          size="lg"
+          variant="default"
+          onClick={handleSms}
+          disabled={!bookingLink}
+          className="flex flex-col h-auto py-3 gap-1"
+          data-testid="button-share-sheet-sms"
+        >
+          <MessageSquare className="h-5 w-5" />
+          <span className="text-xs font-medium">SMS</span>
+        </Button>
+        <Button
+          type="button"
+          size="lg"
+          variant="default"
+          onClick={handleWhatsapp}
+          disabled={!bookingLink}
+          className="flex flex-col h-auto py-3 gap-1 bg-[#25D366] hover:bg-[#20bd5a] text-white"
+          data-testid="button-share-sheet-whatsapp"
+        >
+          <SiWhatsapp className="h-5 w-5" />
+          <span className="text-xs font-medium">WhatsApp</span>
+        </Button>
+        <Button
+          type="button"
+          size="lg"
+          variant="outline"
+          onClick={handleCopy}
+          disabled={!bookingLink}
+          className="flex flex-col h-auto py-3 gap-1"
+          data-testid="button-share-sheet-copy"
+        >
+          {copied ? <Check className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
+          <span className="text-xs font-medium">{copied ? "Copied" : "Copy"}</span>
+        </Button>
+      </div>
+    </div>
+  );
+
+  const titleText = "Send your booking link";
+  const descriptionText =
+    "Pick how you want to share. Most pros get booked after 3–5 sends.";
+
+  // Bottom sheet on mobile (<768px), centered Dialog on tablet+/desktop.
+  // Both surfaces render identical content + the same data-testid sentinel
+  // so e2e specs and component tests can drive either at the same locator.
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent
+          side="bottom"
+          className="rounded-t-2xl max-h-[92vh] overflow-y-auto"
+          data-testid="sheet-booking-link-share"
+        >
+          <SheetHeader className="text-left">
+            <SheetTitle>{titleText}</SheetTitle>
+            <SheetDescription>{descriptionText}</SheetDescription>
+          </SheetHeader>
+          {body}
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="bottom"
-        className="rounded-t-2xl max-h-[92vh] overflow-y-auto sm:max-w-md sm:mx-auto sm:rounded-t-2xl"
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="max-w-md"
         data-testid="sheet-booking-link-share"
       >
-        <SheetHeader className="text-left">
-          <SheetTitle>Send your booking link</SheetTitle>
-          <SheetDescription>
-            Pick how you want to share. Most pros get booked after 3–5 sends.
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="mt-4 space-y-4">
-          <div className="space-y-1.5">
-            <Label
-              htmlFor="share-sheet-link"
-              className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-            >
-              Your booking link
-            </Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="share-sheet-link"
-                readOnly
-                value={bookingLink ?? ""}
-                onClick={(e) => (e.target as HTMLInputElement).select()}
-                className="font-mono text-xs"
-                data-testid="input-share-sheet-link"
-              />
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={handleCopyLinkOnly}
-                className="shrink-0"
-                data-testid="button-share-sheet-copy-link-only"
-              >
-                <Copy className="h-4 w-4" />
-                <span className="sr-only">Copy link only</span>
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label
-              htmlFor="share-sheet-message"
-              className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-            >
-              Message
-            </Label>
-            <Textarea
-              id="share-sheet-message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={4}
-              className="resize-none text-sm"
-              data-testid="textarea-share-sheet-message"
-            />
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 pt-1">
-            <Button
-              type="button"
-              size="lg"
-              variant="default"
-              onClick={handleSms}
-              disabled={!bookingLink}
-              className="flex flex-col h-auto py-3 gap-1"
-              data-testid="button-share-sheet-sms"
-            >
-              <MessageSquare className="h-5 w-5" />
-              <span className="text-xs font-medium">SMS</span>
-            </Button>
-            <Button
-              type="button"
-              size="lg"
-              variant="default"
-              onClick={handleWhatsapp}
-              disabled={!bookingLink}
-              className="flex flex-col h-auto py-3 gap-1 bg-[#25D366] hover:bg-[#20bd5a] text-white"
-              data-testid="button-share-sheet-whatsapp"
-            >
-              <SiWhatsapp className="h-5 w-5" />
-              <span className="text-xs font-medium">WhatsApp</span>
-            </Button>
-            <Button
-              type="button"
-              size="lg"
-              variant="outline"
-              onClick={handleCopy}
-              disabled={!bookingLink}
-              className="flex flex-col h-auto py-3 gap-1"
-              data-testid="button-share-sheet-copy"
-            >
-              {copied ? (
-                <Check className="h-5 w-5" />
-              ) : (
-                <MessageCircle className="h-5 w-5" />
-              )}
-              <span className="text-xs font-medium">{copied ? "Copied" : "Copy"}</span>
-            </Button>
-          </div>
-        </div>
-      </SheetContent>
-    </Sheet>
+        <DialogHeader className="text-left">
+          <DialogTitle>{titleText}</DialogTitle>
+          <DialogDescription>{descriptionText}</DialogDescription>
+        </DialogHeader>
+        {body}
+      </DialogContent>
+    </Dialog>
   );
 }

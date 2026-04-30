@@ -87,7 +87,7 @@ export function BookingLinkShare({ variant, context, demoted = false }: BookingL
             ) : (
               <>
                 <Share2 className="h-4 w-4 mr-2" />
-                Send My Booking Link
+                Copy &amp; Send My Booking Link
               </>
             )}
           </Button>
