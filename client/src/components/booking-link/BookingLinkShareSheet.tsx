@@ -121,18 +121,27 @@ export function BookingLinkShareSheet({
   const handleSms = () => {
     if (!bookingLink) return;
     const body = message.trim() || defaultMessage(bookingLink);
-    // Trigger external nav synchronously inside the click handler so
-    // browsers honor the user-gesture; record completion afterward.
+    // Order matters here: fireCompleted is fire-and-forget and runs its
+    // synchronous prelude (PostHog enqueue + markBookingLinkShared +
+    // queryClient invalidations + apiFetch() request kickoff) BEFORE we
+    // hand the tab off to the SMS scheme. That way the completion tracking
+    // survives even if the OS interrupts JS execution to launch Messages.
+    // We still trigger the deep link on the same synchronous tick so the
+    // browser keeps the user-gesture context for sms:.
+    fireCompleted("sms", "share");
     if (typeof window !== "undefined") {
       window.location.href = `sms:?body=${encodeURIComponent(body)}`;
     }
-    fireCompleted("sms", "share");
     onOpenChange(false);
   };
 
   const handleWhatsapp = () => {
     if (!bookingLink) return;
     const body = message.trim() || defaultMessage(bookingLink);
+    // Same ordering rationale as handleSms — kick off completion tracking
+    // first, then open the WhatsApp tab synchronously so popup blockers
+    // honor the click gesture.
+    fireCompleted("whatsapp", "share");
     if (typeof window !== "undefined") {
       window.open(
         `https://wa.me/?text=${encodeURIComponent(body)}`,
@@ -140,7 +149,6 @@ export function BookingLinkShareSheet({
         "noopener,noreferrer",
       );
     }
-    fireCompleted("whatsapp", "share");
     onOpenChange(false);
   };
 
