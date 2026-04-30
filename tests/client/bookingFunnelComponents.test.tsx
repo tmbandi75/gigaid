@@ -398,14 +398,22 @@ describe("SegmentedShareProgress", () => {
       const inner = segment.firstElementChild as HTMLElement | null;
       expect(inner!.className).toContain("w-full");
     }
+    // Task #319 — once the count exceeds the target the celebratory
+    // line escalates past the at-target copy. At bonus = 4 (9 − 5) the
+    // tier copy is the "Crushing it" variant.
     expect(screen.getByTestId("text-progress-status").textContent).toBe(
-      "You've hit today's goal — keep the momentum",
+      "Crushing it — every share is more pipeline",
     );
     expect(screen.getByTestId("hero-share-progress-celebrated")).toBeTruthy();
     expect(screen.getByTestId("icon-progress-status-check")).toBeTruthy();
     // The flame from the booking-zone state must yield to the green
     // check once the goal is reached.
     expect(screen.queryByTestId("icon-progress-status-flame")).toBeNull();
+    // The bonus pill must surface the over-target delta so the user
+    // sees a concrete acknowledgement of every extra share.
+    const bonusPill = screen.getByTestId("hero-share-progress-bonus");
+    expect(bonusPill.getAttribute("data-bonus-count")).toBe("4");
+    expect(bonusPill.textContent).toBe("+4 bonus shares today");
   });
 
   it("renders the static subtext that anchors the progress bar to the 5-shares spec copy while below target", () => {
@@ -431,6 +439,9 @@ describe("SegmentedShareProgress", () => {
     expect(screen.getByTestId("icon-progress-status-check")).toBeTruthy();
     expect(screen.queryByTestId("icon-progress-status-flame")).toBeNull();
     expect(screen.queryByTestId("text-progress-subtext")).toBeNull();
+    // The bonus pill (Task #319) must NOT appear when the count is
+    // exactly at target — it's the over-target acknowledgement only.
+    expect(screen.queryByTestId("hero-share-progress-bonus")).toBeNull();
     // All five fill segments should be rendered as completed (full
     // width) to match the celebratory acknowledgement above.
     for (let i = 0; i < 5; i += 1) {
@@ -513,6 +524,139 @@ describe("SegmentedShareProgress", () => {
     rerender(<SegmentedShareProgress count={5} target={5} />);
     celebrated = screen.getByTestId("hero-share-progress-celebrated");
     expect(celebrated.getAttribute("data-animate-celebration")).toBe("true");
+  });
+
+  it("escalates the celebratory copy as the bonus count grows past the target", () => {
+    // Task #319 — the at-target line ("keep the momentum") only fires
+    // at exactly target. As the user keeps tapping share past the goal
+    // the line escalates through tiered copy so every extra share
+    // feels like a concrete acknowledgement, not the same flat
+    // celebration. The thresholds are bonus 1–2, 3–4, and 5+.
+    const { rerender } = render(
+      <SegmentedShareProgress count={5} target={5} />,
+    );
+    expect(screen.getByTestId("text-progress-status").textContent).toBe(
+      "You've hit today's goal — keep the momentum",
+    );
+
+    rerender(<SegmentedShareProgress count={6} target={5} />);
+    expect(screen.getByTestId("text-progress-status").textContent).toBe(
+      "On a roll — keep them coming",
+    );
+
+    rerender(<SegmentedShareProgress count={7} target={5} />);
+    expect(screen.getByTestId("text-progress-status").textContent).toBe(
+      "On a roll — keep them coming",
+    );
+
+    rerender(<SegmentedShareProgress count={8} target={5} />);
+    expect(screen.getByTestId("text-progress-status").textContent).toBe(
+      "Crushing it — every share is more pipeline",
+    );
+
+    rerender(<SegmentedShareProgress count={10} target={5} />);
+    expect(screen.getByTestId("text-progress-status").textContent).toBe(
+      "Unstoppable — you're on fire today",
+    );
+  });
+
+  it("renders a singular bonus pill at +1 and pluralises past that", () => {
+    // Task #319 — the pill is the visual anchor for the over-target
+    // delta. We lock both the singular/plural copy and the data-bonus
+    // attribute so a future tweak to the wording can't silently break
+    // the spec ("+1 bonus share today" vs "+N bonus shares today").
+    const { rerender } = render(
+      <SegmentedShareProgress count={6} target={5} />,
+    );
+    let pill = screen.getByTestId("hero-share-progress-bonus");
+    expect(pill.getAttribute("data-bonus-count")).toBe("1");
+    expect(pill.textContent).toBe("+1 bonus share today");
+
+    rerender(<SegmentedShareProgress count={7} target={5} />);
+    pill = screen.getByTestId("hero-share-progress-bonus");
+    expect(pill.getAttribute("data-bonus-count")).toBe("2");
+    expect(pill.textContent).toBe("+2 bonus shares today");
+  });
+
+  it("animates the bonus pill on the render where bonus increases, not on a refetch that lands at the same bonus value", () => {
+    // Task #319 — same one-shot gate as the celebratory line: the pill
+    // entrance animates only when `bonus` actually grows (the user
+    // just tapped share past the goal). Background refetches that
+    // report the same over-target count must NOT replay the entrance
+    // animation, otherwise the pill would flash on every focus /
+    // 30s staleTime refetch while the count sits at e.g. 7/5.
+
+    // (1) Initial mount already at +2 — pill is visible but the
+    // animation gate is OFF (the user landed here, didn't transition).
+    const { rerender, unmount } = render(
+      <SegmentedShareProgress count={7} target={5} />,
+    );
+    let pill = screen.getByTestId("hero-share-progress-bonus");
+    expect(pill.getAttribute("data-animate-bonus")).toBe("false");
+    expect(pill.getAttribute("data-bonus-count")).toBe("2");
+
+    // (2) A subsequent refetch render that keeps bonus at 2 must
+    // leave the gate OFF.
+    rerender(<SegmentedShareProgress count={7} target={5} />);
+    pill = screen.getByTestId("hero-share-progress-bonus");
+    expect(pill.getAttribute("data-animate-bonus")).toBe("false");
+
+    unmount();
+
+    // (3) Mount at exactly target (bonus=0, no pill), then bump to
+    // 6/5 — the pill appears AND the animation gate is ON because the
+    // user just tapped share past the goal.
+    const { rerender: rerenderGrow } = render(
+      <SegmentedShareProgress count={5} target={5} />,
+    );
+    expect(screen.queryByTestId("hero-share-progress-bonus")).toBeNull();
+
+    rerenderGrow(<SegmentedShareProgress count={6} target={5} />);
+    pill = screen.getByTestId("hero-share-progress-bonus");
+    expect(pill.getAttribute("data-bonus-count")).toBe("1");
+    expect(pill.getAttribute("data-animate-bonus")).toBe("true");
+
+    // (4) Another refetch render that keeps bonus at 1 must turn the
+    // gate back OFF — the pill animation is per-increment, not
+    // per-render.
+    rerenderGrow(<SegmentedShareProgress count={6} target={5} />);
+    pill = screen.getByTestId("hero-share-progress-bonus");
+    expect(pill.getAttribute("data-animate-bonus")).toBe("false");
+
+    // (5) The next genuine increment (6 → 7) must re-arm the gate.
+    rerenderGrow(<SegmentedShareProgress count={7} target={5} />);
+    pill = screen.getByTestId("hero-share-progress-bonus");
+    expect(pill.getAttribute("data-bonus-count")).toBe("2");
+    expect(pill.getAttribute("data-animate-bonus")).toBe("true");
+  });
+
+  it("degrades cleanly at very high counts without layout breakage or extra segments", () => {
+    // Task #319 — the celebration treatment must hold up at extreme
+    // counts (e.g. 20/5). The bar still caps at `target` segments, the
+    // top-tier copy is shown, and the bonus pill renders the literal
+    // delta with the truncate guard so the hero can't overflow.
+    render(<SegmentedShareProgress count={20} target={5} />);
+
+    // Bar still caps at the target — no rogue extra segments.
+    expect(screen.queryByTestId("progress-segment-5")).toBeNull();
+    const bar = screen.getByTestId("progress-bar-shares");
+    expect(bar.getAttribute("aria-valuenow")).toBe("5");
+
+    // Top tier copy is the "Unstoppable" line.
+    expect(screen.getByTestId("text-progress-status").textContent).toBe(
+      "Unstoppable — you're on fire today",
+    );
+
+    // Pill renders the full delta and stays within the layout via
+    // the truncate guard on the inner span.
+    const pill = screen.getByTestId("hero-share-progress-bonus");
+    expect(pill.getAttribute("data-bonus-count")).toBe("15");
+    expect(pill.textContent).toBe("+15 bonus shares today");
+    const inner = pill.firstElementChild as HTMLElement | null;
+    expect(inner).not.toBeNull();
+    expect(inner!.className).toContain("truncate");
+    // The pill's container caps its width to prevent overflow.
+    expect(pill.className).toContain("max-w-full");
   });
 });
 
