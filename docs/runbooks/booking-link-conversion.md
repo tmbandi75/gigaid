@@ -45,6 +45,7 @@ context combo inside `BookingLinkShare`:
 | Mobile home-screen empty-state CTA                           | `plan_empty`    |
 | Mobile/tablet first-action overlay (zero shares today, once per session) | `plan_overlay`  |
 | Mobile/tablet shares-away banner above the sticky CTA (under 3 shares today, dismissable per session) | `plan_banner`   |
+| Mobile/tablet "send a follow-up" card between hero and Up Next (>=2 shares today, dismissable per session) | `plan_followup` |
 | Legacy "Your Booking Link" card on plan surfaces (`variant="primary"` + `context="plan"`) — desktop game/money plan + `MoneyPlanPage` | `plan_legacy`   |
 | Leads page card (`variant="inline"` + `context="leads"`)     | `leads`         |
 | Jobs page card (`variant="compact"` + `context="jobs"`)      | `jobs`          |
@@ -81,13 +82,19 @@ a 14-day rolling window:
 2. `booking_link_shared` where `screen` equals the surface label.
 
 Surfaces tracked: `plan_hero`, `plan_empty`, `plan_overlay`,
-`plan_banner`, `plan_legacy`, `leads`, `jobs`, `bookings`. The
-dashboard uses the previous 7-day window as the comparison baseline
-("Compare to" → "Previous period") so the release week sits next to
-the prior week for an at-a-glance lift read. `plan_overlay` and
-`plan_banner` are the conversion-funnel surfaces added with the
-first-action overlay / shares-away banner — pin both insights next
-to `plan_hero` so the home-screen funnel reads top-to-bottom.
+`plan_banner`, `plan_followup`, `plan_legacy`, `leads`, `jobs`,
+`bookings`. The dashboard uses the previous 7-day window as the
+comparison baseline ("Compare to" → "Previous period") so the
+release week sits next to the prior week for an at-a-glance lift
+read. `plan_overlay`, `plan_banner`, and `plan_followup` are the
+conversion-funnel surfaces added with the first-action overlay,
+shares-away banner, and follow-up card respectively — pin all
+three insights next to `plan_hero` so the home-screen funnel
+reads top-to-bottom. `plan_followup` is also the only surface
+that pre-fills a non-default share message via `messageOverride`
+("Just checking in — let me know if you need help. Here's my
+booking link again: <link>"); the editable textarea inside the
+share sheet still lets the pro tweak it before sending.
 
 ### Recreating the dashboard
 

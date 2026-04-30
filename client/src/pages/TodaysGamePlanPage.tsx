@@ -59,6 +59,12 @@ import {
   SharesAwayBanner,
   SHARES_AWAY_BANNER_DISMISSED_KEY,
 } from "@/components/booking-link/SharesAwayBanner";
+import { SegmentedShareProgress } from "@/components/booking-link/SegmentedShareProgress";
+import {
+  FollowUpCard,
+  FOLLOW_UP_DISMISSED_KEY,
+} from "@/components/booking-link/FollowUpCard";
+import { useToast } from "@/hooks/use-toast";
 import type { BookingLinkShareScreen } from "@/lib/useBookingLinkShareAction";
 import { useUpgradeOrchestrator, useStallSignals, UpgradeNudgeModal } from "@/upgrade";
 import { useAuth } from "@/hooks/use-auth";
@@ -272,6 +278,11 @@ export default function TodaysGamePlanPage() {
   const [funnelShareSheetOpen, setFunnelShareSheetOpen] = useState(false);
   const [funnelShareScreen, setFunnelShareScreen] =
     useState<BookingLinkShareScreen>("plan_overlay");
+  // Optional pre-filled message body for surfaces (e.g. follow-up card)
+  // that need a different default than the share sheet's standard
+  // template. `undefined` means "use the sheet's built-in default".
+  const [funnelShareMessageOverride, setFunnelShareMessageOverride] =
+    useState<string | undefined>(undefined);
 
   // Both the overlay and the banner persist their dismissal in
   // sessionStorage so a refresh within the same tab doesn't replay them,
@@ -295,11 +306,57 @@ export default function TodaysGamePlanPage() {
       return false;
     }
   });
+  const [followUpDismissed, setFollowUpDismissed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.sessionStorage.getItem(FOLLOW_UP_DISMISSED_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
 
-  const openFunnelShareSheet = (screen: BookingLinkShareScreen) => {
+  const openFunnelShareSheet = (
+    screen: BookingLinkShareScreen,
+    messageOverride?: string,
+  ) => {
     setFunnelShareScreen(screen);
+    setFunnelShareMessageOverride(messageOverride);
     setFunnelShareSheetOpen(true);
   };
+
+  // Booking-zone toast: fire ONCE per browser session the first time the
+  // pro's daily share count crosses the 3-shares threshold while the page
+  // is open. We wait for the share-progress query to resolve before
+  // capturing a baseline so a refresh that lands with count >= 3 doesn't
+  // mistakenly trigger the toast — only an in-session transition does.
+  const { toast } = useToast();
+  const bookingZoneBaselineRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!shareProgress) return;
+    const current = shareProgress.count;
+    if (bookingZoneBaselineRef.current === null) {
+      bookingZoneBaselineRef.current = current;
+      return;
+    }
+    const previous = bookingZoneBaselineRef.current;
+    bookingZoneBaselineRef.current = current;
+    if (previous >= 3 || current < 3) return;
+    try {
+      if (
+        window.sessionStorage.getItem("gigaid:booking-zone-toast-fired") === "1"
+      ) {
+        return;
+      }
+      window.sessionStorage.setItem("gigaid:booking-zone-toast-fired", "1");
+    } catch {
+      // sessionStorage unavailable — accept that the toast may re-fire
+      // on subsequent transitions (extremely rare in this session).
+    }
+    toast({
+      title: "You're in the booking zone — keep going",
+      description: "Most pros land their first booking around here.",
+    });
+  }, [shareProgress, toast]);
 
   const actMutation = useApiMutation(
     (id: string) => apiFetch(`/api/next-actions/${id}/act`, { method: "POST" }),
@@ -421,12 +478,10 @@ export default function TodaysGamePlanPage() {
           >
             Most pros get booked after sharing their link 3–5 times.
           </p>
-          <p
-            className="text-xs font-medium text-muted-foreground mt-2"
-            data-testid="text-mobile-hero-progress"
-          >
-            Today's progress: {todayShareCount} / {todayShareTarget} shares
-          </p>
+          <SegmentedShareProgress
+            count={todayShareCount}
+            target={todayShareTarget}
+          />
           <CoachingRenderer screen="dashboard" />
         </div>
       ) : (
@@ -751,7 +806,32 @@ export default function TodaysGamePlanPage() {
           onOpenChange={setFunnelShareSheetOpen}
           screen={funnelShareScreen}
           context="plan"
+          messageOverride={funnelShareMessageOverride}
         />
+
+        {/* Follow-up nudge — appears once the pro has shared at least
+            twice today and a booking link exists. Encourages a second
+            message to people they've already contacted. Dismissable
+            for the rest of the browser session via the × button; auto-
+            hides next day when todayShareCount resets to 0. */}
+        {isBelowDesktop &&
+          hasBookingLink &&
+          todayShareCount >= 2 &&
+          !followUpDismissed && (
+            <motion.div variants={itemVariants}>
+              <FollowUpCard
+                open
+                onSendFollowUp={() => {
+                  const link = bookingLinkData?.bookingLink ?? "";
+                  const followUpMessage = link
+                    ? `Just checking in — let me know if you need help. Here's my booking link again: ${link}`
+                    : undefined;
+                  openFunnelShareSheet("plan_followup", followUpMessage);
+                }}
+                onDismiss={() => setFollowUpDismissed(true)}
+              />
+            </motion.div>
+          )}
 
         {/* CARD 3 — Up Next (secondary actions) */}
         {upNextItems.length > 0 && (
