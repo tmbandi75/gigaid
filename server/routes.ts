@@ -1137,6 +1137,40 @@ export async function registerRoutes(
         // successful send (or records a fresh failure if the new number
         // also bounces). This keeps the bounce banner / "phone unreachable"
         // state honest until we've actually proven the new number works.
+        //
+        // Capture the previous phone (before the swap) so we can fire a
+        // heads-up SMS to it and a "this wasn't me" email to the user. Both
+        // sends happen as fire-and-forget so a slow / failing email or SMS
+        // provider can never block the actual phone-change response. The
+        // SMS heads-up is dispatched BEFORE the DB swap (per the security
+        // spec — "before it is replaced"), the email AFTER the commit so
+        // it's a true record of an action that already happened.
+        const previousPhoneE164 = user.phoneE164 || user.phone || null;
+        const changedAtDate = new Date(now);
+
+        const phoneChangeNotifierPromise = import("./phoneChangeNotifier");
+
+        // PRE-COMMIT: heads-up SMS to the old number. Fire-and-forget; we
+        // don't await the result before committing the swap so a slow
+        // Twilio call can't lengthen the user's request, but kicking it
+        // off here means the network attempt starts before the row is
+        // mutated.
+        void phoneChangeNotifierPromise
+          .then(({ sendPhoneChangeHeadsUpSms }) =>
+            sendPhoneChangeHeadsUpSms({
+              userId,
+              oldPhone: previousPhoneE164,
+              newPhone: phoneE164,
+              changedAt: changedAtDate,
+            }),
+          )
+          .catch((err: any) => {
+            logger.error(
+              `[ProfilePhoneOtp] heads-up SMS dispatch failed for user ${userId}:`,
+              err?.message || err,
+            );
+          });
+
         await db
           .update(usersTable)
           .set({
@@ -1151,6 +1185,28 @@ export async function registerRoutes(
         // so the auto-retry that fires immediately after this verify can
         // actually send the confirmation SMS to the new number.
         smsResumeConfirmCache.delete(userId);
+
+        // POST-COMMIT: confirmation/alert email to the user's address with
+        // masked old/new numbers and a "this wasn't me" support link.
+        // Fire-and-forget: failures are logged inside the notifier and
+        // must not block the response.
+        void phoneChangeNotifierPromise
+          .then(({ sendPhoneChangeEmail }) =>
+            sendPhoneChangeEmail({
+              userId,
+              email: user.email,
+              firstName: user.firstName,
+              oldPhone: previousPhoneE164,
+              newPhone: phoneE164,
+              changedAt: changedAtDate,
+            }),
+          )
+          .catch((err: any) => {
+            logger.error(
+              `[ProfilePhoneOtp] phone-change email dispatch failed for user ${userId}:`,
+              err?.message || err,
+            );
+          });
 
         return res.json({ ok: true, phone: phoneE164, phoneVerifiedAt: now });
       } catch (err: any) {
