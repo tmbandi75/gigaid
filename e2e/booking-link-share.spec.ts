@@ -1,7 +1,7 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 import { BASE_URL } from './helpers';
 
-type Variant = 'primary' | 'inline' | 'compact' | 'hero';
+type Variant = 'primary' | 'inline' | 'compact' | 'hero' | 'funnel';
 
 interface CapturedEvent {
   eventName: string;
@@ -29,6 +29,12 @@ const COPY_TEST_IDS: Record<Variant, string> = {
   // opens the new guided share sheet. The hero card has no traditional
   // copy CTA — the secondary copy-only ghost link is `button-hero-copy-only`.
   hero: 'button-hero-copy-send-booking-link',
+  // The funnel harness doesn't render a copy CTA — it mounts the three
+  // dismissable conversion-funnel surfaces. The mount-readiness sentinel
+  // for funnel is the always-open FirstActionOverlay (covers the rest
+  // of the harness). Driven only by the dedicated sessionStorage
+  // persistence describe block at the bottom of this file.
+  funnel: 'overlay-first-action',
 };
 
 const SHARE_TEST_IDS: Record<Variant, string | null> = {
@@ -40,6 +46,9 @@ const SHARE_TEST_IDS: Record<Variant, string | null> = {
   // API; it has its own dedicated test block below and is intentionally
   // excluded from the shared share-button assertions.
   hero: null,
+  // Funnel harness has no share button — see the dedicated describe block
+  // at the bottom of this file for its sessionStorage assertions.
+  funnel: null,
 };
 
 // Per-variant PostHog `screen` label. The harness always passes context="plan",
@@ -55,6 +64,10 @@ const EXPECTED_SCREEN: Record<Variant, string> = {
   // ("plan_hero") inline rather than going through this map. We still
   // include the entry so the Record<Variant, string> typing is exhaustive.
   hero: 'plan_hero',
+  // Funnel harness doesn't fire screen-attributed share events itself —
+  // it drives the dismiss flags only. This entry exists purely to keep
+  // Record<Variant, string> exhaustive.
+  funnel: 'plan_overlay',
 };
 
 /**
@@ -479,4 +492,129 @@ test.describe('BookingLinkShare card', () => {
       });
     });
   }
+});
+
+// ---------------------------------------------------------------------------
+// Conversion-funnel sessionStorage persistence (Task #310)
+//
+// The mobile/tablet TodaysGamePlanPage gates four funnel surfaces on
+// per-surface sessionStorage flags so a dismissal sticks for the rest of
+// the browser session — including across reloads — but resets when the
+// tab is closed (sessionStorage semantics, NOT localStorage). The page-
+// level read happens at first mount; the components themselves only
+// *write* the flag on dismiss.
+//
+// Component-level coverage of the writes lives in
+// tests/client/bookingFunnelComponents.test.tsx. THIS spec verifies the
+// browser-side end of the contract: the keys actually survive a real
+// page reload within the same Playwright context, and a fresh load
+// reads them back as expected. Without this assertion, a future
+// refactor that swapped sessionStorage for an in-memory ref or a
+// per-mount React state would silently break the conversion-funnel UX
+// without breaking any unit test.
+// ---------------------------------------------------------------------------
+
+const FUNNEL_DISMISSAL_KEYS = {
+  overlay: 'gigaid:booking-overlay-skipped',
+  banner: 'gigaid:booking-banner-dismissed',
+  followUp: 'gigaid:booking-followup-dismissed',
+  bookingZoneToast: 'gigaid:booking-zone-toast-fired',
+} as const;
+
+test.describe('Funnel surface sessionStorage persistence', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  test('overlay/banner/follow-up/toast keys persist across reloads within the same session', async ({
+    page,
+  }) => {
+    await installHarnessStubs(page);
+    await gotoHarness(page, 'funnel');
+
+    // The funnel harness mounts all three dismissable surfaces in their
+    // open state. Drive each surface's dismiss action so its component
+    // writes its sessionStorage flag.
+    await page.locator('[data-testid="button-overlay-skip"]').click();
+    // Banner sits at the bottom of the viewport above the safe-area
+    // inset; in jsdom-less reality the click target is always reachable.
+    await page.locator('[data-testid="button-banner-dismiss"]').click();
+    await page.locator('[data-testid="button-follow-up-dismiss"]').click();
+
+    // The booking-zone toast key is set by the page-level effect on a
+    // <3 → ≥3 transition (see todaysGamePlanFunnel.test.tsx). It has no
+    // dismiss button, but the persistence contract is identical: once
+    // set, it must survive a reload. Seed it directly so the e2e
+    // assertion covers all four keys the task spec calls out.
+    await page.evaluate((key: string) => {
+      window.sessionStorage.setItem(key, '1');
+    }, FUNNEL_DISMISSAL_KEYS.bookingZoneToast);
+
+    const beforeReload = await page.evaluate((keys: Record<string, string>) => ({
+      overlay: window.sessionStorage.getItem(keys.overlay),
+      banner: window.sessionStorage.getItem(keys.banner),
+      followUp: window.sessionStorage.getItem(keys.followUp),
+      bookingZoneToast: window.sessionStorage.getItem(keys.bookingZoneToast),
+    }), FUNNEL_DISMISSAL_KEYS as unknown as Record<string, string>);
+
+    expect(beforeReload).toEqual({
+      overlay: '1',
+      banner: '1',
+      followUp: '1',
+      bookingZoneToast: '1',
+    });
+
+    // Hard reload — sessionStorage MUST survive a same-tab navigation
+    // (that's the whole point of using it over localStorage or a
+    // per-mount React ref). If a future refactor moves the writes to
+    // localStorage the dismissals would survive a tab close too, which
+    // is the opposite of the desired UX (the funnel must come back on
+    // a fresh session).
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('[data-testid="harness-booking-link-funnel"]', {
+      timeout: 20000,
+    });
+
+    const afterReload = await page.evaluate((keys: Record<string, string>) => ({
+      overlay: window.sessionStorage.getItem(keys.overlay),
+      banner: window.sessionStorage.getItem(keys.banner),
+      followUp: window.sessionStorage.getItem(keys.followUp),
+      bookingZoneToast: window.sessionStorage.getItem(keys.bookingZoneToast),
+    }), FUNNEL_DISMISSAL_KEYS as unknown as Record<string, string>);
+
+    expect(afterReload).toEqual({
+      overlay: '1',
+      banner: '1',
+      followUp: '1',
+      bookingZoneToast: '1',
+    });
+  });
+
+  test('reload-then-dismiss writes the keys (sessionStorage is writable on a fresh load)', async ({
+    page,
+  }) => {
+    // Defensive complement to the persistence test: if the harness
+    // somehow ran inside an iframe / blob origin where sessionStorage
+    // throws, the writes would silently swallow (the components catch
+    // the QuotaExceededError) and the persistence assertion above
+    // would still pass with all-null values. This second test asserts
+    // that a freshly loaded harness can in fact write the dismiss flag
+    // — i.e. that the test environment supports sessionStorage at all.
+    await installHarnessStubs(page);
+    await gotoHarness(page, 'funnel');
+
+    // Confirm the keys start unset on a fresh session.
+    const initial = await page.evaluate((keys: Record<string, string>) => ({
+      overlay: window.sessionStorage.getItem(keys.overlay),
+      banner: window.sessionStorage.getItem(keys.banner),
+      followUp: window.sessionStorage.getItem(keys.followUp),
+    }), FUNNEL_DISMISSAL_KEYS as unknown as Record<string, string>);
+    expect(initial).toEqual({ overlay: null, banner: null, followUp: null });
+
+    await page.locator('[data-testid="button-follow-up-dismiss"]').click();
+
+    const afterDismiss = await page.evaluate(
+      (key: string) => window.sessionStorage.getItem(key),
+      FUNNEL_DISMISSAL_KEYS.followUp,
+    );
+    expect(afterDismiss).toBe('1');
+  });
 });
