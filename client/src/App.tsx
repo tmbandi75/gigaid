@@ -86,6 +86,7 @@ import ViewAllStats from "@/pages/ViewAllStats";
 import NotFound from "@/pages/not-found";
 import E2ENbaHarness from "@/pages/E2ENbaHarness";
 import E2EBookingLinkShareHarness from "@/pages/E2EBookingLinkShareHarness";
+import E2ECenteredTabletLayoutHarness from "@/pages/E2ECenteredTabletLayoutHarness";
 import { AppErrorBoundary } from "@/components/ErrorBoundary";
 import { logClientEnv } from "./debug/envProbe";
 import { logger } from "@/lib/logger";
@@ -346,6 +347,12 @@ function App() {
                 )}
                 {import.meta.env.DEV && (
                   <Route path="/_e2e/admin-cockpit" component={AdminCockpit} />
+                )}
+                {import.meta.env.DEV && (
+                  <Route
+                    path="/_e2e/centered-tablet-layout"
+                    component={E2ECenteredTabletLayoutHarness}
+                  />
                 )}
                 <Route>
                   <NativeDeepLinkHandler>

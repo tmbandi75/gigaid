@@ -196,7 +196,10 @@ export default function OwnerView() {
     <div className={`flex flex-col min-h-full bg-background ${isMobile ? "pb-20" : "pb-8"}`} data-testid="page-owner-view">
       {isMobile ? renderMobileHeader() : renderDesktopHeader()}
       
-      <div className="w-full px-4 py-4 md:max-w-2xl md:mx-auto md:px-8 md:py-8 lg:max-w-7xl">
+      <div
+        className="w-full px-4 py-4 md:max-w-2xl md:mx-auto md:px-8 md:py-8 lg:max-w-7xl"
+        data-testid="page-body-owner-view"
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <MetricCard
             title="Weekly Revenue"

@@ -960,6 +960,7 @@ export default function Settings() {
 
       <div
         className="px-4 py-4 md:max-w-2xl md:mx-auto md:px-8 md:py-6 lg:max-w-7xl space-y-4"
+        data-testid="page-body-settings"
       >
         {/* SECTION 1: Get Paid (always expanded by default) */}
         <SettingsSectionAccordion

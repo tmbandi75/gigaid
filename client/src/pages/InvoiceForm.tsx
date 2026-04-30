@@ -269,7 +269,10 @@ export default function InvoiceForm() {
     <div className="flex flex-col min-h-full" data-testid="page-invoice-form">
       {isMobile ? renderMobileHeader() : renderDesktopHeader()}
       
-      <div className="w-full px-4 py-4 pb-8 md:max-w-2xl md:mx-auto md:px-8 md:py-6 lg:max-w-7xl">
+      <div
+        className="w-full px-4 py-4 pb-8 md:max-w-2xl md:mx-auto md:px-8 md:py-6 lg:max-w-7xl"
+        data-testid="page-body-invoice-form"
+      >
         {isMobile && (
           <Button
             variant="ghost"

@@ -290,7 +290,10 @@ export default function LeadForm() {
     <div className="flex flex-col min-h-full" data-testid="page-lead-form">
       {isMobile ? renderMobileHeader() : renderDesktopHeader()}
       
-      <div className="flex-1 px-4 py-4 pb-6 md:max-w-2xl md:mx-auto md:px-8 md:py-6 md:pb-12 lg:max-w-7xl lg:pt-0">
+      <div
+        className="flex-1 px-4 py-4 pb-6 md:max-w-2xl md:mx-auto md:px-8 md:py-6 md:pb-12 lg:max-w-7xl lg:pt-0"
+        data-testid="page-body-lead-form"
+      >
         {isMobile && (
           <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
             <Button
