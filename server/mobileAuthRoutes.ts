@@ -13,7 +13,11 @@ import { storage } from './storage';
 // so we derive the same kind of base slug here that `DbStorage.createUser`
 // would have produced and let `writeUserSlugWithRetry` auto-suffix on a
 // race with another concurrent signup picking the same slug.
-function deriveBaseSlugForFirebaseSignup(opts: {
+//
+// Exported so `tests/api/usersSlugFriendlyOnFirebaseSignup.test.ts` can
+// exercise the helper plus the surrounding insert path without needing a
+// live Firebase token.
+export function deriveBaseSlugForFirebaseSignup(opts: {
   name?: string | null;
   email?: string | null;
   username: string;
