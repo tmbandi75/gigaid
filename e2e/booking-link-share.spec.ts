@@ -609,12 +609,17 @@ test.describe('Funnel surface sessionStorage persistence', () => {
     }), FUNNEL_DISMISSAL_KEYS as unknown as Record<string, string>);
     expect(initial).toEqual({ overlay: null, banner: null, followUp: null });
 
+    // The FirstActionOverlay is `fixed inset-0 z-[1000]` and intercepts
+    // pointer events on the rest of the harness, so dismiss it first
+    // (which both writes its own sessionStorage flag and reveals the
+    // FollowUpCard's dismiss button underneath).
+    await page.locator('[data-testid="button-overlay-skip"]').click();
     await page.locator('[data-testid="button-follow-up-dismiss"]').click();
 
-    const afterDismiss = await page.evaluate(
-      (key: string) => window.sessionStorage.getItem(key),
-      FUNNEL_DISMISSAL_KEYS.followUp,
-    );
-    expect(afterDismiss).toBe('1');
+    const afterDismiss = await page.evaluate((keys: Record<string, string>) => ({
+      overlay: window.sessionStorage.getItem(keys.overlay),
+      followUp: window.sessionStorage.getItem(keys.followUp),
+    }), FUNNEL_DISMISSAL_KEYS as unknown as Record<string, string>);
+    expect(afterDismiss).toEqual({ overlay: '1', followUp: '1' });
   });
 });
