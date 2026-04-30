@@ -318,7 +318,7 @@ export default function TodaysGamePlanPage() {
     <div className="min-h-screen bg-background" data-testid="page-game-plan">
       {/* Header */}
       {isBelowDesktop ? (
-        <div className="px-5 pt-5 pb-4 bg-background">
+        <div className="px-5 md:px-8 pt-5 pb-4 bg-background md:max-w-2xl md:mx-auto">
           <p
             className="text-t-meta font-regular text-muted-foreground mb-1"
             data-testid="text-greeting"
@@ -393,7 +393,7 @@ export default function TodaysGamePlanPage() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="block lg:hidden space-y-5 px-4 py-4 pb-28"
+        className="block lg:hidden mx-auto md:max-w-2xl space-y-5 px-4 md:px-8 py-4 pb-28"
       >
 
         {/*
@@ -654,7 +654,7 @@ export default function TodaysGamePlanPage() {
         {upNextItems.length > 0 && (
           <motion.section variants={itemVariants}>
             <h2 className="text-t-primary font-semibold text-muted-foreground mb-2 px-1">Up Next</h2>
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {upNextItems.slice(0, 3).map((item) => {
                 const Icon = getIconForType(item.type);
                 return (
@@ -693,7 +693,7 @@ export default function TodaysGamePlanPage() {
               <Sparkles className="h-3.5 w-3.5 text-violet-500" />
               Smart Suggestions
             </h2>
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {nextActions.slice(0, 4).map((action) => {
                 const Icon = getIconForType(action.entityType);
                 return (
@@ -788,7 +788,7 @@ export default function TodaysGamePlanPage() {
             icon container). Testids preserved. */}
         <motion.section variants={itemVariants}>
           <h2 className="text-t-primary font-semibold text-muted-foreground mb-2 px-1">Quick Actions</h2>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <button
               onClick={() => navigate("/jobs/new")}
               className="flex flex-col items-center justify-center gap-1.5 p-4 min-h-[88px] rounded-xl bg-muted/40 hover-elevate"
