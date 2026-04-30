@@ -1,0 +1,199 @@
+REPLIT PROMPT — TRUE 10/10 OUTBOUND CONVERSION SYSTEM (SAFE)
+
+Copy this exactly into Replit / your dev agent:
+
+🎯 OBJECTIVE
+
+Upgrade GigAid into a guided, high-conversion system that ensures users:
+
+Take at least 1 sharing action immediately and are strongly pushed to reach 3–5 shares
+
+⚠️ STRICT SAFETY CONSTRAINTS
+DO NOT refactor backend APIs
+DO NOT remove any existing features
+DO NOT change routing or database schema
+ONLY:
+add UI layers
+add frontend state
+enhance existing flows
+🧱 1. FIRST BOOKING MODE (GLOBAL STATE)
+Add lightweight state:
+const firstBookingCompleted = false; // replace with real flag if exists
+const shareCount = 0;
+const shareGoal = 5;
+const hasSharedOnce = false;
+
+Persist using:
+
+localStorage OR existing user state
+🧱 2. HARD FIRST-ACTION ENTRY (NON-DESTRUCTIVE OVERLAY)
+Trigger:
+
+On dashboard load IF:
+
+!firstBookingCompleted && shareCount === 0
+Show FULL-SCREEN OVERLAY (not modal, cannot miss)
+UI:
+
+Title:
+Get Your First Paid Job Today
+
+Subtitle:
+Most users get booked after sending their link to 3–5 people
+
+CTA (primary):
+<button id="start-sharing">
+Send My Booking Link
+</button>
+Secondary (soft escape):
+<button id="skip-sharing">
+I’ll do this later
+</button>
+Behavior:
+Clicking primary → open Share Flow (Section 3)
+Clicking skip:
+close overlay
+DO NOT show again in same session
+show persistent banner instead (Section 6)
+🧱 3. ZERO-FRICTION SHARE FLOW (CORE ENGINE)
+Replace basic modal with structured flow
+Step 1: Show booking link
+Read-only input
+Copy button
+Step 2: PRE-WRITTEN MESSAGE (editable)
+Hey — I just started taking bookings. 
+If you or someone you know needs help, here’s my link:
+[booking link]
+Step 3: ONE-TAP SHARE BUTTONS
+
+Implement as deep links (no backend changes):
+
+SMS:
+window.location.href = `sms:?&body=${encodedMessage}`;
+WhatsApp:
+window.open(`https://wa.me/?text=${encodedMessage}`);
+Copy:
+Copy to clipboard
+Show toast: “Copied — send it to someone now”
+CRITICAL LOGIC:
+
+Each action triggers:
+
+shareCount += 1;
+if (!hasSharedOnce) hasSharedOnce = true;
+
+Persist immediately.
+
+🧱 4. REQUIRE FIRST ACTION (LIGHT FORCE)
+If user opens share flow:
+
+DO NOT allow immediate close unless:
+
+shareCount >= 1
+If user tries to close early:
+
+Show confirmation:
+
+“You’re 1 step away from getting your first job”
+
+Buttons:
+
+Continue Sharing (primary)
+Exit Anyway (secondary)
+
+👉 This is a soft force, not a hard lock
+
+🧱 5. HERO REPLACEMENT (POST OVERLAY)
+
+Replace top dashboard section with:
+
+Title:
+
+You’re 2 Steps Away From Getting Paid
+
+Progress Bar:
+5 segments
+Fill based on shareCount
+Status text:
+if (shareCount < 2) → "Getting started"
+if (shareCount < 4) → "Momentum building"
+if (shareCount >= 4) → "Booking zone 🔥"
+PRIMARY CTA:
+<button>
+Send My Booking Link
+</button>
+Subtext:
+
+Send to 5 people — most users get booked here
+
+🧱 6. PERSISTENT NUDGE BANNER
+
+If user skipped initial flow OR shareCount < 3:
+
+Show sticky banner:
+
+Text:
+You’re X shares away from your first booking
+
+CTA:
+Send Link Now
+
+🧱 7. FOLLOW-UP TRIGGER (HIGH IMPACT)
+Trigger condition:
+shareCount >= 2 && !firstBookingCompleted
+Show card:
+
+Title:
+Increase your chances — send a follow-up
+
+CTA:
+
+Send Follow-Up
+
+Message:
+Just checking in — let me know if you need help 👍
+Here’s my booking link again:
+[link]
+🧱 8. PRIORITIZE INCOMING REQUESTS
+
+Move “New Requests” directly under hero.
+
+Add:
+subtle highlight background
+icon: 🔥
+CTA:
+
+Respond Now → Win This Job
+
+🧱 9. REDUCE UI COMPETITION
+De-emphasize:
+Create Job
+Invoices
+Messages
+Voice
+Move to:
+secondary section
+smaller buttons
+🧱 10. MICRO-FEEDBACK (GAMIFICATION)
+
+On each share:
+
+animate progress bar
+show toast:
+Nice — you’re getting closer
+
+At 3 shares:
+
+You’re in the booking zone 🔥
+🧱 11. LIGHTWEIGHT ANALYTICS (NO INFRA CHANGE)
+
+Log to console or existing logger:
+
+track("share_clicked");
+track("share_count_updated", shareCount);
+track("share_flow_opened");
+🧱 END STATE
+
+The app should feel like:
+
+A guided system that actively pushes the user to take action until they get their first job
