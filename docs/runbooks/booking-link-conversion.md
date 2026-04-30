@@ -116,8 +116,34 @@ If the dashboard is missing (e.g. PostHog reset, new workspace):
    - Date range: **Last 14 days**, **Compare to previous period**.
    - Conversion window: **1 hour** (matches the existing share-sheet
      timing).
-3. Pin all six insights to the dashboard. Add a markdown tile that
-   links back to this runbook.
+3. Pin one insight per surface to the dashboard. The full surface
+   list lives in the table under "`screen` values" above — currently
+   nine: `plan_hero`, `plan_empty`, `plan_overlay`, `plan_banner`,
+   `plan_followup`, `plan_legacy`, `leads`, `jobs`, `bookings`. The
+   `nba` surface is intentionally excluded from this dashboard
+   because it isn't part of the booking-link share comparison. Add a
+   markdown tile to the dashboard that links back to this runbook.
+
+### Live links (fill in after first creation)
+
+> **TODO (operator):** replace the placeholders below with the real
+> URLs/screenshots once the dashboard and alert exist. Until then this
+> section is the only gap between the runbook and reality — please
+> close it the same day you stand the dashboard up.
+
+- Dashboard URL: `<TODO: paste PostHog dashboard URL here>`
+- `Hero share completion — WoW` insight URL:
+  `<TODO: paste PostHog insight URL here>`
+- Alert/subscription URL:
+  `<TODO: paste PostHog subscription URL here>`
+- Screenshots (commit under `docs/runbooks/screenshots/booking-link-conversion/`):
+  - `dashboard-overview.png` — full dashboard with all nine funnels
+    visible, "Compare to previous period" toggled on.
+  - `hero-funnel-detail.png` — `plan_hero` funnel insight expanded so
+    the absolute counts are legible.
+  - `wow-alert-config.png` — the alert configuration screen showing
+    the 20% drop threshold, weekly cadence, and the
+    `#growth-alerts` + `growth@gigaid.test` recipients.
 
 ## Conversion regression alert
 
@@ -142,6 +168,220 @@ posts to the `#growth-alerts` Slack channel and emails
 4. **Cadence:** weekly.
 5. **Notify:** `#growth-alerts` Slack channel + `growth@gigaid.test`.
 6. Save. Verify the test notification fires.
+
+## Operator setup playbook (PostHog API)
+
+Use this section if you'd rather create everything via the PostHog
+REST API instead of clicking through the UI — faster and reproducible
+across workspaces (staging, prod, recovery from a wipe).
+
+### Prerequisites
+
+- A **Personal API key** with `insight:write`, `dashboard:write`, and
+  `subscription:write` scopes (PostHog → Account settings → Personal
+  API keys → "Create personal API key").
+- The numeric **project ID** (PostHog → Project settings → top of the
+  page; it is the integer in URLs like `/project/12345/dashboard`).
+- The PostHog host (`https://app.posthog.com` for US cloud,
+  `https://eu.posthog.com` for EU, or your self-hosted base URL).
+- For Slack: the `#growth-alerts` channel must already be authorized
+  in PostHog → **Project settings → Integrations → Slack** (one-time
+  OAuth). Grab the resulting Slack integration's numeric `id` from
+  PostHog → **Project settings → Integrations** (the "Edit" link's
+  URL contains it) — call this `SLACK_INTEGRATION_ID`.
+
+Export these once at the top of your shell so the snippets below
+don't repeat them:
+
+```bash
+export POSTHOG_HOST="https://app.posthog.com"
+export POSTHOG_PROJECT_ID="<numeric project id>"
+export POSTHOG_API_KEY="<personal api key starting with phx_>"
+export SLACK_INTEGRATION_ID="<numeric slack integration id>"
+```
+
+### 1. Create the dashboard
+
+```bash
+curl -sS -X POST \
+  "$POSTHOG_HOST/api/projects/$POSTHOG_PROJECT_ID/dashboards/" \
+  -H "Authorization: Bearer $POSTHOG_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Booking Link Share — Surface Conversion",
+    "description": "Per-surface share-open → share-completed funnels. See docs/runbooks/booking-link-conversion.md.",
+    "pinned": true
+  }'
+```
+
+Capture the returned `id` as `DASHBOARD_ID` — the next step pins
+insights onto it:
+
+```bash
+export DASHBOARD_ID="<id from previous response>"
+```
+
+### 2. Create one funnel insight per surface
+
+The funnel insight payload is identical for every surface; only the
+`screen` filter value and the insight name change. Loop over the nine
+surfaces:
+
+```bash
+for SURFACE in plan_hero plan_empty plan_overlay plan_banner plan_followup plan_legacy leads jobs bookings; do
+  curl -sS -X POST \
+    "$POSTHOG_HOST/api/projects/$POSTHOG_PROJECT_ID/insights/" \
+    -H "Authorization: Bearer $POSTHOG_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d "$(cat <<JSON
+{
+  "name": "${SURFACE} — share open → completed",
+  "description": "Funnel for booking-link share on the ${SURFACE} surface. Step 1 = booking_link_share_opened, Step 2 = booking_link_shared, both filtered by screen=${SURFACE}. 14d window, compared to previous 7d.",
+  "dashboards": [${DASHBOARD_ID}],
+  "filters": {
+    "insight": "FUNNELS",
+    "events": [
+      {
+        "id": "booking_link_share_opened",
+        "name": "booking_link_share_opened",
+        "type": "events",
+        "order": 0,
+        "properties": [
+          {"key": "screen", "value": "${SURFACE}", "operator": "exact", "type": "event"}
+        ]
+      },
+      {
+        "id": "booking_link_shared",
+        "name": "booking_link_shared",
+        "type": "events",
+        "order": 1,
+        "properties": [
+          {"key": "screen", "value": "${SURFACE}", "operator": "exact", "type": "event"}
+        ]
+      }
+    ],
+    "date_from": "-14d",
+    "compare": true,
+    "funnel_window_interval": 1,
+    "funnel_window_interval_unit": "hour",
+    "funnel_viz_type": "steps",
+    "layout": "horizontal"
+  }
+}
+JSON
+)"
+done
+```
+
+After running, confirm in the UI that all nine insights are pinned to
+the dashboard, ordered with the home-screen surfaces first
+(`plan_hero`, `plan_empty`, `plan_overlay`, `plan_banner`,
+`plan_followup`), then the legacy + per-context surfaces
+(`plan_legacy`, `leads`, `jobs`, `bookings`).
+
+### 3. Create the WoW Trends insight
+
+```bash
+WOW_INSIGHT=$(curl -sS -X POST \
+  "$POSTHOG_HOST/api/projects/$POSTHOG_PROJECT_ID/insights/" \
+  -H "Authorization: Bearer $POSTHOG_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Hero share completion — WoW",
+    "description": "Powers the Slack/email alert: rolling 7d count of booking_link_shared on the plan_hero surface, compared to the previous 7d. Alert trips when the value drops more than 20% WoW.",
+    "filters": {
+      "insight": "TRENDS",
+      "events": [
+        {
+          "id": "booking_link_shared",
+          "name": "booking_link_shared",
+          "type": "events",
+          "order": 0,
+          "math": "total",
+          "properties": [
+            {"key": "screen", "value": "plan_hero", "operator": "exact", "type": "event"}
+          ]
+        }
+      ],
+      "date_from": "-7d",
+      "compare": true,
+      "interval": "day",
+      "display": "ActionsLineGraph"
+    }
+  }')
+export WOW_INSIGHT_ID=$(echo "$WOW_INSIGHT" | jq -r '.id')
+echo "WoW insight ID: $WOW_INSIGHT_ID"
+```
+
+### 4. Create the Slack + email subscription / alert
+
+PostHog's UI calls this an "alert"; the API resource is
+`subscriptions/`. The payload below wires both targets in one shot.
+
+```bash
+curl -sS -X POST \
+  "$POSTHOG_HOST/api/projects/$POSTHOG_PROJECT_ID/subscriptions/" \
+  -H "Authorization: Bearer $POSTHOG_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"insight\": ${WOW_INSIGHT_ID},
+    \"title\": \"Hero share completion — WoW\",
+    \"target_type\": \"slack\",
+    \"target_value\": \"${SLACK_INTEGRATION_ID}:#growth-alerts\",
+    \"frequency\": \"weekly\",
+    \"interval\": 1,
+    \"byweekday\": [\"monday\"],
+    \"start_date\": \"2026-05-04T15:00:00Z\"
+  }"
+
+curl -sS -X POST \
+  "$POSTHOG_HOST/api/projects/$POSTHOG_PROJECT_ID/subscriptions/" \
+  -H "Authorization: Bearer $POSTHOG_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"insight\": ${WOW_INSIGHT_ID},
+    \"title\": \"Hero share completion — WoW (email)\",
+    \"target_type\": \"email\",
+    \"target_value\": \"growth@gigaid.test\",
+    \"frequency\": \"weekly\",
+    \"interval\": 1,
+    \"byweekday\": [\"monday\"],
+    \"start_date\": \"2026-05-04T15:00:00Z\"
+  }"
+```
+
+Then in the UI open the WoW insight → **Alerts** tab → **New alert**
+and configure the *threshold* portion (the API does not yet expose
+this on the free tier):
+
+- **Condition:** "Value changes" → "decreases by" → **20%** vs.
+  previous period.
+- **Calculation window:** 7 days.
+- **Notification channel:** the two subscriptions you just created
+  will appear as available targets — tick both.
+- **Save.**
+
+### 5. Verify
+
+```bash
+# Smoke-test the alert by sending yourself a test notification.
+curl -sS -X POST \
+  "$POSTHOG_HOST/api/projects/$POSTHOG_PROJECT_ID/subscriptions/<subscription_id>/test/" \
+  -H "Authorization: Bearer $POSTHOG_API_KEY"
+```
+
+Expected: a Slack message in `#growth-alerts` and an email to
+`growth@gigaid.test` within ~1 minute, both linking back to the WoW
+insight.
+
+Once everything is live:
+
+1. Paste the dashboard, insight, and subscription URLs into the
+   **Live links** section above.
+2. Capture the three screenshots listed there and commit them to
+   `docs/runbooks/screenshots/booking-link-conversion/`.
+3. Post the dashboard link in `#growth-alerts` so the team knows
+   where to find it.
 
 ## Local verification
 
