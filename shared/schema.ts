@@ -73,7 +73,16 @@ export const users = pgTable("users", {
   phoneUnreachableAt: text("phone_unreachable_at"),
   lastActiveAt: text("last_active_at"),
   publicProfileEnabled: boolean("public_profile_enabled").default(true),
-  publicProfileSlug: text("public_profile_slug").notNull(),
+  // Database-level safety net: if any insert path forgets to provide a slug,
+  // Postgres synthesizes a placeholder of the form `user-<8 hex chars>` so the
+  // NOT NULL + unique-index contract below is never violated. The application
+  // layer (see `computeBaseSlugForNewUser` in `server/db-storage.ts` and the
+  // `writeUserSlugWithRetry` helper) still derives a friendly slug from the
+  // user's name/email for normal signup flows — the DEFAULT only kicks in for
+  // bypass paths (test fixtures, ad-hoc seed inserts, future writers we
+  // haven't audited yet) and prevents a recurrence of the NULL-slug rows
+  // backfilled by `scripts/backfill-profile-slugs.ts` (Task #290).
+  publicProfileSlug: text("public_profile_slug").notNull().default(sql`'user-' || substring(gen_random_uuid()::text, 1, 8)`),
   showReviewsOnBooking: boolean("show_reviews_on_booking").default(true),
   referralCode: text("referral_code"),
   referredBy: text("referred_by"),
