@@ -19,6 +19,8 @@ export type BookingLinkShareScreen =
   | "plan_hero"
   | "plan_empty"
   | "plan_legacy"
+  | "plan_overlay"
+  | "plan_banner"
   | "leads"
   | "jobs"
   | "bookings";

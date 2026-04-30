@@ -43,6 +43,8 @@ context combo inside `BookingLinkShare`:
 | ------------------------------------------------------------ | --------------- |
 | Mobile home-screen hero card (`variant="hero"`)              | `plan_hero`     |
 | Mobile home-screen empty-state CTA                           | `plan_empty`    |
+| Mobile/tablet first-action overlay (zero shares today, once per session) | `plan_overlay`  |
+| Mobile/tablet shares-away banner above the sticky CTA (under 3 shares today, dismissable per session) | `plan_banner`   |
 | Legacy "Your Booking Link" card on plan surfaces (`variant="primary"` + `context="plan"`) — desktop game/money plan + `MoneyPlanPage` | `plan_legacy`   |
 | Leads page card (`variant="inline"` + `context="leads"`)     | `leads`         |
 | Jobs page card (`variant="compact"` + `context="jobs"`)      | `jobs`          |
@@ -78,11 +80,14 @@ a 14-day rolling window:
 1. `booking_link_share_opened` where `screen` equals the surface label.
 2. `booking_link_shared` where `screen` equals the surface label.
 
-Surfaces tracked: `plan_hero`, `plan_empty`, `plan_legacy`, `leads`,
-`jobs`, `bookings`. The dashboard uses the previous 7-day window as
-the comparison baseline ("Compare to" → "Previous period") so the
-release week sits next to the prior week for an at-a-glance lift
-read.
+Surfaces tracked: `plan_hero`, `plan_empty`, `plan_overlay`,
+`plan_banner`, `plan_legacy`, `leads`, `jobs`, `bookings`. The
+dashboard uses the previous 7-day window as the comparison baseline
+("Compare to" → "Previous period") so the release week sits next to
+the prior week for an at-a-glance lift read. `plan_overlay` and
+`plan_banner` are the conversion-funnel surfaces added with the
+first-action overlay / shares-away banner — pin both insights next
+to `plan_hero` so the home-screen funnel reads top-to-bottom.
 
 ### Recreating the dashboard
 

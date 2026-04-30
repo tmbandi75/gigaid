@@ -51,6 +51,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { BookingLinkShare } from "@/components/booking-link";
 import { BookingLinkShareSheet } from "@/components/booking-link/BookingLinkShareSheet";
+import {
+  FirstActionOverlay,
+  FIRST_ACTION_OVERLAY_SKIP_KEY,
+} from "@/components/booking-link/FirstActionOverlay";
+import {
+  SharesAwayBanner,
+  SHARES_AWAY_BANNER_DISMISSED_KEY,
+} from "@/components/booking-link/SharesAwayBanner";
+import type { BookingLinkShareScreen } from "@/lib/useBookingLinkShareAction";
 import { useUpgradeOrchestrator, useStallSignals, UpgradeNudgeModal } from "@/upgrade";
 import { useAuth } from "@/hooks/use-auth";
 import { useBookingLinkShareAction } from "@/lib/useBookingLinkShareAction";
@@ -220,6 +229,18 @@ export default function TodaysGamePlanPage() {
   const todayShareTarget =
     shareProgress?.target ?? BOOKING_LINK_DAILY_SHARE_TARGET;
 
+  // Booking link presence drives the overlay/banner gates below — both
+  // surfaces only render when the worker actually has a booking link to
+  // share. Reuses the cached query the hero card already populates.
+  const { data: bookingLinkData } = useQuery<{
+    bookingLink: string | null;
+    servicesCount: number;
+  }>({
+    queryKey: QUERY_KEYS.bookingLink(),
+    enabled: !!user?.id,
+  });
+  const hasBookingLink = !!bookingLinkData?.bookingLink;
+
   // Shared share/copy handler — same hook as the hero card so the two
   // surfaces never drift on toasts, analytics, or copy fallback. The hook
   // is still used for the missing-link guard (redirect to profile) and for
@@ -241,6 +262,43 @@ export default function TodaysGamePlanPage() {
       return;
     }
     setEmptyStateShareSheetOpen(true);
+  };
+
+  // Single share-sheet instance shared by the first-action overlay and the
+  // shares-away banner. We carry the originating screen on the sheet so
+  // its open-effect fires booking_link_share_opened with the correct
+  // attribution (`plan_overlay` vs `plan_banner`) and we never mount two
+  // extra sheet copies just to differentiate analytics.
+  const [funnelShareSheetOpen, setFunnelShareSheetOpen] = useState(false);
+  const [funnelShareScreen, setFunnelShareScreen] =
+    useState<BookingLinkShareScreen>("plan_overlay");
+
+  // Both the overlay and the banner persist their dismissal in
+  // sessionStorage so a refresh within the same tab doesn't replay them,
+  // but a brand-new session brings them back. We initialise the in-memory
+  // flags lazily from sessionStorage to avoid a hydration flash.
+  const [overlaySkipped, setOverlaySkipped] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.sessionStorage.getItem(FIRST_ACTION_OVERLAY_SKIP_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [bannerDismissed, setBannerDismissed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return (
+        window.sessionStorage.getItem(SHARES_AWAY_BANNER_DISMISSED_KEY) === "1"
+      );
+    } catch {
+      return false;
+    }
+  });
+
+  const openFunnelShareSheet = (screen: BookingLinkShareScreen) => {
+    setFunnelShareScreen(screen);
+    setFunnelShareSheetOpen(true);
   };
 
   const actMutation = useApiMutation(
@@ -292,11 +350,37 @@ export default function TodaysGamePlanPage() {
   // phones. Otherwise iPad portrait would lose the sticky CTA while still
   // rendering the mobile body.
   const stickyCtaActive = isBelowDesktop && !!stickyCtaInfo;
+
+  // Conversion-funnel surfaces: only show on the mobile/tablet hero
+  // layout, only when the worker has a booking link, and only when the
+  // share count signals they still need the nudge. The overlay hits the
+  // first-action-of-session moment (zero shares today); the banner is
+  // persistent for the wider <3-shares window so even returning users
+  // see it after dismissing the overlay.
+  const overlayVisible =
+    isBelowDesktop &&
+    hasBookingLink &&
+    todayShareCount === 0 &&
+    !overlaySkipped;
+  const bannerVisible =
+    isBelowDesktop &&
+    hasBookingLink &&
+    todayShareCount < 3 &&
+    !bannerDismissed;
+
+  // Reserve enough space below floating UI (VoiceFAB) for whatever
+  // bottom-anchored elements are currently mounted: nothing, just the
+  // sticky CTA, just the banner, or both stacked.
   useEffect(() => {
-    if (!stickyCtaActive) return;
+    if (!stickyCtaActive && !bannerVisible) return;
     const root = document.documentElement;
     const previous = root.style.getPropertyValue("--sticky-cta-offset");
-    root.style.setProperty("--sticky-cta-offset", "4.5rem");
+    const offset = stickyCtaActive && bannerVisible
+      ? "8rem"
+      : stickyCtaActive
+        ? "4.5rem"
+        : "3.5rem";
+    root.style.setProperty("--sticky-cta-offset", offset);
     return () => {
       if (previous) {
         root.style.setProperty("--sticky-cta-offset", previous);
@@ -304,7 +388,7 @@ export default function TodaysGamePlanPage() {
         root.style.removeProperty("--sticky-cta-offset");
       }
     };
-  }, [stickyCtaActive]);
+  }, [stickyCtaActive, bannerVisible]);
 
   if (isLoading) {
     return (
@@ -393,7 +477,12 @@ export default function TodaysGamePlanPage() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="block lg:hidden mx-auto md:max-w-2xl space-y-5 px-4 md:px-8 py-4 pb-28"
+        // Bump bottom padding when the shares-away banner is visible so
+        // its fixed-position pill sitting above the sticky CTA doesn't
+        // cover the last cards in the scroll content.
+        className={`block lg:hidden mx-auto md:max-w-2xl space-y-5 px-4 md:px-8 py-4 ${
+          bannerVisible ? "pb-40" : "pb-28"
+        }`}
       >
 
         {/*
@@ -650,6 +739,20 @@ export default function TodaysGamePlanPage() {
           context="plan"
         />
 
+        {/*
+          Shared share-sheet instance for the first-action overlay and
+          shares-away banner. Its `screen` prop carries the funnel
+          surface so booking_link_share_opened analytics distinguish
+          plan_overlay from plan_banner without us mounting two extra
+          sheet copies.
+        */}
+        <BookingLinkShareSheet
+          open={funnelShareSheetOpen}
+          onOpenChange={setFunnelShareSheetOpen}
+          screen={funnelShareScreen}
+          context="plan"
+        />
+
         {/* CARD 3 — Up Next (secondary actions) */}
         {upNextItems.length > 0 && (
           <motion.section variants={itemVariants}>
@@ -861,6 +964,43 @@ export default function TodaysGamePlanPage() {
           </motion.section>
         )}
       </motion.div>
+
+      {/* First-action full-screen overlay — once-per-session nudge for
+          mobile/tablet pros who have a booking link but haven't shared
+          yet today. The overlay opens the shared funnel sheet with
+          screen="plan_overlay" so analytics attribute the resulting
+          share to this surface. */}
+      <FirstActionOverlay
+        open={overlayVisible}
+        onSendLink={() => {
+          // Skip the overlay for the rest of the session as soon as
+          // we hand off to the share sheet — otherwise it would re-
+          // mount on top of the sheet on the next render.
+          try {
+            window.sessionStorage.setItem(
+              FIRST_ACTION_OVERLAY_SKIP_KEY,
+              "1",
+            );
+          } catch {
+            // sessionStorage unavailable: still flip the in-memory flag
+            // so the overlay stays closed for this mount.
+          }
+          setOverlaySkipped(true);
+          openFunnelShareSheet("plan_overlay");
+        }}
+        onSkip={() => setOverlaySkipped(true)}
+      />
+
+      {/* Persistent shares-away banner — sits just above the sticky CTA
+          (or in its slot when no sticky CTA) for any pro under 3 shares
+          today. Dismissable for the session via the × button. */}
+      <SharesAwayBanner
+        open={bannerVisible}
+        todayShareCount={todayShareCount}
+        stickyCtaActive={stickyCtaActive}
+        onSendLink={() => openFunnelShareSheet("plan_banner")}
+        onDismiss={() => setBannerDismissed(true)}
+      />
 
       {/* Sticky bottom CTA — shown alongside the mobile/tablet hero layout
           (i.e. < lg / 1024px). Use the same gate as `stickyCtaActive` so the
