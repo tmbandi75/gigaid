@@ -483,7 +483,7 @@ export default function Invoices() {
   const renderDesktopLayout = () => (
     <div className="flex flex-col min-h-full bg-background" data-testid="page-invoices">
       <div className="border-b bg-background sticky top-0 z-[999]">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+        <div className="max-w-2xl lg:max-w-7xl mx-auto px-6 lg:px-8 py-5">
           <div className="flex items-center justify-between gap-6">
             <div className="flex items-center gap-4">
               <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/10 flex items-center justify-center">
@@ -530,7 +530,7 @@ export default function Invoices() {
         </div>
       </div>
       
-      <div className="flex-1 max-w-7xl mx-auto w-full px-6 lg:px-8 py-6">
+      <div className="flex-1 max-w-2xl lg:max-w-7xl mx-auto w-full px-6 lg:px-8 py-6">
         <div className="flex items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg">
             {filters.map((f) => (
