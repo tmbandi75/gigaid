@@ -8,6 +8,17 @@
  * `tests/utils/writeUserSlugWithRetry.unit.test.ts`. Without this index in
  * place the helper would have nothing to retry against.
  *
+ * Note: this suite used to also assert that inserting `publicProfileSlug:
+ * null` was rejected with a NOT NULL violation (SQLSTATE 23502). That
+ * assertion predates Task #291, which added a DB-level DEFAULT to the column
+ * (`'user-' || substring(gen_random_uuid()::text, 1, 8)`). Drizzle's insert
+ * builder strips explicit `null`s for columns with a default, so the row
+ * went through, the DEFAULT fired, and the assertion failed on every run —
+ * dead code that produced a confusing failure right next to the genuinely
+ * passing slug tests. The "every account always has a booking link"
+ * invariant is now covered by the DEFAULT, regression-tested in
+ * `tests/api/usersSlugDefault.test.ts`.
+ *
  * Skipped automatically when DATABASE_URL is not set so the rest of the
  * suite stays runnable on a clean local checkout.
  */
@@ -15,7 +26,7 @@
 const HAS_DB = !!process.env.DATABASE_URL;
 const d = HAS_DB ? describe : describe.skip;
 
-d("users.public_profile_slug unique index + NOT NULL (DB-bound)", () => {
+d("users.public_profile_slug unique index (DB-bound)", () => {
   let db: typeof import("../../server/db")["db"];
   let pool: typeof import("../../server/db")["pool"];
   let schema: typeof import("../../shared/schema");
@@ -37,7 +48,6 @@ d("users.public_profile_slug unique index + NOT NULL (DB-bound)", () => {
         inArray(schema.users.username, [
           `${suiteId}-a`,
           `${suiteId}-b`,
-          `${suiteId}-null`,
         ]),
       );
     await pool.end().catch(() => undefined);
@@ -58,19 +68,5 @@ d("users.public_profile_slug unique index + NOT NULL (DB-bound)", () => {
         publicProfileSlug: slug,
       } as any),
     ).rejects.toMatchObject({ code: "23505" });
-  });
-
-  it("rejects an insert with a NULL slug (column is NOT NULL)", async () => {
-    // The column-level NOT NULL constraint is the database half of the
-    // "every account always has a booking link" invariant. Bypassing
-    // `createUser` (which always derives a slug) and inserting NULL
-    // directly must fail with Postgres's not_null_violation (23502).
-    await expect(
-      db.insert(schema.users).values({
-        username: `${suiteId}-null`,
-        password: "x",
-        publicProfileSlug: null,
-      } as any),
-    ).rejects.toMatchObject({ code: "23502" });
   });
 });
