@@ -8,7 +8,7 @@ import { PageSpinner } from "@/components/ui/spinner";
 import { apiFetch } from "@/lib/apiFetch";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useApiMutation } from "@/hooks/useApiMutation";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsBelowDesktop } from "@/hooks/use-mobile";
 import {
   Dialog,
   DialogContent,
@@ -158,7 +158,11 @@ export default function TodaysGamePlanPage() {
   const queryClient = useQueryClient();
   const [showVoiceNotes, setShowVoiceNotes] = useState(false);
   const [showAddService, setShowAddService] = useState(false);
-  const isMobile = useIsMobile();
+  // Tablet widths (768–1023px) reuse the mobile hero layout because the
+  // desktop view's column grid only kicks in at lg (≥1024px). Without this,
+  // iPad-portrait users would see the desktop layout AND the mobile hero
+  // would disappear, leaving two competing booking-link surfaces.
+  const isBelowDesktop = useIsBelowDesktop();
   const stallSignals = useStallSignals();
   const stallOrchestrator = useUpgradeOrchestrator({ capabilityKey: 'sms.auto_followups', surface: 'game_plan' });
   const { user } = useAuth();
@@ -271,7 +275,11 @@ export default function TodaysGamePlanPage() {
     [stats, priorityItem, nbaState]
   );
 
-  const stickyCtaActive = isMobile && !!stickyCtaInfo;
+  // The sticky CTA is part of the mobile/tablet hero experience; show it on
+  // any width that renders the mobile layout (i.e. < lg / 1024px), not just
+  // phones. Otherwise iPad portrait would lose the sticky CTA while still
+  // rendering the mobile body.
+  const stickyCtaActive = isBelowDesktop && !!stickyCtaInfo;
   useEffect(() => {
     if (!stickyCtaActive) return;
     const root = document.documentElement;
@@ -297,7 +305,7 @@ export default function TodaysGamePlanPage() {
   return (
     <div className="min-h-screen bg-background" data-testid="page-game-plan">
       {/* Header */}
-      {isMobile ? (
+      {isBelowDesktop ? (
         <div className="px-5 pt-5 pb-4 bg-background">
           <p
             className="text-t-meta font-regular text-muted-foreground mb-1"
@@ -335,8 +343,11 @@ export default function TodaysGamePlanPage() {
         </div>
       )}
 
-      {/* Desktop layout */}
-      <div className="hidden md:block">
+      {/* Desktop layout — only ≥ lg (1024px). Tablet widths (md: 768–1023px)
+          fall through to the mobile/tablet hero layout below so iPad-portrait
+          users see the new hero booking-link card and don't end up with a
+          stretched desktop grid that has its own competing booking-link card. */}
+      <div className="hidden lg:block">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6">
           <GamePlanDesktopView
             priorityItem={priorityItem}
@@ -370,7 +381,7 @@ export default function TodaysGamePlanPage() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="block md:hidden space-y-5 px-4 py-4 pb-28"
+        className="block lg:hidden space-y-5 px-4 py-4 pb-28"
       >
 
         {/*
@@ -832,8 +843,10 @@ export default function TodaysGamePlanPage() {
         )}
       </motion.div>
 
-      {/* Sticky bottom CTA (mobile only) — driven by money-waiting, invoice priority, or NBA primary */}
-      {isMobile && stickyCtaInfo && (
+      {/* Sticky bottom CTA — shown alongside the mobile/tablet hero layout
+          (i.e. < lg / 1024px). Use the same gate as `stickyCtaActive` so the
+          CSS offset effect and the rendered CTA can never disagree. */}
+      {stickyCtaActive && stickyCtaInfo && (
         <div
           className="fixed left-0 right-0 p-3 z-50"
           style={{ bottom: "calc(4rem + var(--safe-area-inset-bottom))" }}
