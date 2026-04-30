@@ -913,7 +913,7 @@ export default function Settings() {
 
   const renderDesktopHeader = () => (
     <div className="border-b bg-background sticky top-0 z-[999]">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5 flex items-center gap-4">
+      <div className="max-w-2xl lg:max-w-7xl mx-auto px-6 md:px-8 py-5 flex items-center gap-4">
         <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-slate-500/10 to-gray-500/10 flex items-center justify-center">
           <SettingsIcon className="h-6 w-6 text-slate-700 dark:text-slate-300" />
         </div>
@@ -959,7 +959,7 @@ export default function Settings() {
       {isMobile ? renderMobileHeader() : renderDesktopHeader()}
 
       <div
-        className={`${isMobile ? "px-4 py-4" : "max-w-7xl mx-auto px-6 lg:px-8 py-6"} space-y-4`}
+        className="px-4 py-4 md:max-w-2xl md:mx-auto md:px-8 md:py-6 lg:max-w-7xl space-y-4"
       >
         {/* SECTION 1: Get Paid (always expanded by default) */}
         <SettingsSectionAccordion

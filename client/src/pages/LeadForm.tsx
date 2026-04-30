@@ -264,7 +264,7 @@ export default function LeadForm() {
 
   const renderDesktopHeader = () => (
     <div className="border-b bg-background sticky top-0 z-[999]">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5 flex items-center gap-4">
+      <div className="max-w-2xl lg:max-w-7xl mx-auto px-6 md:px-8 py-5 flex items-center gap-4">
         <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
           <UserPlus className="h-6 w-6 text-white" />
         </div>
@@ -290,7 +290,7 @@ export default function LeadForm() {
     <div className="flex flex-col min-h-full" data-testid="page-lead-form">
       {isMobile ? renderMobileHeader() : renderDesktopHeader()}
       
-      <div className={`flex-1 ${isMobile ? "px-4 py-4" : "px-6 lg:px-8 lg:max-w-7xl lg:mx-auto"} ${isMobile ? "pb-6" : "pb-12"}`}>
+      <div className="flex-1 px-4 py-4 pb-6 md:max-w-2xl md:mx-auto md:px-8 md:py-6 md:pb-12 lg:max-w-7xl lg:pt-0">
         {isMobile && (
           <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
             <Button

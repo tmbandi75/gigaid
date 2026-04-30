@@ -236,7 +236,7 @@ export default function InvoiceForm() {
 
   const renderDesktopHeader = () => (
     <div className="border-b bg-background sticky top-0 z-[999]">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+      <div className="max-w-2xl lg:max-w-7xl mx-auto px-6 md:px-8 py-5">
         <div className="flex items-center gap-4">
           <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/10 flex items-center justify-center">
             <FileText className="h-6 w-6 text-blue-600" />
@@ -269,7 +269,7 @@ export default function InvoiceForm() {
     <div className="flex flex-col min-h-full" data-testid="page-invoice-form">
       {isMobile ? renderMobileHeader() : renderDesktopHeader()}
       
-      <div className={isMobile ? "px-4 py-4 pb-8" : "px-6 lg:px-8 max-w-7xl mx-auto w-full py-6"}>
+      <div className="w-full px-4 py-4 pb-8 md:max-w-2xl md:mx-auto md:px-8 md:py-6 lg:max-w-7xl">
         {isMobile && (
           <Button
             variant="ghost"

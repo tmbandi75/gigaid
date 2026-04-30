@@ -178,7 +178,7 @@ export default function OwnerView() {
 
   const renderDesktopHeader = () => (
     <div className="border-b bg-background sticky top-0 z-[999]">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+      <div className="max-w-2xl lg:max-w-7xl mx-auto px-6 md:px-8 py-5">
         <div className="flex items-center gap-4">
           <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center">
             <Crown className="h-6 w-6 text-white" />
@@ -196,7 +196,7 @@ export default function OwnerView() {
     <div className={`flex flex-col min-h-full bg-background ${isMobile ? "pb-20" : "pb-8"}`} data-testid="page-owner-view">
       {isMobile ? renderMobileHeader() : renderDesktopHeader()}
       
-      <div className={`${isMobile ? "px-4 py-4" : "max-w-7xl mx-auto px-6 lg:px-8 py-8"} w-full`}>
+      <div className="w-full px-4 py-4 md:max-w-2xl md:mx-auto md:px-8 md:py-8 lg:max-w-7xl">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <MetricCard
             title="Weekly Revenue"
