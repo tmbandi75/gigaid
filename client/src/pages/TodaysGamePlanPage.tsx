@@ -76,6 +76,7 @@ import { GamePlanDesktopView } from "@/components/game-plan/GamePlanDesktopView"
 import { NextBestActionCard, deriveNBAState } from "@/components/dashboard/NextBestActionCard";
 import type { NBAState } from "@/lib/nbaState";
 import { shouldDemoteNBAMoneyTone, shouldSuppressBookingLinkPrimary } from "@/lib/nbaStyling";
+import { trackEvent } from "@/components/PostHogProvider";
 
 interface RecentItem {
   id: string;
@@ -366,6 +367,41 @@ export default function TodaysGamePlanPage() {
       description: "Most pros land their first booking around here.",
     });
   }, [shareProgress, toast]);
+
+  // One-shot follow_up_card_shown PostHog event — fires the first time
+  // the follow-up card actually becomes eligible to render in this
+  // browser session. Mirrors the eligibility predicate used to render
+  // <FollowUpCard /> further down (mobile/tablet + booking link +
+  // ≥2 shares + not already dismissed-or-sent for this session). The
+  // sessionStorage guard pairs with FOLLOW_UP_DISMISSED_KEY /
+  // FOLLOW_UP_SENT_KEY so we never double-count "shown" if the user
+  // navigates away and back, or if the card briefly remounts during
+  // route transitions. Together with follow_up_card_dismissed and
+  // follow_up_card_auto_hidden this gives us a clean shown -> shared
+  // vs shown -> dismissed funnel in PostHog.
+  useEffect(() => {
+    if (!isBelowDesktop) return;
+    if (!hasBookingLink) return;
+    if (todayShareCount < 2) return;
+    if (followUpDismissed) return;
+    try {
+      if (
+        window.sessionStorage.getItem("gigaid:booking-followup-shown-tracked") ===
+        "1"
+      ) {
+        return;
+      }
+      window.sessionStorage.setItem(
+        "gigaid:booking-followup-shown-tracked",
+        "1",
+      );
+    } catch {
+      // sessionStorage unavailable — accept the rare risk of re-firing
+      // on remount within the same session rather than dropping the
+      // event entirely.
+    }
+    trackEvent("follow_up_card_shown", { todayShareCount });
+  }, [isBelowDesktop, hasBookingLink, todayShareCount, followUpDismissed]);
 
   const actMutation = useApiMutation(
     (id: string) => apiFetch(`/api/next-actions/${id}/act`, { method: "POST" }),
@@ -816,7 +852,7 @@ export default function TodaysGamePlanPage() {
           screen={funnelShareScreen}
           context="plan"
           messageOverride={funnelShareMessageOverride}
-          onShared={() => {
+          onShared={(method) => {
             // Auto-hide the follow-up card the moment the pro actually
             // sends a follow-up so we don't keep nagging them after
             // they've taken the action. Only fires on the follow-up
@@ -829,6 +865,18 @@ export default function TodaysGamePlanPage() {
               // sessionStorage unavailable — in-memory flag below still
               // hides the card for the rest of this mount.
             }
+            // Telemetry counterpart to follow_up_card_dismissed (fired
+            // from FollowUpCard's × handler). The existing
+            // booking_link_shared event already records the share with
+            // screen=plan_followup; this extra event lets us build a
+            // shown -> auto_hidden funnel without re-deriving it from
+            // share-method joins. todayShareCount is the pre-share
+            // count so the funnel groups by the cohort that saw the
+            // card, not the post-share count.
+            trackEvent("follow_up_card_auto_hidden", {
+              todayShareCount,
+              method,
+            });
             setFollowUpDismissed(true);
             toast({
               title: "Follow-up sent — nice work",
@@ -851,6 +899,7 @@ export default function TodaysGamePlanPage() {
             <motion.div variants={itemVariants}>
               <FollowUpCard
                 open
+                todayShareCount={todayShareCount}
                 onSendFollowUp={() => {
                   const link = bookingLinkData?.bookingLink ?? "";
                   const followUpMessage = link
