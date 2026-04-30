@@ -1,0 +1,144 @@
+You are adding lightweight event tracking and progress tracking to an existing React + Node (or serverless) app.
+
+IMPORTANT:
+- DO NOT refactor existing architecture
+- DO NOT break existing routes
+- ADD new functionality only
+- Keep changes minimal and safe
+
+-----------------------------------
+GOAL
+-----------------------------------
+
+Track user actions and power the "0/5 shares" progress system.
+
+We will track:
+1. Link copied (proxy for shares)
+2. Booking link viewed
+3. First booking completed
+
+-----------------------------------
+BACKEND CHANGES
+-----------------------------------
+
+1. CREATE TABLE (or collection)
+
+Name: booking_page_events
+
+Fields:
+- id (uuid)
+- user_id (string)
+- booking_page_id (string)
+- event_type (string) // "link_copied", "link_viewed", "booking_completed"
+- created_at (timestamp)
+
+-----------------------------------
+
+2. CREATE API ENDPOINT
+
+POST /api/events
+
+Body:
+{
+  userId,
+  bookingPageId,
+  eventType
+}
+
+Logic:
+- Insert into booking_page_events
+- Return success
+
+-----------------------------------
+
+3. CREATE PROGRESS ENDPOINT
+
+GET /api/progress/:userId
+
+Logic:
+- Count number of "link_copied" events for TODAY
+- Return:
+{
+  sharesToday: number,
+  goal: 5
+}
+
+-----------------------------------
+
+4. OPTIONAL (if booking system exists)
+
+When a booking is completed:
+→ Insert event_type = "booking_completed"
+
+-----------------------------------
+FRONTEND CHANGES
+-----------------------------------
+
+1. TRACK LINK COPY
+
+Find booking link copy button
+
+On click:
+- Call POST /api/events
+  eventType: "link_copied"
+
+-----------------------------------
+
+2. TRACK LINK VISITS (IMPORTANT)
+
+On booking page load (/book/:slug):
+
+- Call POST /api/events
+  eventType: "link_viewed"
+
+-----------------------------------
+
+3. FETCH PROGRESS
+
+On Plan/Home screen load:
+
+- Call GET /api/progress/:userId
+
+- Replace static:
+  "0 / 5 shares"
+
+With dynamic:
+  "{sharesToday} / 5 shares"
+
+-----------------------------------
+
+4. ADD SIMPLE PROGRESSION FEEDBACK
+
+After link copy:
+
+- Show toast:
+  "Nice — you're one step closer to getting booked"
+
+-----------------------------------
+
+5. DO NOT BREAK UI
+
+- Keep all existing components
+- Only inject logic into:
+  - Copy button
+  - Booking page load
+  - Home screen progress display
+
+-----------------------------------
+
+6. ERROR HANDLING
+
+- Fail silently if tracking fails
+- Do NOT block UI actions
+
+-----------------------------------
+
+OUTPUT
+
+Return:
+- Backend route code
+- Frontend integration snippets
+- Minimal explanation
+- Safe, production-ready code
+
+-----------------------------------
