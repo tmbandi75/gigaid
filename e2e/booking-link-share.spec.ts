@@ -1,7 +1,7 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 import { BASE_URL } from './helpers';
 
-type Variant = 'primary' | 'inline' | 'compact';
+type Variant = 'primary' | 'inline' | 'compact' | 'hero';
 
 interface CapturedEvent {
   eventName: string;
@@ -24,6 +24,11 @@ const COPY_TEST_IDS: Record<Variant, string> = {
   primary: 'button-copy-booking-link',
   inline: 'button-copy-booking-link-leads',
   compact: 'button-share-booking-link-jobs',
+  // Hero variant has its own "Just copy the link" ghost button, but the
+  // mount-readiness sentinel for the hero harness is the primary CTA that
+  // opens the new guided share sheet. The hero card has no traditional
+  // copy CTA — the secondary copy-only ghost link is `button-hero-copy-only`.
+  hero: 'button-hero-copy-send-booking-link',
 };
 
 const SHARE_TEST_IDS: Record<Variant, string | null> = {
@@ -31,6 +36,10 @@ const SHARE_TEST_IDS: Record<Variant, string | null> = {
   inline: 'button-share-booking-link-leads',
   // Compact variant only has a copy button — no share button to drive.
   compact: null,
+  // Hero variant opens the guided share sheet rather than the OS share
+  // API; it has its own dedicated test block below and is intentionally
+  // excluded from the shared share-button assertions.
+  hero: null,
 };
 
 // Per-variant PostHog `screen` label. The harness always passes context="plan",
@@ -314,6 +323,125 @@ test.describe('BookingLinkShare card', () => {
           expect(completed).toHaveLength(0);
         });
       }
+
+      // ---------------- Hero variant — guided share sheet ----------------
+      test.describe('hero variant guided share sheet', () => {
+        test('clicking the hero CTA opens the share sheet and fires booking_link_share_opened', async ({
+          page,
+        }) => {
+          await installHarnessStubs(page);
+          await gotoHarness(page, 'hero');
+          await clearCapturedAnalytics(page);
+
+          await page.locator('[data-testid="button-hero-copy-send-booking-link"]').click();
+
+          await expect(page.locator('[data-testid="sheet-booking-link-share"]')).toBeVisible();
+          await expect(page.locator('[data-testid="textarea-share-sheet-message"]')).toBeVisible();
+
+          const events = await getCapturedAnalytics(page);
+          const opened = events.filter((e) => e.eventName === 'booking_link_share_opened');
+          expect(opened).toHaveLength(1);
+          expect(opened[0].properties).toMatchObject({ screen: 'plan_hero' });
+        });
+
+        test('SMS button records booking_link_shared with method "sms"', async ({ page }) => {
+          await installHarnessStubs(page);
+          // Stub navigation away by intercepting the sms: handler — Playwright
+          // can't open sms: URLs but window.location.href assignment is fine
+          // and the test only cares about the analytics + API call that happen
+          // on the click itself.
+          await page.addInitScript(() => {
+            const w = window as unknown as { __smsHrefs?: string[] };
+            w.__smsHrefs = [];
+            const orig = Object.getOwnPropertyDescriptor(window.location, 'href');
+            Object.defineProperty(window.location, 'href', {
+              configurable: true,
+              get: () => orig?.get?.call(window.location) ?? '',
+              set: (v: string) => {
+                if (v.startsWith('sms:')) {
+                  w.__smsHrefs!.push(v);
+                  return;
+                }
+                orig?.set?.call(window.location, v);
+              },
+            });
+          });
+          await gotoHarness(page, 'hero');
+          await page.locator('[data-testid="button-hero-copy-send-booking-link"]').click();
+          await clearCapturedAnalytics(page);
+
+          await page.locator('[data-testid="button-share-sheet-sms"]').click();
+          await page.waitForTimeout(300);
+
+          const events = await getCapturedAnalytics(page);
+          const completed = events.filter((e) => e.eventName === 'booking_link_shared');
+          expect(completed).toHaveLength(1);
+          expect(completed[0].properties).toMatchObject({
+            screen: 'plan_hero',
+            method: 'sms',
+          });
+
+          const smsHrefs = await page.evaluate(
+            () => (window as unknown as { __smsHrefs: string[] }).__smsHrefs ?? [],
+          );
+          expect(smsHrefs.length).toBeGreaterThan(0);
+          expect(smsHrefs[0]).toContain('sms:');
+        });
+
+        test('WhatsApp button records booking_link_shared with method "whatsapp"', async ({
+          page,
+        }) => {
+          await installHarnessStubs(page);
+          // Stub window.open so the test does not actually navigate to wa.me.
+          await page.addInitScript(() => {
+            const w = window as unknown as { __waUrls?: string[] };
+            w.__waUrls = [];
+            window.open = ((url?: string | URL) => {
+              if (url) w.__waUrls!.push(String(url));
+              return null;
+            }) as typeof window.open;
+          });
+          await gotoHarness(page, 'hero');
+          await page.locator('[data-testid="button-hero-copy-send-booking-link"]').click();
+          await clearCapturedAnalytics(page);
+
+          await page.locator('[data-testid="button-share-sheet-whatsapp"]').click();
+          await page.waitForTimeout(300);
+
+          const events = await getCapturedAnalytics(page);
+          const completed = events.filter((e) => e.eventName === 'booking_link_shared');
+          expect(completed).toHaveLength(1);
+          expect(completed[0].properties).toMatchObject({
+            screen: 'plan_hero',
+            method: 'whatsapp',
+          });
+
+          const waUrls = await page.evaluate(
+            () => (window as unknown as { __waUrls: string[] }).__waUrls ?? [],
+          );
+          expect(waUrls.length).toBeGreaterThan(0);
+          expect(waUrls[0]).toContain('wa.me');
+        });
+
+        test('Copy button records booking_link_shared with method "copy"', async ({ page }) => {
+          await installHarnessStubs(page);
+          await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+          await gotoHarness(page, 'hero');
+          await page.locator('[data-testid="button-hero-copy-send-booking-link"]').click();
+          await clearCapturedAnalytics(page);
+
+          await page.locator('[data-testid="button-share-sheet-copy"]').click();
+          await page.waitForTimeout(300);
+
+          const events = await getCapturedAnalytics(page);
+          const completed = events.filter((e) => e.eventName === 'booking_link_shared');
+          expect(completed).toHaveLength(1);
+          expect(completed[0].properties).toMatchObject({
+            screen: 'plan_hero',
+            method: 'copy',
+          });
+        });
+      });
     });
   }
 });

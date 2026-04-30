@@ -50,6 +50,7 @@ import { AddServiceDialog } from "@/components/settings/AddServiceDialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { BookingLinkShare } from "@/components/booking-link";
+import { BookingLinkShareSheet } from "@/components/booking-link/BookingLinkShareSheet";
 import { useUpgradeOrchestrator, useStallSignals, UpgradeNudgeModal } from "@/upgrade";
 import { useAuth } from "@/hooks/use-auth";
 import { useBookingLinkShareAction } from "@/lib/useBookingLinkShareAction";
@@ -220,15 +221,26 @@ export default function TodaysGamePlanPage() {
     shareProgress?.target ?? BOOKING_LINK_DAILY_SHARE_TARGET;
 
   // Shared share/copy handler — same hook as the hero card so the two
-  // surfaces never drift on toasts, analytics, or copy fallback.
+  // surfaces never drift on toasts, analytics, or copy fallback. The hook
+  // is still used for the missing-link guard (redirect to profile) and for
+  // the underlying booking link / hasServices state.
   const emptyStateBookingLinkShare = useBookingLinkShareAction({
     screen: "plan_empty",
     context: "plan",
     redirectToProfileWhenMissing: true,
   });
 
+  const [emptyStateShareSheetOpen, setEmptyStateShareSheetOpen] = useState(false);
+
   const handleEmptyStateSendBookingLink = () => {
-    void emptyStateBookingLinkShare.share();
+    // Reuse the hook's missing-link guard: when the worker has no services
+    // configured, `share()` redirects them to /profile and we never open
+    // the sheet. Otherwise we open the guided share sheet.
+    if (!emptyStateBookingLinkShare.hasServices || !emptyStateBookingLinkShare.bookingLink) {
+      void emptyStateBookingLinkShare.share();
+      return;
+    }
+    setEmptyStateShareSheetOpen(true);
   };
 
   const actMutation = useApiMutation(
@@ -630,6 +642,13 @@ export default function TodaysGamePlanPage() {
             ) : null}
           </AnimatePresence>
         </motion.section>
+
+        <BookingLinkShareSheet
+          open={emptyStateShareSheetOpen}
+          onOpenChange={setEmptyStateShareSheetOpen}
+          screen="plan_empty"
+          context="plan"
+        />
 
         {/* CARD 3 — Up Next (secondary actions) */}
         {upNextItems.length > 0 && (

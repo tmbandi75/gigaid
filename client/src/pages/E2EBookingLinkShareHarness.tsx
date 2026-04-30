@@ -1,6 +1,6 @@
 import { BookingLinkShare } from "@/components/booking-link";
 
-type Variant = "primary" | "inline" | "compact";
+type Variant = "primary" | "inline" | "compact" | "hero";
 
 function readParam<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
   const search = typeof window !== "undefined" ? window.location.search : "";
@@ -9,7 +9,7 @@ function readParam<T extends string>(key: string, allowed: readonly T[], fallbac
   return (allowed as readonly string[]).includes(raw ?? "") ? (raw as T) : fallback;
 }
 
-const VARIANTS = ["primary", "inline", "compact"] as const;
+const VARIANTS = ["primary", "inline", "compact", "hero"] as const;
 
 /**
  * E2E-only harness that mounts the standalone BookingLinkShare card so a

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Copy, Share2, Link2, Check } from "lucide-react";
@@ -5,6 +6,7 @@ import {
   useBookingLinkShareAction,
   type BookingLinkShareScreen,
 } from "@/lib/useBookingLinkShareAction";
+import { BookingLinkShareSheet } from "./BookingLinkShareSheet";
 
 type BookingLinkShareProps = {
   variant: "primary" | "inline" | "compact" | "hero";
@@ -15,6 +17,7 @@ type BookingLinkShareProps = {
 
 export function BookingLinkShare({ variant, context, demoted = false }: BookingLinkShareProps) {
   const isPrimary = variant === "primary";
+  const [shareSheetOpen, setShareSheetOpen] = useState(false);
   // Per-surface screen labels for PostHog so we can compare share-open →
   // share-completed conversion across the new mobile hero, the empty-state
   // CTA, and the legacy primary card. See docs/runbooks/booking-link-conversion.md.
@@ -73,7 +76,7 @@ export function BookingLinkShare({ variant, context, demoted = false }: BookingL
             size="lg"
             variant={demoted ? "outline" : "default"}
             className="w-full"
-            onClick={handleShare}
+            onClick={() => setShareSheetOpen(true)}
             data-testid="button-hero-copy-send-booking-link"
           >
             {copied ? (
@@ -84,7 +87,7 @@ export function BookingLinkShare({ variant, context, demoted = false }: BookingL
             ) : (
               <>
                 <Share2 className="h-4 w-4 mr-2" />
-                Copy &amp; Send My Booking Link
+                Send My Booking Link
               </>
             )}
           </Button>
@@ -107,6 +110,12 @@ export function BookingLinkShare({ variant, context, demoted = false }: BookingL
             </Button>
           </div>
         </CardContent>
+        <BookingLinkShareSheet
+          open={shareSheetOpen}
+          onOpenChange={setShareSheetOpen}
+          screen={screen}
+          context={context}
+        />
       </Card>
     );
   }
