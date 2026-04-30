@@ -22,30 +22,10 @@ export type BookingLinkShareScreen =
   | "bookings";
 
 export interface UseBookingLinkShareActionOptions {
-  /**
-   * Screen / surface label sent to PostHog so we can break the share
-   * funnel down by where the user kicked off the action.
-   */
   screen: BookingLinkShareScreen;
-  /**
-   * Server-side analytics context (legacy — kept for backwards compat
-   * with `recordCopy` / `recordShareTap`). Defaults to "plan".
-   */
   context?: "plan" | "leads" | "jobs" | "bookings";
-  /**
-   * Title shown in the OS share sheet on platforms that surface it.
-   */
   shareTitle?: string;
-  /**
-   * Body text shown in the OS share sheet (alongside the URL).
-   */
   shareText?: string;
-  /**
-   * When true, navigates the user to /profile if the booking link
-   * isn't ready yet (e.g. they haven't added a service). Default:
-   * false (caller decides what to do via the returned `bookingLink`
-   * being null).
-   */
   redirectToProfileWhenMissing?: boolean;
 }
 
@@ -53,37 +33,14 @@ export interface UseBookingLinkShareActionResult {
   bookingLink: string | null;
   hasServices: boolean;
   copied: boolean;
-  /**
-   * Triggers the OS share sheet (or copy-fallback on platforms
-   * without `navigator.share`). Resolves once the user dismisses
-   * the share UI.
-   */
   share: () => Promise<void>;
-  /**
-   * Copies the booking link to the clipboard and records the share
-   * with method "copy". Sets `copied=true` for 2s so callers can
-   * flash a checkmark.
-   */
   copy: () => Promise<boolean>;
-  /** True when the platform supports a native share sheet. */
   supportsShare: boolean;
 }
 
 const DEFAULT_SHARE_TITLE = "Book my services";
 const DEFAULT_SHARE_TEXT = "Schedule a job with me using this link:";
 
-/**
- * Single source of truth for the booking-link share/copy action.
- * Used by:
- *  - The hero `BookingLinkShare` card on Today's Game Plan
- *  - The "Send Booking Link" button in the empty state on Today's
- *    Game Plan
- *  - Any future surface that needs the same toast + analytics
- *    behavior (leads inline, jobs compact, etc.)
- *
- * Keeping the logic here prevents drift between surfaces and
- * guarantees the analytics funnel remains consistent.
- */
 export function useBookingLinkShareAction(
   opts: UseBookingLinkShareActionOptions,
 ): UseBookingLinkShareActionResult {

@@ -9,13 +9,7 @@ import {
 type BookingLinkShareProps = {
   variant: "primary" | "inline" | "compact" | "hero";
   context: "plan" | "leads" | "jobs" | "bookings";
-  /**
-   * When true (hero variant only), the primary "Copy & Send" CTA is
-   * rendered as an outline button so it doesn't compete with another
-   * primary CTA elsewhere on the screen (e.g. the green Collect Payment
-   * card or the NBA card's own primary action). The booking link still
-   * remains visible — only the button visual weight is reduced.
-   */
+  /** Hero variant only: render the primary CTA as outline so it doesn't compete with another primary on screen. */
   demoted?: boolean;
 };
 
@@ -39,17 +33,9 @@ export function BookingLinkShare({ variant, context, demoted = false }: BookingL
       : "Book a job with me using this link",
   });
 
-  // Only show booking link if user has services set up and a booking link.
-  // The early-return below means the hook's "missing link" toast guard
-  // is a no-op on this surface — the empty-state surface in
-  // TodaysGamePlanPage opts in to that guard via the hook directly.
   if (!hasServices || !bookingLink) return null;
 
   if (variant === "hero") {
-    // Single primary action does both: trigger native share sheet
-    // (with copy fallback on platforms without share). The secondary
-    // text-link is a quieter copy-only escape hatch so the surface
-    // never carries two competing solid buttons.
     return (
       <Card
         className="border border-primary/15 shadow-md bg-primary/5 dark:bg-primary/10"

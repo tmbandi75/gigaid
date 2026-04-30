@@ -188,15 +188,8 @@ export default function TodaysGamePlanPage() {
     staleTime: 300000,
   });
 
-  // Single shared booking-link share handler — uses the same
-  // `useBookingLinkShareAction` hook that powers the hero
-  // `BookingLinkShare` card, so toasts, analytics events
-  // (`booking_link_share_opened`, `booking_link_copied`,
-  // `booking_link_shared`) and the copy/share fallback behavior
-  // never drift between the hero and the empty state. The
-  // empty-state surface opts in to the
-  // "redirect to /profile when link missing" guard since it's the
-  // primary entry point a user sees when they have no jobs.
+  // Shared share/copy handler — same hook as the hero card so the two
+  // surfaces never drift on toasts, analytics, or copy fallback.
   const emptyStateBookingLinkShare = useBookingLinkShareAction({
     screen: "plan_empty",
     context: "plan",
@@ -390,7 +383,7 @@ export default function TodaysGamePlanPage() {
                   onClick={() => navigate("/invoices")}
                   data-testid="stat-money-waiting"
                 >
-                  <CardContent className="p-3 flex items-center gap-3">
+                  <CardContent className="p-4 flex items-center gap-3">
                     <div className="h-10 w-10 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0">
                       <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                     </div>
@@ -406,7 +399,7 @@ export default function TodaysGamePlanPage() {
                   className="flex-1 border-0 shadow-sm bg-emerald-50 dark:bg-emerald-950/20"
                   data-testid="stat-money-collected"
                 >
-                  <CardContent className="p-3 flex items-center gap-3">
+                  <CardContent className="p-4 flex items-center gap-3">
                     <div className="h-10 w-10 rounded-xl bg-emerald-500/15 flex items-center justify-center shrink-0">
                       <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                     </div>
@@ -453,12 +446,7 @@ export default function TodaysGamePlanPage() {
 
         <CampaignSuggestionBanner />
 
-        {/*
-          Note: the standalone BookingLinkShare(variant="primary") block
-          that used to live here has been replaced by the hero booking-
-          link card rendered at the top of this container. Keeping it
-          here would render the booking-link surface twice on mobile.
-        */}
+        {/* Booking-link surface lives in the hero card at the top of this container. */}
 
         {showNBACard && (
           <motion.div variants={itemVariants}>
@@ -567,14 +555,6 @@ export default function TodaysGamePlanPage() {
                 exit={{ opacity: 0, y: -8 }}
               >
                 <Card className="border shadow-sm" data-testid="card-all-caught-up">
-                  {/*
-                    Empty state is the only above-the-fold "primary action"
-                    card visible when the user has no jobs and no money
-                    waiting, so it gets the same hero-tier p-5 padding as
-                    the BookingLinkShare hero card and the Collect Payment
-                    card. List items below (Up Next, Smart Suggestions)
-                    keep their compact p-3 padding.
-                  */}
                   <CardContent className="p-5 text-center">
                     <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
                       <Briefcase className="h-6 w-6 text-primary" />
@@ -633,7 +613,7 @@ export default function TodaysGamePlanPage() {
                     onClick={() => navigate(item.actionRoute)}
                     data-testid={`card-upnext-${item.id}`}
                   >
-                    <CardContent className="p-3">
+                    <CardContent className="p-4">
                       <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-xl bg-muted/60 flex items-center justify-center shrink-0">
                           <Icon className="h-4 w-4 text-muted-foreground" />
@@ -671,7 +651,7 @@ export default function TodaysGamePlanPage() {
                     className="border shadow-sm"
                     data-testid={`card-suggestion-${action.id}`}
                   >
-                    <CardContent className="p-3">
+                    <CardContent className="p-4">
                       <div className="flex items-start gap-3">
                         <div className="h-9 w-9 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0 mt-0.5">
                           <Icon className="h-4 w-4 text-violet-600 dark:text-violet-400" />
@@ -727,7 +707,7 @@ export default function TodaysGamePlanPage() {
             <h2 className="text-t-primary font-semibold text-muted-foreground mb-2 px-1">Today at a Glance</h2>
             <div className="grid grid-cols-2 gap-2">
               <Card className="border shadow-sm" data-testid="stat-jobs-today">
-                <CardContent className="p-3 flex items-center gap-3">
+                <CardContent className="p-4 flex items-center gap-3">
                   <div className="h-9 w-9 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
                     <Briefcase className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   </div>
@@ -738,7 +718,7 @@ export default function TodaysGamePlanPage() {
                 </CardContent>
               </Card>
               <Card className="border shadow-sm" data-testid="stat-messages">
-                <CardContent className="p-3 flex items-center gap-3">
+                <CardContent className="p-4 flex items-center gap-3">
                   <div className="h-9 w-9 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
                     <MessageSquare className="h-4 w-4 text-violet-600 dark:text-violet-400" />
                   </div>
