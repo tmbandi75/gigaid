@@ -96,6 +96,13 @@ that pre-fills a non-default share message via `messageOverride`
 booking link again: <link>"); the editable textarea inside the
 share sheet still lets the pro tweak it before sending.
 
+The dashboard also pins one **outcome** funnel directly under the
+`plan_followup` tile — "Follow-up card — shown vs shared vs
+dismissed" — that splits **shown → auto_hidden** vs.
+**shown → dismissed** for the follow-up nudge specifically. That
+funnel is documented in
+`docs/runbooks/follow-up-card-conversion.md`.
+
 ### Recreating the dashboard
 
 If the dashboard is missing (e.g. PostHog reset, new workspace):
