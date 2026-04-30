@@ -42,6 +42,13 @@ export interface BookingLinkShareSheetProps {
   context: "plan" | "leads" | "jobs" | "bookings";
   /** Optional override for the editable message body. */
   messageOverride?: string;
+  /**
+   * Fired immediately after a successful share completes via this sheet
+   * (SMS / WhatsApp / Copy). Mirrors the `booking_link_shared` analytics
+   * event so callers can react to the same trigger (e.g. hide a nudge
+   * card) without subscribing to PostHog. Receives the share method.
+   */
+  onShared?: (method: "sms" | "whatsapp" | "copy") => void;
 }
 
 function defaultMessage(bookingLink: string): string {
@@ -54,6 +61,7 @@ export function BookingLinkShareSheet({
   screen,
   context,
   messageOverride,
+  onShared,
 }: BookingLinkShareSheetProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -116,6 +124,17 @@ export function BookingLinkShareSheet({
       onLocalMark: invalidateGamePlan,
       onApiSuccess: invalidateGamePlan,
     });
+    // Notify the host AFTER the analytics + recording side effects have
+    // been kicked off so consumers see the same ordering as the
+    // PostHog event. Wrapped so a host-side throw can never break the
+    // user-visible deep-link / clipboard flow.
+    if (onShared) {
+      try {
+        onShared(method);
+      } catch {
+        // swallow — host callback is purely best-effort UI state.
+      }
+    }
   };
 
   const handleSms = () => {

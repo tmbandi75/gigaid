@@ -3,6 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Send, X } from "lucide-react";
 
 export const FOLLOW_UP_DISMISSED_KEY = "gigaid:booking-followup-dismissed";
+// Set when the pro actually completes a share via the follow-up card's
+// share sheet (any of SMS / WhatsApp / Copy). Distinct from the dismiss
+// key so we can tell "user opted out" from "user followed through" in
+// analytics / future logic, but functionally either flag hides the card
+// for the rest of the browser session.
+export const FOLLOW_UP_SENT_KEY = "gigaid:booking-followup-sent";
 
 interface FollowUpCardProps {
   open: boolean;

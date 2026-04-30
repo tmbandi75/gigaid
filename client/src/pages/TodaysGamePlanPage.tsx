@@ -63,6 +63,7 @@ import { SegmentedShareProgress } from "@/components/booking-link/SegmentedShare
 import {
   FollowUpCard,
   FOLLOW_UP_DISMISSED_KEY,
+  FOLLOW_UP_SENT_KEY,
 } from "@/components/booking-link/FollowUpCard";
 import { useToast } from "@/hooks/use-toast";
 import type { BookingLinkShareScreen } from "@/lib/useBookingLinkShareAction";
@@ -306,10 +307,18 @@ export default function TodaysGamePlanPage() {
       return false;
     }
   });
+  // Hide the follow-up card if the pro EITHER tapped × (dismissed) OR
+  // actually sent a follow-up via the share sheet earlier in the same
+  // browser session. Both flags live in sessionStorage so a refresh in
+  // the same tab keeps the card hidden, and a brand-new session brings
+  // it back (paired with the share-count reset at midnight local time).
   const [followUpDismissed, setFollowUpDismissed] = useState(() => {
     if (typeof window === "undefined") return false;
     try {
-      return window.sessionStorage.getItem(FOLLOW_UP_DISMISSED_KEY) === "1";
+      return (
+        window.sessionStorage.getItem(FOLLOW_UP_DISMISSED_KEY) === "1" ||
+        window.sessionStorage.getItem(FOLLOW_UP_SENT_KEY) === "1"
+      );
     } catch {
       return false;
     }
@@ -807,13 +816,34 @@ export default function TodaysGamePlanPage() {
           screen={funnelShareScreen}
           context="plan"
           messageOverride={funnelShareMessageOverride}
+          onShared={() => {
+            // Auto-hide the follow-up card the moment the pro actually
+            // sends a follow-up so we don't keep nagging them after
+            // they've taken the action. Only fires on the follow-up
+            // surface — the overlay/banner share flows have their own
+            // dismissal mechanics.
+            if (funnelShareScreen !== "plan_followup") return;
+            try {
+              window.sessionStorage.setItem(FOLLOW_UP_SENT_KEY, "1");
+            } catch {
+              // sessionStorage unavailable — in-memory flag below still
+              // hides the card for the rest of this mount.
+            }
+            setFollowUpDismissed(true);
+            toast({
+              title: "Follow-up sent — nice work",
+              description: "A second nudge often makes the difference.",
+            });
+          }}
         />
 
         {/* Follow-up nudge — appears once the pro has shared at least
             twice today and a booking link exists. Encourages a second
-            message to people they've already contacted. Dismissable
-            for the rest of the browser session via the × button; auto-
-            hides next day when todayShareCount resets to 0. */}
+            message to people they've already contacted. Hides for the
+            rest of the browser session via either the × button OR an
+            actual successful share through the share sheet (handled by
+            the onShared callback above, keyed on FOLLOW_UP_SENT_KEY).
+            Auto-returns next day when todayShareCount resets to 0. */}
         {isBelowDesktop &&
           hasBookingLink &&
           todayShareCount >= 2 &&
