@@ -48,14 +48,7 @@ import { CoachingRenderer } from "@/coaching/CoachingRenderer";
 import { BookingLinkShare } from "@/components/booking-link";
 import { useUpgradeOrchestrator, useStallSignals, UpgradeNudgeModal } from "@/upgrade";
 import { useAuth } from "@/hooks/use-auth";
-import { useToast } from "@/hooks/use-toast";
-import { canShareContent } from "@/lib/share";
-import {
-  attemptShareBookingLink,
-  copyBookingLinkToClipboard,
-} from "@/lib/bookingLinkShareFlow";
-import { trackEvent } from "@/components/PostHogProvider";
-import { recordCopy, recordShareTap } from "@/lib/bookingLinkAnalytics";
+import { useBookingLinkShareAction } from "@/lib/useBookingLinkShareAction";
 import { getSubtitleMessage, type EncouragementData } from "@/encouragement/encouragementEngine";
 import { ActivationChecklist } from "@/components/activation/ActivationChecklist";
 import { GamePlanDesktopView } from "@/components/game-plan/GamePlanDesktopView";
@@ -195,75 +188,23 @@ export default function TodaysGamePlanPage() {
     staleTime: 300000,
   });
 
-  // Reads from the same react-query cache that BookingLinkShare populates,
-  // so the empty-state "Send Booking Link" button can trigger the same
-  // share flow without any extra network round-trips.
-  const { data: bookingLinkData } = useQuery<{
-    bookingLink: string | null;
-    servicesCount: number;
-  }>({
-    queryKey: QUERY_KEYS.bookingLink(),
+  // Single shared booking-link share handler — uses the same
+  // `useBookingLinkShareAction` hook that powers the hero
+  // `BookingLinkShare` card, so toasts, analytics events
+  // (`booking_link_share_opened`, `booking_link_copied`,
+  // `booking_link_shared`) and the copy/share fallback behavior
+  // never drift between the hero and the empty state. The
+  // empty-state surface opts in to the
+  // "redirect to /profile when link missing" guard since it's the
+  // primary entry point a user sees when they have no jobs.
+  const emptyStateBookingLinkShare = useBookingLinkShareAction({
+    screen: "plan_empty",
+    context: "plan",
+    redirectToProfileWhenMissing: true,
   });
 
-  const { toast } = useToast();
-
-  const triggerBookingLinkShare = async (screen: "plan_empty"): Promise<void> => {
-    const bookingLink = bookingLinkData?.bookingLink ?? null;
-    if (!bookingLink) {
-      toast({
-        title: "Booking link not ready yet",
-        description: "Add a service first to generate your booking link.",
-      });
-      navigate("/profile");
-      return;
-    }
-    const invalidateGamePlan = () =>
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboardGamePlan() });
-
-    trackEvent("booking_link_share_opened", { screen });
-    void recordShareTap("plan");
-
-    if (!canShareContent()) {
-      const { copied: ok } = await copyBookingLinkToClipboard({
-        bookingLink,
-        userId: user?.id,
-        onLocalMark: invalidateGamePlan,
-        onApiSuccess: invalidateGamePlan,
-      });
-      if (ok) {
-        trackEvent("booking_link_copied", { screen });
-        void recordCopy("plan");
-        toast({
-          title: "Link copied",
-          description: "Your booking link is ready to share",
-        });
-        trackEvent("booking_link_shared", { screen, method: "copy" });
-      } else {
-        toast({
-          title: "Couldn't copy",
-          description: "Please copy the link manually",
-          variant: "destructive",
-        });
-      }
-      return;
-    }
-
-    const { shared, target } = await attemptShareBookingLink({
-      bookingLink,
-      shareTitle: "Book my services",
-      shareText: "Schedule a job with me using this link:",
-      dialogTitle: "Share booking link",
-      userId: user?.id,
-      onLocalMark: invalidateGamePlan,
-      onApiSuccess: invalidateGamePlan,
-    });
-    if (shared) {
-      trackEvent("booking_link_shared", { screen, method: "share", target });
-    }
-  };
-
   const handleEmptyStateSendBookingLink = () => {
-    void triggerBookingLinkShare("plan_empty");
+    void emptyStateBookingLinkShare.share();
   };
 
   const actMutation = useApiMutation(
@@ -626,7 +567,15 @@ export default function TodaysGamePlanPage() {
                 exit={{ opacity: 0, y: -8 }}
               >
                 <Card className="border shadow-sm" data-testid="card-all-caught-up">
-                  <CardContent className="p-4 text-center">
+                  {/*
+                    Empty state is the only above-the-fold "primary action"
+                    card visible when the user has no jobs and no money
+                    waiting, so it gets the same hero-tier p-5 padding as
+                    the BookingLinkShare hero card and the Collect Payment
+                    card. List items below (Up Next, Smart Suggestions)
+                    keep their compact p-3 padding.
+                  */}
+                  <CardContent className="p-5 text-center">
                     <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
                       <Briefcase className="h-6 w-6 text-primary" />
                     </div>

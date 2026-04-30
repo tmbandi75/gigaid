@@ -1,19 +1,10 @@
-import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Copy, Share2, Link2, Check } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { QUERY_KEYS } from "@/lib/queryKeys";
-import { getPostActionMessage } from "@/encouragement/encouragementToast";
-import { canShareContent } from "@/lib/share";
 import {
-  attemptShareBookingLink,
-  copyBookingLinkToClipboard,
-} from "@/lib/bookingLinkShareFlow";
-import { recordCopy, recordShareTap } from "@/lib/bookingLinkAnalytics";
-import { trackEvent } from "@/components/PostHogProvider";
-import { useAuth } from "@/hooks/use-auth";
+  useBookingLinkShareAction,
+  type BookingLinkShareScreen,
+} from "@/lib/useBookingLinkShareAction";
 
 type BookingLinkShareProps = {
   variant: "primary" | "inline" | "compact" | "hero";
@@ -29,85 +20,30 @@ type BookingLinkShareProps = {
 };
 
 export function BookingLinkShare({ variant, context, demoted = false }: BookingLinkShareProps) {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const userId = user?.id;
-  const [copied, setCopied] = useState(false);
+  const isPrimary = variant === "primary";
+  const screen: BookingLinkShareScreen = context;
 
-  const { data } = useQuery<{ bookingLink: string | null; servicesCount: number }>({
-    queryKey: QUERY_KEYS.bookingLink(),
+  const {
+    bookingLink,
+    hasServices,
+    copied,
+    share: handleShare,
+    copy: handleCopy,
+    supportsShare,
+  } = useBookingLinkShareAction({
+    screen,
+    context,
+    shareTitle: isPrimary ? "Book my services" : "Book with me",
+    shareText: isPrimary
+      ? "Schedule a job with me using this link:"
+      : "Book a job with me using this link",
   });
 
-  const bookingLink = data?.bookingLink;
-  const hasServices = (data?.servicesCount || 0) > 0;
-
-  // Only show booking link if user has services set up and a booking link
+  // Only show booking link if user has services set up and a booking link.
+  // The early-return below means the hook's "missing link" toast guard
+  // is a no-op on this surface — the empty-state surface in
+  // TodaysGamePlanPage opts in to that guard via the hook directly.
   if (!hasServices || !bookingLink) return null;
-
-  const invalidateGamePlan = () =>
-    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboardGamePlan() });
-
-  const handleCopy = async (): Promise<boolean> => {
-    if (!bookingLink) return false;
-
-    const { copied: copiedOk } = await copyBookingLinkToClipboard({
-      bookingLink,
-      userId,
-      onLocalMark: invalidateGamePlan,
-      onApiSuccess: invalidateGamePlan,
-    });
-    if (copiedOk) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      trackEvent('booking_link_copied', { screen: context });
-      void recordCopy(context);
-      const encouragement = getPostActionMessage("link_shared");
-      toast({
-        title: "Link copied",
-        description: encouragement || "Your booking link is ready to share",
-      });
-      return true;
-    }
-    toast({
-      title: "Couldn't copy",
-      description: "Please copy the link manually",
-      variant: "destructive",
-    });
-    return false;
-  };
-
-  const handleShare = async () => {
-    if (!bookingLink) return;
-
-    trackEvent('booking_link_share_opened', { screen: context });
-    void recordShareTap(context);
-
-    if (!canShareContent()) {
-      const copiedOk = await handleCopy();
-      if (copiedOk) {
-        trackEvent('booking_link_shared', { screen: context, method: 'copy' });
-      }
-      return;
-    }
-
-    const { shared, target } = await attemptShareBookingLink({
-      bookingLink,
-      shareTitle: variant === "primary" ? "Book my services" : "Book with me",
-      shareText: variant === "primary"
-        ? "Schedule a job with me using this link:"
-        : "Book a job with me using this link",
-      dialogTitle: "Share booking link",
-      userId,
-      onLocalMark: invalidateGamePlan,
-      onApiSuccess: invalidateGamePlan,
-    });
-    if (shared) {
-      trackEvent('booking_link_shared', { screen: context, method: 'share', target });
-    }
-  };
-
-  const supportsShare = canShareContent();
 
   if (variant === "hero") {
     // Single primary action does both: trigger native share sheet
