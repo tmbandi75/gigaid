@@ -1,9 +1,11 @@
 import { index, jsonb, pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
 
-// Session storage table.
-// (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
-export const sessions = pgTable(
-  "sessions",
+// connect-pg-simple store (Passport / express-session). Table name is the
+// library default "session" — distinct from the app's API token table `sessions`
+// in shared/schema.ts. Exported under this name so Drizzle schema and TypeScript
+// never collide with app `sessions`.
+export const expressSessionTable = pgTable(
+  "session",
   {
     sid: varchar("sid").primaryKey(),
     sess: jsonb("sess").notNull(),
@@ -11,6 +13,3 @@ export const sessions = pgTable(
   },
   (table) => [index("IDX_session_expire").on(table.expire)]
 );
-
-// Re-export users table from main schema for auth storage compatibility
-// The users table is defined in shared/schema.ts with all GigAid-specific fields

@@ -3083,4 +3083,4 @@ export const duplicatePhoneAlerts = pgTable("duplicate_phone_alerts", {
 export type DuplicatePhoneAlert = typeof duplicatePhoneAlerts.$inferSelect;
 
 export * from "./models/chat";
-export * from "./models/auth";
+export { expressSessionTable } from "./models/auth";

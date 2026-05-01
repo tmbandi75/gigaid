@@ -1892,11 +1892,30 @@ export async function registerRoutes(
           ),
       );
 
+      // growth_leads has no user_id; clear this user as converted lead or referrer instead.
+      await clearRelated("growth_leads_converted", () =>
+        db.delete(schema.growthLeads).where(eq(schema.growthLeads.convertedUserId, userId)),
+      );
+      await clearRelated("growth_leads_referrer_cleared", () =>
+        db
+          .update(schema.growthLeads)
+          .set({ referrerUserId: null })
+          .where(eq(schema.growthLeads.referrerUserId, userId)),
+      );
+
+      // outreach_queue rows are platform prospecting; only clear assignment to this user.
+      await clearRelated("outreach_queue_assigned_cleared", () =>
+        db
+          .update(schema.outreachQueue)
+          .set({ assignedToUserId: null })
+          .where(eq(schema.outreachQueue.assignedToUserId, userId)),
+      );
+
       // Delete all user-related data in dependency order (children before parents)
       const userIdTables = [
         { table: schema.crewJobPhotos, col: schema.crewJobPhotos.userId, name: "crew_job_photos" },
         { table: schema.crewMessages, col: schema.crewMessages.userId, name: "crew_messages" },
-        { table: schema.crewInvites, col: schema.crewInvites.inviterId, name: "crew_invites" },
+        { table: schema.crewInvites, col: schema.crewInvites.userId, name: "crew_invites" },
         { table: schema.crewMembers, col: schema.crewMembers.userId, name: "crew_members" },
         { table: schema.aiNudgeEvents, col: schema.aiNudgeEvents.userId, name: "ai_nudge_events" },
         { table: schema.aiNudges, col: schema.aiNudges.userId, name: "ai_nudges" },
@@ -1935,13 +1954,12 @@ export async function registerRoutes(
         { table: schema.priceAdjustments, col: schema.priceAdjustments.userId, name: "price_adjustments" },
         { table: schema.churnMetrics, col: schema.churnMetrics.userId, name: "churn_metrics" },
         { table: schema.retentionActions, col: schema.retentionActions.userId, name: "retention_actions" },
-        { table: schema.retentionPlaybooks, col: schema.retentionPlaybooks.userId, name: "retention_playbooks" },
+        // retention_playbooks are global templates (no user_id); do not delete on account removal.
         { table: schema.planOverrides, col: schema.planOverrides.userId, name: "plan_overrides" },
-        { table: schema.growthLeads, col: schema.growthLeads.userId, name: "growth_leads" },
+        // growth_leads and outreach_queue handled above (non–user_id keys).
         { table: schema.onboardingCalls, col: schema.onboardingCalls.userId, name: "onboarding_calls" },
         { table: schema.acquisitionAttribution, col: schema.acquisitionAttribution.userId, name: "acquisition_attribution" },
-        { table: schema.outreachQueue, col: schema.outreachQueue.userId, name: "outreach_queue" },
-        { table: schema.revenueDriftLogs, col: schema.revenueDriftLogs.userId, name: "revenue_drift_logs" },
+        // revenue_drift_logs are aggregate job runs (no per-user column); never delete by userId here.
         { table: schema.aiInterventions, col: schema.aiInterventions.userId, name: "ai_interventions" },
         { table: schema.aiOverrides, col: schema.aiOverrides.userId, name: "ai_overrides" },
         { table: schema.stallDetections, col: schema.stallDetections.userId, name: "stall_detections" },
